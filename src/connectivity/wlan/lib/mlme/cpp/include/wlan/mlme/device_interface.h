@@ -50,7 +50,7 @@ class DeviceInterface {
  public:
   virtual ~DeviceInterface() {}
 
-  virtual zx_status_t Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
+  virtual zx_status_t Start(const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
                             zx::channel* out_sme_channel) = 0;
 
   virtual zx_status_t DeliverEthernet(cpp20::span<const uint8_t> eth_frame) = 0;
@@ -63,15 +63,15 @@ class DeviceInterface {
   virtual zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) = 0;
   virtual zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) = 0;
   virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;
-  virtual zx_status_t StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+  virtual zx_status_t StartPassiveScan(const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                        uint64_t* out_scan_id) = 0;
-  virtual zx_status_t StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+  virtual zx_status_t StartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                                       uint64_t* out_scan_id) = 0;
   virtual zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) = 0;
   virtual zx_status_t ClearAssoc(const common::MacAddr& peer_addr) = 0;
 
   virtual fbl::RefPtr<DeviceState> GetState() = 0;
-  virtual const wlanmac_info_t& GetWlanMacInfo() const = 0;
+  virtual const wlan_softmac_info_t& GetWlanSoftmacInfo() const = 0;
 };
 
 }  // namespace wlan

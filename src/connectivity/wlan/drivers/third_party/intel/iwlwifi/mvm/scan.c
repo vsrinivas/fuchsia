@@ -373,7 +373,7 @@ static const char* iwl_mvm_ebs_status_str(enum iwl_scan_ebs_status status) {
 
 static void notify_mlme_scan_completion(struct iwl_mvm_vif* mvmvif, zx_status_t status) {
   // TODO(fxbug.dev/88934): scan_id is always 0
-  wlanmac_ifc_scan_complete(&mvmvif->ifc, status, 0);
+  wlan_softmac_ifc_scan_complete(&mvmvif->ifc, status, 0);
 }
 
 void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -1559,10 +1559,10 @@ static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_para
 }
 #endif  // NEEDS_PORTING
 
-// TODO(fxbug.dev/89682): Fuchsia-specific wlanmac_passive_scan_args_t should be moved out
+// TODO(fxbug.dev/89682): Fuchsia-specific wlan_softmac_passive_scan_args_t should be moved out
 // of these function arguments or this function should be moved to platform/mvm-mlme.cc.
-zx_status_t iwl_mvm_reg_scan_start_passive(struct iwl_mvm_vif* mvmvif,
-                                           const wlanmac_passive_scan_args_t* passive_scan_args) {
+zx_status_t iwl_mvm_reg_scan_start_passive(
+    struct iwl_mvm_vif* mvmvif, const wlan_softmac_passive_scan_args_t* passive_scan_args) {
   // TODO(fxbug.dev/89693): iwlwifi only uses the channels field.
   return iwl_mvm_reg_scan_start(mvmvif, passive_scan_args->channels_list,
                                 passive_scan_args->channels_count);

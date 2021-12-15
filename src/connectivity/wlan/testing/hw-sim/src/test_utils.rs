@@ -85,7 +85,7 @@ where
 impl TestHelper {
     pub async fn begin_test(config: wlantap::WlantapPhyConfig) -> Self {
         let mut helper = TestHelper::create_phy_and_helper(config).await;
-        helper.wait_for_wlanmac_start().await;
+        helper.wait_for_wlan_softmac_start().await;
         helper
     }
     pub async fn begin_ap_test(
@@ -94,7 +94,7 @@ impl TestHelper {
     ) -> Self {
         let mut helper = TestHelper::create_phy_and_helper(config).await;
         start_ap_and_wait_for_confirmation(network_config).await;
-        helper.wait_for_wlanmac_start().await;
+        helper.wait_for_wlan_softmac_start().await;
         helper
     }
     async fn create_phy_and_helper(config: wlantap::WlantapPhyConfig) -> Self {
@@ -120,14 +120,14 @@ impl TestHelper {
         let event_stream = Some(proxy.take_event_stream());
         TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream, is_stopped: false }
     }
-    async fn wait_for_wlanmac_start(&mut self) {
+    async fn wait_for_wlan_softmac_start(&mut self) {
         let (sender, receiver) = oneshot::channel::<()>();
         let mut sender = Some(sender);
         self.run_until_complete_or_timeout(
             120.seconds(),
-            "receive a WlanmacStart event",
+            "receive a WlanSoftmacStart event",
             move |event| match event {
-                wlantap::WlantapPhyEvent::WlanmacStart { .. } => {
+                wlantap::WlantapPhyEvent::WlanSoftmacStart { .. } => {
                     sender.take().map(|s| s.send(()));
                 }
                 _ => {}

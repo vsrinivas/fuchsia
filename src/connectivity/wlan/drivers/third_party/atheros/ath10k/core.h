@@ -768,7 +768,7 @@ struct ath10k {
     const struct ath10k_hif_ops* ops;
   } hif;
 
-  wlanmac_ifc_protocol_t wlanmac;
+  wlan_softmac_ifc_protocol_t wlan_softmac;
 
   // Now we only support one interface. Need to review the below variables when supporting
   // multiple interfaces. TODO(fxbug.dev/29263)

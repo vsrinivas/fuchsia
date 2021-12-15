@@ -163,7 +163,7 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_info_band_info_t* out
       out->supported_channels.channels);
 }
 
-zx_status_t ConvertTapPhyConfig(wlanmac_info_t* mac_info,
+zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
                                 const wlan_tap::WlantapPhyConfig& tap_phy_config) {
   std::memset(mac_info, 0, sizeof(*mac_info));
   std::copy_n(tap_phy_config.sta_addr.begin(), ETH_MAC_SIZE, mac_info->sta_addr);

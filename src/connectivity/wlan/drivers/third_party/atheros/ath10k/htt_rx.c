@@ -1348,7 +1348,7 @@ static void ath10k_htt_rx_h_deliver(struct ath10k* ar, list_node_t* amsdu) {
         .mac_frame_size = msdu->rx.frame_size,
         .info = rx_info,
     };
-    wlanmac_ifc_recv(&ar->wlanmac, &rx_packet);
+    wlan_softmac_ifc_recv(&ar->wlan_softmac, &rx_packet);
     ath10k_msg_buf_free(msdu);
   }
 }
@@ -1766,7 +1766,7 @@ static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct ath10k_msg
         .mac_frame_size = msdu_len,
         .info = rx_info,
     };
-    wlanmac_ifc_recv(&ar->wlanmac, &rx_packet);
+    wlan_softmac_ifc_recv(&ar->wlan_softmac, &rx_packet);
     ath10k_msg_buf_free(msdu);
   }
 

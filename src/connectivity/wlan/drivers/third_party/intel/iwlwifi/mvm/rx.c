@@ -488,7 +488,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
       .mac_frame_size = res_len,
       .info = rx_info,
   };
-  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
+  wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
 
 #if 0   // NEEDS_PORTING
   if (take_ref) {

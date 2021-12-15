@@ -76,8 +76,8 @@ class MvmTest : public SingleApTest {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
     mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
-    mvmvif_->ifc.ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
-        calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
+    mvmvif_->ifc.ops = reinterpret_cast<wlan_softmac_ifc_protocol_ops_t*>(
+        calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
 
@@ -91,12 +91,13 @@ class MvmTest : public SingleApTest {
   }
 
  protected:
-  // This function is kind of dirty. It hijacks the wlanmac_ifc_protocol_t.recv() so that we can
-  // save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this function.
+  // This function is kind of dirty. It hijacks the wlan_softmac_ifc_protocol_t.recv() so that we
+  // can save the rx_info passed to MLME.  See TearDown() for cleanup logic related to this
+  // function.
   void MockRecv(TestCtx* ctx) {
     // TODO(fxbug.dev/43218): replace rxq->napi with interface instance so that we can map to
     // mvmvif.
-    mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlanmac_ifc_protocol_t*', but we override it
+    mvmvif_->ifc.ctx = ctx;  // 'ctx' was used as 'wlan_softmac_ifc_protocol_t*', but we override it
                              // with 'TestCtx*'.
     mvmvif_->ifc.ops->recv = [](void* ctx, const wlan_rx_packet_t* packet) {
       TestCtx* test_ctx = reinterpret_cast<TestCtx*>(ctx);
@@ -373,10 +374,10 @@ class PassiveScanTest : public MvmTest {
   ~PassiveScanTest() {}
 
   struct iwl_trans* trans_;
-  wlanmac_ifc_protocol_ops_t ops;
+  wlan_softmac_ifc_protocol_ops_t ops;
   struct iwl_mvm_vif mvmvif_sta;
   uint8_t channels_to_scan_[4] = {7, 1, 40, 136};
-  wlanmac_passive_scan_args_t passive_scan_args_{
+  wlan_softmac_passive_scan_args_t passive_scan_args_{
       .channels_list = channels_to_scan_, .channels_count = 4,
       // TODO(fxbug.dev/88943): Fill in other fields once support determined.
   };
@@ -396,8 +397,8 @@ class PassiveUmacScanTest : public FakeUcodeCapaTest {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = mvm_;
     mvmvif_->mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
-    mvmvif_->ifc.ops = reinterpret_cast<wlanmac_ifc_protocol_ops_t*>(
-        calloc(1, sizeof(wlanmac_ifc_protocol_ops_t)));
+    mvmvif_->ifc.ops = reinterpret_cast<wlan_softmac_ifc_protocol_ops_t*>(
+        calloc(1, sizeof(wlan_softmac_ifc_protocol_ops_t)));
     mvm_->mvmvif[0] = mvmvif_;
     mvm_->vif_count++;
 
@@ -427,10 +428,10 @@ class PassiveUmacScanTest : public FakeUcodeCapaTest {
   }
 
   struct iwl_trans* trans_;
-  wlanmac_ifc_protocol_ops_t ops_;
+  wlan_softmac_ifc_protocol_ops_t ops_;
   struct iwl_mvm_vif mvmvif_sta_;
   uint8_t channels_to_scan_[4] = {7, 1, 40, 136};
-  wlanmac_passive_scan_args_t passive_scan_args_{
+  wlan_softmac_passive_scan_args_t passive_scan_args_{
       .channels_list = channels_to_scan_, .channels_count = 4,
       // TODO(fxbug.dev/89693): iwlwifi ignores all other fields.
   };

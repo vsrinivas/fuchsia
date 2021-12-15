@@ -3647,7 +3647,7 @@ static bool ath10k_tx_h_use_hwcrypto(struct ath10k* ar, struct ath10k_msg_buf* t
 }
 
 /* HTT Tx uses Native Wifi tx mode which expects 802.11 frames without QoS
- * Control in the header. We would prefer that wlanmac allow us to specify
+ * Control in the header. We would prefer that wlan-softmac allow us to specify
  * that we don't want this information in the header so that we don't have
  * to change frames on-the-fly (see fxbug.dev/29275).
  */
@@ -4041,8 +4041,9 @@ void __ath10k_scan_finish(struct ath10k* ar) {
     case ATH10K_SCAN_ABORTING:
       if (!ar->scan.is_roc) {
         // TODO(fxbug.dev/88935): scan_id is always 0
-        wlanmac_ifc_scan_complete(
-            &ar->wlanmac, (ar->scan.state == ATH10K_SCAN_ABORTING) ? ZX_ERR_CANCELED : ZX_OK, 0);
+        wlan_softmac_ifc_scan_complete(
+            &ar->wlan_softmac, (ar->scan.state == ATH10K_SCAN_ABORTING) ? ZX_ERR_CANCELED : ZX_OK,
+            0);
       } else if (ar->scan.roc_notify) {
 #if 0   // NEEDS PORTING
             ieee80211_remain_on_channel_expired(ar->hw);
@@ -4451,7 +4452,7 @@ static zx_status_t ath10k_set_antenna(struct ieee80211_hw* hw, uint32_t tx_ant, 
 enum { IEEE80211_AC_VO, IEEE80211_AC_VI, IEEE80211_AC_BE, IEEE80211_AC_BK };
 static int ath10k_conf_tx(struct ath10k* ar, uint16_t ac, struct wmi_wmm_params_arg* params);
 
-zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
+zx_status_t ath10k_start(struct ath10k* ar, const wlan_softmac_ifc_protocol_t* ifc,
                          zx_handle_t* out_mlme_channel) {
   zx_status_t ret = ZX_OK;
 
@@ -4461,7 +4462,7 @@ zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
     goto err;
   }
 
-  ar->wlanmac = *ifc;
+  ar->wlan_softmac = *ifc;
 
   /*
    * This makes sense only when restarting hw. It is harmless to call
@@ -5506,7 +5507,7 @@ static void ath10k_mac_op_set_coverage_class(struct ieee80211_hw* hw, int16_t va
 #endif  // NEEDS PORTING
 
 static zx_status_t ath10k_mac_convert_scan_args_passive(
-    const wlanmac_passive_scan_args_t* passive_scan_args, struct wmi_start_scan_arg* arg) {
+    const wlan_softmac_passive_scan_args_t* passive_scan_args, struct wmi_start_scan_arg* arg) {
   if (passive_scan_args->channels_count == 0) {
     ath10k_err("number of channels to scan must be non-zero\n");
     return ZX_ERR_INVALID_ARGS;
@@ -5537,7 +5538,7 @@ static zx_status_t ath10k_mac_convert_scan_args_passive(
 }
 
 zx_status_t ath10k_mac_hw_scan_passive(struct ath10k* ar,
-                                       const wlanmac_passive_scan_args_t* passive_scan_args,
+                                       const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                        uint64_t* out_scan_id) {
   struct wmi_start_scan_arg arg;
   zx_status_t ret = ath10k_mac_convert_scan_args_passive(passive_scan_args, &arg);
@@ -5597,7 +5598,7 @@ exit:
 }
 
 zx_status_t ath10k_mac_hw_scan_active(struct ath10k* ar,
-                                      const wlanmac_active_scan_args_t* active_scan_args,
+                                      const wlan_softmac_active_scan_args_t* active_scan_args,
                                       uint64_t* out_scan_id) {
   return ZX_ERR_NOT_SUPPORTED;
 }

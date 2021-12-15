@@ -184,7 +184,7 @@ static void free_ap_mvm_sta(void* data) {
 
 /////////////////////////////////////       MAC       //////////////////////////////////////////////
 
-zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
+zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (!ctx || !info) {
@@ -215,7 +215,8 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info) {
   return ZX_OK;
 }
 
-zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
+zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
+                      zx_handle_t* out_mlme_channel) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (!ctx || !ifc || !out_mlme_channel) {
@@ -756,13 +757,15 @@ out:
   return ret;
 }
 
-zx_status_t mac_start_passive_scan(void* ctx, const wlanmac_passive_scan_args_t* passive_scan_args,
+zx_status_t mac_start_passive_scan(void* ctx,
+                                   const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                    uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   return iwl_mvm_mac_hw_scan_passive(mvmvif, passive_scan_args, out_scan_id);
 }
 
-zx_status_t mac_start_active_scan(void* ctx, const wlanmac_active_scan_args_t* active_scan_args,
+zx_status_t mac_start_active_scan(void* ctx,
+                                  const wlan_softmac_active_scan_args_t* active_scan_args,
                                   uint64_t* out_scan_id) {
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -777,7 +780,7 @@ zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, u
 }
 
 // TODO (fxbug.dev/63618) - to be removed.
-wlanmac_protocol_ops_t wlanmac_ops = {
+wlan_softmac_protocol_ops_t wlan_softmac_ops = {
     .query = mac_query,
     .start = mac_start,
     .stop = mac_stop,

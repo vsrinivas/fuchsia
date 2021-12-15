@@ -118,8 +118,8 @@ fn blank_wmm_ac_params() -> banjo_wlan_associnfo::WlanWmmAcParams {
     }
 }
 
-pub fn device_info_from_wlanmac_info(
-    info: banjo_wlan_softmac::WlanmacInfo,
+pub fn device_info_from_wlan_softmac_info(
+    info: banjo_wlan_softmac::WlanSoftmacInfo,
 ) -> Result<fidl_mlme::DeviceInfo, Error> {
     let sta_addr = info.sta_addr;
     let role = match info.mac_role {
@@ -235,8 +235,9 @@ pub fn cssid_from_ssid_unchecked(ssid: &Vec<u8>) -> banjo_ieee80211::CSsid {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::device::fake_wlanmac_info, banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
-        std::convert::TryInto, wlan_common::ie, zerocopy::AsBytes,
+        super::*, crate::device::fake_wlan_softmac_info,
+        banjo_ddk_hw_wlan_ieee80211 as banjo_80211, std::convert::TryInto, wlan_common::ie,
+        zerocopy::AsBytes,
     };
 
     #[test]
@@ -365,8 +366,8 @@ mod tests {
 
     #[test]
     fn test_convert_band_info() {
-        let wlanmac_info = fake_wlanmac_info();
-        let band0 = convert_ddk_band_info(wlanmac_info.bands[0], 10);
+        let wlan_softmac_info = fake_wlan_softmac_info();
+        let band0 = convert_ddk_band_info(wlan_softmac_info.bands[0], 10);
         assert_eq!(band0.band_id, fidl_common::Band::WlanBand2Ghz);
         assert_eq!(band0.rates, vec![12, 24, 48, 54, 96, 108]);
         assert_eq!(band0.base_frequency, 2407);
@@ -378,10 +379,10 @@ mod tests {
 
     #[test]
     fn test_convert_device_info() {
-        let wlanmac_info = fake_wlanmac_info();
-        let device_info =
-            device_info_from_wlanmac_info(wlanmac_info).expect("Failed to conver wlanmac info");
-        assert_eq!(device_info.sta_addr, wlanmac_info.sta_addr);
+        let wlan_softmac_info = fake_wlan_softmac_info();
+        let device_info = device_info_from_wlan_softmac_info(wlan_softmac_info)
+            .expect("Failed to conver wlan-softmac info");
+        assert_eq!(device_info.sta_addr, wlan_softmac_info.sta_addr);
         assert_eq!(device_info.role, fidl_mlme::MacRole::Client);
         assert_eq!(device_info.bands.len(), 2);
         assert_eq!(
@@ -392,9 +393,9 @@ mod tests {
 
     #[test]
     fn test_convert_device_info_unknown_role() {
-        let mut wlanmac_info = fake_wlanmac_info();
-        wlanmac_info.mac_role.0 = 10;
-        device_info_from_wlanmac_info(wlanmac_info)
+        let mut wlan_softmac_info = fake_wlan_softmac_info();
+        wlan_softmac_info.mac_role.0 = 10;
+        device_info_from_wlan_softmac_info(wlan_softmac_info)
             .expect_err("Shouldn't convert invalid mac role");
     }
 

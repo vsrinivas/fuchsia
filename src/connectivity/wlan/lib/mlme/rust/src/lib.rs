@@ -144,7 +144,7 @@ impl MlmeHandle {
 // events from our ethernet device or vendor device are converted to DriverEvents
 // and sent through this sink, where they can then be handled serially. Multiple copies of
 // DriverEventSink may be safely passed between threads, including one that is used by our
-// vendor driver as the context for wlanmac_ifc_protocol_ops.
+// vendor driver as the context for wlan_softmac_ifc_protocol_ops.
 struct DriverEventSink(pub mpsc::UnboundedSender<DriverEvent>);
 
 // TODO(fxbug.dev/29063): Remove copies from MacFrame and EthFrame.
@@ -277,7 +277,7 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
         startup_sender: oneshot::Sender<Result<(), Error>>,
     ) {
         let mut driver_event_sink = Box::new(DriverEventSink(driver_event_sink));
-        let ifc = device::WlanmacIfcProtocol::new(driver_event_sink.as_mut());
+        let ifc = device::WlanSoftmacIfcProtocol::new(driver_event_sink.as_mut());
         // Indicate to the vendor driver that we can start sending and receiving info. Any messages received from the
         // driver before we start our MLME will be safely buffered in our driver_event_sink.
         // Note that device.start will copy relevant fields out of ifc, so dropping it after this is fine.
@@ -303,7 +303,7 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
             }
         };
 
-        let device_info = device.wlanmac_info();
+        let device_info = device.wlan_softmac_info();
         let (minstrel_timer, minstrel_time_stream) = common::timer::create_timer();
         let update_interval =
             if device_info.driver_features.0 & ddk_wlaninfo::WlanInfoDriverFeature::SYNTH.0 != 0 {

@@ -78,9 +78,9 @@ class DevicePool {
 
 constexpr size_t kMaxMacDevices = 4;
 
-wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, const wlan_key_config_t* config) {
+wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlan_softmac_id, const wlan_key_config_t* config) {
   auto set_key_args = wlantap::SetKeyArgs{
-      .wlanmac_id = wlanmac_id,
+      .wlan_softmac_id = wlan_softmac_id,
       .config =
           wlantap::WlanKeyConfig{
               .protection = config->protection,
@@ -98,9 +98,9 @@ wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, const wlan_key_config_t* c
   return set_key_args;
 }
 
-wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) {
+wlantap::TxArgs ToTxArgs(uint16_t wlan_softmac_id, const wlan_tx_packet_t* pkt) {
   auto tx_args = wlantap::TxArgs{
-      .wlanmac_id = wlanmac_id,
+      .wlan_softmac_id = wlan_softmac_id,
       .packet =
           wlantap::WlanTxPacket{.info =
                                     wlantap::WlanTxInfo{
@@ -168,8 +168,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     // interfaces
     ::async::PostTask(loop_, [this] {
       {
-        std::lock_guard<std::mutex> guard(wlanmac_lock_);
-        wlanmac_devices_.ReleaseAll();
+        std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+        wlan_softmac_devices_.ReleaseAll();
       }
       device_async_remove(device_);
     });
@@ -216,8 +216,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     if (!mlme_channel.is_valid()) {
       return ZX_ERR_IO_INVALID;
     }
-    std::lock_guard<std::mutex> guard(wlanmac_lock_);
-    zx_status_t status = wlanmac_devices_.TryCreateNew(
+    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+    zx_status_t status = wlan_softmac_devices_.TryCreateNew(
         [&](uint16_t id, WlantapMac** out_dev) {
           return CreateWlantapMac(device_, dev_role, phy_config_.get(), id, this,
                                   std::move(mlme_channel), out_dev);
@@ -234,13 +234,13 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   zx_status_t DestroyIface(uint16_t id) {
     zxlogf(INFO, "%s: received a 'DestroyIface' DDK request", name_.c_str());
-    std::lock_guard<std::mutex> guard(wlanmac_lock_);
-    WlantapMac* wlanmac = wlanmac_devices_.Release(id);
-    if (wlanmac == nullptr) {
+    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+    WlantapMac* wlan_softmac = wlan_softmac_devices_.Release(id);
+    if (wlan_softmac == nullptr) {
       zxlogf(ERROR, "%s: DestroyIface: invalid iface id", name_.c_str());
       return ZX_ERR_INVALID_ARGS;
     }
-    wlanmac->RemoveDevice();
+    wlan_softmac->RemoveDevice();
     zxlogf(ERROR, "%s: DestroyIface: done", name_.c_str());
     return ZX_OK;
   }
@@ -287,33 +287,33 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "%s: Shutdown done", name_.c_str());
   }
 
-  virtual void Rx(uint16_t wlanmac_id, ::std::vector<uint8_t> data,
+  virtual void Rx(uint16_t wlan_softmac_id, ::std::vector<uint8_t> data,
                   wlantap::WlanRxInfo info) override {
     zxlogf(INFO, "%s: Rx(%zu bytes)", name_.c_str(), data.size());
-    std::lock_guard<std::mutex> guard(wlanmac_lock_);
-    if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
-      wlanmac->Rx(data, info);
+    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(wlan_softmac_id)) {
+      wlan_softmac->Rx(data, info);
     }
     zxlogf(INFO, "%s: Rx done", name_.c_str());
   }
 
-  virtual void Status(uint16_t wlanmac_id, uint32_t st) override {
+  virtual void Status(uint16_t wlan_softmac_id, uint32_t st) override {
     zxlogf(INFO, "%s: Status(%u)", name_.c_str(), st);
-    std::lock_guard<std::mutex> guard(wlanmac_lock_);
-    if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
-      wlanmac->Status(st);
+    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(wlan_softmac_id)) {
+      wlan_softmac->Status(st);
     }
     zxlogf(INFO, "%s: Status done", name_.c_str());
   }
 
-  virtual void ReportTxStatus(uint16_t wlanmac_id, wlantap::WlanTxStatus ts) override {
-    std::lock_guard<std::mutex> guard(wlanmac_lock_);
+  virtual void ReportTxStatus(uint16_t wlan_softmac_id, wlantap::WlanTxStatus ts) override {
+    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: ReportTxStatus %zu", name_.c_str(), report_tx_status_count_);
     }
-    if (WlantapMac* wlanmac = wlanmac_devices_.Get(wlanmac_id)) {
+    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(wlan_softmac_id)) {
       ++report_tx_status_count_;
-      wlanmac->ReportTxStatus(ts);
+      wlan_softmac->ReportTxStatus(ts);
     }
     if (!phy_config_->quiet || report_tx_status_count_ <= 32) {
       zxlogf(INFO, "%s: ReportTxStatus %zu done", name_.c_str(), report_tx_status_count_);
@@ -322,25 +322,25 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
 
   // WlantapMac::Listener impl
 
-  virtual void WlantapMacStart(uint16_t wlanmac_id) override {
-    zxlogf(INFO, "%s: WlantapMacStart id=%u", name_.c_str(), wlanmac_id);
+  virtual void WlantapMacStart(uint16_t wlan_softmac_id) override {
+    zxlogf(INFO, "%s: WlantapMacStart id=%u", name_.c_str(), wlan_softmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (stopped_ || !user_binding_.is_bound()) {
       return;
     }
-    user_binding_.events().WlanmacStart({.wlanmac_id = wlanmac_id});
+    user_binding_.events().WlanSoftmacStart({.wlan_softmac_id = wlan_softmac_id});
     zxlogf(INFO, "%s: WlantapMacStart done", name_.c_str());
   }
 
-  virtual void WlantapMacStop(uint16_t wlanmac_id) override {
+  virtual void WlantapMacStop(uint16_t wlan_softmac_id) override {
     zxlogf(INFO, "%s: WlantapMacStop", name_.c_str());
   }
 
-  virtual void WlantapMacQueueTx(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) override {
+  virtual void WlantapMacQueueTx(uint16_t wlan_softmac_id, const wlan_tx_packet_t* pkt) override {
     size_t pkt_size = pkt->mac_frame_size;
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: WlantapMacQueueTx id=%u, size=%zu, tx_report_count=%zu", name_.c_str(),
-             wlanmac_id, pkt_size, report_tx_status_count_);
+             wlan_softmac_id, pkt_size, report_tx_status_count_);
     }
 
     std::lock_guard<std::mutex> guard(lock_);
@@ -349,16 +349,17 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return;
     }
 
-    user_binding_.events().Tx(ToTxArgs(wlanmac_id, pkt));
+    user_binding_.events().Tx(ToTxArgs(wlan_softmac_id, pkt));
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
       zxlogf(INFO, "%s: WlantapMacQueueTx done(%zu bytes), tx_report_count=%zu", name_.c_str(),
              pkt_size, report_tx_status_count_);
     }
   }
 
-  virtual void WlantapMacSetChannel(uint16_t wlanmac_id, const wlan_channel_t* channel) override {
+  virtual void WlantapMacSetChannel(uint16_t wlan_softmac_id,
+                                    const wlan_channel_t* channel) override {
     if (!phy_config_->quiet) {
-      zxlogf(INFO, "%s: WlantapMacSetChannel id=%u, channel=%u", name_.c_str(), wlanmac_id,
+      zxlogf(INFO, "%s: WlantapMacSetChannel id=%u, channel=%u", name_.c_str(), wlan_softmac_id,
              channel->primary);
     }
     std::lock_guard<std::mutex> guard(lock_);
@@ -367,7 +368,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return;
     }
     user_binding_.events().SetChannel(
-        {.wlanmac_id = wlanmac_id,
+        {.wlan_softmac_id = wlan_softmac_id,
          .channel = {.primary = channel->primary,
                      .cbw = static_cast<wlan_common::ChannelBandwidth>(channel->cbw),
                      .secondary80 = channel->secondary80}});
@@ -376,15 +377,16 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
   }
 
-  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, const bss_config_t* config) override {
-    zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u", name_.c_str(), wlanmac_id);
+  virtual void WlantapMacConfigureBss(uint16_t wlan_softmac_id,
+                                      const bss_config_t* config) override {
+    zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u", name_.c_str(), wlan_softmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (stopped_ || !user_binding_.is_bound()) {
       zxlogf(INFO, "%s: WlantapMacConfigureBss ignored, shutting down", name_.c_str());
       return;
     }
     user_binding_.events().ConfigureBss(
-        {.wlanmac_id = wlanmac_id,
+        {.wlan_softmac_id = wlan_softmac_id,
          .config = {
              .bssid = ToFidlArray(config->bssid),
              .bss_type = static_cast<fuchsia::wlan::internal::BssType>(config->bss_type),
@@ -393,22 +395,23 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "%s: WlantapMacConfigureBss done", name_.c_str());
   }
 
-  virtual void WlantapMacSetKey(uint16_t wlanmac_id, const wlan_key_config_t* key_config) override {
-    zxlogf(INFO, "%s: WlantapMacSetKey id=%u", name_.c_str(), wlanmac_id);
+  virtual void WlantapMacSetKey(uint16_t wlan_softmac_id,
+                                const wlan_key_config_t* key_config) override {
+    zxlogf(INFO, "%s: WlantapMacSetKey id=%u", name_.c_str(), wlan_softmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (stopped_ || !user_binding_.is_bound()) {
       zxlogf(INFO, "%s: WlantapMacSetKey ignored, shutting down", name_.c_str());
       return;
     }
-    user_binding_.events().SetKey(ToSetKeyArgs(wlanmac_id, key_config));
+    user_binding_.events().SetKey(ToSetKeyArgs(wlan_softmac_id, key_config));
     zxlogf(INFO, "%s: WlantapMacSetKey done", name_.c_str());
   }
 
   zx_device_t* device_;
   const std::unique_ptr<const wlantap::WlantapPhyConfig> phy_config_;
   async_dispatcher_t* loop_;
-  std::mutex wlanmac_lock_;
-  DevicePool<WlantapMac, kMaxMacDevices> wlanmac_devices_ __TA_GUARDED(wlanmac_lock_);
+  std::mutex wlan_softmac_lock_;
+  DevicePool<WlantapMac, kMaxMacDevices> wlan_softmac_devices_ __TA_GUARDED(wlan_softmac_lock_);
   std::mutex lock_;
   fidl::Binding<wlantap::WlantapPhy> user_binding_ __TA_GUARDED(lock_);
   size_t report_tx_status_count_ = 0;

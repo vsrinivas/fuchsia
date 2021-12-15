@@ -317,9 +317,9 @@ zx_status_t ath10k_pci_wait_for_target_init(struct ath10k* ar);
 zx_status_t ath10k_pci_setup_resource(struct ath10k* ar);
 void ath10k_pci_release_resource(struct ath10k* ar);
 void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* phy_info);
-void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info);
+void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* mac_info);
 
-extern wlanmac_protocol_ops_t wlanmac_ops;
+extern wlan_softmac_protocol_ops_t wlan_softmac_ops;
 
 /* QCA6174 is known to have Tx/Rx issues when SOC_WAKE register is poked too
  * frequently. To avoid this put SoC to sleep after a very conservative grace

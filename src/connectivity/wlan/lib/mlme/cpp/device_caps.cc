@@ -8,7 +8,8 @@
 
 namespace wlan {
 
-const wlan_info_band_info_t* FindBandByChannel(const wlanmac_info_t& device_info, uint8_t channel) {
+const wlan_info_band_info_t* FindBandByChannel(const wlan_softmac_info_t& device_info,
+                                               uint8_t channel) {
   for (size_t i = 0; i < device_info.bands_count; ++i) {
     for (auto& c : device_info.bands[i].supported_channels.channels) {
       if (c == channel) {
@@ -21,7 +22,7 @@ const wlan_info_band_info_t* FindBandByChannel(const wlanmac_info_t& device_info
   return nullptr;
 }
 
-const cpp20::span<const uint8_t> GetRatesByChannel(const wlanmac_info_t& device_info,
+const cpp20::span<const uint8_t> GetRatesByChannel(const wlan_softmac_info_t& device_info,
                                                    uint8_t channel) {
   const wlan_info_band_info_t* band = FindBandByChannel(device_info, channel);
   if (band == nullptr) {

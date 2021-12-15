@@ -2273,7 +2273,7 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
       .mac_frame_size = arg.buf_len,
       .info = rx_info,
   };
-  wlanmac_ifc_recv(&ar->wlanmac, &rx_packet);
+  wlan_softmac_ifc_recv(&ar->wlan_softmac, &rx_packet);
 
 maybe_free_buf:
   if (free_buf) {

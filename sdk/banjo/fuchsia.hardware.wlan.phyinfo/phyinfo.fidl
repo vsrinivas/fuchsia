@@ -56,7 +56,7 @@ type WlanInfoDriverFeature = strict enum : uint32 {
     SYNTH = 0x00000004;
 
     /// Driver supports transmission reports, and will use the
-    /// wlanmac_ifc.report_tx_status() callback to report the status of each queued
+    /// wlan_softmac_ifc.report_tx_status() callback to report the status of each queued
     /// transmission.
     TX_STATUS_REPORT = 0x00000008;
 

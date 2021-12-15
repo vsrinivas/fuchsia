@@ -61,7 +61,7 @@ std::string Describe(const VhtOperation& vht_op);
 std::string Describe(const ieee80211_ht_capabilities& ht_caps);
 std::string Describe(const wlan_info_channel_list& wl);
 std::string Describe(const wlan_info_band_info& bi);
-std::string Describe(const wlanmac_info& wi);
+std::string Describe(const wlan_softmac_info& wi);
 std::string Describe(const CapabilityInfo& cap);
 std::string Describe(const std::vector<SupportedRate> rates);
 

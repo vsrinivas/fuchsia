@@ -37,7 +37,7 @@ zx_status_t ApMlme::Init() {
 
   auto rust_device = rust_device_interface_t{
       .device = static_cast<void*>(this),
-      .start = [](void* mlme, const rust_wlanmac_ifc_protocol_copy_t* ifc,
+      .start = [](void* mlme, const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
                   zx_handle_t* out_sme_channel) -> zx_status_t {
         zx::channel channel;
         zx_status_t result = MLME(mlme)->device_->Start(ifc, &channel);
@@ -62,8 +62,8 @@ zx_status_t ApMlme::Init() {
       .set_key = [](void* mlme, wlan_key_config_t* key) -> zx_status_t {
         return MLME(mlme)->device_->SetKey(key);
       },
-      .get_wlanmac_info = [](void* mlme) -> wlanmac_info_t {
-        return MLME(mlme)->device_->GetWlanMacInfo();
+      .get_wlan_softmac_info = [](void* mlme) -> wlan_softmac_info_t {
+        return MLME(mlme)->device_->GetWlanSoftmacInfo();
       },
       .configure_bss = [](void* mlme, bss_config_t* cfg) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureBss(cfg);

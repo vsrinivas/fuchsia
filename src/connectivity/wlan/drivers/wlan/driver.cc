@@ -14,13 +14,14 @@
 zx_status_t wlan_bind(void* ctx, zx_device_t* device) {
   std::printf("%s\n", __func__);
 
-  wlanmac_protocol_t wlanmac_proto;
-  if (device_get_protocol(device, ZX_PROTOCOL_WLANMAC, reinterpret_cast<void*>(&wlanmac_proto))) {
-    std::printf("wlan: bind: no wlanmac protocol\n");
+  wlan_softmac_protocol_t wlan_softmac_proto;
+  if (device_get_protocol(device, ZX_PROTOCOL_WLAN_SOFTMAC,
+                          reinterpret_cast<void*>(&wlan_softmac_proto))) {
+    std::printf("wlan: bind: no wlan-softmac protocol\n");
     return ZX_ERR_INTERNAL;
   }
 
-  auto wlandev = std::make_unique<wlan::Device>(device, wlanmac_proto);
+  auto wlandev = std::make_unique<wlan::Device>(device, wlan_softmac_proto);
   auto status = wlandev->Bind();
   if (status != ZX_OK) {
     std::printf("wlan: could not bind: %d\n", status);

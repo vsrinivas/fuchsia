@@ -31,7 +31,7 @@ namespace wlan {
 
 class Device : public DeviceInterface {
  public:
-  Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto);
+  Device(zx_device_t* device, wlan_softmac_protocol_t wlan_softmac_proto);
   ~Device();
 
   zx_status_t Bind();
@@ -51,7 +51,7 @@ class Device : public DeviceInterface {
                                    size_t data_size);
 
   // DeviceInterface methods
-  zx_status_t Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
+  zx_status_t Start(const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
                     zx::channel* out_sme_channel) final;
   zx_status_t DeliverEthernet(cpp20::span<const uint8_t> eth_frame) final
       __TA_EXCLUDES(ethernet_proxy_lock_);
@@ -65,12 +65,12 @@ class Device : public DeviceInterface {
   zx_status_t SetKey(wlan_key_config_t* key_config) final;
   zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) final;
   zx_status_t ClearAssoc(const common::MacAddr& peer_addr) final;
-  zx_status_t StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+  zx_status_t StartPassiveScan(const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                uint64_t* out_scan_id) final;
-  zx_status_t StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+  zx_status_t StartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                               uint64_t* out_scan_id) final;
   fbl::RefPtr<DeviceState> GetState() final;
-  const wlanmac_info_t& GetWlanMacInfo() const final;
+  const wlan_softmac_info_t& GetWlanSoftmacInfo() const final;
 
  private:
   enum class DevicePacket : uint64_t {
@@ -102,7 +102,7 @@ class Device : public DeviceInterface {
   zx_device_t* parent_ = nullptr;
   zx_device_t* ethdev_ = nullptr;
 
-  ddk::WlanmacProtocolClient wlanmac_proxy_;
+  ddk::WlanSoftmacProtocolClient wlan_softmac_proxy_;
 
   std::mutex ethernet_proxy_lock_;
   ddk::EthernetIfcProtocolClient ethernet_proxy_ __TA_GUARDED(ethernet_proxy_lock_);
@@ -110,15 +110,15 @@ class Device : public DeviceInterface {
 
   // Manages the lifetime of the protocol struct we pass down to the vendor driver. Actual
   // calls to this protocol should only be performed by the vendor driver.
-  std::unique_ptr<wlanmac_ifc_protocol_ops_t> wlanmac_ifc_protocol_ops_;
+  std::unique_ptr<wlan_softmac_ifc_protocol_ops_t> wlan_softmac_ifc_protocol_ops_;
 
-  wlanmac_info_t wlanmac_info_ = {};
+  wlan_softmac_info_t wlan_softmac_info_ = {};
   fbl::RefPtr<DeviceState> state_;
 
   std::unique_ptr<Mlme> mlme_;
 };
 
-zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info);
+zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info);
 
 }  // namespace wlan
 

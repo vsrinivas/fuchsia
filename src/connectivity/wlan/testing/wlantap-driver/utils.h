@@ -23,7 +23,7 @@ uint16_t ConvertMacRole(::fuchsia::wlan::device::MacRole role);
 uint16_t ConvertMacRoles(::std::vector<::fuchsia::wlan::device::MacRole>& role);
 uint32_t ConvertCaps(const ::std::vector<::fuchsia::wlan::device::Capability>& caps);
 void ConvertBandInfo(const ::fuchsia::wlan::device::BandInfo& in, wlan_info_band_info_t* out);
-zx_status_t ConvertTapPhyConfig(wlanmac_info_t* mac_info,
+zx_status_t ConvertTapPhyConfig(wlan_softmac_info_t* mac_info,
                                 const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);
 zx_status_t ConvertTapPhyConfig(wlanphy_impl_info_t* phy_impl_info,
                                 const ::fuchsia::wlan::tap::WlantapPhyConfig& tap_phy_config);

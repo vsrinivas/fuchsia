@@ -15,17 +15,17 @@ namespace wlan {
 namespace testing {
 
 #define DEV(c) static_cast<IfaceDevice*>(c)
-static zx_protocol_device_t wlanmac_test_device_ops = {
+static zx_protocol_device_t wlan_softmac_test_device_ops = {
     .version = DEVICE_OPS_VERSION,
     .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
     .release = [](void* ctx) { DEV(ctx)->Release(); },
 };
 
-static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
-    .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
+static wlan_softmac_protocol_ops_t wlan_softmac_test_protocol_ops = {
+    .query = [](void* ctx, uint32_t options, wlan_softmac_info_t* info) -> zx_status_t {
       return DEV(ctx)->Query(options, info);
     },
-    .start = [](void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
+    .start = [](void* ctx, const wlan_softmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel)
         -> zx_status_t { return DEV(ctx)->Start(ifc, out_mlme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
     .queue_tx = [](void* ctx, uint32_t options, const wlan_tx_packet_t* pkt) -> zx_status_t {
@@ -61,11 +61,11 @@ zx_status_t IfaceDevice::Bind() {
 
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "wlanmac-test";
+  args.name = "wlan-softmac-test";
   args.ctx = this;
-  args.ops = &wlanmac_test_device_ops;
-  args.proto_id = ZX_PROTOCOL_WLANMAC;
-  args.proto_ops = &wlanmac_test_protocol_ops;
+  args.ops = &wlan_softmac_test_device_ops;
+  args.proto_id = ZX_PROTOCOL_WLAN_SOFTMAC;
+  args.proto_ops = &wlan_softmac_test_protocol_ops;
 
   zx_status_t status = device_add(parent_, &args, &zxdev_);
   if (status != ZX_OK) {
@@ -84,7 +84,7 @@ void IfaceDevice::Release() {
   delete this;
 }
 
-zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
+zx_status_t IfaceDevice::Query(uint32_t options, wlan_softmac_info_t* info) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Query()");
   memset(info, 0, sizeof(*info));
 
@@ -137,7 +137,8 @@ void IfaceDevice::Stop() {
   ifc_.ctx = nullptr;
 }
 
-zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
+zx_status_t IfaceDevice::Start(const wlan_softmac_ifc_protocol_t* ifc,
+                               zx_handle_t* out_mlme_channel) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Start()");
   std::lock_guard<std::mutex> lock(lock_);
   *out_mlme_channel = ZX_HANDLE_INVALID;

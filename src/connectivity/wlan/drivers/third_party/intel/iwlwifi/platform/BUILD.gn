@@ -94,8 +94,8 @@ source_set("fuchsia_device") {
     "mvm-mlme.h",
     "pcie-device.cc",
     "pcie-device.h",
-    "wlanmac-device.cc",
-    "wlanmac-device.h",
+    "wlan-softmac-device.cc",
+    "wlan-softmac-device.h",
     "wlanphy-impl-device.cc",
     "wlanphy-impl-device.h",
   ]

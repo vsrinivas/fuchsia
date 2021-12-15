@@ -473,7 +473,7 @@ struct iwl_mvm_vif {
   struct zx_device* zxdev;
   wlan_info_mac_role_t mac_role;
   zx_handle_t mlme_channel;  // Channel passed from devmgr. Will be passed to MLME at mac_start().
-  wlanmac_ifc_protocol_t ifc;
+  wlan_softmac_ifc_protocol_t ifc;
 
   // Merged from 'struct ieee80211_vif'
   bool ht_enabled;
@@ -1765,8 +1765,8 @@ ssize_t iwl_dbgfs_quota_status_read(struct file* file, char __user* user_buf, si
 #endif
 
 /* Scanning */
-zx_status_t iwl_mvm_reg_scan_start_passive(struct iwl_mvm_vif* mvmvif,
-                                           const wlanmac_passive_scan_args_t* passive_scan_args);
+zx_status_t iwl_mvm_reg_scan_start_passive(
+    struct iwl_mvm_vif* mvmvif, const wlan_softmac_passive_scan_args_t* passive_scan_args);
 zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* channel_list_buffer,
                                    size_t channel_list_size);
 int iwl_mvm_scan_size(struct iwl_mvm* mvm);
@@ -2145,7 +2145,7 @@ zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 void iwl_mvm_configure_filter(struct iwl_mvm* mvm);
 
 zx_status_t iwl_mvm_mac_hw_scan_passive(struct iwl_mvm_vif* mvmvif,
-                                        const wlanmac_passive_scan_args_t* passive_scan_args,
+                                        const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                         uint64_t* out_scan_id);
 
 zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* mvm_sta,

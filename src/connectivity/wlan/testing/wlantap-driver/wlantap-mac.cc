@@ -42,16 +42,16 @@ struct WlantapMacImpl : WlantapMac {
 
   static void DdkRelease(void* ctx) { delete static_cast<WlantapMacImpl*>(ctx); }
 
-  // Wlanmac protocol impl
+  // WlanSoftmac protocol impl
 
-  static zx_status_t WlanmacQuery(void* ctx, uint32_t options, wlanmac_info_t* mac_info) {
+  static zx_status_t WlanSoftmacQuery(void* ctx, uint32_t options, wlan_softmac_info_t* mac_info) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     ConvertTapPhyConfig(mac_info, *self.phy_config_);
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacStart(void* ctx, const wlanmac_ifc_protocol_t* ifc,
-                                  zx_handle_t* out_sme_channel) {
+  static zx_status_t WlanSoftmacStart(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
+                                      zx_handle_t* out_sme_channel) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     {
       std::lock_guard<std::mutex> guard(self.lock_);
@@ -61,14 +61,14 @@ struct WlantapMacImpl : WlantapMac {
       if (!self.sme_channel_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
       }
-      self.ifc_ = ddk::WlanmacIfcProtocolClient(ifc);
+      self.ifc_ = ddk::WlanSoftmacIfcProtocolClient(ifc);
     }
     self.listener_->WlantapMacStart(self.id_);
     *out_sme_channel = self.sme_channel_.release();
     return ZX_OK;
   }
 
-  static void WlanmacStop(void* ctx) {
+  static void WlanSoftmacStop(void* ctx) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     {
       std::lock_guard<std::mutex> guard(self.lock_);
@@ -77,13 +77,15 @@ struct WlantapMacImpl : WlantapMac {
     self.listener_->WlantapMacStop(self.id_);
   }
 
-  static zx_status_t WlanmacQueueTx(void* ctx, uint32_t options, const wlan_tx_packet_t* packet) {
+  static zx_status_t WlanSoftmacQueueTx(void* ctx, uint32_t options,
+                                        const wlan_tx_packet_t* packet) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     self.listener_->WlantapMacQueueTx(self.id_, packet);
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacSetChannel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
+  static zx_status_t WlanSoftmacSetChannel(void* ctx, uint32_t options,
+                                           const wlan_channel_t* channel) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -95,7 +97,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureBss(void* ctx, uint32_t options, const bss_config_t* config) {
+  static zx_status_t WlanSoftmacConfigureBss(void* ctx, uint32_t options,
+                                             const bss_config_t* config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -108,8 +111,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacEnableBeaconing(void* ctx, uint32_t options,
-                                            const wlan_bcn_config_t* bcn_cfg) {
+  static zx_status_t WlanSoftmacEnableBeaconing(void* ctx, uint32_t options,
+                                                const wlan_bcn_config_t* bcn_cfg) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -118,8 +121,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureBeacon(void* ctx, uint32_t options,
-                                            const wlan_tx_packet_t* pkt) {
+  static zx_status_t WlanSoftmacConfigureBeacon(void* ctx, uint32_t options,
+                                                const wlan_tx_packet_t* pkt) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -128,8 +131,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacSetKey(void* ctx, uint32_t options,
-                                   const wlan_key_config_t* key_config) {
+  static zx_status_t WlanSoftmacSetKey(void* ctx, uint32_t options,
+                                       const wlan_key_config_t* key_config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -138,8 +141,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureAssoc(void* ctx, uint32_t options,
-                                           const wlan_assoc_ctx* assoc_ctx) {
+  static zx_status_t WlanSoftmacConfigureAssoc(void* ctx, uint32_t options,
+                                               const wlan_assoc_ctx* assoc_ctx) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -149,7 +152,7 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacClearAssoc(
+  static zx_status_t WlanSoftmacClearAssoc(
       void* ctx, uint32_t options, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -211,7 +214,7 @@ struct WlantapMacImpl : WlantapMac {
   uint16_t id_;
   wlan_device::MacRole role_;
   std::mutex lock_;
-  ddk::WlanmacIfcProtocolClient ifc_ __TA_GUARDED(lock_);
+  ddk::WlanSoftmacIfcProtocolClient ifc_ __TA_GUARDED(lock_);
   const wlantap::WlantapPhyConfig* phy_config_;
   Listener* listener_;
   zx::channel sme_channel_;
@@ -225,37 +228,37 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole
                              WlantapMac** ret) {
   char name[ZX_MAX_NAME_LEN + 1];
   snprintf(name, sizeof(name), "mac%u", id);
-  std::unique_ptr<WlantapMacImpl> wlanmac(
+  std::unique_ptr<WlantapMacImpl> wlan_softmac(
       new WlantapMacImpl(parent_phy, id, role, phy_config, listener, std::move(sme_channel)));
   static zx_protocol_device_t device_ops = {.version = DEVICE_OPS_VERSION,
                                             .unbind = &WlantapMacImpl::DdkUnbind,
                                             .release = &WlantapMacImpl::DdkRelease};
-  static wlanmac_protocol_ops_t proto_ops = {
-      .query = &WlantapMacImpl::WlanmacQuery,
-      .start = &WlantapMacImpl::WlanmacStart,
-      .stop = &WlantapMacImpl::WlanmacStop,
-      .queue_tx = &WlantapMacImpl::WlanmacQueueTx,
-      .set_channel = &WlantapMacImpl::WlanmacSetChannel,
-      .configure_bss = &WlantapMacImpl::WlanmacConfigureBss,
-      .enable_beaconing = &WlantapMacImpl::WlanmacEnableBeaconing,
-      .configure_beacon = &WlantapMacImpl::WlanmacConfigureBeacon,
-      .set_key = &WlantapMacImpl::WlanmacSetKey,
-      .configure_assoc = &WlantapMacImpl::WlanmacConfigureAssoc,
-      .clear_assoc = &WlantapMacImpl::WlanmacClearAssoc,
+  static wlan_softmac_protocol_ops_t proto_ops = {
+      .query = &WlantapMacImpl::WlanSoftmacQuery,
+      .start = &WlantapMacImpl::WlanSoftmacStart,
+      .stop = &WlantapMacImpl::WlanSoftmacStop,
+      .queue_tx = &WlantapMacImpl::WlanSoftmacQueueTx,
+      .set_channel = &WlantapMacImpl::WlanSoftmacSetChannel,
+      .configure_bss = &WlantapMacImpl::WlanSoftmacConfigureBss,
+      .enable_beaconing = &WlantapMacImpl::WlanSoftmacEnableBeaconing,
+      .configure_beacon = &WlantapMacImpl::WlanSoftmacConfigureBeacon,
+      .set_key = &WlantapMacImpl::WlanSoftmacSetKey,
+      .configure_assoc = &WlantapMacImpl::WlanSoftmacConfigureAssoc,
+      .clear_assoc = &WlantapMacImpl::WlanSoftmacClearAssoc,
   };
   device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
                             .name = name,
-                            .ctx = wlanmac.get(),
+                            .ctx = wlan_softmac.get(),
                             .ops = &device_ops,
-                            .proto_id = ZX_PROTOCOL_WLANMAC,
+                            .proto_id = ZX_PROTOCOL_WLAN_SOFTMAC,
                             .proto_ops = &proto_ops};
-  zx_status_t status = device_add(parent_phy, &args, &wlanmac->device_);
+  zx_status_t status = device_add(parent_phy, &args, &wlan_softmac->device_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not add device: %d", __func__, status);
     return status;
   }
   // Transfer ownership to devmgr
-  *ret = wlanmac.release();
+  *ret = wlan_softmac.release();
   return ZX_OK;
 }
 

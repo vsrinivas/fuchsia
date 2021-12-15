@@ -107,7 +107,7 @@ type SetCountryArgs = struct {
 /// Allow the test program to observe and control the behavior of the wlantap-phy device.
 /// A wlantap-phy device is a special vendor device and its driver (Fuchsia being the vendor)
 /// used for testing purpose.
-/// Implements a subset of `wlanmac_ifc_t` and `wlanmac_protocol_ops_t` defined in
+/// Implements a subset of `wlan_softmac_ifc_t` and `wlan_softmac_protocol_ops_t` defined in
 /// fuchsia.hardware.wlan.softmac/mac.fidl
 /// Implements a subset of `WlanphyImpl` protocol defined in
 /// fuchsia.hardware.wlanphyimpl/wlanphy-impl.fidl
@@ -117,29 +117,29 @@ protocol WlantapPhy {
     /// It can only be called at the end of a test.
     Shutdown() -> ();
 
-    // wlanmac_ifc_t callbacks
+    // wlan_softmac_ifc_t callbacks
     // simulating events happening at the devices side that are passed up to the driver.
 
     /// The device "receives" a frame "over the air" and pass it up to driver.
     Rx(struct {
-        wlanmac_id uint16;
+        wlan_softmac_id uint16;
         data vector<uint8>;
         info WlanRxInfo;
     });
     /// The device report its status to the driver. (Not used).
     Status(struct {
-        wlanmac_id uint16;
+        wlan_softmac_id uint16;
         st uint32;
     });
     /// For rate selection (Minstrel), the device's last frame transmission is a success/failure,
     /// with a certain number of retries.
     ReportTxStatus(struct {
-        wlanmac_id uint16;
+        wlan_softmac_id uint16;
         txs WlanTxStatus;
     });
 
-    // wlanmac_protocol_ops_t
-    // events indicating that the wlanmac device received interface request calls from the driver.
+    // wlan_softmac_protocol_ops_t
+    // events indicating that the wlan-softmac device received interface request calls from the driver.
 
     /// The device is to send a frame "over the air".
     -> Tx(struct {
@@ -148,8 +148,8 @@ protocol WlantapPhy {
     /// The device created by its parent device (wlantap-phy: wlanphy) is
     /// detected and being connected by wlanstack/wlancfg.
     /// The device is to enter the "running" state.
-    -> WlanmacStart(struct {
-        args WlanmacStartArgs;
+    -> WlanSoftmacStart(struct {
+        args WlanSoftmacStartArgs;
     });
     /// The device is to switch to the specified channel.
     -> SetChannel(struct {
@@ -179,25 +179,25 @@ protocol WlantapPhy {
 };
 
 type TxArgs = struct {
-    wlanmac_id uint16;
+    wlan_softmac_id uint16;
     packet WlanTxPacket;
 };
 
 type SetChannelArgs = struct {
-    wlanmac_id uint16;
+    wlan_softmac_id uint16;
     channel fuchsia.wlan.common.WlanChannel;
 };
 
 type ConfigureBssArgs = struct {
-    wlanmac_id uint16;
+    wlan_softmac_id uint16;
     config fuchsia.wlan.internal.BssConfig;
 };
 
 type SetKeyArgs = struct {
-    wlanmac_id uint16;
+    wlan_softmac_id uint16;
     config WlanKeyConfig;
 };
 
-type WlanmacStartArgs = struct {
-    wlanmac_id uint16;
+type WlanSoftmacStartArgs = struct {
+    wlan_softmac_id uint16;
 };

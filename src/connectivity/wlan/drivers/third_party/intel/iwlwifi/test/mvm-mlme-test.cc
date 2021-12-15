@@ -33,7 +33,7 @@ static constexpr size_t kListenInterval = 100;
 
 typedef mock_function::MockFunction<void, void*, const wlan_rx_packet_t*> recv_cb_t;
 
-// The wrapper used by wlanmac_ifc_t.recv() to call mock-up.
+// The wrapper used by wlan_softmac_ifc_t.recv() to call mock-up.
 void recv_wrapper(void* cookie, const wlan_rx_packet_t* packet) {
   auto recv = reinterpret_cast<recv_cb_t*>(cookie);
   recv->Call(cookie, packet);
@@ -177,13 +177,14 @@ TEST_F(WlanDeviceTest, MacQuery) {
   // Test input null pointers
   uint32_t options = 0;
   void* whatever = &options;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.query(nullptr, options, nullptr));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.query(whatever, options, nullptr));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
-            wlanmac_ops.query(nullptr, options, reinterpret_cast<wlanmac_info*>(whatever)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.query(nullptr, options, nullptr));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.query(whatever, options, nullptr));
+  ASSERT_EQ(
+      ZX_ERR_INVALID_ARGS,
+      wlan_softmac_ops.query(nullptr, options, reinterpret_cast<wlan_softmac_info*>(whatever)));
 
-  wlanmac_info_t info = {};
-  ASSERT_EQ(ZX_OK, wlanmac_ops.query(&mvmvif_sta_, options, &info));
+  wlan_softmac_info_t info = {};
+  ASSERT_EQ(ZX_OK, wlan_softmac_ops.query(&mvmvif_sta_, options, &info));
   EXPECT_EQ(WLAN_INFO_MAC_ROLE_CLIENT, info.mac_role);
 
   //
@@ -202,19 +203,19 @@ TEST_F(WlanDeviceTest, MacQuery) {
 
 TEST_F(WlanDeviceTest, MacStart) {
   // Test input null pointers
-  wlanmac_ifc_protocol_ops_t proto_ops = {
+  wlan_softmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
-  wlanmac_ifc_protocol_t ifc = {.ops = &proto_ops};
+  wlan_softmac_ifc_protocol_t ifc = {.ops = &proto_ops};
   zx_handle_t mlme_channel;
-  ASSERT_EQ(wlanmac_ops.start(nullptr, &ifc, &mlme_channel), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, nullptr, &mlme_channel), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlan_softmac_ops.start(nullptr, &ifc, &mlme_channel), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, nullptr, &mlme_channel), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, nullptr), ZX_ERR_INVALID_ARGS);
 
   // Test callback function
-  recv_cb_t mock_recv;  // To mock up the wlanmac_ifc_t.recv().
+  recv_cb_t mock_recv;  // To mock up the wlan_softmac_ifc_t.recv().
   mvmvif_sta_.mlme_channel = mlme_channel_;
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
+  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
   // Expect the above line would copy the 'ifc'. Then set expectation below and fire test.
   mock_recv.ExpectCall(&mock_recv, nullptr);
   mvmvif_sta_.ifc.ops->recv(&mock_recv, nullptr);
@@ -225,17 +226,17 @@ TEST_F(WlanDeviceTest, MacStartSmeChannel) {
   // The normal case. A channel will be transferred to MLME.
   constexpr zx_handle_t from_devmgr = mlme_channel_;
   mvmvif_sta_.mlme_channel = from_devmgr;
-  wlanmac_ifc_protocol_ops_t proto_ops = {
+  wlan_softmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
-  wlanmac_ifc_protocol_t ifc = {.ops = &proto_ops};
+  wlan_softmac_ifc_protocol_t ifc = {.ops = &proto_ops};
   zx_handle_t mlme_channel;
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
+  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_OK);
   ASSERT_EQ(mlme_channel, from_devmgr);                    // The channel handle is returned.
   ASSERT_EQ(mvmvif_sta_.mlme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
 
   // Since the driver no longer owns the handle, the start should fail.
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_ERR_ALREADY_BOUND);
+  ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc, &mlme_channel), ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(WlanDeviceTest, MacRelease) {
@@ -420,7 +421,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
   MacInterfaceTest() : ifc_{ .ops = &proto_ops_, } , proto_ops_{ .recv = recv_wrapper, } {
     mvmvif_sta_.mlme_channel = mlme_channel_;
     zx_handle_t mlme_channel;
-    ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc_, &mlme_channel), ZX_OK);
+    ASSERT_EQ(wlan_softmac_ops.start(&mvmvif_sta_, &ifc_, &mlme_channel), ZX_OK);
 
     // Add the interface to MVM instance.
     mvmvif_sta_.mvm->mvmvif[0] = &mvmvif_sta_;
@@ -437,7 +438,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     // Stop the MAC to free resources we allocated.
     // This must be called after we verify the expected commands and restore the mock command
     // callback so that the stop command doesn't mess up the test case expectation.
-    wlanmac_ops.stop(&mvmvif_sta_);
+    wlan_softmac_ops.stop(&mvmvif_sta_);
     VerifyStaHasBeenRemoved();
   }
 
@@ -480,30 +481,30 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
  protected:
   zx_status_t SetChannel(const wlan_channel_t* channel) {
     uint32_t option = 0;
-    return wlanmac_ops.set_channel(&mvmvif_sta_, option, channel);
+    return wlan_softmac_ops.set_channel(&mvmvif_sta_, option, channel);
   }
 
   zx_status_t ConfigureBss(const bss_config_t* config) {
     uint32_t option = 0;
-    return wlanmac_ops.configure_bss(&mvmvif_sta_, option, config);
+    return wlan_softmac_ops.configure_bss(&mvmvif_sta_, option, config);
   }
 
   zx_status_t ConfigureAssoc(const wlan_assoc_ctx_t* config) {
     uint32_t option = 0;
-    return wlanmac_ops.configure_assoc(&mvmvif_sta_, option, config);
+    return wlan_softmac_ops.configure_assoc(&mvmvif_sta_, option, config);
   }
 
   zx_status_t ClearAssoc() {
     uint32_t option = 0;
     uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN];  // Not used since all info were
                                                              // saved in mvmvif_sta_ already.
-    return wlanmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr);
+    return wlan_softmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr);
   }
 
   zx_status_t SetKey(const wlan_key_config_t* key_config) {
     uint32_t option = 0;
     IWL_INFO(nullptr, "Calling set_key");
-    return wlanmac_ops.set_key(&mvmvif_sta_, option, key_config);
+    return wlan_softmac_ops.set_key(&mvmvif_sta_, option, key_config);
   }
   // The following functions are for mocking up the firmware commands.
   //
@@ -583,8 +584,8 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
                                WIDE_ID(dev_cmd->hdr.group_id, dev_cmd->hdr.cmd), txq_id);
   }
 
-  wlanmac_ifc_protocol_t ifc_;
-  wlanmac_ifc_protocol_ops_t proto_ops_;
+  wlan_softmac_ifc_protocol_t ifc_;
+  wlan_softmac_ifc_protocol_ops_t proto_ops_;
   static constexpr bss_config_t kBssConfig = {
       .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
       .bss_type = BSS_TYPE_INFRASTRUCTURE,
@@ -901,7 +902,7 @@ TEST_F(MacInterfaceTest, TxPktTooLong) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -916,7 +917,7 @@ TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
   bindTx(tx_wrapper);
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlan_softmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 
@@ -930,7 +931,7 @@ TEST_F(MacInterfaceTest, TxPkt) {
   WlanPktBuilder builder;
   std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
   mock_tx_.ExpectCall(ZX_OK, wlan_pkt->len(), WIDE_ID(0, TX_CMD), IWL_MVM_DQA_MIN_MGMT_QUEUE);
-  ASSERT_EQ(ZX_OK, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  ASSERT_EQ(ZX_OK, wlan_softmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
   unbindTx();
 }
 

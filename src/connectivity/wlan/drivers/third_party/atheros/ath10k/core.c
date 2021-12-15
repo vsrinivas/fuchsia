@@ -51,7 +51,7 @@ bool skip_otp = false;
 // Use raw 802.11 frame datapath
 bool rawmode = false;
 
-const char* device_name = "ath10k-wlanmac";
+const char* device_name = "ath10k-wlan-softmac";
 
 static const struct ath10k_hw_params ath10k_hw_params_list[] = {
     {
@@ -2116,7 +2116,7 @@ void ath10k_core_stop(struct ath10k* ar) {
 }
 
 /* In order to know what hw capabilities should be advertised, we have to load the
- * firmware. Rather than tear it down immediately and re-load it when wlanmac's
+ * firmware. Rather than tear it down immediately and re-load it when wlan-softmac's
  * start() is invoked, we just keep it running. Note that this behavior is subject
  * to change in the future (see fxbug.dev/29274).
  */
@@ -2324,8 +2324,8 @@ static zx_status_t ath10k_core_create_iface(void* ctx, const wlanphy_impl_create
       .name = device_name,
       .ctx = ar,
       .ops = &device_mac_ops,
-      .proto_id = ZX_PROTOCOL_WLANMAC,
-      .proto_ops = &wlanmac_ops,
+      .proto_id = ZX_PROTOCOL_WLAN_SOFTMAC,
+      .proto_ops = &wlan_softmac_ops,
   };
 
   // Add this MAC device into the tree. The parent device is the PHY device.

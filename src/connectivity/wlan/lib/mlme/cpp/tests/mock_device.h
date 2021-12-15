@@ -89,7 +89,8 @@ struct MockDevice : public DeviceInterface {
   using PacketList = std::vector<WlanPacket>;
   using KeyList = std::vector<wlan_key_config_t>;
 
-  MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_{} {
+  MockDevice(common::MacAddr addr = common::MacAddr(kClientAddress)) : sta_assoc_ctx_ {}
+  {
     auto [sme, mlme] = make_channel();
     sme_ = fidl::InterfaceHandle<fuchsia::wlan::mlme::MLME>(std::move(sme)).BindSync();
     mlme_ = std::make_optional(std::move(mlme));
@@ -97,15 +98,15 @@ struct MockDevice : public DeviceInterface {
     state = fbl::AdoptRef(new DeviceState);
     state->set_address(addr);
 
-    memcpy(wlanmac_info.sta_addr, addr.byte, 6);
-    wlanmac_info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
-    wlanmac_info.supported_phys =
+    memcpy(wlan_softmac_info.sta_addr, addr.byte, 6);
+    wlan_softmac_info.mac_role = WLAN_INFO_MAC_ROLE_CLIENT;
+    wlan_softmac_info.supported_phys =
         WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
-    wlanmac_info.driver_features = 0;
-    wlanmac_info.bands_count = 2;
-    wlanmac_info.bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
-    wlanmac_info.bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
-    wlanmac_info.caps = 0;
+    wlan_softmac_info.driver_features = 0;
+    wlan_softmac_info.bands_count = 2;
+    wlan_softmac_info.bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
+    wlan_softmac_info.bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
+    wlan_softmac_info.caps = 0;
     state->set_channel({
         .primary = 1,
         .cbw = CHANNEL_BANDWIDTH_CBW20,
@@ -114,14 +115,14 @@ struct MockDevice : public DeviceInterface {
 
   // DeviceInterface implementation.
 
-  zx_status_t Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
+  zx_status_t Start(const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
                     zx::channel* out_sme_channel) final {
     protocol_ = std::make_optional(
-        wlanmac_ifc_protocol_ops_t{.status = ifc->ops->status,
-                                   .recv = ifc->ops->recv,
-                                   .complete_tx = ifc->ops->complete_tx,
-                                   .report_tx_status = ifc->ops->report_tx_status,
-                                   .scan_complete = ifc->ops->scan_complete});
+        wlan_softmac_ifc_protocol_ops_t{.status = ifc->ops->status,
+                                        .recv = ifc->ops->recv,
+                                        .complete_tx = ifc->ops->complete_tx,
+                                        .report_tx_status = ifc->ops->report_tx_status,
+                                        .scan_complete = ifc->ops->scan_complete});
     protocol_ctx_ = ifc->ctx;
     if (mlme_->is_valid()) {
       *out_sme_channel = std::move(mlme_.value());
@@ -182,12 +183,12 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+  zx_status_t StartPassiveScan(const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                uint64_t* scan_id) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+  zx_status_t StartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                               uint64_t* scan_id) final {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -203,7 +204,7 @@ struct MockDevice : public DeviceInterface {
 
   fbl::RefPtr<DeviceState> GetState() final { return state; }
 
-  const wlanmac_info_t& GetWlanMacInfo() const final { return wlanmac_info; }
+  const wlan_softmac_info_t& GetWlanSoftmacInfo() const final { return wlan_softmac_info; }
 
   // Convenience methods.
 
@@ -280,7 +281,7 @@ struct MockDevice : public DeviceInterface {
   }
 
   fbl::RefPtr<DeviceState> state;
-  wlanmac_info_t wlanmac_info;
+  wlan_softmac_info_t wlan_softmac_info;
   PacketList wlan_queue;
   std::vector<std::vector<uint8_t>> svc_queue;
   std::vector<std::vector<uint8_t>> eth_queue;
@@ -291,7 +292,7 @@ struct MockDevice : public DeviceInterface {
   wlan_assoc_ctx_t sta_assoc_ctx_;
   fidl::SynchronousInterfacePtr<fuchsia::wlan::mlme::MLME> sme_;
   std::optional<zx::channel> mlme_;
-  std::optional<wlanmac_ifc_protocol_ops_t> protocol_;
+  std::optional<wlan_softmac_ifc_protocol_ops_t> protocol_;
   void* protocol_ctx_;
 };
 

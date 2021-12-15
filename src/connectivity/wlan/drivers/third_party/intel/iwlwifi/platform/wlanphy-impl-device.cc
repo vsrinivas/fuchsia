@@ -13,7 +13,7 @@ extern "C" {
 }  // extern "C"
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanmac-device.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlan-softmac-device.h"
 
 namespace wlan::iwlwifi {
 
@@ -45,14 +45,15 @@ zx_status_t WlanphyImplDevice::WlanphyImplCreateIface(const wlanphy_impl_create_
   struct iwl_mvm* mvm = iwl_trans_get_mvm(drvdata());
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[*out_iface_id];
 
-  auto wlanmac_device = std::make_unique<WlanmacDevice>(parent(), drvdata(), *out_iface_id, mvmvif);
+  auto wlan_softmac_device =
+      std::make_unique<WlanSoftmacDevice>(parent(), drvdata(), *out_iface_id, mvmvif);
 
-  if ((status = wlanmac_device->DdkAdd("iwlwifi-wlanmac")) != ZX_OK) {
+  if ((status = wlan_softmac_device->DdkAdd("iwlwifi-wlan-softmac")) != ZX_OK) {
     IWL_ERR(this, "%s() failed mac device add: %s\n", __func__, zx_status_get_string(status));
     phy_create_iface_undo(drvdata(), *out_iface_id);
     return status;
   }
-  wlanmac_device.release();
+  wlan_softmac_device.release();
   return ZX_OK;
 }
 

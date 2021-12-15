@@ -650,7 +650,7 @@ std::string Describe(const wlan_info_band_info& bi) {
   return std::string(buf);
 }
 
-std::string Describe(const wlanmac_info& wi) {
+std::string Describe(const wlan_softmac_info& wi) {
   char buf[2048];
   size_t offset = 0;
 

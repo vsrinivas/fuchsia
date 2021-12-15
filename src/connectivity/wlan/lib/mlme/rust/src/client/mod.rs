@@ -138,7 +138,7 @@ impl ClientMlme {
     ) -> Self {
         logger::init();
 
-        let iface_mac = device.wlanmac_info().sta_addr;
+        let iface_mac = device.wlan_softmac_info().sta_addr;
         Self {
             sta: None,
             ctx: Context { config, device, buf_provider, timer, seq_mgr: SequenceManager::new() },
@@ -283,7 +283,7 @@ impl ClientMlme {
                 self.sta.replace(Client::new(
                     bss.ssid.clone(),
                     bss.bssid,
-                    self.ctx.device.wlanmac_info().sta_addr,
+                    self.ctx.device.wlan_softmac_info().sta_addr,
                     bss.beacon_period,
                     bss.rsne().is_some()
                     // TODO (fxb/61020): Add detection of WPA1 in softmac for testing
@@ -359,8 +359,8 @@ impl ClientMlme {
         &self,
         responder: fidl_mlme::MlmeQueryDeviceInfoResponder,
     ) -> Result<(), Error> {
-        let wlanmac_info = self.ctx.device.wlanmac_info();
-        let mut info = crate::ddk_converter::device_info_from_wlanmac_info(wlanmac_info)?;
+        let wlan_softmac_info = self.ctx.device.wlan_softmac_info();
+        let mut info = crate::ddk_converter::device_info_from_wlan_softmac_info(wlan_softmac_info)?;
         responder.send(&mut info).map_err(|e| e.into())
     }
 

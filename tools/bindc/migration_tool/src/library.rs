@@ -140,7 +140,7 @@ pub fn rename_and_add<'a>(libraries: &mut HashSet<Library>, original: &'a str) -
             libraries.insert(Library::Wlan);
             "fuchsia.wlan.BIND_PROTOCOL.IF_IMPL"
         }
-        "ZX_PROTOCOL_WLANMAC" => {
+        "ZX_PROTOCOL_WLAN_SOFTMAC" => {
             libraries.insert(Library::Wlan);
             "fuchsia.wlan.BIND_PROTOCOL.MAC"
         }

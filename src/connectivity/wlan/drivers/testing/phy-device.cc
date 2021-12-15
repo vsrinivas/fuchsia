@@ -162,7 +162,7 @@ void PhyDevice::CreateIface(wlan_device::CreateIfaceRequest req, CreateIfaceCall
   auto macdev = std::make_unique<IfaceDevice>(zxdev_, role);
   zx_status_t status = macdev->Bind();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "could not bind child wlanmac device: %d", status);
+    zxlogf(ERROR, "could not bind child wlan-softmac device: %d", status);
     resp.status = status;
     callback(std::move(resp));
     return;

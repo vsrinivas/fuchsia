@@ -13,9 +13,10 @@
 
 namespace wlan {
 
-const wlan_info_band_info_t* FindBandByChannel(const wlanmac_info_t& device_info, uint8_t channel);
+const wlan_info_band_info_t* FindBandByChannel(const wlan_softmac_info_t& device_info,
+                                               uint8_t channel);
 
-const cpp20::span<const uint8_t> GetRatesByChannel(const wlanmac_info_t& device_info,
+const cpp20::span<const uint8_t> GetRatesByChannel(const wlan_softmac_info_t& device_info,
                                                    uint8_t channel);
 
 }  // namespace wlan

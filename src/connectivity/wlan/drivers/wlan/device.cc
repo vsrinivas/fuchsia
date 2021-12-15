@@ -63,8 +63,8 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
 };
 #undef DEV
 
-Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
-    : parent_(device), wlanmac_proxy_(&wlanmac_proto) {
+Device::Device(zx_device_t* device, wlan_softmac_protocol_t wlan_softmac_proto)
+    : parent_(device), wlan_softmac_proxy_(&wlan_softmac_proto) {
   infof("Creating a new WLAN device.\n");
   debugfn();
   state_ = fbl::AdoptRef(new DeviceState);
@@ -80,23 +80,23 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   debugfn();
   infof("Binding our new WLAN device.\n");
 
-  zx_status_t status = wlanmac_proxy_.Query(0, &wlanmac_info_);
+  zx_status_t status = wlan_softmac_proxy_.Query(0, &wlan_softmac_info_);
   if (status != ZX_OK) {
-    errorf("could not query wlanmac device: %d\n", status);
+    errorf("could not query wlan-softmac device: %d\n", status);
     return status;
   }
 
-  status = ValidateWlanMacInfo(wlanmac_info_);
+  status = ValidateWlanSoftmacInfo(wlan_softmac_info_);
   if (status != ZX_OK) {
-    errorf("could not bind wlanmac device with invalid wlanmac info\n");
+    errorf("could not bind wlan-softmac device with invalid wlan-softmac info\n");
     return status;
   }
 
-  state_->set_address(common::MacAddr(wlanmac_info_.sta_addr));
+  state_->set_address(common::MacAddr(wlan_softmac_info_.sta_addr));
 
   // mac_role is a bitfield, but only a single value is supported for an
   // interface
-  switch (wlanmac_info_.mac_role) {
+  switch (wlan_softmac_info_.mac_role) {
     case WLAN_INFO_MAC_ROLE_CLIENT:
       infof("Initialize a client MLME.\n");
       mlme_.reset(new ClientMlme(this, ClientMlmeDefaultConfig()));
@@ -107,7 +107,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
       break;
     // TODO(fxbug.dev/44485): Add support for WLAN_INFO_MAC_ROLE_MESH.
     default:
-      errorf("unsupported MAC role: %u\n", wlanmac_info_.mac_role);
+      errorf("unsupported MAC role: %u\n", wlan_softmac_info_.mac_role);
       return ZX_ERR_NOT_SUPPORTED;
   }
   ZX_DEBUG_ASSERT(mlme_ != nullptr);
@@ -174,7 +174,7 @@ void Device::ShutdownMainLoop() {
 void Device::EthUnbind() {
   debugfn();
   ShutdownMainLoop();
-  wlanmac_proxy_.Stop();
+  wlan_softmac_proxy_.Stop();
   device_async_remove(ethdev_);
 }
 
@@ -192,9 +192,9 @@ zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
     return ZX_ERR_INVALID_ARGS;
 
   memset(info, 0, sizeof(*info));
-  memcpy(info->mac, wlanmac_info_.sta_addr, ETH_MAC_SIZE);
+  memcpy(info->mac, wlan_softmac_info_.sta_addr, ETH_MAC_SIZE);
   info->features = ETHERNET_FEATURE_WLAN;
-  if (wlanmac_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
+  if (wlan_softmac_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SYNTH) {
     info->features |= ETHERNET_FEATURE_SYNTH;
   }
   info->mtu = 1500;
@@ -269,13 +269,13 @@ zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value, const vo
   return status;
 }
 
-zx_status_t Device::Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
+zx_status_t Device::Start(const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
                           zx::channel* out_sme_channel) {
   debugf("Start");
 
   // We manually populate the protocol ops here so that we can verify at compile time that our rust
   // bindings have the expected parameters.
-  wlanmac_ifc_protocol_ops_.reset(new wlanmac_ifc_protocol_ops_t{
+  wlan_softmac_ifc_protocol_ops_.reset(new wlan_softmac_ifc_protocol_ops_t{
       .status = ifc->ops->status,
       .recv = ifc->ops->recv,
       .complete_tx = ifc->ops->complete_tx,
@@ -283,7 +283,7 @@ zx_status_t Device::Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
       .scan_complete = ifc->ops->scan_complete,
   });
 
-  return wlanmac_proxy_.Start(ifc->ctx, wlanmac_ifc_protocol_ops_.get(), out_sme_channel);
+  return wlan_softmac_proxy_.Start(ifc->ctx, wlan_softmac_ifc_protocol_ops_.get(), out_sme_channel);
 }
 
 zx_status_t Device::DeliverEthernet(cpp20::span<const uint8_t> eth_frame) {
@@ -304,9 +304,9 @@ zx_status_t Device::QueueTx(uint32_t options, std::unique_ptr<Packet> packet,
   ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
   packet->CopyCtrlFrom(tx_info);
   wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
-  auto status = wlanmac_proxy_.QueueTx(options, &tx_pkt);
-  // TODO(tkilbourn): remove this once we implement WlanmacCompleteTx and allow
-  // wlanmac drivers to complete transmits asynchronously.
+  auto status = wlan_softmac_proxy_.QueueTx(options, &tx_pkt);
+  // TODO(tkilbourn): remove this once we implement WlanSoftmacCompleteTx and allow
+  // wlan-softmac drivers to complete transmits asynchronously.
   ZX_DEBUG_ASSERT(status != ZX_ERR_SHOULD_WAIT);
 
   return status;
@@ -327,7 +327,7 @@ zx_status_t Device::SetChannel(wlan_channel_t channel) __TA_NO_THREAD_SAFETY_ANA
   snprintf(buf, sizeof(buf), "channel set: from %s to %s",
            common::ChanStr(state_->channel()).c_str(), common::ChanStr(channel).c_str());
 
-  zx_status_t status = wlanmac_proxy_.SetChannel(0u, &channel);
+  zx_status_t status = wlan_softmac_proxy_.SetChannel(0u, &channel);
   if (status != ZX_OK) {
     errorf("%s change failed (status %d)\n", buf, status);
     return status;
@@ -347,7 +347,9 @@ zx_status_t Device::SetStatus(uint32_t status) {
   return ZX_OK;
 }
 
-zx_status_t Device::ConfigureBss(bss_config_t* cfg) { return wlanmac_proxy_.ConfigureBss(0u, cfg); }
+zx_status_t Device::ConfigureBss(bss_config_t* cfg) {
+  return wlan_softmac_proxy_.ConfigureBss(0u, cfg);
+}
 
 zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
   if (bcn_cfg != nullptr) {
@@ -356,7 +358,7 @@ zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
                       {reinterpret_cast<const uint8_t*>(bcn_cfg->packet_template.mac_frame_buffer),
                        bcn_cfg->packet_template.mac_frame_size}));
   }
-  return wlanmac_proxy_.EnableBeaconing(0u, bcn_cfg);
+  return wlan_softmac_proxy_.EnableBeaconing(0u, bcn_cfg);
 }
 
 zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
@@ -368,38 +370,38 @@ zx_status_t Device::ConfigureBeacon(std::unique_ptr<Packet> beacon) {
   ZX_DEBUG_ASSERT(ValidateFrame("Malformed beacon template", *beacon));
 
   wlan_tx_packet_t tx_packet = beacon->AsWlanTxPacket();
-  return wlanmac_proxy_.ConfigureBeacon(0u, &tx_packet);
+  return wlan_softmac_proxy_.ConfigureBeacon(0u, &tx_packet);
 }
 
 zx_status_t Device::SetKey(wlan_key_config_t* key_config) {
-  return wlanmac_proxy_.SetKey(0u, key_config);
+  return wlan_softmac_proxy_.SetKey(0u, key_config);
 }
 
-zx_status_t Device::StartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+zx_status_t Device::StartPassiveScan(const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                      uint64_t* out_scan_id) {
-  return wlanmac_proxy_.StartPassiveScan(passive_scan_args, out_scan_id);
+  return wlan_softmac_proxy_.StartPassiveScan(passive_scan_args, out_scan_id);
 }
 
-zx_status_t Device::StartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+zx_status_t Device::StartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                                     uint64_t* out_scan_id) {
-  return wlanmac_proxy_.StartActiveScan(active_scan_args, out_scan_id);
+  return wlan_softmac_proxy_.StartActiveScan(active_scan_args, out_scan_id);
 }
 
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
-  return wlanmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
+  return wlan_softmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
 }
 
 zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
-  return wlanmac_proxy_.ClearAssoc(0u, peer_addr.byte);
+  return wlan_softmac_proxy_.ClearAssoc(0u, peer_addr.byte);
 }
 
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }
 
-const wlanmac_info_t& Device::GetWlanMacInfo() const { return wlanmac_info_; }
+const wlan_softmac_info_t& Device::GetWlanSoftmacInfo() const { return wlan_softmac_info_; }
 
-zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
-  for (uint8_t i = 0; i < wlanmac_info.bands_count; i++) {
-    auto bandinfo = wlanmac_info.bands[i];
+zx_status_t ValidateWlanSoftmacInfo(const wlan_softmac_info& wlan_softmac_info) {
+  for (uint8_t i = 0; i < wlan_softmac_info.bands_count; i++) {
+    auto bandinfo = wlan_softmac_info.bands[i];
 
     // Validate channels
     auto& supported_channels = bandinfo.supported_channels;
@@ -411,7 +413,7 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
           }
           auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
           if (!common::IsValidChan5Ghz(channel)) {
-            errorf("wlanmac band info for %u MHz has invalid channel %u\n",
+            errorf("wlan-softmac band info for %u MHz has invalid channel %u\n",
                    supported_channels.base_freq, c);
             return ZX_ERR_NOT_SUPPORTED;
           }
@@ -424,14 +426,14 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
           }
           auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
           if (!common::IsValidChan2Ghz(channel)) {
-            errorf("wlanmac band info for %u MHz has invalid cahnnel %u\n",
+            errorf("wlan-softmac band info for %u MHz has invalid cahnnel %u\n",
                    supported_channels.base_freq, c);
             return ZX_ERR_NOT_SUPPORTED;
           }
         }
         break;
       default:
-        errorf("wlanmac band info for %u MHz not supported\n", supported_channels.base_freq);
+        errorf("wlan-softmac band info for %u MHz not supported\n", supported_channels.base_freq);
         return ZX_ERR_NOT_SUPPORTED;
     }
   }

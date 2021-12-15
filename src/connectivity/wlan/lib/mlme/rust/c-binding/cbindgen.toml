@@ -14,8 +14,8 @@ language = "C"
 
 sys_includes = [
     # Banjo types.
-    "fuchsia/hardware/wlan/softmac/c/banjo.h",   # wlanmac_info_t, wlan_hw_scan_config_t,
-                                                 # wlanmac_passive_scan_args_t, wlan_rx_info_t
+    "fuchsia/hardware/wlan/softmac/c/banjo.h",   # wlan_softmac_info_t, wlan_hw_scan_config_t,
+                                                 # wlan_softmac_passive_scan_args_t, wlan_rx_info_t
     "fuchsia/wlan/common/c/banjo.h",   # wlan_channel_t
     "fuchsia/wlan/internal/c/banjo.h",   # bss_config_t
     "fuchsia/wlan/ieee80211/c/banjo.h",   # cssid_t
@@ -49,12 +49,12 @@ exclude = [
     # Banjo types.
     "BssConfig",
     "CSsid",
-    "WlanmacActiveScanArgs",
-    "WlanmacPassiveScanArgs",
+    "WlanSoftmacActiveScanArgs",
+    "WlanSoftmacPassiveScanArgs",
     "WlanAssocCtx",
     "WlanChannel",
     "WlanIndication",
-    "WlanmacInfo",
+    "WlanSoftmacInfo",
     "WlanRxInfo",
     "WlanTxInfo",
     "WlanTxPacket",
@@ -93,13 +93,13 @@ exclude = [
 # Banjo types.
 "BssConfig" = "bss_config_t"
 "CSsid" = "cssid_t"
-"WlanmacActiveScanArgs" = "wlanmac_active_scan_args_t"
-"WlanmacPassiveScanArgs" = "wlanmac_passive_scan_args_t"
+"WlanSoftmacActiveScanArgs" = "wlan_softmac_active_scan_args_t"
+"WlanSoftmacPassiveScanArgs" = "wlan_softmac_passive_scan_args_t"
 "WlanAssocCtx" = "wlan_assoc_ctx_t"
 "WlanChannel" = "wlan_channel_t"
-"WlanmacIfcProtocol" = "rust_wlanmac_ifc_protocol_copy_t"
-"WlanmacIfcProtocolOps" = "rust_wlanmac_ifc_protocol_ops_copy_t"
-"WlanmacInfo" = "wlanmac_info_t"
+"WlanSoftmacIfcProtocol" = "rust_wlan_softmac_ifc_protocol_copy_t"
+"WlanSoftmacIfcProtocolOps" = "rust_wlan_softmac_ifc_protocol_ops_copy_t"
+"WlanSoftmacInfo" = "wlan_softmac_info_t"
 "WlanIndication" = "wlan_indication_t"
 "WlanRxPacket" = "wlan_rx_packet_t"
 "WlanRxInfo" = "wlan_rx_info_t"

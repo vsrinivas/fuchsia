@@ -2509,7 +2509,7 @@ static void iwl_mvm_bss_info_changed(struct ieee80211_hw* hw, struct ieee80211_v
 
 // Modified from original iwl_mvm_mac_hw_scan() to split call path for active and passive.
 zx_status_t iwl_mvm_mac_hw_scan_passive(struct iwl_mvm_vif* mvmvif,
-                                        const wlanmac_passive_scan_args_t* passive_scan_args,
+                                        const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                         uint64_t* out_scan_id) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   zx_status_t ret;

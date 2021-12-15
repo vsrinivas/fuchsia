@@ -218,7 +218,7 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
       .mac_frame_size = frame_len,
       .info = rx_status->rx_info,
   };
-  wlanmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
+  wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
 }
 
 static int iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, int energy_a, int energy_b) {

@@ -45,7 +45,7 @@ Below is the brief illustration of how we map the iwlwifi driver onto Fuchsia:
 ```
                  MLME
                   |
-           --------------- wlanphy_impl_protocol_ops_t / wlanmac_protocol_ops_t
+           --------------- wlanphy_impl_protocol_ops_t / wlan_softmac_protocol_ops_t
                   |
      ^            |
      |     +-------------+         +--------------+

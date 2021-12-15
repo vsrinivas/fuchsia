@@ -46,18 +46,18 @@ typedef struct {
   void (*complete_tx)(void *ctx, const wlan_tx_packet_t *packet, int32_t status);
   void (*report_tx_status)(void *ctx, const wlan_tx_status_t *tx_status);
   void (*scan_complete)(void *ctx, int32_t status, uint64_t scan_id);
-} rust_wlanmac_ifc_protocol_ops_copy_t;
+} rust_wlan_softmac_ifc_protocol_ops_copy_t;
 
 /**
- * Hand-rolled Rust version of the banjo wlanmac_ifc_protocol for communication from the driver up.
- * Note that we copy the individual fns out of this struct into the equivalent generated struct
+ * Hand-rolled Rust version of the banjo wlan_softmac_ifc_protocol for communication from the driver
+ * up. Note that we copy the individual fns out of this struct into the equivalent generated struct
  * in C++. Thanks to cbindgen, this gives us a compile-time confirmation that our function
  * signatures are correct.
  */
 typedef struct {
-  const rust_wlanmac_ifc_protocol_ops_copy_t *ops;
+  const rust_wlan_softmac_ifc_protocol_ops_copy_t *ops;
   void *ctx;
-} rust_wlanmac_ifc_protocol_copy_t;
+} rust_wlan_softmac_ifc_protocol_copy_t;
 
 /**
  * An output buffer requires its owner to manage the underlying buffer's memory themselves.
@@ -83,7 +83,7 @@ typedef struct {
   /**
    * Start operations on the underlying device and return the SME channel.
    */
-  int32_t (*start)(void *device, const rust_wlanmac_ifc_protocol_copy_t *ifc,
+  int32_t (*start)(void *device, const rust_wlan_softmac_ifc_protocol_copy_t *ifc,
                    zx_handle_t *out_sme_channel);
   /**
    * Request to deliver an Ethernet II frame to Fuchsia's Netstack.
@@ -115,17 +115,18 @@ typedef struct {
    * Make passive scan request to the driver
    */
   zx_status_t (*start_passive_scan)(void *device,
-                                    const wlanmac_passive_scan_args_t *passive_scan_args,
+                                    const wlan_softmac_passive_scan_args_t *passive_scan_args,
                                     uint64_t *out_scan_id);
   /**
    * Make active scan request to the driver
    */
-  zx_status_t (*start_active_scan)(void *device, const wlanmac_active_scan_args_t *active_scan_args,
+  zx_status_t (*start_active_scan)(void *device,
+                                   const wlan_softmac_active_scan_args_t *active_scan_args,
                                    uint64_t *out_scan_id);
   /**
    * Get information and capabilities of this WLAN interface
    */
-  wlanmac_info_t (*get_wlanmac_info)(void *device);
+  wlan_softmac_info_t (*get_wlan_softmac_info)(void *device);
   /**
    * Configure the device's BSS.
    * |cfg| is mutable because the underlying API does not take a const bss_config_t.

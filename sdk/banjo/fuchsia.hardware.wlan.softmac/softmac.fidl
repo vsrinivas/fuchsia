@@ -10,7 +10,7 @@ using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
 
-type WlanmacInfo = struct {
+type WlanSoftmacInfo = struct {
     /// Station address.
     sta_addr ieee80211.MacAddr;
 
@@ -99,7 +99,7 @@ type WlanTxInfo = struct {
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
-    /// the wlanmac driver.
+    /// the softmac driver.
     valid_fields uint32;
     // Will be sent back in wlan_tx_status_t if Minstrel is enabled for the device, indicated by
     // WLAN_TX_INFO_VALID_TX_VECTOR_IDX.
@@ -197,8 +197,8 @@ type WlanBcnConfig = struct {
 
 @transport("Banjo")
 @banjo_layout("ddk-interface")
-protocol WlanmacIfc {
-    /// Report the status of the wlanmac device.
+protocol WlanSoftmacIfc {
+    /// Report the status of the softmac device.
     Status(struct {
         status uint32;
     }) -> ();
@@ -235,8 +235,8 @@ protocol WlanmacIfc {
     });
 };
 
-/// Argument struct to be passed as the single argument to Wlanmac.StartPassiveScan.
-type WlanmacPassiveScanArgs = struct {
+/// Argument struct to be passed as the single argument to WlanSoftmac.StartPassiveScan.
+type WlanSoftmacPassiveScanArgs = struct {
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return ZX_ERR_INVALID_ARGS.
     ///
@@ -258,8 +258,8 @@ type WlanmacPassiveScanArgs = struct {
     min_home_time zx.duration;
 };
 
-/// Argument struct to be passed as the single argument to Wlanmac.StartActiveScan
-type WlanmacActiveScanArgs = struct {
+/// Argument struct to be passed as the single argument to WlanSoftmac.StartActiveScan
+type WlanSoftmacActiveScanArgs = struct {
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return ZX_ERR_INVALID_ARGS.
     ///
@@ -316,27 +316,27 @@ type WlanmacActiveScanArgs = struct {
 
 @transport("Banjo")
 @banjo_layout("ddk-protocol")
-protocol Wlanmac {
+protocol WlanSoftmac {
     /// Obtain information about the device and supported features
     /// Safe to call at any time.
     Query(struct {
         options uint32;
     }) -> (struct {
         status zx.status;
-        info WlanmacInfo;
+        info WlanSoftmacInfo;
     });
 
-    /// Start wlanmac running with ifc_virt
+    /// Start softmac running with ifc_virt
     /// Callbacks on ifc may be invoked from now until stop() is called
     Start(resource struct {
-        ifc client_end:WlanmacIfc;
+        ifc client_end:WlanSoftmacIfc;
     }) -> (resource struct {
         status zx.status;
         sme_channel zx.handle:CHANNEL;
     });
 
-    /// Shut down a running wlanmac
-    /// Safe to call if the wlanmac is already stopped.
+    /// Shut down a running softmac
+    /// Safe to call if the softmac is already stopped.
     Stop() -> ();
 
     /// Queue the data for transmit. Return status indicates queue state:
@@ -418,25 +418,25 @@ protocol Wlanmac {
     });
 
     /// Start a passive scan in the device driver. Scan results will be delivered as Beacon
-    /// frames via WlanmacIfc.Recv(). When complete, WlanmacIfc.ScanComplete() will be called
-    /// with the corresponding unique `scan_id`.
+    /// frames via WlanSoftmacIfc.Recv(). When complete, WlanSoftmacIfc.ScanComplete() will
+    /// be called with the corresponding unique `scan_id`.
     StartPassiveScan(struct {
-        args WlanmacPassiveScanArgs;
+        args WlanSoftmacPassiveScanArgs;
     }) -> (struct {
         status zx.status;
         scan_id uint64;
     });
 
     /// Start an active scan in the device driver. Scan results will be delivered as Beacon or
-    /// Probe Response frames via WlanmacIfc.Recv(). When complete, WlanmacIfc.ScanComplete()
-    /// will be called with the corresponding unique `scan_id`.
+    /// Probe Response frames via WlanSoftmacIfc.Recv(). When complete,
+    /// WlanSoftmacIfc.ScanComplete() will be called with the corresponding unique `scan_id`.
     ///
     /// The IEs specified must not result in a Probe Request MMPDU that exceed the limits
     /// defined by IEEE Std 802.11-2016, 9.2.4.7. MMPDU limit constants can be found in
     /// fuchsia.wlan.ieee80211. These limits are very large and will likely not be exceeded
     /// by specifying the most common IEs found in Probe Request frames.
     StartActiveScan(struct {
-        args WlanmacActiveScanArgs;
+        args WlanSoftmacActiveScanArgs;
     }) -> (struct {
         status zx.status;
         scan_id uint64;

@@ -26,9 +26,9 @@ class IfaceDevice {
   void Unbind();
   void Release();
 
-  zx_status_t Query(uint32_t options, wlanmac_info_t* info);
+  zx_status_t Query(uint32_t options, wlan_softmac_info_t* info);
   void Stop();
-  zx_status_t Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
+  zx_status_t Start(const wlan_softmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
   zx_status_t SetChannel(uint32_t options, const wlan_channel_t* channel);
 
  private:
@@ -36,7 +36,7 @@ class IfaceDevice {
   zx_device_t* parent_;
 
   std::mutex lock_;
-  wlanmac_ifc_protocol_t ifc_ = {};
+  wlan_softmac_ifc_protocol_t ifc_ = {};
 
   wlan_info_mac_role_t role_;
 };

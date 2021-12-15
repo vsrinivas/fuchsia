@@ -3113,9 +3113,9 @@ static void ath10k_band_query_info(struct ath10k* ar, const struct ath10k_band* 
   ath10k_foreach_channel(dev_band, ath10k_chan_query_info, &next_ch);
 }
 
-static void ath10k_wlanmac_band_query_info(struct ath10k* ar, const struct ath10k_band* dev_band,
-                                           void* cookie) {
-  wlanmac_info_t* mac_info = cookie;
+static void ath10k_wlan_softmac_band_query_info(struct ath10k* ar,
+                                                const struct ath10k_band* dev_band, void* cookie) {
+  wlan_softmac_info_t* mac_info = cookie;
 
   ZX_DEBUG_ASSERT(mac_info->bands_count < WLAN_INFO_MAX_BANDS);
   ath10k_band_query_info(ar, dev_band, &mac_info->bands[mac_info->bands_count++]);
@@ -3127,7 +3127,7 @@ void ath10k_pci_fill_wlanphy_impl_info(struct ath10k* ar, wlanphy_impl_info_t* p
   phy_info->supported_mac_roles = ar->mac_role;
 }
 
-void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info) {
+void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* mac_info) {
   // eth_info
   ZX_DEBUG_ASSERT(ETH_ALEN == fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
   memcpy(mac_info->sta_addr, ar->mac_addr, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
@@ -3154,22 +3154,23 @@ void ath10k_pci_fill_wlanmac_info(struct ath10k* ar, wlanmac_info_t* mac_info) {
                    WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;
 
   // bands
-  ath10k_foreach_band(ar, ath10k_wlanmac_band_query_info, mac_info);
+  ath10k_foreach_band(ar, ath10k_wlan_softmac_band_query_info, mac_info);
 }
 
-static zx_status_t ath10k_pci_mac_query(void* ctx, uint32_t options, wlanmac_info_t* mac_info) {
+static zx_status_t ath10k_pci_mac_query(void* ctx, uint32_t options,
+                                        wlan_softmac_info_t* mac_info) {
   struct ath10k* ar = ctx;
 
   ZX_DEBUG_ASSERT(BITARR_TEST(ar->dev_flags, ATH10K_FLAG_CORE_REGISTERED));
 
   memset(mac_info, 0, sizeof(*mac_info));
 
-  ath10k_pci_fill_wlanmac_info(ar, mac_info);
+  ath10k_pci_fill_wlan_softmac_info(ar, mac_info);
 
   return ZX_OK;
 }
 
-static zx_status_t ath10k_pci_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
+static zx_status_t ath10k_pci_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
                                     zx_handle_t* out_mlme_channel) {
   struct ath10k* ar = ctx;
   return ath10k_start(ar, ifc, out_mlme_channel);
@@ -3339,18 +3340,18 @@ static zx_status_t ath10k_pci_clear_assoc(
 }
 
 static zx_status_t ath10k_pci_start_hw_scan_passive(
-    void* ctx, const wlanmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
+    void* ctx, const wlan_softmac_passive_scan_args_t* passive_scan_args, uint64_t* out_scan_id) {
   struct ath10k* ar = ctx;
   return ath10k_mac_hw_scan_passive(ar, passive_scan_args, out_scan_id);
 }
 
 static zx_status_t ath10k_pci_start_hw_scan_active(
-    void* ctx, const wlanmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
+    void* ctx, const wlan_softmac_active_scan_args_t* active_scan_args, uint64_t* out_scan_id) {
   struct ath10k* ar = ctx;
   return ath10k_mac_hw_scan_active(ar, active_scan_args, out_scan_id);
 }
 
-wlanmac_protocol_ops_t wlanmac_ops = {
+wlan_softmac_protocol_ops_t wlan_softmac_ops = {
     .query = ath10k_pci_mac_query,
     .start = ath10k_pci_start,
     .stop = ath10k_pci_stop,

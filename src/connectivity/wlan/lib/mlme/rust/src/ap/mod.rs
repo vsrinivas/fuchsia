@@ -246,8 +246,8 @@ impl Ap {
         &self,
         responder: fidl_mlme::MlmeQueryDeviceInfoResponder,
     ) -> Result<(), Error> {
-        let wlanmac_info = self.ctx.device.wlanmac_info();
-        let mut info = crate::ddk_converter::device_info_from_wlanmac_info(wlanmac_info)?;
+        let wlan_softmac_info = self.ctx.device.wlan_softmac_info();
+        let mut info = crate::ddk_converter::device_info_from_wlan_softmac_info(wlan_softmac_info)?;
         responder.send(&mut info).map_err(|e| e.into())
     }
 

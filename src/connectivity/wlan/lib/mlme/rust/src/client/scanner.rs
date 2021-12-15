@@ -151,12 +151,12 @@ impl<'a> BoundScanner<'a> {
             return Err(Error::ScanError(ScanError::MaxChannelTimeLtMin));
         }
 
-        let wlanmac_info = self.ctx.device.wlanmac_info();
+        let wlan_softmac_info = self.ctx.device.wlan_softmac_info();
 
         // The else of this branch is an "MLME scan" which is implemented by calling SetChannel
         // multiple times to visit each channel. It's only used in hw-sim tests and is not supported
         // by any SoftMAC device drivers.
-        let offload_scan = (wlanmac_info.driver_features
+        let offload_scan = (wlan_softmac_info.driver_features
             & banjo_hw_wlaninfo::WlanInfoDriverFeature::SCAN_OFFLOAD)
             .0
             > 0;
@@ -201,9 +201,9 @@ impl<'a> BoundScanner<'a> {
     }
 
     fn start_passive_scan(&mut self, req: &fidl_mlme::ScanRequest) -> Result<u64, zx::Status> {
-        // Note: WlanmacPassiveScanArgs contains raw pointers and the memory pointed
+        // Note: WlanSoftmacPassiveScanArgs contains raw pointers and the memory pointed
         // to must remain in scope for the duration of the call to Device::start_passive_scan().
-        self.ctx.device.start_passive_scan(&banjo_wlan_softmac::WlanmacPassiveScanArgs {
+        self.ctx.device.start_passive_scan(&banjo_wlan_softmac::WlanSoftmacPassiveScanArgs {
             channels_list: req.channel_list.as_ptr(),
             channels_count: req.channel_list.len(),
             // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets. Conversion here
@@ -242,9 +242,9 @@ impl<'a> BoundScanner<'a> {
         })?;
         let ies_buffer = ies_in_buf.as_slice().as_ptr();
 
-        // Note: WlanmacActiveScanArgs contains raw pointers and the memory pointed
+        // Note: WlanSoftmacActiveScanArgs contains raw pointers and the memory pointed
         // to must remain in scope for the duration of the call to Device::start_active_scan().
-        self.ctx.device.start_active_scan(&banjo_wlan_softmac::WlanmacActiveScanArgs {
+        self.ctx.device.start_active_scan(&banjo_wlan_softmac::WlanSoftmacActiveScanArgs {
             channels_list: req.channel_list.as_ptr(),
             channels_count: req.channel_list.len(),
             ssids_list: ssids_list.as_ptr(),
@@ -400,7 +400,7 @@ impl<'a> BoundScanner<'a> {
     }
 
     fn probe_request_rates(&mut self, primary_channel_number: u8) -> Result<Vec<u8>, Error> {
-        let iface_info = self.ctx.device.wlanmac_info();
+        let iface_info = self.ctx.device.wlan_softmac_info();
         let band_info = get_band_info(&iface_info, primary_channel_number)
             .ok_or(format_err!("no band found for channel {:?}", primary_channel_number))?;
         Ok(band_info.rates.iter().cloned().filter(|r| *r > 0).collect())
@@ -459,7 +459,7 @@ impl<'a> BoundScanner<'a> {
 }
 
 fn get_band_info(
-    iface_info: &banjo_wlan_softmac::WlanmacInfo,
+    iface_info: &banjo_wlan_softmac::WlanSoftmacInfo,
     primary_channel: u8,
 ) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
     const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;

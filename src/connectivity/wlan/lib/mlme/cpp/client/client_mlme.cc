@@ -56,7 +56,7 @@ zx_status_t ClientMlme::Init() {
   // Initialize Rust dependencies
   auto rust_device = rust_device_interface_t{
       .device = static_cast<void*>(this->device_),
-      .start = [](void* device, const rust_wlanmac_ifc_protocol_copy_t* ifc,
+      .start = [](void* device, const rust_wlan_softmac_ifc_protocol_copy_t* ifc,
                   zx_handle_t* out_sme_channel) -> zx_status_t {
         zx::channel channel;
         zx_status_t result = DEVICE(device)->Start(ifc, &channel);
@@ -81,16 +81,17 @@ zx_status_t ClientMlme::Init() {
       .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
         return DEVICE(device)->SetKey(key);
       },
-      .start_passive_scan = [](void* device, const wlanmac_passive_scan_args_t* passive_scan_args,
+      .start_passive_scan = [](void* device,
+                               const wlan_softmac_passive_scan_args_t* passive_scan_args,
                                uint64_t* out_scan_id) -> zx_status_t {
         return DEVICE(device)->StartPassiveScan(passive_scan_args, out_scan_id);
       },
-      .start_active_scan = [](void* device, const wlanmac_active_scan_args_t* active_scan_args,
+      .start_active_scan = [](void* device, const wlan_softmac_active_scan_args_t* active_scan_args,
                               uint64_t* out_scan_id) -> zx_status_t {
         return DEVICE(device)->StartActiveScan(active_scan_args, out_scan_id);
       },
-      .get_wlanmac_info = [](void* device) -> wlanmac_info_t {
-        return DEVICE(device)->GetWlanMacInfo();
+      .get_wlan_softmac_info = [](void* device) -> wlan_softmac_info_t {
+        return DEVICE(device)->GetWlanSoftmacInfo();
       },
       .configure_bss = [](void* device, bss_config_t* cfg) -> zx_status_t {
         return DEVICE(device)->ConfigureBss(cfg);
