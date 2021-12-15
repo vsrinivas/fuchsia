@@ -87,7 +87,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       case Operation::kRead: {
         if (open_files == 0)
           break;
-        int index = fuzzed_data.ConsumeIntegralInRange<uint8_t>(0, open_files - 1);
+        int index = fuzzed_data.ConsumeIntegralInRange<int>(0, open_files - 1);
         size_t read_len = fuzzed_data.ConsumeIntegralInRange<size_t>(0, 65536);
         size_t offset = fuzzed_data.ConsumeIntegral<size_t>();
         for (auto& file : files) {
@@ -101,7 +101,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       case Operation::kWrite: {
         if (open_files == 0)
           break;
-        int index = fuzzed_data.ConsumeIntegralInRange<uint8_t>(0, open_files - 1);
+        int index = fuzzed_data.ConsumeIntegralInRange<int>(0, open_files - 1);
         size_t write_len = fuzzed_data.ConsumeIntegralInRange<size_t>(0, 65536);
         size_t offset = fuzzed_data.ConsumeIntegral<size_t>();
         for (auto& file : files) {

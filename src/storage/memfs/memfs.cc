@@ -64,7 +64,7 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
 zx::status<fs::FilesystemInfo> Vfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
-  info.block_size = GetPageSize();
+  info.block_size = static_cast<uint32_t>(GetPageSize());
   info.max_filename_size = kDnodeNameMax;
   info.fs_type = VFS_TYPE_MEMFS;
   info.SetFsId(fs_id_);

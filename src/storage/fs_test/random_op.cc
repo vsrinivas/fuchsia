@@ -36,7 +36,7 @@ class RandomOpTest;
 unsigned GenerateSeed() {
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
-  return ts.tv_nsec;
+  return static_cast<unsigned>(ts.tv_nsec);
 }
 
 struct Worker {

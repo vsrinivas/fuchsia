@@ -124,7 +124,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
     if (status.is_error()) {
       return status.take_error();
     }
-    block_count = vmo_size / (kPageSize + kOobSize) / kPagesPerBlock;
+    block_count = static_cast<uint32_t>(vmo_size / (kPageSize + kOobSize) / kPagesPerBlock);
     // For now, when using a ram-nand device, the only supported device block size is 8 KiB, so
     // raise an error if the user tries to ask for something different.
     if ((options.device_block_size != 0 && options.device_block_size != 8192) ||
@@ -141,8 +141,8 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   } else if (options.device_block_size != 8192) {  // FTL exports a device with 8 KiB blocks.
     return zx::error(ZX_ERR_INVALID_ARGS);
   } else {
-    block_count =
-        options.device_block_size * options.device_block_count / kPageSize / kPagesPerBlock;
+    block_count = static_cast<uint32_t>(options.device_block_size * options.device_block_count /
+                                        kPageSize / kPagesPerBlock);
   }
 
   auto status =
@@ -254,8 +254,8 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
   // Create an FVM partition if requested.
   if (options.use_fvm) {
     storage::FvmOptions fvm_options = {.initial_fvm_slice_count = options.initial_fvm_slice_count};
-    auto fvm_partition_or =
-        storage::CreateFvmPartition(device_path, options.fvm_slice_size, fvm_options);
+    auto fvm_partition_or = storage::CreateFvmPartition(
+        device_path, static_cast<int>(options.fvm_slice_size), fvm_options);
     if (fvm_partition_or.is_error()) {
       return fvm_partition_or.take_error();
     }
@@ -457,7 +457,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
     auto options = new std::vector<TestFilesystemOptions>;
     iter = config.FindMember("options");
     if (iter == config.MemberEnd()) {
-      name[0] = toupper(name[0]);
+      name[0] = static_cast<char>(toupper(name[0]));
       options->push_back(TestFilesystemOptions{.description = name,
                                                .use_fvm = false,
                                                .device_block_size = 512,
@@ -465,7 +465,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
                                                .filesystem = filesystem.get()});
     } else {
       for (size_t i = 0; i < iter->value.Size(); ++i) {
-        const auto& opt = iter->value[i];
+        const auto& opt = iter->value[static_cast<rapidjson::SizeType>(i)];
         options->push_back(TestFilesystemOptions{
             .description = opt["description"].GetString(),
             .use_fvm = opt["use_fvm"].GetBool(),

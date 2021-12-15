@@ -77,7 +77,7 @@ zx::status<> VbootClient::ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* on
   bool seen_a = false;
   bool seen_b = false;
   for (uint64_t i = 0; i < gpt->EntryCount(); i++) {
-    auto part = gpt->GetPartition(i);
+    auto part = gpt->GetPartition(static_cast<uint32_t>(i));
     if (part.is_error()) {
       break;
     }
@@ -113,7 +113,7 @@ zx::status<> VbootClient::WriteCustom(const AbrSlotData* a, const AbrSlotData* b
   bool seen_a = false;
   bool seen_b = false;
   for (uint64_t i = 0; i < gpt->EntryCount(); i++) {
-    auto result = gpt->GetPartition(i);
+    auto result = gpt->GetPartition(static_cast<uint32_t>(i));
     if (result.is_error()) {
       break;
     }
@@ -125,7 +125,7 @@ zx::status<> VbootClient::WriteCustom(const AbrSlotData* a, const AbrSlotData* b
           gpt_cros_attr_get_priority(part->flags) >= max_prio) {
         // Make sure all other partitions have a lower priority than the one we're trying to boot
         // from.
-        gpt_cros_attr_set_priority(&part->flags, max_prio - 1);
+        gpt_cros_attr_set_priority(&part->flags, static_cast<uint8_t>(max_prio - 1));
       }
 
       // Make sure the recovery slot is always marked as successful.

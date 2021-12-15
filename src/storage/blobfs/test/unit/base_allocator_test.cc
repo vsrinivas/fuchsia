@@ -73,7 +73,7 @@ class AllocatorForTesting : public BaseAllocator {
     if (!allow_growing_) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
-    uint32_t new_node_count = node_map_.size() + 1;
+    size_t new_node_count = node_map_.size() + 1;
     node_map_.resize(new_node_count);
     return zx::make_status(GetNodeBitmap().Grow(new_node_count));
   }

@@ -84,7 +84,7 @@ void TestCreateAndDeleteUnicodeFilename(UnicodeTest* test, const char* name) {
 
   ASSERT_GE(fd = open(test->GetPath(name).c_str(), O_RDWR | O_CREAT), 0) << strerror(errno);
 
-  int result = write(fd, "abc", 4);
+  ssize_t result = write(fd, "abc", 4);
   ASSERT_GT(result, 0) << strerror(errno);
 
   ASSERT_EQ(unlink(test->GetPath(name).c_str()), 0) << strerror(errno);

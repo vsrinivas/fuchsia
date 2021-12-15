@@ -142,7 +142,7 @@ class BlobfsCheckerTest : public testing::Test {
     auto blob = fbl::RefPtr<Blob>::Downcast(file);
 
     const uint32_t inode = blob->Ino();
-    const uint32_t node_block = NodeMapStartBlock(blobfs()->Info()) + inode / kBlobfsInodesPerBlock;
+    const uint64_t node_block = NodeMapStartBlock(blobfs()->Info()) + inode / kBlobfsInodesPerBlock;
 
     blob.reset();
     file.reset();

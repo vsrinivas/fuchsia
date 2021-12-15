@@ -460,7 +460,8 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
 
 TEST_P(BlobTest, GetAttributes) {
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob("", 64);
-  uint64_t inode, block_count;
+  uint32_t inode;
+  uint64_t block_count;
 
   auto check_attributes = [&](const fs::VnodeAttributes& attributes) {
     ASSERT_EQ(attributes.mode, unsigned{V_TYPE_FILE | V_IRUSR | V_IXUSR});

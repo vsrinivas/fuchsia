@@ -30,7 +30,7 @@ class FakeNodeReserver : public NodeReserverInterface {
       return zx::error(status);
     }
     ++reserved_node_count_;
-    return zx::ok(ReservedNode(this, index));
+    return zx::ok(ReservedNode(this, static_cast<uint32_t>(index)));
   }
 
   void UnreserveNode(ReservedNode node) override {

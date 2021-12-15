@@ -110,9 +110,6 @@ test("blobfs_integration") {
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 storage_driver_test_realm_v2_component("blobfs-integration-component") {

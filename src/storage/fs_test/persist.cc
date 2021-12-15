@@ -184,7 +184,7 @@ class PersistRenameLoopTest : public BaseFilesystemTest,
 TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
   // Create loop_length() directories
   for (int i = 0; i < LoopLength(GetParam()); i++) {
-    const std::string src = GetPath(std::string(1, 'a' + i));
+    const std::string src = GetPath(std::string(1, static_cast<char>('a' + i)));
     ASSERT_EQ(mkdir(src.c_str(), 0644), 0);
   }
 
@@ -204,9 +204,9 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
   std::string dst = src;
   while (to_do--) {
     char_index = (char_index + 1) % LoopLength(GetParam());
-    dst[0] = 'a' + char_index;
+    dst[0] = static_cast<char>('a' + char_index);
     ASSERT_EQ(rename(GetPath(src).c_str(), GetPath(dst).c_str()), 0);
-    src[0] = 'a' + char_index;
+    src[0] = static_cast<char>('a' + char_index);
   }
 
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
@@ -216,7 +216,7 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
   // Check that the target only exists in ONE directory
   bool target_found = false;
   for (int i = 0; i < LoopLength(GetParam()); i++) {
-    std::string src(1, 'a' + i);
+    std::string src(1, static_cast<char>('a' + i));
     DIR* dirp = opendir(GetPath(src).c_str());
     ASSERT_NE(dirp, nullptr);
     struct dirent* de;
@@ -242,7 +242,7 @@ TEST_P(PersistRenameLoopTest, MultipleRenamesCorrectAfterRemount) {
 
   target_found = false;
   for (int i = 0; i < LoopLength(GetParam()); i++) {
-    std::string src(1, 'a' + i);
+    std::string src(1, static_cast<char>('a' + i));
     int ret = unlink(GetPath(src).c_str());
     if (ret != 0) {
       ASSERT_FALSE(target_found);

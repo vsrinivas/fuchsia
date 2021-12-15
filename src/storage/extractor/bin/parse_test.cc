@@ -68,27 +68,27 @@ TestArguments setup(bool create_disk, bool create_image_file,
 
 TEST(Parse, NoArgument) {
   auto args = setup(/*create_disk=*/false, /*create_image_file=*/false);
-  std::vector<char*> argv{args.command};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, ExtractAllArgument) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,  args.type_arg,
-                          args.disk,     args.input_file,  args.image, args.output_file,
-                          args.pii_dump, args.help};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command,  args.sub_command, args.type,  args.type_arg,
+                        args.disk,     args.input_file,  args.image, args.output_file,
+                        args.pii_dump, args.help};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, ExtractMissingType) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command, args.sub_command, args.disk,    args.input_file,
-                          args.image,   args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command, args.sub_command, args.disk,    args.input_file,
+                        args.image,   args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
@@ -96,46 +96,45 @@ TEST(Parse, ExtractInvalidType) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   strncpy(args.type_arg, "njgenkgnaw", sizeof(args.type_arg));
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,
-                          args.type_arg, args.disk,        args.input_file,
-                          args.image,    args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command,  args.sub_command, args.type,
+                        args.type_arg, args.disk,        args.input_file,
+                        args.image,    args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, ExtractMissingDisk) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command, args.sub_command, args.type,    args.type_arg,
-                          args.image,   args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command, args.sub_command, args.type,    args.type_arg,
+                        args.image,   args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, ExtractMissingImage) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/false);
-  std::vector<char*> argv{args.command, args.sub_command, args.type,    args.type_arg,
-                          args.disk,    args.input_file,  args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command, args.sub_command, args.type,    args.type_arg,
+                        args.disk,    args.input_file,  args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, ExtractDiskDoesNotExists) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.input_file), 0);
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,
-                          args.type_arg, args.disk,        args.input_file,
-                          args.image,    args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
-            ZX_ERR_IO);
+  char* const argv[] = {args.command,  args.sub_command, args.type,
+                        args.type_arg, args.disk,        args.input_file,
+                        args.image,    args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(), ZX_ERR_IO);
 }
 
 TEST(Parse, ExtractImageFileAlreadyExists) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,
-                          args.type_arg, args.disk,        args.input_file,
-                          args.image,    args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command,  args.sub_command, args.type,
+                        args.type_arg, args.disk,        args.input_file,
+                        args.image,    args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_ALREADY_EXISTS);
 }
 
@@ -144,71 +143,69 @@ TEST(Parse, ExtractFailureToCreateImageFile) {
   auto len = strlen(args.output_file);
   args.output_file[len] = '/';
   args.output_file[len + 1] = '\0';
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,
-                          args.type_arg, args.disk,        args.input_file,
-                          args.image,    args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
-            ZX_ERR_IO);
+  char* const argv[] = {args.command,  args.sub_command, args.type,
+                        args.type_arg, args.disk,        args.input_file,
+                        args.image,    args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(), ZX_ERR_IO);
 }
 
 TEST(Parse, ExtractExtraArgument) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,  args.type_arg,
-                          args.disk,     args.input_file,  args.image, args.output_file,
-                          args.pii_dump, args.extra};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command,  args.sub_command, args.type,  args.type_arg,
+                        args.disk,     args.input_file,  args.image, args.output_file,
+                        args.pii_dump, args.extra};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, ExtractDumpPii) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command,  args.sub_command, args.type,
-                          args.type_arg, args.disk,        args.input_file,
-                          args.image,    args.output_file, args.pii_dump};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).value().dump_pii, true);
+  char* const argv[] = {args.command,  args.sub_command, args.type,
+                        args.type_arg, args.disk,        args.input_file,
+                        args.image,    args.output_file, args.pii_dump};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).value().dump_pii, true);
 }
 
 TEST(Parse, ExtractDontDumpPii) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command, args.sub_command, args.type,  args.type_arg,
-                          args.disk,    args.input_file,  args.image, args.output_file};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).value().dump_pii, false);
+  char* const argv[] = {args.command, args.sub_command, args.type,  args.type_arg,
+                        args.disk,    args.input_file,  args.image, args.output_file};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).value().dump_pii, false);
 }
 
 TEST(Parse, DeflateOnlyOneArg) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true, SubCommand::kDeflate);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command, args.sub_command, args.output, args.output_file};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command, args.sub_command, args.output, args.output_file};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_INVALID_ARGS);
 }
 
 TEST(Parse, DeflateDiskDoesNotExists) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true, SubCommand::kDeflate);
   EXPECT_EQ(remove(args.input_file), 0);
-  std::vector<char*> argv{args.command,    args.sub_command, args.input,
-                          args.input_file, args.output,      args.output_file};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
-            ZX_ERR_IO);
+  char* const argv[] = {args.command,    args.sub_command, args.input,
+                        args.input_file, args.output,      args.output_file};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(), ZX_ERR_IO);
 }
 
 TEST(Parse, DeflateImageFileAlreadyExists) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true, SubCommand::kDeflate);
-  std::vector<char*> argv{args.command,    args.sub_command, args.input,
-                          args.input_file, args.output,      args.output_file};
-  ASSERT_EQ(extractor::ParseCommandLineArguments(argv.size(), argv.data()).error_value(),
+  char* const argv[] = {args.command,    args.sub_command, args.input,
+                        args.input_file, args.output,      args.output_file};
+  ASSERT_EQ(extractor::ParseCommandLineArguments(std::size(argv), argv).error_value(),
             ZX_ERR_ALREADY_EXISTS);
 }
 
 TEST(Parse, DeflateValidArguments) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true, SubCommand::kDeflate);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command,    args.sub_command, args.input,
-                          args.input_file, args.output,      args.output_file};
-  auto opts = extractor::ParseCommandLineArguments(argv.size(), argv.data()).value();
+  char* const argv[] = {args.command,    args.sub_command, args.input,
+                        args.input_file, args.output,      args.output_file};
+  auto opts = extractor::ParseCommandLineArguments(std::size(argv), argv).value();
   ASSERT_EQ(opts.sub_command, SubCommand::kDeflate);
   ASSERT_EQ(opts.verbose, false);
 }
@@ -216,9 +213,9 @@ TEST(Parse, DeflateValidArguments) {
 TEST(Parse, DeflateValidArgumentsWithVerbose) {
   auto args = setup(/*create_disk=*/true, /*create_image_file=*/true, SubCommand::kDeflate);
   EXPECT_EQ(remove(args.output_file), 0);
-  std::vector<char*> argv{args.command, args.sub_command, args.input,  args.input_file,
-                          args.output,  args.output_file, args.verbose};
-  auto opts = extractor::ParseCommandLineArguments(argv.size(), argv.data()).value();
+  char* const argv[] = {args.command, args.sub_command, args.input,  args.input_file,
+                        args.output,  args.output_file, args.verbose};
+  auto opts = extractor::ParseCommandLineArguments(std::size(argv), argv).value();
   ASSERT_EQ(opts.sub_command, SubCommand::kDeflate);
   ASSERT_EQ(opts.verbose, true);
 }

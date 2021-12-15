@@ -102,11 +102,11 @@ void FillFileWithRandomContent(File& file, size_t size, unsigned int* seed) {
   std::vector<uint8_t> file_contents(size, 0);
 
   for (auto& b : file_contents) {
-    b = rand_r(seed) % std::numeric_limits<uint8_t>::max();
+    b = static_cast<uint8_t>(rand_r(seed) % std::numeric_limits<uint8_t>::max());
   }
 
   int written = 0;
-  int write_result = 0;
+  ssize_t write_result = 0;
   while ((write_result = write(file.fd(), file_contents.data() + written,
                                file_contents.size() - written)) > 0) {
     written += write_result;
@@ -315,7 +315,7 @@ TEST(BlobfsHostTest, WriteEmptyBlobWithCompactFormatIsCorrect) {
 void CheckBlobContents(File& blob, cpp20::span<const uint8_t> contents) {
   std::vector<uint8_t> buffer(kBlobfsBlockSize);
 
-  int read_result = 0;
+  ssize_t read_result = 0;
   int read_bytes = 0;
   lseek(blob.fd(), 0, SEEK_SET);
   while ((read_result = read(blob.fd(), buffer.data(), buffer.size())) >= 0) {
@@ -400,7 +400,7 @@ std::vector<uint8_t> ReadFileContents(int fd) {
   std::vector<uint8_t> data(1);
   std::vector<uint8_t> buffer(kBlobfsBlockSize);
   int read_bytes = 0;
-  int read_result = 0;
+  ssize_t read_result = 0;
   while ((read_result = read(fd, buffer.data(), buffer.size())) > 0) {
     data.resize(read_bytes + read_result);
     memcpy(&data[read_bytes], buffer.data(), read_result);

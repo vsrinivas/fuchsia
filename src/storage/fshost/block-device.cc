@@ -950,11 +950,10 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     }
   }
 
-  // -1 because zxcrypt steals a slice.
-  int slice_count =
-      device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0) / slice_size - 1;
+  uint64_t slice_count =
+      device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0) / slice_size;
 
-  if (slice_count < 0) {
+  if (slice_count == 0) {
     auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
     if (query_result.status() != ZX_OK)
       return query_result.status();
@@ -963,9 +962,12 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
       return response->status;
     // If a size is not specified, limit the size of the data partition so as not to use up all
     // FVM's space (thus limiting blobfs growth).  24 MiB should be enough.
-    slice_count =
-        std::min(24 * 1024 * 1024 / slice_size - 1,
-                 response->manager->slice_count - response->manager->assigned_slice_count);
+    slice_count = std::min<uint64_t>(
+        24 * 1024 * 1024 / slice_size - 1,
+        response->manager->slice_count - response->manager->assigned_slice_count);
+  } else {
+    // Account for the slice zxcrypt uses.
+    slice_count--;
   }
 
   auto extend_result =

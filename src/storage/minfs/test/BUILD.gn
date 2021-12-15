@@ -58,9 +58,6 @@ test("minfs_unit") {
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("minfs-integration") {
@@ -113,9 +110,6 @@ test("minfs_dirty_cache_integration") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
@@ -226,9 +220,6 @@ fuzzer("minfs-fuzzer") {
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuzzers_package("minfs-fuzzers") {

@@ -47,9 +47,6 @@ static_library("fs_test") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("access_tests") {
@@ -220,9 +217,6 @@ test("persist_tests") {
     ":fs_test",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("query_filesystem_tests") {
@@ -242,9 +236,6 @@ test("random_op_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("realpath_tests") {
@@ -354,9 +345,6 @@ test("unicode_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("unlink_tests") {

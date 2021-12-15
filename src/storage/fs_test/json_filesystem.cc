@@ -19,7 +19,8 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
         std::make_unique<fs_management::CustomDiskFormat>(name, config["binary_path"].GetString()));
   }
   iter = config.FindMember("sectors_per_cluster");
-  const int sectors_per_cluster = iter == config.MemberEnd() ? 0 : iter->value.GetInt64();
+  const int sectors_per_cluster =
+      iter == config.MemberEnd() ? 0 : static_cast<int>(iter->value.GetInt64());
   return zx::ok(std::make_unique<JsonFilesystem>(
       Traits{
           .name = config["name"].GetString(),

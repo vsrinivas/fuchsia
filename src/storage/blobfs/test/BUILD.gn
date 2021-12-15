@@ -113,9 +113,6 @@ test("blobfs_unittest") {
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_component("blobfs-unittest-worker") {
@@ -157,7 +154,4 @@ test("blobfs_host") {
     "//src/storage/blobfs",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
