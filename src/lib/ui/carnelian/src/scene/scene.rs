@@ -15,6 +15,7 @@ use crate::{
     color::Color,
     drawing::{path_for_cursor, FontFace},
     render::{
+        generic::{GenericOrder, OrderError},
         Composition, Context as RenderContext, Fill, Layer, Order, PreClear, Raster, RenderExt,
         Style,
     },
@@ -31,12 +32,20 @@ use std::{
     fmt::{self, Debug},
 };
 
-// Mold backend currently supports up to Order::MAX / 2 orders.
-const BACKEND_MAX_ORDER: u32 = Order::MAX.as_u32() / 2;
-
 // Maximum order supported by scene. 3 layers are reserved for
 /// scene features such as rounded corners.
-pub const MAX_ORDER: u32 = BACKEND_MAX_ORDER - 3;
+pub const MAX_ORDER: usize = (Order::MAX.as_u32() - 3) as usize;
+
+/// Scene order
+pub type SceneOrder = GenericOrder<MAX_ORDER>;
+
+impl TryFrom<SceneOrder> for Order {
+    type Error = OrderError;
+
+    fn try_from(order: SceneOrder) -> Result<Self, OrderError> {
+        Self::try_from(order.as_u32())
+    }
+}
 
 struct DirectLayerGroup<'a>(&'a mut Composition);
 
@@ -44,28 +53,24 @@ impl LayerGroup for DirectLayerGroup<'_> {
     fn clear(&mut self) {
         self.0.clear();
     }
-    fn insert(&mut self, order: Order, layer: Layer) {
-        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
-        self.0.insert(order, layer);
+    fn insert(&mut self, order: SceneOrder, layer: Layer) {
+        self.0.insert(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)), layer);
     }
-    fn remove(&mut self, order: Order) {
-        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
-        self.0.remove(order);
+    fn remove(&mut self, order: SceneOrder) {
+        self.0.remove(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)));
     }
 }
 
-struct SimpleLayerGroup<'a>(&'a mut BTreeMap<Order, Layer>);
+struct SimpleLayerGroup<'a>(&'a mut BTreeMap<SceneOrder, Layer>);
 
 impl LayerGroup for SimpleLayerGroup<'_> {
     fn clear(&mut self) {
         self.0.clear();
     }
-    fn insert(&mut self, order: Order, layer: Layer) {
-        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
+    fn insert(&mut self, order: SceneOrder, layer: Layer) {
         self.0.insert(order, layer);
     }
-    fn remove(&mut self, order: Order) {
-        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
+    fn remove(&mut self, order: SceneOrder) {
         self.0.remove(&order);
     }
 }
@@ -97,7 +102,7 @@ fn cursor_layer_pair(cursor_raster: &Raster, position: IntPoint) -> (Layer, Laye
     )
 }
 
-type LayerMap = BTreeMap<FacetId, BTreeMap<Order, Layer>>;
+type LayerMap = BTreeMap<FacetId, BTreeMap<SceneOrder, Layer>>;
 
 /// Options for creating a scene.
 pub struct SceneOptions {
@@ -292,7 +297,7 @@ impl Scene {
     }
 
     fn update_composition(
-        layers: impl IntoIterator<Item = (Order, Layer)>,
+        layers: impl IntoIterator<Item = (SceneOrder, Layer)>,
         mouse_position: &Option<IntPoint>,
         mouse_cursor_raster: &Option<Raster>,
         corner_knockouts: &Option<Raster>,
@@ -304,9 +309,9 @@ impl Scene {
             composition.insert(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
 
-        const CORNER_KOCKOUTS_ORDER: u32 = BACKEND_MAX_ORDER;
-        const MOUSE_CURSOR_LAYER_0_ORDER: u32 = BACKEND_MAX_ORDER - 1;
-        const MOUSE_CURSOR_LAYER_1_ORDER: u32 = BACKEND_MAX_ORDER - 2;
+        const CORNER_KOCKOUTS_ORDER: u32 = Order::MAX.as_u32();
+        const MOUSE_CURSOR_LAYER_0_ORDER: u32 = Order::MAX.as_u32() - 1;
+        const MOUSE_CURSOR_LAYER_1_ORDER: u32 = Order::MAX.as_u32() - 2;
 
         if let Some(position) = mouse_position {
             if let Some(raster) = mouse_cursor_raster {
@@ -419,7 +424,7 @@ impl Scene {
 
                 facet_layers.iter().map(move |(order, layer)| {
                     (
-                        Order::try_from(facet_origin + order.as_u32())
+                        SceneOrder::try_from(facet_origin + order.as_u32())
                             .unwrap_or_else(|e| panic!("{}", e)),
                         Layer {
                             raster: layer.raster.clone().translate(facet_translation),

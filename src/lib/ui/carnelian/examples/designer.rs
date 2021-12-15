@@ -9,12 +9,11 @@ use {
         input::{self},
         make_app_assistant,
         render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, PathBuilder,
-            Style,
+            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, PathBuilder, Style,
         },
         scene::{
             facets::Facet,
-            scene::{Scene, SceneBuilder},
+            scene::{Scene, SceneBuilder, SceneOrder},
             LayerGroup,
         },
         App, AppAssistant, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
@@ -405,7 +404,7 @@ struct DesignerState {
     pub drawing_mode: DrawingMode,
     pub last_points: PairQueue<Point>,
     pub last_anchor: Option<Point>,
-    pub layer_order: Order,
+    pub layer_order: SceneOrder,
 }
 
 impl DesignerState {
@@ -419,13 +418,13 @@ impl DesignerState {
 
     fn handle_mouse_release(&mut self) {
         self.layer_order =
-            Order::try_from(self.layer_order.as_u32() + 1).unwrap_or_else(|e| panic!("{}", e));
+            SceneOrder::try_from(self.layer_order.as_u32() + 1).unwrap_or_else(|e| panic!("{}", e));
         self.last_anchor = match self.handle_mouse_up_anchor_event() {
             MouseUpAnchorEvent::SetLastAnchor(position) => Some(position),
             MouseUpAnchorEvent::ResetLastAnchor => None,
         };
 
-        self.layer_order = Order::try_from(
+        self.layer_order = SceneOrder::try_from(
             self.layer_order.as_u32()
                 + match self.drawing_mode {
                     DrawingMode::Curve(_) => 3,
@@ -479,7 +478,7 @@ impl DesignerState {
         path: Path,
         context: &mut RenderContext,
         layer_group: &mut dyn LayerGroup,
-        layer_order: Order,
+        layer_order: SceneOrder,
     ) {
         let mut raster_builder = context.raster_builder().expect("raster_builder");
         raster_builder.add(&path, None);
@@ -533,7 +532,7 @@ impl DesignerState {
                         path,
                         context,
                         layer_group,
-                        Order::try_from(self.layer_order.as_u32() + i as u32)
+                        SceneOrder::try_from(self.layer_order.as_u32() + i as u32)
                             .unwrap_or_else(|e| panic!("{}", e)),
                     );
                 }
@@ -566,7 +565,7 @@ impl DesignerState {
                         path,
                         context,
                         layer_group,
-                        Order::try_from(self.layer_order.as_u32() + i as u32)
+                        SceneOrder::try_from(self.layer_order.as_u32() + i as u32)
                             .unwrap_or_else(|e| panic!("{}", e)),
                     );
                 }
@@ -591,7 +590,7 @@ impl DesignerState {
                         path,
                         context,
                         layer_group,
-                        Order::try_from(self.layer_order.as_u32() + i as u32)
+                        SceneOrder::try_from(self.layer_order.as_u32() + i as u32)
                             .unwrap_or_else(|e| panic!("{}", e)),
                     );
                 }
@@ -608,7 +607,7 @@ impl Default for DesignerState {
             drawing_mode: DrawingMode::Point,
             last_points: PairQueue::new(),
             last_anchor: None,
-            layer_order: Order::default(),
+            layer_order: SceneOrder::default(),
         }
     }
 }

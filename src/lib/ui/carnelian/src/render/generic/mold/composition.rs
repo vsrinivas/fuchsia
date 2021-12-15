@@ -20,7 +20,7 @@ use crate::{
 pub struct MoldComposition {
     pub(crate) id: Option<usize>,
     pub(crate) composition: mold::Composition,
-    orders_to_layer_ids: FxHashMap<Order, mold::LayerId>,
+    orders_to_layer_ids: FxHashMap<MoldOrder, mold::LayerId>,
     pub(crate) current_layer_ids: FxHashSet<mold::LayerId>,
     cached_display_transform: Option<Transform2D<Coord>>,
     pub(crate) background_color: Color,
@@ -139,7 +139,7 @@ impl Composition<Mold> for MoldComposition {
     fn insert(&mut self, order: Order, layer: Layer<Mold>) {
         for i in 0..2 {
             if let Some(id) = self.orders_to_layer_ids.remove(
-                &(Order::try_from(order.as_u32() * 2 + i)).unwrap_or_else(|e| panic!("{}", e)),
+                &(MoldOrder::try_from(order.as_u32() * 2 + i)).unwrap_or_else(|e| panic!("{}", e)),
             ) {
                 if let Some(layer) = self.composition.get_mut(id) {
                     if !self.current_layer_ids.contains(&id) {
@@ -160,19 +160,14 @@ impl Composition<Mold> for MoldComposition {
             let mold_layer = self.composition.get_mut(id).unwrap();
 
             let mold_order =
-                Order::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e));
-            mold_layer
-                .enable()
-                .set_order(
-                    MoldOrder::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e)),
-                )
-                .set_props(mold::Props {
-                    fill_rule: match layer.style.fill_rule {
-                        FillRule::NonZero => mold::FillRule::NonZero,
-                        FillRule::EvenOdd => mold::FillRule::EvenOdd,
-                    },
-                    func: mold::Func::Clip(1),
-                });
+                MoldOrder::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e));
+            mold_layer.enable().set_order(mold_order).set_props(mold::Props {
+                fill_rule: match layer.style.fill_rule {
+                    FillRule::NonZero => mold::FillRule::NonZero,
+                    FillRule::EvenOdd => mold::FillRule::EvenOdd,
+                },
+                func: mold::Func::Clip(1),
+            });
 
             mold_layer.set_transform(
                 AffineTransform::try_from(mold_transform).unwrap_or_else(|e| panic!("{}", e)),
@@ -187,53 +182,50 @@ impl Composition<Mold> for MoldComposition {
         let mold_transform = self.mold_transform(layer.raster.translation);
         let mold_layer = self.composition.get_mut(id).unwrap();
         let mold_order =
-            Order::try_from(order.as_u32() * 2 + 1).unwrap_or_else(|e| panic!("{}", e));
-        mold_layer
-            .enable()
-            .set_order(MoldOrder::try_from(order.as_u32() * 2).unwrap_or_else(|e| panic!("{}", e)))
-            .set_props(mold::Props {
-                fill_rule: match layer.style.fill_rule {
-                    FillRule::NonZero => mold::FillRule::NonZero,
-                    FillRule::EvenOdd => mold::FillRule::EvenOdd,
-                },
-                func: mold::Func::Draw(mold::Style {
-                    fill: match &layer.style.fill {
-                        Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
-                        Fill::Gradient(gradient) => {
-                            let mut builder = mold::GradientBuilder::new(
-                                [gradient.start.x, gradient.start.y],
-                                [gradient.end.x, gradient.end.y],
-                            );
-                            builder.r#type(match gradient.r#type {
-                                GradientType::Linear => mold::GradientType::Linear,
-                                GradientType::Radial => mold::GradientType::Radial,
-                            });
+            MoldOrder::try_from(order.as_u32() * 2 + 1).unwrap_or_else(|e| panic!("{}", e));
+        mold_layer.enable().set_order(mold_order).set_props(mold::Props {
+            fill_rule: match layer.style.fill_rule {
+                FillRule::NonZero => mold::FillRule::NonZero,
+                FillRule::EvenOdd => mold::FillRule::EvenOdd,
+            },
+            func: mold::Func::Draw(mold::Style {
+                fill: match &layer.style.fill {
+                    Fill::Solid(color) => mold::Fill::Solid(color.to_linear_bgra()),
+                    Fill::Gradient(gradient) => {
+                        let mut builder = mold::GradientBuilder::new(
+                            [gradient.start.x, gradient.start.y],
+                            [gradient.end.x, gradient.end.y],
+                        );
+                        builder.r#type(match gradient.r#type {
+                            GradientType::Linear => mold::GradientType::Linear,
+                            GradientType::Radial => mold::GradientType::Radial,
+                        });
 
-                            for &(color, stop) in &gradient.stops {
-                                builder.color_with_stop(color.to_linear_bgra(), stop);
-                            }
-
-                            mold::Fill::Gradient(builder.build().unwrap())
+                        for &(color, stop) in &gradient.stops {
+                            builder.color_with_stop(color.to_linear_bgra(), stop);
                         }
-                    },
-                    is_clipped: layer.clip.is_some(),
-                    blend_mode: match layer.style.blend_mode {
-                        BlendMode::Over => mold::BlendMode::Over,
-                        BlendMode::Screen => mold::BlendMode::Screen,
-                        BlendMode::Overlay => mold::BlendMode::Overlay,
-                        BlendMode::Darken => mold::BlendMode::Darken,
-                        BlendMode::Lighten => mold::BlendMode::Lighten,
-                        BlendMode::ColorDodge => mold::BlendMode::ColorDodge,
-                        BlendMode::ColorBurn => mold::BlendMode::ColorBurn,
-                        BlendMode::HardLight => mold::BlendMode::HardLight,
-                        BlendMode::SoftLight => mold::BlendMode::SoftLight,
-                        BlendMode::Difference => mold::BlendMode::Difference,
-                        BlendMode::Exclusion => mold::BlendMode::Exclusion,
-                        BlendMode::Multiply => mold::BlendMode::Multiply,
-                    },
-                    ..Default::default()
-                }),
-            });
+
+                        mold::Fill::Gradient(builder.build().unwrap())
+                    }
+                },
+                is_clipped: layer.clip.is_some(),
+                blend_mode: match layer.style.blend_mode {
+                    BlendMode::Over => mold::BlendMode::Over,
+                    BlendMode::Screen => mold::BlendMode::Screen,
+                    BlendMode::Overlay => mold::BlendMode::Overlay,
+                    BlendMode::Darken => mold::BlendMode::Darken,
+                    BlendMode::Lighten => mold::BlendMode::Lighten,
+                    BlendMode::ColorDodge => mold::BlendMode::ColorDodge,
+                    BlendMode::ColorBurn => mold::BlendMode::ColorBurn,
+                    BlendMode::HardLight => mold::BlendMode::HardLight,
+                    BlendMode::SoftLight => mold::BlendMode::SoftLight,
+                    BlendMode::Difference => mold::BlendMode::Difference,
+                    BlendMode::Exclusion => mold::BlendMode::Exclusion,
+                    BlendMode::Multiply => mold::BlendMode::Multiply,
+                },
+                ..Default::default()
+            }),
+        });
 
         mold_layer.set_transform(
             AffineTransform::try_from(mold_transform).unwrap_or_else(|e| panic!("{}", e)),
@@ -245,7 +237,8 @@ impl Composition<Mold> for MoldComposition {
 
     fn remove(&mut self, order: Order) {
         for i in 0..2 {
-            let order = Order::try_from(order.as_u32() * 2 + i).unwrap_or_else(|e| panic!("{}", e));
+            let order =
+                MoldOrder::try_from(order.as_u32() * 2 + i).unwrap_or_else(|e| panic!("{}", e));
             if let Some(id) = self.orders_to_layer_ids.remove(&order) {
                 if let Some(layer) = self.composition.get_mut(id) {
                     layer.disable();

@@ -7,10 +7,8 @@ use {
     carnelian::{
         color::Color,
         drawing::{path_for_rectangle, FontFace},
-        render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Raster, Style,
-        },
-        scene::{facets::Facet, LayerGroup},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
+        scene::{facets::Facet, LayerGroup, SceneOrder},
         Rect, Size, ViewAssistantContext,
     },
     fuchsia_trace as ftrace,
@@ -47,7 +45,7 @@ pub struct TerminalFacet<T> {
     size: Size,
     term: Rc<RefCell<Term<T>>>,
     scroll_thumb: Option<Rect>,
-    thumb_order: Option<Order>,
+    thumb_order: Option<SceneOrder>,
     renderer: Renderer,
 }
 
@@ -82,7 +80,8 @@ impl<T: 'static> Facet for TerminalFacet<T> {
         let cols = term.cols().0;
         let rows = term.lines().0;
         let stride = cols * 4;
-        let new_thumb_order = Order::try_from(stride * rows).unwrap_or_else(|e| panic!("{}", e));
+        let new_thumb_order =
+            SceneOrder::try_from(stride * rows).unwrap_or_else(|e| panic!("{}", e));
 
         // Remove old scrollbar thumb.
         if let Some(thumb_order) = self.thumb_order.take() {

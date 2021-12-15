@@ -6,10 +6,8 @@ use {
     carnelian::{
         color::Color,
         drawing::{FontFace, GlyphMap, TextGrid, TextGridCell},
-        render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, Raster, Style,
-        },
-        scene::LayerGroup,
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Raster, Style},
+        scene::{LayerGroup, SceneOrder},
         Size,
     },
     euclid::point2,
@@ -276,9 +274,9 @@ pub struct Renderer {
     textgrid: TextGrid,
     glyphs: GlyphMap,
     cursors: FxHashMap<CursorStyle, Option<Raster>>,
-    layers: FxHashMap<Order, LayerId>,
-    old_layers: FxHashSet<Order>,
-    new_layers: FxHashSet<Order>,
+    layers: FxHashMap<SceneOrder, LayerId>,
+    old_layers: FxHashSet<SceneOrder>,
+    new_layers: FxHashSet<SceneOrder>,
 }
 
 impl Renderer {
@@ -311,7 +309,7 @@ impl Renderer {
         // Process all layers and update the layer group as needed.
         for RenderableLayer { order, column, row, content, rgb } in layers.into_iter() {
             let id = LayerId { content, rgb };
-            let order = Order::try_from(order).unwrap_or_else(|e| panic!("{}", e));
+            let order = SceneOrder::try_from(order).unwrap_or_else(|e| panic!("{}", e));
 
             // Remove from old layers.
             self.old_layers.remove(&order);
@@ -448,16 +446,16 @@ mod tests {
     static FONT_FACE: Lazy<FontFace> =
         Lazy::new(|| FontFace::new(&FONT_DATA).expect("Failed to create font"));
 
-    struct TestLayerGroup<'a>(&'a mut BTreeMap<Order, Layer>);
+    struct TestLayerGroup<'a>(&'a mut BTreeMap<SceneOrder, Layer>);
 
     impl LayerGroup for TestLayerGroup<'_> {
         fn clear(&mut self) {
             self.0.clear();
         }
-        fn insert(&mut self, order: Order, layer: Layer) {
+        fn insert(&mut self, order: SceneOrder, layer: Layer) {
             self.0.insert(order, layer);
         }
-        fn remove(&mut self, order: Order) {
+        fn remove(&mut self, order: SceneOrder) {
             self.0.remove(&order);
         }
     }

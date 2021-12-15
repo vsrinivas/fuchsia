@@ -10,10 +10,10 @@ use {
         color::Color,
         drawing::{load_font, DisplayRotation, FontFace, GlyphMap, TextGrid, TextGridCell},
         make_app_assistant,
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Style},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Style},
         scene::{
             facets::{Facet, FacetId},
-            scene::{Scene, SceneBuilder},
+            scene::{Scene, SceneBuilder, SceneOrder},
             LayerGroup,
         },
         App, AppAssistant, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
@@ -187,7 +187,7 @@ impl Facet for TextGridFacet {
         for (column, row, c) in page {
             assert_eq!(*row < MAX_ROWS, true);
             assert_eq!(*column < MAX_COLUMNS_PER_ROW, true);
-            let order = Order::try_from((*row * MAX_COLUMNS_PER_ROW + *column) as u32)
+            let order = SceneOrder::try_from((*row * MAX_COLUMNS_PER_ROW + *column) as u32)
                 .unwrap_or_else(|e| panic!("{}", e));
             match self.cells.entry((*column, *row)) {
                 Entry::Occupied(entry) => {

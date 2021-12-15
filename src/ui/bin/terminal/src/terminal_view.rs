@@ -16,7 +16,7 @@ use {
         render::Context as RenderContext,
         scene::{
             facets::FacetId,
-            scene::{Scene, SceneBuilder, MAX_ORDER},
+            scene::{Scene, SceneBuilder, SceneOrder},
         },
         AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
     },
@@ -57,7 +57,7 @@ const MAX_FONT_SIZE: f32 = 140.0;
 const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
 
 // Maximum terminal size in cells. We support up to 4 layers per cell.
-const MAX_CELLS: u32 = MAX_ORDER / 4;
+const MAX_CELLS: u32 = SceneOrder::MAX.as_u32() / 4;
 
 const BACKGROUND_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
 

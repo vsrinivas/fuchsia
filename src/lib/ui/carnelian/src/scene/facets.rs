@@ -8,8 +8,9 @@ use crate::{
     drawing::{linebreak_text, measure_text_size, path_for_rectangle, FontFace, GlyphMap, Text},
     render::{
         rive::{load_rive, RenderCache as RiveRenderCache},
-        BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Raster, Shed, Style,
+        BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Shed, Style,
     },
+    scene::scene::SceneOrder,
     Coord, Point, Rect, Size, ViewAssistantContext,
 };
 use anyhow::Error;
@@ -131,7 +132,7 @@ impl Facet for RectangleFacet {
         let raster = line_raster.clone();
         self.raster = Some(line_raster);
         layer_group.insert(
-            Order::default(),
+            SceneOrder::default(),
             Layer {
                 raster,
                 clip: None,
@@ -327,8 +328,8 @@ impl Facet for TextFacet {
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        const BACKGROUND_LAYER_ORDER: Order = Order::from_u16(0);
-        const TEXT_LAYER_ORDER: Order = Order::from_u16(1);
+        const BACKGROUND_LAYER_ORDER: SceneOrder = SceneOrder::from_u16(0);
+        const TEXT_LAYER_ORDER: SceneOrder = SceneOrder::from_u16(1);
 
         if self.rendered_background_size != Some(size) {
             self.rendered_background = None;
@@ -444,7 +445,7 @@ impl Facet for RasterFacet {
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         layer_group.insert(
-            Order::default(),
+            SceneOrder::default(),
             Layer { raster: self.raster.clone(), clip: None, style: self.style.clone() },
         );
         Ok(())
@@ -506,7 +507,7 @@ impl Facet for ShedFacet {
         });
         for (i, (raster, style)) in rasters.iter().rev().enumerate() {
             layer_group.insert(
-                Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)),
+                SceneOrder::try_from(i).unwrap_or_else(|e| panic!("{}", e)),
                 Layer { raster: raster.clone(), clip: None, style: style.clone() },
             );
         }
@@ -627,7 +628,7 @@ impl Facet for RiveFacet {
 
         layer_group.clear();
         for (i, layer) in layers.enumerate() {
-            layer_group.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
+            layer_group.insert(SceneOrder::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
 
         Ok(())

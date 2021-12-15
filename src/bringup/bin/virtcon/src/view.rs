@@ -15,7 +15,7 @@ use {
         render::{rive::load_rive, Context as RenderContext},
         scene::{
             facets::{FacetId, RiveFacet},
-            scene::{Scene, SceneBuilder, MAX_ORDER},
+            scene::{Scene, SceneBuilder, SceneOrder},
         },
         AppContext, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
@@ -98,7 +98,7 @@ const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
 const FONT_SIZE_INCREMENT: f32 = 14.0;
 
 // Maximum terminal size in cells. We support up to 4 layers per cell.
-const MAX_CELLS: u32 = MAX_ORDER / 4;
+const MAX_CELLS: u32 = SceneOrder::MAX.as_u32() / 4;
 
 struct Animation {
     // Artboard has weak references to data owned by file.

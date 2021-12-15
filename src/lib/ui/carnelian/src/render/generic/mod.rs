@@ -263,25 +263,35 @@ pub struct Style {
 
 #[derive(Debug, PartialEq)]
 pub enum OrderError {
-    ExceededLayerLimit,
+    ExceededLayerLimit(u32),
 }
 
 impl fmt::Display for OrderError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "exceeded layer limit ({})", Order::MAX.as_u32())
+        write!(
+            f,
+            "exceeded layer limit ({})",
+            match self {
+                OrderError::ExceededLayerLimit(val) => val,
+            }
+        )
     }
 }
 
-impl error::Error for OrderError {}
+const CARNELIAN_MAX_ORDER: usize = (1 << 18) - 1;
+
+pub type Order = GenericOrder<CARNELIAN_MAX_ORDER>;
 
 type GuaranteedOrderType = u16;
 static_assertions::const_assert!((GuaranteedOrderType::MAX as u32) < (Order::MAX.as_u32()));
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Order(u32);
+impl error::Error for OrderError {}
 
-impl Order {
-    pub const MAX: Self = Self((1 << 18) - 1);
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct GenericOrder<const MAX: usize>(u32);
+
+impl<const MAX: usize> GenericOrder<MAX> {
+    pub const MAX: Self = Self(MAX as u32);
 
     pub const fn as_u32(&self) -> u32 {
         self.0
@@ -289,7 +299,7 @@ impl Order {
 
     pub const fn new(order: u32) -> Result<Self, OrderError> {
         if order > Self::MAX.as_u32() {
-            Err(OrderError::ExceededLayerLimit)
+            Err(OrderError::ExceededLayerLimit(Self::MAX.as_u32()))
         } else {
             Ok(Self(order))
         }
@@ -303,7 +313,7 @@ impl Order {
     }
 }
 
-impl TryFrom<u32> for Order {
+impl<const MAX: usize> TryFrom<u32> for GenericOrder<MAX> {
     type Error = OrderError;
 
     fn try_from(order: u32) -> Result<Self, OrderError> {
@@ -311,12 +321,12 @@ impl TryFrom<u32> for Order {
     }
 }
 
-impl TryFrom<usize> for Order {
+impl<const MAX: usize> TryFrom<usize> for GenericOrder<MAX> {
     type Error = OrderError;
 
     fn try_from(order: usize) -> Result<Self, OrderError> {
         u32::try_from(order)
-            .map_err(|_| OrderError::ExceededLayerLimit)
+            .map_err(|_| OrderError::ExceededLayerLimit(Self::MAX.as_u32()))
             .and_then(|x| Self::try_from(x))
     }
 }

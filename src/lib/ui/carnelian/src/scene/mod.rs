@@ -6,10 +6,12 @@
 
 use crate::{
     drawing::path_for_corner_knockouts,
-    render::{BlendMode, Context as RenderContext, FillRule, Layer, Order, Raster},
+    render::{BlendMode, Context as RenderContext, FillRule, Layer, Raster},
     Coord, Rect, Size,
 };
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+pub use crate::scene::scene::SceneOrder;
 
 /// Individual bits of UI
 pub mod facets;
@@ -66,8 +68,8 @@ pub trait LayerGroup {
     fn clear(&mut self);
 
     /// Insert a order-layer pair into the group.
-    fn insert(&mut self, order: Order, layer: Layer);
+    fn insert(&mut self, order: SceneOrder, layer: Layer);
 
     /// Removes a layer from the group.
-    fn remove(&mut self, order: Order);
+    fn remove(&mut self, order: SceneOrder);
 }

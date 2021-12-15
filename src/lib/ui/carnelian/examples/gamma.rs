@@ -8,10 +8,10 @@ use {
         color::Color,
         drawing::path_for_rectangle,
         make_app_assistant,
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, Style},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Style},
         scene::{
             facets::Facet,
-            scene::{Scene, SceneBuilder},
+            scene::{Scene, SceneBuilder, SceneOrder},
             LayerGroup,
         },
         App, AppAssistant, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
@@ -101,7 +101,7 @@ impl Facet for GammaFacet {
         }));
         layer_group.clear();
         for (i, layer) in layers.enumerate() {
-            layer_group.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
+            layer_group.insert(SceneOrder::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
         Ok(())
     }

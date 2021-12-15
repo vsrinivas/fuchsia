@@ -8,12 +8,12 @@ use {
         color::Color,
         make_app_assistant,
         render::{
-            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Path, PathBuilder,
-            Raster, Style,
+            BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, PathBuilder, Raster,
+            Style,
         },
         scene::{
             facets::Facet,
-            scene::{Scene, SceneBuilder},
+            scene::{Scene, SceneBuilder, SceneOrder},
             LayerGroup,
         },
         App, AppAssistant, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
@@ -270,7 +270,7 @@ impl Facet for ClockFaceFacet {
         }));
         layer_group.clear();
         for (i, layer) in layers.enumerate() {
-            layer_group.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
+            layer_group.insert(SceneOrder::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
         Ok(())
     }
