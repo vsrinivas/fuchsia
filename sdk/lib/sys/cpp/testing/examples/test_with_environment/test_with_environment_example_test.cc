@@ -27,7 +27,6 @@ using sys::testing::EnvironmentServices;
 using sys::testing::TestWithEnvironment;
 using test::placeholders::EchoPtr;
 
-const char kEnvironment[] = "environment_test";
 const auto kTimeout = zx::sec(5);
 const char kFakeEchoUrl[] =
     "fuchsia-pkg://fuchsia.com/test_with_environment_example_test#meta/"
@@ -45,7 +44,8 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsService) {
   std::unique_ptr<EnvironmentServices> services = CreateServices();
   FakeEcho fake_echo;
   services->AddService(fake_echo.GetHandler());
-  enclosing_environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
+  enclosing_environment_ =
+      CreateNewEnclosingEnvironment("Env_AddFakeEchoAsService", std::move(services));
 
   fidl::StringPtr message = "bogus";
   fake_echo.SetAnswer(answer_);
@@ -68,7 +68,8 @@ TEST_F(TestWithEnvironmentExampleTest, AddFakeEchoAsServiceComponent) {
   launch_info.url = kFakeEchoUrl;
   launch_info.arguments.emplace({answer_});
   services->AddServiceWithLaunchInfo(std::move(launch_info), Echo::Name_);
-  enclosing_environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
+  enclosing_environment_ =
+      CreateNewEnclosingEnvironment("Env_AddFakeEchoAsServiceComponent", std::move(services));
 
   fidl::StringPtr message = "bogus";
   EchoPtr echo_ptr;
