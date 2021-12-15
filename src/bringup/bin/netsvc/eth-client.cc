@@ -17,8 +17,7 @@
 #endif
 
 zx::status<std::unique_ptr<EthClient>> EthClient::Create(
-    fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end, zx::unowned_vmo io_vmo,
-    void* io_mem) {
+    fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end, zx::vmo io_vmo, void* io_mem) {
   fidl::WireSyncClient eth = fidl::BindSyncClient(std::move(client_end));
 
   fidl::WireResult r = eth->GetFifos();
@@ -32,13 +31,8 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
   }
   fuchsia_hardware_ethernet::wire::Fifos& fifos = *r.value().info;
 
-  zx::vmo device_vmo;
-  if (zx_status_t status = io_vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo); status != ZX_OK) {
-    fprintf(stderr, "%s: failed to duplicate vmo %s\n", __FUNCTION__, zx_status_get_string(status));
-  }
-
   {
-    fidl::WireResult result = eth->SetIoBuffer(std::move(device_vmo));
+    fidl::WireResult result = eth->SetIoBuffer(std::move(io_vmo));
     if (!result.ok()) {
       fprintf(stderr, "%s: failed to set iobuf: %s\n", __FUNCTION__, result.status_string());
       return zx::error(result.status());

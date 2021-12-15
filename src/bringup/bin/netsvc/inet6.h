@@ -146,7 +146,7 @@ void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
 
 uint16_t ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
 
-void send_router_advertisement(void);
+void send_router_advertisement();
 
 // NOTES
 //

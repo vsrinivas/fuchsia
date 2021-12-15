@@ -14,8 +14,7 @@
 class EthClient {
  public:
   static zx::status<std::unique_ptr<EthClient>> Create(
-      fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end, zx::unowned_vmo io_vmo,
-      void* io_mem);
+      fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end, zx::vmo io_vmo, void* io_mem);
 
   // Enqueue a packet for transmit.
   zx_status_t QueueTx(void* cookie, void* data, size_t len);
