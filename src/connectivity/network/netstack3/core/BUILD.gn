@@ -54,6 +54,7 @@ rustc_library("netstack3-core") {
     "src/device/link.rs",
     "src/device/mod.rs",
     "src/device/ndp.rs",
+    "src/device/state.rs",
     "src/error.rs",
     "src/ip/forwarding.rs",
     "src/ip/gmp/igmp.rs",

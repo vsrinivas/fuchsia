@@ -8,6 +8,9 @@ pub(crate) mod arp;
 pub(crate) mod ethernet;
 pub(crate) mod link;
 pub(crate) mod ndp;
+mod state;
+
+pub(crate) use self::state::{AddrConfigType, AddressEntry, AddressState};
 
 use alloc::boxed::Box;
 use alloc::vec::Vec;
@@ -20,7 +23,8 @@ use net_types::ethernet::Mac;
 use net_types::ip::{
     AddrSubnet, Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
 };
-use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr, Witness};
+use net_types::{MulticastAddr, SpecifiedAddr, UnicastAddr};
+use nonzero_ext::nonzero;
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
 use packet_formats::icmp::{mld::MldPacket, ndp::NdpPacket};
 use specialize_ip_macro::specialize_ip_address;
@@ -36,9 +40,11 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::{NdpHandler, NdpPacketHandler};
+use crate::device::state::{
+    CommonDeviceState, DeviceState, InitializationStatus, IpLinkDeviceState,
+};
 use crate::ip::gmp::igmp::{IgmpGroupState, IgmpPacketHandler};
 use crate::ip::gmp::mld::{MldGroupState, MldPacketHandler};
-use crate::ip::gmp::MulticastGroupSet;
 use crate::ip::socket::IpSockUpdate;
 use crate::{BufferDispatcher, Ctx, EventDispatcher, Instant, StackState};
 
@@ -75,12 +81,13 @@ pub(crate) trait IpDeviceContext<D: LinkDevice, TimerId, State>:
     + FrameContext<EmptyBuf, <Self as DeviceIdContext<D>>::DeviceId>
     + FrameContext<Buf<Vec<u8>>, <Self as DeviceIdContext<D>>::DeviceId>
 {
-    /// Is `device` currently operating as a router?
+    /// Is the netstack currently operating as a router for this IP version?
     ///
-    /// Returns `true` if both the `device` has routing enabled AND the netstack
-    /// is configured to route packets not destined for it; returns `false`
-    /// otherwise.
-    fn is_router_device<I: Ip>(&self, device: <Self as DeviceIdContext<D>>::DeviceId) -> bool;
+    /// Returns `true` if the netstack is configured to route IP packets not
+    /// destined for it for IP version `I`. Note that this does not necessarily
+    /// mean that routing is enabled on any given interface. That is configured
+    /// separately on a per-interface basis.
+    fn is_router<I: Ip>(&self) -> bool;
 
     /// Is `device` usable?
     ///
@@ -92,8 +99,8 @@ impl<D: EventDispatcher>
     IpDeviceContext<EthernetLinkDevice, EthernetTimerId<EthernetDeviceId>, EthernetDeviceState>
     for Ctx<D>
 {
-    fn is_router_device<I: Ip>(&self, device: EthernetDeviceId) -> bool {
-        is_router_device::<_, I>(self, device.into())
+    fn is_router<I: Ip>(&self) -> bool {
+        crate::ip::is_routing_enabled::<_, I>(self)
     }
 
     fn is_device_usable(&self, device: EthernetDeviceId) -> bool {
@@ -150,7 +157,7 @@ impl<D: EventDispatcher>
         id0: EthernetDeviceId,
         _id1: (),
     ) -> (&IpLinkDeviceState<D::Instant, EthernetDeviceState>, &D::Rng) {
-        (self.state.device.ethernet.get(id0.0).unwrap().device(), self.dispatcher.rng())
+        (&self.state.device.ethernet.get(id0.0).unwrap().device, self.dispatcher.rng())
     }
 
     fn get_states_mut_with(
@@ -159,7 +166,7 @@ impl<D: EventDispatcher>
         _id1: (),
     ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState>, &mut D::Rng) {
         let Ctx { state, dispatcher } = self;
-        (state.device.ethernet.get_mut(id0.0).unwrap().device_mut(), dispatcher.rng_mut())
+        (&mut state.device.ethernet.get_mut(id0.0).unwrap().device, dispatcher.rng_mut())
     }
 }
 
@@ -403,85 +410,29 @@ impl<I: Instant> DeviceLayerState<I> {
     }
 }
 
-/// Initialization status of a device.
-#[derive(Debug, PartialEq, Eq)]
-enum InitializationStatus {
-    /// The device is not yet initialized and MUST NOT be used.
-    Uninitialized,
-
-    /// The device is currently being initialized and must only be used by
-    /// the initialization methods.
-    Initializing,
-
-    /// The device is initialized and can operate as normal.
-    Initialized,
+/// The state associated with an IP address assigned to an IP device.
+pub trait AssignedAddress<A: IpAddress> {
+    /// Gets the address.
+    fn addr(&self) -> SpecifiedAddr<A>;
 }
 
-impl Default for InitializationStatus {
-    fn default() -> InitializationStatus {
-        InitializationStatus::Uninitialized
+impl AssignedAddress<Ipv4Addr> for AddrSubnet<Ipv4Addr> {
+    fn addr(&self) -> SpecifiedAddr<Ipv4Addr> {
+        self.addr()
     }
 }
 
-/// Common state across devices.
-#[derive(Default)]
-struct CommonDeviceState {
-    /// The device's initialization status.
-    initialization_status: InitializationStatus,
-}
-
-impl CommonDeviceState {
-    fn is_initialized(&self) -> bool {
-        self.initialization_status == InitializationStatus::Initialized
-    }
-
-    fn is_uninitialized(&self) -> bool {
-        self.initialization_status == InitializationStatus::Uninitialized
-    }
-}
-
-/// Device state.
-///
-/// `D` is the device-specific state.
-struct DeviceState<D> {
-    /// Device-independant state.
-    common: CommonDeviceState,
-
-    /// Device-specific state.
-    device: D,
-}
-
-impl<D> DeviceState<D> {
-    /// Create a new `DeviceState` with a device-specific state `device`.
-    pub(crate) fn new(device: D) -> Self {
-        Self { common: CommonDeviceState::default(), device }
-    }
-
-    /// Get a reference to the common (device-independant) state.
-    pub(crate) fn common(&self) -> &CommonDeviceState {
-        &self.common
-    }
-
-    /// Get a mutable reference to the common (device-independant) state.
-    pub(crate) fn common_mut(&mut self) -> &mut CommonDeviceState {
-        &mut self.common
-    }
-
-    /// Get a reference to the inner (device-specific) state.
-    pub(crate) fn device(&self) -> &D {
-        &self.device
-    }
-
-    /// Get a mutable reference to the inner (device-specific) state.
-    pub(crate) fn device_mut(&mut self) -> &mut D {
-        &mut self.device
+impl<I: Instant> AssignedAddress<Ipv6Addr> for AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>> {
+    fn addr(&self) -> SpecifiedAddr<Ipv6Addr> {
+        self.addr_sub().addr().into_specified()
     }
 }
 
 /// An `Ip` extension trait adding device layer functionality.
 pub(crate) trait DeviceIpExt<Instant>: Ip {
     /// The information stored about an IP address assigned to an interface.
-    type AssignedAddress;
+    type AssignedAddress: AssignedAddress<Self::Addr>;
+
     /// The state kept by the Group Messaging Protocol (GMP) used to announce
     /// membership in an IP multicast group for this version of IP.
     ///
@@ -490,215 +441,22 @@ pub(crate) trait DeviceIpExt<Instant>: Ip {
     /// device (because there are no remote hosts) or in the context of an IPsec
     /// device (because multicast is not supported).
     type GmpState;
+
+    /// The default TTL (IPv4) or hop limit (IPv6) to configure for new IP
+    /// devices.
+    const DEFAULT_HOP_LIMIT: NonZeroU8;
 }
 
 impl<I: Instant> DeviceIpExt<I> for Ipv4 {
     type AssignedAddress = AddrSubnet<Ipv4Addr>;
     type GmpState = IgmpGroupState<I>;
+    const DEFAULT_HOP_LIMIT: NonZeroU8 = nonzero!(64u8);
 }
 
 impl<I: Instant> DeviceIpExt<I> for Ipv6 {
     type AssignedAddress = AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>;
     type GmpState = MldGroupState<I>;
-}
-
-/// Generic IP-Device state.
-// TODO(ghanan): Split this up into IPv4 and IPv6 specific device states.
-pub(crate) struct IpDeviceState<I: Instant> {
-    /// Assigned IPv4 addresses.
-    ipv4_addr_sub: Vec<AddrSubnet<Ipv4Addr>>,
-
-    /// Assigned IPv6 addresses.
-    ///
-    /// May be tentative (performing NDP's Duplicate Address Detection).
-    ipv6_addr_sub: Vec<AddressEntry<Ipv6Addr, I, UnicastAddr<Ipv6Addr>>>,
-
-    /// IPv4 multicast groups this device has joined.
-    ipv4_multicast_groups: MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>>,
-
-    /// Is IGMP enabled for this device?
-    ///
-    /// If `igmp_enabled` is false, multicast groups will still be added to
-    /// `ipv4_multicast_groups`, but we will not inform the network of our
-    /// membership in those groups using IGMP.
-    igmp_enabled: bool,
-
-    /// IPv6 multicast groups this device has joined.
-    ipv6_multicast_groups: MulticastGroupSet<Ipv6Addr, MldGroupState<I>>,
-
-    /// Is MLD enabled for this device?
-    ///
-    /// If `mld_enabled` is false, multicast groups will still be added to
-    /// `ipv6_multicast_groups`, but we will not inform the network of our
-    /// membership in those groups using MLD.
-    mld_enabled: bool,
-
-    /// Default hop limit for new IPv6 packets sent from this device.
-    // TODO(ghanan): Once we separate out device-IP state from device-specific
-    //               state, move this to some IPv6-device state.
-    ipv6_hop_limit: NonZeroU8,
-
-    /// A flag indicating whether routing of IPv4 packets not destined for this
-    /// device is enabled.
-    ///
-    /// This flag controls whether or not packets can be routed from this
-    /// device. That is, when a packet arrives at a device it is not destined
-    /// for, the packet can only be routed if the device it arrived at has
-    /// routing enabled and there exists another device that has a path to the
-    /// packet's destination, regardless the other device's routing ability.
-    ///
-    /// Default: `false`.
-    route_ipv4: bool,
-
-    /// A flag indicating whether routing of IPv6 packets not destined for this
-    /// device is enabled.
-    ///
-    /// This flag controls whether or not packets can be routed from this
-    /// device. That is, when a packet arrives at a device it is not destined
-    /// for, the packet can only be routed if the device it arrived at has
-    /// routing enabled and there exists another device that has a path to the
-    /// packet's destination, regardless the other device's routing ability.
-    ///
-    /// Default: `false`.
-    route_ipv6: bool,
-}
-
-impl<I: Instant> Default for IpDeviceState<I> {
-    fn default() -> IpDeviceState<I> {
-        IpDeviceState {
-            ipv4_addr_sub: Vec::new(),
-            ipv6_addr_sub: Vec::new(),
-            ipv4_multicast_groups: MulticastGroupSet::default(),
-            igmp_enabled: false,
-            ipv6_multicast_groups: MulticastGroupSet::default(),
-            mld_enabled: false,
-            ipv6_hop_limit: ndp::HOP_LIMIT_DEFAULT,
-            route_ipv4: false,
-            route_ipv6: false,
-        }
-    }
-}
-
-/// State for a link-device that is also an IP device.
-///
-/// `D` is the link-specific state.
-pub(crate) struct IpLinkDeviceState<I: Instant, D> {
-    ip: IpDeviceState<I>,
-    link: D,
-}
-
-impl<I: Instant, D> IpLinkDeviceState<I, D> {
-    /// Create a new `IpLinkDeviceState` with a link-specific state `link`.
-    pub(crate) fn new(link: D) -> Self {
-        Self { ip: IpDeviceState::default(), link }
-    }
-
-    /// Get a reference to the IP (link-independant) state.
-    pub(crate) fn ip(&self) -> &IpDeviceState<I> {
-        &self.ip
-    }
-
-    /// Get a mutable reference to the IP (link-independant) state.
-    pub(crate) fn ip_mut(&mut self) -> &mut IpDeviceState<I> {
-        &mut self.ip
-    }
-
-    /// Get a reference to the inner (link-specific) state.
-    pub(crate) fn link(&self) -> &D {
-        &self.link
-    }
-
-    /// Get a mutable reference to the inner (link-specific) state.
-    pub(crate) fn link_mut(&mut self) -> &mut D {
-        &mut self.link
-    }
-}
-
-/// The various states an IP address can be on an interface.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AddressState {
-    /// The address is assigned to an interface and can be considered bound to
-    /// it (all packets destined to the address will be accepted).
-    Assigned,
-
-    /// The address is considered unassigned to an interface for normal
-    /// operations, but has the intention of being assigned in the future (e.g.
-    /// once NDP's Duplicate Address Detection is completed).
-    Tentative,
-
-    /// The address is considered deprecated on an interface. Existing
-    /// connections using the address will be fine, however new connections
-    /// should not use the deprecated address.
-    Deprecated,
-}
-
-impl AddressState {
-    /// Is this address assigned?
-    pub(crate) fn is_assigned(self) -> bool {
-        self == AddressState::Assigned
-    }
-
-    /// Is this address tentative?
-    pub(crate) fn is_tentative(self) -> bool {
-        self == AddressState::Tentative
-    }
-
-    /// Is this address deprecated?
-    pub(crate) fn is_deprecated(self) -> bool {
-        self == AddressState::Deprecated
-    }
-}
-
-/// The type of address configuraion.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum AddrConfigType {
-    /// Configured by stateless address autoconfiguration.
-    Slaac,
-
-    /// Manually configured.
-    Manual,
-}
-
-/// Data associated with an IP addresses on an interface.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> + Copy = SpecifiedAddr<S>> {
-    addr_sub: AddrSubnet<S, A>,
-    state: AddressState,
-    config_type: AddrConfigType,
-    valid_until: Option<Instant>,
-}
-
-impl<S: IpAddress, Instant, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
-    pub(crate) fn new(
-        addr_sub: AddrSubnet<S, A>,
-        state: AddressState,
-        config_type: AddrConfigType,
-        valid_until: Option<Instant>,
-    ) -> Self {
-        Self { addr_sub, state, config_type, valid_until }
-    }
-
-    pub(crate) fn addr_sub(&self) -> &AddrSubnet<S, A> {
-        &self.addr_sub
-    }
-
-    pub(crate) fn state(&self) -> AddressState {
-        self.state
-    }
-
-    pub(crate) fn config_type(&self) -> AddrConfigType {
-        self.config_type
-    }
-
-    pub(crate) fn mark_permanent(&mut self) {
-        self.state = AddressState::Assigned;
-    }
-}
-
-impl<S: IpAddress, Instant: Copy, A: Witness<S> + Copy> AddressEntry<S, Instant, A> {
-    pub(crate) fn valid_until(&self) -> Option<Instant> {
-        self.valid_until
-    }
+    const DEFAULT_HOP_LIMIT: NonZeroU8 = ndp::HOP_LIMIT_DEFAULT;
 }
 
 /// Possible return values during an erroneous interface address change operation.
@@ -773,7 +531,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
     // `device` must currently be uninitialized.
     assert!(state.is_uninitialized());
 
-    state.initialization_status = InitializationStatus::Initializing;
+    state.set_initialization_status(InitializationStatus::Initializing);
 
     match device.protocol {
         DeviceProtocol::Ethernet => ethernet::initialize_device(ctx, device.id.into()),
@@ -782,7 +540,9 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
     // All nodes should join the all-nodes multicast group.
     join_ip_multicast(ctx, device, Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS);
 
-    if !self::is_router_device::<_, Ipv6>(ctx, device) {
+    if !(crate::ip::is_routing_enabled::<_, Ipv6>(ctx)
+        && is_routing_enabled::<_, Ipv6>(ctx, device))
+    {
         // RFC 4861 section 6.3.7, it implies only a host sends router
         // solicitation messages.
         match device.protocol {
@@ -795,8 +555,8 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
         }
     }
 
-    get_common_device_state_mut(&mut ctx.state, device).initialization_status =
-        InitializationStatus::Initialized;
+    get_common_device_state_mut(&mut ctx.state, device)
+        .set_initialization_status(InitializationStatus::Initialized);
 }
 
 /// Remove a device from the device layer.
@@ -1162,12 +922,14 @@ fn get_common_device_state<D: EventDispatcher>(
     device: DeviceId,
 ) -> &CommonDeviceState {
     match device.protocol {
-        DeviceProtocol::Ethernet => state
-            .device
-            .ethernet
-            .get(device.id)
-            .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
-            .common(),
+        DeviceProtocol::Ethernet => {
+            &state
+                .device
+                .ethernet
+                .get(device.id)
+                .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
+                .common
+        }
     }
 }
 
@@ -1177,12 +939,14 @@ fn get_common_device_state_mut<D: EventDispatcher>(
     device: DeviceId,
 ) -> &mut CommonDeviceState {
     match device.protocol {
-        DeviceProtocol::Ethernet => state
-            .device
-            .ethernet
-            .get_mut(device.id)
-            .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
-            .common_mut(),
+        DeviceProtocol::Ethernet => {
+            &mut state
+                .device
+                .ethernet
+                .get_mut(device.id)
+                .unwrap_or_else(|| panic!("no such Ethernet device: {}", device.id))
+                .common
+        }
     }
 }
 
@@ -1339,15 +1103,6 @@ fn set_routing_enabled_inner<D: EventDispatcher, I: Ip>(
     }
 }
 
-/// Is `device` currently operating as a router?
-///
-/// Returns `true` if both the `device` has routing enabled AND the netstack is
-/// configured to route packets not destined for it; returns `false` otherwise.
-pub(crate) fn is_router_device<D: EventDispatcher, I: Ip>(ctx: &Ctx<D>, device: DeviceId) -> bool {
-    crate::ip::is_routing_enabled::<_, I>(ctx)
-        && crate::device::is_routing_enabled::<_, I>(ctx, device)
-}
-
 /// Insert a static entry into this device's ARP table.
 ///
 /// This will cause any conflicting dynamic entry to be removed, and
@@ -1439,38 +1194,6 @@ pub fn get_ndp_configurations<D: EventDispatcher>(
 /// [RFC 4862]: https://tools.ietf.org/html/rfc4862
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Tentative<T>(T, bool);
-
-impl<T> Tentative<T> {
-    /// Create a new address that is marked as tentative.
-    pub(crate) fn new_tentative(t: T) -> Self {
-        Self(t, true)
-    }
-
-    /// Create a new address that is marked as permanent/assigned.
-    pub(crate) fn new_permanent(t: T) -> Self {
-        Self(t, false)
-    }
-
-    /// Returns whether the value is tentative.
-    pub(crate) fn is_tentative(&self) -> bool {
-        self.1
-    }
-
-    /// Gets the value that is stored inside.
-    pub(crate) fn into_inner(self) -> T {
-        self.0
-    }
-
-    /// Converts a `Tentative<T>` into a `Option<T>` in the way that
-    /// a tentative value corresponds to a `None`.
-    pub(crate) fn try_into_permanent(self) -> Option<T> {
-        if self.is_tentative() {
-            None
-        } else {
-            Some(self.into_inner())
-        }
-    }
-}
 
 /// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
 impl<D: EventDispatcher> NdpPacketHandler<DeviceId> for Ctx<D> {

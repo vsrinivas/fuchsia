@@ -667,7 +667,7 @@ mod ipv6_source_address_selection {
         addresses
             // Tentative addresses are not considered available to the source
             // selection algorithm.
-            .filter(|(a, _)| !a.state().is_tentative())
+            .filter(|(a, _)| !a.state.is_tentative())
             .max_by(|(a, a_device), (b, b_device)| {
                 select_ipv6_source_address_cmp(
                     remote_ip,
@@ -692,9 +692,9 @@ mod ipv6_source_address_selection {
     ) -> Ordering {
         // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, and 7.
 
-        let a_state = a.state();
+        let a_state = a.state;
         let a_addr = a.addr_sub().addr().into_specified();
-        let b_state = b.state();
+        let b_state = b.state;
         let b_addr = b.addr_sub().addr().into_specified();
 
         // Assertions required in order for this implementation to be valid.
