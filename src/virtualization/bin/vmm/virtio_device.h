@@ -219,8 +219,8 @@ class VirtioComponentDevice : public VirtioDevice<DeviceId, NumQueues, ConfigTyp
     if (status != ZX_OK) {
       return status;
     }
-    return this->phys_mem_.vmo().duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP,
-                                           &start_info->vmo);
+    return this->phys_mem_.vmo().duplicate(
+        ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHTS_IO | ZX_RIGHT_MAP, &start_info->vmo);
   }
 
   const zx::event& event() const { return event_; }
