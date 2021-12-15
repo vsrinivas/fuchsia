@@ -302,17 +302,17 @@ fn send_mouse_event(
     }
 }
 
-/// Returns a u32 representation of `vector`, where each u8 of `vector` is an id of a button and
+/// Returns a u32 representation of `buttons`, where each u8 of `buttons` is an id of a button and
 /// indicates the position of a bit to set.
 ///
-/// This supports vectors with numbers from 1 - fidl_input_report::MOUSE_MAX_NUM_BUTTONS.
+/// This supports hashsets with numbers from 1 to fidl_input_report::MOUSE_MAX_NUM_BUTTONS.
 ///
 /// # Parameters
-/// - `vector`: The vector containing the position of bits to be set.
+/// - `buttons`: The hashset containing the position of bits to be set.
 ///
 /// # Example
 /// ```
-/// let bits = get_u32_from_vector(&vec![1, 3, 5]);
+/// let bits = get_u32_from_buttons(&HashSet::from_iter(vec![1, 3, 5]).into_iter());
 /// assert_eq!(bits, 21 /* ...00010101 */)
 /// ```
 pub fn get_u32_from_buttons(buttons: &HashSet<MouseButton>) -> u32 {
