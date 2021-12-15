@@ -172,7 +172,7 @@ TEST_F(MmapTest, InvalidMapFlags) {
 #if defined(MAP_SHARED_VALIDATE)
   // In the event these flags no longer overlap, we need to revisit if MAP_SHARED | MAP_PRIVATE
   // will correctly match the behavior in the POSIX standard (being rejected with EINVAL).
-  static_assert(MAP_SHARED_VALIDATE == MAP_SHARED | MAP_PRIVATE,
+  static_assert(MAP_SHARED_VALIDATE == (MAP_SHARED | MAP_PRIVATE),
                 "MAP_SHARED_VALIDATE no longer overlaps MAP_SHARED | MAP_PRIVATE! Test case "
                 "requires update.");
 #endif
