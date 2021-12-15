@@ -57,6 +57,8 @@ type BlockFormat = strict enum {
     FILE = 0;
     /// QCOW image. All reads and writes go to a QCOW image.
     QCOW = 1;
+    /// Block IO. All reads and writes go to a block server.
+    BLOCK = 2;
 };
 
 /// Properties describing a block device.
