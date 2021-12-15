@@ -46,7 +46,9 @@
 use {
     core::ops::{Deref, DerefMut},
     derivative::Derivative,
-    fuchsia_inspect::{Node, Property, StringProperty, StringReference, UintProperty},
+    fuchsia_inspect::{
+        BoolProperty, Node, Property, StringProperty, StringReference, UintProperty,
+    },
     std::{borrow::Borrow, collections::HashSet},
 };
 
@@ -241,6 +243,22 @@ impl Watch<u64> for InspectableU64Watcher {
 /// Exports via an Inspect `UintProperty` a `u64`. Useful because the wrapped `u64`
 /// value can be read.
 pub type InspectableU64 = Inspectable<u64, InspectableU64Watcher>;
+
+pub struct InspectableBoolWatcher {
+    bool_property: BoolProperty,
+}
+
+impl Watch<bool> for InspectableBoolWatcher {
+    fn new<'b>(value: &bool, node: &Node, name: impl Into<StringReference<'b>>) -> Self {
+        Self { bool_property: node.create_bool(name, *value) }
+    }
+
+    fn watch(&mut self, value: &bool) {
+        self.bool_property.set(*value);
+    }
+}
+
+pub type InspectableBool = Inspectable<bool, InspectableBoolWatcher>;
 
 #[cfg(test)]
 mod test {
@@ -442,6 +460,40 @@ mod test_inspectable_u64 {
             inspector,
             root: {
                 "test-property": 1u64,
+            }
+        );
+    }
+}
+
+#[cfg(test)]
+mod test_inspectable_bool {
+    use super::*;
+    use fuchsia_inspect::assert_data_tree;
+
+    #[fuchsia::test]
+    fn test_initialization() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _inspectable = InspectableBool::new(false, inspector.root(), "test-property");
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                "test-property": false,
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_watcher() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let mut inspectable = InspectableBool::new(false, inspector.root(), "test-property");
+
+        *inspectable.get_mut() = true;
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                "test-property": true,
             }
         );
     }
