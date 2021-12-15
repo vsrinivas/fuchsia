@@ -71,8 +71,9 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
         &self.data[key.get_variant()]
     }
 
-    fn get_map_mut(&mut self, key: &K) -> &mut IdMap<T> {
-        &mut self.data[key.get_variant()]
+    fn get_entry(&mut self, key: &K) -> Entry<'_, usize, T> {
+        let Self { data, _marker } = self;
+        data[key.get_variant()].entry(key.get_id())
     }
 
     /// Returns `true` if the `IdMapCollection` holds no items.
@@ -89,14 +90,20 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
     /// Returns a mutable reference to the item indexed by `key`, or `None` if
     /// the `key` doesn't exist.
     pub fn get_mut(&mut self, key: &K) -> Option<&mut T> {
-        self.get_map_mut(key).get_mut(key.get_id())
+        match self.get_entry(key) {
+            Entry::Occupied(e) => Some(e.into_mut()),
+            Entry::Vacant(_) => None,
+        }
     }
 
     /// Removes item indexed by `key` from the container.
     ///
     /// Returns the removed item if it exists, or `None` otherwise.
     pub fn remove(&mut self, key: &K) -> Option<T> {
-        self.get_map_mut(key).remove(key.get_id())
+        match self.get_entry(key) {
+            Entry::Occupied(e) => Some(e.remove()),
+            Entry::Vacant(_) => None,
+        }
     }
 
     /// Inserts `item` at `key`.
@@ -104,23 +111,31 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
     /// If the [`IdMapCollection`] already contained an item indexed by `key`,
     /// `insert` returns it, or `None` otherwise.
     pub fn insert(&mut self, key: &K, item: T) -> Option<T> {
-        self.get_map_mut(key).insert(key.get_id(), item)
+        match self.get_entry(key) {
+            Entry::Occupied(mut e) => Some(e.insert(item)),
+            Entry::Vacant(e) => {
+                let _: &mut T = e.insert(item);
+                None
+            }
+        }
     }
 
     /// Creates an iterator over the containing items.
     pub fn iter(&self) -> impl Iterator<Item = &T> {
-        self.data.iter().flat_map(|m| m.iter()).map(|(_, v)| v)
+        let Self { data, _marker } = self;
+        data.iter().flat_map(|m| m.iter()).map(|(_, v)| v)
     }
 
     /// Creates a mutable iterator over the containing items.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        self.data.iter_mut().flat_map(|m| m.iter_mut()).map(|(_, v)| v)
+        let Self { data, _marker } = self;
+        data.iter_mut().flat_map(|m| m.iter_mut()).map(|(_, v)| v)
     }
 
     /// Gets the given key's corresponding entry in the map for in-place
     /// manipulation.
     pub fn entry(&mut self, key: K) -> Entry<'_, K, T> {
-        self.get_map_mut(&key).entry(key.get_id()).map_key(|_| key)
+        self.get_entry(&key).map_key(|_| key)
     }
 }
 
