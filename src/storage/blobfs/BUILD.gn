@@ -117,6 +117,8 @@ static_library("blobfs") {
   ]
   if (is_fuchsia) {
     sources += [
+      "admin_service.cc",
+      "admin_service.h",
       "allocator/allocator.cc",
       "blob.cc",
       "blob_cache.cc",

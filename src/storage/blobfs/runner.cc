@@ -10,6 +10,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/storage/blobfs/admin_service.h"
 
 namespace blobfs {
 
@@ -109,6 +110,9 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
       health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_);
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
                         health_check_svc_);
+
+      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                        fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(), *this));
 
       export_root = std::move(outgoing);
       break;
