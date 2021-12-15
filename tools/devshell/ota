@@ -30,6 +30,10 @@ function needs-update {
   [[ $(fx-command-run shell 'read ver < /system/meta;echo $ver') != $(<"${system_image_merkle}") ]]
 }
 
+function target-using-omaha-client {
+  [[ "$(ffx component select capability fuchsia.update.Manager)" == "/core/omaha-client-service" ]]
+}
+
 function main {
   local build=false
   local build_targets=("updates")
@@ -60,6 +64,11 @@ function main {
   done
 
   check-for-package-server || return 1
+
+  if target-using-omaha-client; then
+    fx-warn "The target device is using omaha-client for update management, which will not"
+    fx-warn "OTA from this host. Consider 'fx force-ota-from-devhost' to bypass omaha-client."
+  fi
 
   if $build; then
     fx-info "Building/refreshing ${build_targets[@]}"
