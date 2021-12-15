@@ -1,5 +1,7 @@
 {
     select: {
+        is_driver_unresponsive: "INSPECT:core/wlancfg:root/client_stats:is_driver_unresponsive",
+
         // Counters for up to last 24 hours
         connect_attempts_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connect_attempts_count",
         connect_successful_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connect_successful_count",
@@ -45,6 +47,12 @@
         disconnect_per_day_connected_ratio_7d: "disconnect_count_7d / (connected_duration_7d / Days(1))",
     },
     act: {
+        wlan_driver_unresponsive: {
+            type: "Snapshot",
+            trigger: "And(Not(Missing(is_driver_unresponsive)), is_driver_unresponsive)",
+            repeat: "Hours(24)",
+            signature: "wlan_driver_unresponsive",
+        },
         low_uptime_ratio_1d: {
             type: "Snapshot",
             trigger: "And(uptime_ratio_1d < 0.95, enough_1d_counters_data)",
@@ -123,6 +131,27 @@
         },
     },
     test: {
+        wlan_driver_unresponsive_triggers: {
+            yes: [
+                "wlan_driver_unresponsive",
+            ],
+            values: {
+                is_driver_unresponsive: true,
+            },
+        },
+        wlan_driver_unresponsive_not_triggers_due_to_field_being_false: {
+            no: [
+                "wlan_driver_unresponsive",
+            ],
+            values: {
+                is_driver_unresponsive: false,
+            },
+        },
+        wlan_driver_unresponsive_not_triggers_due_to_missing_field: {
+            no: [
+                "wlan_driver_unresponsive",
+            ],
+        },
         low_uptime_ratio_1d_triggers: {
             yes: [
                 "low_uptime_ratio_1d",
