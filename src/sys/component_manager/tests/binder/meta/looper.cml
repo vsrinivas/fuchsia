@@ -1,0 +1,20 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/looper",
+    },
+    capabilities: [
+        { protocol: "fuchsia.component.tests.Shutdowner" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.component.tests.Shutdowner",
+            from: "self",
+        },
+    ],
+}

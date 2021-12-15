@@ -64,6 +64,7 @@ impl CapabilityProvider for HubCapabilityProvider {
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
+        log::info!("Opening the /hub capability provider: {:?}", relative_path);
         let mut relative_path = relative_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?
@@ -343,6 +344,7 @@ impl Hub {
                       _mode: u32,
                       _relative_path: pfsPath,
                       server_end: ServerEnd<NodeMarker>| {
+                    log::info!("Connecting fuchsia.sys2.LifecycleController");
                     let lifecycle_controller = lifecycle_controller.clone();
                     let server_end =
                         ServerEnd::<LifecycleControllerMarker>::new(server_end.into_channel());

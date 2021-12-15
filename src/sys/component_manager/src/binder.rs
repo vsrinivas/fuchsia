@@ -43,16 +43,11 @@ lazy_static! {
 pub struct BinderCapabilityProvider {
     source: WeakComponentInstance,
     target: WeakComponentInstance,
-    host: Arc<BinderCapabilityHost>,
 }
 
 impl BinderCapabilityProvider {
-    pub fn new(
-        source: WeakComponentInstance,
-        target: WeakComponentInstance,
-        host: Arc<BinderCapabilityHost>,
-    ) -> Self {
-        Self { source, target, host }
+    pub fn new(source: WeakComponentInstance, target: WeakComponentInstance) -> Self {
+        Self { source, target }
     }
 }
 
@@ -66,26 +61,26 @@ impl CapabilityProvider for BinderCapabilityProvider {
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
-        let host = self.host.clone();
         let target = self.target.clone();
         let source = self.source.clone();
         let server_end = channel::take_channel(server_end);
+
         task_scope
             .add_task(async move {
-                if let Err(err) = host.bind(source).await {
-                    let res = target.upgrade().map_err(|e| ModelError::from(e));
-                    match res {
-                        Ok(target) => {
-                            report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end)
-                                .await;
-                        }
-                        Err(err) => {
-                            log::warn!(
-                                "failed to upgrade reference to {}: {}",
-                                target.moniker,
-                                err
-                            );
-                        }
+                let source = match source.upgrade().map_err(|e| ModelError::from(e)) {
+                    Ok(source) => source,
+                    Err(err) => {
+                        report_routing_failure_to_target(target, err, server_end).await;
+                        return;
+                    }
+                };
+
+                match source.bind(&BindReason::Binder).await {
+                    Ok(()) => {
+                        source.scope_to_runtime(server_end).await;
+                    }
+                    Err(err) => {
+                        report_routing_failure_to_target(target, err, server_end).await;
                     }
                 }
             })
@@ -113,12 +108,6 @@ impl BinderCapabilityHost {
         )]
     }
 
-    pub async fn bind(&self, source: WeakComponentInstance) -> Result<(), ModelError> {
-        let source = source.upgrade().map_err(|e| ModelError::from(e))?;
-        source.bind(&BindReason::Binder).await?;
-        Ok(())
-    }
-
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
         source: WeakComponentInstance,
@@ -132,7 +121,7 @@ impl BinderCapabilityHost {
             let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
             let target =
                 WeakComponentInstance::new(&model.look_up(&target_moniker.to_partial()).await?);
-            Ok(Some(Box::new(BinderCapabilityProvider::new(source, target, self.clone()))
+            Ok(Some(Box::new(BinderCapabilityProvider::new(source, target))
                 as Box<dyn CapabilityProvider>))
         } else {
             Ok(capability_provider)
@@ -165,6 +154,21 @@ impl Hook for BinderCapabilityHost {
                 .await?;
         }
         Ok(())
+    }
+}
+
+async fn report_routing_failure_to_target(
+    target: WeakComponentInstance,
+    err: ModelError,
+    server_end: zx::Channel,
+) {
+    match target.upgrade().map_err(|e| ModelError::from(e)) {
+        Ok(target) => {
+            report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end).await;
+        }
+        Err(err) => {
+            log::warn!("failed to upgrade reference to {}: {}", target.moniker, err);
+        }
     }
 }
 
@@ -217,7 +221,6 @@ mod tests {
             target: AbsoluteMoniker,
         ) -> Box<BinderCapabilityProvider> {
             let builtin_environment = self.builtin_environment.lock().await;
-            let host = builtin_environment.binder_capability_host.clone();
             let source = builtin_environment
                 .model
                 .look_up(&source.to_partial())
@@ -232,7 +235,6 @@ mod tests {
             Box::new(BinderCapabilityProvider::new(
                 WeakComponentInstance::new(&source),
                 WeakComponentInstance::new(&target),
-                host,
             ))
         }
     }

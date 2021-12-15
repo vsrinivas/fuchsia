@@ -8,15 +8,11 @@
     },
     children: [
         {
-            name: "hello_world",
-            url: "fuchsia-pkg://fuchsia.com/binder_integration_test#meta/hello_world.cm",
+            name: "looper",
+            url: "fuchsia-pkg://fuchsia.com/binder_integration_test#meta/looper.cm",
         },
     ],
     use: [
-        {
-            protocol: "fuchsia.component.Binder",
-            from: "#hello_world",
-        },
         { protocol: "fuchsia.sys2.EventSource" },
         {
             event: "stopped",
@@ -26,12 +22,19 @@
             event: "started",
             from: "framework",
         },
+        {
+            protocol: [
+                "fuchsia.component.Binder",
+                "fuchsia.component.tests.Shutdowner",
+            ],
+            from: "#looper",
+        },
     ],
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: "#hello_world",
+            to: "#looper",
         },
     ],
 }

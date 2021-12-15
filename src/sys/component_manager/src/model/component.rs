@@ -1036,6 +1036,14 @@ impl ComponentInstance {
         logger.log(level, format_args!("{}", &message))
     }
 
+    /// Scoped this server_end to the component instance's Runtime. For the duration
+    /// of the component's lifetime, when it's running, this channel will be
+    /// kept alive.
+    pub async fn scope_to_runtime(self: &Arc<Self>, server_end: zx::Channel) {
+        let mut execution = self.lock_execution().await;
+        execution.scope_server_end(server_end);
+    }
+
     /// Returns the top instance (component manager's instance) by traversing parent links.
     async fn top_instance(self: &Arc<Self>) -> Result<Arc<ComponentManagerInstance>, ModelError> {
         let mut current = self.clone();
@@ -1157,6 +1165,16 @@ impl ExecutionState {
     /// Returns whether the instance has shut down.
     pub fn is_shut_down(&self) -> bool {
         self.shut_down
+    }
+
+    /// Scope server_end to `runtime` of this state. This ensures that the channel
+    /// will be kept alive as long as runtime is set to Some(...). If it is
+    /// None when this method is called, this operation is a no-op and the channel
+    /// will be dropped.
+    pub fn scope_server_end(&mut self, server_end: zx::Channel) {
+        if let Some(runtime) = self.runtime.as_mut() {
+            runtime.add_scoped_server_end(server_end);
+        }
     }
 }
 
@@ -1584,6 +1602,11 @@ pub struct Runtime {
     /// controller channel to close, to be aborted when the `Runtime` is
     /// dropped.
     exit_listener: Option<AbortHandle>,
+
+    /// Channels scoped to lifetime of this component's execution context. This
+    /// should only be used for the server_end of the `fuchsia.component.Binder`
+    /// connection.
+    binder_server_ends: Vec<zx::Channel>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -1665,6 +1688,7 @@ impl Runtime {
             controller: controller.map(ComponentController::new),
             timestamp,
             exit_listener: None,
+            binder_server_ends: vec![],
         })
     }
 
@@ -1716,6 +1740,11 @@ impl Runtime {
                 component_exit_status: zx::Status::OK,
             })
         }
+    }
+
+    /// Add a channel scoped to the lifetime of this object.
+    pub fn add_scoped_server_end(&mut self, server_end: zx::Channel) {
+        self.binder_server_ends.push(server_end);
     }
 }
 

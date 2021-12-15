@@ -1357,10 +1357,11 @@ mod tests {
 
         // Connect to fuchsia.component.Binder to start the test realm.
         let binder_proxy = realm.connect_to_protocol::<fidl_fuchsia_component::BinderMarker>();
-        // Take event stream of channel in order to observe channel closures.
-        // If the channel is closed early, component_manager will write an
-        // epitaph.
-        let mut binder_evt_stream = binder_proxy.take_event_stream();
+
+        // Receive Signal if fuchsia.component.Binder channel is closed prematurely.
+        // This channel is scoped to the runtime of the component, so it should
+        // not be closed before the component stops.
+        let binder_fut = binder_proxy.on_closed().fuse();
 
         // Hold Future object of main assertion of the test so that we can join!
         // with the binder channel event stream below.
@@ -1373,15 +1374,14 @@ mod tests {
                         count: 0u64,
                     }
                 });
-            });
+            }).fuse();
 
-        // TODO(https://fxbug.dev/83945): component_manager does not scope the channel
-        // of a framework capability to the lifetime of the component. Therefore,
-        // the channel is closed relatively quickly. join! is used here to ensure
-        // that the assertion above is made AND the channel closes without an
-        // epitaph.
-        let (event, ()) = futures::join!(binder_evt_stream.next(), assert_fut);
-        matches::assert_matches!(event, None);
+        pin_mut!(binder_fut, assert_fut);
+
+        futures::select! {
+            () = assert_fut => {},
+            signals = binder_fut => panic!("binder channel closed with: {:?}", signals)
+        };
     }
 
     #[fixture(with_sandbox)]

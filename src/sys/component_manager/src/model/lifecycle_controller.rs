@@ -111,7 +111,9 @@ impl LifecycleController {
     }
 
     async fn stop(&self, moniker: String, is_recursive: bool) -> Result<(), fcomponent::Error> {
+        log::info!("Stopping {}", moniker);
         let component = self.resolve_component(&moniker).await?;
+        log::info!("{} Resolved!", moniker);
         component.stop_instance(false, is_recursive).await.map_err(|e: ModelError| {
             debug!(
                 "lifecycle controller failed to stop component instance {} (is_recursive={}): {:?}",

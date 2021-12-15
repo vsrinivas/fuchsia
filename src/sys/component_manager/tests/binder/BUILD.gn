@@ -11,10 +11,27 @@ group("tests") {
   deps = [ ":binder_integration_test" ]
 }
 
-fuchsia_component("hello_world") {
+rustc_binary("looper_bin") {
+  output_name = "looper"
+  source_root = "src/looper.rs"
+
+  deps = [
+    "fidl:fuchsia.component.tests-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  sources = [ "src/looper.rs" ]
+}
+
+fuchsia_component("looper_component") {
+  component_name = "looper"
   testonly = true
-  manifest = "meta/hello_world.cml"
-  deps = [ "//examples/hello_world/rust:bin" ]
+  manifest = "meta/looper.cml"
+  deps = [ ":looper_bin" ]
 }
 
 rustc_test("binder_integration_test_bin") {
@@ -22,6 +39,7 @@ rustc_test("binder_integration_test_bin") {
   source_root = "src/binder_integration_test.rs"
 
   deps = [
+    "fidl:fuchsia.component.tests-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -29,6 +47,9 @@ rustc_test("binder_integration_test_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/lib/component-events",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
   ]
 
   sources = [ "src/binder_integration_test.rs" ]
@@ -43,5 +64,5 @@ fuchsia_component("binder_integration_test_component") {
 
 fuchsia_test_package("binder_integration_test") {
   test_components = [ ":binder_integration_test_component" ]
-  deps = [ ":hello_world" ]
+  deps = [ ":looper_component" ]
 }
