@@ -262,7 +262,6 @@ fs_test_config("minfs") {
   supports_hard_links = true
   supports_resize = true
   max_file_size = 4294950912
-  use_directory_admin_to_unmount = true
   has_directory_size_limit = true
   supports_fsck_after_every_transaction = true
   supports_watch_event_deleted = false
