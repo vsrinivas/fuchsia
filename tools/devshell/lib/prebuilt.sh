@@ -21,7 +21,7 @@ esac
 readonly PREBUILT_3P_DIR="${FUCHSIA_DIR}/prebuilt/third_party"
 readonly PREBUILT_TOOLS_DIR="${FUCHSIA_DIR}/prebuilt/tools"
 
-readonly PREBUILT_AEMU_DIR="${PREBUILT_3P_DIR}/aemu/${HOST_PLATFORM}"
+readonly PREBUILT_AEMU_DIR="${PREBUILT_3P_DIR}/android/aemu/release/${HOST_PLATFORM}"
 readonly PREBUILT_CLANG_DIR="${PREBUILT_3P_DIR}/clang/${HOST_PLATFORM}"
 readonly PREBUILT_CMAKE_DIR="${PREBUILT_3P_DIR}/cmake/${HOST_PLATFORM}"
 readonly PREBUILT_DART_DIR="${PREBUILT_3P_DIR}/dart/${HOST_PLATFORM}"
