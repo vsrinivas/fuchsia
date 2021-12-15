@@ -8,10 +8,11 @@ mod windowed_stats;
 use {
     crate::telemetry::windowed_stats::WindowedStats,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
+    fidl_fuchsia_wlan_device_service::{
+        GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
+    },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_sme as fidl_sme,
-    fidl_fuchsia_wlan_stats::MlmeStats,
-    fuchsia_async as fasync,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
     fuchsia_inspect::{
         ArrayProperty, InspectType, Inspector, Node as InspectNode, NumericProperty, UintProperty,
     },
@@ -314,7 +315,7 @@ struct ConnectedState {
     /// Time when the user manually initiates connecting to another network via the
     /// Policy ClientController::Connect FIDL call.
     new_connect_start_time: Option<fasync::Time>,
-    prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
+    prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceCounterStats>,
     multiple_bss_candidates: bool,
     latest_ap_state: BssDescription,
 }
@@ -459,30 +460,24 @@ fn inspect_record_external_data(
                     },
                 });
 
-                match dev_svc_proxy.get_iface_stats(iface_id).await {
-                    Ok((zx::sys::ZX_OK, Some(stats))) => {
-                        if let Some(mlme_stats) = &stats.mlme_stats {
-                            if let fidl_fuchsia_wlan_stats::MlmeStats::ClientMlmeStats(mlme_stats) =
-                                mlme_stats.as_ref()
-                            {
-                                let mut histograms = HistogramsNode::new(
-                                    inspector.root().create_child("histograms"),
-                                );
-                                histograms
-                                    .log_per_antenna_snr_histograms(&mlme_stats.snr_histograms[..]);
-                                histograms.log_per_antenna_rx_rate_histograms(
-                                    &mlme_stats.rx_rate_index_histograms[..],
-                                );
-                                histograms.log_per_antenna_noise_floor_histograms(
-                                    &mlme_stats.noise_floor_histograms[..],
-                                );
-                                histograms.log_per_antenna_rssi_histograms(
-                                    &mlme_stats.rssi_histograms[..],
-                                );
+                match dev_svc_proxy.get_iface_histogram_stats(iface_id).await {
+                    Ok(GetIfaceHistogramStatsResponse::Stats(stats)) => {
+                        let mut histograms = HistogramsNode::new(
+                            inspector.root().create_child("histograms"),
+                        );
+                        histograms
+                            .log_per_antenna_snr_histograms(&stats.snr_histograms[..]);
+                        histograms.log_per_antenna_rx_rate_histograms(
+                            &stats.rx_rate_index_histograms[..],
+                        );
+                        histograms.log_per_antenna_noise_floor_histograms(
+                            &stats.noise_floor_histograms[..],
+                        );
+                        histograms.log_per_antenna_rssi_histograms(
+                            &stats.rssi_histograms[..],
+                        );
 
-                                inspector.root().record(histograms);
-                            }
-                        }
+                        inspector.root().record(histograms);
                     }
                     _ => (),
                 }
@@ -702,8 +697,8 @@ impl Telemetry {
             ConnectionState::Idle(..) => (),
             ConnectionState::Connected(state) => {
                 self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
-                match self.dev_svc_proxy.get_iface_stats(state.iface_id).await {
-                    Ok((zx::sys::ZX_OK, Some(stats))) => {
+                match self.dev_svc_proxy.get_iface_counter_stats(state.iface_id).await {
+                    Ok(GetIfaceCounterStatsResponse::Stats(stats)) => {
                         if let Some(prev_counters) = state.prev_counters.as_ref() {
                             diff_and_log_counters(
                                 &mut self.stats_logger,
@@ -713,7 +708,7 @@ impl Telemetry {
                             )
                             .await;
                         }
-                        let _prev = state.prev_counters.replace(*stats);
+                        let _prev = state.prev_counters.replace(stats);
                     }
                     _ => {
                         self.get_iface_stats_fail_count.add(1);
@@ -1049,24 +1044,14 @@ const DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD: f64 = 0.1;
 
 async fn diff_and_log_counters(
     stats_logger: &mut StatsLogger,
-    prev: &fidl_fuchsia_wlan_stats::IfaceStats,
-    current: &fidl_fuchsia_wlan_stats::IfaceStats,
+    prev: &fidl_fuchsia_wlan_stats::IfaceCounterStats,
+    current: &fidl_fuchsia_wlan_stats::IfaceCounterStats,
     duration: zx::Duration,
 ) {
-    let (prev, current) = match (&prev.mlme_stats, &current.mlme_stats) {
-        (Some(ref prev), Some(ref current)) => match (prev.as_ref(), current.as_ref()) {
-            (MlmeStats::ClientMlmeStats(prev), MlmeStats::ClientMlmeStats(current)) => {
-                (prev, current)
-            }
-            _ => return,
-        },
-        _ => return,
-    };
-
-    let tx_total = current.tx_frame.in_.count - prev.tx_frame.in_.count;
-    let tx_drop = current.tx_frame.drop.count - prev.tx_frame.drop.count;
-    let rx_total = current.rx_frame.in_.count - prev.rx_frame.in_.count;
-    let rx_drop = current.rx_frame.drop.count - prev.rx_frame.drop.count;
+    let tx_total = current.tx_total - prev.tx_total;
+    let tx_drop = current.tx_drop - prev.tx_drop;
+    let rx_total = current.rx_unicast_total - prev.rx_unicast_total;
+    let rx_drop = current.rx_unicast_drop - prev.rx_unicast_drop;
 
     let tx_drop_rate = if tx_total > 0 { tx_drop as f64 / tx_total as f64 } else { 0f64 };
     let rx_drop_rate = if rx_total > 0 { rx_drop as f64 / rx_total as f64 } else { 0f64 };
@@ -2269,9 +2254,9 @@ mod tests {
         fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device_service::{
-            DeviceServiceGetIfaceStatsResponder, DeviceServiceRequest,
+            DeviceServiceRequest, GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
         },
-        fidl_fuchsia_wlan_stats::{self, ClientMlmeStats, Counter, PacketCounter},
+        fidl_fuchsia_wlan_stats,
         fuchsia_inspect::{testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
         std::{cmp::min, pin::Pin},
@@ -2306,10 +2291,9 @@ mod tests {
                             &mut $test_fut,
                         );
                         // Manually respond to iface stats request
-                        respond_iface_stats_req(
+                        respond_iface_histogram_stats_req(
                             &mut $test_helper.exec,
                             &mut $test_helper.dev_svc_stream,
-                            &mut $test_helper.iface_stats_req_handler
                         );
                     }
                     Poll::Ready(result) => {
@@ -2906,22 +2890,13 @@ mod tests {
     #[fuchsia::test]
     fn test_tx_high_packet_drop_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            let mut iface_stats = fake_iface_stats(seed);
-            match &mut iface_stats.mlme_stats {
-                Some(stats) => match **stats {
-                    MlmeStats::ClientMlmeStats(ref mut stats) => {
-                        stats.tx_frame.in_.count = 10 * seed;
-                        stats.tx_frame.drop.count = 3 * seed;
-                    }
-                    _ => panic!("expect ClientMlmeStats"),
-                },
-                _ => panic!("expect mlme_stats to be available"),
-            }
-            responder
-                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                .expect("expect sending IfaceStats response to succeed");
+            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+                tx_total: 10 * seed,
+                tx_drop: 3 * seed,
+                ..fake_iface_counter_stats(seed)
+            })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -2954,22 +2929,13 @@ mod tests {
     #[fuchsia::test]
     fn test_rx_high_packet_drop_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            let mut iface_stats = fake_iface_stats(seed);
-            match &mut iface_stats.mlme_stats {
-                Some(stats) => match **stats {
-                    MlmeStats::ClientMlmeStats(ref mut stats) => {
-                        stats.rx_frame.in_.count = 10 * seed;
-                        stats.rx_frame.drop.count = 3 * seed;
-                    }
-                    _ => panic!("expect ClientMlmeStats"),
-                },
-                _ => panic!("expect mlme_stats to be available"),
-            }
-            responder
-                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                .expect("expect sending IfaceStats response to succeed");
+            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+                rx_unicast_total: 10 * seed,
+                rx_unicast_drop: 3 * seed,
+                ..fake_iface_counter_stats(seed)
+            })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -3002,25 +2968,16 @@ mod tests {
     #[fuchsia::test]
     fn test_rx_tx_high_but_not_very_high_packet_drop_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            let mut iface_stats = fake_iface_stats(seed);
-            match &mut iface_stats.mlme_stats {
-                Some(stats) => match **stats {
-                    MlmeStats::ClientMlmeStats(ref mut stats) => {
-                        // 3% drop rate would be high, but not very high
-                        stats.rx_frame.in_.count = 100 * seed;
-                        stats.rx_frame.drop.count = 3 * seed;
-                        stats.tx_frame.in_.count = 100 * seed;
-                        stats.tx_frame.drop.count = 3 * seed;
-                    }
-                    _ => panic!("expect ClientMlmeStats"),
-                },
-                _ => panic!("expect mlme_stats to be available"),
-            }
-            responder
-                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                .expect("expect sending IfaceStats response to succeed");
+            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+                // 3% drop rate would be high, but not very high
+                rx_unicast_total: 100 * seed,
+                rx_unicast_drop: 3 * seed,
+                tx_total: 100 * seed,
+                tx_drop: 3 * seed,
+                ..fake_iface_counter_stats(seed)
+            })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -3054,21 +3011,12 @@ mod tests {
     #[fuchsia::test]
     fn test_no_rx_duration_counters() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64;
-            let mut iface_stats = fake_iface_stats(seed);
-            match &mut iface_stats.mlme_stats {
-                Some(stats) => match **stats {
-                    MlmeStats::ClientMlmeStats(ref mut stats) => {
-                        stats.rx_frame.in_.count = 10;
-                    }
-                    _ => panic!("expect ClientMlmeStats"),
-                },
-                _ => panic!("expect mlme_stats to be available"),
-            }
-            responder
-                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                .expect("expect sending IfaceStats response to succeed");
+            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+                rx_unicast_total: 10,
+                ..fake_iface_counter_stats(seed)
+            })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -3101,10 +3049,8 @@ mod tests {
     #[fuchsia::test]
     fn test_get_iface_stats_fail() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
-            responder
-                .send(zx::sys::ZX_ERR_NOT_SUPPORTED, None)
-                .expect("expect sending IfaceStats response to succeed");
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
+            GetIfaceCounterStatsResponse::ErrorStatus(zx::sys::ZX_ERR_NOT_SUPPORTED)
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -3322,35 +3268,26 @@ mod tests {
     #[fuchsia::test]
     fn test_log_daily_rx_tx_ratio_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64 / 1000_000_000;
-            let mut iface_stats = fake_iface_stats(seed);
-            match &mut iface_stats.mlme_stats {
-                Some(stats) => match **stats {
-                    MlmeStats::ClientMlmeStats(ref mut stats) => {
-                        stats.tx_frame.in_.count = 10 * seed;
-                        // TX drop rate stops increasing at 1 hour + TELEMETRY_QUERY_INTERVAL mark.
-                        // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
-                        // computing counters, this leads to 3 hour of high TX drop rate.
-                        stats.tx_frame.drop.count = 3 * min(
-                            seed,
-                            (3.hours() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
-                        );
-                        // RX drop rate stops increasing at 4 hour + TELEMETRY_QUERY_INTERVAL mark.
-                        stats.rx_frame.drop.count = 3 * min(
-                            seed,
-                            (4.hours() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
-                        );
-                        // RX total stops increasing at 23 hour mark
-                        stats.rx_frame.in_.count = 10 * min(seed, 23.hours().into_seconds() as u64);
-                    }
-                    _ => panic!("expect ClientMlmeStats"),
-                },
-                _ => panic!("expect mlme_stats to be available"),
-            }
-            responder
-                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                .expect("expect sending IfaceStats response to succeed");
+            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+                tx_total: 10 * seed,
+                // TX drop rate stops increasing at 1 hour + TELEMETRY_QUERY_INTERVAL mark.
+                // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
+                // computing counters, this leads to 3 hour of high TX drop rate.
+                tx_drop: 3 * min(
+                    seed,
+                    (3.hours() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                ),
+                // RX total stops increasing at 23 hour mark
+                rx_unicast_total: 10 * min(seed, 23.hours().into_seconds() as u64),
+                // RX drop rate stops increasing at 4 hour + TELEMETRY_QUERY_INTERVAL mark.
+                rx_unicast_drop: 3 * min(
+                    seed,
+                    (4.hours() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                ),
+                ..fake_iface_counter_stats(seed)
+            })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -3486,7 +3423,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_log_hourly_fleetwise_uptime_cobalt_metrics() {
+    fn test_log_hourly_fleetwide_uptime_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -3552,38 +3489,28 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_log_hourly_fleetwise_rx_tx_cobalt_metrics() {
+    fn test_log_hourly_fleetwide_rx_tx_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
-        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+        test_helper.set_iface_counter_stats_resp(Box::new(|| {
             let seed = fasync::Time::now().into_nanos() as u64 / 1000_000_000;
-            let mut iface_stats = fake_iface_stats(seed);
-            match &mut iface_stats.mlme_stats {
-                Some(stats) => match **stats {
-                    MlmeStats::ClientMlmeStats(ref mut stats) => {
-                        stats.tx_frame.in_.count = 10 * seed;
-                        // TX drop rate stops increasing at 10 min + TELEMETRY_QUERY_INTERVAL mark.
-                        // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
-                        // computing counters, this leads to 10 min of high TX drop rate.
-                        stats.tx_frame.drop.count = 3 * min(
-                            seed,
-                            (10.minutes() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
-                        );
-                        // RX drop rate stops increasing at 20 min + TELEMETRY_QUERY_INTERVAL mark.
-                        stats.rx_frame.drop.count = 3 * min(
-                            seed,
-                            (20.minutes() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
-                        );
-                        // RX total stops increasing at 45 min mark
-                        stats.rx_frame.in_.count =
-                            10 * min(seed, 45.minutes().into_seconds() as u64);
-                    }
-                    _ => panic!("expect ClientMlmeStats"),
-                },
-                _ => panic!("expect mlme_stats to be available"),
-            }
-            responder
-                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                .expect("expect sending IfaceStats response to succeed");
+            GetIfaceCounterStatsResponse::Stats(fidl_fuchsia_wlan_stats::IfaceCounterStats {
+                tx_total: 10 * seed,
+                // TX drop rate stops increasing at 10 min + TELEMETRY_QUERY_INTERVAL mark.
+                // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
+                // computing counters, this leads to 10 min of high TX drop rate.
+                tx_drop: 3 * min(
+                    seed,
+                    (10.minutes() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                ),
+                // RX total stops increasing at 45 min mark
+                rx_unicast_total: 10 * min(seed, 45.minutes().into_seconds() as u64),
+                // RX drop rate stops increasing at 20 min + TELEMETRY_QUERY_INTERVAL mark.
+                rx_unicast_drop: 3 * min(
+                    seed,
+                    (20.minutes() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                ),
+                ..fake_iface_counter_stats(seed)
+            })
         }));
 
         test_helper.send_connected_event(random_bss_description!(Wpa2));
@@ -4826,7 +4753,7 @@ mod tests {
         inspector: Inspector,
         dev_svc_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
         cobalt_1dot1_stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
-        iface_stats_req_handler: Option<Box<dyn FnMut(DeviceServiceGetIfaceStatsResponder)>>,
+        iface_counter_stats_resp: Option<Box<dyn Fn() -> GetIfaceCounterStatsResponse>>,
         /// As requests to Cobalt are responded to via `self.drain_cobalt_events()`,
         /// their payloads are drained to this HashMap
         cobalt_events: Vec<MetricEvent>,
@@ -4860,10 +4787,10 @@ mod tests {
                 let _ = self.exec.wake_expired_timers();
                 assert_eq!(self.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-                respond_iface_stats_req(
+                respond_iface_counter_stats_req(
                     &mut self.exec,
                     &mut self.dev_svc_stream,
-                    &mut self.iface_stats_req_handler,
+                    &mut self.iface_counter_stats_resp,
                 );
 
                 // Respond to any potential Cobalt request, draining their payloads to
@@ -4874,11 +4801,11 @@ mod tests {
             }
         }
 
-        fn set_iface_stats_req_handler(
+        fn set_iface_counter_stats_resp(
             &mut self,
-            iface_stats_req_handler: Box<dyn FnMut(DeviceServiceGetIfaceStatsResponder)>,
+            iface_counter_stats_resp: Box<dyn Fn() -> GetIfaceCounterStatsResponse>,
         ) {
-            let _ = self.iface_stats_req_handler.replace(iface_stats_req_handler);
+            let _ = self.iface_counter_stats_resp.replace(iface_counter_stats_resp);
         }
 
         /// Advance executor by some duration until the next time `test_fut` handles periodic
@@ -4948,29 +4875,53 @@ mod tests {
         }
     }
 
-    fn respond_iface_stats_req(
+    fn respond_iface_counter_stats_req(
         executor: &mut fasync::TestExecutor,
         dev_svc_stream: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
-        iface_stats_req_handler: &mut Option<Box<dyn FnMut(DeviceServiceGetIfaceStatsResponder)>>,
+        iface_counter_stats_resp: &mut Option<Box<dyn Fn() -> GetIfaceCounterStatsResponse>>,
     ) {
         let dev_svc_req_fut = dev_svc_stream.try_next();
         pin_mut!(dev_svc_req_fut);
         if let Poll::Ready(Ok(Some(request))) = executor.run_until_stalled(&mut dev_svc_req_fut) {
             match request {
-                DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
-                    // Telemetry should make stats request to the client iface that's
+                DeviceServiceRequest::GetIfaceCounterStats { iface_id, responder } => {
+                    // Telemetry should make counter stats request to the client iface that's
                     // connected.
                     assert_eq!(iface_id, IFACE_ID);
-                    match iface_stats_req_handler.as_mut() {
-                        Some(handle_iface_stats_req) => handle_iface_stats_req(responder),
+                    let mut resp = match &iface_counter_stats_resp {
+                        Some(get_resp) => get_resp(),
                         None => {
                             let seed = fasync::Time::now().into_nanos() as u64;
-                            let mut iface_stats = fake_iface_stats(seed);
-                            responder
-                                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                                .expect("expect sending IfaceStats response to succeed");
+                            GetIfaceCounterStatsResponse::Stats(fake_iface_counter_stats(seed))
                         }
-                    }
+                    };
+                    responder
+                        .send(&mut resp)
+                        .expect("expect sending IfaceCounterStats response to succeed");
+                }
+                _ => {
+                    panic!("unexpected request: {:?}", request);
+                }
+            }
+        }
+    }
+
+    fn respond_iface_histogram_stats_req(
+        executor: &mut fasync::TestExecutor,
+        dev_svc_stream: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+    ) {
+        let dev_svc_req_fut = dev_svc_stream.try_next();
+        pin_mut!(dev_svc_req_fut);
+        if let Poll::Ready(Ok(Some(request))) = executor.run_until_stalled(&mut dev_svc_req_fut) {
+            match request {
+                DeviceServiceRequest::GetIfaceHistogramStats { iface_id, responder } => {
+                    // Telemetry should make counter stats request to the client iface that's
+                    // connected.
+                    assert_eq!(iface_id, IFACE_ID);
+                    let stats = fake_iface_histogram_stats();
+                    responder
+                        .send(&mut GetIfaceHistogramStatsResponse::Stats(stats))
+                        .expect("expect sending IfaceHistogramStats response to succeed");
                 }
                 _ => {
                     panic!("unexpected request: {:?}", request);
@@ -5114,50 +5065,30 @@ mod tests {
             inspector,
             dev_svc_stream,
             cobalt_1dot1_stream,
-            iface_stats_req_handler: None,
+            iface_counter_stats_resp: None,
             cobalt_events: vec![],
             exec,
         };
         (test_helper, test_fut)
     }
 
-    fn fake_iface_stats(nth_req: u64) -> fidl_fuchsia_wlan_stats::IfaceStats {
-        fidl_fuchsia_wlan_stats::IfaceStats {
-            dispatcher_stats: fidl_fuchsia_wlan_stats::DispatcherStats {
-                any_packet: fake_packet_counter(nth_req),
-                mgmt_frame: fake_packet_counter(nth_req),
-                ctrl_frame: fake_packet_counter(nth_req),
-                data_frame: fake_packet_counter(nth_req),
-            },
-            mlme_stats: Some(Box::new(MlmeStats::ClientMlmeStats(ClientMlmeStats {
-                svc_msg: fake_packet_counter(nth_req),
-                data_frame: fake_packet_counter(nth_req),
-                mgmt_frame: fake_packet_counter(nth_req),
-                tx_frame: fake_packet_counter(nth_req),
-                rx_frame: fake_packet_counter(nth_req),
-                assoc_data_rssi: fake_rssi(nth_req),
-                beacon_rssi: fake_rssi(nth_req),
-                noise_floor_histograms: fake_noise_floor_histograms(),
-                rssi_histograms: fake_rssi_histograms(),
-                rx_rate_index_histograms: fake_rx_rate_index_histograms(),
-                snr_histograms: fake_snr_histograms(),
-            }))),
+    fn fake_iface_counter_stats(nth_req: u64) -> fidl_fuchsia_wlan_stats::IfaceCounterStats {
+        fidl_fuchsia_wlan_stats::IfaceCounterStats {
+            rx_unicast_total: 1 * nth_req,
+            rx_unicast_drop: 0,
+            rx_multicast: 2 * nth_req,
+            tx_total: 1 * nth_req,
+            tx_drop: 0,
         }
     }
 
-    fn fake_packet_counter(nth_req: u64) -> PacketCounter {
-        PacketCounter {
-            in_: Counter { count: 1 * nth_req, name: "in".to_string() },
-            out: Counter { count: 1 * nth_req, name: "out".to_string() },
-            drop: Counter { count: 0 * nth_req, name: "drop".to_string() },
-            in_bytes: Counter { count: 13 * nth_req, name: "in_bytes".to_string() },
-            out_bytes: Counter { count: 13 * nth_req, name: "out_bytes".to_string() },
-            drop_bytes: Counter { count: 0 * nth_req, name: "drop_bytes".to_string() },
+    fn fake_iface_histogram_stats() -> fidl_fuchsia_wlan_stats::IfaceHistogramStats {
+        fidl_fuchsia_wlan_stats::IfaceHistogramStats {
+            noise_floor_histograms: fake_noise_floor_histograms(),
+            rssi_histograms: fake_rssi_histograms(),
+            rx_rate_index_histograms: fake_rx_rate_index_histograms(),
+            snr_histograms: fake_snr_histograms(),
         }
-    }
-
-    fn fake_rssi(nth_req: u64) -> fidl_fuchsia_wlan_stats::RssiStats {
-        fidl_fuchsia_wlan_stats::RssiStats { hist: vec![nth_req] }
     }
 
     fn fake_noise_floor_histograms() -> Vec<fidl_fuchsia_wlan_stats::NoiseFloorHistogram> {
