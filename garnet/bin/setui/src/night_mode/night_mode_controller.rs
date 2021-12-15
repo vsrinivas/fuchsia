@@ -51,12 +51,7 @@ impl controller::Handle for NightModeController {
 
                 // Save the value locally.
                 current.night_mode_enabled = night_mode_info.night_mode_enabled;
-                Some(
-                    self.client
-                        .write_setting(current.into(), false, nonce)
-                        .await
-                        .into_handler_result(),
-                )
+                Some(self.client.write_setting(current.into(), nonce).await.into_handler_result())
             }
             Request::Get => Some(
                 self.client

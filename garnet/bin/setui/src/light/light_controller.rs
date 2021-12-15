@@ -182,7 +182,7 @@ impl LightController {
         // After the main validations, write the state to the hardware.
         self.write_light_group_to_hardware(group, &state).await?;
 
-        self.client.write_setting(current.into(), false, nonce).await.into_handler_result()
+        self.client.write_setting(current.into(), nonce).await.into_handler_result()
     }
 
     /// Writes the given list of light states for a light group to the actual hardware.
@@ -253,7 +253,7 @@ impl LightController {
             light.enabled = mic_mute;
         }
 
-        self.client.write_setting(current.into(), false, nonce).await.into_handler_result()
+        self.client.write_setting(current.into(), nonce).await.into_handler_result()
     }
 
     async fn restore(&self) -> SettingHandlerResult {
@@ -309,7 +309,7 @@ impl LightController {
         }
 
         self.client
-            .write_setting(LightInfo { light_groups }.into(), false, nonce)
+            .write_setting(LightInfo { light_groups }.into(), nonce)
             .await
             .into_handler_result()
     }
@@ -345,7 +345,7 @@ impl LightController {
             let _ = current.light_groups.insert(name, group);
         }
 
-        self.client.write_setting(current.into(), false, nonce).await.into_handler_result()
+        self.client.write_setting(current.into(), nonce).await.into_handler_result()
     }
 
     /// Converts an Info object from the fuchsia.hardware.Light API into a LightGroup, the internal

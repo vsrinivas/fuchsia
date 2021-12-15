@@ -464,7 +464,6 @@ pub mod persist {
         pub(crate) async fn write_setting(
             &self,
             setting_info: SettingInfo,
-            write_through: bool,
             nonce: TracingNonce,
         ) -> Result<UpdateState, ControllerError> {
             let setting_type = (&setting_info).into();
@@ -481,7 +480,6 @@ pub mod persist {
                 .message(
                     storage::Payload::Request(storage::StorageRequest::Write(
                         setting_info.clone().into(),
-                        write_through,
                         nonce,
                     ))
                     .into(),

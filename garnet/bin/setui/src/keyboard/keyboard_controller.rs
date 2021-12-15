@@ -70,12 +70,7 @@ impl controller::Handle for KeyboardController {
                             Some(value)
                         }
                     });
-                Some(
-                    self.client
-                        .write_setting(current.into(), false, nonce)
-                        .await
-                        .into_handler_result(),
-                )
+                Some(self.client.write_setting(current.into(), nonce).await.into_handler_result())
             }
             Request::Get => {
                 let nonce = fuchsia_trace::generate_nonce();

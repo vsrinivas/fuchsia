@@ -147,7 +147,7 @@ impl BrightnessManager for () {
                 format!("{:?}", info).into(),
             ));
         }
-        client.write_setting(info.into(), false, nonce).await.into_handler_result()
+        client.write_setting(info.into(), nonce).await.into_handler_result()
     }
 }
 
@@ -182,7 +182,7 @@ impl BrightnessManager for ExternalBrightnessControl {
                 format!("{:?}", info).into(),
             ));
         }
-        let update_state = client.write_setting(info.into(), false, nonce).await?;
+        let update_state = client.write_setting(info.into(), nonce).await?;
         if update_state == UpdateState::Unchanged && !always_send {
             return Ok(None);
         }

@@ -462,7 +462,7 @@ async fn test_handler_restore_persisted_state() {
     let store = storage_factory.get_store().await;
 
     // Write the "persisted" value to storage for the handler to read on start.
-    let _ = store.write(&persisted_state, false).await.expect("write failed");
+    let _ = store.write(&persisted_state).await.expect("write failed");
 
     let mut env = TestEnvironment::new_with_store(storage_factory, None).await;
 

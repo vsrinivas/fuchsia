@@ -22,9 +22,8 @@ pub enum Payload {
 pub enum StorageRequest {
     /// A read requests for the corresponding [`StorageInfo`] of this `StorageType`.
     Read(StorageType, TracingNonce),
-    /// A write requests for this [`StorageInfo`]. The `bool` is for specifying whether
-    /// the data needs to be immediately flushed to disk or not.
-    Write(StorageInfo, bool, TracingNonce),
+    /// A write requests for this [`StorageInfo`].
+    Write(StorageInfo, TracingNonce),
 }
 
 #[derive(Clone, PartialEq, Debug)]

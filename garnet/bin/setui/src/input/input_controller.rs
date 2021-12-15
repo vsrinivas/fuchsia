@@ -205,7 +205,7 @@ impl InputControllerInner {
             if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
         );
         let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
+        self.client.write_setting(input_info.into(), nonce).await.into_handler_result()
     }
 
     /// Sets the hardware mic/cam state from the muted states in `media_buttons`.
@@ -266,7 +266,7 @@ impl InputControllerInner {
 
         // Store the newly set value.
         let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
+        self.client.write_setting(input_info.into(), nonce).await.into_handler_result()
     }
 
     /// Sets state for the given input devices.
@@ -302,7 +302,7 @@ impl InputControllerInner {
 
         // Store the newly set value.
         let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
+        self.client.write_setting(input_info.into(), nonce).await.into_handler_result()
     }
 
     /// Pulls the current software state of the camera from the device state.

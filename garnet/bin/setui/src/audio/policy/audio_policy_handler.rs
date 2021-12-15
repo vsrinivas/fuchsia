@@ -382,7 +382,7 @@ impl AudioPolicyHandler {
         })?;
 
         // Persist the policy state. Ignore update state result.
-        let _ = self.client_proxy.write_policy(self.state.clone().into(), false, nonce).await?;
+        let _ = self.client_proxy.write_policy(self.state.clone().into(), nonce).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;
@@ -427,7 +427,7 @@ impl AudioPolicyHandler {
         }
 
         // Persist the policy state. Ignore update state result.
-        let _ = self.client_proxy.write_policy(self.state.clone().into(), false, nonce).await?;
+        let _ = self.client_proxy.write_policy(self.state.clone().into(), nonce).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;

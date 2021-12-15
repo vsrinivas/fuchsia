@@ -219,7 +219,7 @@ where
         drop(guard);
     }
 
-    async fn write<S>(&self, data: S, flush: bool, responder: service::message::MessageClient)
+    async fn write<S>(&self, data: S, responder: service::message::MessageClient)
     where
         S: DeviceStorageConvertible,
     {
@@ -231,7 +231,7 @@ where
                 Ok(UpdateState::Unchanged)
             } else {
                 store
-                    .write::<S::Storable>(storable_value, flush)
+                    .write::<S::Storable>(storable_value)
                     .await
                     .map_err(|e| Error { message: format!("{:?}", e) })
             }
@@ -288,35 +288,35 @@ where
                     PolicyType::Audio => self.read::<audio_policy::State>(nonce, responder).await,
                 }
             }
-            StorageRequest::Write(StorageInfo::SettingInfo(setting_info), flush, nonce) => {
+            StorageRequest::Write(StorageInfo::SettingInfo(setting_info), nonce) => {
                 match setting_info {
                     #[cfg(test)]
-                    SettingInfo::Unknown(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Accessibility(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Unknown(info) => self.write(info, responder).await,
+                    SettingInfo::Accessibility(info) => self.write(info, responder).await,
                     SettingInfo::Audio(info) => {
                         trace!(nonce, "audio storage write");
-                        self.write(info, flush, responder).await
+                        self.write(info, responder).await
                     }
-                    SettingInfo::Brightness(info) => self.write(info, flush, responder).await,
-                    SettingInfo::DoNotDisturb(info) => self.write(info, flush, responder).await,
-                    SettingInfo::FactoryReset(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Input(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Intl(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Keyboard(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Light(info) => self.write(info, flush, responder).await,
+                    SettingInfo::Brightness(info) => self.write(info, responder).await,
+                    SettingInfo::DoNotDisturb(info) => self.write(info, responder).await,
+                    SettingInfo::FactoryReset(info) => self.write(info, responder).await,
+                    SettingInfo::Input(info) => self.write(info, responder).await,
+                    SettingInfo::Intl(info) => self.write(info, responder).await,
+                    SettingInfo::Keyboard(info) => self.write(info, responder).await,
+                    SettingInfo::Light(info) => self.write(info, responder).await,
                     SettingInfo::LightSensor(_) => {
                         panic!("SettingInfo::LightSensor does not support storage")
                     }
-                    SettingInfo::NightMode(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Privacy(info) => self.write(info, flush, responder).await,
-                    SettingInfo::Setup(info) => self.write(info, flush, responder).await,
+                    SettingInfo::NightMode(info) => self.write(info, responder).await,
+                    SettingInfo::Privacy(info) => self.write(info, responder).await,
+                    SettingInfo::Setup(info) => self.write(info, responder).await,
                 }
             }
-            StorageRequest::Write(StorageInfo::PolicyInfo(policy_info), flush, _nonce) => {
+            StorageRequest::Write(StorageInfo::PolicyInfo(policy_info), _nonce) => {
                 match policy_info {
                     #[cfg(test)]
-                    PolicyInfo::Unknown(info) => self.write(info, flush, responder).await,
-                    PolicyInfo::Audio(info) => self.write(info, flush, responder).await,
+                    PolicyInfo::Unknown(info) => self.write(info, responder).await,
+                    PolicyInfo::Audio(info) => self.write(info, responder).await,
                 }
             }
         }
@@ -390,7 +390,7 @@ mod tests {
             }
             Setting::Info(setting_info) => {
                 storage_manager
-                    .handle_request(StorageRequest::Write(setting_info.into(), true, 0), responder)
+                    .handle_request(StorageRequest::Write(setting_info.into(), 0), responder)
                     .await;
             }
         }

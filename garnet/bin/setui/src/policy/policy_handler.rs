@@ -197,7 +197,6 @@ impl ClientProxy {
     pub(crate) async fn write_policy(
         &self,
         policy_info: PolicyInfo,
-        write_through: bool,
         nonce: TracingNonce,
     ) -> Result<UpdateState, PolicyError> {
         let policy_type = (&policy_info).into();
@@ -206,7 +205,6 @@ impl ClientProxy {
             .message(
                 storage::Payload::Request(storage::StorageRequest::Write(
                     policy_info.into(),
-                    write_through,
                     nonce,
                 ))
                 .into(),

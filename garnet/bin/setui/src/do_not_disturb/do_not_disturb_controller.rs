@@ -56,7 +56,7 @@ impl controller::Handle for DoNotDisturbController {
                 }
                 Some(
                     self.client
-                        .write_setting(stored_value.into(), false, nonce)
+                        .write_setting(stored_value.into(), nonce)
                         .await
                         .into_handler_result(),
                 )

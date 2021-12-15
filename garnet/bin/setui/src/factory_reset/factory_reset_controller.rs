@@ -123,7 +123,7 @@ impl FactoryResetManager {
                 "set_local_reset_allowed".into(),
             )
         })?;
-        self.client.write_setting(info.into(), false, nonce).await.map(|_| None)
+        self.client.write_setting(info.into(), nonce).await.map(|_| None)
     }
 }
 

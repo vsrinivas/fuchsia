@@ -137,7 +137,7 @@ impl VolumeController {
         let mut audio_info = self.client.read_setting::<AudioInfo>(nonce).await;
         audio_info.input.mic_mute = mic_mute_state;
 
-        self.client.write_setting(audio_info.into(), false, nonce).await.into_handler_result()
+        self.client.write_setting(audio_info.into(), nonce).await.into_handler_result()
     }
 
     /// Updates the state with the given streams' volume levels.
@@ -213,7 +213,7 @@ impl VolumeController {
             drop(guard);
 
             let guard = trace_guard!(nonce, "writing setting");
-            let write_result = self.client.write_setting(stored_value.into(), false, nonce).await;
+            let write_result = self.client.write_setting(stored_value.into(), nonce).await;
             drop(guard);
             Ok(write_result.notified())
         } else {

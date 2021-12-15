@@ -51,12 +51,7 @@ impl controller::Handle for PrivacyController {
 
                 // Save the value locally.
                 current.user_data_sharing_consent = user_data_sharing_consent;
-                Some(
-                    self.client
-                        .write_setting(current.into(), false, nonce)
-                        .await
-                        .into_handler_result(),
-                )
+                Some(self.client.write_setting(current.into(), nonce).await.into_handler_result())
             }
             Request::Get => Some(
                 self.client

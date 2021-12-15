@@ -88,7 +88,7 @@ impl controller::Handle for SetupController {
                 info.configuration_interfaces = params.config_interfaces_flags;
 
                 let write_setting_result =
-                    self.client.write_setting(info.into(), true, nonce).await.into_handler_result();
+                    self.client.write_setting(info.into(), nonce).await.into_handler_result();
 
                 // If the write succeeded, reboot if necessary.
                 if write_setting_result.is_ok() && params.should_reboot {

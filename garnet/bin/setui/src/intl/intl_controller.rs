@@ -96,10 +96,7 @@ impl IntlController {
 
         let nonce = fuchsia_trace::generate_nonce();
         let current = self.client.read_setting::<IntlInfo>(nonce).await;
-        self.client
-            .write_setting(current.merge(info).into(), false, nonce)
-            .await
-            .into_handler_result()
+        self.client.write_setting(current.merge(info).into(), nonce).await.into_handler_result()
     }
 
     /// Checks if the given IntlInfo is valid.

@@ -83,10 +83,8 @@ async fn test_write() {
         FakePolicyHandler::create(client_proxy.clone()).await.expect("failed to create handler");
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
-            let _ = client_proxy
-                .write_policy(expected_value.into(), false, 0)
-                .await
-                .expect("write failed");
+            let _ =
+                client_proxy.write_policy(expected_value.into(), 0).await.expect("write failed");
             Ok(Payload::PolicyInfo(UnknownInfo(true).into()))
         })
     }));
