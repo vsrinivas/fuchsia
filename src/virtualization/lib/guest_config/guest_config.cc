@@ -78,6 +78,8 @@ zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::str
       out->format = fuchsia::virtualization::BlockFormat::FILE;
     } else if (token == "qcow") {
       out->format = fuchsia::virtualization::BlockFormat::QCOW;
+    } else if (token == "block") {
+      out->format = fuchsia::virtualization::BlockFormat::BLOCK;
     } else {
       // Set the last MAX_BLOCK_DEVICE_ID characters of token as the ID.
       size_t pos = token.size() > fuchsia::virtualization::MAX_BLOCK_DEVICE_ID
