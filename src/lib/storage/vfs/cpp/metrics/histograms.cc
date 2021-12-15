@@ -42,17 +42,6 @@ struct BlockCount : NumericAttribute<BlockCount, int64_t> {
   static constexpr int64_t EventOptions::*kAttributeValue = &EventOptions::block_count;
 };
 
-// An attribute which indicates whether the event may be cached in memory or not.
-//
-// Inheriting from this attribute within an event indicates that such event may have variable modes
-// of events, where it either acts on in-memory structures or sends requests to the underlying
-// storage.
-struct Bufferable : public BinaryAttribute {
-  static constexpr bool EventOptions::*kAttributeValue = &EventOptions::buffered;
-
-  static std::string ToString(size_t index) { return index == 0 ? "unbuffered" : "buffered"; }
-};
-
 // An attribute which indicates whether the event successful completion should be treated
 // differently than when it completes with failure.
 //
@@ -61,24 +50,9 @@ struct Bufferable : public BinaryAttribute {
 struct Success : public BinaryAttribute {
   static constexpr bool EventOptions::*kAttributeValue = &EventOptions::success;
 
-  static std::string ToString(size_t index) { return index == 0 ? "ok" : "fail"; }
-};
-
-// An attribute which indicates the number of childs a given node in the file system has.
-//
-// Inheriting from this attribute within an event indicates that such event is affected by the
-// number of children the node has. An example is a lookup event.
-struct NodeDegree : NumericAttribute<NodeDegree, int64_t> {
-  static constexpr int64_t kBuckets[] = {
-      // Bucket 0: [0, 10)
-      10,
-      // Bucket 1: [10, 100)
-      100,
-      // Bucket 2: [100, 1000)
-      1000,
-  };
-
-  static constexpr int64_t EventOptions::*kAttributeValue = &EventOptions::node_degree;
+  // The index needs to match the offset specified in BinaryAttribute, which maps values of
+  // true to index 1, and values of false to index 0.
+  static std::string ToString(size_t index) { return index == 0 ? "fail" : "ok"; }
 };
 
 void CreateMicrosecHistogramId(const char* name, inspect::Node* root,
@@ -93,7 +67,7 @@ void CreateMicrosecHistogramId(const char* name, inspect::Node* root,
 // Provides a specialized type that keep track of created attributes. In order to add new
 // attributes, the Attribute class needs to be listed here. Note: New attributes need to be added to
 // |MakeOptionsSet| in HistogramsTest.
-using HistogramOffsets = ObjectOffsets<NodeDegree, BlockCount, Bufferable, Success>;
+using HistogramOffsets = ObjectOffsets<BlockCount, Success>;
 
 // In order to add a new events a couple of things needs to be added:
 //
@@ -111,7 +85,7 @@ struct EventInfo {};
 // Each event or metric we want to track needs to provide its own specialization with the relavant
 // data and the attributes that it wishes to track.
 template <>
-struct EventInfo<Event::kRead> : public BlockCount, Bufferable, Success {
+struct EventInfo<Event::kRead> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "read";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -119,7 +93,7 @@ struct EventInfo<Event::kRead> : public BlockCount, Bufferable, Success {
 };
 
 template <>
-struct EventInfo<Event::kWrite> : public BlockCount, Bufferable, Success {
+struct EventInfo<Event::kWrite> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "write";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -127,7 +101,7 @@ struct EventInfo<Event::kWrite> : public BlockCount, Bufferable, Success {
 };
 
 template <>
-struct EventInfo<Event::kAppend> : public BlockCount, Bufferable, Success {
+struct EventInfo<Event::kAppend> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "append";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -135,7 +109,7 @@ struct EventInfo<Event::kAppend> : public BlockCount, Bufferable, Success {
 };
 
 template <>
-struct EventInfo<Event::kTruncate> : public BlockCount, Success {
+struct EventInfo<Event::kTruncate> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "truncate";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -159,7 +133,7 @@ struct EventInfo<Event::kGetAttr> : public Success {
 };
 
 template <>
-struct EventInfo<Event::kReadDir> : public NodeDegree, Success {
+struct EventInfo<Event::kReadDir> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "readdir";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -167,7 +141,7 @@ struct EventInfo<Event::kReadDir> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kSync> : public BlockCount, Success {
+struct EventInfo<Event::kSync> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "sync";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -175,7 +149,7 @@ struct EventInfo<Event::kSync> : public BlockCount, Success {
 };
 
 template <>
-struct EventInfo<Event::kLookUp> : public NodeDegree, Success {
+struct EventInfo<Event::kLookUp> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "lookup";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -183,7 +157,7 @@ struct EventInfo<Event::kLookUp> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kCreate> : public NodeDegree, Success {
+struct EventInfo<Event::kCreate> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "create";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -199,7 +173,7 @@ struct EventInfo<Event::kClose> : public Success {
 };
 
 template <>
-struct EventInfo<Event::kLink> : public NodeDegree, Success {
+struct EventInfo<Event::kLink> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "link";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -207,7 +181,7 @@ struct EventInfo<Event::kLink> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kUnlink> : public NodeDegree, Success {
+struct EventInfo<Event::kUnlink> : public Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "unlink";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -215,7 +189,7 @@ struct EventInfo<Event::kUnlink> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalWriteData> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriteData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_write_data";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -223,7 +197,7 @@ struct EventInfo<Event::kJournalWriteData> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalWriteMetadata> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriteMetadata> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_write_metadata";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -231,7 +205,7 @@ struct EventInfo<Event::kJournalWriteMetadata> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalTrimData> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalTrimData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_trim_data";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -240,7 +214,7 @@ struct EventInfo<Event::kJournalTrimData> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalSync> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalSync> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_sync";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -248,7 +222,7 @@ struct EventInfo<Event::kJournalSync> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalScheduleTask> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalScheduleTask> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_schedule_task";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -256,7 +230,7 @@ struct EventInfo<Event::kJournalScheduleTask> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalWriterWriteData> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriterWriteData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_write_data";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -265,7 +239,7 @@ struct EventInfo<Event::kJournalWriterWriteData> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalWriterWriteMetadata> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriterWriteMetadata> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_write_metadata";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -274,7 +248,7 @@ struct EventInfo<Event::kJournalWriterWriteMetadata> : public NodeDegree, Succes
 };
 
 template <>
-struct EventInfo<Event::kJournalWriterTrimData> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriterTrimData> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_trim_data";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -283,7 +257,7 @@ struct EventInfo<Event::kJournalWriterTrimData> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalWriterSync> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriterSync> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_sync";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -292,7 +266,7 @@ struct EventInfo<Event::kJournalWriterSync> : public NodeDegree, Success {
 };
 
 template <>
-struct EventInfo<Event::kJournalWriterWriteInfoBlock> : public NodeDegree, Success {
+struct EventInfo<Event::kJournalWriterWriteInfoBlock> : public BlockCount, Success {
   using AttributeData = EventOptions;
   static constexpr char kPrefix[] = "journal_writer_write_info_block";
   static constexpr auto CreateTracker = CreateMicrosecHistogramId;
@@ -300,7 +274,7 @@ struct EventInfo<Event::kJournalWriterWriteInfoBlock> : public NodeDegree, Succe
 };
 
 template <>
-struct EventInfo<Event::kInvalidEvent> : public NodeDegree, Success {
+struct EventInfo<Event::kInvalidEvent> : public BlockCount, Success {
   using AttributeData = EventOptions;
   [[maybe_unused]] static constexpr char kPrefix[] = "invalid event";
   [[maybe_unused]] static constexpr auto CreateTracker = CreateMicrosecHistogramId;

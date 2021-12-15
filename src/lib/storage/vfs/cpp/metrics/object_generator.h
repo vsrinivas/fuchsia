@@ -35,37 +35,61 @@ namespace fs_metrics {
 //
 // When using in conjunction with |Offset|, prefer |ObjectOffset<>|;
 
-// Maximum size for object names. We limit this, so an intermediate buffer can be used as scratch
-// surface when generating all objects for all attributes, effectively reducing the amount of
-// allocations.
-constexpr uint64_t kNameMaxLength = 80;
-
 namespace internal {
 
-template <typename OperationInfo, typename ObjectType>
-void AddObjects(inspect::Node* root, std::vector<ObjectType>* object_collection,
-                fbl::StringBuffer<kNameMaxLength>* name_buffer, size_t last_character) {
-  OperationInfo::CreateTracker(name_buffer->c_str(), root, object_collection);
+template <typename Attribute>
+std::vector<std::string> GetAttributeLabels() {
+  std::vector<std::string> labels;
+  for (size_t i = 0; i < Attribute::kSize; ++i) {
+    labels.emplace_back(Attribute::ToString(i));
+  }
+  return labels;
 }
 
-template <typename OperationInfo, typename ObjectType, typename Attribute,
-          typename... RemainingAttributes>
-void AddObjects(inspect::Node* root, std::vector<ObjectType>* object_collection,
-                fbl::StringBuffer<kNameMaxLength>* name_buffer, size_t last_character) {
-  // Skip if this is not an attribute being tracked for the given operation.
-  if constexpr (!std::is_base_of<Attribute, OperationInfo>::value) {
-    AddObjects<OperationInfo, ObjectType, RemainingAttributes...>(
-        root, object_collection, name_buffer, name_buffer->length());
-    return;
-  }
+template <typename OperationInfo>
+void GetOperationLabels(std::vector<std::vector<std::string>>&) {
+  // No more attributes to process.
+}
 
-  // Clear any remainder from other invocations.
-  for (size_t i = 0; i < Attribute::kSize; ++i) {
-    name_buffer->Resize(last_character);
-    name_buffer->AppendPrintf("_%s", Attribute::ToString(i).c_str());
-    AddObjects<OperationInfo, ObjectType, RemainingAttributes...>(
-        root, object_collection, name_buffer, name_buffer->length());
+template <typename OperationInfo, typename Attribute, typename... RemainingAttributes>
+void GetOperationLabels(std::vector<std::vector<std::string>>& labels) {
+  // Process remaining attributes first.
+  GetOperationLabels<OperationInfo, RemainingAttributes...>(labels);
+
+  // Ensure this attribute is being tracked for the given operation.
+  if constexpr (std::is_base_of<Attribute, OperationInfo>::value) {
+    labels.emplace_back(GetAttributeLabels<Attribute>());
   }
+}
+
+inline std::vector<std::string> CombineLabels(const std::vector<std::string>& base_labels,
+                                              const std::vector<std::string>& new_labels) {
+  std::vector<std::string> result;
+  for (const std::string& base_label : base_labels) {
+    for (const std::string& new_label : new_labels) {
+      result.emplace_back(base_label + "_" + new_label);
+    }
+  }
+  return result;
+}
+
+[[maybe_unused]] inline std::vector<std::string> GenerateHistogramLabels(
+    const std::vector<std::vector<std::string>>& labels, std::string prefix) {
+  std::vector<std::string> result;
+  result.emplace_back(std::move(prefix));
+
+  for (const auto& label : labels) {
+    result = CombineLabels(result, label);
+  }
+  return result;
+}
+
+template <typename OperationInfo, typename Attribute, typename... RemainingAttributes>
+std::vector<std::string> GetHistogramNames() {
+  std::vector<std::vector<std::string>> all_labels;
+  std::vector<std::string> result;
+  GetOperationLabels<OperationInfo, Attribute, RemainingAttributes...>(all_labels);
+  return GenerateHistogramLabels(all_labels, OperationInfo::kPrefix);
 }
 
 }  // namespace internal
@@ -76,10 +100,12 @@ struct ObjectGenerator {
   // histograms, etc.
   template <typename OperationInfo, typename ObjectType>
   static void AddObjects(inspect::Node* root, std::vector<ObjectType>* object_collection) {
-    fbl::StringBuffer<kNameMaxLength> name_buffer;
-    name_buffer.AppendPrintf("%s", OperationInfo::kPrefix);
-    internal::AddObjects<OperationInfo, ObjectType, Attributes...>(
-        root, object_collection, &name_buffer, name_buffer.length());
+    // We need to make sure the order that the histograms are generated matches the indices
+    // which are calculated in `object_offsets.h`.
+    auto histogram_names = internal::GetHistogramNames<OperationInfo, Attributes...>();
+    for (const std::string& name : histogram_names) {
+      OperationInfo::CreateTracker(name.c_str(), root, object_collection);
+    }
   }
 };
 

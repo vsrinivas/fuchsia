@@ -944,16 +944,19 @@ zx_status_t Blob::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol prot
 zx_status_t Blob::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Read", "len", len, "off", off);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kRead);
-
-  return ReadInternal(data, len, off, out_actual);
+  zx_status_t status = ReadInternal(data, len, off, out_actual);
+  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
+  return status;
 }
 
 zx_status_t Blob::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
   TRACE_DURATION("blobfs", "Blob::Write", "len", len, "off", offset);
+  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
 
   std::lock_guard lock(mutex_);
-  auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kWrite);
-  return WriteInternal(data, len, {offset}, out_actual);
+  zx_status_t status = WriteInternal(data, len, {offset}, out_actual);
+  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
+  return status;
 }
 
 zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
@@ -968,6 +971,8 @@ zx_status_t Blob::Append(const void* data, size_t len, size_t* out_end, size_t* 
   } else {
     *out_end = blob_size_;
   }
+
+  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
   return status;
 }
 
@@ -987,13 +992,17 @@ zx_status_t Blob::GetAttributes(fs::VnodeAttributes* a) {
   a->link_count = 1;
   a->creation_time = 0;
   a->modification_time = 0;
+  event.mutable_latency_event()->mutable_options()->success = true;
   return ZX_OK;
 }
 
 zx_status_t Blob::Truncate(size_t len) {
   TRACE_DURATION("blobfs", "Blob::Truncate", "len", len);
   auto event = blobfs_->GetMetrics()->NewLatencyEvent(fs_metrics::Event::kTruncate);
-  return PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
+  zx_status_t status =
+      PrepareWrite(len, blobfs_->ShouldCompress() && len > kCompressionSizeThresholdBytes);
+  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
+  return status;
 }
 
 void Blob::SetTargetCompressionSize(uint64_t size) {
@@ -1056,16 +1065,18 @@ void Blob::Sync(SyncCallback on_complete) {
       // happen "soon" and provides a way to get notified when it does.
       auto trace_id = TRACE_NONCE();
       TRACE_FLOW_BEGIN("blobfs", "Blob.sync", trace_id);
-      blobfs_->Sync([evt = std::move(event),
+      blobfs_->Sync([event = std::move(event),
                      on_complete = std::move(on_complete)](zx_status_t status) mutable {
         // Note: this may be executed on an arbitrary thread.
         on_complete(status);
+        event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
       });
       break;
     }
     case SyncingState::kDone: {
       // All metadata has already been synced. Calling Sync() is a no-op.
       on_complete(ZX_OK);
+      event.mutable_latency_event()->mutable_options()->success = true;
       break;
     }
   }
@@ -1188,7 +1199,9 @@ zx_status_t Blob::CloseNode() {
   }
 
   // Attempt purge in case blob was unlinked prior to close.
-  return TryPurge();
+  zx_status_t status = TryPurge();
+  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
+  return status;
 }
 
 zx_status_t Blob::TryPurge() {

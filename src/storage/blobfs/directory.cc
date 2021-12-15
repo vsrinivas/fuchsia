@@ -81,6 +81,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
   auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
   blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
   *out = std::move(vnode);
+  event.mutable_latency_event()->mutable_options()->success = true;
   return ZX_OK;
 }
 
@@ -115,6 +116,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
     return status;
   }
   *out = std::move(vn);
+  event.mutable_latency_event()->mutable_options()->success = true;
   return ZX_OK;
 }
 
@@ -142,7 +144,9 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
   }
   auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
   blobfs_->GetMetrics()->UpdateLookup(vnode->SizeData());
-  return vnode->QueueUnlink();
+  status = vnode->QueueUnlink();
+  event.mutable_latency_event()->mutable_options()->success = (status == ZX_OK);
+  return status;
 }
 
 void Directory::Sync(SyncCallback closure) {

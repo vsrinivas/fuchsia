@@ -70,9 +70,9 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteData(JournalWorkItem wor
   zx_status_t status = WriteOperations(work.operations);
   if (status != ZX_OK) {
     FX_LOGST(WARNING, "journal") << "Failed to write data: " << zx_status_get_string(status);
-    event.set_success(false);
     return fpromise::error(status);
   }
+  event.set_success(true);
   return fpromise::ok();
 }
 
@@ -83,7 +83,6 @@ fpromise::result<void, zx_status_t> JournalWriter::WriteMetadata(
                              << " blocks (includes header, commit)";
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterWriteMetadata);
   event.set_block_count(block_count);
-  event.set_success(false);
 
   // Ensure the info block is caught up, so it doesn't point to the middle of an invalid entry.
   zx_status_t status = WriteInfoBlockIfIntersect(block_count);
@@ -157,7 +156,6 @@ zx_status_t JournalWriter::WriteOperationToJournal(const storage::BlockBufferVie
 fpromise::result<void, zx_status_t> JournalWriter::Sync() {
   auto event = metrics()->NewLatencyEvent(fs_metrics::Event::kJournalWriterSync);
   if (!IsWritebackEnabled()) {
-    event.set_success(false);
     return fpromise::error(ZX_ERR_IO_REFUSED);
   }
 
@@ -168,9 +166,9 @@ fpromise::result<void, zx_status_t> JournalWriter::Sync() {
 
   zx_status_t status = WriteInfoBlock();
   if (status != ZX_OK) {
-    event.set_success(false);
     return fpromise::error(status);
   }
+  event.set_success(true);
   return fpromise::ok();
 }
 
@@ -278,9 +276,9 @@ zx_status_t JournalWriter::WriteInfoBlock() {
   journal_operations.push_back(operation);
   zx_status_t status = WriteOperations(journal_operations);
   if (status != ZX_OK) {
-    event.set_success(false);
     return status;
   }
+  event.set_success(true);
 
   // Immediately after the info block is updated, no metadata operations should be replayed
   // on reboot.

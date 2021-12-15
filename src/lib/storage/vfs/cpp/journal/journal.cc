@@ -112,7 +112,6 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   auto block_count_or =
       CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(operations);
   if (block_count_or.is_error()) {
-    event.set_success(false);
     return fpromise::make_error_promise(block_count_or.status_value());
   }
   if (block_count_or.value() == 0) {
@@ -126,7 +125,6 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   if (status != ZX_OK) {
     FX_LOGST(ERROR, "journal") << "Failed to reserve space in writeback buffer: "
                                << zx_status_get_string(status);
-    event.set_success(false);
     return fpromise::make_error_promise(status);
   }
 
@@ -136,11 +134,11 @@ Journal::Promise Journal::WriteData(std::vector<storage::UnbufferedOperation> op
   if (result.is_error()) {
     FX_LOGST(ERROR, "journal") << "Failed to copy operations into writeback buffer: "
                                << result.status_string();
-    event.set_success(false);
     return fpromise::make_error_promise(result.error_value());
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
 
+  event.set_success(true);
   // Return the deferred action to write the data operations to the device.
   return fpromise::make_promise(
       [this, work = std::move(work)]() mutable { return writer_.WriteData(std::move(work)); });
@@ -174,7 +172,6 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   auto block_count_or = CheckOperationsAndGetTotalBlockCount<storage::OperationType::kWrite>(
       transaction.metadata_operations);
   if (block_count_or.is_error()) {
-    event.set_success(false);
     return block_count_or.status_value();
   }
 
@@ -197,7 +194,6 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   if (status != ZX_OK) {
     FX_LOGST(ERROR, "journal") << "Failed to reserve space in journal buffer: "
                                << zx_status_get_string(status);
-    event.set_success(false);
     return status;
   }
 
@@ -208,7 +204,6 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
   if (result.is_error()) {
     FX_LOGST(ERROR, "journal") << "Failed to copy operations into journal buffer: "
                                << result.status_string();
-    event.set_success(false);
     return result.error_value();
   }
   internal::JournalWorkItem work(std::move(reservation), std::move(buffered_operations));
@@ -255,6 +250,7 @@ zx_status_t Journal::CommitTransaction(Transaction transaction) {
     task = std::move(ordered_promise);
   }
 
+  event.set_success(true);
   schedule_task(std::move(task));
   return ZX_OK;
 }
