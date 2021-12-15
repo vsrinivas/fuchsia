@@ -544,7 +544,7 @@ TEST_F(VirtioSoundTest, GetJackInfos) {
       .hdr = {.code = VIRTIO_SND_R_JACK_INFO},
       .start_id = 0,
       .count = kNumJacks,
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_jack_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_jack_info_t* resp;
@@ -570,12 +570,50 @@ TEST_F(VirtioSoundTest, GetJackInfos) {
   }
 }
 
+TEST_F(VirtioSoundTest, GetJackInfosFutureProof) {
+  // Test that we are future-proof: correctly handle the scenario where the guest OS
+  // is using a more recent version of the protocol that has a larger info struct.
+  struct JackInfoV2 {
+    virtio_snd_jack_info_t v1;
+    uint64_t extra_field;
+  };
+  virtio_snd_query_info_t query = {
+      .hdr = {.code = VIRTIO_SND_R_JACK_INFO},
+      .start_id = 0,
+      .count = kNumJacks,
+      .size = sizeof(JackInfoV2),
+  };
+  virtio_snd_hdr* resphdr;
+  JackInfoV2* resp;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+
+  static_assert(kNumJacks == 1);
+
+  ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
+  EXPECT_EQ(resp->v1.hdr.hda_fn_nid, 0u);
+  EXPECT_EQ(resp->v1.features, 0u);
+  EXPECT_EQ(resp->v1.hda_reg_defconf, 0x90100010u);
+  EXPECT_EQ(resp->v1.hda_reg_caps, 0x30u);
+  EXPECT_EQ(resp->v1.connected, 1u);
+  for (size_t k = 0; k < sizeof(resp->v1.padding); k++) {
+    // 5.14.6.4.1.1: The device MUST initialize the padding bytes to 0
+    EXPECT_EQ(resp->v1.padding[k], 0);
+  }
+  EXPECT_EQ(resp->extra_field, 0u);
+}
+
 TEST_F(VirtioSoundTest, GetPcmInfos) {
   virtio_snd_query_info_t query = {
       .hdr = {.code = VIRTIO_SND_R_PCM_INFO},
       .start_id = 0,
       .count = kNumStreams,
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_pcm_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_pcm_info_t* resp;
@@ -620,7 +658,7 @@ TEST_F(VirtioSoundTest, GetChmapInfos) {
       .hdr = {.code = VIRTIO_SND_R_CHMAP_INFO},
       .start_id = 0,
       .count = kNumChmaps,
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_chmap_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
@@ -658,7 +696,7 @@ TEST_F(VirtioSoundTest, GetChmapInfosJustOne) {
       .hdr = {.code = VIRTIO_SND_R_CHMAP_INFO},
       .start_id = 0,
       .count = 1,
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_chmap_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
@@ -683,7 +721,7 @@ TEST_F(VirtioSoundTest, GetChmapInfosSubset) {
       .hdr = {.code = VIRTIO_SND_R_CHMAP_INFO},
       .start_id = 1,
       .count = 2,
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_chmap_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
@@ -710,7 +748,7 @@ TEST_F(VirtioSoundTest, BadGetChmapInfosRequestTooSmall) {
       .hdr = {.code = VIRTIO_SND_R_CHMAP_INFO},
       .start_id = 0,
       .count = kNumChmaps,
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_chmap_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
@@ -729,7 +767,7 @@ TEST_F(VirtioSoundTest, BadGetChmapInfosRequestTooManyInfos) {
       .hdr = {.code = VIRTIO_SND_R_CHMAP_INFO},
       .start_id = 0,
       .count = kNumChmaps + 1,  // too many
-      .size = sizeof(virtio_snd_query_info_t),
+      .size = sizeof(virtio_snd_chmap_info_t),
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
@@ -743,12 +781,12 @@ TEST_F(VirtioSoundTest, BadGetChmapInfosRequestTooManyInfos) {
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
 }
 
-TEST_F(VirtioSoundTest, BadGetChmapInfosRequestBadSize) {
+TEST_F(VirtioSoundTest, BadGetChmapInfosRequestBadSizeTooSmall) {
   virtio_snd_query_info_t query = {
       .hdr = {.code = VIRTIO_SND_R_CHMAP_INFO},
       .start_id = 0,
       .count = kNumChmaps,
-      .size = sizeof(virtio_snd_query_info_t) - 1,  // bad size
+      .size = sizeof(virtio_snd_chmap_info_t) - 1,  // bad size
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
@@ -826,6 +864,12 @@ TEST_F(VirtioSoundTest, PcmSetParams) {
 TEST_F(VirtioSoundTest, BadPcmSetParamsBadStreamId) {
   auto params = kGoodPcmSetParams;
   params.hdr.stream_id = kNumStreams;
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsPeriodBytesZero) {
+  auto params = kGoodPcmSetParams;
+  params.period_bytes = 0;  // verify we don't panic
   ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
 }
 

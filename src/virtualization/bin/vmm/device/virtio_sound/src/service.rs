@@ -205,7 +205,7 @@ impl<'s> PcmStream<'s> {
 
         // 5.14.6.6.3.2 Driver Requirements: Stream Parameters
         // - buffer_bytes must be divisible by period_bytes
-        if buffer_bytes % period_bytes != 0 {
+        if period_bytes == 0 || buffer_bytes % period_bytes != 0 {
             tracing::warn!(
                 "{} buffer_bytes must be divisible by period_bytes: {:?}",
                 req_wrapper.name(),
@@ -256,7 +256,7 @@ impl<'s> PcmStream<'s> {
         // The virtio-sound spec doesn't require this explicitly but it seems unlikely
         // that any driver would use a fractional number of frames per period.
         let frame_bytes = bytes_per_frame(stream_type) as usize;
-        if period_bytes % frame_bytes != 0 {
+        if frame_bytes == 0 || period_bytes % frame_bytes != 0 {
             tracing::warn!(
                 "{} period_bytes must be divisible by the frame size ({} bytes): {:?}",
                 req_wrapper.name(),
@@ -565,7 +565,7 @@ impl<'s> VirtSoundService<'s> {
             );
             return reply_controlq::err(req_wrapper.take_chain(), wire::VIRTIO_SND_S_BAD_MSG);
         }
-        let min_size = std::mem::size_of::<wire::JackInfoRequest>();
+        let min_size = std::mem::size_of::<T::WireT>();
         if (req.size.get() as usize) < min_size {
             tracing::error!(
                 "{} response struct is {} bytes, but driver provided only {} bytes",
