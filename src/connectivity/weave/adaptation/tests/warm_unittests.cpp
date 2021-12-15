@@ -265,6 +265,15 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
       return;
     }
 
+    // Verify that the interface does not already have the address being added.
+    auto addr_it = std::find_if(
+        it->ipv6addrs.begin(), it->ipv6addrs.end(),
+        [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(addr, ipv6.addr); });
+    if (addr_it != it->ipv6addrs.end()) {
+      callback({.status = Status::UNKNOWN_ERROR});
+      return;
+    }
+
     auto& ipv6 = it->ipv6addrs.emplace_back();
     ipv6.prefix_len = prefix_len;
     ipv6.addr.set_ipv6(addr.ipv6());
@@ -273,6 +282,12 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
 
   void RemoveInterfaceAddress(uint32_t nicid, ::fuchsia::net::IpAddress addr, uint8_t prefix_len,
                               RemoveInterfaceAddressCallback callback) override {
+    // If forced, return UNKNOWN_ERROR.
+    if (remove_interface_address_unknown_error_) {
+      callback({.status = Status::UNKNOWN_ERROR});
+      return;
+    }
+
     // Find the interface with the specified ID and remove the address.
     auto it = std::find_if(interfaces_.begin(), interfaces_.end(),
                            [&](const OwnedInterface& interface) { return nicid == interface.id; });
@@ -285,7 +300,9 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
         it->ipv6addrs.begin(), it->ipv6addrs.end(),
         [&](const fuchsia::net::Subnet& ipv6) { return CompareIpAddress(addr, ipv6.addr); });
     if (addr_it == it->ipv6addrs.end()) {
-      callback({.status = Status::UNKNOWN_ERROR});
+      // Refer to netstack_service.go - when an address cannot be found on the
+      // interface, it currently returns UNKNOWN_INTERFACE.
+      callback({.status = Status::UNKNOWN_INTERFACE});
       return;
     }
     it->ipv6addrs.erase(addr_it, it->ipv6addrs.end());
@@ -325,6 +342,11 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
 
  public:
   // Mutators, accessors, and helpers for tests.
+
+  // Force RemoveInterfaceAddress to return an UNKNOWN_ERROR.
+  void SetRemoveInterfaceAddressUnknownError(bool enable) {
+    remove_interface_address_unknown_error_ = enable;
+  }
 
   // Add a fake interface with the given name. Does not check for duplicates.
   FakeNetstack& AddOwnedInterface(std::string name) {
@@ -384,6 +406,7 @@ class FakeNetstack : public fuchsia::netstack::testing::Netstack_TestBase,
   async_dispatcher_t* dispatcher_;
   std::vector<OwnedInterface> interfaces_;
   std::vector<RouteTableEntry> route_table_;
+  bool remove_interface_address_unknown_error_ = false;
   uint32_t last_id_assigned = 0;
 };
 
@@ -601,6 +624,83 @@ TEST_F(WarmTest, AddRemoveAddressWiFi) {
 
   // Confirm that it worked.
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
+}
+
+TEST_F(WarmTest, AddRemoveSameAddress) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPAddress addr;
+
+  // Sanity check - no addresses assigned.
+  OwnedInterface& lowpan = GetThreadInterface();
+  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+
+  // Attempt to add the address.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Attempt to add the address again, which should silently ignore the request.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that it worked and only added a single address.
+  ASSERT_EQ(lowpan.ipv6addrs.size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, lowpan.ipv6addrs[0].addr));
+  EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
+
+  // Attempt to remove the address.
+  result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Attempt to remove the address again, which should silently ignore the
+  // request. An already removed address results in UNKNOWN_INTERFACE.
+  result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that it worked.
+  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
+}
+
+TEST_F(WarmTest, RemoveAddressUnknownError) {
+  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
+  constexpr uint8_t kPrefixLength = 48;
+  Inet::IPAddress addr;
+
+  // Sanity check - no addresses assigned.
+  OwnedInterface& lowpan = GetThreadInterface();
+  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+
+  // Attempt to add the address.
+  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
+  auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that it worked and only added a single address.
+  ASSERT_EQ(lowpan.ipv6addrs.size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, lowpan.ipv6addrs[0].addr));
+  EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
+
+  // Attempt to remove the address, but simulate an UNKNOWN_ERROR.
+  fake_net_stack().SetRemoveInterfaceAddressUnknownError(true);
+  result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultFailure);
+
+  // Confirm that we still have a single address.
+  ASSERT_EQ(lowpan.ipv6addrs.size(), 1u);
+  EXPECT_TRUE(CompareIpAddress(addr, lowpan.ipv6addrs[0].addr));
+  EXPECT_TRUE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
+
+  // Attempt to remove the address, after recovering from UNKNOWN_ERROR.
+  fake_net_stack().SetRemoveInterfaceAddressUnknownError(false);
+  result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
+  EXPECT_EQ(result, kPlatformResultSuccess);
+
+  // Confirm that it worked.
+  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
+  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
 TEST_F(WarmTest, RemoveAddressThreadNotFound) {
