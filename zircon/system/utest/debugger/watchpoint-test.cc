@@ -65,6 +65,7 @@ zx_status_t set_watchpoint(zx_handle_t thread_handle) {
   zx_thread_state_debug_regs_t debug_regs = {};
   ARM64_DBGWCR_E_SET(&debug_regs.hw_wps[0].dbgwcr, 1);
   ARM64_DBGWCR_BAS_SET(&debug_regs.hw_wps[0].dbgwcr, 0xff);
+  ARM64_DBGWCR_LSC_SET(&debug_regs.hw_wps[0].dbgwcr, 0b11);
 
   debug_regs.hw_wps[0].dbgwvr = reinterpret_cast<uint64_t>(&gVariableToChange);
 
@@ -169,9 +170,6 @@ void test_watchpoint_impl(zx_handle_t excp_channel) {
 }
 
 TEST(WatchpointStartTests, WatchpointTest) {
-  // TODO(fxbug.dev/35295): This test flakes.
-  return;
-
   zx_handle_t excp_channel = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), 0, &excp_channel), ZX_OK);
 
