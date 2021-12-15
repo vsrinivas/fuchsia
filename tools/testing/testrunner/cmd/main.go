@@ -69,6 +69,9 @@ type testrunnerFlags struct {
 
 	// The path to the ffx tool.
 	ffxPath string
+
+	// Whether to enable experimental ffx features.
+	ffxExperimental bool
 }
 
 func usage() {
@@ -92,6 +95,7 @@ func main() {
 	flag.StringVar(&flags.snapshotFile, "snapshot-output", "", "The output filename for the snapshot. This will be created in the output directory.")
 	flag.Var(&flags.logLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
+	flag.BoolVar(&flags.ffxExperimental, "ffx-experimental", false, "Whether to enable experimental ffx features. If -ffx is not set, this will have no effect.")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -224,7 +228,7 @@ var (
 	serialTester = testrunner.NewFuchsiaSerialTester
 )
 
-var ffxInstance = func(ctx context.Context, ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (testrunner.FFXInstance, error) {
+var ffxInstance = func(ctx context.Context, ffxPath, dir string, env []string, target, sshKey, outputDir string) (testrunner.FFXInstance, error) {
 	ffx, err := func() (testrunner.FFXInstance, error) {
 		ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
 		if ffx == nil {
@@ -291,7 +295,7 @@ func execute(
 			if err != nil {
 				return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 			}
-			fuchsiaTester = testrunner.NewFFXTester(ffx, t, outputs.OutDir)
+			fuchsiaTester = testrunner.NewFFXTester(ffx, t, outputs.OutDir, flags.ffxExperimental)
 		}
 	}
 

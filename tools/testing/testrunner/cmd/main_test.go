@@ -897,7 +897,7 @@ func TestExecute(t *testing.T) {
 			producer := tap.NewProducer(&buf)
 			o := testrunner.CreateTestOutputs(producer, "")
 			defer o.Close()
-			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{})
+			err := execute(context.Background(), tests, o, net.IPAddr{}, c.sshKeyFile, c.serialSocketPath, "out-dir", testrunnerFlags{ffxExperimental: true})
 			if c.wantErr {
 				if err == nil {
 					t.Errorf("got nil error, want an error for failing to initialize a tester")

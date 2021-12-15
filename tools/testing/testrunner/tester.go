@@ -299,19 +299,24 @@ type FFXTester struct {
 	// available as an output artifact of `ffx test`.
 	sshTester      Tester
 	localOutputDir string
+	// Whether to run experimental ffx functions.
+	experimental bool
 }
 
 // NewFFXTester returns an FFXTester.
-func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string) *FFXTester {
+func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string, experimental bool) *FFXTester {
 	return &FFXTester{
 		ffx:            ffx,
 		sshTester:      sshTester,
 		localOutputDir: localOutputDir,
+		experimental:   experimental,
 	}
 }
 
 func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
-	if test.IsComponentV2() {
+	// TODO(fxbug.dev/84153): Once performance is up to par with running over SSH,
+	// remove experimental condition.
+	if test.IsComponentV2() && t.experimental {
 		sinks := runtests.DataSinkReference{}
 		testDef := ffxutil.TestDef{
 			TestUrl:         test.PackageURL,

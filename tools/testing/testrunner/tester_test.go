@@ -22,6 +22,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
@@ -217,6 +218,113 @@ func (*fakeDataSinkCopier) Close() error {
 	return nil
 }
 
+func TestFFXTester(t *testing.T) {
+	cases := []struct {
+		name         string
+		experimental bool
+		runV2        bool
+		sshRunErrs   []error
+		wantErr      bool
+	}{
+		{
+			name:         "run v1 tests with ssh",
+			experimental: true,
+			sshRunErrs:   []error{nil},
+		},
+		{
+			name:         "run v2 tests with ffx",
+			experimental: true,
+			runV2:        true,
+		},
+		{
+			name:         "ffx test fails",
+			experimental: true,
+			runV2:        true,
+			wantErr:      true,
+		},
+		{
+			name:       "run v2 tests with ssh if ffx not experimental",
+			runV2:      true,
+			sshRunErrs: []error{nil},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			client := &fakeSSHClient{
+				runErrs: c.sshRunErrs,
+			}
+			copier := &fakeDataSinkCopier{}
+			var tester Tester
+			tester = &FuchsiaSSHTester{
+				client:                      client,
+				copier:                      copier,
+				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
+				useRuntests:                 true,
+			}
+			outcome := ffxutil.TestPassed
+			if c.wantErr {
+				outcome = ffxutil.TestFailed
+			}
+			ffx := &MockFFXTester{TestOutcome: outcome}
+			tester = NewFFXTester(ffx, tester, "", c.experimental)
+
+			defer func() {
+				if err := tester.Close(); err != nil {
+					t.Errorf("Close returned error: %s", err)
+				}
+			}()
+
+			test := testsharder.Test{
+				Test:         build.Test{PackageURL: "fuchsia-pkg://foo"},
+				Runs:         1,
+				RunAlgorithm: testsharder.StopOnSuccess,
+			}
+			if c.runV2 {
+				test.Test = build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"}
+			}
+			sinks, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
+			if c.wantErr == (err == nil) {
+				t.Errorf("tester.Test got error: %s, want err: %v", err, c.wantErr)
+			}
+
+			if c.runV2 && c.experimental {
+				if !ffx.ContainsCmd("test") {
+					t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
+				}
+			} else {
+				if ffx.ContainsCmd("test") {
+					t.Errorf("unexpectedly called ffx test")
+				}
+			}
+			p := filepath.Join(t.TempDir(), "testrunner-cmd-test")
+			if err = tester.RunSnapshot(context.Background(), p); err != nil {
+				t.Errorf("failed to run snapshot: %s", err)
+			}
+			if !ffx.ContainsCmd("snapshot") {
+				t.Errorf("failed to call `ffx target snapshot`, called: %s", ffx.CmdsCalled)
+			}
+
+			wantSSHRunCalls := len(c.sshRunErrs)
+			if wantSSHRunCalls != client.runCalls {
+				t.Errorf("Run() called wrong number of times. Got: %d, Want: %d", client.runCalls, wantSSHRunCalls)
+			}
+
+			expectedRemoteDir := dataOutputDir
+			if c.runV2 {
+				// Call EnsureSinks() for v2 tests to set the copier.remoteDir to the data output dir for v2 tests.
+				// v1 tests will already have set the appropriate remoteDir value within Test().
+				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &TestOutputs{}); err != nil {
+					t.Errorf("failed to collect sinks: %s", err)
+				}
+				expectedRemoteDir = dataOutputDirV2
+			}
+			if copier.remoteDir != expectedRemoteDir {
+				t.Errorf("expected sinks in dir: %s, but got: %s", expectedRemoteDir, copier.remoteDir)
+			}
+		})
+	}
+}
+
 func TestSSHTester(t *testing.T) {
 	cases := []struct {
 		name            string
@@ -228,7 +336,6 @@ func TestSSHTester(t *testing.T) {
 		runSnapshot     bool
 		useRuntests     bool
 		runV2           bool
-		useFFX          bool
 	}{
 		{
 			name:    "success",
@@ -283,17 +390,6 @@ func TestSSHTester(t *testing.T) {
 			useRuntests: true,
 			runV2:       true,
 		},
-		{
-			name:        "run v2 tests with ffx",
-			runV2:       true,
-			runSnapshot: true,
-			useFFX:      true,
-		},
-		{
-			name:    "run v1 tests with ssh",
-			runErrs: []error{nil},
-			useFFX:  true,
-		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -310,10 +406,6 @@ func TestSSHTester(t *testing.T) {
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 				serialSocket:                serialSocket,
 				useRuntests:                 c.useRuntests,
-			}
-			ffx := &MockFFXTester{}
-			if c.useFFX {
-				tester = NewFFXTester(ffx, tester, "")
 			}
 
 			defer func() {
@@ -354,27 +446,6 @@ func TestSSHTester(t *testing.T) {
 			if c.runV2 {
 				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &TestOutputs{}); err != nil {
 					t.Errorf("failed to collect v2 sinks: %s", err)
-				}
-			}
-
-			if c.useFFX {
-				if c.runV2 && !c.useRuntests {
-					if !ffx.ContainsCmd("test") {
-						t.Errorf("failed to call `ffx test`, called: %s", ffx.CmdsCalled)
-					}
-				} else {
-					if ffx.ContainsCmd("test") {
-						t.Errorf("unexpectedly called ffx test")
-					}
-				}
-				if c.runSnapshot {
-					if !ffx.ContainsCmd("snapshot") {
-						t.Errorf("failed to call `ffx target snapshot`, called: %s", ffx.CmdsCalled)
-					}
-				} else {
-					if ffx.ContainsCmd("snapshot") {
-						t.Errorf("unexpectedly called ffx target snapshot")
-					}
 				}
 			}
 
