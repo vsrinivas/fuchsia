@@ -1868,6 +1868,9 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   join_params.params_le.chanspec_num = 1;
   join_params.params_le.chanspec_list[0] = chanspec;
 
+  // Attempt to clear counters here and ignore the error. Synaptics indicates that
+  // some counters might be active even when the client is not connected.
+  brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
   BRCMF_DBG(CONN, "Sending join request");
   err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size, &fw_err);
   if (err != ZX_OK) {
@@ -1918,6 +1921,7 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_if* ifp = ndev_to_if(ndev);
   bcme_status_t fw_err;
   uint32_t is_up = 0;
+  float tx_err_rate = 0.0, rx_err_rate = 0.0;
 
   // First check if the IF is up.
   zx_status_t err =
@@ -1956,10 +1960,15 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
   if (err != ZX_OK) {
     BRCMF_INFO("Unable to get FW packet counts err: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
+  } else {
+    zxlogf(INFO, "FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
+           fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
+           fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
+    rx_err_rate =
+        (float)(fw_pktcnt.rx_bad_pkt) / (float)(fw_pktcnt.rx_good_pkt + fw_pktcnt.rx_bad_pkt);
+    tx_err_rate =
+        (float)(fw_pktcnt.tx_bad_pkt) / (float)(fw_pktcnt.tx_good_pkt + fw_pktcnt.tx_bad_pkt);
   }
-  zxlogf(INFO, "FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
-         fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
-         fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
 
   if (ndev->stats.rx_packets != ndev->stats.rx_last_log) {
     if (ndev->stats.rx_packets < ndev->stats.rx_last_log) {
@@ -2026,7 +2035,36 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
   if (ctl_chan <= CH_MAX_2G_CHANNEL) {
     brcmf_btcoex_log_active_bt_tasks(ifp);
   }
-  ndev->client_stats_log_count++;
+
+  // If the rate is 6 Mbps or less OR Rx error rate >= 40% OR Tx error rate is >= 40%
+  // log some of the Tx and Rx error counts retrieved from FW.
+  if ((rate != 0 && (rate / 2) <= 6) || rx_err_rate >= 0.4 || tx_err_rate >= 0.4) {
+    uint8_t cnt_buf[BRCMF_DCMD_MAXLEN] = {0};
+    // The version # in the counters struct returned by FW is set to 10 currently but its
+    // corresponding struct definition is not available. It appears each new version is a superset
+    // of the previous one. So tell FW the size of the struct is that of wl_cnt_ver_11_t which is >=
+    // "wl_cnt_ver_10_t".
+    err = brcmf_fil_iovar_data_get(ifp, "counters", cnt_buf, sizeof(wl_cnt_ver_11_t), &fw_err);
+    if (err != ZX_OK) {
+      BRCMF_WARN("Unable to get fw counters err: %s fw_err %d", zx_status_get_string(err), fw_err);
+    } else {
+      wl_cnt_ver_6_t* counters = reinterpret_cast<wl_cnt_ver_6_t*>(cnt_buf);
+
+      BRCMF_INFO(
+          "FW Err Counts: Tx: Err Rate: %f retrans: %u err %u serr %u nobuf %u runt %u uflo %u "
+          "phyerr %u fail %u",
+          tx_err_rate * 100.0, counters->txretrans, counters->txerror, counters->txserr,
+          counters->txnobuf, counters->txrunt, counters->txuflo, counters->txphyerr,
+          counters->txfail);
+      BRCMF_INFO(
+          "FW Err Counts: Rx: Err Rate: %f err %u nobuf %u runt %u fragerr %u badplcp %u crsglitch "
+          "%u badfcs %u",
+          rx_err_rate * 100.0, counters->rxerror, counters->rxnobuf, counters->rxrunt,
+          counters->rxfragerr, counters->rxbadplcp, counters->rxcrsglitch, counters->rxbadfcs);
+    }
+
+    ndev->client_stats_log_count++;
+  }
 }
 
 static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
