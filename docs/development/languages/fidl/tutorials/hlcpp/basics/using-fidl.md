@@ -48,7 +48,7 @@ rm -r examples/fidl/hlcpp/unittests/*
 
    test("example-cpp-host-test") {
      sources = [ "main.cc" ]
-     deps = [ "//third_party/googletest:gtest_main" ]
+     deps = [ "//src/lib/fxl/test:gtest_main" ]
    }
    ```
 

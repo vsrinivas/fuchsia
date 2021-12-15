@@ -64,10 +64,10 @@ test("unit-tests") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-ddk",
     "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }
 

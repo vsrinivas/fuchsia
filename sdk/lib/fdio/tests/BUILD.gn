@@ -124,7 +124,7 @@ test("fdio-gtest") {
   ]
 
   deps = [
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/fbl",
   ]
 

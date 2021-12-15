@@ -13,7 +13,6 @@ executable("bin") {
     "//examples/fidl/fuchsia.examples",
     "//src/lib/fostr/fidl/fuchsia.examples",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest_main",
   ]
 }
 

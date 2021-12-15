@@ -123,7 +123,7 @@ if (is_fuchsia) {
       ":fidl.test.coding_llcpp",
       ":tests_to_run_under_handle_policy",
       "//sdk/lib/fdio",
-      "//third_party/googletest:gtest_main",
+      "//src/lib/fxl/test:gtest_main",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/zx",
     ]

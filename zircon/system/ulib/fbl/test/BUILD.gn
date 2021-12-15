@@ -88,13 +88,6 @@ test("fbl") {
   }
 }
 
-# Generic main entry point target for GTest executables.
-source_set("gtest_main") {
-  testonly = true
-  sources = [ "run_all_unittests.cc" ]
-  public_deps = [ "//third_party/googletest:gtest" ]
-}
-
 # These tests test compatibility with GMock. As such, they must use the GTest
 # runner instead of zxtest.
 test("fbl-gmock-test") {
@@ -102,7 +95,7 @@ test("fbl-gmock-test") {
   include_dirs = [ "include" ]
   sources = [ "ref_ptr_gmock_tests.cc" ]
   deps = [
-    ":gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fbl",

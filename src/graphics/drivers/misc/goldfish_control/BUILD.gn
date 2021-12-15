@@ -87,7 +87,7 @@ test("goldfish-control-device-test") {
            "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
            "//src/devices/testing/mock-ddk",
            "//third_party/googletest:gtest",
-           "//third_party/googletest:gtest_main",
+           "//src/lib/fxl/test:gtest_main",
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake-object",

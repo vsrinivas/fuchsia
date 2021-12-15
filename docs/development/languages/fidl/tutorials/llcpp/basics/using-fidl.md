@@ -50,7 +50,7 @@ rm -r examples/fidl/llcpp/unittests/*
      testonly = true
      output_name = "fidl_example_llcpp_test"
      sources = [ "main.cc" ]
-     deps = [ "//third_party/googletest:gtest_main" ]
+     deps = [ "//src/lib/fxl/test:gtest_main" ]
    }
 
    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/BUILD.gn" region_tag="package" %}

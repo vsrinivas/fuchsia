@@ -291,8 +291,8 @@ executable("logging_cpp_unittests_structured") {
     ":backend",
     ":cpp",
     "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gtest_main",
   ]
 }
 

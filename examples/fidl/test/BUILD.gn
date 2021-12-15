@@ -40,7 +40,7 @@ executable("examples_integration_test") {
   deps = [
     ":launcher_sources",
     "//sdk/lib/sys/cpp",
-    "//third_party/googletest:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

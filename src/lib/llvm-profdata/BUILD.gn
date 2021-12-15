@@ -136,7 +136,7 @@ if (!is_kernel) {
       ":coverage-example",
       ":llvm-profdata-for-test",
       "//src/lib/elfldltl",
-      "//third_party/googletest:gtest_main",
+      "//src/lib/fxl/test:gtest_main",
     ]
 
     # Make sure the LinkTimeDeadFunction is really dead at link time.

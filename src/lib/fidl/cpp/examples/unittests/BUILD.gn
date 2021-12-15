@@ -17,7 +17,6 @@ test("test") {
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples_cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest_main",
   ]
 }
 
