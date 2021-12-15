@@ -10,7 +10,6 @@
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <zx/cpp/fidl_v2.h>
 
 namespace fidl_test_encapsulatedstructs {
 class NonInlineStructTestStruct;

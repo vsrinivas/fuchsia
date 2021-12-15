@@ -187,7 +187,9 @@ template("fidl_library") {
                              "visibility",
                            ])
 
-    sources = [ _tables_file ] + _fidlgen_files
+    if (_library_basename != "zx") {
+      sources = [ _tables_file ] + _fidlgen_files
+    }
 
     # Metadata to allow us to query all FIDL IR files.
     metadata = {

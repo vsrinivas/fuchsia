@@ -92,35 +92,49 @@ _impl_wrapper = rule(
     }
 )
 
-def cc_fidl_library(name, library, deps=[], tags=[], visibility=None):
-    gen_name = "%s_codegen" % name
-    impl_name = "%s_impl" % name
+def cc_fidl_library(name, library, deps = [], tags = [], visibility = None):
+    if name == "zx_cc":
+        native.cc_library(
+            name = name,
+            srcs = [
+                # Just the coding tables.
+                library,
+            ],
+            deps = deps + [
+                Label("//pkg/fidl_cpp"),
+            ],
+            tags = tags,
+            visibility = visibility,
+        )
+    else:
+        gen_name = "%s_codegen" % name
+        impl_name = "%s_impl" % name
 
-    _codegen(
-        name = gen_name,
-        library = library,
-    )
+        _codegen(
+            name = gen_name,
+            library = library,
+        )
 
-    _impl_wrapper(
-        name = impl_name,
-        codegen = ":%s" % gen_name,
-    )
+        _impl_wrapper(
+            name = impl_name,
+            codegen = ":%s" % gen_name,
+        )
 
-    native.cc_library(
-        name = name,
-        hdrs = [
-            ":%s" % gen_name,
-        ],
-        srcs = [
-            ":%s" % impl_name,
-            # For the coding tables.
-            library,
-        ],
-        # This is necessary in order to locate generated headers.
-        strip_include_prefix = gen_name + ".cc",
-        deps = deps + [
-            Label("//pkg/fidl_cpp"),
-        ],
-        tags = tags,
-        visibility = visibility,
-    )
+        native.cc_library(
+            name = name,
+            hdrs = [
+                ":%s" % gen_name,
+            ],
+            srcs = [
+                ":%s" % impl_name,
+                # For the coding tables.
+                library,
+            ],
+            # This is necessary in order to locate generated headers.
+            strip_include_prefix = gen_name + ".cc",
+            deps = deps + [
+                Label("//pkg/fidl_cpp"),
+            ],
+            tags = tags,
+            visibility = visibility,
+        )

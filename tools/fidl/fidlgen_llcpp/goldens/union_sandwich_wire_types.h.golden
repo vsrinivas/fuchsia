@@ -47,8 +47,7 @@ class UnionSize8Alignment4 {
   UnionSize8Alignment4()
       : ordinal_(::fidl_test_unionsandwich::wire::UnionSize8Alignment4::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   UnionSize8Alignment4(const UnionSize8Alignment4&) = default;
   UnionSize8Alignment4& operator=(const UnionSize8Alignment4&) = default;
@@ -128,8 +127,7 @@ class UnionSize36Alignment4 {
   UnionSize36Alignment4()
       : ordinal_(::fidl_test_unionsandwich::wire::UnionSize36Alignment4::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   UnionSize36Alignment4(const UnionSize36Alignment4&) = default;
   UnionSize36Alignment4& operator=(const UnionSize36Alignment4&) = default;
@@ -227,8 +225,7 @@ class UnionSize12Alignment4 {
   UnionSize12Alignment4()
       : ordinal_(::fidl_test_unionsandwich::wire::UnionSize12Alignment4::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   UnionSize12Alignment4(const UnionSize12Alignment4&) = default;
   UnionSize12Alignment4& operator=(const UnionSize12Alignment4&) = default;
@@ -326,8 +323,7 @@ class UnionSize24Alignment8 {
   UnionSize24Alignment8()
       : ordinal_(::fidl_test_unionsandwich::wire::UnionSize24Alignment8::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   UnionSize24Alignment8(const UnionSize24Alignment8&) = default;
   UnionSize24Alignment8& operator=(const UnionSize24Alignment8&) = default;

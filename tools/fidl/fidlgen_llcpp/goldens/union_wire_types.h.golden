@@ -102,8 +102,7 @@ class UnionWithAttributes {
   UnionWithAttributes()
       : ordinal_(
             ::fidl_test_union::wire::UnionWithAttributes::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   UnionWithAttributes(const UnionWithAttributes&) = default;
   UnionWithAttributes& operator=(const UnionWithAttributes&) = default;
@@ -192,8 +191,8 @@ extern "C" const fidl_type_t fidl_test_union_UnionTable;
 class Union {
  public:
   Union()
-      : ordinal_(::fidl_test_union::wire::Union::Ordinal::Invalid), envelope_ {}
-  {}
+      : ordinal_(::fidl_test_union::wire::Union::Ordinal::Invalid),
+        envelope_{} {}
 
   Union(const Union&) = default;
   Union& operator=(const Union&) = default;
@@ -366,8 +365,7 @@ class StrictUnion {
  public:
   StrictUnion()
       : ordinal_(::fidl_test_union::wire::StrictUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictUnion(const StrictUnion&) = default;
   StrictUnion& operator=(const StrictUnion&) = default;
@@ -547,8 +545,7 @@ class StrictSimpleXUnion {
  public:
   StrictSimpleXUnion()
       : ordinal_(::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictSimpleXUnion(const StrictSimpleXUnion&) = default;
   StrictSimpleXUnion& operator=(const StrictSimpleXUnion&) = default;
@@ -694,8 +691,7 @@ class StrictFoo {
  public:
   StrictFoo()
       : ordinal_(::fidl_test_union::wire::StrictFoo::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictFoo(const StrictFoo&) = default;
   StrictFoo& operator=(const StrictFoo&) = default;
@@ -808,8 +804,7 @@ class StrictBoundedXUnion {
   StrictBoundedXUnion()
       : ordinal_(
             ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictBoundedXUnion(const StrictBoundedXUnion&) = default;
   StrictBoundedXUnion& operator=(const StrictBoundedXUnion&) = default;
@@ -905,8 +900,7 @@ class ReverseOrdinalUnion {
   ReverseOrdinalUnion()
       : ordinal_(
             ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ReverseOrdinalUnion(const ReverseOrdinalUnion&) = default;
   ReverseOrdinalUnion& operator=(const ReverseOrdinalUnion&) = default;
@@ -1012,8 +1006,7 @@ class StrictPizzaOrPasta {
  public:
   StrictPizzaOrPasta()
       : ordinal_(::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictPizzaOrPasta(const StrictPizzaOrPasta&) = default;
   StrictPizzaOrPasta& operator=(const StrictPizzaOrPasta&) = default;
@@ -1153,8 +1146,7 @@ class PizzaOrPasta {
  public:
   PizzaOrPasta()
       : ordinal_(::fidl_test_union::wire::PizzaOrPasta::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   PizzaOrPasta(const PizzaOrPasta&) = default;
   PizzaOrPasta& operator=(const PizzaOrPasta&) = default;
@@ -1288,8 +1280,7 @@ class FlexiblePizzaOrPasta {
   FlexiblePizzaOrPasta()
       : ordinal_(
             ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   FlexiblePizzaOrPasta(const FlexiblePizzaOrPasta&) = default;
   FlexiblePizzaOrPasta& operator=(const FlexiblePizzaOrPasta&) = default;
@@ -1427,8 +1418,7 @@ class ExplicitPizzaOrPasta {
   ExplicitPizzaOrPasta()
       : ordinal_(
             ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExplicitPizzaOrPasta(const ExplicitPizzaOrPasta&) = default;
   ExplicitPizzaOrPasta& operator=(const ExplicitPizzaOrPasta&) = default;
@@ -1568,8 +1558,7 @@ class OlderSimpleUnion {
  public:
   OlderSimpleUnion()
       : ordinal_(::fidl_test_union::wire::OlderSimpleUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   OlderSimpleUnion(const OlderSimpleUnion&) = default;
   OlderSimpleUnion& operator=(const OlderSimpleUnion&) = default;
@@ -1684,8 +1673,7 @@ class NewerSimpleUnion {
  public:
   NewerSimpleUnion()
       : ordinal_(::fidl_test_union::wire::NewerSimpleUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   NewerSimpleUnion(const NewerSimpleUnion&) = default;
   NewerSimpleUnion& operator=(const NewerSimpleUnion&) = default;
@@ -1859,8 +1847,7 @@ class FlexibleUnion {
  public:
   FlexibleUnion()
       : ordinal_(::fidl_test_union::wire::FlexibleUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   FlexibleUnion(const FlexibleUnion&) = default;
   FlexibleUnion& operator=(const FlexibleUnion&) = default;
@@ -2037,8 +2024,7 @@ class FlexibleFoo {
  public:
   FlexibleFoo()
       : ordinal_(::fidl_test_union::wire::FlexibleFoo::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   FlexibleFoo(const FlexibleFoo&) = default;
   FlexibleFoo& operator=(const FlexibleFoo&) = default;
@@ -2148,8 +2134,7 @@ class FieldCollision {
  public:
   FieldCollision()
       : ordinal_(::fidl_test_union::wire::FieldCollision::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   FieldCollision(const FieldCollision&) = default;
   FieldCollision& operator=(const FieldCollision&) = default;
@@ -2229,8 +2214,7 @@ class ExplicitXUnion {
  public:
   ExplicitXUnion()
       : ordinal_(::fidl_test_union::wire::ExplicitXUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExplicitXUnion(const ExplicitXUnion&) = default;
   ExplicitXUnion& operator=(const ExplicitXUnion&) = default;
@@ -2341,8 +2325,7 @@ class ExplicitUnion {
  public:
   ExplicitUnion()
       : ordinal_(::fidl_test_union::wire::ExplicitUnion::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExplicitUnion(const ExplicitUnion&) = default;
   ExplicitUnion& operator=(const ExplicitUnion&) = default;
@@ -2467,8 +2450,7 @@ class ExplicitStrictFoo {
  public:
   ExplicitStrictFoo()
       : ordinal_(::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExplicitStrictFoo(const ExplicitStrictFoo&) = default;
   ExplicitStrictFoo& operator=(const ExplicitStrictFoo&) = default;
@@ -2587,8 +2569,7 @@ class ExplicitFoo {
  public:
   ExplicitFoo()
       : ordinal_(::fidl_test_union::wire::ExplicitFoo::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   ExplicitFoo(const ExplicitFoo&) = default;
   ExplicitFoo& operator=(const ExplicitFoo&) = default;
@@ -2699,8 +2680,7 @@ class XUnionContainingEmptyStruct {
   XUnionContainingEmptyStruct()
       : ordinal_(::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::
                      Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   XUnionContainingEmptyStruct(const XUnionContainingEmptyStruct&) = default;
   XUnionContainingEmptyStruct& operator=(const XUnionContainingEmptyStruct&) =

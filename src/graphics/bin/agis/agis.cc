@@ -15,7 +15,6 @@
 #include <unordered_set>
 
 #include <sdk/lib/fdio/include/lib/fdio/fd.h>
-#include <zx/cpp/fidl.h>
 
 namespace {
 // Value struct for |registry| below.

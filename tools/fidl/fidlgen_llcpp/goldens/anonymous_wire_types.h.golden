@@ -679,8 +679,7 @@ class UnionMember {
  public:
   UnionMember()
       : ordinal_(::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   UnionMember(const UnionMember&) = default;
   UnionMember& operator=(const UnionMember&) = default;
@@ -758,8 +757,7 @@ class Expression {
 
   Expression()
       : ordinal_(::fidl_test_anonymous::wire::Expression::Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   Expression(const Expression&) = default;
   Expression& operator=(const Expression&) = default;
@@ -958,8 +956,7 @@ class SomeProtocolSomeMethodResult {
   SomeProtocolSomeMethodResult()
       : ordinal_(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   SomeProtocolSomeMethodResult(const SomeProtocolSomeMethodResult&) = default;
   SomeProtocolSomeMethodResult& operator=(const SomeProtocolSomeMethodResult&) =

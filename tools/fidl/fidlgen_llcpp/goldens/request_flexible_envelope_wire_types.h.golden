@@ -34,8 +34,7 @@ class StrictFoo {
   StrictFoo()
       : ordinal_(::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::
                      Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   StrictFoo(const StrictFoo&) = default;
   StrictFoo& operator=(const StrictFoo&) = default;
@@ -164,8 +163,7 @@ class FlexibleFoo {
   FlexibleFoo()
       : ordinal_(::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::
                      Ordinal::Invalid),
-        envelope_ {}
-  {}
+        envelope_{} {}
 
   FlexibleFoo(const FlexibleFoo&) = default;
   FlexibleFoo& operator=(const FlexibleFoo&) = default;

@@ -198,7 +198,12 @@ template("_fidl_cpp_library_impl") {
     if (defined(invoker.public_deps)) {
       foreach(dep, invoker.public_deps) {
         label = get_label_info(dep, "label_no_toolchain")
-        public_deps += [ "${label}_${invoker.bindings_flavor}" ]
+        if (label == "//zircon/vdso/zx:zx") {
+          # For the zx library, only link in the coding tables.
+          public_deps += [ "${label}_tables" ]
+        } else {
+          public_deps += [ "${label}_${invoker.bindings_flavor}" ]
+        }
       }
     }
 
@@ -244,8 +249,15 @@ template("_fidl_cpp_library_impl") {
 #
 template("fidl_cpp_library") {
   if (current_toolchain != fidl_toolchain) {
-    _fidl_cpp_library_impl(target_name) {
-      forward_variables_from(invoker, "*")
+    if (invoker.library_name == "zx") {
+      # The zx FIDL library isn't generated with C++ fidlgens.
+      not_needed(invoker, "*")
+      group(target_name) {
+      }
+    } else {
+      _fidl_cpp_library_impl(target_name) {
+        forward_variables_from(invoker, "*")
+      }
     }
   } else {
     # No-op under FIDL toolchain

@@ -3,7 +3,6 @@
 #pragma once
 
 #include <fidl/test/nullable/cpp/fidl.h>
-#include <zx/cpp/libfuzzer.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
