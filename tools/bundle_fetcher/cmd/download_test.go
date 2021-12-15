@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -116,9 +117,51 @@ func TestParseFlags(t *testing.T) {
 	}
 }
 
-func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
+func TestGetProductBundleContainerArtifactsFromImagesJSON(t *testing.T) {
 	contents := map[string][]byte{
-		"some/valid/images.json": []byte(`[{
+		"some/valid/physical/images.json": []byte(`[{
+			"label": "//build/images:zedboot-script(//build/toolchain/fuchsia:arm64)",
+			"name": "zedboot-script",
+			"path": "pave-zedboot.sh",
+			"type": "script"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "product_bundle",
+			"path": "gen/build/images/product_bundle.json",
+			"type": "manifest"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "physical_device",
+			"path": "gen/build/images/physical_device.json",
+			"type": "manifest"
+		  }]`),
+		"some/valid/virtual/images.json": []byte(`[{
+			"label": "//build/images:zedboot-script(//build/toolchain/fuchsia:arm64)",
+			"name": "zedboot-script",
+			"path": "pave-zedboot.sh",
+			"type": "script"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "product_bundle",
+			"path": "gen/build/images/product_bundle.json",
+			"type": "manifest"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "virtual_device",
+			"path": "gen/build/images/virtual_device.json",
+			"type": "manifest"
+		  }]`),
+		"some/missing/product/bundle/images.json": []byte(`[{
+			"label": "//build/images:zedboot-script(//build/toolchain/fuchsia:arm64)",
+			"name": "zedboot-script",
+			"path": "pave-zedboot.sh",
+			"type": "script"
+		  }]`),
+		"some/missing/physical/and/virtual/metadata/images.json": []byte(`[{
 			"label": "//build/images:zedboot-script(//build/toolchain/fuchsia:arm64)",
 			"name": "zedboot-script",
 			"path": "pave-zedboot.sh",
@@ -130,11 +173,29 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 			"path": "gen/build/images/product_bundle.json",
 			"type": "manifest"
 		  }]`),
-		"some/missing/product/bundle/images.json": []byte(`[{
+		"some/invalid/contains/both/virtual/and/physical/images.json": []byte(`[{
 			"label": "//build/images:zedboot-script(//build/toolchain/fuchsia:arm64)",
 			"name": "zedboot-script",
 			"path": "pave-zedboot.sh",
 			"type": "script"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "product_bundle",
+			"path": "gen/build/images/product_bundle.json",
+			"type": "manifest"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "physical_device",
+			"path": "gen/build/images/physical_device.json",
+			"type": "manifest"
+		  },
+		  {
+			"label": "//build/images:product_metadata_json_generator(//build/toolchain/fuchsia:arm64)",
+			"name": "virtual_device",
+			"path": "gen/build/images/virtual_device.json",
+			"type": "manifest"
 		  }]`),
 	}
 	ctx := context.Background()
@@ -142,13 +203,24 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 		name               string
 		imageJSONPath      string
 		dataSinkErr        error
-		expectedOutput     string
+		expectedOutput     *productBundleContainerArtifacts
 		expectedErrMessage string
 	}{
 		{
-			name:           "valid images.json",
-			imageJSONPath:  "some/valid/images.json",
-			expectedOutput: "gen/build/images/product_bundle.json",
+			name:          "valid images.json with physical device",
+			imageJSONPath: "some/valid/physical/images.json",
+			expectedOutput: &productBundleContainerArtifacts{
+				productBundlePath:  "gen/build/images/product_bundle.json",
+				deviceMetadataPath: "gen/build/images/physical_device.json",
+			},
+		},
+		{
+			name:          "valid images.json with virtual device",
+			imageJSONPath: "some/valid/virtual/images.json",
+			expectedOutput: &productBundleContainerArtifacts{
+				productBundlePath:  "gen/build/images/product_bundle.json",
+				deviceMetadataPath: "gen/build/images/virtual_device.json",
+			},
 		},
 		{
 			name:               "product bundle is missing from images.json",
@@ -161,12 +233,23 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 			dataSinkErr:        errors.New("storage: object doesn't exist"),
 			expectedErrMessage: "storage: object doesn't exist",
 		},
+		{
+			name:               "images.json is missing physical and virtual device metadata",
+			imageJSONPath:      "some/missing/physical/and/virtual/metadata/images.json",
+			expectedErrMessage: "unable to find a physical or virtual device metadata in image manifest: some/missing/physical/and/virtual/metadata/images.json",
+		},
+		{
+			name:          "images.json contains both a physical and virtual device metadata",
+			imageJSONPath: "some/invalid/contains/both/virtual/and/physical/images.json",
+			expectedErrMessage: `found both a physical and virtual device metadata in the following paths: "gen/build/images/physical_device.json",` +
+				` "gen/build/images/virtual_device.json". Should only have one.`,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			sink := newMemSink(contents, test.dataSinkErr, "")
-			output, err := getProductBundlePathFromImagesJSON(ctx, sink, test.imageJSONPath)
-			if output != test.expectedOutput {
+			output, err := getProductBundleContainerArtifactsFromImagesJSON(ctx, sink, test.imageJSONPath)
+			if !reflect.DeepEqual(output, test.expectedOutput) {
 				t.Errorf("Got output: %v, want: %v", output, test.expectedOutput)
 			}
 			if err != nil && err.Error() != test.expectedErrMessage {
@@ -179,7 +262,234 @@ func TestGetProductBundlePathFromImagesJSON(t *testing.T) {
 	}
 }
 
-var contents = map[string][]byte{
+var (
+	validVirtualDeviceMetadata = []byte(`{
+		"data": {
+		  "description": "A virtual x64 device",
+		  "hardware": {
+			  "cpu": {
+				"arch": "x64"
+			  },
+			  "audio": {
+				"model": "hda"
+			  },
+			  "inputs": {
+				"pointing_device": "touch"
+			  },
+			  "window_size": {
+				"height": 800,
+				"width": 1280,
+				"units": "pixels"
+			  },
+			  "memory": {
+				"quantity": 8192,
+				"units": "megabytes"
+			  },
+			  "storage": {
+				"quantity": 2,
+				"units": "gigabytes"
+			  }
+		  },
+		  "name": "qemu-x64",
+		  "type": "virtual_device"
+		},
+		"schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
+	}`)
+	validPhysicalDeviceMetadata = []byte(`{
+		"data": {
+		  "description": "A generic x64 device",
+		  "hardware": {
+			"cpu": {
+			  "arch": "x64"
+            }
+		  },
+		  "name": "x64",
+		  "type": "physical_device"
+		},
+		"schema_id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json"
+	}`)
+	contentsDeviceMetadata = map[string][]byte{
+		"builds/123456/images/gen/build/images/virtual/device/one.json":  validVirtualDeviceMetadata,
+		"builds/123456/images/gen/build/images/physical/device/one.json": validPhysicalDeviceMetadata,
+		"some/invalid/virtual/device.json": []byte(`{
+		  "data": "I am a string instead of an object",
+		  "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json"
+	  	}`),
+	}
+)
+
+func TestReadDeviceMetadata(t *testing.T) {
+	ctx := context.Background()
+	var tests = []struct {
+		name                   string
+		knownDeviceMetadata    *map[string][]byte
+		dir                    string
+		deviceMetadataPath     string
+		expectedIsNew          bool
+		expectedDeviceMetadata string
+	}{
+		{
+			name:                "valid virtual device metadata that is new",
+			dir:                 "fuchsia",
+			deviceMetadataPath:  "builds/123456/images/gen/build/images/virtual/device/one.json",
+			knownDeviceMetadata: &map[string][]byte{},
+			expectedIsNew:       true,
+			expectedDeviceMetadata: `{
+  "description": "A virtual x64 device",
+  "type": "virtual_device",
+  "name": "qemu-x64",
+  "hardware": {
+    "cpu": {
+      "arch": "x64"
+    },
+    "audio": {
+      "model": "hda"
+    },
+    "inputs": {
+      "pointing_device": "touch"
+    },
+    "window_size": {
+      "height": 800,
+      "width": 1280,
+      "units": "pixels"
+    },
+    "memory": {
+      "quantity": 8192,
+      "units": "megabytes"
+    },
+    "storage": {
+      "quantity": 2,
+      "units": "gigabytes"
+    }
+  }
+}`,
+		},
+		{
+			name:               "valid physical device metadata that is new",
+			dir:                "fuchsia",
+			deviceMetadataPath: "builds/123456/images/gen/build/images/physical/device/one.json",
+			knownDeviceMetadata: &map[string][]byte{
+				"qemu-x64": validVirtualDeviceMetadata,
+			},
+			expectedIsNew: true,
+			expectedDeviceMetadata: `{
+  "description": "A generic x64 device",
+  "type": "physical_device",
+  "name": "x64",
+  "hardware": {
+    "cpu": {
+      "arch": "x64"
+    }
+  }
+}`,
+		},
+		{
+			name: "valid virtual device metadata that already exists with identical data",
+			dir:  "fuchsia",
+			knownDeviceMetadata: &map[string][]byte{
+				"qemu-x64": validVirtualDeviceMetadata,
+			},
+			deviceMetadataPath: "builds/123456/images/gen/build/images/virtual/device/one.json",
+			expectedIsNew:      false,
+			expectedDeviceMetadata: `{
+  "description": "A virtual x64 device",
+  "type": "virtual_device",
+  "name": "qemu-x64",
+  "hardware": {
+    "cpu": {
+      "arch": "x64"
+    },
+    "audio": {
+      "model": "hda"
+    },
+    "inputs": {
+      "pointing_device": "touch"
+    },
+    "window_size": {
+      "height": 800,
+      "width": 1280,
+      "units": "pixels"
+    },
+    "memory": {
+      "quantity": 8192,
+      "units": "megabytes"
+    },
+    "storage": {
+      "quantity": 2,
+      "units": "gigabytes"
+    }
+  }
+}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sink := newMemSink(contentsDeviceMetadata, nil, test.dir)
+			output, isNew, err := readDeviceMetadata(ctx, sink, test.deviceMetadataPath, test.knownDeviceMetadata)
+			if err != nil {
+				t.Errorf("Got error: %s, expected no error", err)
+			}
+			if isNew != test.expectedIsNew {
+				t.Errorf("readDeviceMetadata() got: %t, want: %t", isNew, test.expectedIsNew)
+			}
+			marshalledOutput, err := json.MarshalIndent(&output, "", "  ")
+			if err != nil {
+				t.Fatalf("json.MarshalIndent(%#v): %s", &output, err)
+			}
+			if diff := cmp.Diff(test.expectedDeviceMetadata, string(marshalledOutput)); diff != "" {
+				t.Errorf("unexpected device metadata (-want +got):\n%v", diff)
+			}
+		})
+	}
+}
+
+func TestReadDeviceMetadataInvalid(t *testing.T) {
+	ctx := context.Background()
+	var tests = []struct {
+		name                string
+		deviceMetadataPath  string
+		knownDeviceMetadata *map[string][]byte
+		dir                 string
+		dataSinkErr         error
+		expectedErrMessage  string
+	}{
+		{
+			name:               "device metadata does not exist in GCS",
+			deviceMetadataPath: "device/does/not/exist.json",
+			dataSinkErr:        errors.New("storage: object doesn't exist"),
+			expectedErrMessage: "storage: object doesn't exist",
+		},
+		{
+			name:               "device metadata contains incorrect json schema",
+			deviceMetadataPath: "some/invalid/virtual/device.json",
+			expectedErrMessage: "json: cannot unmarshal string into Go struct field DeviceMetadata.data of type meta.DeviceMetadataData",
+		},
+		{
+			name: "device metadata has same name but different values in metadata",
+			dir:  "fuchsia",
+			knownDeviceMetadata: &map[string][]byte{
+				"qemu-x64": []byte("{some-thing-invalid}"),
+			},
+			deviceMetadataPath: "builds/123456/images/gen/build/images/virtual/device/one.json",
+			expectedErrMessage: "device metadata's have the same name qemu-x64 but different values",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sink := newMemSink(contentsDeviceMetadata, test.dataSinkErr, test.dir)
+			_, _, err := readDeviceMetadata(ctx, sink, test.deviceMetadataPath, test.knownDeviceMetadata)
+			if err != nil && err.Error() != test.expectedErrMessage {
+				t.Errorf("Got error: %s, want: %s", err.Error(), test.expectedErrMessage)
+			}
+			if err == nil && test.expectedErrMessage != "" {
+				t.Errorf("Got no error, want: %s", test.expectedErrMessage)
+			}
+		})
+	}
+}
+
+var contentsProductBundle = map[string][]byte{
 	"builds/123456/images/gen/build/images/emulator.json": []byte(`{
 		"data": {
 		  "description": "some emulator device",
@@ -332,43 +642,40 @@ func TestGetProductBundleData(t *testing.T) {
 			name:              "valid product bundle for emulator",
 			productBundlePath: "builds/123456/images/gen/build/images/emulator.json",
 			expectedProductBundle: `{
-  "data": {
-    "device_refs": [
-      "qemu-x64"
-    ],
-    "images": [
-      {
-        "base_uri": "gs://fuchsia/builds/123456/images",
-        "format": "files"
-      }
-    ],
-    "type": "product_bundle",
-    "name": "terminal.qemu-x64",
-    "packages": [
-      {
-        "format": "files",
-        "blob_uri": "gs://fuchsia/blobs",
-        "repo_uri": "gs://fuchsia/builds/123456/packages"
-      }
-    ],
-    "description": "some emulator device",
-    "metadata": [
-      [
-        "is_debug",
-        false
-      ]
-    ],
-    "manifests": {
-      "emu": {
-        "disk_images": [
-          "obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
-        ],
-        "initial_ramdisk": "fuchsia.zbi",
-        "kernel": "multiboot.bin"
-      }
+  "device_refs": [
+    "qemu-x64"
+  ],
+  "images": [
+    {
+      "base_uri": "gs://fuchsia/builds/123456/images",
+      "format": "files"
     }
-  },
-  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+  ],
+  "type": "product_bundle",
+  "name": "terminal.qemu-x64",
+  "packages": [
+    {
+      "format": "files",
+      "blob_uri": "gs://fuchsia/blobs",
+      "repo_uri": "gs://fuchsia/builds/123456/packages"
+    }
+  ],
+  "description": "some emulator device",
+  "metadata": [
+    [
+      "is_debug",
+      false
+    ]
+  ],
+  "manifests": {
+    "emu": {
+      "disk_images": [
+        "obj/build/images/fuchsia/fuchsia/fvm.blob.sparse.blk"
+      ],
+      "initial_ramdisk": "fuchsia.zbi",
+      "kernel": "multiboot.bin"
+    }
+  }
 }`,
 			dir: "fuchsia",
 		},
@@ -376,69 +683,66 @@ func TestGetProductBundleData(t *testing.T) {
 			name:              "valid product bundle for physical device",
 			productBundlePath: "builds/789123/images/gen/build/images/physical_device.json",
 			expectedProductBundle: `{
-  "data": {
-    "device_refs": [
-      "x64"
-    ],
-    "images": [
-      {
-        "base_uri": "gs://fuchsia/builds/789123/images",
-        "format": "files"
-      }
-    ],
-    "type": "product_bundle",
-    "name": "terminal.x64",
-    "packages": [
-      {
-        "format": "files",
-        "blob_uri": "gs://fuchsia/blobs",
-        "repo_uri": "gs://fuchsia/builds/789123/packages"
-      }
-    ],
-    "description": "",
-    "metadata": [
-      [
-        "build_info_board",
-        "x64"
-      ]
-    ],
-    "manifests": {
-      "flash": {
-        "hw_revision": "x64",
-        "products": [
-          {
-            "name": "fuchsia",
-            "bootloader_partitions": [
-              {
-                "name": "fuchsia-esp",
-                "path": "fuchsia.esp.blk"
-              }
-            ],
-            "oem_files": [],
-            "partitions": [
-              {
-                "name": "a",
-                "path": "zbi"
-              },
-              {
-                "name": "r",
-                "path": "vbmeta"
-              }
-            ]
-          }
-        ]
-      }
+  "device_refs": [
+    "x64"
+  ],
+  "images": [
+    {
+      "base_uri": "gs://fuchsia/builds/789123/images",
+      "format": "files"
     }
-  },
-  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+  ],
+  "type": "product_bundle",
+  "name": "terminal.x64",
+  "packages": [
+    {
+      "format": "files",
+      "blob_uri": "gs://fuchsia/blobs",
+      "repo_uri": "gs://fuchsia/builds/789123/packages"
+    }
+  ],
+  "description": "",
+  "metadata": [
+    [
+      "build_info_board",
+      "x64"
+    ]
+  ],
+  "manifests": {
+    "flash": {
+      "hw_revision": "x64",
+      "products": [
+        {
+          "name": "fuchsia",
+          "bootloader_partitions": [
+            {
+              "name": "fuchsia-esp",
+              "path": "fuchsia.esp.blk"
+            }
+          ],
+          "oem_files": [],
+          "partitions": [
+            {
+              "name": "a",
+              "path": "zbi"
+            },
+            {
+              "name": "r",
+              "path": "vbmeta"
+            }
+          ]
+        }
+      ]
+    }
+  }
 }`,
 			dir: "fuchsia",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sink := newMemSink(contents, nil, test.dir)
-			output, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
+			sink := newMemSink(contentsProductBundle, nil, test.dir)
+			output, err := readAndUpdateProductBundleData(ctx, sink, test.productBundlePath)
 			if err != nil {
 				t.Errorf("Got error: %s, expected no error", err)
 			}
@@ -481,8 +785,8 @@ func TestGetProductBundleDataInvalid(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			sink := newMemSink(contents, test.dataSinkErr, test.dir)
-			_, err := readAndUpdateProductBundle(ctx, sink, test.productBundlePath)
+			sink := newMemSink(contentsProductBundle, test.dataSinkErr, test.dir)
+			_, err := readAndUpdateProductBundleData(ctx, sink, test.productBundlePath)
 			if err != nil && err.Error() != test.expectedErrMessage {
 				t.Errorf("Got error: %s, want: %s", err.Error(), test.expectedErrMessage)
 			}

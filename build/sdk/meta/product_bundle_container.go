@@ -6,24 +6,24 @@ package meta
 
 import (
 	"embed"
+	"encoding/json"
 	"errors"
 	"regexp"
-
-	"go.fuchsia.dev/fuchsia/tools/artifactory"
 
 	"github.com/xeipuuv/gojsonschema"
 	"go.uber.org/multierr"
 )
 
 const (
-	pbmContainerFileName = "product_bundle_container-76a5c104.json"
+	pbmContainerFileName = "product_bundle_container-32z5e391.json"
+	// PBMContainerSchemaID represents the schema version for the current PBM container.
 	PBMContainerSchemaID = "http://fuchsia.com/schemas/sdk/" + pbmContainerFileName
 	// refRegexpString is used to capture objects in the schema with the
 	// format: "$ref": "flash_manifest-835e8f26.json.
-	refRegexpString = `"\$ref": "(.*)\.json`
+	refRegexpString = `ref": "(.*)\.json`
 	// refReplaceString is used to turn "$ref": "flash_manifest-835e8f26.json
-	// into "$ref": "file://./flash_manifest-835e8f26.json.
-	refReplaceString = `"ref": "file://./$1.json`
+	// into "$ref": "http://fuchsia.com/schemas/sdk/flash_manifest-835e8f26.json.
+	refReplaceString = `ref": "http://fuchsia.com/schemas/sdk/$1.json`
 )
 
 var (
@@ -32,19 +32,35 @@ var (
 	jsonSchemas embed.FS
 )
 
+// ProductBundleContainer is a struct representing a PBM container.
 type ProductBundleContainer struct {
-	SchemaID string `json:"schema_id"`
-	Data     Data   `json:"data"`
+	SchemaID string                     `json:"schema_id"`
+	Data     ProductBundleContainerData `json:"data"`
 }
 
-type Data struct {
-	Bundles []artifactory.ProductBundle `json:"bundles"`
-	Type    string                      `json:"type"`
-	Name    string                      `json:"name"`
+// DeviceMetadata is a struct that contains device specifications.
+type DeviceMetadata struct {
+	Data     DeviceMetadataData `json:"data"`
+	SchemaID string             `json:"schema_id"`
 }
 
-// ValidateProductBundleContainer validates that the data is a valid
-// based on product_bundle_container-76a5c104.json schema.
+// Data contained in the device metadata.
+type DeviceMetadataData struct {
+	Description json.RawMessage `json:"description"`
+	Type        json.RawMessage `json:"type"`
+	Name        string          `json:"name"`
+	Hardware    json.RawMessage `json:"hardware"`
+}
+
+// Data contained in the PBM container.
+type ProductBundleContainerData struct {
+	Entries []json.RawMessage `json:"fms_entries"`
+	Type    string            `json:"type"`
+	Name    string            `json:"name"`
+}
+
+// ValidateProductBundleContainer validates that the data is a valid schema
+// based on product_bundle_container-32z5e391.json schema.
 func ValidateProductBundleContainer(pbmContainer ProductBundleContainer) error {
 	schemaLoader, err := loadProductBundleContainer()
 	if err != nil {
@@ -93,7 +109,9 @@ func loadProductBundleContainer() (*gojsonschema.Schema, error) {
 			return nil, err
 		}
 		fileLoader := gojsonschema.NewStringLoader(metadata)
-		loader.AddSchema(f.Name(), fileLoader)
+		if err := loader.AddSchemas(fileLoader); err != nil {
+			return nil, err
+		}
 	}
 
 	// Read the product_bundle_container as the main schema and compile it.

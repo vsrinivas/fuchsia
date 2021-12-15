@@ -19,77 +19,125 @@ func compareMultierr(lhs, rhs error) bool {
 
 func TestValidateProductBundleContainer(t *testing.T) {
 	const validPBMContainerData = `{
-		"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
-		"data": {
-		  "bundles": [
+		"schema_id":"http://fuchsia.com/schemas/sdk/product_bundle_container-32z5e391.json",
+		"data":{
+		  "fms_entries":[
 			{
-			  "data": {
-				"device_refs": [
-				  "x64"
-				],
-				"images": [
-				  {
-					"base_uri": "gs://fuchsia/images",
-					"format": "files"
-				  }
-				],
-				"type": "product_bundle",
-				"name": "x64",
-				"packages": [
-				  {
-					"format": "files",
-					"blob_uri": "gs://fuchsia/packages",
-					"repo_uri": "gs://fuchsia/packages"
-				  }
-				],
-				"description": "",
-				"metadata": [
-				  [
-					"is_debug",
-					true
+			  "device_refs":[
+				"x64"
+			  ],
+			  "images":[
+				{
+				  "base_uri":"gs://fuchsia/images",
+				  "format":"files"
+				}
+			  ],
+			  "type":"product_bundle",
+			  "name":"x64",
+			  "packages":[
+				{
+				  "format":"files",
+				  "blob_uri":"gs://fuchsia/packages",
+				  "repo_uri":"gs://fuchsia/packages"
+				}
+			  ],
+			  "description":"",
+			  "metadata":[
+				[
+				  "is_debug",
+				  true
+				]
+			  ],
+			  "manifests":{
+				"flash":{
+				  "hw_revision":"x64",
+				  "products":[
+					{
+					  "name":"recovery",
+					  "bootloader_partitions":[
+						
+					  ],
+					  "oem_files":[
+						
+					  ],
+					  "partitions":[
+						{
+						  "name":"zircon_a",
+						  "path":"zedboot"
+						}
+					  ]
+					},
+					{
+					  "name":"fuchsia",
+					  "bootloader_partitions":[
+						
+					  ],
+					  "oem_files":[
+						
+					  ],
+					  "partitions":[
+						{
+						  "name":"zircon_a",
+						  "path":"fuchsia"
+						}
+					  ]
+					},
+					{
+					  "name":"bootstrap",
+					  "bootloader_partitions":[
+						
+					  ],
+					  "oem_files":[
+						
+					  ],
+					  "partitions":[
+						
+					  ]
+					}
 				  ]
-				],
-				"manifests": {
-				  "flash": {
-					"hw_revision": "x64",
-					"products": [
-					  {
-						"name": "recovery",
-						"bootloader_partitions": [],
-						"oem_files": [],
-						"partitions": [
-						  {
-							"name": "zircon_a",
-							"path": "zedboot"
-						  }
-						]
-					  },
-					  {
-						"name": "fuchsia",
-						"bootloader_partitions": [],
-						"oem_files": [],
-						"partitions": [
-						  {
-							"name": "zircon_a",
-							"path": "fuchsia"
-						  }
-						]
-					  },
-					  {
-						"name": "bootstrap",
-						"bootloader_partitions": [],
-						"oem_files": [],
-						"partitions": []
-					  }
-					]
-				  }
+				}
+			  }
+			},
+			{
+			  "type":"virtual_device",
+			  "name":"qemu-x64",
+			  "hardware":{
+				"cpu":{
+				  "arch":"x64"
+				},
+				"audio":{
+				  "model":"hda"
+				},
+				"inputs":{
+				  "pointing_device":"touch"
+				},
+				"window_size":{
+				  "height":800,
+				  "width":1280,
+				  "units":"pixels"
+				},
+				"memory":{
+				  "quantity":8192,
+				  "units":"megabytes"
+				},
+				"storage":{
+				  "quantity":2,
+				  "units":"gigabytes"
+				}
+			  }
+			},
+			{
+			  "hardware":{
+				"cpu":{
+				  "arch":"x64"
 				}
 			  },
-			  "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+			  "name":"x64",
+			  "type":"physical_device"
 			}
 		  ],
-		  "type": "product_bundle_container",
-		  "name": "sdk_product_bundle_container"
+		  "type":"product_bundle_container",
+		  "name":"sdk_product_bundle_container"
 		}
 	  }`
 	var validPBMContainer ProductBundleContainer
@@ -101,9 +149,9 @@ func TestValidateProductBundleContainer(t *testing.T) {
 	}
 
 	const invalidPBMData = `{
-		"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
+		"schema_id": "http://fuchsia.com/schemas/sdk/product_bundle_container-32z5e391.json",
 		"data": {
-		  "bundles": [],
+		  "fms_entries": [],
 		  "type": "product_bundle_container",
 		  "name": "sdk_product_bundle_container"
 		}
@@ -114,7 +162,7 @@ func TestValidateProductBundleContainer(t *testing.T) {
 	}
 
 	var want error
-	want = multierr.Append(want, errors.New("data.bundles: Array must have at least 1 items"))
+	want = multierr.Append(want, errors.New("data.fms_entries: Array must have at least 1 items"))
 	want = multierr.Append(want, errors.New("(root): Must validate all the schemas (allOf)"))
 
 	if diff := cmp.Diff(want, ValidateProductBundleContainer(invalidPBMContainer), cmp.Comparer(compareMultierr)); diff != "" {

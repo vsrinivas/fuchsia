@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -34,14 +35,22 @@ type downloadCmd struct {
 	outputProductBundleFileName string
 }
 
+type productBundleContainerArtifacts struct {
+	productBundlePath  string
+	deviceMetadataPath string
+}
+
 const (
-	buildsDirName    = "builds"
-	imageDirName     = "images"
-	imageJSONName    = "images.json"
-	fileFormatName   = "files"
-	gcsBaseURI       = "gs://"
-	pbmContainerType = "product_bundle_container"
-	pbmContainerName = "sdk_product_bundle_container"
+	buildsDirName           = "builds"
+	imageDirName            = "images"
+	imageJSONName           = "images.json"
+	fileFormatName          = "files"
+	gcsBaseURI              = "gs://"
+	pbmContainerType        = "product_bundle_container"
+	pbmContainerName        = "sdk_product_bundle_container"
+	pbmEntryName            = "product_bundle"
+	virtualDeviceEntryName  = "virtual_device"
+	physicalDeviceEntryName = "physical_device"
 )
 
 func (*downloadCmd) Name() string { return "download" }
@@ -107,11 +116,14 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 
 	productBundleContainer := meta.ProductBundleContainer{
 		SchemaID: meta.PBMContainerSchemaID,
-		Data: meta.Data{
+		Data: meta.ProductBundleContainerData{
 			Type: pbmContainerType,
 			Name: pbmContainerName,
 		},
 	}
+
+	// knownDeviceMetadata is used to de-duplicate device metadata.
+	knownDeviceMetadata := make(map[string][]byte)
 
 	buildIDsList := strings.Split(cmd.buildIDs, ",")
 	for _, buildID := range buildIDsList {
@@ -120,18 +132,36 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 		imageDir := filepath.Join(buildsNamespaceDir, imageDirName)
 		imagesJSONPath := filepath.Join(imageDir, imageJSONName)
 
-		productBundlePath, err := getProductBundlePathFromImagesJSON(ctx, sink, imagesJSONPath)
+		artifact, err := getProductBundleContainerArtifactsFromImagesJSON(ctx, sink, imagesJSONPath)
 		if err != nil {
-			return fmt.Errorf("unable to get product bundle path from images.json for build_id %s: %w", buildID, err)
+			return fmt.Errorf("unable to find artifacts from images.json for build_id %s: %w", buildID, err)
 		}
-		productBundleAbsPath := filepath.Join(imageDir, productBundlePath)
+		productBundleAbsPath := filepath.Join(imageDir, artifact.productBundlePath)
 		logger.Debugf(ctx, "%s contains the product bundle in abs path %s", buildID, productBundleAbsPath)
 
-		updatedProductBundleData, err := readAndUpdateProductBundle(ctx, sink, productBundleAbsPath)
+		updatedProductBundleData, err := readAndUpdateProductBundleData(ctx, sink, productBundleAbsPath)
 		if err != nil {
 			return fmt.Errorf("unable to read product bundle data for build_id %s: %w", buildID, err)
 		}
-		productBundleContainer.Data.Bundles = append(productBundleContainer.Data.Bundles, updatedProductBundleData)
+		entry, err := convertMetadataToRawMessage(updatedProductBundleData)
+		if err != nil {
+			return fmt.Errorf("unable to convert product bundle metadata to json.RawMessage %w", err)
+		}
+		productBundleContainer.Data.Entries = append(productBundleContainer.Data.Entries, entry)
+
+		deviceMetadataAbsPath := filepath.Join(imageDir, artifact.deviceMetadataPath)
+		deviceData, isNew, err := readDeviceMetadata(ctx, sink, deviceMetadataAbsPath, &knownDeviceMetadata)
+		if err != nil {
+			return fmt.Errorf("unable to read device metadata data for build_id %s: %w", buildID, err)
+		}
+		// Only append the device metadata if it is new.
+		if isNew {
+			entry, err := convertMetadataToRawMessage(deviceData)
+			if err != nil {
+				return fmt.Errorf("unable to convert device metadata to json.RawMessage %w", err)
+			}
+			productBundleContainer.Data.Entries = append(productBundleContainer.Data.Entries, entry)
+		}
 	}
 
 	logger.Debugf(ctx, "validating output data to make sure it follows the appropriate schema")
@@ -157,6 +187,44 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 	return errs
 }
 
+// readDeviceMetadata reads the device metadata from GCS and checks that
+// the metadata hasn't been seen already.
+func readDeviceMetadata(ctx context.Context, sink dataSink, deviceMetadataPath string, knownDeviceMetadata *map[string][]byte) (*meta.DeviceMetadataData, bool, error) {
+	var device meta.DeviceMetadata
+	data, err := sink.readFromGCS(ctx, deviceMetadataPath)
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	if err := json.Unmarshal(data, &device); err != nil {
+		return nil, false, err
+	}
+	name := device.Data.Name
+	// Check if the name has been seen already. If it isn't in the knownDeviceMetadata, that means it
+	// is in new and exit early.
+	if _, ok := (*knownDeviceMetadata)[name]; !ok {
+		(*knownDeviceMetadata)[name] = data
+		return &device.Data, true, nil
+	}
+
+	// Device metadata should have the same content if they have identical names.
+	if !reflect.DeepEqual(data, (*knownDeviceMetadata)[name]) {
+		return nil, false, fmt.Errorf("device metadata's have the same name %s but different values", name)
+	}
+
+	return &device.Data, false, nil
+}
+
+// convertMetadataToRawMessage converts metadata to json.RawMessage.
+func convertMetadataToRawMessage(metadata interface{}) (json.RawMessage, error) {
+	content, err := json.MarshalIndent(metadata, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(content), err
+}
+
 // getGCSURIBasedOnFileURI gets the gcs_uri based on the product_bundle path.
 func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, productBundleJSONPath, bucket string) (string, error) {
 	u, err := url.ParseRequestURI(fileURI)
@@ -175,12 +243,12 @@ func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, produc
 	return gcsBaseURI + filepath.Join(bucket, baseURI), nil
 }
 
-// readAndUpdateProductBundle reads the product bundle from GCS and returns the ProductBundle
+// readAndUpdateProductBundleData reads the product bundle from GCS and returns the ProductBundle Data
 // with updated images/packages paths that point to a GCS URI.
-func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundleJSONPath string) (artifactory.ProductBundle, error) {
+func readAndUpdateProductBundleData(ctx context.Context, sink dataSink, productBundleJSONPath string) (*artifactory.Data, error) {
 	productBundleData, err := getProductBundleData(ctx, sink, productBundleJSONPath)
 	if err != nil {
-		return productBundleData, err
+		return nil, err
 	}
 
 	data := productBundleData.Data
@@ -193,7 +261,7 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 		if image.Format == fileFormatName {
 			gcsURI, err := getGCSURIBasedOnFileURI(ctx, sink, image.BaseURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
-				return artifactory.ProductBundle{}, err
+				return nil, err
 			}
 			logger.Debugf(ctx, "gcs_uri is %s for image base_uri %s", gcsURI, image.BaseURI)
 			newImages = append(newImages, &artifactory.Image{
@@ -208,13 +276,13 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 		if pkg.Format == fileFormatName {
 			repoURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.RepoURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
-				return artifactory.ProductBundle{}, err
+				return nil, err
 			}
 			logger.Debugf(ctx, "gcs_uri is %s for package repo_uri %s", repoURI, pkg.RepoURI)
 
 			blobURI, err := getGCSURIBasedOnFileURI(ctx, sink, pkg.BlobURI, productBundleJSONPath, sink.getBucketName())
 			if err != nil {
-				return artifactory.ProductBundle{}, err
+				return nil, err
 			}
 
 			logger.Debugf(ctx, "gcs_uri is %s for package blob_uri %s", blobURI, pkg.BlobURI)
@@ -229,37 +297,52 @@ func readAndUpdateProductBundle(ctx context.Context, sink dataSink, productBundl
 	productBundleData.Data.Images = newImages
 	productBundleData.Data.Packages = newPackages
 
-	return productBundleData, nil
+	return &productBundleData.Data, nil
 }
 
-func getProductBundleData(ctx context.Context, sink dataSink, productBundleJSONPath string) (artifactory.ProductBundle, error) {
-	var productBundle artifactory.ProductBundle
+func getProductBundleData(ctx context.Context, sink dataSink, productBundleJSONPath string) (*artifactory.ProductBundle, error) {
+	productBundle := &artifactory.ProductBundle{}
 	data, err := sink.readFromGCS(ctx, productBundleJSONPath)
 	if err != nil {
-		return productBundle, err
+		return nil, err
 	}
 	err = json.Unmarshal(data, &productBundle)
 	return productBundle, err
 }
 
-// getProductBundlePathFromImagesJson reads the images.json file in GCS and determines
-// the product_bundle path based on that.
-func getProductBundlePathFromImagesJSON(ctx context.Context, sink dataSink, imagesJSONPath string) (string, error) {
+// getProductBundleContainerArtifactsFromImagesJSON reads the images.json file in GCS and determines
+// the paths for product_bundle and either physical or virtual device metadata.
+func getProductBundleContainerArtifactsFromImagesJSON(ctx context.Context, sink dataSink, imagesJSONPath string) (*productBundleContainerArtifacts, error) {
+	artifact := &productBundleContainerArtifacts{}
 	data, err := sink.readFromGCS(ctx, imagesJSONPath)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	var m build.ImageManifest
 	err = json.Unmarshal(data, &m)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	for _, entry := range m {
-		if entry.Name == "product_bundle" {
-			return entry.Path, nil
+		if entry.Name == pbmEntryName {
+			artifact.productBundlePath = entry.Path
+		} else if entry.Name == virtualDeviceEntryName || entry.Name == physicalDeviceEntryName {
+			if artifact.deviceMetadataPath != "" {
+				return nil, fmt.Errorf("found both a physical and virtual device metadata in the following paths: %q, %q."+
+					" Should only have one.", artifact.deviceMetadataPath, entry.Path)
+			}
+			artifact.deviceMetadataPath = entry.Path
 		}
 	}
-	return "", fmt.Errorf("unable to find product bundle in image manifest: %s", imagesJSONPath)
+	// Ensure that a product bundle path exists.
+	if artifact.productBundlePath == "" {
+		return nil, fmt.Errorf("unable to find product bundle in image manifest: %s", imagesJSONPath)
+	}
+	// Ensure that either a physical or virtual device metadata path exists.
+	if artifact.deviceMetadataPath == "" {
+		return nil, fmt.Errorf("unable to find a physical or virtual device metadata in image manifest: %s", imagesJSONPath)
+	}
+	return artifact, nil
 }
 
 // DataSink is an abstract data sink, providing a mockable interface to

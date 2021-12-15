@@ -9,7 +9,6 @@ import("//build/sdk/sdk_documentation.gni")
 # Schemas that are required for the product_bundle_container.
 product_bundle_container_required_schemas = [
   "product_bundle_container-32z5e391.json",
-  "product_bundle_container-76a5c104.json",
   "common.json",
   "product_bundle-6320eef1.json",
   "flash_manifest-835e8f26.json",
@@ -32,6 +31,7 @@ schemas = [
             "host_tool.json",
             "loadable_module.json",
             "manifest.json",
+            "product_bundle_container-76a5c104.json",
             "sysroot.json",
             "version_history-038fa854.json",
           ] + product_bundle_container_required_schemas
@@ -56,7 +56,6 @@ go_library("go_meta") {
   deps = [
     "//third_party/golibs:github.com/xeipuuv/gojsonschema",
     "//third_party/golibs:go.uber.org/multierr",
-    "//tools/artifactory:lib",
   ]
   sources = [
               "product_bundle_container.go",
