@@ -184,7 +184,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             let event = Event::new(
                 &self.target.upgrade()?,
                 Ok(EventPayload::CapabilityRequested {
-                    source_moniker: source.abs_moniker.clone(),
+                    source_moniker: source.abs_moniker().clone(),
                     name: self.name.to_string(),
                     capability: capability.clone(),
                 }),
@@ -379,7 +379,7 @@ pub async fn report_routing_failure(
                 "Failed to route {} `{}` with target component `{}`: {}",
                 cap.type_name(),
                 cap.source_id(),
-                &target.abs_moniker.to_partial(),
+                &target.partial_abs_moniker,
                 &err_str
             ),
         )
@@ -417,7 +417,7 @@ async fn open_storage_capability(
                 .clone(fio::CLONE_FLAG_SAME_RIGHTS, ServerEnd::new(server_chan))
                 .map_err(|e| {
                     let moniker = match &dir_source {
-                        Some(r) => ExtendedMoniker::ComponentInstance(r.abs_moniker.clone()),
+                        Some(r) => ExtendedMoniker::ComponentInstance(r.abs_moniker().clone()),
                         None => ExtendedMoniker::ComponentManager,
                     };
                     ModelError::from(OpenResourceError::open_storage_failed(

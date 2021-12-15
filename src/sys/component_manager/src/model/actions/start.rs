@@ -20,7 +20,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
-    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::PartialAbsoluteMoniker,
     std::sync::Arc,
 };
 
@@ -72,9 +72,7 @@ async fn do_start(
     {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
-        if let Some(res) =
-            should_return_early(&state, &execution, &component.abs_moniker.to_partial())
-        {
+        if let Some(res) = should_return_early(&state, &execution, &component.partial_abs_moniker) {
             return res;
         }
     }
@@ -85,7 +83,7 @@ async fn do_start(
 
         // Find the runner to use.
         let runner = component.resolve_runner().await.map_err(|e| {
-            warn!("Failed to resolve runner for `{}`: {}", component.abs_moniker, e);
+            warn!("Failed to resolve runner for `{}`: {}", component.partial_abs_moniker, e);
             e
         })?;
 
@@ -180,7 +178,7 @@ async fn configure_component_runtime(
     let state = component.lock_state().await;
     let mut execution = component.lock_execution().await;
 
-    match should_return_early(&state, &execution, &component.abs_moniker.to_partial()) {
+    match should_return_early(&state, &execution, &component.partial_abs_moniker) {
         Some(Result::Ok(())) => return RuntimeConfigResult::AlreadyStarted,
         Some(Result::Err(e)) => return RuntimeConfigResult::Error(e),
         None => {}
@@ -229,7 +227,7 @@ async fn make_execution_runtime(
 > {
     match component.on_terminate {
         fdecl::OnTerminate::Reboot => {
-            checker.reboot_on_terminate_allowed(&component.abs_moniker.to_partial())?;
+            checker.reboot_on_terminate_allowed(&component.partial_abs_moniker)?;
         }
         fdecl::OnTerminate::None => {}
     }

@@ -227,7 +227,7 @@ mod tests {
 
         // Convert the tree to a directory.
         let mut in_dir = pfs::simple();
-        tree.install(&root.abs_moniker, &mut in_dir).expect("Unable to build pseudodirectory");
+        tree.install(&root.abs_moniker(), &mut in_dir).expect("Unable to build pseudodirectory");
         let (in_dir_client, in_dir_server) = zx::Channel::create().unwrap();
         in_dir.open(
             ExecutionScope::new(),
@@ -305,7 +305,8 @@ mod tests {
 
         // Convert the tree to a directory.
         let mut expose_dir = pfs::simple();
-        tree.install(&root.abs_moniker, &mut expose_dir).expect("Unable to build pseudodirectory");
+        tree.install(&root.abs_moniker(), &mut expose_dir)
+            .expect("Unable to build pseudodirectory");
         let (expose_dir_client, expose_dir_server) = zx::Channel::create().unwrap();
         expose_dir.open(
             ExecutionScope::new(),

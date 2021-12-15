@@ -12,7 +12,9 @@ use {
         },
         model::Model,
     },
-    ::routing::{event::EventFilter, rights::Rights},
+    ::routing::{
+        component_instance::ComponentInstanceInterface, event::EventFilter, rights::Rights,
+    },
     async_trait::async_trait,
     cm_rust::{
         CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
@@ -139,7 +141,7 @@ impl DirectoryReadyNotifier {
             self.create_events(outgoing_node_result, decl, matching_exposes, target).await;
         for directory_ready_event in directory_ready_events {
             target.hooks.dispatch(&directory_ready_event).await.unwrap_or_else(|e| {
-                warn!("Error notifying directory ready for {}: {:?}", target.abs_moniker, e)
+                warn!("Error notifying directory ready for {}: {:?}", target.partial_abs_moniker, e)
             });
         }
     }
@@ -155,9 +157,10 @@ impl DirectoryReadyNotifier {
         // dispatch in order to propagate any potential errors as an event.
         let outgoing_dir_result = async move {
             let outgoing_node = outgoing_node_result?;
-            self.wait_for_on_open(&outgoing_node, &target.abs_moniker, "/".to_string()).await?;
-            io_util::node_to_directory(outgoing_node)
-                .map_err(|_| ModelError::open_directory_error(target.abs_moniker.to_partial(), "/"))
+            self.wait_for_on_open(&outgoing_node, &target.abs_moniker(), "/".to_string()).await?;
+            io_util::node_to_directory(outgoing_node).map_err(|_| {
+                ModelError::open_directory_error(target.partial_abs_moniker.clone(), "/")
+            })
         }
         .await;
 
@@ -222,7 +225,7 @@ impl DirectoryReadyNotifier {
                     Ok(node) => return Ok(node),
                     Err(TryOpenError::Fidl(_)) => {
                         break Err(ModelError::open_directory_error(
-                            target.abs_moniker.to_partial(),
+                            target.partial_abs_moniker.clone(),
                             source_path.clone(),
                         ));
                     }
@@ -240,7 +243,7 @@ impl DirectoryReadyNotifier {
                             }
                         }
                         break Err(ModelError::open_directory_error(
-                            target.abs_moniker.to_partial(),
+                            target.partial_abs_moniker.clone(),
                             source_path.clone(),
                         ));
                     }
@@ -402,13 +405,13 @@ impl EventSynthesisProvider for DirectoryReadyNotifier {
             let runtime = execution.runtime.as_ref().unwrap();
             let out_dir =
                 match runtime.outgoing_dir.as_ref().ok_or(ModelError::open_directory_error(
-                    component.abs_moniker.to_partial(),
+                    component.partial_abs_moniker.clone(),
                     "/".to_string(),
                 )) {
                     Ok(out_dir) => out_dir,
                     Err(e) => return Some(Err(e)),
                 };
-            Some(clone_outgoing_root(&out_dir, &component.abs_moniker).await)
+            Some(clone_outgoing_root(&out_dir, &component.abs_moniker()).await)
         }
         .await;
         let outgoing_node_result = match maybe_outgoing_node_result {

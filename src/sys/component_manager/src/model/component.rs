@@ -59,7 +59,7 @@ use {
     log::warn,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
-        InstanceId, PartialChildMoniker,
+        InstanceId, PartialAbsoluteMoniker, PartialChildMoniker,
     },
     std::iter::Iterator,
     std::{
@@ -329,7 +329,9 @@ pub struct ComponentInstance {
     /// The parent instance. Either a component instance or component manager's instance.
     pub parent: WeakExtendedInstance,
     /// The absolute moniker of this instance.
-    pub abs_moniker: AbsoluteMoniker,
+    abs_moniker: AbsoluteMoniker,
+    /// The partial absolute moniker of this instance.
+    pub partial_abs_moniker: PartialAbsoluteMoniker,
     /// The hooks scoped to this instance.
     pub hooks: Arc<Hooks>,
     /// Numbered handles to pass to the component on startup. These handles
@@ -384,9 +386,11 @@ impl ComponentInstance {
         hooks: Arc<Hooks>,
         numbered_handles: Option<Vec<fprocess::HandleInfo>>,
     ) -> Arc<Self> {
+        let partial_abs_moniker = abs_moniker.clone().to_partial();
         Arc::new(Self {
             environment,
             abs_moniker,
+            partial_abs_moniker,
             component_url,
             startup,
             on_terminate,
@@ -448,7 +452,7 @@ impl ComponentInstance {
                 }
                 InstanceState::Purged => {
                     return Err(ComponentInstanceError::instance_not_found(
-                        self.abs_moniker.to_partial(),
+                        self.partial_abs_moniker.clone(),
                     ));
                 }
                 InstanceState::New | InstanceState::Discovered => {}
@@ -456,11 +460,13 @@ impl ComponentInstance {
             // Drop the lock before doing the work to resolve the state.
         }
         self.resolve().await.map_err(|err| {
-            ComponentInstanceError::resolve_failed(self.abs_moniker.to_partial(), err)
+            ComponentInstanceError::resolve_failed(self.partial_abs_moniker.clone(), err)
         })?;
         let state = self.state.lock().await;
         if let InstanceState::Purged = *state {
-            return Err(ComponentInstanceError::instance_not_found(self.abs_moniker.to_partial()));
+            return Err(ComponentInstanceError::instance_not_found(
+                self.partial_abs_moniker.clone(),
+            ));
         }
         Ok(MutexGuard::map(state, get_resolved))
     }
@@ -491,7 +497,9 @@ impl ComponentInstance {
                 match *state {
                     InstanceState::Resolved(ref s) => s.decl.clone(),
                     InstanceState::Purged => {
-                        return Err(ModelError::instance_not_found(self.abs_moniker.to_partial()));
+                        return Err(ModelError::instance_not_found(
+                            self.partial_abs_moniker.clone(),
+                        ));
                     }
                     _ => {
                         panic!("resolve_runner: not resolved")
@@ -626,7 +634,7 @@ impl ComponentInstance {
                 let partial_moniker =
                     PartialChildMoniker::new(child_decl.name.clone(), Some(collection_name));
                 Err(ModelError::instance_already_exists(
-                    self.abs_moniker.to_partial(),
+                    self.partial_abs_moniker.clone(),
                     partial_moniker,
                 ))
             }
@@ -653,7 +661,7 @@ impl ComponentInstance {
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
-                self.abs_moniker.to_partial(),
+                self.partial_abs_moniker.clone(),
                 partial_moniker.clone(),
             ))
         }
@@ -690,7 +698,7 @@ impl ComponentInstance {
                     let ret =
                         runtime.stop_component(stop_timer, kill_timer).await.map_err(|e| {
                             ModelError::RunnerCommunicationError {
-                                moniker: self.abs_moniker.to_partial(),
+                                moniker: self.partial_abs_moniker.clone(),
                                 operation: "stop".to_string(),
                                 err: ClonableError::from(anyhow::Error::from(e)),
                             }
@@ -700,7 +708,7 @@ impl ComponentInstance {
                     {
                         warn!(
                             "component {} did not stop in {:?}. Killed it.",
-                            self.abs_moniker,
+                            self.partial_abs_moniker,
                             self.environment.stop_timeout()
                         );
                     }
@@ -708,7 +716,7 @@ impl ComponentInstance {
                         warn!(
                             "Component with on_terminate=REBOOT terminated: {}. \
                             Rebooting the system",
-                            self.abs_moniker
+                            self.partial_abs_moniker
                         );
                         let top_instance = self.top_instance().await?;
                         top_instance.trigger_reboot().await;
@@ -784,7 +792,7 @@ impl ComponentInstance {
                         Err(e) => {
                             warn!(
                                 "component {} was not destroyed when stopped in single run collection: {}",
-                                component.abs_moniker, e
+                                component.partial_abs_moniker, e
                             );
                         }
                     }
@@ -850,7 +858,7 @@ impl ComponentInstance {
                         // this instance. It's bad to leave storage state undeleted, but it would
                         // be worse to not continue with destroying this instance. Log the error,
                         // and proceed.
-                        warn!("failed to delete storage during instance destruction for component {}, proceeding with destruction anyway: {}", self.abs_moniker, e);
+                        warn!("failed to delete storage during instance destruction for component {}, proceeding with destruction anyway: {}", self.partial_abs_moniker, e);
                     }
                 }
             }
@@ -908,14 +916,12 @@ impl ComponentInstance {
     ) -> Result<(), ModelError> {
         let execution = self.lock_execution().await;
         if execution.runtime.is_none() {
-            return Err(
-                RoutingError::source_instance_stopped(&self.abs_moniker.to_partial()).into()
-            );
+            return Err(RoutingError::source_instance_stopped(&self.partial_abs_moniker).into());
         }
         let runtime = execution.runtime.as_ref().expect("bind_instance_open_outgoing: no runtime");
         let out_dir = &runtime.outgoing_dir.as_ref().ok_or_else(|| {
             ModelError::from(RoutingError::source_instance_not_executable(
-                &self.abs_moniker.to_partial(),
+                &self.partial_abs_moniker,
             ))
         })?;
         let path = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
@@ -948,7 +954,7 @@ impl ComponentInstance {
                 Ok(())
             }
             InstanceState::Purged => {
-                Err(ModelError::instance_not_found(self.abs_moniker().to_partial()))
+                Err(ModelError::instance_not_found(self.partial_abs_moniker.clone()))
             }
             _ => {
                 panic!("Component must be resolved or destroyed before using this function")
@@ -964,7 +970,7 @@ impl ComponentInstance {
             let state = self.lock_state().await;
             let execution = self.lock_execution().await;
             if let Some(res) =
-                start::should_return_early(&state, &execution, &self.abs_moniker.to_partial())
+                start::should_return_early(&state, &execution, &self.partial_abs_moniker)
             {
                 return res;
             }
@@ -982,7 +988,7 @@ impl ComponentInstance {
                     })
                     .collect(),
                 InstanceState::Purged => {
-                    return Err(ModelError::instance_not_found(self.abs_moniker.to_partial()));
+                    return Err(ModelError::instance_not_found(self.partial_abs_moniker.clone()));
                 }
                 InstanceState::New | InstanceState::Discovered => {
                     panic!("bind_at: not resoled")
@@ -1014,9 +1020,7 @@ impl ComponentInstance {
 
     pub fn instance_id(self: &Arc<Self>) -> Option<ComponentInstanceId> {
         self.try_get_context()
-            .map(|ctx| {
-                ctx.component_id_index().look_up_moniker(&self.abs_moniker.to_partial()).cloned()
-            })
+            .map(|ctx| ctx.component_id_index().look_up_moniker(&self.partial_abs_moniker).cloned())
             .unwrap_or(None)
     }
 
@@ -1093,7 +1097,7 @@ impl ComponentInstanceInterface for ComponentInstance {
     fn try_get_policy_checker(&self) -> Result<GlobalPolicyChecker, ComponentInstanceError> {
         let context =
             self.try_get_context().map_err(|_| ComponentInstanceError::PolicyCheckerNotFound {
-                moniker: self.abs_moniker().to_partial(),
+                moniker: self.partial_abs_moniker.clone(),
             })?;
         Ok(context.policy().clone())
     }
@@ -1101,7 +1105,7 @@ impl ComponentInstanceInterface for ComponentInstance {
     fn try_get_component_id_index(&self) -> Result<Arc<ComponentIdIndex>, ComponentInstanceError> {
         let context = self.try_get_context().map_err(|_| {
             ComponentInstanceError::ComponentIdIndexNotFound {
-                moniker: self.abs_moniker().to_partial(),
+                moniker: self.partial_abs_moniker.clone(),
             }
         })?;
         Ok(context.component_id_index())

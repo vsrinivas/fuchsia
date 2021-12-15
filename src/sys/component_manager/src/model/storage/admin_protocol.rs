@@ -185,7 +185,7 @@ impl StorageAdmin {
                 e,
             )
         })?;
-        let storage_moniker = component.abs_moniker.clone();
+        let storage_moniker = component.abs_moniker().clone();
 
         let storage_capability_source_info = {
             match route_capability(RouteRequest::StorageBackingDirectory(storage_decl), &component)
@@ -211,7 +211,7 @@ impl StorageAdmin {
                 } => {
                     let relative_moniker = relative_moniker.as_str().try_into()?;
                     let abs_moniker =
-                        AbsoluteMoniker::from_relative(&component.abs_moniker, &relative_moniker)?;
+                        AbsoluteMoniker::from_relative(component.abs_moniker(), &relative_moniker)?;
                     let instance_id = component
                         .try_get_component_id_index()?
                         .look_up_moniker(&abs_moniker.to_partial())
@@ -240,7 +240,7 @@ impl StorageAdmin {
                         let relative_moniker = PartialRelativeMoniker::parse(&relative_moniker)
                             .map_err(|_| fcomponent::Error::InvalidArguments)?;
                         let absolute_moniker = PartialAbsoluteMoniker::from_relative(
-                            &component.abs_moniker.to_partial(),
+                            &component.partial_abs_moniker,
                             &relative_moniker,
                         )
                         .map_err(|_| fcomponent::Error::InvalidArguments)?;
@@ -305,7 +305,7 @@ impl StorageAdmin {
                         }
                         Ok(relative_moniker) => {
                             let abs_moniker = AbsoluteMoniker::from_relative(
-                                &component.abs_moniker,
+                                component.abs_moniker(),
                                 &relative_moniker,
                             )?;
                             let instance_id = component

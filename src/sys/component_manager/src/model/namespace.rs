@@ -30,7 +30,6 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
-    moniker::AbsoluteMonikerBase,
     std::{collections::HashMap, sync::Arc},
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
@@ -575,8 +574,7 @@ fn make_dir_with_not_found_logging(
                         format_args!(
                             "No capability available at path {} for component {}, \
                                 verify the component has the proper `use` declaration.",
-                            requested_path,
-                            target.abs_moniker.to_partial()
+                            requested_path, target.partial_abs_moniker
                         ),
                     );
                 }

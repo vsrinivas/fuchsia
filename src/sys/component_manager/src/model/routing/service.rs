@@ -11,7 +11,10 @@ use {
             routing::{open_capability_at_source, OpenRequest},
         },
     },
-    ::routing::capability_source::AggregateCapabilityProvider,
+    ::routing::{
+        capability_source::AggregateCapabilityProvider,
+        component_instance::ComponentInstanceInterface,
+    },
     async_trait::async_trait,
     cm_task_scope::TaskScope,
     cm_util::channel,
@@ -56,7 +59,7 @@ impl CollectionServiceDirectoryProvider {
             collection_component.lock_resolved_state().await?.execution_scope().clone();
         let dir = lazy::lazy(CollectionServiceDirectory {
             target,
-            collection_component: collection_component.abs_moniker.clone(),
+            collection_component: collection_component.abs_moniker().clone(),
             provider,
         });
         Ok(CollectionServiceDirectoryProvider { execution_scope, dir })

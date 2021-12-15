@@ -14,7 +14,6 @@ use {
         resolver::Resolver,
     },
     async_trait::async_trait,
-    moniker::AbsoluteMonikerBase,
     std::convert::TryFrom,
     std::sync::Arc,
 };
@@ -52,7 +51,9 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                 InstanceState::Discovered => true,
                 InstanceState::Resolved(_) => false,
                 InstanceState::Purged => {
-                    return Err(ModelError::instance_not_found(component.abs_moniker.to_partial()));
+                    return Err(ModelError::instance_not_found(
+                        component.partial_abs_moniker.clone(),
+                    ));
                 }
             }
         };
@@ -70,7 +71,7 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                     }
                     InstanceState::Purged => {
                         return Err(ModelError::instance_not_found(
-                            component.abs_moniker.to_partial(),
+                            component.partial_abs_moniker.clone(),
                         ));
                     }
                     InstanceState::New | InstanceState::Discovered => {}

@@ -10,7 +10,7 @@ use {
         hooks::{Event as HookEvent, EventType},
         model::Model,
     },
-    ::routing::event::EventFilter,
+    ::routing::{component_instance::ComponentInstanceInterface, event::EventFilter},
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fuchsia_async as fasync,
@@ -184,7 +184,7 @@ impl SynthesisTask {
             let root = model.look_up(&scope_moniker.to_partial()).await?;
             let mut component_stream = get_subcomponents(root, visited_components.clone());
             while let Some(component) = component_stream.next().await {
-                visited_components.insert(component.abs_moniker.clone());
+                visited_components.insert(component.abs_moniker().clone());
                 if let Err(_) = Self::send_events(
                     &info.provider,
                     &scope,
@@ -228,7 +228,7 @@ fn get_subcomponents(
             match pending.pop() {
                 None => return None,
                 Some(curr_component) => {
-                    if visited.contains(&curr_component.abs_moniker) {
+                    if visited.contains(&curr_component.abs_moniker()) {
                         continue;
                     }
                     let state_guard = curr_component.lock_state().await;
@@ -241,7 +241,7 @@ fn get_subcomponents(
                         }
                     }
                     drop(state_guard);
-                    visited.insert(curr_component.abs_moniker.clone());
+                    visited.insert(curr_component.abs_moniker().clone());
                     return Some((curr_component, (pending, visited)));
                 }
             }

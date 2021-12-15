@@ -408,7 +408,7 @@ impl RoutingTest {
         let component =
             self.model.look_up(&moniker.to_partial()).await.expect("failed to look up component");
         self.model
-            .bind(&component.abs_moniker.to_partial(), &BindReason::Eager)
+            .bind(&component.partial_abs_moniker, &BindReason::Eager)
             .await
             .expect("bind instance failed");
         let partial_moniker =

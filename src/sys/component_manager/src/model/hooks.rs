@@ -21,6 +21,7 @@ use {
     io_util,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     rand::random,
+    routing::component_instance::ComponentInstanceInterface,
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -403,7 +404,7 @@ impl Event {
     pub fn new(component: &Arc<ComponentInstance>, result: EventResult) -> Self {
         let timestamp = zx::Time::get_monotonic();
         Self::new_internal(
-            component.abs_moniker.clone().into(),
+            component.abs_moniker().clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
@@ -426,7 +427,7 @@ impl Event {
         timestamp: zx::Time,
     ) -> Self {
         Self::new_internal(
-            component.abs_moniker.clone().into(),
+            component.abs_moniker().clone().into(),
             component.component_url.clone(),
             timestamp,
             result,
