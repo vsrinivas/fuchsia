@@ -162,6 +162,7 @@ template("fuzzer_package") {
           } else {
             name = get_label_info(label, "name")
           }
+          dir = get_label_info(label, "dir")
 
           # Set defaults
           output_name = name
@@ -193,16 +194,54 @@ template("fuzzer_package") {
 
     # Compare each selected variant with a profile's supported sanitizers. Unselected fuzzers are
     # built as uninstrumented unit tests instead; see `test("${fuzzer_name}_test")` above.
+    #
+    # IMPORTANT: Keep this in sync with the selection mechanism implemented in the variant_target()
+    # template defined in //build/config/BUILDCONFIG.gn
+    fuzz = false
     foreach(selector, select_variant_canonical) {
-      foreach(sanitizer, fuzzer.sanitizers) {
-        if (!fuzz && selector.variant == "${sanitizer}-fuzzer") {
-          fuzz =
-              (defined(selector.target_type) &&
-               selector.target_type == [ "fuzzed_executable" ]) ||
-              (defined(selector.output_name) &&
-               selector.output_name == [ fuzzer.output_name ]) ||
-              (defined(selector.label) && selector.label == [ fuzzer.label ]) ||
-              (defined(selector.name) && selector.name == [ fuzzer.name ])
+      if (!fuzz) {
+        foreach(sanitizer, fuzzer.sanitizers) {
+          if (!fuzz && selector.variant == "${sanitizer}-fuzzer") {
+            if (!fuzz && defined(selector.target_type)) {
+              foreach(candidate, selector.target_type) {
+                if (candidate == "fuzzed_executable") {
+                  fuzz = true
+                }
+              }
+            }
+
+            if (!fuzz && defined(selector.output_name)) {
+              foreach(candidate, selector.output_name) {
+                if (candidate == fuzzer.output_name) {
+                  fuzz = true
+                }
+              }
+            }
+
+            if (!fuzz && defined(selector.label)) {
+              foreach(candidate, selector.label) {
+                if (candidate == fuzzer.label) {
+                  fuzz = true
+                }
+              }
+            }
+
+            if (!fuzz && defined(selector.name)) {
+              foreach(candidate, selector.name) {
+                if (candidate == fuzzer.name) {
+                  fuzz = true
+                }
+              }
+            }
+
+            if (!fuzz && defined(selector.dir)) {
+              foreach(candidate, selector.dir) {
+                if (candidate == fuzzer.dir) {
+                  fuzz = true
+                }
+              }
+            }
+          }
         }
       }
     }

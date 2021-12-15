@@ -8,7 +8,7 @@ import("//build/toolchain/basic_toolchain.gni")
 basic_toolchain("sysroot_toolchain") {
   # As a special case, it is necesssary to perform variant selection
   # for the user.libc_$cpu toolchain, within the context of sysroot_toolchain.
-  # This happens in //zircon/system/ulib/c/sysroot_entries.gni
+  # This happens in //zircon/system/ulib/c/libc_toolchain.gni
   # To make this work, it is necessary to pass the select_variant_canonical
   # global variable to the new toolchain instance.
   _select_variant_canonical = select_variant_canonical
