@@ -154,6 +154,7 @@ class VmObjectPaged final : public VmObject {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->FailPageRequestsLocked(offset, len, error_status);
   }
+
   zx_status_t DirtyPages(uint64_t offset, uint64_t len) override {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->DirtyPagesLocked(offset, len);
@@ -162,6 +163,15 @@ class VmObjectPaged final : public VmObject {
                                    DirtyRangeEnumerateFunction&& dirty_range_fn) const override {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->EnumerateDirtyRangesLocked(offset, len, ktl::move(dirty_range_fn));
+  }
+
+  zx_status_t WritebackBegin(uint64_t offset, uint64_t len) override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->WritebackBeginLocked(offset, len);
+  }
+  zx_status_t WritebackEnd(uint64_t offset, uint64_t len) override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->WritebackEndLocked(offset, len);
   }
 
   void Dump(uint depth, bool verbose) override {

@@ -298,13 +298,20 @@ struct vm_page {
       // be moved into the child instead of setting the second bit.
       uint8_t cow_left_split : 1;
       uint8_t cow_right_split : 1;
+
       // Hint for whether the page is always needed and should not be considered for reclamation
       // under memory pressure (unless the kernel decides to override hints for some reason).
       uint8_t always_need : 1;
-      // Whether the page is dirty and its contents need to written back to the page source at some
-      // point. Used for pages backed by a user pager.
-      uint8_t dirty : 1;
-      uint8_t padding : 7;
+
+#define VM_PAGE_OBJECT_DIRTY_STATE_BITS 2
+#define VM_PAGE_OBJECT_MAX_DIRTY_STATES ((1u << VM_PAGE_OBJECT_DIRTY_STATE_BITS))
+      // Tracks state used to determine whether the page is dirty and its contents need to written
+      // back to the page source at some point, and when it has been cleaned. Used for pages backed
+      // by a user pager. The three states supported are Clean, Dirty, and AwaitingClean (more
+      // details in VmCowPages::DirtyState).
+      uint8_t dirty_state : VM_PAGE_OBJECT_DIRTY_STATE_BITS;
+
+      uint8_t padding : 6;
       // This struct has no type name and exists inside an unpacked parent and so it really doesn't
       // need to have any padding. By making it packed we allow the next outer variables, to use
       // space we would have otherwise wasted in padding, without breaking alignment rules.

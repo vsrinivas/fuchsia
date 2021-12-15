@@ -123,6 +123,10 @@ class UserPager {
   bool VerifyDirtyRanges(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
                          size_t num_dirty_ranges_to_verify);
 
+  // Begins and ends writeback on pages in the specified range.
+  bool WritebackBeginPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
+  bool WritebackEndPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
+
   // Checks if there is a request for the range [page_offset, length). Will
   // wait until |deadline|.
   bool WaitForPageRead(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx_time_t deadline);

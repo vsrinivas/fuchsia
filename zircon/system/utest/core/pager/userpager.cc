@@ -416,6 +416,29 @@ bool UserPager::DirtyPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_c
   return true;
 }
 
+bool UserPager::WritebackBeginPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count) {
+  zx_status_t status;
+  if ((status = pager_.op_range(ZX_PAGER_OP_WRITEBACK_BEGIN, paged_vmo->vmo_,
+                                page_offset * zx_system_get_page_size(),
+                                page_count * zx_system_get_page_size(), 0)) != ZX_OK) {
+    fprintf(stderr, "pager op_range WRITEBACK_BEGIN failed with %s\n",
+            zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
+bool UserPager::WritebackEndPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count) {
+  zx_status_t status;
+  if ((status = pager_.op_range(ZX_PAGER_OP_WRITEBACK_END, paged_vmo->vmo_,
+                                page_offset * zx_system_get_page_size(),
+                                page_count * zx_system_get_page_size(), 0)) != ZX_OK) {
+    fprintf(stderr, "pager op_range WRITEBACK_END failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
 bool UserPager::VerifyDirtyRanges(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
                                   size_t num_dirty_ranges_to_verify) {
   if (num_dirty_ranges_to_verify > 0 && dirty_ranges_to_verify == nullptr) {

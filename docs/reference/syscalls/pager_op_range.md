@@ -45,6 +45,36 @@ the blocked thread was requesting pages through a [`zx_vmo_read()`] / [`zx_vmo_w
 will be returned. If the blocked thread was requesting pages through a VMAR mapping, the thread will
 take a fatal page fault exception.
 
+**ZX_PAGER_OP_WRITEBACK_BEGIN** - The userspace pager wants to begin writing back pages in the range
+[*offset*, *offset* + *length*). This indicates an intent to clean any dirty pages in the specified
+range once the writeback is completed (signaled with **ZX_PAGER_OP_WRITEBACK_END**). Refer to the
+sample code below for suggested usage.
+
+**ZX_PAGER_OP_WRITEBACK_END** - The userspace pager is done writing back pages in the range
+[*offset*, *offset* + *length*). This indicates that any dirty pages in the specified range that
+were previously signaled with **ZX_PAGER_OP_WRITEBACK_BEGIN** can be marked clean. Refer to the
+sample code below for suggested usage.
+
+Sample code (modulo error handling) to discover and clean any dirty pages might look something like
+this.
+
+```c
+  zx_vmo_dirty_range_t ranges[kMaxRanges];
+  uint64_t num_ranges;
+
+  zx_status_t st =
+      zx_pager_query_dirty_ranges(pager, vmo, 0, vmo_size, &ranges[0],
+                                  kMaxRanges * sizeof(zx_vmo_dirty_range_t), &num_ranges, nullptr);
+
+  for (uint64_t i = 0; i < num_ranges; i++) {
+    uint64_t start = ranges[i].offset;
+    uint64_t len = ranges[i].length;
+    st = zx_pager_op_range(pager, ZX_PAGER_OP_WRITEBACK_BEGIN, vmo, start, len, 0);
+    WritebackToDisk(vmo, start, len);
+    st = zx_pager_op_range(pager, ZX_PAGER_OP_WRITEBACK_END, vmo, start, len, 0);
+  }
+```
+
 ## RIGHTS
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
@@ -76,6 +106,7 @@ not page aligned, or *op* is **ZX_PAGER_OP_FAIL** and *data* is not one of **ZX_
  - [`zx_pager_create_vmo()`]
  - [`zx_pager_detach_vmo()`]
  - [`zx_pager_supply_pages()`]
+ - [`zx_pager_query_dirty_ranges()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 

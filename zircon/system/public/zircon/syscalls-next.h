@@ -46,6 +46,8 @@ __BEGIN_CDECLS
 
 // Pager opcodes
 #define ZX_PAGER_OP_DIRTY ((uint32_t)2u)
+#define ZX_PAGER_OP_WRITEBACK_BEGIN ((uint32_t)3u)
+#define ZX_PAGER_OP_WRITEBACK_END ((uint32_t)4u)
 
 // zx_packet_page_request_t::command
 #define ZX_PAGER_VMO_DIRTY ((uint16_t)2)

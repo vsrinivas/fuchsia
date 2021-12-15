@@ -821,4 +821,256 @@ TEST(PagerWriteback, NoDirtyRequestsMapExistingDirty) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
 }
 
+// Tests that dirty ranges cannot be queried on a clone.
+TEST(PagerWriteback, NoQueryOnClone) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Dirty the page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  // Create a clone.
+  auto clone = vmo->Clone();
+  ASSERT_NOT_NULL(clone);
+
+  // Write to the clone.
+  uint8_t data = 0x77;
+  ASSERT_OK(clone->vmo().write(&data, 0, sizeof(data)));
+
+  // Can query dirty ranges on the parent.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Cannot query dirty ranges on the clone.
+  uint64_t num_ranges = 0;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            zx_pager_query_dirty_ranges(pager.pager().get(), clone->vmo().get(), 0,
+                                        zx_system_get_page_size(), &range, sizeof(range),
+                                        &num_ranges, nullptr));
+}
+
+// Tests that WRITEBACK_BEGIN/END clean pages as expected.
+TEST(PagerWriteback, SimpleWriteback) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Dirty the page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Begin writeback on the page.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+
+  // The page is still dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // This should transition the page to clean, and a subsequent write should trigger
+  // another dirty request.
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+
+  // No dirty pages after writeback end.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  TestThread t([vmo]() -> bool {
+    uint64_t data = 77;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // We should see a dirty request now.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  ASSERT_TRUE(t.Wait());
+
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that a write after WRITEBACK_BEGIN but before WRITEBACK_END is handled correctly.
+TEST(PagerWriteback, DirtyDuringWriteback) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Dirty the page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Begin writeback on the page.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+
+  // The page is still dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Write to the page before ending writeback. This should generate a dirty request.
+  TestThread t1([vmo]() -> bool {
+    uint8_t data = 0xcc;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+
+  ASSERT_TRUE(t1.Start());
+
+  // Verify that we saw the dirty request but do not acknowledge it yet. The write will remain
+  // blocked.
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // End the writeback. This should transition the page to clean.
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The writing thread is still blocked.
+  ASSERT_TRUE(t1.WaitForBlocked());
+
+  // Now dirty the page, unblocking the writing thread.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(t1.Wait());
+
+  // The page is dirty again.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Begin another writeback, and try writing again before ending it. This time acknowledge the
+  // dirty request while the writeback is in progress.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Write to the page before ending writeback. This should generate a dirty request.
+  TestThread t2([vmo]() -> bool {
+    uint8_t data = 0xdd;
+    return vmo->vmo().write(&data, 0, sizeof(data)) == ZX_OK;
+  });
+
+  ASSERT_TRUE(t2.Start());
+
+  // Verify that we saw the dirty request.
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // This should reset the page state to dirty so that it is not moved to clean when the writeback
+  // ends later.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  ASSERT_TRUE(t2.Wait());
+
+  // Verify that the page is dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Now end the writeback. This should *not* clean the page, as a write was accepted after
+  // beginning the writeback.
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
+// Tests that mapping write permissions are cleared as expected on writeback.
+TEST(PagerWriteback, WritebackWithMapping) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  zx_vaddr_t ptr;
+  // Map the vmo.
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo->vmo(), 0,
+                                       zx_system_get_page_size(), &ptr));
+
+  auto unmap = fit::defer([&]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  // Write to the vmo. This will be trapped and generate a dirty request.
+  auto buf = reinterpret_cast<uint8_t*>(ptr);
+  uint8_t data = 0xaa;
+  TestThread t1([buf, data]() -> bool {
+    *buf = data;
+    return true;
+  });
+
+  ASSERT_TRUE(t1.Start());
+
+  ASSERT_TRUE(t1.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Dirty the page.
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  ASSERT_TRUE(t1.Wait());
+
+  // Verify that the page is dirty.
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_EQ(data, *buf);
+
+  // Write to the page again. This should go through without any page faults / dirty requests.
+  data = 0xbb;
+  *buf = data;
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_EQ(data, *buf);
+
+  // Start a writeback.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_EQ(data, *buf);
+
+  // Write to the page again. This should result in a fault / dirty request.
+  TestThread t2([buf]() -> bool {
+    *buf = 0xcc;
+    return true;
+  });
+
+  ASSERT_TRUE(t2.Start());
+
+  ASSERT_TRUE(t2.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+
+  // Fail the dirty request so the writeback can complete.
+  ASSERT_TRUE(pager.FailPages(vmo, 0, 1));
+  ASSERT_TRUE(t2.WaitForCrash(ptr, ZX_ERR_IO));
+
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_EQ(data, *buf);
+
+  // Complete the writeback, making the page clean.
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+  ASSERT_EQ(data, *buf);
+
+  // Write to the page again. This should again be trapped.
+  data = 0xdd;
+  TestThread t3([buf, data]() -> bool {
+    *buf = data;
+    return true;
+  });
+
+  ASSERT_TRUE(t3.Start());
+
+  ASSERT_TRUE(t3.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  ASSERT_TRUE(t3.Wait());
+
+  // The page is dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+  ASSERT_EQ(data, *buf);
+}
+
 }  // namespace pager_tests

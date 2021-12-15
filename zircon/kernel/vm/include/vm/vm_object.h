@@ -393,6 +393,17 @@ class VmObject : public VmHierarchyBase,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Indicates start of writeback for the range [offset, offset + len). Any Dirty pages in the range
+  // are transitioned to AwaitingClean, in preparation for transition to Clean when the writeback is
+  // done (See VmCowPages::DirtyState for details of these states). |offset| and |len| must be page
+  // aligned.
+  virtual zx_status_t WritebackBegin(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
+  // Indicates end of writeback for the range [offset, offset + len). Any AwaitingClean pages in the
+  // range are transitioned to Clean (See VmCowPages::DirtyState for details of these states).
+  // |offset| and |len| must be page aligned.
+  virtual zx_status_t WritebackEnd(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
   enum EvictionHint {
     DontNeed,
     AlwaysNeed,

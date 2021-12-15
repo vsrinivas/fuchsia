@@ -82,7 +82,7 @@ void InitializeVmPage(vm_page_t* p) {
   p->object.cow_left_split = 0;
   p->object.cow_right_split = 0;
   p->object.always_need = 0;
-  p->object.dirty = 0;
+  p->object.dirty_state = uint8_t(VmCowPages::DirtyState::Untracked);
 }
 
 // Allocates a new page and populates it with the data at |parent_paddr|.
@@ -1623,29 +1623,34 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
     return ZX_OK;
   }
 
-  // Otherwise, generate a DIRTY page request for clean pages in the range. Find a contiguous run
-  // of committed clean pages. The caller is expected to only pass in a committed range with no gaps
-  // or markers.
-  uint64_t clean_pages_start = offset;
-  uint64_t clean_pages_len = 0;
+  // Otherwise, generate a DIRTY page request for pages in the range which need to transition to
+  // Dirty. Find a contiguous run of committed non-Dirty pages. For the purpose of generating DIRTY
+  // requests, both Clean and AwaitingClean pages are considered equivalent. This is because pages
+  // that are in AwaitingClean will need another acknowledgment from the user pager before they can
+  // be made Dirty (the filesystem might need to reserve additional space for them etc.).
+  //
+  // The caller is expected to only pass in a committed range with no gaps or markers.
+  uint64_t pages_to_dirty_start = offset;
+  uint64_t pages_to_dirty_len = 0;
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [&clean_pages_start, &clean_pages_len](const VmPageOrMarker* p, uint64_t off) {
+      [&pages_to_dirty_start, &pages_to_dirty_len](const VmPageOrMarker* p, uint64_t off) {
         if (p->IsMarker()) {
           return ZX_ERR_BAD_STATE;
         }
+        DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
         // Page is already dirty.
-        if (p->Page()->object.dirty) {
-          // Bail if we were tracking a non-zero run of clean pages.
-          if (clean_pages_len > 0) {
+        if (is_page_dirty(p->Page())) {
+          // Bail if we were tracking a non-zero run of pages to be dirtied.
+          if (pages_to_dirty_len > 0) {
             return ZX_ERR_STOP;
           } else {
-            // Otherwise advance clean_pages_start to track a potential clean pages run later.
-            clean_pages_start = off + PAGE_SIZE;
+            // Otherwise advance pages_to_dirty_start to track a potential run later.
+            pages_to_dirty_start = off + PAGE_SIZE;
             return ZX_ERR_NEXT;
           }
         }
-        // This is a clean committed page. Increment clean_pages_len.
-        clean_pages_len += PAGE_SIZE;
+        // This is a committed page which is not already Dirty. Increment pages_to_dirty_len.
+        pages_to_dirty_len += PAGE_SIZE;
         return ZX_ERR_NEXT;
       },
       [](uint64_t start, uint64_t end) { return ZX_ERR_BAD_STATE; }, offset, offset + len);
@@ -1654,19 +1659,19 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
   // only come in here after collecting committed pages in LookupPagesLocked.
   ASSERT(status == ZX_OK);
 
-  // No pages need to transition from clean -> dirty.
-  if (clean_pages_len == 0) {
+  // No pages need to transition to Dirty.
+  if (pages_to_dirty_len == 0) {
     return ZX_OK;
   }
 
-  // Found a contiguous run of clean pages. There might be more clean pages later in the range, but
-  // we will come into this call again for them via another LookupPagesLocked after the waiting
-  // caller is unblocked for this range.
+  // Found a contiguous run of pages that need to transition to Dirty. There might be more such
+  // pages later in the range, but we will come into this call again for them via another
+  // LookupPagesLocked after the waiting caller is unblocked for this range.
   AssertHeld(paged_ref_->lock_ref());
   VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(paged_ref_),
                                  .vmo_id = paged_ref_->user_id_locked()};
-  status = page_source_->RequestDirtyTransition(page_request->get(), clean_pages_start,
-                                                clean_pages_len, vmo_debug_info);
+  status = page_source_->RequestDirtyTransition(page_request->get(), pages_to_dirty_start,
+                                                pages_to_dirty_len, vmo_debug_info);
   // The page source will never succeed synchronously.
   DEBUG_ASSERT(status != ZX_OK);
   return status;
@@ -3261,6 +3266,11 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
       src_page = VmPageOrMarker::Marker();
     }
 
+    // A newly supplied page starts off as Clean.
+    if (src_page.IsPage()) {
+      src_page.Page()->object.dirty_state = uint8_t(DirtyState::Clean);
+    }
+
     if (can_borrow_locked() && src_page.IsPage() &&
         pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled()) {
       // Assert some things we implicitly know are true (currently).  We can avoid explicitly
@@ -3393,11 +3403,13 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
   }
 
   return page_list_.ForEveryPageAndContiguousRunInRange(
-      [](const VmPageOrMarker* p, uint64_t off) { return p->IsPage() && !p->Page()->object.dirty; },
       [](const VmPageOrMarker* p, uint64_t off) {
-        DEBUG_ASSERT(p->IsPage() && !p->Page()->object.dirty);
+        return p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_dirty(p->Page());
+      },
+      [](const VmPageOrMarker* p, uint64_t off) {
+        DEBUG_ASSERT(p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_dirty(p->Page()));
         DEBUG_ASSERT(p->Page()->object.get_page_offset() == off);
-        p->Page()->object.dirty = 1;
+        p->Page()->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
         return ZX_ERR_NEXT;
       },
       [this](uint64_t start, uint64_t end) {
@@ -3424,9 +3436,16 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(
   uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
   return page_list_.ForEveryPageAndContiguousRunInRange(
-      [](const VmPageOrMarker* p, uint64_t off) { return p->IsPage() && p->Page()->object.dirty; },
       [](const VmPageOrMarker* p, uint64_t off) {
-        DEBUG_ASSERT(p->IsPage() && p->Page()->object.dirty);
+        // Enumerate both AwaitingClean and Dirty pages, i.e. anything that is not Clean.
+        // AwaitingClean pages are "dirty" too for the purposes of this enumeration, since their
+        // modified contents are still in the process of being written back.
+        return p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_clean(p->Page());
+      },
+      [](const VmPageOrMarker* p, uint64_t off) {
+        DEBUG_ASSERT(p->IsPage());
+        DEBUG_ASSERT(is_page_dirty_tracked(p->Page()));
+        DEBUG_ASSERT(!is_page_clean(p->Page()));
         DEBUG_ASSERT(p->Page()->object.get_page_offset() == off);
         return ZX_ERR_NEXT;
       },
@@ -3434,6 +3453,77 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(
         return dirty_range_fn(start, end - start);
       },
       start_offset, end_offset);
+}
+
+zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
+  ASSERT(page_source_);
+
+  if (!InRange(offset, len, size_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (!page_source_->properties().is_preserving_page_content) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t status = page_list_.ForEveryPageInRange(
+      [](auto* p, uint64_t off) {
+        // Transition pages from Dirty to AwaitingClean.
+        if (p->IsPage() && is_page_dirty(p->Page())) {
+          vm_page_t* page = p->Page();
+          DEBUG_ASSERT(page->object.get_page_offset() == off);
+          page->object.dirty_state = static_cast<uint8_t>(DirtyState::AwaitingClean);
+        }
+        return ZX_ERR_NEXT;
+      },
+      offset, offset + len);
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Set any mappings for this range to read-only, so that a permission fault is triggered the next
+  // time the page is written to in order for us to track it as dirty. This might cover more pages
+  // than the Dirty pages found in the page list traversal above, but we choose to do this once for
+  // the entire range instead of per page; pages in the AwaitingClean and Clean states will already
+  // have their write permission removed, so this is a no-op for them.
+  RangeChangeUpdateLocked(offset, len, RangeChangeOp::RemoveWrite);
+
+  return ZX_OK;
+}
+
+zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
+  ASSERT(page_source_);
+
+  if (!InRange(offset, len, size_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (!page_source_->properties().is_preserving_page_content) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  return page_list_.ForEveryPageInRange(
+      [](auto* p, uint64_t off) {
+        // Transition pages from AwaitingClean to Clean.
+        if (p->IsPage() && is_page_awaiting_clean(p->Page())) {
+          vm_page_t* page = p->Page();
+          DEBUG_ASSERT(page->object.get_page_offset() == off);
+          page->object.dirty_state = static_cast<uint8_t>(DirtyState::Clean);
+        }
+        return ZX_ERR_NEXT;
+      },
+      offset, offset + len);
 }
 
 const VmCowPages* VmCowPages::GetRootLocked() const {
@@ -3594,6 +3684,8 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
     return false;
   }
 
+  // TODO(rashaeqbal): Check for dirty_state != Dirty once the dirty queue is separate.
+
   // Remove any mappings to this page before we remove it.
   RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
 
@@ -3678,7 +3770,7 @@ zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offse
     if (!can_borrow_locked()) {
       return ZX_ERR_NOT_SUPPORTED;
     }
-    if (old_page->object.dirty) {
+    if (is_page_dirty_tracked(old_page) && !is_page_clean(old_page)) {
       return ZX_ERR_BAD_STATE;
     }
     pmm_alloc_flags |= PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW;
@@ -4487,7 +4579,7 @@ void VmCowPages::CopyPageForReplacementLocked(vm_page_t* dst_page, vm_page_t* sr
   dst_page->object.always_need = src_page->object.always_need;
   DEBUG_ASSERT(!dst_page->object.always_need ||
                (!pmm_is_loaned(dst_page) && !pmm_is_loaned(src_page)));
-  dst_page->object.dirty = src_page->object.dirty;
+  dst_page->object.dirty_state = src_page->object.dirty_state;
 }
 
 VmCowPagesContainer* VmCowPages::raw_container() {

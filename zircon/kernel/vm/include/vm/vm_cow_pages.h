@@ -253,6 +253,46 @@ class VmCowPages final
   zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)
       TA_REQ(lock_);
 
+  // Used to track dirty_state in the vm_page_t.
+  //
+  // The transitions between the three states can roughly be summarized as follows:
+  // 1. A page starts off as Clean when supplied.
+  // 2. A write transitions the page from Clean to Dirty.
+  // 3. A writeback_begin moves the Dirty page to AwaitingClean.
+  // 4. A writeback_end moves the AwaitingClean page to Clean.
+  // 5. A write that comes in while the writeback is in progress (i.e. the page is AwaitingClean)
+  // moves the AwaitingClean page back to Dirty.
+  enum class DirtyState : uint8_t {
+    // The page does not track dirty state. Used for non pager backed pages.
+    Untracked = 0,
+    // The page is clean, i.e. its contents have not been altered from when the page was supplied.
+    Clean,
+    // The page's contents have been modified from the time of supply, and should be written back to
+    // the page source at some point.
+    Dirty,
+    // The page still has modified contents, but the page source is in the process of writing back
+    // the changes. This is used to ensure that a consistent version is written back, and that any
+    // new modifications that happen during the writeback are not lost. The page source will mark
+    // pages AwaitingClean before starting any writeback.
+    AwaitingClean,
+    NumStates,
+  };
+  // Make sure that the state can be encoded in the vm_page_t's dirty_state field.
+  static_assert(static_cast<uint8_t>(DirtyState::NumStates) <= VM_PAGE_OBJECT_MAX_DIRTY_STATES);
+
+  static bool is_page_dirty_tracked(const vm_page_t* page) {
+    return DirtyState(page->object.dirty_state) != DirtyState::Untracked;
+  }
+  static bool is_page_dirty(const vm_page_t* page) {
+    return DirtyState(page->object.dirty_state) == DirtyState::Dirty;
+  }
+  static bool is_page_clean(const vm_page_t* page) {
+    return DirtyState(page->object.dirty_state) == DirtyState::Clean;
+  }
+  static bool is_page_awaiting_clean(const vm_page_t* page) {
+    return DirtyState(page->object.dirty_state) == DirtyState::AwaitingClean;
+  }
+
   // See VmObject::DirtyPages
   zx_status_t DirtyPagesLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
@@ -261,6 +301,12 @@ class VmCowPages final
   zx_status_t EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
                                          DirtyRangeEnumerateFunction&& dirty_range_fn) const
       TA_REQ(lock_);
+
+  // See VmObject::WritebackBegin
+  zx_status_t WritebackBeginLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
+  // See VmObject::WritebackEnd
+  zx_status_t WritebackEndLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   using LookupInfo = VmObject::LookupInfo;
   using DirtyTrackingAction = VmObject::DirtyTrackingAction;
