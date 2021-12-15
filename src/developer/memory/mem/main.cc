@@ -191,7 +191,7 @@ int main(int argc, const char** argv) {
                  " Options:\n"
                  " [default]  Human readable representation of process and vmo groups\n"
                  " --trace    Enable tracing support\n"
-                 " --print    Machine readable representation of proccess and vmos\n"
+                 " --print    Machine readable representation of process and vmos\n"
                  " --output   CSV of process memory\n"
                  "            --repeat=N Runs forever, outputing every N seconds\n"
                  "            --pid=N    Output vmo groups of process pid instead\n"
