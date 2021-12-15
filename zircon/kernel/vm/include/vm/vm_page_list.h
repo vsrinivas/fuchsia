@@ -280,6 +280,19 @@ class VmPageList final {
     return ForEveryPageAndGapInRange(this, per_page_func, per_gap_func, start_offset, end_offset);
   }
 
+  // walk the page tree, calling |per_page_func| on every page/marker that fulfills (returns true)
+  // the |compare_func|. Also call |contiguous_run_func| on every contiguous range of such
+  // pages/markers encountered.
+  template <typename COMPARE_FUNC, typename PAGE_FUNC, typename CONTIGUOUS_RUN_FUNC>
+  zx_status_t ForEveryPageAndContiguousRunInRange(COMPARE_FUNC compare_func,
+                                                  PAGE_FUNC per_page_func,
+                                                  CONTIGUOUS_RUN_FUNC contiguous_run_func,
+                                                  uint64_t start_offset,
+                                                  uint64_t end_offset) const {
+    return ForEveryPageAndContiguousRunInRange(this, compare_func, per_page_func,
+                                               contiguous_run_func, start_offset, end_offset);
+  }
+
   // Returns true if any pages or markers are in the given range.
   bool AnyPagesInRange(uint64_t start_offset, uint64_t end_offset) const {
     bool found_page = false;
@@ -498,6 +511,88 @@ class VmPageList final {
 
     if (expected_next_off != end_offset) {
       status = per_gap_func(expected_next_off, end_offset);
+      if (status != ZX_ERR_NEXT && status != ZX_ERR_STOP) {
+        return status;
+      }
+    }
+
+    return ZX_OK;
+  }
+
+  template <typename S, typename COMPARE_FUNC, typename PAGE_FUNC, typename CONTIGUOUS_RUN_FUNC>
+  static zx_status_t ForEveryPageAndContiguousRunInRange(S self, COMPARE_FUNC compare_func,
+                                                         PAGE_FUNC per_page_func,
+                                                         CONTIGUOUS_RUN_FUNC contiguous_run_func,
+                                                         uint64_t start_offset,
+                                                         uint64_t end_offset) {
+    // Track contiguous range of pages fulfilling compare_func.
+    uint64_t contiguous_run_start = start_offset;
+    uint64_t contiguous_run_len = 0;
+
+    zx_status_t status = ForEveryPageAndGapInRange(
+        self,
+        [&](const VmPageOrMarker* p, uint64_t off) {
+          zx_status_t st = ZX_ERR_NEXT;
+          if (compare_func(p, off)) {
+            st = per_page_func(p, off);
+            if (st == ZX_ERR_STOP) {
+              return ZX_OK;
+            }
+            if (st != ZX_ERR_NEXT) {
+              return st;
+            }
+            // Start tracking a new range first if no range is being tracked yet.
+            if (contiguous_run_len == 0) {
+              contiguous_run_start = off;
+            }
+            // Append this page to the contiguous range being tracked.
+            contiguous_run_len += PAGE_SIZE;
+            return ZX_ERR_NEXT;
+          }
+          // We were already tracking a contiguous range when we encountered this page that does not
+          // fulfill compare_func. Invoke contiguous_run_func on the range so far and start tracking
+          // a new one skipping over this page.
+          if (contiguous_run_len > 0) {
+            st = contiguous_run_func(contiguous_run_start,
+                                     contiguous_run_start + contiguous_run_len);
+            if (st == ZX_ERR_STOP) {
+              return ZX_OK;
+            }
+            if (st != ZX_ERR_NEXT) {
+              return st;
+            }
+          }
+          // Reset contiguous_run_len to zero to track a new range later if required.
+          contiguous_run_len = 0;
+          return ZX_ERR_NEXT;
+        },
+        [&](uint64_t start, uint64_t end) {
+          // We were already tracking a contiguous range when we encountered this gap. Invoke
+          // contiguous_run_func on the range so far and start tracking a new one skipping over this
+          // gap.
+          if (contiguous_run_len > 0) {
+            zx_status_t st = contiguous_run_func(contiguous_run_start,
+                                                 contiguous_run_start + contiguous_run_len);
+            if (st == ZX_ERR_STOP) {
+              return ZX_OK;
+            }
+            if (st != ZX_ERR_NEXT) {
+              return st;
+            }
+          }
+          // Reset contiguous_run_len to zero to track a new range later if required.
+          contiguous_run_len = 0;
+          return ZX_ERR_NEXT;
+        },
+        start_offset, end_offset);
+
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    // Process the last contiguous range if there is one.
+    if (contiguous_run_len > 0) {
+      status = contiguous_run_func(contiguous_run_start, contiguous_run_start + contiguous_run_len);
       if (status != ZX_ERR_NEXT && status != ZX_ERR_STOP) {
         return status;
       }

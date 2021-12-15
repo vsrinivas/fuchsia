@@ -40,7 +40,7 @@ range [*offset*, *offset* + *length*) with command **ZX_PAGER_VMO_READ** or **ZX
 value) - permitted values are **ZX_ERR_IO**, **ZX_ERR_IO_DATA_INTEGRITY** and **ZX_ERR_BAD_STATE**.
 
 This will signal threads that might be waiting on page requests in that range, unblocking them. If
-the blocked thread was requesting pages through a [`zx_vmo_read()`/`zx_vmo_write()`] or a
+the blocked thread was requesting pages through a [`zx_vmo_read()`] / [`zx_vmo_write()`] or a
 [`zx_vmo_op_range()`] with **ZX_VMO_OP_COMMIT**, the call will fail and the error status (*data*)
 will be returned. If the blocked thread was requesting pages through a VMAR mapping, the thread will
 take a fatal page fault exception.
@@ -84,3 +84,4 @@ not page aligned, or *op* is **ZX_PAGER_OP_FAIL** and *data* is not one of **ZX_
 [`zx_pager_supply_pages()`]: pager_supply_pages.md
 [`zx_vmo_op_range()`]: vmo_op_range.md
 [`zx_vmo_read()`]: vmo_read.md
+[`zx_vmo_write()`]: vmo_write.md

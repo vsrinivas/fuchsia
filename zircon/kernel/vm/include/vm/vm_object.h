@@ -13,10 +13,12 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
 #include <zircon/listnode.h>
+#include <zircon/syscalls-next.h>
 #include <zircon/types.h>
 
 #include <fbl/array.h>
 #include <fbl/canary.h>
+#include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
@@ -378,6 +380,18 @@ class VmObject : public VmHierarchyBase,
 
   // Dirties pages in the vmo in the range [offset, offset + len).
   virtual zx_status_t DirtyPages(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
+  using DirtyRangeEnumerateFunction =
+      fbl::Function<zx_status_t(uint64_t range_offset, uint64_t range_len)>;
+  // Enumerates dirty ranges in the range [offset, offset + len) in ascending order, and calls
+  // |dirty_range_fn| on each range (spanning [range_offset, range_offset + range_len)).
+  // |dirty_range_fn| can return ZX_ERR_NEXT to continue with the enumeration, ZX_ERR_STOP to
+  // terminate the enumeration successfully, and any other error code to terminate the enumeration
+  // early with that error code.
+  virtual zx_status_t EnumerateDirtyRanges(uint64_t offset, uint64_t len,
+                                           DirtyRangeEnumerateFunction&& dirty_range_fn) const {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
 
   enum EvictionHint {
     DontNeed,

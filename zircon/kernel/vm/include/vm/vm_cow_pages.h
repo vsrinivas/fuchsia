@@ -256,11 +256,17 @@ class VmCowPages final
   // See VmObject::DirtyPages
   zx_status_t DirtyPagesLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
+  using DirtyRangeEnumerateFunction = VmObject::DirtyRangeEnumerateFunction;
+  // See VmObject::EnumerateDirtyRanges
+  zx_status_t EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
+                                         DirtyRangeEnumerateFunction&& dirty_range_fn) const
+      TA_REQ(lock_);
+
   using LookupInfo = VmObject::LookupInfo;
   using DirtyTrackingAction = VmObject::DirtyTrackingAction;
   // See VmObject::GetPage
   // The pages returned from this are assumed to be used in the following ways.
-  //  * Our VmObjectPaged backlink, or any of childrens backlinks, are allowed to have readable
+  //  * Our VmObjectPaged backlink, or any of children's backlinks, are allowed to have readable
   //    mappings, and will be informed to unmap via the backlinks when needed.
   //  * Our VmObjectPaged backlink and our *slice* children are allowed to have writable mappings,
   //    and will be informed to either unmap or remove writability when needed.

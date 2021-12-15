@@ -158,6 +158,11 @@ class VmObjectPaged final : public VmObject {
     Guard<Mutex> guard{&lock_};
     return cow_pages_locked()->DirtyPagesLocked(offset, len);
   }
+  zx_status_t EnumerateDirtyRanges(uint64_t offset, uint64_t len,
+                                   DirtyRangeEnumerateFunction&& dirty_range_fn) const override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->EnumerateDirtyRangesLocked(offset, len, ktl::move(dirty_range_fn));
+  }
 
   void Dump(uint depth, bool verbose) override {
     Guard<Mutex> guard{&lock_};

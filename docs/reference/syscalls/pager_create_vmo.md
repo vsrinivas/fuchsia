@@ -103,13 +103,14 @@ If *pager* is closed, then no more packets will be delivered to *port* (includin
 ## SEE ALSO
 
  - [`zx_pager_detach_vmo()`]
- - [`zx_pager_supply_pages()`]
  - [`zx_pager_op_range()`]
+ - [`zx_pager_supply_pages()`]
  - [`zx_port_wait()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_pager_detach_vmo()`]: pager_detach_vmo.md
+[`zx_pager_op_range()`]: pager_op_range.md
 [`zx_pager_supply_pages()`]: pager_supply_pages.md
 [`zx_port_wait()`]: port_wait.md
 [`zx_vmo_create()`]: vmo_create.md

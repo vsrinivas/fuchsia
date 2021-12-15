@@ -66,4 +66,20 @@ protocol pager {
     }) -> (struct {
         status status;
     });
+
+    /// Query contiguous ranges of dirty pages in a pager owned vmo.
+    /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
+    /// Rights: pager_vmo must be of type ZX_OBJ_TYPE_VMO.
+    @next
+    pager_query_dirty_ranges(resource struct {
+        pager handle:PAGER;
+        pager_vmo handle:VMO;
+        offset uint64;
+        length uint64;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+        actual optional_usize;
+        avail optional_usize;
+    });
 };

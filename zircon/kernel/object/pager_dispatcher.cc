@@ -132,3 +132,120 @@ zx_status_t PagerDispatcher::RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uin
       return ZX_ERR_NOT_SUPPORTED;
   }
 }
+
+zx_status_t PagerDispatcher::QueryDirtyRanges(VmAspace* current_aspace, fbl::RefPtr<VmObject> vmo,
+                                              uint64_t offset, uint64_t length,
+                                              user_out_ptr<void> buffer, size_t buffer_size,
+                                              user_out_ptr<size_t> actual,
+                                              user_out_ptr<size_t> avail) {
+  // State captured by |copy_to_buffer| below.
+  struct CopyToBufferInfo {
+    // Index into |buffer|, used to populate its entries.
+    size_t index = 0;
+    // Total number of dirty ranges discovered.
+    size_t total = 0;
+    // Whether the total number of ranges need to be computed, depending on whether |avail| is
+    // supplied.
+    bool compute_total = false;
+    // The range that enumeration runs over. Might get updated when enumeration ends early due to a
+    // page fault.
+    uint64_t offset = 0;
+    uint64_t length = 0;
+    // State that will get populated if the user copy in the DirtyRangeEnumerateFunction encounters
+    // a page fault.
+    vaddr_t pf_va = 0;
+    uint pf_flags = 0;
+    bool captured_fault_info = false;
+  };
+  CopyToBufferInfo info = {};
+  info.offset = offset;
+  info.length = length;
+  if (avail) {
+    info.compute_total = true;
+  }
+
+  // Enumeration function that will be invoked on each dirty range found.
+  VmObject::DirtyRangeEnumerateFunction copy_to_buffer =
+      [&info, &buffer, buffer_size](uint64_t range_offset, uint64_t range_len) {
+        // No more space in the buffer.
+        if ((info.index + 1) * sizeof(zx_vmo_dirty_range_t) > buffer_size) {
+          // If we were not asked to compute the total, we can end termination early as there is
+          // nothing more to copy out.
+          if (!info.compute_total) {
+            return ZX_ERR_STOP;
+          }
+          // If there is no more space in the |buffer|, only update the total without trying to copy
+          // out any more ranges.
+          ++info.total;
+          return ZX_ERR_NEXT;
+        }
+
+        zx_vmo_dirty_range_t dirty_range;
+        memset(&dirty_range, 0, sizeof(dirty_range));
+        dirty_range.offset = range_offset;
+        dirty_range.length = range_len;
+        dirty_range.options = 0u;
+
+        UserCopyCaptureFaultsResult copy_result = buffer.reinterpret<zx_vmo_dirty_range_t>()
+                                                      .element_offset(info.index)
+                                                      .copy_to_user_capture_faults(dirty_range);
+        // Stash fault information if a fault is encountered. Return early from enumeration with
+        // ZX_ERR_SHOULD_WAIT so that the page fault can be resolved.
+        if (copy_result.status != ZX_OK) {
+          info.captured_fault_info = true;
+          info.pf_va = copy_result.fault_info->pf_va;
+          info.pf_flags = copy_result.fault_info->pf_flags;
+
+          // Update the offset and length to skip over the range that we've already processed dirty
+          // ranges for, to allow forward progress of the syscall.
+          uint64_t processed = range_offset - info.offset;
+          info.offset += processed;
+          info.length -= processed;
+
+          return ZX_ERR_SHOULD_WAIT;
+        }
+        // We were able to successfully copy out this dirty range. Advance the index and continue
+        // with the enumeration.
+        ++info.index;
+        ++info.total;
+        return ZX_ERR_NEXT;
+      };
+
+  // Enumerate dirty ranges with |copy_to_buffer|. If page faults are captured, resolve them and
+  // retry enumeration.
+  zx_status_t status = ZX_OK;
+  do {
+    status = vmo->EnumerateDirtyRanges(info.offset, info.length, ktl::move(copy_to_buffer));
+    // Per |copy_to_buffer|, enumeration will terminate early with ZX_ERR_SHOULD_WAIT if a fault is
+    // captured. Resolve the fault and then attempt the enumeration again.
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      DEBUG_ASSERT(info.captured_fault_info);
+      zx_status_t fault_status = current_aspace->SoftFault(info.pf_va, info.pf_flags);
+      if (fault_status != ZX_OK) {
+        return fault_status;
+      }
+      // Reset |captured_fault_info| so that a future page fault can set it again.
+      info.captured_fault_info = false;
+    } else if (status != ZX_OK) {
+      // Another error was encountered. Return.
+      return status;
+    }
+  } while (status == ZX_ERR_SHOULD_WAIT);
+
+  DEBUG_ASSERT(status == ZX_OK);
+
+  // Now try to copy out the total and actual number of ranges we populated in |buffer|. We don't
+  // need to use copy_to_user_capture_faults() here; we don't hold any locks that need to be dropped
+  // before handling a fault.
+  if (actual) {
+    status = actual.copy_to_user(info.index);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  if (avail) {
+    DEBUG_ASSERT(info.total >= info.index);
+    status = avail.copy_to_user(info.total);
+  }
+  return status;
+}

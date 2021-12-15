@@ -222,6 +222,8 @@ toc:
     path: /docs/reference/syscalls/pager_supply_pages.md
   - title: "zx_pager_op_range"
     path: /docs/reference/syscalls/pager_op_range.md
+  - title: "zx_pager_query_dirty_ranges"
+    path: /docs/reference/syscalls/pager_query_dirty_ranges.md
 - title: "Cryptographically secure RNG"
   section:
   - title: "zx_cprng_add_entropy"

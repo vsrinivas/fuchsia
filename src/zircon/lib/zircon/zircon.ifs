@@ -84,6 +84,7 @@ Symbols:
   - { Name: _zx_pager_create_vmo, Type: Func }
   - { Name: _zx_pager_detach_vmo, Type: Func }
   - { Name: _zx_pager_op_range, Type: Func }
+  - { Name: _zx_pager_query_dirty_ranges, Type: Func }
   - { Name: _zx_pager_supply_pages, Type: Func }
   - { Name: _zx_pc_firmware_tables, Type: Func }
   - { Name: _zx_pci_add_subtract_io_range, Type: Func }
@@ -271,6 +272,7 @@ Symbols:
   - { Name: zx_pager_create_vmo, Type: Func, Weak: true }
   - { Name: zx_pager_detach_vmo, Type: Func, Weak: true }
   - { Name: zx_pager_op_range, Type: Func, Weak: true }
+  - { Name: zx_pager_query_dirty_ranges, Type: Func, Weak: true }
   - { Name: zx_pager_supply_pages, Type: Func, Weak: true }
   - { Name: zx_pc_firmware_tables, Type: Func, Weak: true }
   - { Name: zx_pci_add_subtract_io_range, Type: Func, Weak: true }

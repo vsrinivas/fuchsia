@@ -3392,43 +3392,48 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint64_t new_dirty_start = offset;
-  uint64_t new_dirty_len = 0;
-  page_list_.ForEveryPageAndGapInRange(
-      [&new_dirty_start, &new_dirty_len, this](const VmPageOrMarker* p, uint64_t off) {
-        // This is a clean page which is transitioning to dirty.
-        if (p->IsPage() && !p->Page()->object.dirty) {
-          p->Page()->object.dirty = 1;
-          new_dirty_len += PAGE_SIZE;
-          return ZX_ERR_NEXT;
-        }
-        // This is a marker or a page that is already dirty. End the run of new dirty pages (if
-        // any), and signal the page source. Reset the range trackers.
-        if (new_dirty_len > 0) {
-          page_source_->OnPagesDirtied(new_dirty_start, new_dirty_len);
-        }
-        new_dirty_start = off + PAGE_SIZE;
-        new_dirty_len = 0;
+  return page_list_.ForEveryPageAndContiguousRunInRange(
+      [](const VmPageOrMarker* p, uint64_t off) { return p->IsPage() && !p->Page()->object.dirty; },
+      [](const VmPageOrMarker* p, uint64_t off) {
+        DEBUG_ASSERT(p->IsPage() && !p->Page()->object.dirty);
+        DEBUG_ASSERT(p->Page()->object.get_page_offset() == off);
+        p->Page()->object.dirty = 1;
         return ZX_ERR_NEXT;
       },
-      [&new_dirty_start, &new_dirty_len, this](uint64_t start, uint64_t end) {
-        // End the run of new dirty pages (if any), and signal the page source. Reset the range
-        // trackers.
-        if (new_dirty_len > 0) {
-          page_source_->OnPagesDirtied(new_dirty_start, new_dirty_len);
-        }
-        new_dirty_start = end;
-        new_dirty_len = 0;
+      [this](uint64_t start, uint64_t end) {
+        page_source_->OnPagesDirtied(start, end - start);
         return ZX_ERR_NEXT;
       },
       offset, offset + len);
+}
 
-  // Signal the last run of new dirty pages, if any.
-  if (new_dirty_len > 0) {
-    page_source_->OnPagesDirtied(new_dirty_start, new_dirty_len);
+zx_status_t VmCowPages::EnumerateDirtyRangesLocked(
+    uint64_t offset, uint64_t len, DirtyRangeEnumerateFunction&& dirty_range_fn) const {
+  canary_.Assert();
+
+  // Dirty pages are only tracked if the page source preserves content.
+  if (!is_source_preserving_page_content_locked()) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
-  return ZX_OK;
+  if (!InRange(offset, len, size_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  uint64_t start_offset = ROUNDDOWN(offset, PAGE_SIZE);
+  uint64_t end_offset = ROUNDUP(offset + len, PAGE_SIZE);
+
+  return page_list_.ForEveryPageAndContiguousRunInRange(
+      [](const VmPageOrMarker* p, uint64_t off) { return p->IsPage() && p->Page()->object.dirty; },
+      [](const VmPageOrMarker* p, uint64_t off) {
+        DEBUG_ASSERT(p->IsPage() && p->Page()->object.dirty);
+        DEBUG_ASSERT(p->Page()->object.get_page_offset() == off);
+        return ZX_ERR_NEXT;
+      },
+      [&dirty_range_fn](uint64_t start, uint64_t end) {
+        return dirty_range_fn(start, end - start);
+      },
+      start_offset, end_offset);
 }
 
 const VmCowPages* VmCowPages::GetRootLocked() const {

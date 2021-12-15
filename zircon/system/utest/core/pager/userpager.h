@@ -10,6 +10,7 @@
 #include <lib/zx/port.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/syscalls-next.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -116,6 +117,12 @@ class UserPager {
   // Signals that pages in the specified range can be marked dirty.
   bool DirtyPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
 
+  // Queries dirty ranges of pages in the specified range and verifies that they match the ones
+  // provided in |dirty_ranges_to_verify|. The number of entries in |dirty_ranges_to_verify| is
+  // passed in with |num_dirty_ranges_to_verify|.
+  bool VerifyDirtyRanges(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
+                         size_t num_dirty_ranges_to_verify);
+
   // Checks if there is a request for the range [page_offset, length). Will
   // wait until |deadline|.
   bool WaitForPageRead(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx_time_t deadline);
@@ -147,6 +154,9 @@ class UserPager {
   bool WaitForRequest(fbl::Function<bool(const zx_port_packet_t& packet)> cmp_fn,
                       zx_time_t deadline);
   void PageFaultHandler();
+  bool VerifyDirtyRangesHelper(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
+                               size_t num_dirty_ranges_to_verify, zx_vmo_dirty_range_t* ranges_buf,
+                               size_t ranges_buf_size, uint64_t* num_ranges_buf);
 
   zx::pager pager_;
   zx::port port_;

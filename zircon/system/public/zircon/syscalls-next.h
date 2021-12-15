@@ -31,6 +31,11 @@ __END_CDECLS
 
 #endif  // !_KERNEL
 
+#include <stdint.h>
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
+
 // ====== Pager writeback support ====== //
 //
 // Make sure the constants defined here do not overlap with VMO / pager constants defined in
@@ -45,6 +50,17 @@ __END_CDECLS
 // zx_packet_page_request_t::command
 #define ZX_PAGER_VMO_DIRTY ((uint16_t)2)
 
+// Range type used by the zx_pager_query_dirty_ranges() syscall.
+typedef struct zx_vmo_dirty_range {
+  // Represents the range [offset, offset + length).
+  uint64_t offset;
+  uint64_t length;
+  // Any options applicable to the range.
+  uint64_t options;
+} zx_vmo_dirty_range_t;
+
 // ====== End of pager writeback support ====== //
+
+__END_CDECLS
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_NEXT_H_

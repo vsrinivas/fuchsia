@@ -416,6 +416,146 @@ bool UserPager::DirtyPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_c
   return true;
 }
 
+bool UserPager::VerifyDirtyRanges(Vmo* paged_vmo, zx_vmo_dirty_range_t* dirty_ranges_to_verify,
+                                  size_t num_dirty_ranges_to_verify) {
+  if (num_dirty_ranges_to_verify > 0 && dirty_ranges_to_verify == nullptr) {
+    return false;
+  }
+
+  // We will query ranges twice, using both populated and upopulated user mode buffers. Unpopulated
+  // buffers will verify that faults are being captured and resolved correctly in the query syscall.
+  //
+  // Initialize a set of buffers for the first query. Keep the number of entries > 1 but small
+  // enough so that we end up making more than one syscall in the average case.
+  constexpr size_t kMaxRanges = 2;
+  zx_vmo_dirty_range_t ranges_no_fault[kMaxRanges];
+  for (auto& range : ranges_no_fault) {
+    range = {0, 0, 0};
+  }
+  uint64_t num_ranges_no_fault = 0;
+
+  if (!VerifyDirtyRangesHelper(paged_vmo, dirty_ranges_to_verify, num_dirty_ranges_to_verify,
+                               ranges_no_fault, kMaxRanges * sizeof(zx_vmo_dirty_range_t),
+                               &num_ranges_no_fault)) {
+    fprintf(stderr, "failed to query dirty ranges\n");
+    return false;
+  }
+
+  // Use a mapped VMO with no committed pages as the buffer for the second query.
+  zx::vmo tmp_vmo;
+  zx_vaddr_t buf = 0;
+
+  // Use separate pages for the ranges buffer and the count, so they can trigger page faults
+  // separately. Also set up the buffer such that its elements straddle a page boundary - map an
+  // extra page and start the first element just before a page boundary, with the rest of the
+  // elements on the following page; this ensures more than a single page fault for the buffer.
+  const size_t kVmoSize =
+      fbl::round_up(kMaxRanges * sizeof(zx_vmo_dirty_range_t), zx_system_get_page_size()) +
+      2 * zx_system_get_page_size();
+
+  zx_status_t status;
+  if ((status = zx::vmo::create(kVmoSize, 0, &tmp_vmo)) != ZX_OK) {
+    fprintf(stderr, "vmo create failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+
+  if ((status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, tmp_vmo, 0,
+                                           kVmoSize, &buf)) != ZX_OK) {
+    fprintf(stderr, "vmar map failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+
+  auto unmap = fit::defer([&]() { zx_vmar_unmap(zx_vmar_root_self(), buf, kVmoSize); });
+
+  auto ranges = reinterpret_cast<zx_vmo_dirty_range_t*>(buf + zx_system_get_page_size() -
+                                                        sizeof(zx_vmo_dirty_range_t));
+  auto num_ranges = reinterpret_cast<uint64_t*>(buf + kVmoSize - zx_system_get_page_size());
+
+  return VerifyDirtyRangesHelper(paged_vmo, dirty_ranges_to_verify, num_dirty_ranges_to_verify,
+                                 ranges, kMaxRanges * sizeof(zx_vmo_dirty_range_t), num_ranges);
+}
+
+bool UserPager::VerifyDirtyRangesHelper(Vmo* paged_vmo,
+                                        zx_vmo_dirty_range_t* dirty_ranges_to_verify,
+                                        size_t num_dirty_ranges_to_verify,
+                                        zx_vmo_dirty_range_t* ranges_buf, size_t ranges_buf_size,
+                                        uint64_t* num_ranges_buf) {
+  size_t verify_index = 0;
+  uint64_t start = 0;
+  uint64_t queried_ranges = 0;
+  const uint64_t kMaxRanges = ranges_buf_size / sizeof(zx_vmo_dirty_range_t);
+  bool found_extra_ranges = false;
+
+  // Make an initial call to verify the total number of dirty ranges, before we get into the loop
+  // and advance start per iteration.
+  uint64_t avail = 0;
+  zx_status_t status = zx_pager_query_dirty_ranges(pager_.get(), paged_vmo->vmo_.get(), 0,
+                                                   paged_vmo->size_, nullptr, 0, nullptr, &avail);
+  if (status != ZX_OK) {
+    fprintf(stderr, "query dirty ranges failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  if (avail != num_dirty_ranges_to_verify) {
+    fprintf(stderr, "available ranges %zu not as expected %zu\n", avail,
+            num_dirty_ranges_to_verify);
+    return false;
+  }
+
+  do {
+    status = zx_pager_query_dirty_ranges(pager_.get(), paged_vmo->vmo_.get(), start,
+                                         paged_vmo->size_ - start, (void*)ranges_buf,
+                                         ranges_buf_size, num_ranges_buf, &avail);
+    if (status != ZX_OK) {
+      fprintf(stderr, "query dirty ranges failed with %s\n", zx_status_get_string(status));
+      return false;
+    }
+    queried_ranges = *num_ranges_buf;
+    // Something went wrong if the available ranges is less than the number copied out.
+    if (avail < queried_ranges) {
+      fprintf(stderr, "available ranges %zu smaller than actual %zu\n", avail, queried_ranges);
+      return false;
+    }
+
+    // No dirty ranges found.
+    if (queried_ranges == 0) {
+      break;
+    }
+
+    // If there are more ranges available, we should be using up all the space available in buffer.
+    if (queried_ranges < avail) {
+      if (queried_ranges != kMaxRanges) {
+        fprintf(stderr, "queried ranges do not fully occupy buffer\n");
+        return false;
+      }
+    }
+
+    // Verify the dirty ranges returned.
+    for (size_t i = 0; i < queried_ranges; i++) {
+      if (verify_index == num_dirty_ranges_to_verify) {
+        found_extra_ranges = true;
+        break;
+      }
+      if (ranges_buf[i].offset !=
+              dirty_ranges_to_verify[verify_index].offset * zx_system_get_page_size() ||
+          ranges_buf[i].length !=
+              dirty_ranges_to_verify[verify_index].length * zx_system_get_page_size()) {
+        fprintf(stderr, "mismatch in queried range\n");
+        return false;
+      }
+      verify_index++;
+    }
+    // No more ranges to verify.
+    if (verify_index == num_dirty_ranges_to_verify) {
+      break;
+    }
+    // Adjust the start and length for the next query.
+    // We're constrained by the size of |ranges|. We might need another iteration.
+    start = ranges_buf[queried_ranges - 1].offset + ranges_buf[queried_ranges - 1].length;
+  } while (queried_ranges < avail);
+
+  return verify_index == num_dirty_ranges_to_verify && !found_extra_ranges;
+}
+
 void UserPager::PageFaultHandler() {
   zx::vmo aux_vmo;
   zx_status_t status = zx::vmo::create(zx_system_get_page_size(), 0, &aux_vmo);
