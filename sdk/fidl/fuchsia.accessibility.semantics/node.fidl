@@ -172,6 +172,12 @@ type TableAttributes = table {
 
     /// Number of columns in this table.
     4: number_of_columns uint32;
+
+    /// Node ids of the table's column headers.
+    5: column_header_ids vector<uint32>:MAX_SET_ELEMENTS;
+
+    /// Node ids of the table's row headers.
+    6: row_header_ids vector<uint32>:MAX_SET_ELEMENTS;
 };
 
 /// Attributes that control how a table row node is interpreted.

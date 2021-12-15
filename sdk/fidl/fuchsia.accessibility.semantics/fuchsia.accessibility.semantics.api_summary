@@ -114,9 +114,11 @@ table/member fuchsia.accessibility.semantics/States.toggled_state fuchsia.access
 table/member fuchsia.accessibility.semantics/States.value string:16384
 table/member fuchsia.accessibility.semantics/States.viewport_offset fuchsia.ui.gfx/vec2
 table fuchsia.accessibility.semantics/States
+table/member fuchsia.accessibility.semantics/TableAttributes.column_header_ids vector<uint32>:100
 table/member fuchsia.accessibility.semantics/TableAttributes.column_span uint32
 table/member fuchsia.accessibility.semantics/TableAttributes.number_of_columns uint32
 table/member fuchsia.accessibility.semantics/TableAttributes.number_of_rows uint32
+table/member fuchsia.accessibility.semantics/TableAttributes.row_header_ids vector<uint32>:100
 table/member fuchsia.accessibility.semantics/TableAttributes.row_span uint32
 table fuchsia.accessibility.semantics/TableAttributes
 table/member fuchsia.accessibility.semantics/TableCellAttributes.column_index uint32
