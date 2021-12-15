@@ -70,7 +70,7 @@ TEST_ota_incr_noargs() {
   local out="${BT_TEMP_DIR}/_fx_ota_output"
   BT_EXPECT ${fx} --enable=incremental ota > "$out" 2>&1
   # build was called with the minimal targets required for incremental ota
-  btf::expect-mock-args "${build}" "build/images:packages" "build/images:update.meta"
+  btf::expect-mock-args "${build}" "build/images:packages" "build/images/fuchsia:update"
   # update was triggered
   BT_ASSERT_FILE_EXISTS "${trigger_update}.mock_state"
   # update was committed
