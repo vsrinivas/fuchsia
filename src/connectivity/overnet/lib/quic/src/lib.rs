@@ -193,7 +193,7 @@ impl std::fmt::Debug for AsyncConnection {
 }
 
 impl AsyncConnection {
-    pub fn from_connection(conn: Pin<Box<Connection>>, endpoint: Endpoint) -> Arc<Self> {
+    fn from_connection(conn: Pin<Box<Connection>>, endpoint: Endpoint) -> Arc<Self> {
         Arc::new(Self {
             trace_id: conn.trace_id().to_string(),
             io: Mutex::new(ConnState {
@@ -213,6 +213,18 @@ impl AsyncConnection {
             next_uni: AtomicU64::new(0),
             endpoint,
         })
+    }
+
+    pub fn connect(
+        server_name: Option<&str>,
+        scid: &[u8],
+        config: &mut quiche::Config,
+    ) -> Result<Arc<Self>, Error> {
+        Ok(Self::from_connection(quiche::connect(server_name, scid, config)?, Endpoint::Client))
+    }
+
+    pub fn accept(scid: &[u8], config: &mut quiche::Config) -> Result<Arc<Self>, Error> {
+        Ok(Self::from_connection(quiche::accept(scid, None, config)?, Endpoint::Server))
     }
 
     pub async fn run(self: Arc<Self>) -> Result<(), Error> {
@@ -836,18 +848,12 @@ mod test_util {
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
-        let client = AsyncConnection::from_connection(
-            quiche::connect(None, &scid, &mut client_config().unwrap()).unwrap(),
-            Endpoint::Client,
-        );
+        let client = AsyncConnection::connect(None, &scid, &mut client_config().unwrap()).unwrap();
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
-        let server = AsyncConnection::from_connection(
-            quiche::accept(&scid, None, &mut server_config().await.unwrap()).unwrap(),
-            Endpoint::Server,
-        );
+        let server = AsyncConnection::accept(&scid, &mut server_config().await.unwrap()).unwrap();
         let forward = futures::future::try_join(
             direct_packets(client.clone(), server.clone()),
             direct_packets(server.clone(), client.clone()),

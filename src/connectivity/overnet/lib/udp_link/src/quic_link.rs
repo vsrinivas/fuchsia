@@ -40,13 +40,10 @@ pub async fn new_quic_link(
     const DGRAM_QUEUE_SIZE: usize = 1024 * 1024;
     config.enable_dgram(true, DGRAM_QUEUE_SIZE, DGRAM_QUEUE_SIZE);
 
-    let quic = AsyncConnection::from_connection(
-        match endpoint {
-            Endpoint::Client => quiche::connect(None, &scid.to_array(), &mut config)?,
-            Endpoint::Server => quiche::accept(&scid.to_array(), None, &mut config)?,
-        },
-        endpoint,
-    );
+    let quic = match endpoint {
+        Endpoint::Client => AsyncConnection::connect(None, &scid.to_array(), &mut config)?,
+        Endpoint::Server => AsyncConnection::accept(&scid.to_array(), &mut config)?,
+    };
 
     Ok((
         QuicSender { quic: quic.clone() },

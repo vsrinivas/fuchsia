@@ -172,14 +172,13 @@ impl PeerMaps {
         let mut config =
             router.quiche_config().await.context("creating client configuration for quiche")?;
         let conn_id = ConnectionId::new();
-        let conn = quiche::connect(None, &conn_id.to_array(), &mut config)?;
         let peer = Peer::new_client(
             peer_node_id,
             conn_id,
-            conn,
+            &mut config,
             router.service_map.new_local_service_observer(),
             router,
-        );
+        )?;
         self.clients.insert(peer_node_id, peer.clone());
         self.connections.insert(conn_id, peer.clone());
         Ok(peer)
@@ -193,8 +192,7 @@ impl PeerMaps {
         let mut config =
             router.quiche_config().await.context("creating client configuration for quiche")?;
         let conn_id = ConnectionId::new();
-        let conn = quiche::accept(&conn_id.to_array(), None, &mut config)?;
-        let peer = Peer::new_server(peer_node_id, conn_id, conn, router);
+        let peer = Peer::new_server(peer_node_id, conn_id, &mut config, router)?;
         self.servers.entry(peer_node_id).or_insert(Vec::new()).push(peer.clone());
         self.connections.insert(conn_id, peer.clone());
         Ok(peer)

@@ -37,7 +37,6 @@ use quic::{
 };
 use std::{
     convert::TryInto,
-    pin::Pin,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Weak,
@@ -400,10 +399,10 @@ impl Peer {
     pub(crate) fn new_client(
         node_id: NodeId,
         conn_id: ConnectionId,
-        conn: Pin<Box<quiche::Connection>>,
+        config: &mut quiche::Config,
         service_observer: Observer<Vec<String>>,
         router: &Arc<Router>,
-    ) -> Arc<Self> {
+    ) -> Result<Arc<Self>, Error> {
         log::trace!(
             "[{:?}] NEW CLIENT: peer={:?} conn_id={:?}",
             router.node_id(),
@@ -411,11 +410,11 @@ impl Peer {
             conn_id,
         );
         let (command_sender, command_receiver) = mpsc::channel(1);
-        let conn = AsyncConnection::from_connection(conn, Endpoint::Client);
+        let conn = AsyncConnection::connect(None, &conn_id.to_array(), config)?;
         let conn_stats = Arc::new(PeerConnStats::default());
         let (conn_stream_writer, conn_stream_reader) = conn.alloc_bidi();
         assert_eq!(conn_stream_writer.id(), 0);
-        Arc::new(Self {
+        Ok(Arc::new(Self {
             endpoint: Endpoint::Client,
             node_id,
             conn_id,
@@ -446,27 +445,27 @@ impl Peer {
                 .map_ok(drop),
             )),
             conn,
-        })
+        }))
     }
 
     /// Construct a new server peer - spawns tasks to handle responding to control stream requests
     pub(crate) fn new_server(
         node_id: NodeId,
         conn_id: ConnectionId,
-        conn: Pin<Box<quiche::Connection>>,
+        config: &mut quiche::Config,
         router: &Arc<Router>,
-    ) -> Arc<Self> {
+    ) -> Result<Arc<Self>, Error> {
         log::trace!(
             "[{:?}] NEW SERVER: peer={:?} conn_id={:?}",
             router.node_id(),
             node_id,
             conn_id,
         );
-        let conn = AsyncConnection::from_connection(conn, Endpoint::Server);
+        let conn = AsyncConnection::accept(&conn_id.to_array(), config)?;
         let conn_stats = Arc::new(PeerConnStats::default());
         let (conn_stream_writer, conn_stream_reader) = conn.bind_id(0);
         let channel_proxy_stats = Arc::new(MessageStats::default());
-        Arc::new(Self {
+        Ok(Arc::new(Self {
             endpoint: Endpoint::Server,
             node_id,
             conn_id,
@@ -496,7 +495,7 @@ impl Peer {
                 .map_ok(drop),
             )),
             conn,
-        })
+        }))
     }
 
     async fn runner(
