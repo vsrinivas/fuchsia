@@ -9,35 +9,45 @@
                 "data": {
                     "allOf": [
                         {
-                            "properties": {
-                                "type": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "common.json#/definitions/kind"
-                                        },
-                                        {
-                                            "enum": [
-                                                "physical_device"
-                                            ]
-                                        }
-                                    ]
-                                }
-                            }
-                        },
-                        {
-                            "$ref": "hardware-f6f47515.json#/definitions/requirements"
+                            "$ref": "#/definitions/physical_hardware"
                         }
-                    ],
-                    "required": [
-                        "hardware",
-                        "type",
-                        "name"
                     ]
                 }
             },
             "type": "object"
         }
     ],
+    "definitions": {
+        "physical_hardware": {
+            "allOf": [
+                {
+                    "$ref": "hardware-f6f47515.json#/definitions/requirements"
+                },
+                {
+                    "properties": {
+                        "type": {
+                            "allOf": [
+                                {
+                                    "$ref": "common.json#/definitions/kind"
+                                },
+                                {
+                                    "enum": [
+                                        "physical_device"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "required": [
+                "hardware",
+                "type",
+                "name"
+            ],
+            "type": "object"
+        }
+    },
     "description": "A physical device specification.",
     "id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json",
     "type": "object"

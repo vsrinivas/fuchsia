@@ -1,0 +1,63 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/versioned_sdk_element"
+        },
+        {
+            "$ref": "#/definitions/product_bundle_container"
+        }
+    ],
+    "definitions": {
+        "product_bundle_container": {
+            "properties": {
+                "data": {
+                    "properties": {
+                        "fms_entries": {
+                            "description": "A list of Fuchsia Metadata System entries for a particular release.",
+                            "items": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "product_bundle-6320eef1.json#/definitions/product_bundle"
+                                    },
+                                    {
+                                        "$ref": "virtual_device-93A41932.json#/definitions/virtual_hardware"
+                                    },
+                                    {
+                                        "$ref": "physical_device-0bd5d21f.json#/definitions/physical_hardware"
+                                    }
+                                ]
+                            },
+                            "minItems": 1,
+                            "type": "array"
+                        },
+                        "type": {
+                            "allOf": [
+                                {
+                                    "$ref": "common.json#/definitions/kind"
+                                },
+                                {
+                                    "enum": [
+                                        "product_bundle_container"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "required": [
+                        "fms_entries",
+                        "type"
+                    ],
+                    "type": "object"
+                }
+            },
+            "required": [
+                "data"
+            ],
+            "type": "object"
+        }
+    },
+    "description": "A collection of metadata for a particular SDK release.",
+    "id": "http://fuchsia.com/schemas/sdk/product_bundle_container-32z5e391.json",
+    "type": "object"
+}

@@ -8,6 +8,22 @@
                 },
                 {
                     "properties": {
+                        "type": {
+                            "allOf": [
+                                {
+                                    "$ref": "common.json#/definitions/kind"
+                                },
+                                {
+                                    "enum": [
+                                        "virtual_device"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "properties": {
                         "hardware": {
                             "properties": {
                                 "audio": {
@@ -135,7 +151,13 @@
                         }
                     }
                 }
-            ]
+            ],
+            "required": [
+                "hardware",
+                "type",
+                "name"
+            ],
+            "type": "object"
         }
     },
     "allOf": [
@@ -147,29 +169,8 @@
                 "data": {
                     "allOf": [
                         {
-                            "properties": {
-                                "type": {
-                                    "allOf": [
-                                        {
-                                            "$ref": "common.json#/definitions/kind"
-                                        },
-                                        {
-                                            "enum": [
-                                                "virtual_device"
-                                            ]
-                                        }
-                                    ]
-                                }
-                            }
-                        },
-                        {
                             "$ref": "#/definitions/virtual_hardware"
                         }
-                    ],
-                    "required": [
-                        "hardware",
-                        "type",
-                        "name"
                     ]
                 }
             },

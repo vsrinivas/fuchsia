@@ -8,11 +8,15 @@ import("//build/sdk/sdk_documentation.gni")
 
 # Schemas that are required for the product_bundle_container.
 product_bundle_container_required_schemas = [
+  "product_bundle_container-32z5e391.json",
   "product_bundle_container-76a5c104.json",
   "common.json",
   "product_bundle-6320eef1.json",
   "flash_manifest-835e8f26.json",
   "emu_manifest.json",
+  "hardware-f6f47515.json",
+  "physical_device-0bd5d21f.json",
+  "virtual_device-93A41932.json",
 ]
 
 # This list should only contain schemas that are currently exported outside of
@@ -25,15 +29,11 @@ schemas = [
             "data.json",
             "documentation.json",
             "fidl_library.json",
-            "hardware-f6f47515.json",
             "host_tool.json",
             "loadable_module.json",
             "manifest.json",
-            "physical_device-0bd5d21f.json",
-            "product_bundle-6320eef1.json",
             "sysroot.json",
             "version_history-038fa854.json",
-            "virtual_device-93A41932.json",
           ] + product_bundle_container_required_schemas
 
 sdk_documentation("meta") {
@@ -140,6 +140,7 @@ if (is_host) {
       "physical_device-0bd5d21f.json",
       "product_bundle-6320eef1.json",
       "product_bundle_container-76a5c104.json",
+      "product_bundle_container-32z5e391.json",
       "sysroot.json",
       "virtual_device-93A41932.json",
     ]

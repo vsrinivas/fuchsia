@@ -94,6 +94,11 @@ impl Entries {
                     self.add_metadata(Metadata::ProductBundleV1(entry.data))?
                 }
             }
+            Metadata::ProductBundleContainerV2(container) => {
+                for entry in container.fms_entries {
+                    self.add_metadata(entry)?;
+                }
+            }
             _ => {
                 self.add_metadata(metadata)?;
             }
@@ -314,7 +319,7 @@ mod tests {
     }
 
     #[test]
-    fn test_product_bundle_container() {
+    fn test_product_bundle_container_76a5c104() {
         let mut entries = Entries::new();
         entries
             .add_json(&mut BufReader::new(
@@ -331,7 +336,8 @@ mod tests {
                 include_str!("../test_data/test_virtual_device.json").as_bytes(),
             ))
             .expect("add metadata");
-        const METADATA: &str = include_str!("../test_data/test_product_bundle_container.json");
+        const METADATA: &str =
+            include_str!("../test_data/test_product_bundle_container-76a5c104.json");
 
         // Damage "kind" key.
         let broken = str::replace(METADATA, r#""type""#, r#""wrong""#);

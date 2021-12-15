@@ -25,10 +25,10 @@ if (is_host) {
     inputs = [
       "test_data/test_physical_device.json",
       "test_data/test_product_bundle.json",
-      "test_data/test_product_bundle_container.json",
+      "test_data/test_product_bundle_container-32z5e391.json",
+      "test_data/test_product_bundle_container-76a5c104.json",
       "test_data/test_virtual_device.json",
     ]
-
     sources = [ "src/lib.rs" ]
   }
 

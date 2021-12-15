@@ -170,6 +170,7 @@ pub struct VirtualDeviceV1 {
     pub hardware: Hardware,
 
     /// List of behaviors to be implemented by the virtual device.
+    #[serde(default)]
     pub behaviors: HashMap<String, Behavior>,
 }
 
@@ -232,6 +233,45 @@ mod tests {
                                 "options": []
                             }
                         }
+                    }
+                }
+            }
+        }
+        "#,
+        valid = true,
+    }
+
+    test_validation! {
+        name = test_validation_skip_behaviors,
+        kind = Envelope::<VirtualDeviceV1>,
+        data = r#"
+        {
+            "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
+            "data": {
+                "name": "generic-x64",
+                "type": "virtual_device",
+                "hardware": {
+                    "audio": {
+                        "model": "hda"
+                    },
+                    "cpu": {
+                        "arch": "x64"
+                    },
+                    "inputs": {
+                        "pointing_device": "touch"
+                    },
+                    "window_size": {
+                        "width": 640,
+                        "height": 480,
+                        "units": "pixels"
+                    },
+                    "memory": {
+                        "quantity": 1,
+                        "units": "gigabytes"
+                    },
+                    "storage": {
+                        "quantity": 1,
+                        "units": "gigabytes"
                     }
                 }
             }
