@@ -5,8 +5,8 @@
 #include <cpuid.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <fuchsia/kernel/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -24,7 +24,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/system.h>
 
-static zx_handle_t root_resource;
+static zx_handle_t power_resource;
 
 // degrees Celsius below threshold before we adjust PL value
 constexpr float kCoolThresholdCelsius = 5.0f;
@@ -57,18 +57,28 @@ class PlatformConfiguration {
   uint32_t current_pl1_mw_;
 };
 
-static zx_status_t get_root_resource(zx_handle_t* root_resource) {
+static zx_status_t get_power_resource(zx_handle_t* power_resource_handle) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
     return status;
   }
-  status = fdio_service_connect("/svc/fuchsia.boot.RootResource", remote.release());
+  status = fdio_service_connect(
+      (std::string("/svc/") + fuchsia::kernel::PowerResource::Name_).c_str(), remote.release());
   if (status != ZX_OK) {
-    return ZX_ERR_NOT_FOUND;
+    fprintf(stderr, "ERROR: Failed to open fuchsia.kernel.PowerResource: %d\n", status);
+    return status;
   }
 
-  return fuchsia_boot_RootResourceGet(local.get(), root_resource);
+  fuchsia::kernel::PowerResource_SyncProxy proxy(std::move(local));
+  zx::resource power_resource;
+  status = proxy.Get(&power_resource);
+  if (status != ZX_OK) {
+    fprintf(stderr, "ERROR: FIDL error while trying to get power resource: %d\n", status);
+    return status;
+  }
+  *power_resource_handle = power_resource.release();
+  return ZX_OK;
 }
 
 std::unique_ptr<PlatformConfiguration> PlatformConfiguration::Create() {
@@ -107,7 +117,7 @@ zx_status_t PlatformConfiguration::SetPL1Mw(uint32_t target_mw) {
               .enable = 1,
           },
   };
-  zx_status_t st = zx_system_powerctl(root_resource, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg);
+  zx_status_t st = zx_system_powerctl(power_resource, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg);
   if (st != ZX_OK) {
     fprintf(stderr, "ERROR: Failed to set PL1 to %d: %d\n", target_mw, st);
     return st;
@@ -151,9 +161,9 @@ int main(int argc, char** argv) {
 
   start_trace();
 
-  zx_status_t st = get_root_resource(&root_resource);
+  zx_status_t st = get_power_resource(&power_resource);
   if (st != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to get root resource: %d\n", st);
+    fprintf(stderr, "ERROR: Failed to get power resource: %d\n", st);
     return -1;
   }
 

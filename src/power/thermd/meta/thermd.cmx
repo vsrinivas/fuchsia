@@ -12,7 +12,7 @@
             "misc"
         ],
         "services": [
-            "fuchsia.boot.RootResource",
+            "fuchsia.kernel.PowerResource",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
