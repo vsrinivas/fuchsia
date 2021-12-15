@@ -4,7 +4,6 @@
 
 use std::mem::MaybeUninit;
 
-use fuchsia_trace::duration;
 use rayon::prelude::*;
 
 use crate::{
@@ -205,8 +204,6 @@ impl Rasterizer {
     }
 
     pub fn rasterize(&mut self, lines: &Lines) {
-        duration!("gfx", "Rasterizer::rasterize");
-
         let len = lines.lengths.iter().copied().sum::<usize>();
         self.line_indices.resize_uninit(len);
         self.pixel_indices.resize_uninit(len);
@@ -273,8 +270,6 @@ impl Rasterizer {
     }
 
     pub fn sort(&mut self) {
-        duration!("gfx", "Rasterizer::sort");
-
         self.segments_mut().par_sort_unstable_by_key(|segment| {
             let segment: u64 = segment.into();
             segment

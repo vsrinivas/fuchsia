@@ -270,11 +270,19 @@ impl Composition {
         };
 
         take_builder!(self, |builder: LinesBuilder| {
-            let lines =
-                builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()));
+            let lines = {
+                duration!("gfx", "LinesBuilder::build");
+                builder.build(|layer_id| layers.get(&layer_id).map(|layer| layer.inner.clone()))
+            };
 
-            rasterizer.rasterize(&lines);
-            rasterizer.sort();
+            {
+                duration!("gfx", "Rasterizer::rasterize");
+                rasterizer.rasterize(&lines);
+            }
+            {
+                duration!("gfx", "Rasterizer::sort");
+                rasterizer.sort();
+            }
 
             let last_segment =
                 rasterizer::search_last_by_key(rasterizer.segments(), false, |segment| {
@@ -287,15 +295,18 @@ impl Composition {
                 .as_ref()
                 .map(|buffer_layer_cache| buffer_layer_cache.layers_per_tile.borrow_mut());
 
-            layout.print(
-                &mut buffer.buffer,
-                layers_per_tile.as_mut().map(|layers_per_tile| layers_per_tile.as_mut_slice()),
-                buffer.flusher.as_ref().map(|flusher| &**flusher),
-                segments,
-                background_color,
-                crop,
-                context,
-            );
+            {
+                duration!("gfx", "BufferLayout::print");
+                layout.print(
+                    &mut buffer.buffer,
+                    layers_per_tile.as_mut().map(|layers_per_tile| layers_per_tile.as_mut_slice()),
+                    buffer.flusher.as_ref().map(|flusher| &**flusher),
+                    segments,
+                    background_color,
+                    crop,
+                    context,
+                );
+            }
 
             lines.unwrap()
         });

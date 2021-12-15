@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_trace::duration;
 use rayon::prelude::*;
 
 use crate::{
@@ -93,8 +92,6 @@ impl LinesBuilder {
     where
         F: Fn(u32) -> Option<Layer> + Send + Sync,
     {
-        duration!("gfx", "LinesBuilder::build");
-
         let transform = self.lines.transform;
         let ps_layers = self.lines.p0xs.par_iter().with_min_len(MIN_LEN).zip_eq(
             self.lines.p0ys.par_iter().with_min_len(MIN_LEN).zip_eq(

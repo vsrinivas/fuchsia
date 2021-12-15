@@ -1,0 +1,8 @@
+[package]
+name = "surpass"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+rayon = "1.2.1"
+rustc-hash = "1.0.1"

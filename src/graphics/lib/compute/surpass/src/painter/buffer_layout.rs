@@ -8,7 +8,6 @@ use std::{
     slice::{self, ChunksExactMut},
 };
 
-use fuchsia_trace::duration;
 use rayon::prelude::*;
 
 use crate::{
@@ -160,8 +159,6 @@ impl BufferLayout {
         crop: Option<Rect>,
         styles: S,
     ) {
-        duration!("gfx", "BufferLayout::print");
-
         if !self.same_buffer(buffer) {
             panic!(
                 "BufferLayout::print called with a different buffer than the one than the\

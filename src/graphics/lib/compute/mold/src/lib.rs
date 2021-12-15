@@ -2,6 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(target_os = "fuchsia")]
+macro_rules! duration {
+    ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {
+        fuchsia_trace::duration!($category, $name $(, $key => $val)*)
+    }
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+macro_rules! duration {
+    ($category:expr, $name:expr $(, $key:expr => $val:expr)*) => {};
+}
+
 mod buffer;
 mod composition;
 mod layer;
