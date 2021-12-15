@@ -9,6 +9,5 @@ mod id_map_collection;
 pub(crate) mod ref_counted_hash_map;
 pub(crate) mod token_bucket;
 
-pub use id_map::Entry;
 pub use id_map::IdMap;
-pub use id_map_collection::{IdMapCollection, IdMapCollectionKey};
+pub use id_map_collection::{Entry, IdMapCollection, IdMapCollectionKey};

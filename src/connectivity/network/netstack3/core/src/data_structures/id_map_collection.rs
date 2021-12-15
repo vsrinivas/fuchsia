@@ -12,8 +12,8 @@
 
 use alloc::vec::Vec;
 
-use super::id_map::{Entry, EntryKey};
-use super::IdMap;
+use super::id_map;
+use super::id_map::{EntryKey, IdMap};
 
 /// A key that can index items in [`IdMapCollection`].
 ///
@@ -45,6 +45,206 @@ where
     }
 }
 
+pub struct VacantEntry<'a, K, T> {
+    entry: id_map::VacantEntry<'a, K, T>,
+    count: &'a mut usize,
+}
+
+impl<'a, K, T> VacantEntry<'a, K, T> {
+    /// Sets the value of the entry with the VacantEntry's key, and returns a
+    /// mutable reference to it.
+    pub fn insert(self, value: T) -> &'a mut T
+    where
+        K: EntryKey,
+    {
+        let Self { entry, count } = self;
+        *count += 1;
+        entry.insert(value)
+    }
+
+    /// Gets a reference to the key that would be used when inserting a value
+    /// through the `VacantEntry`.
+    pub fn key(&self) -> &K {
+        self.entry.key()
+    }
+
+    /// Take ownership of the key.
+    pub fn into_key(self) -> K {
+        self.entry.into_key()
+    }
+
+    /// Changes the key type of this `VacantEntry` to another key `X` that still
+    /// maps to the same index in an `IdMap`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the resulting mapped key from `f` does not return the same
+    /// value for [`EntryKey::get_key_index`] as the old key did.
+    pub(crate) fn map_key<X, F>(self, f: F) -> VacantEntry<'a, X, T>
+    where
+        K: EntryKey,
+        X: EntryKey,
+        F: FnOnce(K) -> X,
+    {
+        let Self { entry, count } = self;
+        VacantEntry { entry: entry.map_key(f), count }
+    }
+}
+
+pub struct OccupiedEntry<'a, K, T> {
+    entry: id_map::OccupiedEntry<'a, K, T>,
+    count: &'a mut usize,
+}
+
+impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
+    /// Gets a reference to the key in the entry.
+    pub fn key(&self) -> &K {
+        self.entry.key()
+    }
+
+    /// Gets a reference to the value in the entry.
+    pub fn get(&self) -> &T {
+        self.entry.get()
+    }
+
+    /// Gets a mutable reference to the value in the entry.
+    ///
+    /// If you need a reference to the `OccupiedEntry` which may outlive the
+    /// destruction of the entry value, see [`OccupiedEntry::into_mut`].
+    pub fn get_mut(&mut self) -> &mut T {
+        self.entry.get_mut()
+    }
+
+    /// Converts the `OccupiedEntry` into a mutable reference to the value in
+    /// the entry with a lifetime bound to the map itself.
+    ///
+    /// If you need multiple references to the `OccupiedEntry`, see
+    /// [`OccupiedEntry::get_mut`].
+    pub fn into_mut(self) -> &'a mut T {
+        self.entry.into_mut()
+    }
+
+    /// Sets the value of the entry, and returns the entry's old value.
+    pub fn insert(&mut self, value: T) -> T {
+        self.entry.insert(value)
+    }
+
+    /// Takes the value out of the entry, and returns it.
+    pub fn remove(self) -> T {
+        let Self { entry, count } = self;
+        *count -= 1;
+        entry.remove()
+    }
+
+    /// Changes the key type of this `OccupiedEntry` to another key `X` that
+    /// still maps to the same value.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the resulting mapped key from `f` does not return the same
+    /// value for [`EntryKey::get_key_index`] as the old key did.
+    pub(crate) fn map_key<X, F>(self, f: F) -> OccupiedEntry<'a, X, T>
+    where
+        K: EntryKey,
+        X: EntryKey,
+        F: FnOnce(K) -> X,
+    {
+        let Self { entry, count } = self;
+        OccupiedEntry { entry: entry.map_key(f), count }
+    }
+}
+
+/// A view into an in-place entry in a map that can be vacant or occupied.
+pub enum Entry<'a, K, T> {
+    /// A vacant entry.
+    Vacant(VacantEntry<'a, K, T>),
+    /// An occupied entry.
+    Occupied(OccupiedEntry<'a, K, T>),
+}
+
+impl<'a, K: EntryKey, T> Entry<'a, K, T> {
+    /// Returns a reference to this entry's key.
+    pub fn key(&self) -> &K {
+        match self {
+            Entry::Occupied(e) => e.key(),
+            Entry::Vacant(e) => e.key(),
+        }
+    }
+
+    /// Ensures a value is in the entry by inserting `default` if empty, and
+    /// returns a mutable reference to the value in the entry.
+    pub fn or_insert(self, default: T) -> &'a mut T
+    where
+        K: EntryKey,
+    {
+        self.or_insert_with(|| default)
+    }
+
+    /// Ensures a value is in the entry by inserting the result of the function
+    /// `f` if empty, and returns a mutable reference to the value in the entry.
+    pub fn or_insert_with<F: FnOnce() -> T>(self, f: F) -> &'a mut T {
+        match self {
+            Entry::Occupied(e) => e.into_mut(),
+            Entry::Vacant(e) => e.insert(f()),
+        }
+    }
+
+    /// Ensures a value is in the entry by inserting the default value if empty,
+    /// and returns a mutable reference to the value in the entry.
+    pub fn or_default(self) -> &'a mut T
+    where
+        T: Default,
+        K: EntryKey,
+    {
+        self.or_insert_with(<T as Default>::default)
+    }
+
+    /// Provides in-place mutable access to an occupied entry before any
+    /// potential inserts into the map.
+    pub fn and_modify<F: FnOnce(&mut T)>(self, f: F) -> Self {
+        match self {
+            Entry::Occupied(mut e) => {
+                f(e.get_mut());
+                Entry::Occupied(e)
+            }
+            Entry::Vacant(e) => Entry::Vacant(e),
+        }
+    }
+}
+
+/// An iterator wrapper used to implement ExactSizeIterator.
+///
+/// Wraps an iterator of type `I`, keeping track of the number of elements it
+/// is expected to produce.
+pub struct SizeAugmentedIterator<I> {
+    wrapped: I,
+    remaining: usize,
+}
+
+impl<I: Iterator> Iterator for SizeAugmentedIterator<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let Self { wrapped, remaining } = self;
+        match wrapped.next() {
+            Some(v) => {
+                *remaining -= 1;
+                Some(v)
+            }
+            None => {
+                assert_eq!(remaining, &0);
+                None
+            }
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.remaining, Some(self.remaining))
+    }
+}
+
+impl<I: Iterator> ExactSizeIterator for SizeAugmentedIterator<I> {}
+
 /// A generic collection indexed by an [`IdMapCollectionKey`].
 ///
 /// `IdMapCollection` provides the same performance guarantees as [`IdMap`], but
@@ -56,6 +256,7 @@ pub struct IdMapCollection<K: IdMapCollectionKey, T> {
     // IdMapCollectionKey. When rust issue #43408 gets resolved we can switch
     // this to use the associated const and just have a fixed length array.
     data: Vec<IdMap<T>>,
+    count: usize,
     _marker: core::marker::PhantomData<K>,
 }
 
@@ -64,7 +265,7 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
     pub fn new() -> Self {
         let mut data = Vec::new();
         data.resize_with(K::VARIANT_COUNT, IdMap::default);
-        Self { data, _marker: core::marker::PhantomData }
+        Self { data, count: 0, _marker: core::marker::PhantomData }
     }
 
     fn get_map(&self, key: &K) -> &IdMap<T> {
@@ -72,8 +273,11 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
     }
 
     fn get_entry(&mut self, key: &K) -> Entry<'_, usize, T> {
-        let Self { data, _marker } = self;
-        data[key.get_variant()].entry(key.get_id())
+        let Self { data, count, _marker } = self;
+        match data[key.get_variant()].entry(key.get_id()) {
+            id_map::Entry::Occupied(entry) => Entry::Occupied(OccupiedEntry { entry, count }),
+            id_map::Entry::Vacant(entry) => Entry::Vacant(VacantEntry { entry, count }),
+        }
     }
 
     /// Returns `true` if the `IdMapCollection` holds no items.
@@ -121,21 +325,30 @@ impl<K: IdMapCollectionKey, T> IdMapCollection<K, T> {
     }
 
     /// Creates an iterator over the containing items.
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
-        let Self { data, _marker } = self;
-        data.iter().flat_map(|m| m.iter()).map(|(_, v)| v)
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &T> {
+        let Self { data, count, _marker } = self;
+        SizeAugmentedIterator {
+            wrapped: data.iter().flat_map(|m| m.iter()).map(|(_, v)| v),
+            remaining: *count,
+        }
     }
 
     /// Creates a mutable iterator over the containing items.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
-        let Self { data, _marker } = self;
-        data.iter_mut().flat_map(|m| m.iter_mut()).map(|(_, v)| v)
+    pub fn iter_mut(&mut self) -> impl ExactSizeIterator<Item = &mut T> {
+        let Self { data, count, _marker } = self;
+        SizeAugmentedIterator {
+            wrapped: data.iter_mut().flat_map(|m| m.iter_mut()).map(|(_, v)| v),
+            remaining: *count,
+        }
     }
 
     /// Gets the given key's corresponding entry in the map for in-place
     /// manipulation.
     pub fn entry(&mut self, key: K) -> Entry<'_, K, T> {
-        self.get_entry(&key).map_key(|_| key)
+        match self.get_entry(&key) {
+            Entry::Occupied(e) => Entry::Occupied(e.map_key(|_| key)),
+            Entry::Vacant(e) => Entry::Vacant(e.map_key(|_| key)),
+        }
     }
 }
 
@@ -194,13 +407,21 @@ mod tests {
     #[test]
     fn test_insert_and_get() {
         let mut t = TestCollection::new();
-        assert_empty(t.data[0].iter());
-        assert_empty(t.data[1].iter());
-        assert_empty(t.data[2].iter());
+        let IdMapCollection { data, count, _marker } = &t;
+        assert_empty(data[0].iter());
+        assert_empty(data[1].iter());
+        assert_empty(data[2].iter());
+        assert_eq!(count, &0);
+
         assert_eq!(t.insert(&KEY_A, 1), None);
-        assert!(!t.data[0].is_empty());
+        let IdMapCollection { data, count, _marker } = &t;
+        assert!(!data[0].is_empty());
+        assert_eq!(count, &1);
+
         assert_eq!(t.insert(&KEY_B, 2), None);
-        assert!(!t.data[1].is_empty());
+        let IdMapCollection { data, count, _marker } = &t;
+        assert!(!data[1].is_empty());
+        assert_eq!(count, &2);
 
         assert_eq!(*t.get(&KEY_A).unwrap(), 1);
         assert_eq!(t.get(&KEY_C), None);
@@ -214,6 +435,9 @@ mod tests {
         let mut t = TestCollection::new();
         assert_eq!(t.insert(&KEY_B, 15), None);
         assert_eq!(t.remove(&KEY_B).unwrap(), 15);
+        let IdMapCollection { data: _, count, _marker } = &t;
+        assert_eq!(count, &0);
+
         assert_eq!(t.remove(&KEY_B), None);
     }
 
@@ -231,6 +455,17 @@ mod tests {
         }
         assert_eq!(c, 3);
         assert_eq!(sum, 0);
+    }
+
+    #[test]
+    fn test_iter_len() {
+        let mut t = TestCollection::new();
+        assert_eq!(t.insert(&KEY_A, 1), None);
+        assert_eq!(t.insert(&KEY_B, 1), None);
+        assert_eq!(t.insert(&KEY_C, 1), None);
+        assert_eq!(t.iter().len(), 3);
+        assert_eq!(t.remove(&KEY_A), Some(1));
+        assert_eq!(t.iter().len(), 2);
     }
 
     #[test]
@@ -253,6 +488,7 @@ mod tests {
         assert_eq!(*t.get(&KEY_A).unwrap(), 30);
         assert_eq!(*t.get(&KEY_B).unwrap(), -10);
         assert_eq!(*t.get(&KEY_C).unwrap(), -20);
+        assert_eq!(t.iter_mut().len(), 3);
     }
 
     #[test]

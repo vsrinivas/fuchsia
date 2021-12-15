@@ -625,25 +625,6 @@ impl<'a, K: EntryKey, T> Entry<'a, K, T> {
             }
         }
     }
-
-    /// Changes the key type of this `Entry` to another key `X` that still maps
-    /// to the same index in an `IdMap`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the resulting mapped key from `f` does not return the same
-    /// value for [`EntryKey::get_key_index`] as the old key did.
-    pub(crate) fn map_key<X, F>(self, f: F) -> Entry<'a, X, T>
-    where
-        K: EntryKey,
-        X: EntryKey,
-        F: FnOnce(K) -> X,
-    {
-        match self {
-            Entry::Vacant(e) => Entry::Vacant(e.map_key(f)),
-            Entry::Occupied(e) => Entry::Occupied(e.map_key(f)),
-        }
-    }
 }
 
 #[cfg(test)]
