@@ -5,8 +5,9 @@
 //! Type-safe bindings for Zircon processes.
 
 use crate::ok;
-use crate::{object_get_info, ObjectQuery, Topic};
+use crate::{object_get_info, object_get_property, object_set_property, ObjectQuery, Topic};
 use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Task, Thread};
+use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys::{
     self as sys, zx_info_maps_type_t, zx_koid_t, zx_time_t, zx_vaddr_t, zx_vm_option_t,
@@ -29,6 +30,11 @@ bitflags! {
 #[repr(transparent)]
 pub struct Process(Handle);
 impl_handle_based!(Process);
+unsafe_handle_properties!(object: Process,
+    props: [
+        {query_ty: PROCESS_DEBUG_ADDR, tag: ProcessDebugAddrTag, prop_ty: u64, get:get_debug_addr, set:set_debug_addr},
+    ]
+);
 
 sys::zx_info_process_t!(ProcessInfo);
 
@@ -361,6 +367,28 @@ mod tests {
                 flags: STARTED_AND_EXITED,
             } if start_time > 0
         );
+    }
+
+    #[test]
+    fn test_set_debug_addr() {
+        // This test utility will sleep "forever" without exiting, so that we can kill it..
+        let binpath = CString::new("/pkg/bin/sleep_forever_util").unwrap();
+        let process = fdio::spawn(
+            &fuchsia_runtime::job_default(),
+            // Careful not to clone stdio here, or the test runner can hang.
+            fdio::SpawnOptions::DEFAULT_LOADER,
+            &binpath,
+            &[&binpath],
+        )
+        .expect("Failed to spawn process");
+
+        let default_addr = process.get_debug_addr().expect("Failed to get debug addr.");
+        assert_eq!(default_addr, 0);
+
+        let expected_debug_addr = 100;
+        process.set_debug_addr(&expected_debug_addr).expect("Failed to set debug addr");
+        let debug_addr = process.get_debug_addr().expect("Failed to get debug addr.");
+        assert_eq!(debug_addr, expected_debug_addr);
     }
 
     #[test]
