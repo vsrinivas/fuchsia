@@ -130,7 +130,7 @@ async fn version_test() {
         &mut stdout_reader,
         &mut stderr_reader,
         vec![
-            Regex::new(r"tcpdump version 4\.99\.0").expect("parse tcpdump version regex"),
+            Regex::new(r"tcpdump version 4\.99\.1").expect("parse tcpdump version regex"),
             Regex::new(r"libpcap version 1\.10\.1").expect("parse libpcap version regex"),
         ],
     )
