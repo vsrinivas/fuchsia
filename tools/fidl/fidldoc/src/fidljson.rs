@@ -176,6 +176,13 @@ mod test {
     use serde_json::json;
 
     #[test]
+    fn to_lower_snake_case_test() {
+        assert_eq!(to_lower_snake_case("FooBarBaz"), "foo_bar_baz");
+        assert_eq!(to_lower_snake_case("Foo bar Baz"), "foo_bar_baz");
+        assert_eq!(to_lower_snake_case("foo barBaz QUX"), "foo_bar_baz_qux");
+    }
+
+    #[test]
     fn sort_declarations_test() {
         let mut f = FidlJson {
             name: "fuchsia.test".to_string(),
