@@ -12,7 +12,8 @@ namespace blobfs {
 
 class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Service {
  public:
-  AdminService(async_dispatcher_t* dispatcher, Runner& runner);
+  using ShutdownRequester = fit::callback<void(fs::FuchsiaVfs::ShutdownCallback)>;
+  AdminService(async_dispatcher_t* dispatcher, ShutdownRequester shutdown);
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override;
   void GetRoot(GetRootRequestView request, GetRootCompleter::Sync& completer) override {
@@ -20,7 +21,7 @@ class AdminService : public fidl::WireServer<fuchsia_fs::Admin>, public fs::Serv
   }
 
  private:
-  Runner& runner_;
+  ShutdownRequester shutdown_;
 };
 
 }  // namespace blobfs

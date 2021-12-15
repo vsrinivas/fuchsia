@@ -112,7 +112,10 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
                         health_check_svc_);
 
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                        fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(), *this));
+                        fbl::MakeRefCounted<AdminService>(
+                            blobfs_->dispatcher(), [this](fs::FuchsiaVfs::ShutdownCallback cb) {
+                              this->Shutdown(std::move(cb));
+                            }));
 
       export_root = std::move(outgoing);
       break;
