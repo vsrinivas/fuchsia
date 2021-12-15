@@ -675,6 +675,7 @@ test "${#link_sysroot[@]}" = 0 || test -z "$sysroot_triple" || {
     "$sysroot_dir"/lib/"$sysroot_triple"/libc.so.6
     "$sysroot_dir"/lib/"$sysroot_triple"/libpthread.so.0
     "$sysroot_dir"/lib/"$sysroot_triple"/libm.so.6
+    "$sysroot_dir"/lib/"$sysroot_triple"/libmvec.so.1
     "$sysroot_dir"/lib/"$sysroot_triple"/librt.so.1
     "$sysroot_dir"/lib/"$sysroot_triple"/libutil.so.1
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/libc.so
@@ -682,6 +683,8 @@ test "${#link_sysroot[@]}" = 0 || test -z "$sysroot_triple" || {
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread.{a,so}
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/libpthread_nonshared.a
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/libm.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libmvec.{a,so}
+    "$sysroot_dir"/usr/lib/"$sysroot_triple"/libmvec_nonshared.a
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/librt.{a,so}
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/libdl.{a,so}
     "$sysroot_dir"/usr/lib/"$sysroot_triple"/libutil.{a,so}
