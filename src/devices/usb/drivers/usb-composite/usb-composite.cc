@@ -69,6 +69,7 @@ zx_status_t UsbComposite::AddInterface(const usb_interface_descriptor_t* interfa
       {BIND_USB_CLASS, 0, interface->usb_class()},
       {BIND_USB_SUBCLASS, 0, interface->usb_subclass()},
       {BIND_USB_PROTOCOL, 0, interface->usb_protocol()},
+      {BIND_USB_INTERFACE_NUMBER, 0, interface_desc->b_interface_number},
   };
 
   status = interface->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
@@ -107,6 +108,7 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
       {BIND_USB_CLASS, 0, interface->usb_class()},
       {BIND_USB_SUBCLASS, 0, interface->usb_subclass()},
       {BIND_USB_PROTOCOL, 0, interface->usb_protocol()},
+      {BIND_USB_INTERFACE_NUMBER, 0, assoc_desc->b_first_interface},
   };
 
   status = interface->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
