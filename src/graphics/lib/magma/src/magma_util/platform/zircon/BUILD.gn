@@ -82,6 +82,7 @@ source_set("dependency_injection_device") {
 entry_deps = [
   ":dependency_injection_device",
   ":performance_counter_device",
+  ":status",
   "..:logger",
   "..:trace",
   "..:trace_provider",
@@ -183,6 +184,7 @@ source_set("connection") {
   ]
 
   public_deps = [
+    ":status",
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",

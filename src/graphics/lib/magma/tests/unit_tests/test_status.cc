@@ -7,12 +7,7 @@
 #include "magma_util/status.h"
 
 #if defined(__Fuchsia__)
-#include <fidl/fuchsia.gpu.magma/cpp/wire.h>
-using FidlStatus = fuchsia_gpu_magma::wire::Status;
-
-static FidlStatus Convert(magma_status_t status) {
-  return static_cast<FidlStatus>(magma::Status(status).getFidlStatus());
-}
+#include "src/graphics/lib/magma/src/magma_util/platform/zircon/zircon_platform_status.h"
 #endif
 
 class TestStatus {
@@ -28,16 +23,16 @@ class TestStatus {
 TEST(MagmaUtil, Status) { TestStatus::Test(); }
 
 #if defined(__Fuchsia__)
-TEST(MagmaUtil, FidlStatus) {
-  EXPECT_EQ(Convert(MAGMA_STATUS_INTERNAL_ERROR), FidlStatus::kInternalError);
-  EXPECT_EQ(Convert(MAGMA_STATUS_INVALID_ARGS), FidlStatus::kInvalidArgs);
-  EXPECT_EQ(Convert(MAGMA_STATUS_ACCESS_DENIED), FidlStatus::kAccessDenied);
-  EXPECT_EQ(Convert(MAGMA_STATUS_MEMORY_ERROR), FidlStatus::kMemoryError);
-  EXPECT_EQ(Convert(MAGMA_STATUS_CONTEXT_KILLED), FidlStatus::kContextKilled);
-  EXPECT_EQ(Convert(MAGMA_STATUS_CONNECTION_LOST), FidlStatus::kConnectionLost);
-  EXPECT_EQ(Convert(MAGMA_STATUS_TIMED_OUT), FidlStatus::kTimedOut);
-  EXPECT_EQ(Convert(MAGMA_STATUS_UNIMPLEMENTED), FidlStatus::kUnimplemented);
-  EXPECT_EQ(Convert(MAGMA_STATUS_BAD_STATE), FidlStatus::kBadState);
+TEST(MagmaUtil, ZxStatus) {
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_INTERNAL_ERROR), ZX_ERR_INTERNAL);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_INVALID_ARGS), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_ACCESS_DENIED), ZX_ERR_ACCESS_DENIED);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_MEMORY_ERROR), ZX_ERR_NO_MEMORY);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_CONTEXT_KILLED), ZX_ERR_IO);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_CONNECTION_LOST), ZX_ERR_PEER_CLOSED);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_TIMED_OUT), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_UNIMPLEMENTED), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(magma::ToZxStatus(MAGMA_STATUS_BAD_STATE), ZX_ERR_BAD_STATE);
   EXPECT_EQ(MAGMA_STATUS_ALIAS_FOR_LAST, MAGMA_STATUS_BAD_STATE) << "test needs updating";
 }
 #endif

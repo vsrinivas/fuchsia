@@ -5,6 +5,7 @@
 #include "zircon_platform_connection.h"
 
 #include "magma_common_defs.h"
+#include "zircon_platform_status.h"
 
 namespace magma {
 
@@ -42,11 +43,10 @@ class ZirconPlatformPerfCountPool : public PlatformPerfCountPool {
 void ZirconPlatformConnection::SetError(fidl::CompleterBase* completer, magma_status_t error) {
   if (!error_) {
     error_ = DRET_MSG(error, "ZirconPlatformConnection encountered dispatcher error");
-    // Send error as epitaph Status
     if (completer) {
-      completer->Close(-error_);
+      completer->Close(magma::ToZxStatus(error));
     } else {
-      server_binding_->Close(-error_);
+      server_binding_->Close(magma::ToZxStatus(error));
     }
     async_loop()->Quit();
   }
@@ -102,7 +102,7 @@ void ZirconPlatformConnection::AsyncWaitHandler(async_dispatcher_t* dispatcher, 
   }
 
   if (quit) {
-    server_binding_->Close(-MAGMA_STATUS_CONNECTION_LOST);
+    server_binding_->Close(ZX_ERR_CANCELED);
     async_loop()->Quit();
   }
 }

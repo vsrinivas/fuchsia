@@ -31,18 +31,6 @@ type QueryId = strict enum {
     VENDOR_QUERY_0 = 10000;
 };
 
-type Status = strict enum {
-    INTERNAL_ERROR = 1;
-    INVALID_ARGS = 2;
-    ACCESS_DENIED = 3;
-    MEMORY_ERROR = 4;
-    CONTEXT_KILLED = 5;
-    CONNECTION_LOST = 6;
-    TIMED_OUT = 7;
-    UNIMPLEMENTED = 8;
-    BAD_STATE = 9;
-};
-
 /// The maximum number of ICDs supported by a Magma system driver.
 const MAX_ICD_COUNT uint64 = 8;
 
@@ -71,14 +59,14 @@ protocol Device {
         query_id uint64;
     }) -> (struct {
         result uint64;
-    }) error Status;
+    }) error zx.status;
 
     /// On success, returns a buffer given a QueryId; otherwise returns an error.
     QueryReturnsBuffer(struct {
         query_id uint64;
     }) -> (resource struct {
         buffer zx.handle:VMO;
-    }) error Status;
+    }) error zx.status;
 
     /// Creates a connection to the device comprised of two IPC channels.
     /// The primary channel is for the Primary protocol (see below).  The notification channel is
@@ -175,7 +163,7 @@ type BufferRange = struct {
     size uint64;
 };
 
-/// If a system driver error occurs, the connection will be closed and a Status sent via epitaph.
+/// If a system driver error occurs, the connection will be closed and a zx.status sent via epitaph.
 /// If negative, the Epitaph represents a Zircon error.
 protocol Primary {
     /// Imports an object for use in the system driver.

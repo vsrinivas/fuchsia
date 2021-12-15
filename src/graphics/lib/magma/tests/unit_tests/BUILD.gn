@@ -108,6 +108,7 @@ source_set("magma_util_tests") {
   ]
   if (is_fuchsia) {
     deps += [
+      "$magma_build_root/src/magma_util/platform/zircon:status",
       "$zircon_build_root/system/ulib/zx",
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     ]

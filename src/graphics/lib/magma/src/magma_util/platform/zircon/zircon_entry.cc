@@ -30,14 +30,13 @@
 #include "platform_trace_provider_with_fdio.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_device.h"
+#include "zircon_platform_status.h"
 
 #if MAGMA_TEST_DRIVER
 zx_status_t magma_indriver_test(zx_device_t* device);
 #endif
 
 class GpuDevice;
-
-using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 using DdkDeviceType =
     ddk::Device<GpuDevice, ddk::MessageableManual, ddk::Unbindable, ddk::Initializable>;
@@ -87,7 +86,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
     uint64_t result;
     magma::Status status = Query(request->query_id, &result);
     if (!status.ok()) {
-      _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;
     }
     _completer.ReplySuccess(result);
@@ -116,7 +115,7 @@ class GpuDevice : public fidl::WireServer<fuchsia_gpu_magma::Device>,
     zx::vmo buffer;
     magma::Status status = QueryReturnsBuffer(request->query_id, &buffer);
     if (!status.ok()) {
-      _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;
     }
     _completer.ReplySuccess(std::move(buffer));

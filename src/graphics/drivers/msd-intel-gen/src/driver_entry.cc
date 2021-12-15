@@ -27,6 +27,7 @@
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
 #include "src/graphics/lib/magma/src/magma_util/platform/zircon/magma_performance_counter_device.h"
+#include "src/graphics/lib/magma/src/magma_util/platform/zircon/zircon_platform_status.h"
 #include "sys_driver/magma_driver.h"
 
 #if MAGMA_TEST_DRIVER
@@ -38,8 +39,6 @@
 #if MAGMA_TEST_DRIVER
 zx_status_t magma_indriver_test(magma::PlatformPciDevice* platform_device);
 #endif
-
-using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
  public:
@@ -72,7 +71,7 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
       default:
         magma::Status status = this->magma_system_device->Query(request->query_id, &result);
         if (!status.ok()) {
-          _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+          _completer.ReplyError(magma::ToZxStatus(status.get()));
           return;
         }
     }
@@ -92,7 +91,7 @@ struct sysdrv_device_t : public fidl::WireServer<fuchsia_gpu_magma::Device> {
     magma::Status status =
         this->magma_system_device->QueryReturnsBuffer(request->query_id, &result);
     if (!status.ok()) {
-      _completer.ReplyError(static_cast<FidlStatus>(status.getFidlStatus()));
+      _completer.ReplyError(magma::ToZxStatus(status.get()));
       return;
     }
     DLOG("query extended query_id 0x%" PRIx64 " returning 0x%x", request->query_id, result);
