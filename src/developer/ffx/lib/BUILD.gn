@@ -8,6 +8,7 @@ if (is_host) {
     "buildid",
     "daemonize",
     "diagnostics",
+    "doctor_utils",
     "errors",
     "fidl-fuchsia-developer-bridge-ext",
     "fms",

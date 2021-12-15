@@ -4,26 +4,27 @@
 
 use {
     crate::constants::*,
-    anyhow::{anyhow, Context, Error, Result},
+    crate::doctor_ledger::*,
+    crate::ledger_view::*,
+    anyhow::{anyhow, Context, Result},
     async_lock::Mutex,
     async_trait::async_trait,
     doctor_utils::{DaemonManager, DefaultDaemonManager, DoctorRecorder, Recorder},
     errors::ffx_bail,
     ffx_config::{get, print_config},
     ffx_core::ffx_plugin,
-    ffx_doctor_args::DoctorCommand,
+    ffx_doctor_new_args::DoctorCommand,
     fidl::endpoints::create_proxy,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge::{
-        DaemonProxy, Target, TargetCollectionIteratorMarker, TargetCollectionMarker,
-        TargetCollectionProxy, TargetHandleMarker, TargetState, VersionInfo,
+        Target, TargetCollectionIteratorMarker, TargetCollectionMarker, TargetCollectionProxy,
+        TargetHandleMarker, TargetState, VersionInfo,
     },
     fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
-    itertools::Itertools,
     serde_json::json,
     std::sync::Arc,
     std::{
-        collections::HashMap,
+        collections::HashSet,
         io::{stdout, BufWriter, Write},
         path::PathBuf,
         process::Command,
@@ -34,6 +35,8 @@ use {
 };
 
 mod constants;
+mod doctor_ledger;
+mod ledger_view;
 
 const DEFAULT_TARGET_CONFIG: &str = "target.default";
 const DOCTOR_OUTPUT_FILENAME: &str = "doctor_output.txt";
@@ -41,203 +44,47 @@ const PLATFORM_INFO_FILENAME: &str = "platform.json";
 const USER_CONFIG_FILENAME: &str = "user_config.txt";
 const RECORD_CONFIG_SETTING: &str = "doctor.record_config";
 
-macro_rules! success_or_continue {
-    ($fut:expr, $handler:ident, $v:ident, $e:expr $(,)?) => {
-        match $fut.await {
-            Ok(Ok(s)) => {
-                $handler.result(StepResult::Success).await?;
-                let $v = s;
-                $e
-            }
-
-            Ok(Err(e)) => {
-                $handler.result(StepResult::Error(e.into())).await?;
-                continue;
-            }
-            Err(_) => {
-                $handler.result(StepResult::Timeout).await?;
-                continue;
-            }
-        }
-    };
-}
-
 #[derive(Debug, PartialEq)]
 enum StepType {
-    Started(Result<Option<String>, String>, Option<String>),
-    AttemptStarted(usize, usize),
-    DaemonForceRestart,
-    DaemonRunning,
-    KillingZombieDaemons,
-    SpawningDaemon,
-    ConnectingToDaemon,
-    CommunicatingWithDaemon,
-    DaemonVersion(VersionInfo),
-    ListingTargets(String),
-    DaemonChecksFailed,
-    NoTargetsFound,
-    TerminalNoTargetsFound,
-    SkippedFastboot(Option<String>),
-    SkippedZedboot(Option<String>),
-    CheckingTarget(Option<String>),
-    RcsAttemptStarted(usize, usize),
-    OpeningTargetHandle(Option<String>),
-    ConnectingToRcs,
-    CommunicatingWithRcs,
-    TargetSummary(HashMap<TargetCheckResult, Vec<Option<String>>>),
-    RcsTerminalFailure,
+    DoctorSummaryInitNormal(),
+    DoctorSummaryInitVerbose(),
     GeneratingRecord,
+    Output(String),
     RecordGenerated(PathBuf),
 }
 
 #[derive(Debug)]
 enum StepResult {
     Success,
-    Timeout,
-    Error(Error),
-    Other(String),
 }
 
 impl std::fmt::Display for StepResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             StepResult::Success => SUCCESS.to_string(),
-            StepResult::Timeout => FAILED_TIMEOUT.to_string(),
-            StepResult::Error(e) => format_err(e.into()),
-            StepResult::Other(s) => s.to_string(),
         };
 
         write!(f, "{}", s)
     }
 }
 
-impl StepType {
-    fn with_bug_link(&self, s: &str) -> String {
-        let mut s = String::from(s);
-        s.push_str(&format!("\nFile a bug at: {}", BUG_URL));
-        s
-    }
-}
-
 impl std::fmt::Display for StepType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            StepType::Started(default_target, version_str) => {
-                let default_str = match default_target {
-                    Ok(t) => {
-                        if t.is_none() || t.as_ref().unwrap().is_empty() {
-                            "(none set)".to_string()
-                        } else {
-                            t.clone().unwrap()
-                        }
-                    }
-                    Err(e) => format!("config read failed: {:?}", e),
-                };
-                let welcome_str = format!(
-                    "\nWelcome to ffx doctor.\n- Frontend version: {}\n- Default target: {}\n",
-                    version_str.as_ref().unwrap_or(&"Unknown".to_string()),
-                    default_str
-                );
-                format!("{}{}\n{}{}", style::Bold, welcome_str, DAEMON_CHECK_INTRO, style::Reset)
+            StepType::DoctorSummaryInitNormal() => {
+                let msg = "Doctor summary (to see all details, run ffx doctor-new -v):".to_string();
+                format!("\n{}{}{}\n", style::Bold, msg, style::Reset)
             }
-            StepType::AttemptStarted(i, total) => {
-                format!("\n\nKilling the daemon and trying again. Attempt {} of {}", i + 1, total)
+            StepType::DoctorSummaryInitVerbose() => {
+                let msg = "Doctor summary:".to_string();
+                format!("\n{}{}{}\n", style::Bold, msg, style::Reset)
             }
-            StepType::KillingZombieDaemons => KILLING_ZOMBIE_DAEMONS.to_string(),
-            StepType::DaemonForceRestart => FORCE_DAEMON_RESTART_MESSAGE.to_string(),
-            StepType::DaemonRunning => DAEMON_RUNNING_CHECK.to_string(),
-            StepType::SpawningDaemon => SPAWNING_DAEMON.to_string(),
-            StepType::ConnectingToDaemon => CONNECTING_TO_DAEMON.to_string(),
-            StepType::CommunicatingWithDaemon => COMMUNICATING_WITH_DAEMON.to_string(),
-            StepType::DaemonVersion(version_info) => format!(
-                "{}Daemon version: {}{}",
-                style::Bold,
-                version_info.build_version.as_ref().unwrap_or(&"Unknown".to_string()),
-                style::Reset,
-            ),
-            StepType::ListingTargets(filter) => {
-                if filter.is_empty() {
-                    String::from(LISTING_TARGETS_NO_FILTER)
-                } else {
-                    format!("Attempting to list targets with filter '{}'...", filter)
-                }
-            }
-            StepType::NoTargetsFound => NO_TARGETS_FOUND_SHORT.to_string(),
-            StepType::DaemonChecksFailed => self.with_bug_link(&format!(
-                "\n{}{}{}{}",
-                style::Bold,
-                color::Fg(color::Red),
-                DAEMON_CHECKS_FAILED,
-                style::Reset
-            )),
-            StepType::TerminalNoTargetsFound => {
-                self.with_bug_link(&format!("\n{}", NO_TARGETS_FOUND_EXTENDED))
-            }
-            StepType::SkippedFastboot(nodename) => format!(
-                "{}\nSkipping target in fastboot: '{}'. {}{}",
-                style::Bold,
-                nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
-                TARGET_CHOICE_HELP,
-                style::Reset
-            ),
-            StepType::SkippedZedboot(nodename) => format!(
-                "{}\nSkipping target in zedboot: '{}'. {}{}",
-                style::Bold,
-                nodename.as_ref().unwrap_or(&"UNKNOWN".to_string()),
-                TARGET_CHOICE_HELP,
-                style::Reset
-            ),
-            StepType::CheckingTarget(nodename) => format!(
-                "{}\nChecking target: '{}'. {}{}",
-                style::Bold,
-                nodename.as_deref().unwrap_or("UNKNOWN"),
-                TARGET_CHOICE_HELP,
-                style::Reset
-            ),
-            StepType::RcsAttemptStarted(attempt_num, retry_count) => {
-                format!("\n\nAttempt {} of {}", attempt_num + 1, retry_count)
-            }
-            StepType::OpeningTargetHandle(nodename) => format!(
-                "{}\nOpening target handle for: '{}'. {}{}",
-                style::Bold,
-                nodename.as_deref().unwrap_or("UNKNOWN"),
-                TARGET_CHOICE_HELP,
-                style::Reset,
-            ),
-            StepType::ConnectingToRcs => CONNECTING_TO_RCS.to_string(),
-            StepType::CommunicatingWithRcs => COMMUNICATING_WITH_RCS.to_string(),
-            StepType::TargetSummary(results) => {
-                let mut s = format!("\n\n{}{}\n", style::Bold, TARGET_SUMMARY,);
-                let keys = results.keys().into_iter().sorted_by_key(|k| format!("{:?}", k));
-                for key in keys {
-                    for nodename_opt in results.get(key).unwrap_or(&vec![]).iter() {
-                        let nodename = nodename_opt.clone().unwrap_or("UNKNOWN".to_string());
-                        match *key {
-                            TargetCheckResult::Success => {
-                                s.push_str(&format!("{}✓ {}\n", color::Fg(color::Green), nodename));
-                            }
-                            TargetCheckResult::Failed => {
-                                s.push_str(&format!("{}✗ {}\n", color::Fg(color::Red), nodename));
-                            }
-                            TargetCheckResult::SkippedFastboot => {
-                                s.push_str(&format!("skipped: {}\n", nodename));
-                            }
-                            TargetCheckResult::SkippedZedboot => {
-                                s.push_str(&format!("skipped: {}\n", nodename));
-                            }
-                        }
-                    }
-                }
-                s.push_str(&format!("{}", style::Reset));
-                s
-            }
-            StepType::RcsTerminalFailure => self.with_bug_link(&format!(
-                "{}\n{}",
-                RCS_TERMINAL_FAILURE, RCS_TERMINAL_FAILURE_BUG_INSTRUCTIONS
-            )),
             StepType::GeneratingRecord => "Generating record...".to_string(),
+            StepType::Output(data_str) => {
+                format!("{}", data_str)
+            }
             StepType::RecordGenerated(path) => {
-                format!("Record generated at: {}", path.to_string_lossy().into_owned())
+                format!("Record generated at: {}\n", path.to_string_lossy().into_owned())
             }
         };
 
@@ -249,6 +96,7 @@ impl std::fmt::Display for StepType {
 trait DoctorStepHandler {
     async fn step(&mut self, step: StepType) -> Result<()>;
     async fn output_step(&mut self, step: StepType) -> Result<()>;
+    async fn record(&mut self, step: StepType) -> Result<()>;
     async fn result(&mut self, result: StepResult) -> Result<()>;
 }
 
@@ -278,6 +126,12 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
         writeln!(&mut self.writer, "{}", step)?;
         let mut r = self.recorder.lock().await;
         r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}\n", step));
+        Ok(())
+    }
+
+    async fn record(&mut self, step: StepType) -> Result<()> {
+        let mut r = self.recorder.lock().await;
+        r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}", step));
         Ok(())
     }
 
@@ -344,24 +198,12 @@ async fn get_config_permission<W: Write>(mut writer: W) -> Result<bool> {
     Ok(permission)
 }
 
-fn format_err(e: &Error) -> String {
-    format!("{}\n\t{:?}", FAILED_WITH_ERROR, e)
-}
-
 struct DoctorRecorderParameters {
     record: bool,
     user_config_enabled: bool,
     log_root: Option<PathBuf>,
     output_dir: Option<PathBuf>,
     recorder: Arc<Mutex<dyn Recorder>>,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-enum TargetCheckResult {
-    Success,
-    Failed,
-    SkippedFastboot,
-    SkippedZedboot,
 }
 
 #[ffx_plugin()]
@@ -453,8 +295,20 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
         .await
         .map_err(|e: ffx_config::api::ConfigError| format!("{:?}", e).replace("\n", ""));
 
+    // create ledger
+    let ledger_mode = match cmd.verbose {
+        true => LedgerViewMode::Verbose,
+        false => LedgerViewMode::Normal,
+    };
+    let mut ledger = DoctorLedger::<std::io::Stdout>::new(
+        stdout(),
+        Box::new(VisualLedgerView::new()),
+        ledger_mode,
+    );
+
     doctor(
         &mut handler,
+        &mut ledger,
         &daemon_manager,
         &target_str,
         cmd.retry_count,
@@ -515,291 +369,654 @@ async fn get_user_config() -> Result<String> {
     Ok(config_str)
 }
 
-async fn doctor(
+async fn doctor<W: Write>(
     step_handler: &mut impl DoctorStepHandler,
+    ledger: &mut DoctorLedger<W>,
     daemon_manager: &impl DaemonManager,
     target_str: &str,
-    retry_count: usize,
+    _retry_count: usize,
     retry_delay: Duration,
     restart_daemon: bool,
     build_version_string: Option<String>,
     default_target: Result<Option<String>, String>,
     record_params: DoctorRecorderParameters,
 ) -> Result<()> {
-    execute_steps(
-        step_handler,
-        daemon_manager,
-        target_str,
-        retry_count,
-        retry_delay,
-        restart_daemon,
-        build_version_string,
-        default_target,
-    )
-    .await?;
+    if restart_daemon {
+        doctor_daemon_restart(daemon_manager, retry_delay, ledger).await?;
+    } else {
+        doctor_summary(
+            step_handler,
+            daemon_manager,
+            target_str,
+            retry_delay,
+            build_version_string,
+            default_target,
+            ledger,
+        )
+        .await?;
+    }
 
     if record_params.record {
-        let log_root =
-            record_params.log_root.context("log_root not present despite record set to true")?;
-        let output_dir = record_params
-            .output_dir
-            .context("output_dir not present despite record set to true")?;
-
-        let mut daemon_log = log_root.clone();
-        daemon_log.push("ffx.daemon.log");
-        let mut fe_log = log_root.clone();
-        fe_log.push("ffx.log");
-
-        step_handler.step(StepType::GeneratingRecord).await?;
-
-        let platform_info = match get_platform_info() {
-            Ok(s) => s,
-            Err(e) => format!("Could not serialize platform info: {}", e),
-        };
-
-        let final_path = {
-            let mut r = record_params.recorder.lock().await;
-            r.add_sources(vec![daemon_log, fe_log]);
-            r.add_content(PLATFORM_INFO_FILENAME, platform_info);
-
-            if record_params.user_config_enabled {
-                let config_str = match get_user_config().await {
-                    Ok(s) => s,
-                    Err(e) => format!("Could not get config data output: {}", e),
-                };
-                r.add_content(USER_CONFIG_FILENAME, config_str);
-            }
-
-            match r.generate(output_dir.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    let path = &output_dir.to_str().unwrap_or("path undefined");
-                    let advice = "You can change the output directory for the generated zip file \
-                                  using `--output-dir`.";
-                    let default_err_msg =
-                        Err(anyhow!("{}\nCould not write to: {}\n{}", e, &path, advice));
-
-                    match e.downcast_ref::<zip::result::ZipError>() {
-                        Some(zip::result::ZipError::Io(io_error)) => {
-                            match io_error.raw_os_error() {
-                                Some(27) => Err(anyhow!(
-                                    "{}\nMake sure you can write files larger than 1MB to: {}\n{}",
-                                    e,
-                                    &path,
-                                    advice
-                                ))?,
-                                _ => default_err_msg?,
-                            }
-                        }
-                        _ => default_err_msg?,
-                    }
-                }
-            }
-        };
-
-        step_handler.result(StepResult::Success).await?;
-        step_handler.output_step(StepType::RecordGenerated(final_path.canonicalize()?)).await?;
+        let mut record_view = RecordLedgerView::new();
+        let data = ledger.write_all(&mut record_view)?;
+        step_handler.record(StepType::Output(data)).await?;
+        doctor_record(step_handler, record_params).await?;
     }
+
     Ok(())
 }
 
-async fn execute_steps(
+async fn doctor_record(
+    step_handler: &mut impl DoctorStepHandler,
+    record_params: DoctorRecorderParameters,
+) -> Result<()> {
+    let log_root =
+        record_params.log_root.context("log_root not present despite record set to true")?;
+    let output_dir =
+        record_params.output_dir.context("output_dir not present despite record set to true")?;
+
+    let mut daemon_log = log_root.clone();
+    daemon_log.push("ffx.daemon.log");
+    let mut fe_log = log_root.clone();
+    fe_log.push("ffx.log");
+
+    step_handler.step(StepType::GeneratingRecord).await?;
+
+    let platform_info = match get_platform_info() {
+        Ok(s) => s,
+        Err(e) => format!("Could not serialize platform info: {}", e),
+    };
+
+    let final_path = {
+        let mut r = record_params.recorder.lock().await;
+        r.add_sources(vec![daemon_log, fe_log]);
+        r.add_content(PLATFORM_INFO_FILENAME, platform_info);
+
+        if record_params.user_config_enabled {
+            let config_str = match get_user_config().await {
+                Ok(s) => s,
+                Err(e) => format!("Could not get config data output: {}", e),
+            };
+            r.add_content(USER_CONFIG_FILENAME, config_str);
+        }
+
+        match r.generate(output_dir.clone()) {
+            Ok(p) => p,
+            Err(e) => {
+                let path = &output_dir.to_str().unwrap_or("path undefined");
+                let advice = "You can change the output directory for the generated zip file \
+                                  using `--output-dir`.";
+                let default_err_msg =
+                    Err(anyhow!("{}\nCould not write to: {}\n{}", e, &path, advice));
+
+                match e.downcast_ref::<zip::result::ZipError>() {
+                    Some(zip::result::ZipError::Io(io_error)) => match io_error.raw_os_error() {
+                        Some(27) => Err(anyhow!(
+                            "{}\nMake sure you can write files larger than 1MB to: {}\n{}",
+                            e,
+                            &path,
+                            advice
+                        ))?,
+                        _ => default_err_msg?,
+                    },
+                    _ => default_err_msg?,
+                }
+            }
+        }
+    };
+
+    step_handler.result(StepResult::Success).await?;
+    step_handler.output_step(StepType::RecordGenerated(final_path.canonicalize()?)).await?;
+    Ok(())
+}
+
+async fn get_daemon_pid<W: Write>(
+    daemon_manager: &impl DaemonManager,
+    ledger: &mut DoctorLedger<W>,
+) -> Option<Vec<usize>> {
+    match daemon_manager.get_pid().await {
+        Ok(vec) => return Some(vec),
+        Err(e) => {
+            let node = ledger
+                .add_node(&format!("Error getting daemon pid: {}", e), LedgerMode::Automatic)
+                .ok()?;
+            ledger.set_outcome(node, LedgerOutcome::SoftWarning).ok()?;
+            return None;
+        }
+    }
+}
+
+// Return the elements of `a` that are not in `b`.
+// Note: this function preserves order for simpler testing.
+fn difference(a: &Vec<usize>, b: &Vec<usize>) -> Vec<usize> {
+    let sb: HashSet<usize> = b.iter().cloned().collect();
+    a.iter().filter(|&e| !sb.contains(e)).cloned().collect()
+}
+
+// Update the current, the added, and the dropped daemon pids.
+// Display if there are any errors while fetching the pids.
+// Note: we display pid fetching error only one time. has_error is set once there is an error.
+async fn calc_daemon_pid_diff<W: Write>(
+    has_error: &mut bool,
+    daemon_manager: &impl DaemonManager,
+    ledger: &mut DoctorLedger<W>,
+    current_pids: &mut Vec<usize>,
+    added_pids: &mut Vec<usize>,
+    dropped_pids: &mut Vec<usize>,
+) {
+    // Setup
+    added_pids.clear();
+    dropped_pids.clear();
+
+    if *has_error {
+        current_pids.clear();
+        return ();
+    }
+
+    // Get pid vector
+    let new_pids = match get_daemon_pid(daemon_manager, ledger).await {
+        Some(v) => v,
+        None => {
+            current_pids.clear();
+            *has_error = true;
+            return ();
+        }
+    };
+
+    // Update
+    added_pids.extend(difference(&new_pids, current_pids));
+    dropped_pids.extend(difference(current_pids, &new_pids));
+    current_pids.clear();
+    current_pids.extend(new_pids);
+}
+
+fn format_vec(a: &Vec<usize>) -> String {
+    format!(
+        "[{}]",
+        a.iter()
+            .enumerate()
+            .map(|(i, v)| match i {
+                0 => format!("{}", v),
+                _ => format!(", {}", v),
+            })
+            .collect::<String>(),
+    )
+}
+
+async fn daemon_restart<W: Write>(
+    daemon_manager: &impl DaemonManager,
+    retry_delay: Duration,
+    ledger: &mut DoctorLedger<W>,
+) -> Result<()> {
+    let mut main_node = ledger.add_node("Killing Daemon", LedgerMode::Automatic)?;
+
+    let mut error_pid = false;
+    let mut cur_pids = Vec::<usize>::new();
+    let mut add_pids = Vec::<usize>::new();
+    let mut sub_pids = Vec::<usize>::new();
+    let error = &mut error_pid;
+    let cpid = &mut cur_pids;
+    let apid = &mut add_pids;
+    let spid = &mut sub_pids;
+
+    calc_daemon_pid_diff(error, daemon_manager, ledger, cpid, apid, spid).await;
+
+    // Kill the daemon if it is running.
+    let daemon_killed = if daemon_manager.is_running().await {
+        let node = ledger.add_node("Killing running daemons.", LedgerMode::Automatic)?;
+        daemon_manager.kill_all().await?;
+        ledger.set_outcome(node, LedgerOutcome::Success)?;
+        true
+    } else {
+        if daemon_manager.kill_all().await? {
+            let node = ledger.add_node("Killing zombie daemons.", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+            true
+        } else {
+            let node = ledger.add_node("No running daemons found.", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+            false
+        }
+    };
+
+    // Display killed daemon PIDs.
+    calc_daemon_pid_diff(error, daemon_manager, ledger, cpid, apid, spid).await;
+    if daemon_killed && !*error {
+        {
+            let node = ledger.add_node(
+                &format!("Killed daemon PID: {}", format_vec(spid)),
+                LedgerMode::Automatic,
+            )?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+
+        if cpid.len() > 0 {
+            let node = ledger.add_node(
+                &format!("Daemon are still running, PID: {}", format_vec(cpid)),
+                LedgerMode::Automatic,
+            )?;
+            ledger.set_outcome(node, LedgerOutcome::Warning)?;
+        }
+    }
+
+    ledger.close(main_node)?;
+
+    if daemon_killed {
+        // HACK: Wait a few seconds before spawning a new daemon. Attempting
+        // to spawn one too quickly after killing one will lead to timeouts
+        // when attempting to communicate with the spawned daemon.
+        // Temporary fix for fxbug.dev/66958. Remove when that bug is resolved.
+        fuchsia_async::Timer::new(Duration::from_millis(5000)).await;
+    };
+
+    main_node = ledger.add_node("Starting Daemon", LedgerMode::Automatic)?;
+
+    // Spawn daemon.
+    match timeout(retry_delay, daemon_manager.spawn()).await {
+        Ok(Ok(_)) => {
+            let node = ledger.add_node("Daemon spawned", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+        Ok(Err(e)) => {
+            let node =
+                ledger.add_node(&format!("Error spawning daemon: {}", e), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+        Err(_) => {
+            let node = ledger.add_node("Timeout spawning daemon", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+    }
+
+    calc_daemon_pid_diff(error, daemon_manager, ledger, cpid, apid, spid).await;
+    if !*error {
+        let node =
+            ledger.add_node(&format!("Daemon PID: {}", format_vec(apid)), LedgerMode::Automatic)?;
+        ledger.set_outcome(node, LedgerOutcome::Success)?;
+    }
+
+    // Check daemon connection.
+    let daemon_proxy = match timeout(retry_delay, daemon_manager.find_and_connect()).await {
+        Ok(Ok(val)) => {
+            let node = ledger.add_node("Connected to daemon", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+            val
+        }
+        Ok(Err(e)) => {
+            let node = ledger
+                .add_node(&format!("Error connecting to daemon: {}", e), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+        Err(_) => {
+            let node =
+                ledger.add_node("Timeout while connecting to daemon", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+    };
+
+    match timeout(retry_delay, daemon_proxy.get_version_info()).await {
+        Ok(Ok(v)) => {
+            let daemon_version = v.build_version.clone().unwrap_or("Unknown".to_string());
+            let node = ledger
+                .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+        Ok(Err(e)) => {
+            let node = ledger
+                .add_node(&format!("Error getting daemon version: {}", e), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+        Err(_) => {
+            let node =
+                ledger.add_node("Timeout while getting daemon version", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+    }
+
+    ledger.close(main_node)?;
+    return Ok(());
+}
+
+async fn doctor_daemon_restart<W: Write>(
+    daemon_manager: &impl DaemonManager,
+    spawn_delay: Duration,
+    ledger: &mut DoctorLedger<W>,
+) -> Result<()> {
+    match daemon_restart(daemon_manager, spawn_delay, ledger).await {
+        Err(err) => {
+            let node = ledger.add_node(&format!("Error: {}", err), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+        }
+        _ => (),
+    };
+    return Ok(());
+}
+
+async fn doctor_summary<W: Write>(
     step_handler: &mut impl DoctorStepHandler,
     daemon_manager: &impl DaemonManager,
     target_str: &str,
-    retry_count: usize,
     retry_delay: Duration,
-    restart_daemon: bool,
     build_version_string: Option<String>,
     default_target: Result<Option<String>, String>,
+    ledger: &mut DoctorLedger<W>,
 ) -> Result<()> {
-    step_handler.output_step(StepType::Started(default_target, build_version_string)).await?;
-
-    let mut proxy_opt: Option<DaemonProxy> = None;
-    let mut targets_opt: Option<Vec<Target>> = None;
-    let mut tc_proxy_opt: Option<TargetCollectionProxy> = None;
-    for i in 0..retry_count {
-        proxy_opt = None;
-        if i > 0 {
-            daemon_manager.kill_all().await?;
-            step_handler.output_step(StepType::AttemptStarted(i, retry_count)).await?;
-        } else if restart_daemon {
-            step_handler.output_step(StepType::DaemonForceRestart).await?;
-            daemon_manager.kill_all().await?;
+    match ledger.get_ledger_mode() {
+        LedgerViewMode::Normal => {
+            step_handler.output_step(StepType::DoctorSummaryInitNormal()).await?
         }
+        LedgerViewMode::Verbose => {
+            step_handler.output_step(StepType::DoctorSummaryInitVerbose()).await?
+        }
+    }
 
-        step_handler.step(StepType::DaemonRunning).await?;
-        if !daemon_manager.is_running().await {
-            step_handler.result(StepResult::Other(NONE_RUNNING.to_string())).await?;
-            step_handler.step(StepType::KillingZombieDaemons).await?;
+    let mut main_node = ledger.add_node("FFX doctor", LedgerMode::Automatic)?;
 
-            if daemon_manager.kill_all().await? {
-                step_handler.result(StepResult::Other(ZOMBIE_KILLED.to_string())).await?;
+    let version_node = ledger.add_node(
+        &format!("Frontend version: {}", build_version_string.unwrap_or("UNKNOWN".to_string())),
+        LedgerMode::Verbose,
+    )?;
+    ledger.set_outcome(version_node, LedgerOutcome::Success)?;
+    ledger.close(main_node)?;
+
+    main_node = ledger.add_node("Checking daemon", LedgerMode::Automatic)?;
+
+    if daemon_manager.is_running().await {
+        let pid_vec = get_daemon_pid(daemon_manager, ledger).await.unwrap_or_default();
+        let node = ledger
+            .add_node(&format!("Daemon found: {}", format_vec(&pid_vec)), LedgerMode::Automatic)?;
+        ledger.set_outcome(node, LedgerOutcome::Success)?;
+    } else {
+        let node = ledger.add_node(
+            "No running daemons found. Run `ffx doctor --restart-daemon`",
+            LedgerMode::Automatic,
+        )?;
+        ledger.set_outcome(node, LedgerOutcome::Failure)?;
+        ledger.close(main_node)?;
+        return Ok(());
+    }
+
+    let daemon_proxy = match timeout(retry_delay, daemon_manager.find_and_connect()).await {
+        Ok(Ok(val)) => {
+            let node = ledger.add_node("Connecting to daemon", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+            val
+        }
+        Ok(Err(e)) => {
+            let node = ledger
+                .add_node(&format!("Error connecting to daemon: {}", e), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+        Err(_) => {
+            let node =
+                ledger.add_node("Timeout while connecting to daemon", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+    };
+
+    match timeout(retry_delay, daemon_proxy.get_version_info()).await {
+        Ok(Ok(v)) => {
+            let daemon_version = v.build_version.clone().unwrap_or("Unknown".to_string());
+            let node = ledger
+                .add_node(&format!("Daemon version: {}", daemon_version), LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+        Ok(Err(e)) => {
+            let node = ledger
+                .add_node(&format!("Error getting daemon version: {}", e), LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            // Continue, not a critical error.
+        }
+        Err(_) => {
+            let node =
+                ledger.add_node("Timeout while getting daemon version", LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            // Continue, not a critical error.
+        }
+    }
+
+    match default_target {
+        Ok(Some(target_name)) => {
+            let node = ledger
+                .add_node(&format!("Default target: {}", target_name), LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+        Ok(_) => {
+            let node = ledger.add_node("Default target: (none)", LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Success)?;
+        }
+        Err(e) => {
+            let node =
+                ledger.add_node(&format!("config read failed: {:?}", e), LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+        }
+    }
+
+    ledger.close(main_node)?;
+    main_node = ledger.add_node("Searching for targets", LedgerMode::Automatic)?;
+
+    let (tc_proxy, tc_server) = fidl::endpoints::create_proxy::<TargetCollectionMarker>()?;
+    match timeout(
+        retry_delay,
+        daemon_proxy.connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel()),
+    )
+    .await
+    {
+        Ok(Err(e)) => {
+            let node = ledger.add_node(
+                &format!("Error connecting to target service: {}", e),
+                LedgerMode::Verbose,
+            )?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+        Ok(_) => {}
+        Err(_) => {
+            let node = ledger
+                .add_node("Timeout while connecting to target service", LedgerMode::Verbose)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+    }
+
+    let targets = match timeout(retry_delay, list_targets(Some(target_str), &tc_proxy)).await {
+        Ok(Ok(list)) => {
+            if list.len() > 0 {
+                let node = ledger
+                    .add_node(&format!("{} targets found", list.len()), LedgerMode::Automatic)?;
+                ledger.set_outcome(node, LedgerOutcome::Success)?;
+                list
             } else {
-                step_handler.result(StepResult::Other(NONE_RUNNING.to_string())).await?;
+                let node = ledger.add_node("No targets found!", LedgerMode::Automatic)?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(main_node)?;
+                return Ok(());
             }
-
-            step_handler.step(StepType::SpawningDaemon).await?;
-
-            // HACK: Wait a few seconds before spawning a new daemon. Attempting
-            // to spawn one too quickly after killing one will lead to timeouts
-            // when attempting to communicate with the spawned daemon.
-            // Temporary fix for fxbug.dev/66958. Remove when that bug is resolved.
-            fuchsia_async::Timer::new(Duration::from_millis(5000)).await;
-            success_or_continue!(timeout(retry_delay, daemon_manager.spawn()), step_handler, _p, {
-            });
-        } else {
-            step_handler.result(StepResult::Other(FOUND.to_string())).await?;
         }
+        Ok(Err(e)) => {
+            let node =
+                ledger.add_node(&format!("Error getting targets: {}", e), LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+        Err(_) => {
+            let node =
+                ledger.add_node("Timeout while getting target list", LedgerMode::Automatic)?;
+            ledger.set_outcome(node, LedgerOutcome::Failure)?;
+            ledger.close(main_node)?;
+            return Ok(());
+        }
+    };
 
-        step_handler.step(StepType::ConnectingToDaemon).await?;
-        proxy_opt = success_or_continue!(
-            timeout(retry_delay, daemon_manager.find_and_connect()),
-            step_handler,
-            p,
-            Some(p)
-        );
+    ledger.close(main_node)?;
+    let mut verify_inode = LedgerNode::new("Verifying Targets".to_string(), LedgerMode::Normal);
+    verify_inode.set_fold_function(OutcomeFoldFunction::FailureToSuccess, LedgerOutcome::Failure);
+    main_node = ledger.add(verify_inode)?;
 
-        step_handler.step(StepType::CommunicatingWithDaemon).await?;
-        match timeout(retry_delay, proxy_opt.as_ref().unwrap().get_version_info()).await {
-            Err(_) => {
-                step_handler.result(StepResult::Timeout).await?;
-                proxy_opt = None;
+    for target in targets.iter() {
+        let target_name = match target.nodename.clone() {
+            Some(v) => v,
+            None => {
+                let node =
+                    ledger.add_node("Skipping target without node name", LedgerMode::Automatic)?;
+                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
                 continue;
-            }
-            Ok(Err(e)) => {
-                step_handler.result(StepResult::Error(e.into())).await?;
-                proxy_opt = None;
-                continue;
-            }
-            Ok(Ok(v)) => {
-                step_handler.result(StepResult::Success).await?;
-                step_handler.output_step(StepType::DaemonVersion(v)).await?;
             }
         };
 
-        let (tc_proxy, tc_server) = fidl::endpoints::create_proxy::<TargetCollectionMarker>()?;
-        success_or_continue!(
-            timeout(
-                retry_delay,
-                proxy_opt
-                    .as_ref()
-                    .unwrap()
-                    .connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel())
-            ),
-            step_handler,
-            _t,
-            {},
-        );
-        step_handler.step(StepType::ListingTargets(target_str.to_string())).await?;
-        targets_opt = success_or_continue!(
-            timeout(retry_delay, list_targets(Some(target_str), &tc_proxy)),
-            step_handler,
-            t,
-            Some(t),
-        );
-        tc_proxy_opt.replace(tc_proxy);
-
-        if targets_opt.is_some() && targets_opt.as_ref().unwrap().len() == 0 {
-            step_handler.output_step(StepType::NoTargetsFound).await?;
-            continue;
-        }
-
-        break;
-    }
-
-    if proxy_opt.is_none() {
-        step_handler.output_step(StepType::DaemonChecksFailed).await?;
-        return Ok(());
-    }
-
-    if targets_opt.is_none() || targets_opt.as_ref().unwrap().len() == 0 {
-        step_handler.output_step(StepType::TerminalNoTargetsFound).await?;
-        return Ok(());
-    }
-
-    let targets = targets_opt.unwrap();
-    let mut target_results: HashMap<Option<String>, TargetCheckResult> = HashMap::new();
-    let tc_proxy = tc_proxy_opt.unwrap();
-
-    for target in targets.iter() {
-        // Note: this match statement intentionally does not have a fallback case in order to ensure
-        // that behavior is considered when we add a new state.
+        // Note: this match statement intentionally does not have a fallback case in order to
+        // ensure that behavior is considered when we add a new state.
         match target.target_state {
             None => {}
             Some(TargetState::Unknown) => {}
             Some(TargetState::Disconnected) => {}
             Some(TargetState::Product) => {}
             Some(TargetState::Fastboot) => {
-                target_results.insert(target.nodename.clone(), TargetCheckResult::SkippedFastboot);
-                step_handler
-                    .output_step(StepType::SkippedFastboot(target.nodename.clone()))
-                    .await?;
+                let node = ledger.add_node(
+                    &format!("Skipping target in fastboot: {}", target_name),
+                    LedgerMode::Automatic,
+                )?;
+                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
                 continue;
             }
             Some(TargetState::Zedboot) => {
-                target_results.insert(target.nodename.clone(), TargetCheckResult::SkippedZedboot);
-                step_handler.output_step(StepType::SkippedZedboot(target.nodename.clone())).await?;
+                let node = ledger.add_node(
+                    &format!("Skipping target in zedboot: {}", target_name),
+                    LedgerMode::Automatic,
+                )?;
+                ledger.set_outcome(node, LedgerOutcome::SoftWarning)?;
                 continue;
             }
         }
-        step_handler.output_step(StepType::CheckingTarget(target.nodename.clone())).await?;
-        for i in 0..retry_count {
-            if i > 0 {
-                step_handler.output_step(StepType::RcsAttemptStarted(i, retry_count)).await?;
+        let target_node =
+            ledger.add_node(&format!("Target: {}", target_name), LedgerMode::Normal)?;
+
+        //TODO(fxbug.dev/86523): Offer a fix when we cannot connect to a device via RCS.
+        let (target_proxy, target_server) = fidl::endpoints::create_proxy::<TargetHandleMarker>()?;
+        match timeout(retry_delay, tc_proxy.open_target(target.nodename.as_deref(), target_server))
+            .await
+        {
+            Ok(Ok(_)) => {
+                let node = ledger.add_node("Opened target handle", LedgerMode::Verbose)?;
+                ledger.set_outcome(node, LedgerOutcome::Success)?;
             }
-
-            // TODO(jwing): SSH into the device and kill Overnet+RCS if anything below this fails
-            let (target_proxy, target_server) =
-                fidl::endpoints::create_proxy::<TargetHandleMarker>()?;
-            step_handler.step(StepType::OpeningTargetHandle(target.nodename.clone())).await?;
-            success_or_continue!(
-                timeout(
-                    retry_delay,
-                    tc_proxy.open_target(target.nodename.as_deref(), target_server)
-                ),
-                step_handler,
-                _t,
-                {},
-            );
-            step_handler.step(StepType::ConnectingToRcs).await?;
-            let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-            success_or_continue!(
-                timeout(retry_delay, target_proxy.open_remote_control(remote_server_end)),
-                step_handler,
-                _p,
-                {},
-            );
-
-            step_handler.step(StepType::CommunicatingWithRcs).await?;
-
-            success_or_continue!(
-                timeout(retry_delay, remote_proxy.identify_host()),
-                step_handler,
-                _t,
-                {
-                    target_results.insert(target.nodename.clone(), TargetCheckResult::Success);
-                }
-            );
-            break;
+            Ok(Err(e)) => {
+                let node = ledger.add_node(
+                    &format!("Error while opening target handle: {}", e),
+                    LedgerMode::Verbose,
+                )?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(target_node)?;
+                continue;
+            }
+            Err(_) => {
+                let node =
+                    ledger.add_node("Timeout while opening target handle", LedgerMode::Verbose)?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(target_node)?;
+                continue;
+            }
         }
 
-        if target_results.get(&target.nodename).is_none() {
-            target_results.insert(target.nodename.clone(), TargetCheckResult::Failed);
+        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
+
+        match timeout(retry_delay, target_proxy.open_remote_control(remote_server_end)).await {
+            Ok(Ok(_)) => {
+                let node = ledger.add_node("Connecting to RCS", LedgerMode::Verbose)?;
+                ledger.set_outcome(node, LedgerOutcome::Success)?;
+            }
+            Ok(Err(e)) => {
+                let node = ledger.add_node(
+                    &format!("Error while connecting to RCS: {}", e),
+                    LedgerMode::Verbose,
+                )?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(target_node)?;
+                continue;
+            }
+            Err(_) => {
+                let node =
+                    ledger.add_node("Timeout while connecting to RCS", LedgerMode::Verbose)?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(target_node)?;
+                continue;
+            }
         }
+
+        match timeout(retry_delay, remote_proxy.identify_host()).await {
+            Ok(Ok(_)) => {
+                let node = ledger.add(LedgerNode::new(
+                    "Communicating with RCS".to_string(),
+                    LedgerMode::Verbose,
+                ))?;
+                ledger.set_outcome(node, LedgerOutcome::Success)?;
+            }
+            Ok(Err(e)) => {
+                let node = ledger.add_node(
+                    &format!("Error while communicating with RCS: {}", e),
+                    LedgerMode::Verbose,
+                )?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(target_node)?;
+                continue;
+            }
+            Err(_) => {
+                let node =
+                    ledger.add_node("Timeout while communicating with RCS", LedgerMode::Verbose)?;
+                ledger.set_outcome(node, LedgerOutcome::Failure)?;
+                ledger.close(target_node)?;
+                continue;
+            }
+        }
+
+        ledger.close(target_node)?;
     }
 
-    let grouped_map = target_results.into_iter().map(|(k, v)| (v, k)).into_group_map();
-    let has_failure = grouped_map.get(&TargetCheckResult::Failed).is_some();
+    ledger.close(main_node)?;
 
-    step_handler.output_step(StepType::TargetSummary(grouped_map)).await?;
-
-    if has_failure {
-        step_handler.output_step(StepType::RcsTerminalFailure).await?;
+    match ledger.calc_outcome(main_node) {
+        LedgerOutcome::Failure => {
+            let msg = match ledger.get_ledger_mode() {
+                LedgerViewMode::Normal => String::from(
+                    "Doctor found issues in one or more categories; \
+                    run 'ffx doctor -v' for more details.",
+                ),
+                _ => String::from("Doctor found issues in one or more categories."),
+            };
+            main_node = ledger.add_node(&msg, LedgerMode::Automatic)?;
+            ledger.set_outcome(main_node, LedgerOutcome::Failure)?;
+        }
+        _ => {
+            main_node = ledger.add_node("No issues found", LedgerMode::Automatic)?;
+            ledger.set_outcome(main_node, LedgerOutcome::Success)?;
+        }
     }
 
     Ok(())
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Tests
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod test {
@@ -807,13 +1024,14 @@ mod test {
         super::*,
         async_lock::Mutex,
         async_trait::async_trait,
+        ffx_doctor_test_utils::MockWriter,
         fidl::endpoints::RequestStream,
         fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
         fidl::Channel,
         fidl_fuchsia_developer_bridge::{
-            DaemonRequest, OpenTargetError, RemoteControlState, TargetCollectionIteratorRequest,
-            TargetCollectionRequest, TargetCollectionRequestStream, TargetHandleRequest,
-            TargetType,
+            DaemonProxy, DaemonRequest, OpenTargetError, RemoteControlState, Target,
+            TargetCollectionIteratorRequest, TargetCollectionRequest,
+            TargetCollectionRequestStream, TargetHandleRequest, TargetState, TargetType,
         },
         fidl_fuchsia_developer_remotecontrol::{
             IdentifyHostResponse, RemoteControlMarker, RemoteControlRequest,
@@ -824,6 +1042,7 @@ mod test {
         futures::{Future, FutureExt, TryFutureExt, TryStreamExt},
         std::cell::Cell,
         std::collections::HashSet,
+        std::fmt,
         std::sync::Arc,
         tempfile::tempdir,
     };
@@ -833,7 +1052,9 @@ mod test {
     const FASTBOOT_NODENAME: &str = "fastboot-nodename-unresponsive";
     const NON_EXISTENT_NODENAME: &str = "extra-fake-nodename";
     const DEFAULT_RETRY_DELAY: Duration = Duration::from_millis(2000);
-    const DAEMON_VERSION_STR: &str = "daemon-build-string";
+    const DAEMON_VERSION: &str = "daemon-build-string";
+    const FRONTEND_VERSION: &str = "fake version";
+    const INDENT_STR: &str = "    ";
 
     #[derive(PartialEq)]
     struct TestStep {
@@ -888,15 +1109,57 @@ mod test {
 
             match (self.result.as_ref(), other.result.as_ref()) {
                 (Some(r), Some(r2)) => match (r, r2) {
-                    (StepResult::Error(_), StepResult::Error(_)) => true,
-                    (StepResult::Other(s), StepResult::Other(s2)) => s == s2,
                     (StepResult::Success, StepResult::Success) => true,
-                    (StepResult::Timeout, StepResult::Timeout) => true,
-                    _ => false,
                 },
                 (None, None) => true,
                 _ => false,
             }
+        }
+    }
+
+    struct FakeLedgerView {
+        tree: LedgerViewNode,
+    }
+
+    impl FakeLedgerView {
+        pub fn new() -> Self {
+            FakeLedgerView { tree: LedgerViewNode::default() }
+        }
+        fn gen_output(&self, parent_node: &LedgerViewNode, indent_level: usize) -> String {
+            let mut data = parent_node.data.clone();
+            // Remove error details to make the tests more stable
+            if data.starts_with("Error") {
+                let v: Vec<_> = data.split(":").collect();
+                if v.len() > 1 {
+                    data = format!("{}: <reason omitted>", v.first().unwrap().to_string());
+                }
+            }
+
+            let mut output_str = format!(
+                "{}[{}] {}\n",
+                INDENT_STR.repeat(indent_level),
+                parent_node.outcome.format(false),
+                data
+            );
+
+            for child_node in &parent_node.children {
+                let child_str = self.gen_output(child_node, indent_level + 1);
+                output_str = format!("{}{}", output_str, child_str);
+            }
+
+            return output_str;
+        }
+    }
+
+    impl fmt::Display for FakeLedgerView {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "{}", self.gen_output(&self.tree, 0))
+        }
+    }
+
+    impl LedgerView for FakeLedgerView {
+        fn set(&mut self, new_tree: LedgerViewNode) {
+            self.tree = new_tree;
         }
     }
 
@@ -932,6 +1195,12 @@ mod test {
         }
 
         async fn output_step(&mut self, step: StepType) -> Result<()> {
+            let mut v = self.steps.lock().await;
+            v.push(TestStepEntry::output_step(step));
+            Ok(())
+        }
+
+        async fn record(&mut self, step: StepType) -> Result<()> {
             let mut v = self.steps.lock().await;
             v.push(TestStepEntry::output_step(step));
             Ok(())
@@ -1012,6 +1281,7 @@ mod test {
         daemons_running_results: Vec<bool>,
         spawn_results: Vec<Result<()>>,
         find_and_connect_results: Vec<Result<DaemonProxy>>,
+        get_pid_results: Vec<Result<Vec<usize>>>,
     }
 
     struct FakeDaemonManager {
@@ -1024,6 +1294,7 @@ mod test {
             kill_results: Vec<Result<bool>>,
             spawn_results: Vec<Result<()>>,
             find_and_connect_results: Vec<Result<DaemonProxy>>,
+            get_pid_results: Vec<Result<Vec<usize>>>,
         ) -> Self {
             return FakeDaemonManager {
                 state_manager: Arc::new(Mutex::new(FakeStateManager {
@@ -1031,6 +1302,7 @@ mod test {
                     daemons_running_results,
                     spawn_results,
                     find_and_connect_results,
+                    get_pid_results,
                 })),
             };
         }
@@ -1068,9 +1340,10 @@ mod test {
             state.kill_results.remove(0)
         }
 
-        // placeholder method
         async fn get_pid(&self) -> Result<Vec<usize>> {
-            Ok(Vec::new())
+            let mut state = self.state_manager.lock().await;
+            assert!(!state.get_pid_results.is_empty(), "too many calls to spawn");
+            state.get_pid_results.remove(0)
         }
 
         async fn is_running(&self) -> bool {
@@ -1109,7 +1382,8 @@ mod test {
         .detach();
     }
 
-    // Spawns a target collection, accepting closures for handling listing and opening target hanles.
+    // Spawns a target collection, accepting closures for handling listing and opening target
+    // handles.
     fn spawn_target_collection<F, F2>(
         server_channel: Channel,
         list_closure: F,
@@ -1404,31 +1678,15 @@ mod test {
         .unwrap()
     }
 
-    fn default_results_map() -> HashMap<TargetCheckResult, Vec<Option<String>>> {
-        let mut map = HashMap::new();
-
-        map.insert(TargetCheckResult::Success, vec![Some(NODENAME.to_string())]);
-        map.insert(TargetCheckResult::Failed, vec![Some(UNRESPONSIVE_NODENAME.to_string())]);
-        map
-    }
-
-    fn peer_closed() -> Error {
-        fidl::Error::ClientChannelClosed {
-            protocol_name: TargetCollectionMarker::NAME,
-            status: fidl::handle::Status::PEER_CLOSED,
-        }
-        .into()
-    }
-
     fn version_str() -> Option<String> {
-        Some(String::from("fake version"))
+        Some(FRONTEND_VERSION.to_string())
     }
 
     fn daemon_version_info() -> VersionInfo {
         VersionInfo {
             commit_hash: None,
             commit_timestamp: None,
-            build_version: Some(DAEMON_VERSION_STR.to_string()),
+            build_version: Some(DAEMON_VERSION.to_string()),
             ..VersionInfo::EMPTY
         }
     }
@@ -1471,11 +1729,20 @@ mod test {
             vec![Ok(false)],
             vec![Ok(())],
             vec![Ok(setup_responsive_daemon_server())],
+            vec![],
         );
 
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -1488,32 +1755,17 @@ mod test {
         .await
         .unwrap();
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(
-                    Ok(Some(NODENAME.to_string())),
-                    version_str(),
-                )),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::KillingZombieDaemons),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::SpawningDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
-            ])
-            .await;
-
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+                   \n[✓] FFX doctor\
+                   \n    [✓] Frontend version: {}\
+                   \n[✗] Checking daemon\
+                   \n    [✗] No running daemons found. Run `ffx doctor --restart-daemon`\n",
+                FRONTEND_VERSION
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1523,11 +1775,19 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server())],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
 
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -1540,24 +1800,22 @@ mod test {
         .await
         .unwrap();
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
-            ])
-            .await;
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+                   \n[✓] FFX doctor\
+                   \n    [✓] Frontend version: {}\
+                   \n[✓] Checking daemon\
+                   \n    [✓] Daemon found: [1]\
+                   \n    [✓] Connecting to daemon\
+                   \n    [✓] Daemon version: {}\
+                   \n    [✓] Default target: (none)\
+                   \n[✗] Searching for targets\
+                   \n    [✗] No targets found!\n",
+                FRONTEND_VERSION, DAEMON_VERSION
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1567,11 +1825,19 @@ mod test {
             vec![Ok(true), Ok(false)],
             vec![Ok(())],
             vec![Ok(setup_daemon_server_list_fails()), Ok(setup_daemon_server_list_fails())],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
 
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             2,
@@ -1584,103 +1850,127 @@ mod test {
         .await
         .unwrap();
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Error(peer_closed())),
-                TestStepEntry::output_step(StepType::AttemptStarted(1, 2)),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::KillingZombieDaemons),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::SpawningDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Error(peer_closed())),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
-            ])
-            .await;
-
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] Default target: (none)\
+            \n[✗] Searching for targets\
+            \n    [✗] Error getting targets: <reason omitted>\n",
+                FRONTEND_VERSION, DAEMON_VERSION
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
+
     async fn test_two_tries_no_daemon_running_echo_timeout() {
         let (tx, rx) = oneshot::channel::<()>();
 
         let fake = FakeDaemonManager::new(
             vec![false, true],
             vec![Ok(false), Ok(true)],
-            vec![Ok(())],
+            vec![Ok(()), Ok(())],
             vec![
                 Ok(setup_daemon_server_echo_hangs(rx.shared())),
                 Ok(setup_responsive_daemon_server()),
             ],
+            vec![Ok(vec![]), Ok(vec![]), Ok(vec![1]), Ok(vec![2]), Ok(vec![]), Ok(vec![3])],
         );
         let mut handler = FakeStepHandler::new();
-        doctor(
-            &mut handler,
-            &fake,
-            "",
-            2,
-            DEFAULT_RETRY_DELAY,
-            false,
-            version_str(),
-            Ok(None),
-            record_params_no_record(),
-        )
-        .await
-        .unwrap();
-        tx.send(()).unwrap();
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::KillingZombieDaemons),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::SpawningDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Timeout),
-                TestStepEntry::output_step(StepType::AttemptStarted(1, 2)),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
-            ])
-            .await;
 
-        fake.assert_no_leftover_calls().await;
+        // restart daemon
+        {
+            let ledger_view = Box::new(FakeLedgerView::new());
+            let mut ledger = DoctorLedger::<MockWriter>::new(
+                MockWriter::new(),
+                ledger_view,
+                LedgerViewMode::Verbose,
+            );
+
+            doctor(
+                &mut handler,
+                &mut ledger,
+                &fake,
+                "",
+                2,
+                DEFAULT_RETRY_DELAY,
+                true,
+                version_str(),
+                Ok(None),
+                record_params_no_record(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(
+                ledger.writer.get_data(),
+                "\
+                    \n[✓] Killing Daemon\
+                    \n    [✓] No running daemons found.\
+                    \n[✗] Starting Daemon\
+                    \n    [✓] Daemon spawned\
+                    \n    [✓] Daemon PID: [1]\
+                    \n    [✓] Connected to daemon\
+                    \n    [✗] Timeout while getting daemon version\
+                    \n"
+            );
+        }
+
+        // restart daemon
+        {
+            let ledger_view = Box::new(FakeLedgerView::new());
+            let mut ledger = DoctorLedger::<MockWriter>::new(
+                MockWriter::new(),
+                ledger_view,
+                LedgerViewMode::Verbose,
+            );
+
+            doctor(
+                &mut handler,
+                &mut ledger,
+                &fake,
+                "",
+                2,
+                DEFAULT_RETRY_DELAY,
+                true,
+                version_str(),
+                Ok(None),
+                record_params_no_record(),
+            )
+            .await
+            .unwrap();
+
+            assert_eq!(
+                ledger.writer.get_data(),
+                format!(
+                    "\
+                    \n[✓] Killing Daemon\
+                    \n    [✓] Killing running daemons.\
+                    \n    [✓] Killed daemon PID: [2]\
+                    \n[✓] Starting Daemon\
+                    \n    [✓] Daemon spawned\
+                    \n    [✓] Daemon PID: [3]\
+                    \n    [✓] Connected to daemon\
+                    \n    [✓] Daemon version: {}\
+                    \n",
+                    DAEMON_VERSION
+                )
+            );
+        }
+
+        tx.send(()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_finds_target_connects_to_rcs() {
+    async fn test_finds_target_connects_to_rcs_setup(
+        mode: LedgerViewMode,
+    ) -> DoctorLedger<MockWriter> {
         let (tx, rx) = oneshot::channel::<()>();
 
         let fake = FakeDaemonManager::new(
@@ -1688,10 +1978,15 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(MockWriter::new(), ledger_view, mode);
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -1705,43 +2000,59 @@ mod test {
         .unwrap();
         tx.send(()).unwrap();
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
-                TestStepEntry::step(StepType::OpeningTargetHandle(Some(NODENAME.to_string()))),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::CheckingTarget(Some(
-                    UNRESPONSIVE_NODENAME.to_string(),
-                ))),
-                TestStepEntry::step(StepType::OpeningTargetHandle(Some(
-                    UNRESPONSIVE_NODENAME.to_string(),
-                ))),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithRcs),
-                TestStepEntry::result(StepResult::Timeout),
-                TestStepEntry::output_step(StepType::TargetSummary(default_results_map())),
-                TestStepEntry::output_step(StepType::RcsTerminalFailure),
-            ])
-            .await;
+        return ledger;
+    }
 
-        fake.assert_no_leftover_calls().await;
+    #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_connects_to_rcs_verbose() {
+        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Verbose).await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] Default target: (none)\
+            \n[✓] Searching for targets\
+            \n    [✓] 2 targets found\
+            \n[✓] Verifying Targets\
+            \n    [✓] Target: {}\
+            \n        [✓] Opened target handle\
+            \n        [✓] Connecting to RCS\
+            \n        [✓] Communicating with RCS\
+            \n    [✗] Target: {}\
+            \n        [✓] Opened target handle\
+            \n        [✓] Connecting to RCS\
+            \n        [✗] Timeout while communicating with RCS\
+            \n[✓] No issues found\n",
+                FRONTEND_VERSION, DAEMON_VERSION, NODENAME, UNRESPONSIVE_NODENAME,
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_connects_to_rcs_normal() {
+        let ledger = test_finds_target_connects_to_rcs_setup(LedgerViewMode::Normal).await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n[✓] Searching for targets\
+            \n    [✓] 2 targets found\
+            \n[✓] Verifying Targets\
+            \n    [✓] Target: {}\
+            \n    [✗] Target: {}\
+            \n[✓] No issues found\n",
+                NODENAME, UNRESPONSIVE_NODENAME,
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1753,10 +2064,19 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             &NODENAME,
             2,
@@ -1770,34 +2090,28 @@ mod test {
         .unwrap();
         tx.send(()).unwrap();
 
-        let mut map = HashMap::new();
-        map.insert(TargetCheckResult::Success, vec![Some(NODENAME.to_string())]);
-
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(NODENAME.to_string())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::CheckingTarget(Some(NODENAME.to_string()))),
-                TestStepEntry::step(StepType::OpeningTargetHandle(Some(NODENAME.to_string()))),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::TargetSummary(map)),
-            ])
-            .await;
-
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] Default target: (none)\
+            \n[✓] Searching for targets\
+            \n    [✓] 1 targets found\
+            \n[✓] Verifying Targets\
+            \n    [✓] Target: {}\
+            \n        [✓] Opened target handle\
+            \n        [✓] Connecting to RCS\
+            \n        [✓] Communicating with RCS\
+            \n[✓] No issues found\n",
+                FRONTEND_VERSION, DAEMON_VERSION, NODENAME,
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1809,11 +2123,20 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_targets(true, rx.shared()))],
+            vec![Ok(vec![1])],
         );
 
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             &NON_EXISTENT_NODENAME,
             1,
@@ -1827,25 +2150,22 @@ mod test {
         .unwrap();
         tx.send(()).unwrap();
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(NON_EXISTENT_NODENAME.to_string())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
-            ])
-            .await;
-
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] Default target: (none)\
+            \n[✗] Searching for targets\
+            \n    [✗] No targets found!\n",
+                FRONTEND_VERSION, DAEMON_VERSION
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1855,10 +2175,19 @@ mod test {
             vec![Ok(true), Ok(false)],
             vec![Ok(())],
             vec![Ok(setup_responsive_daemon_server())],
+            vec![Ok(vec![1, 2, 3]), Ok(vec![]), Ok(vec![4])],
         );
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -1871,29 +2200,75 @@ mod test {
         .await
         .unwrap();
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::output_step(StepType::DaemonForceRestart),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::KillingZombieDaemons),
-                TestStepEntry::result(StepResult::Other(NONE_RUNNING.to_string())),
-                TestStepEntry::step(StepType::SpawningDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
-            ])
-            .await;
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] Killing Daemon\
+            \n    [✓] Killing zombie daemons.\
+            \n    [✓] Killed daemon PID: [1, 2, 3]\
+            \n[✓] Starting Daemon\
+            \n    [✓] Daemon spawned\
+            \n    [✓] Daemon PID: [4]\
+            \n    [✓] Connected to daemon\
+            \n    [✓] Daemon version: {}\
+            \n",
+                DAEMON_VERSION
+            )
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_single_try_daemon_running_restart_daemon_pid_error() {
+        let fake = FakeDaemonManager::new(
+            vec![false],
+            vec![Ok(true), Ok(false)],
+            vec![Ok(())],
+            vec![Ok(setup_responsive_daemon_server())],
+            vec![
+                Err(anyhow!("some error msg")),
+                Err(anyhow!("some error msg")),
+                Err(anyhow!("some error msg")),
+            ],
+        );
+        let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
+        doctor(
+            &mut handler,
+            &mut ledger,
+            &fake,
+            "",
+            1,
+            DEFAULT_RETRY_DELAY,
+            true,
+            version_str(),
+            Ok(None),
+            record_params_no_record(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] Killing Daemon\
+            \n    [!] Error getting daemon pid: <reason omitted>\
+            \n    [✓] Killing zombie daemons.\
+            \n[✓] Starting Daemon\
+            \n    [✓] Daemon spawned\
+            \n    [✓] Connected to daemon\
+            \n    [✓] Daemon version: {}\
+            \n",
+                DAEMON_VERSION
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1903,14 +2278,23 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server())],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
         let temp = tempdir().unwrap();
         let root = temp.path().to_path_buf();
         let (fake_recorder, params) = record_params_with_temp(root);
 
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -1926,25 +2310,25 @@ mod test {
         let r = fake_recorder.lock().await;
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+                TestStepEntry::output_step(StepType::DoctorSummaryInitVerbose()),
+                TestStepEntry::output_step(StepType::Output(format!(
+                    "\
+                [✓] FFX doctor\
+                \n    [✓] Frontend version: {}\n\n\
+                [✓] Checking daemon\
+                \n    [✓] Daemon found: [1]\
+                \n    [✓] Connecting to daemon\
+                \n    [✓] Daemon version: daemon-build-string\
+                \n    [✓] Default target: (none)\n\n\
+                [✗] Searching for targets\
+                \n    [✗] No targets found!\n\n",
+                    FRONTEND_VERSION
+                ))),
                 TestStepEntry::step(StepType::GeneratingRecord),
                 TestStepEntry::result(StepResult::Success),
                 TestStepEntry::output_step(StepType::RecordGenerated(FakeRecorder::result_path())),
             ])
             .await;
-        fake.assert_no_leftover_calls().await;
         r.assert_generate_called();
     }
 
@@ -1957,11 +2341,20 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server())],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
 
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         assert!(doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -1977,19 +2370,20 @@ mod test {
         let _ = fake_recorder.lock().await;
         handler
             .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::NoTargetsFound),
-                TestStepEntry::output_step(StepType::TerminalNoTargetsFound),
+                TestStepEntry::output_step(StepType::DoctorSummaryInitVerbose()),
+                TestStepEntry::output_step(StepType::Output(format!(
+                    "\
+                [✓] FFX doctor\
+                \n    [✓] Frontend version: {}\n\n\
+                [✓] Checking daemon\
+                \n    [✓] Daemon found: [1]\
+                \n    [✓] Connecting to daemon\
+                \n    [✓] Daemon version: daemon-build-string\
+                \n    [✓] Default target: (none)\n\n\
+                [✗] Searching for targets\
+                \n    [✗] No targets found!\n\n",
+                    FRONTEND_VERSION
+                ))),
                 // Error will occur here.
             ])
             .await;
@@ -2014,8 +2408,9 @@ mod test {
         missing_field_test(fake_recorder, params).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_finds_target_with_missing_nodename() {
+    async fn test_finds_target_with_missing_nodename_setup(
+        mode: LedgerViewMode,
+    ) -> DoctorLedger<MockWriter> {
         let (tx, rx) = oneshot::channel::<()>();
 
         let fake = FakeDaemonManager::new(
@@ -2023,10 +2418,16 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_targets(false, rx.shared()))],
+            vec![Ok(vec![1])],
         );
+
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(MockWriter::new(), ledger_view, mode);
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -2040,47 +2441,57 @@ mod test {
         .unwrap();
         tx.send(()).unwrap();
 
-        let mut map = HashMap::new();
-        map.insert(TargetCheckResult::Success, vec![None]);
-        map.insert(TargetCheckResult::Failed, vec![Some(UNRESPONSIVE_NODENAME.to_string())]);
+        return ledger;
+    }
 
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::CheckingTarget(None)),
-                TestStepEntry::step(StepType::OpeningTargetHandle(None)),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::CheckingTarget(Some(
-                    UNRESPONSIVE_NODENAME.to_string(),
-                ))),
-                TestStepEntry::step(StepType::OpeningTargetHandle(Some(
-                    UNRESPONSIVE_NODENAME.to_string(),
-                ))),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ConnectingToRcs),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithRcs),
-                TestStepEntry::result(StepResult::Timeout),
-                TestStepEntry::output_step(StepType::TargetSummary(map)),
-                TestStepEntry::output_step(StepType::RcsTerminalFailure),
-            ])
-            .await;
+    #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_with_missing_nodename_verbose() {
+        let ledger = test_finds_target_with_missing_nodename_setup(LedgerViewMode::Verbose).await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] Default target: (none)\
+            \n[✓] Searching for targets\
+            \n    [✓] 2 targets found\
+            \n[✗] Verifying Targets\
+            \n    [!] Skipping target without node name\
+            \n    [✗] Target: {}\
+            \n        [✓] Opened target handle\
+            \n        [✓] Connecting to RCS\
+            \n        [✗] Timeout while communicating with RCS\
+            \n[✗] Doctor found issues in one or more categories.\n",
+                FRONTEND_VERSION, DAEMON_VERSION, UNRESPONSIVE_NODENAME,
+            )
+        );
+    }
 
-        fake.assert_no_leftover_calls().await;
+    #[fasync::run_singlethreaded(test)]
+    async fn test_finds_target_with_missing_nodename_normal() {
+        let ledger = test_finds_target_with_missing_nodename_setup(LedgerViewMode::Normal).await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n[✓] Searching for targets\
+            \n    [✓] 2 targets found\
+            \n[✗] Verifying Targets\
+            \n    [!] Skipping target without node name\
+            \n    [✗] Target: {}\
+            \n[✗] Doctor found issues in one or more categories; \
+            run 'ffx doctor -v' for more details.\n",
+                UNRESPONSIVE_NODENAME,
+            )
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -2090,10 +2501,19 @@ mod test {
             vec![],
             vec![],
             vec![Ok(setup_responsive_daemon_server_with_fastboot_target())],
+            vec![Ok(vec![1])],
         );
         let mut handler = FakeStepHandler::new();
+        let ledger_view = Box::new(FakeLedgerView::new());
+        let mut ledger = DoctorLedger::<MockWriter>::new(
+            MockWriter::new(),
+            ledger_view,
+            LedgerViewMode::Verbose,
+        );
+
         doctor(
             &mut handler,
+            &mut ledger,
             &fake,
             "",
             1,
@@ -2106,29 +2526,24 @@ mod test {
         .await
         .unwrap();
 
-        let mut map = HashMap::new();
-        map.insert(TargetCheckResult::SkippedFastboot, vec![Some(FASTBOOT_NODENAME.to_string())]);
-
-        handler
-            .assert_matches_steps(vec![
-                TestStepEntry::output_step(StepType::Started(Ok(None), version_str())),
-                TestStepEntry::step(StepType::DaemonRunning),
-                TestStepEntry::result(StepResult::Other(FOUND.to_string())),
-                TestStepEntry::step(StepType::ConnectingToDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::CommunicatingWithDaemon),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::DaemonVersion(daemon_version_info())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::step(StepType::ListingTargets(String::default())),
-                TestStepEntry::result(StepResult::Success),
-                TestStepEntry::output_step(StepType::SkippedFastboot(Some(
-                    FASTBOOT_NODENAME.to_string(),
-                ))),
-                TestStepEntry::output_step(StepType::TargetSummary(map)),
-            ])
-            .await;
-
-        fake.assert_no_leftover_calls().await;
+        assert_eq!(
+            ledger.writer.get_data(),
+            format!(
+                "\
+            \n[✓] FFX doctor\
+            \n    [✓] Frontend version: {}\
+            \n[✓] Checking daemon\
+            \n    [✓] Daemon found: [1]\
+            \n    [✓] Connecting to daemon\
+            \n    [✓] Daemon version: {}\
+            \n    [✓] Default target: (none)\
+            \n[✓] Searching for targets\
+            \n    [✓] 1 targets found\
+            \n[✗] Verifying Targets\
+            \n    [!] Skipping target in fastboot: {}\
+            \n[✗] Doctor found issues in one or more categories.\n",
+                FRONTEND_VERSION, DAEMON_VERSION, FASTBOOT_NODENAME
+            )
+        );
     }
 }
