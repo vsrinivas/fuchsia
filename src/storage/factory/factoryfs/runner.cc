@@ -10,6 +10,7 @@
 #include <fbl/auto_lock.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/storage/factory/factoryfs/admin_service.h"
 
 namespace factoryfs {
 
@@ -66,6 +67,9 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
 
       auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
       outgoing->AddEntry("svc", svc_dir);
+
+      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                        fbl::MakeRefCounted<AdminService>(loop_->dispatcher(), *this));
 
       query_svc_ = fbl::MakeRefCounted<fs::QueryService>(factoryfs_->vfs());
       svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
