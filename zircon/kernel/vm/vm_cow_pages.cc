@@ -1945,6 +1945,14 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       return ZX_ERR_NO_MEMORY;
     }
     VmPageOrMarker insert = VmPageOrMarker::Page(res_page);
+
+    // We could be allocating a page to replace a zero page marker in a pager-backed VMO. We're
+    // going to write to the page, so mark it Dirty. AddPageLocked below will then insert the page
+    // into the appropriate page queue.
+    if (is_source_preserving_page_content_locked()) {
+      res_page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
+    }
+
     zx_status_t status = AddPageLocked(&insert, offset);
     if (status != ZX_OK) {
       // AddPageLocked failing for any other reason is a programming error.
@@ -2590,7 +2598,15 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
 void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
   if (has_pager_backlinks_locked()) {
-    pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+    DEBUG_ASSERT(is_page_dirty_tracked(page));
+    // We can only move Clean pages to the pager backed queues as they track age information for
+    // eviction; only Clean pages can be evicted. Pages in AwaitingClean and Dirty are protected
+    // from eviction in the Dirty queue.
+    if (is_page_clean(page)) {
+      pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+    } else {
+      pmm_page_queues()->MoveToPagerBackedDirty(page, this, offset);
+    }
   } else {
     pmm_page_queues()->MoveToUnswappable(page);
   }
@@ -2598,7 +2614,15 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
 
 void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
   if (has_pager_backlinks_locked()) {
-    pmm_page_queues()->SetPagerBacked(page, this, offset);
+    DEBUG_ASSERT(is_page_dirty_tracked(page));
+    // We can only move Clean pages to the pager backed queues as they track age information for
+    // eviction; only Clean pages can be evicted. Pages in AwaitingClean and Dirty are protected
+    // from eviction in the Dirty queue.
+    if (is_page_clean(page)) {
+      pmm_page_queues()->SetPagerBacked(page, this, offset);
+    } else {
+      pmm_page_queues()->SetPagerBackedDirty(page, this, offset);
+    }
   } else {
     pmm_page_queues()->SetUnswappable(page);
   }
@@ -2645,10 +2669,10 @@ void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len)
       DEBUG_ASSERT(lookup.num_pages == 1);
       vm_page_t* page = paddr_to_vm_page(lookup.paddrs[0]);
       // Check to see if the page is owned by the root VMO. Hints only apply to the root.
-      // Don't move a pinned page to the DontNeed queue.
+      // Don't move a pinned page or a dirty page to the DontNeed queue.
       // Note that this does not unset the always_need bit if it has been previously set. The
       // always_need hint is sticky.
-      if (page->object.get_object() == root && page->object.pin_count == 0) {
+      if (page->object.get_object() == root && page->object.pin_count == 0 && is_page_clean(page)) {
         pmm_page_queues()->MoveToPagerBackedDontNeed(page);
       }
     }
@@ -3406,10 +3430,21 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
       [](const VmPageOrMarker* p, uint64_t off) {
         return p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_dirty(p->Page());
       },
-      [](const VmPageOrMarker* p, uint64_t off) {
-        DEBUG_ASSERT(p->IsPage() && is_page_dirty_tracked(p->Page()) && !is_page_dirty(p->Page()));
-        DEBUG_ASSERT(p->Page()->object.get_page_offset() == off);
-        p->Page()->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
+      [this](const VmPageOrMarker* p, uint64_t off) {
+        ASSERT(p->IsPage());
+        vm_page_t* page = p->Page();
+        DEBUG_ASSERT(is_page_dirty_tracked(page));
+        DEBUG_ASSERT(!is_page_dirty(page));
+        DEBUG_ASSERT(page->object.get_object() == this);
+        DEBUG_ASSERT(page->object.get_page_offset() == off);
+        page->object.dirty_state = static_cast<uint8_t>(DirtyState::Dirty);
+        // Move the page to the Dirty queue, which does not track page age. While the page is in the
+        // Dirty queue, age information is not required (yet). It will be required when the page
+        // becomes Clean (and hence evictable) again, at which point it will get moved to the MRU
+        // pager backed queue and will age as normal.
+        // TODO(rashaeqbal): We might want age tracking for the Dirty queue in the future when the
+        // kernel generates writeback pager requests.
+        pmm_page_queues()->MoveToPagerBackedDirty(page, this, off);
         return ZX_ERR_NEXT;
       },
       [this](uint64_t start, uint64_t end) {
@@ -3478,6 +3513,8 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
           vm_page_t* page = p->Page();
           DEBUG_ASSERT(page->object.get_page_offset() == off);
           page->object.dirty_state = static_cast<uint8_t>(DirtyState::AwaitingClean);
+          // Leave the page in the Dirty queue for now as it is not clean yet; move it out on
+          // WritebackEnd.
         }
         return ZX_ERR_NEXT;
       },
@@ -3514,12 +3551,16 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
   }
 
   return page_list_.ForEveryPageInRange(
-      [](auto* p, uint64_t off) {
+      [this](auto* p, uint64_t off) {
         // Transition pages from AwaitingClean to Clean.
         if (p->IsPage() && is_page_awaiting_clean(p->Page())) {
           vm_page_t* page = p->Page();
+          DEBUG_ASSERT(page->object.get_object() == this);
           DEBUG_ASSERT(page->object.get_page_offset() == off);
           page->object.dirty_state = static_cast<uint8_t>(DirtyState::Clean);
+          // Move the page back out to the evictable pager queues and start tracking age
+          // information.
+          pmm_page_queues()->MoveToPagerBacked(page, this, off);
         }
         return ZX_ERR_NEXT;
       },
@@ -3667,6 +3708,12 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
     return false;
   }
 
+  // We cannot evict the page unless it is clean. If the page is dirty, it will already have been
+  // moved to the dirty page queue.
+  if (!is_page_clean(page)) {
+    return false;
+  }
+
   // Do not evict if the |always_need| hint is set, unless we are told to ignore the eviction hint.
   if (page->object.always_need == 1 && hint_action == EvictionHintAction::Follow) {
     DEBUG_ASSERT(!pmm_is_loaned(page));
@@ -3683,8 +3730,6 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
     UpdateOnAccessLocked(page, VMM_PF_FLAG_SW_FAULT);
     return false;
   }
-
-  // TODO(rashaeqbal): Check for dirty_state != Dirty once the dirty queue is separate.
 
   // Remove any mappings to this page before we remove it.
   RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);

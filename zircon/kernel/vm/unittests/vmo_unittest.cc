@@ -605,7 +605,8 @@ static bool vmo_contiguous_decommit_test() {
     constexpr uint64_t kBorrowingVmoPages = 64;
     vm_page_t* pages[kBorrowingVmoPages];
     fbl::RefPtr<VmObjectPaged> borrowing_vmo;
-    status = make_committed_pager_vmo(kBorrowingVmoPages, &pages[0], &borrowing_vmo);
+    status = make_committed_pager_vmo(kBorrowingVmoPages, /*trap_dirty=*/false, &pages[0],
+                                      &borrowing_vmo);
     ASSERT_EQ(status, ZX_OK);
 
     // Updates borrowing_seen to true, if any pages of vmo are seen to be borrowed (maybe by
@@ -1342,7 +1343,7 @@ static bool vmo_move_pages_on_access_test() {
 
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Our page should now be in a pager backed page queue.
@@ -1395,7 +1396,7 @@ static bool vmo_eviction_hints_test() {
   // Create a pager-backed VMO with a single page.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Newly created page should be in the first pager backed page queue.
@@ -1509,7 +1510,7 @@ static bool vmo_always_need_evicts_loaned_test() {
       }
 
       // Create a pager-backed VMO with a single page.
-      status = make_committed_pager_vmo(1, &page, &vmo);
+      status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
       ASSERT_EQ(ZX_OK, status);
       ++iteration_count;
     } while (!pmm_is_loaned(page) && iteration_count < kMaxIterations);
@@ -1539,7 +1540,7 @@ static bool vmo_eviction_hints_clone_test() {
   // Create a pager-backed VMO with two pages. We will fork a page in a clone later.
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* pages[2];
-  zx_status_t status = make_committed_pager_vmo(2, pages, &vmo);
+  zx_status_t status = make_committed_pager_vmo(2, /*trap_dirty=*/false, pages, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   // Newly created pages should be in the first pager backed page queue.
@@ -1690,9 +1691,9 @@ static bool vmo_eviction_test() {
   fbl::RefPtr<VmObjectPaged> vmo2;
   vm_page_t* page;
   vm_page_t* page2;
-  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
-  status = make_committed_pager_vmo(1, &page2, &vmo2);
+  status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page2, &vmo2);
   ASSERT_EQ(ZX_OK, status);
 
   // Shouldn't be able to evict pages from the wrong VMO.
@@ -2211,7 +2212,7 @@ static bool vmo_attribution_evict_test() {
 
   fbl::RefPtr<VmObjectPaged> vmo;
   vm_page_t* page;
-  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
   uint64_t expected_gen_count = 2;
@@ -3019,6 +3020,200 @@ static bool vmo_stack_owned_loaned_pages_interval_test() {
   END_TEST;
 }
 
+static bool vmo_dirty_pages_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with a single page.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* page;
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+
+  // Newly created page should be in the first pager backed page queue.
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Rotate the queues and check the page moves.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(1u, queue);
+
+  // Accessing the page should move it back to the first queue.
+  EXPECT_OK(vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Now simulate a write to the page. This should move the page to the dirty queue.
+  ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Should not be able to evict a dirty page.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Accessing the page again should not move the page out of the dirty queue.
+  EXPECT_OK(vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  END_TEST;
+}
+
+static bool vmo_dirty_pages_writeback_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with a single page.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* page;
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+
+  // Newly created page should be in the first pager backed page queue.
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Now simulate a write to the page. This should move the page to the dirty queue.
+  ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Should not be able to evict a dirty page.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Begin writeback on the page. This should still keep the page in the dirty queue.
+  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Should not be able to evict a dirty page.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Accessing the page should not move the page out of the dirty queue either.
+  ASSERT_OK(vmo->GetPage(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr, nullptr));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Should not be able to evict a dirty page.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // End writeback on the page. This should finally move the page out of the dirty queue.
+  ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // We should be able to rotate the page as usual.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(1u, queue);
+
+  // Another write moves the page back to the Dirty queue.
+  ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Clean the page again, and try to evict it.
+  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
+  ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // We should now be able to evict the page.
+  ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  END_TEST;
+}
+
+static bool vmo_dirty_pages_with_hints_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a pager-backed VMO with a single page.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* page;
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+
+  // Newly created page should be in the first pager backed page queue.
+  size_t queue;
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Now simulate a write to the page. This should move the page to the dirty queue.
+  ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Hint DontNeed on the page. It should remain in the dirty queue.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Should not be able to evict a dirty page.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  // Hint AlwaysNeed on the page. It should remain in the dirty queue.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Clean the page.
+  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
+  ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Eviction should fail still because we hinted AlwaysNeed previously.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Eviction should succeed if we ignore the hint.
+  ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Ignore));
+
+  // Reset the vmo and retry some of the same actions as before, this time dirtying
+  // the page *after* hinting.
+  vmo.reset();
+
+  ASSERT_OK(make_committed_pager_vmo(1, /*trap_dirty=*/true, &page, &vmo));
+
+  // Newly created page should be in the first pager backed page queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
+  EXPECT_EQ(0u, queue);
+
+  // Hint DontNeed on the page. This should move the page to the DontNeed queue.
+  ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+
+  // Write to the page now. This should move it to the dirty queue.
+  ASSERT_OK(vmo->DirtyPages(0, PAGE_SIZE));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+  EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // Should not be able to evict a dirty page.
+  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
+      page, 0, VmCowPages::EvictionHintAction::Follow));
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -3066,6 +3261,9 @@ VM_UNITTEST(vmo_discardable_counts_test)
 VM_UNITTEST(vmo_lookup_pages_test)
 VM_UNITTEST(vmo_write_does_not_commit_test)
 VM_UNITTEST(vmo_stack_owned_loaned_pages_interval_test)
+VM_UNITTEST(vmo_dirty_pages_test)
+VM_UNITTEST(vmo_dirty_pages_writeback_test)
+VM_UNITTEST(vmo_dirty_pages_with_hints_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

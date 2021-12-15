@@ -121,6 +121,15 @@ class PageQueues {
   // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
   // given in SetPagerBacked apply.
   void MoveToPagerBackedDontNeed(vm_page_t* page);
+  // Place page in the Dirty pager backed queue. Must not already be in a page queue. Sets the back
+  // reference information. Same rules on keeping the back reference up to date as given in
+  // SetPagerBacked apply.
+  void SetPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  // Moves page from whichever queue it is currently in, to the Dirty pager backed queue. The
+  // object back reference information must have already been set by a previous call to
+  // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
+  // given in SetPagerBacked apply.
+  void MoveToPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
   // rules for back pointers apply as for SetPagerBacked.
   void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
@@ -282,6 +291,7 @@ class PageQueues {
   // This takes an optional output parameter that, if the function returns true, will contain the
   // index of the DontNeed queue that the page was in, 0 for DontNeedA and 1 for DontNeedB.
   bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page, size_t* queue = nullptr) const;
+  bool DebugPageIsPagerBackedDirty(const vm_page_t* page) const;
   bool DebugPageIsUnswappable(const vm_page_t* page) const;
   bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
   bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
@@ -323,6 +333,7 @@ class PageQueues {
     PageQueueUnswappable,
     PageQueueWired,
     PageQueueUnswappableZeroFork,
+    PageQueuePagerBackedDirty,
     PageQueuePagerBackedDontNeedA,
     PageQueuePagerBackedDontNeedB,
     PageQueuePagerBackedBase,
@@ -400,6 +411,14 @@ class PageQueues {
     // that the DontNeed queues be directly before the LRU queues, and next to each other.
     static_assert(PageQueuePagerBackedDontNeedA + 2 == PageQueuePagerBackedBase);
     static_assert(PageQueuePagerBackedDontNeedB == PageQueuePagerBackedDontNeedA + 1);
+
+    // Ensure that the Dirty queue comes before the smallest queue that would return true for this
+    // function. This function is used for computing active/inactive sets for the purpose of
+    // eviction, and dirty pages cannot be evicted. The Dirty queue also needs to come before the
+    // DontNeed queues so that MarkAccessed does not try to move the page to the MRU queue on
+    // access. All pager-backed queues except the Dirty queue contain evictable pages.
+    static_assert(PageQueuePagerBackedDirty < PageQueuePagerBackedDontNeedA);
+
     return page_queue >= PageQueuePagerBackedDontNeedA;
   }
 

@@ -801,6 +801,18 @@ void PageQueues::MoveToPagerBackedDontNeed(vm_page_t* page) {
                             GetCurrentDontNeedQueueLocked());
 }
 
+void PageQueues::SetPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+  Guard<CriticalMutex> guard{&lock_};
+  DEBUG_ASSERT(object);
+  SetQueueBacklinkLocked(page, object, page_offset, PageQueuePagerBackedDirty);
+}
+
+void PageQueues::MoveToPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+  Guard<CriticalMutex> guard{&lock_};
+  DEBUG_ASSERT(object);
+  MoveToQueueBacklinkLocked(page, object, page_offset, PageQueuePagerBackedDirty);
+}
+
 void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
   SetQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappableZeroFork);
@@ -969,6 +981,11 @@ bool PageQueues::DebugPageIsPagerBackedDontNeed(const vm_page_t* page, size_t* q
     return true;
   }
   return false;
+}
+
+bool PageQueues::DebugPageIsPagerBackedDirty(const vm_page_t* page) const {
+  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
+         PageQueuePagerBackedDirty;
 }
 
 bool PageQueues::DebugPageIsUnswappable(const vm_page_t* page) const {

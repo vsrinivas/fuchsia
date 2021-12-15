@@ -83,7 +83,7 @@ zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inou
   return ZX_OK;
 }
 
-zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
+zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, vm_page_t** out_pages,
                                      fbl::RefPtr<VmObjectPaged>* out_vmo) {
   // Disable the scanner so we can safely submit our aux vmo and query pages without eviction
   // happening.
@@ -92,7 +92,8 @@ zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
   // Create a pager backed VMO and jump through some hoops to pre-fill pages for it so we do not
   // actually take any page faults.
   fbl::AllocChecker ac;
-  fbl::RefPtr<StubPageProvider> pager = fbl::MakeRefCountedChecked<StubPageProvider>(&ac);
+  fbl::RefPtr<StubPageProvider> pager =
+      fbl::MakeRefCountedChecked<StubPageProvider>(&ac, trap_dirty);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

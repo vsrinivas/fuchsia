@@ -92,7 +92,7 @@ class TestPageRequest {
 // by a user pager, but is incapable of actually providing pages.
 class StubPageProvider : public PageProvider {
  public:
-  StubPageProvider() = default;
+  StubPageProvider(bool trap_dirty = false) : trap_dirty_(trap_dirty) {}
   ~StubPageProvider() override = default;
 
   const PageSourceProperties& properties() const override { return properties_; }
@@ -113,7 +113,13 @@ class StubPageProvider : public PageProvider {
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
   void Dump() override {}
   bool SupportsPageRequestType(page_request_type type) const override {
-    return type == page_request_type::READ;
+    if (type == page_request_type::READ) {
+      return true;
+    }
+    if (type == page_request_type::DIRTY) {
+      return trap_dirty_;
+    }
+    return false;
   }
 
   PageSourceProperties properties_{
@@ -122,15 +128,17 @@ class StubPageProvider : public PageProvider {
       .is_providing_specific_physical_pages = false,
       .is_handling_free = false,
   };
+  const bool trap_dirty_ = false;
 };
 
 // Helper function to allocate memory in a user address space.
 zx_status_t AllocUser(VmAspace* aspace, const char* name, size_t size, user_inout_ptr<void>* ptr);
 
 // Create a pager-backed VMO |out_vmo| with size equals |num_pages| pages, and commit all its pages.
-// Return pointers to the pages committed in |out_pages|, so that tests can examine their state.
-// Allows tests to work with pager-backed VMOs without blocking on page faults.
-zx_status_t make_committed_pager_vmo(size_t num_pages, vm_page_t** out_pages,
+// |trap_dirty| controls whether modifications to pages must be trapped in order to generate DIRTY
+// page requests. Return pointers to the pages committed in |out_pages|, so that tests can examine
+// their state. Allows tests to work with pager-backed VMOs without blocking on page faults.
+zx_status_t make_committed_pager_vmo(size_t num_pages, bool trap_dirty, vm_page_t** out_pages,
                                      fbl::RefPtr<VmObjectPaged>* out_vmo);
 
 uint32_t test_rand(uint32_t seed);

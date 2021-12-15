@@ -207,7 +207,7 @@ static bool vmaspace_accessed_test() {
   // user pager backed memory as harvesting is allowed to be limited to just that.
   vm_page_t* page;
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = make_committed_pager_vmo(1, &page, &vmo);
+  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &vmo);
   ASSERT_EQ(ZX_OK, status);
   auto mem = testing::UserMemory::Create(vmo);
 
@@ -272,7 +272,7 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   // user pager backed memory as harvesting is allowed to be limited to just that.
   vm_page_t* page;
   fbl::RefPtr<VmObjectPaged> mapping_vmo;
-  zx_status_t status = make_committed_pager_vmo(1, &page, &mapping_vmo);
+  zx_status_t status = make_committed_pager_vmo(1, /*trap_dirty=*/false, &page, &mapping_vmo);
   ASSERT_EQ(ZX_OK, status);
   auto mem = testing::UserMemory::Create(mapping_vmo);
 
