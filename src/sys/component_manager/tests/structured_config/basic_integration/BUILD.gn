@@ -3,15 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/fidl/fidl.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
 
-group("basic_integration") {
-  testonly = true
-  deps = [
-    ":basic_structured_config_tests_with_false",
-    ":basic_structured_config_tests_with_true",
-  ]
+# TODO(https://fxbug.dev/86136) replace with a generated library
+fidl("test.structuredconfig.receiver") {
+  sources = [ "fidl/receiver.test.fidl" ]
 }
 
 fuchsia_component("basic_config_receiver") {
@@ -24,24 +22,33 @@ fuchsia_component("basic_config_receiver") {
 rustc_test("basic_integration_tests") {
   testonly = true
   sources = [ "src/lib.rs" ]
-
   deps = [
+    ":test.structuredconfig.receiver-rustc",
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/sys/lib/cm_rust",
+    "//src/sys/lib/config_encoder",
   ]
 }
 
 # this template gives us a clear boundary around what varies in the different test executions
 template("my_flag_test") {
-  values_target = "${target_name}_values_${invoker.my_flag}"
+  my_flag = invoker.my_flag
+  values_target = "${target_name}_values_${my_flag}"
 
   fuchsia_structured_config_values(values_target) {
     testonly = true
     component = ":basic_config_receiver"
-    values = "config/basic_config_values_with_${invoker.my_flag}.json5"
+    values = "config/basic_config_values_with_${my_flag}.json5"
+  }
+
+  if (my_flag) {
+    resource("my_flag_is_true") {
+      sources = [ "config/include_in_pkg_if_my_flag_true" ]
+      outputs = [ "data/my_flag_is_true" ]
+    }
   }
 
   fuchsia_unittest_package(target_name) {
@@ -50,6 +57,10 @@ template("my_flag_test") {
       ":basic_config_receiver",
       ":basic_integration_tests",
     ]
+
+    if (my_flag) {
+      deps += [ ":my_flag_is_true" ]
+    }
   }
 }
 
@@ -59,4 +70,12 @@ my_flag_test("basic_structured_config_tests_with_true") {
 
 my_flag_test("basic_structured_config_tests_with_false") {
   my_flag = false
+}
+
+group("basic_integration") {
+  testonly = true
+  deps = [
+    ":basic_structured_config_tests_with_false",
+    ":basic_structured_config_tests_with_true",
+  ]
 }

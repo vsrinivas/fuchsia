@@ -1,0 +1,31 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.structuredconfig.receiver;
+
+
+// the lines are sorted alphabetically by field name to match cmc's current behavior
+// TODO(https://fxbug.dev/86136) replace with a generated library
+type ReceiverConfig = struct {
+    my_flag bool;
+    my_int16 int16;
+    my_int32 int32;
+    my_int64 int64;
+    my_int8 int8;
+    my_string string:100;
+    my_uint16 uint16;
+    my_uint32 uint32;
+    my_uint64 uint64;
+    my_uint8 uint8;
+    my_vector_of_flag vector<bool>:100;
+    my_vector_of_int16 vector<int16>:100;
+    my_vector_of_int32 vector<int32>:100;
+    my_vector_of_int64 vector<int64>:100;
+    my_vector_of_int8 vector<int8>:100;
+    my_vector_of_string vector<string:100>:100;
+    my_vector_of_uint16 vector<uint16>:100;
+    my_vector_of_uint32 vector<uint32>:100;
+    my_vector_of_uint64 vector<uint64>:100;
+    my_vector_of_uint8 vector<uint8>:100;
+};
