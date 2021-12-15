@@ -10,12 +10,16 @@ executable("bin") {
   sources = [
     "channels.cc",
     "handle_creation.cc",
+    "round_trips.cc",
     "test_runner.cc",
   ]
   deps = [
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//zircon/system/ulib/perftest" ]
