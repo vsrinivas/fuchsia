@@ -15,16 +15,26 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/common.h"
+#include "src/storage/blobfs/compression_settings.h"
+#include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
 
 namespace blobfs {
 namespace {
 
-class LargeBlobTest : public BlobfsFixedDiskSizeTest {
- public:
-  LargeBlobTest() : BlobfsFixedDiskSizeTest(GetDiskSize()) {}
+fs_test::TestFilesystemOptions TestParams(uint64_t disk_size) {
+  auto options = BlobfsWithFixedDiskSizeTestParam(disk_size);
+  // Disabling compression speeds up the test.  Since we want to generate an uncompressible blob to
+  // take up the maximum amount of space anyways, compression is wasted effort.
+  options.blob_compression_algorithm = CompressionAlgorithm::kUncompressed;
+  return options;
+}
 
-  static uint64_t GetDataBlockCount() { return 12 * kBlobfsBlockBits / 10; }
+class LargeBlobTest : public BaseBlobfsTest {
+ public:
+  LargeBlobTest() : BaseBlobfsTest(TestParams(GetDiskSize())) {}
+
+  static uint64_t GetDataBlockCount() { return kBlobfsBlockBits + 1; }
 
  private:
   static uint64_t GetDiskSize() {
@@ -43,10 +53,13 @@ class LargeBlobTest : public BlobfsFixedDiskSizeTest {
 TEST_F(LargeBlobTest, UseSecondBitmap) {
   // Create (and delete) a blob large enough to overflow into the second bitmap block.
   size_t blob_size = ((GetDataBlockCount() / 2) + 1) * kBlobfsBlockSize;
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), blob_size);
+  std::unique_ptr<BlobInfo> info =
+      GenerateBlob([](void*, size_t) { /* NOP */ }, fs().mount_path(), blob_size);
 
   fbl::unique_fd fd;
+  fprintf(stderr, "Writing %zu bytes...\n", blob_size);
   ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &fd));
+  fprintf(stderr, "Done writing %zu bytes\n", blob_size);
   ASSERT_EQ(syncfs(fd.get()), 0);
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(unlink(info->path), 0);

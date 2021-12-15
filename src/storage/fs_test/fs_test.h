@@ -27,6 +27,7 @@
 #include <ramdevice-client/ramnand.h>
 
 #include "src/storage/blobfs/blob_layout.h"
+#include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace fs_test {
@@ -38,6 +39,8 @@ using RamDevice = std::variant<storage::RamDisk, ramdevice_client::RamNand>;
 struct TestFilesystemOptions {
   static TestFilesystemOptions DefaultBlobfs();
   static TestFilesystemOptions BlobfsWithoutFvm();
+
+  fs_management::MountOptions AsMountOptions() const;
 
   std::string description;
   bool use_ram_nand = false;
@@ -68,6 +71,8 @@ struct TestFilesystemOptions {
 
   // The format blobfs should store blobs in.
   blobfs::BlobLayoutFormat blob_layout_format = blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+  // The compression algorithm blobfs should use for new files.
+  std::optional<blobfs::CompressionAlgorithm> blob_compression_algorithm = std::nullopt;
 
   // If using ram_nand, the number of writes after which writes should fail.
   uint32_t fail_after;

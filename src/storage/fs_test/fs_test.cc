@@ -40,6 +40,7 @@
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
+#include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/json_filesystem.h"
 #include "src/storage/fs_test/test_filesystem.h"
@@ -422,6 +423,15 @@ TestFilesystemOptions TestFilesystemOptions::BlobfsWithoutFvm() {
   return blobfs_with_no_fvm;
 }
 
+fs_management::MountOptions TestFilesystemOptions::AsMountOptions() const {
+  fs_management::MountOptions options;
+  if (blob_compression_algorithm) {
+    options.write_compression_algorithm =
+        blobfs::CompressionAlgorithmToString(*blob_compression_algorithm);
+  }
+  return options;
+}
+
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options) {
   return out << options.description;
 }
@@ -578,7 +588,7 @@ zx::status<TestFilesystem> TestFilesystem::FromInstance(
   static uint32_t mount_index;
   TestFilesystem filesystem(options, std::move(instance),
                             std::string("/fs_test." + std::to_string(mount_index++) + "/"));
-  auto status = filesystem.Mount();
+  auto status = filesystem.Mount(options.AsMountOptions());
   if (status.is_error()) {
     return status.take_error();
   }

@@ -45,13 +45,6 @@ class BlobfsTest : public BaseBlobfsTest {
   explicit BlobfsTest() : BaseBlobfsTest(BlobfsDefaultTestParam()) {}
 };
 
-// A test fixture for tests that only run against blobfs with a fixed disk size.
-class BlobfsFixedDiskSizeTest : public BaseBlobfsTest {
- protected:
-  explicit BlobfsFixedDiskSizeTest(uint64_t disk_size)
-      : BaseBlobfsTest(BlobfsWithFixedDiskSizeTestParam(disk_size)) {}
-};
-
 // A test fixture for tests that only run against blobfs with FVM.
 class BlobfsWithFvmTest : public BaseBlobfsTest {
  protected:
