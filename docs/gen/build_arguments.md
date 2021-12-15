@@ -3720,7 +3720,7 @@ Platform portability header for spinel.
 From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/3efdc0475dadf3b3ea6fd98c72bd004e92adfa59/src/lib/spinel/BUILD.gn#32)
 
 ### start_oobe
-Whether or not to launch OOBE workflow on startup.
+TODO(http://fxb/85576): Whether or not to launch OOBE workflow on startup.
 
 **Current value (from the default):** `false`
 
@@ -3859,7 +3859,7 @@ From //build/config/clang/time_trace.gni:8
 ### toolchain_variant
 *This should never be set as a build argument.*
 It exists only to be set in `toolchain_args`.
-See //docs/development/build/concepts/build_system/internals/toolchains/build_variants.md
+See //docs/concepts/build_system/internals/toolchains/build_arguments.md#toolchain_variant
 for details and documentation for each field.
 
 **Current value (from the default):**
