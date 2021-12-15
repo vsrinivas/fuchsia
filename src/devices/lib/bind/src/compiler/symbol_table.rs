@@ -222,6 +222,7 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_USB_CLASS".to_string(), 0x0202));
     keys.push(("BIND_USB_SUBCLASS".to_string(), 0x0203));
     keys.push(("BIND_USB_PROTOCOL".to_string(), 0x0204));
+    keys.push(("BIND_USB_INTERFACE_NUMBER".to_string(), 0x0205));
 
     // Platform bus binding variables at 0x03XX
     keys.push(("BIND_PLATFORM_DEV_VID".to_string(), 0x0300));
