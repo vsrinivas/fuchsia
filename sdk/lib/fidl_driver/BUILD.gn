@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("include") {
+  include_dirs = [ "include" ]
+}
+
+source_set("fidl_driver") {
+  sources = [ "include/lib/fidl/driver/wire_messaging.h" ]
+  public_configs = [ ":include" ]
+  public_deps = []
+  deps = [
+    "//sdk/lib/driver_runtime",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}

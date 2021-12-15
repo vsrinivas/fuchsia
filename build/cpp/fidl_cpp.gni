@@ -469,7 +469,10 @@ template("fidl_cpp_family") {
                              ])
       forward_variables_from(common_options, "*")
       forward_variables_from(driver_options, "*")
-      additional_public_deps = llcpp_public_deps + [ ":" + wire_types_target ]
+      additional_public_deps = llcpp_public_deps + [
+                                 ":" + wire_types_target,
+                                 "//sdk/lib/fidl_driver",
+                               ]
     }
   }
 

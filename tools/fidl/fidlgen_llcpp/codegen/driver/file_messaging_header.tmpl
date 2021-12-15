@@ -18,7 +18,7 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
   #include <{{ .Library | Filename "Markers" }}>
   #include <{{ .Library | Filename "TypesHeader" }}>
 
-  #include <lib/fidl/llcpp/wire_messaging.h>
+  #include <lib/fidl/driver/wire_messaging.h>
 
   {{ IfdefFuchsia }}
     #include <lib/fidl/llcpp/client.h>

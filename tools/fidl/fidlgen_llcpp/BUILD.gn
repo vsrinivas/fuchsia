@@ -141,7 +141,9 @@ group("goldens") {
     if (info[denylist_key] + [ "fidlgen_llcpp" ] - [ "fidlgen_llcpp" ] ==
         info[denylist_key]) {
       deps += [ "${info.target}_llcpp" ]
-      deps += [ "${info.target}_driver" ]
+      if (is_fuchsia) {
+        deps += [ "${info.target}_driver" ]
+      }
     }
   }
 }

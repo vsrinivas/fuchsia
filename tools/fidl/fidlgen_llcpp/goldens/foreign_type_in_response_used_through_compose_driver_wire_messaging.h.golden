@@ -4,7 +4,7 @@
 
 #include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
 #include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/wire_types.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/driver/wire_messaging.h>
 
 #ifdef __Fuchsia__
 
