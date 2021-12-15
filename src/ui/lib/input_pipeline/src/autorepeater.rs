@@ -47,7 +47,7 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { delay: Duration::from_millis(200), period: Duration::from_millis(100) }
+        Settings { delay: Duration::from_millis(250), period: Duration::from_millis(50) }
     }
 }
 
