@@ -218,6 +218,19 @@ pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_dev
     }
 }
 
+/// Creates a fake handled input event with the given event time.  Please do not
+/// read into other event fields.
+pub fn create_fake_handled_input_event(
+    event_time: input_device::EventTime,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        event_time,
+        device_event: input_device::InputDeviceEvent::Fake,
+        device_descriptor: input_device::InputDeviceDescriptor::Fake,
+        handled: input_device::Handled::Yes,
+    }
+}
+
 /// Creates an [`input_device::InputDeviceDescriptor`] for a consumer controls device.
 pub fn consumer_controls_device_descriptor() -> input_device::InputDeviceDescriptor {
     input_device::InputDeviceDescriptor::ConsumerControls(
