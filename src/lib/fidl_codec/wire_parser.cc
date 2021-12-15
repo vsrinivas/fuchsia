@@ -15,7 +15,7 @@ namespace {
 // JSON object which represents the message. The format of the message is
 // specified by str.
 // Returns true on success, false on failure.
-bool DecodeMessage(const Struct& str, const uint8_t* bytes, size_t num_bytes,
+bool DecodeMessage(const Struct* str, const uint8_t* bytes, size_t num_bytes,
                    const zx_handle_disposition_t* handles, size_t num_handles,
                    std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream) {
   MessageDecoder decoder(bytes, num_bytes, handles, num_handles, error_stream);
@@ -28,20 +28,20 @@ bool DecodeMessage(const Struct& str, const uint8_t* bytes, size_t num_bytes,
 bool DecodeRequest(const InterfaceMethod* method, const uint8_t* bytes, size_t num_bytes,
                    const zx_handle_disposition_t* handles, size_t num_handles,
                    std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream) {
-  if (method->request() == nullptr) {
+  if (!method->has_request()) {
     return false;
   }
-  return DecodeMessage(*method->request(), bytes, num_bytes, handles, num_handles, decoded_object,
+  return DecodeMessage(method->request(), bytes, num_bytes, handles, num_handles, decoded_object,
                        error_stream);
 }
 
 bool DecodeResponse(const InterfaceMethod* method, const uint8_t* bytes, size_t num_bytes,
                     const zx_handle_disposition_t* handles, size_t num_handles,
                     std::unique_ptr<StructValue>* decoded_object, std::ostream& error_stream) {
-  if (method->response() == nullptr) {
+  if (!method->has_response()) {
     return false;
   }
-  return DecodeMessage(*method->response(), bytes, num_bytes, handles, num_handles, decoded_object,
+  return DecodeMessage(method->response(), bytes, num_bytes, handles, num_handles, decoded_object,
                        error_stream);
 }
 

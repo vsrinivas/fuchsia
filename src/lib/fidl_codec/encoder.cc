@@ -57,7 +57,7 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, const u
                       ? WireVersion::kWireV2
                       : WireVersion::kWireV1);
 
-  size_t object_size = object.struct_definition().Size(encoder.version());
+  size_t object_size = object.struct_definition().Size(encoder.version()) + kTransactionHeaderSize;
   encoder.AllocateObject(object_size);
   encoder.WriteValue(tx_id);
   encoder.WriteValue(flags[0]);
@@ -68,7 +68,7 @@ Encoder::Result Encoder::EncodeMessage(uint32_t tx_id, uint64_t ordinal, const u
   FX_DCHECK(sizeof(fidl_message_header_t) == encoder.current_offset_);
 
   // The primary object offsets include the header size, so the offset of the object is zero.
-  encoder.VisitStructValueBody(0, &object);
+  encoder.VisitStructValueBody(kTransactionHeaderSize, &object);
 
   return Result{std::move(encoder.bytes_), std::move(encoder.handles_)};
 }

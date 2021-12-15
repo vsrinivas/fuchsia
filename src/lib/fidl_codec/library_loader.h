@@ -240,7 +240,11 @@ class Struct {
   friend class Library;
   friend class InterfaceMethod;
 
-  Struct(std::string_view name) : name_(name) {}
+  Struct() = default;
+
+  static const Struct Empty;
+
+  explicit Struct(std::string_view name) : name_(name) {}
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
@@ -270,21 +274,8 @@ class Struct {
  private:
   Struct(Library* enclosing_library, const rapidjson::Value* json_definition);
 
-  // Decode all the values from the JSON definition if the object represents a
-  // structure.
-  void DecodeStructTypes();
-
-  // Decode all the values from the JSON definition if the object represents a
-  // request message.
-  void DecodeRequestTypes();
-
-  // Decode all the values from the JSON definition if the object represents a
-  // response message.
-  void DecodeResponseTypes();
-
   // Decode all the values from the JSON definition.
-  void DecodeTypes(std::string_view container_name, const char* size_name, const char* member_name,
-                   const char* v1_name, const char* v2_name);
+  void DecodeTypes();
 
   Library* enclosing_library_ = nullptr;
   const rapidjson::Value* json_definition_ = nullptr;
@@ -356,17 +347,19 @@ class InterfaceMethod {
   const std::string& name() const { return name_; }
   Ordinal64 ordinal() const { return ordinal_; }
   bool is_composed() const { return is_composed_; }
+  bool has_request() const { return has_request_; }
   Struct* request() const {
     if (request_ != nullptr) {
-      request_->DecodeRequestTypes();
+      request_->DecodeTypes();
     }
-    return request_.get();
+    return request_;
   }
+  bool has_response() const { return has_response_; }
   Struct* response() const {
     if (response_ != nullptr) {
-      response_->DecodeResponseTypes();
+      response_->DecodeTypes();
     }
-    return response_.get();
+    return response_;
   }
 
   semantic::MethodSemantic* semantic() { return semantic_.get(); }
@@ -385,10 +378,10 @@ class InterfaceMethod {
 
   void Decode() {
     if (request_ != nullptr) {
-      request_->DecodeRequestTypes();
+      request_->DecodeTypes();
     }
     if (response_ != nullptr) {
-      response_->DecodeResponseTypes();
+      response_->DecodeTypes();
     }
   }
 
@@ -398,14 +391,18 @@ class InterfaceMethod {
   InterfaceMethod& operator=(const InterfaceMethod&) = delete;
 
  private:
-  InterfaceMethod(const Interface& interface, const rapidjson::Value* json_definition);
+  InterfaceMethod(Library* enclosing_library, const Interface& interface,
+                  const rapidjson::Value* json_definition);
 
+  Library* enclosing_library_;
   const Interface* const enclosing_interface_ = nullptr;
   const std::string name_;
   const Ordinal64 ordinal_ = 0;
   const bool is_composed_ = false;
-  std::unique_ptr<Struct> request_;
-  std::unique_ptr<Struct> response_;
+  bool has_request_ = false;
+  Struct* request_ = nullptr;
+  bool has_response_ = false;
+  Struct* response_ = nullptr;
   std::unique_ptr<semantic::MethodSemantic> semantic_;
   std::unique_ptr<semantic::MethodDisplay> short_display_;
 };
@@ -435,7 +432,7 @@ class Interface {
   Interface(Library* enclosing_library, const rapidjson::Value& json_definition)
       : enclosing_library_(enclosing_library), name_(json_definition["name"].GetString()) {
     for (auto& method : json_definition["methods"].GetArray()) {
-      interface_methods_.emplace_back(new InterfaceMethod(*this, &method));
+      interface_methods_.emplace_back(new InterfaceMethod(enclosing_library, *this, &method));
     }
   }
 
@@ -496,6 +493,14 @@ class Library {
   void FieldNotFound(std::string_view container_type, std::string_view container_name,
                      const char* field_name);
 
+  Struct* GetPayload(const std::string& payload_name) const {
+    auto result = payloads_.find(payload_name);
+    if (result == payloads_.end()) {
+      return nullptr;
+    }
+    return result->second.get();
+  }
+
   const Table* GetTable(const std::string& table_name) const {
     auto result = tables_.find(table_name);
     if (result == tables_.end()) {
@@ -517,6 +522,7 @@ class Library {
   bool has_errors_ = false;
   std::string name_;
   std::vector<std::unique_ptr<Interface>> interfaces_;
+  std::map<std::string, std::unique_ptr<Struct>> payloads_;
   std::map<std::string, std::unique_ptr<Enum>> enums_;
   std::map<std::string, std::unique_ptr<Bits>> bits_;
   std::map<std::string, std::unique_ptr<Union>> unions_;

@@ -20,6 +20,9 @@
 
 namespace fidl_codec {
 
+// Transaction header size in bytes.
+constexpr uint32_t kTransactionHeaderSize = 16;
+
 class LibraryLoader;
 class StructType;
 class TableType;

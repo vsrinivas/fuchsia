@@ -31,10 +31,54 @@ class Library {
       interface: this.ir.interface_declarations,
       service: this.ir.service_declarations,
       struct: this.ir.struct_declarations,
+      external_struct: this.ir.external_struct_declarations,
       table: this.ir.table_declarations,
       union: this.ir.union_declarations,
       xunion: this.ir.xunion_declarations,
       type_alias: this.ir.type_alias_declarations,
+    }
+
+    // Match each method with its request and response payloads.
+    for (let protocol of this.ir.interface_declarations) {
+      for (let method of protocol.methods) {
+        if (!method.has_request || !method.maybe_request_payload) {
+          method.maybe_request = [];
+        } else {
+          if (method.maybe_request_payload.kind != "identifier") {
+            throw new Error(`Method '${method.name}' of protocol '${protocol.name}' has invalid maybe_request_payload type`);
+          }
+
+          let payload = method.maybe_request_payload.identifier;
+          let decl = this._findDeclaration(this.ir.struct_declarations, payload);
+          if (decl == null) {
+            decl = this._findDeclaration(this.ir.external_struct_declarations, payload);
+            if (decl == null) {
+              throw new Error(`Method '${method.name}' of protocol '${protocol.name}' uses unknown payload '${payload}'`);
+            }
+          }
+
+          method.maybe_request = decl.members;
+        }
+
+        if (!method.has_response || !method.maybe_response_payload) {
+          method.maybe_response = [];
+        } else {
+          if (method.maybe_response_payload.kind != "identifier") {
+            throw new Error(`Method '${method.name}' of protocol '${protocol.name}' has invalid maybe_response_payload type`);
+          }
+
+          let payload = method.maybe_response_payload.identifier;
+          let decl = this._findDeclaration(this.ir.struct_declarations, payload);
+          if (decl == null) {
+            decl = this._findDeclaration(this.ir.external_struct_declarations, payload);
+            if (decl == null) {
+              throw new Error(`Method '${method.name}' of protocol '${protocol.name}' uses unknown payload '${payload}'`);
+            }
+          }
+
+          method.maybe_response = decl.members;
+        }
+      }
     }
   }
 

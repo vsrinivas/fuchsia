@@ -172,61 +172,41 @@ void StructMember::reset_type() { type_ = nullptr; }
 Struct::Struct(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
 
+const Struct Struct::Empty = Struct();
+
 void Struct::AddMember(std::string_view name, std::unique_ptr<Type> type, uint32_t id) {
   members_.emplace_back(std::make_unique<StructMember>(name, std::move(type), id));
 }
 
-void Struct::DecodeStructTypes() {
+void Struct::DecodeTypes() {
   if (json_definition_ == nullptr) {
     return;
   }
-  DecodeTypes("struct", "size", "members", "type_shape_v1", "type_shape_v2");
-}
-
-void Struct::DecodeRequestTypes() {
-  if (json_definition_ == nullptr) {
-    return;
-  }
-  DecodeTypes("request", "maybe_request_size", "maybe_request", "maybe_request_type_shape_v1",
-              "maybe_request_type_shape_v2");
-}
-
-void Struct::DecodeResponseTypes() {
-  if (json_definition_ == nullptr) {
-    return;
-  }
-  DecodeTypes("response", "maybe_response_size", "maybe_response", "maybe_response_type_shape_v1",
-              "maybe_response_type_shape_v2");
-}
-
-void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
-                         const char* member_name, const char* v1_name, const char* v2_name) {
-  FX_DCHECK(json_definition_ != nullptr);
   const rapidjson::Value* json_definition = json_definition_;
   // Reset json_definition_ member to allow recursive declarations.
   json_definition_ = nullptr;
-  name_ = enclosing_library_->ExtractString(json_definition, container_name, "<unknown>", "name");
+  name_ = enclosing_library_->ExtractString(json_definition, "struct", "<unknown>", "name");
 
-  if (!json_definition->HasMember(v1_name)) {
-    enclosing_library_->FieldNotFound(container_name, name_, v1_name);
+  if (!json_definition->HasMember("type_shape_v1")) {
+    enclosing_library_->FieldNotFound("struct", name_, "type_shape_v1");
   } else {
-    const rapidjson::Value& v1 = (*json_definition)[v1_name];
+    const rapidjson::Value& v1 = (*json_definition)["type_shape_v1"];
     size_v1_ = static_cast<uint32_t>(
-        enclosing_library_->ExtractUint64(&v1, container_name, name_, "inline_size"));
+        enclosing_library_->ExtractUint64(&v1, "struct", name_, "inline_size"));
   }
 
-  if (!json_definition->HasMember(v2_name)) {
-    enclosing_library_->FieldNotFound(container_name, name_, v2_name);
+  if (!json_definition->HasMember("type_shape_v2")) {
+    enclosing_library_->FieldNotFound("struct", name_, "type_shape_v2");
   } else {
-    const rapidjson::Value& v2 = (*json_definition)[v2_name];
+    const rapidjson::Value& v2 = (*json_definition)["type_shape_v2"];
     size_v2_ = static_cast<uint32_t>(
-        enclosing_library_->ExtractUint64(&v2, container_name, name_, "inline_size"));
+        enclosing_library_->ExtractUint64(&v2, "struct", name_, "inline_size"));
   }
 
-  if (!json_definition->HasMember(member_name)) {
-    enclosing_library_->FieldNotFound(container_name, name_, member_name);
+  if (!json_definition->HasMember("members")) {
+    enclosing_library_->FieldNotFound("struct", name_, "members");
   } else {
-    auto member_arr = (*json_definition)[member_name].GetArray();
+    auto member_arr = (*json_definition)["members"].GetArray();
     members_.reserve(member_arr.Size());
     for (auto& member : member_arr) {
       members_.push_back(std::make_unique<StructMember>(enclosing_library_, &member));
@@ -286,22 +266,41 @@ void Table::DecodeTypes() {
   }
 }
 
-InterfaceMethod::InterfaceMethod(const Interface& interface,
+InterfaceMethod::InterfaceMethod(Library* enclosing_library, const Interface& interface,
                                  const rapidjson::Value* json_definition)
-    : enclosing_interface_(&interface),
+    : enclosing_library_(enclosing_library),
+      enclosing_interface_(&interface),
       name_(interface.enclosing_library()->ExtractString(json_definition, "method", "<unknown>",
                                                          "name")),
       ordinal_(interface.enclosing_library()->ExtractUint64(json_definition, "method", name_,
                                                             "ordinal")),
       is_composed_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
-                                                              "is_composed")) {
+                                                              "is_composed")),
+      has_request_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
+                                                              "has_request")),
+      has_response_(interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
+                                                               "has_response")) {
   if (interface.enclosing_library()->ExtractBool(json_definition, "method", name_, "has_request")) {
-    request_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), json_definition));
+    if (json_definition->HasMember("maybe_request_payload")) {
+      const rapidjson::Value& payload_type = (*json_definition)["maybe_request_payload"];
+      if (!payload_type.HasMember("identifier")) {
+        enclosing_library_->FieldNotFound("request", name_, "identifier");
+      } else {
+        request_ = enclosing_library_->GetPayload(payload_type["identifier"].GetString());
+      }
+    }
   }
 
   if (interface.enclosing_library()->ExtractBool(json_definition, "method", name_,
                                                  "has_response")) {
-    response_ = std::unique_ptr<Struct>(new Struct(interface.enclosing_library(), json_definition));
+    if (json_definition->HasMember("maybe_response_payload")) {
+      const rapidjson::Value& payload_type = (*json_definition)["maybe_response_payload"];
+      if (!payload_type.HasMember("identifier")) {
+        enclosing_library_->FieldNotFound("response", name_, "identifier");
+      } else {
+        response_ = enclosing_library_->GetPayload(payload_type["identifier"].GetString());
+      }
+    }
   }
 }
 
@@ -353,6 +352,17 @@ InterfaceMethod* Interface::GetMethodByName(std::string_view name) const {
 
 Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_definition)
     : enclosing_loader_(enclosing_loader), json_definition_(std::move(json_definition)) {
+  if (!json_definition_.HasMember("struct_declarations")) {
+    FieldNotFound("library", name_, "struct_declarations");
+  } else {
+    for (auto& str : json_definition_["struct_declarations"].GetArray()) {
+      if (str.HasMember("is_request_or_response")) {
+        payloads_.emplace(std::piecewise_construct, std::forward_as_tuple(str["name"].GetString()),
+                          std::forward_as_tuple(new Struct(this, &str)));
+      }
+    }
+  }
+
   auto interfaces_array = json_definition_["interface_declarations"].GetArray();
   interfaces_.reserve(interfaces_array.Size());
 
@@ -429,7 +439,7 @@ void Library::DecodeTypes() {
 bool Library::DecodeAll() {
   DecodeTypes();
   for (const auto& tmp : structs_) {
-    tmp.second->DecodeStructTypes();
+    tmp.second->DecodeTypes();
   }
   for (const auto& tmp : enums_) {
     tmp.second->DecodeTypes(this);
@@ -455,7 +465,7 @@ bool Library::DecodeAll() {
 std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, const std::string& identifier) {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
-    str->second->DecodeStructTypes();
+    str->second->DecodeTypes();
     std::unique_ptr<Type> type(new StructType(std::ref(*str->second), is_nullable));
     return type;
   }
@@ -581,8 +591,8 @@ LibraryLoader::LibraryLoader(const std::vector<std::string>& library_paths, Libr
 
 bool LibraryLoader::AddAll(const std::vector<std::string>& library_paths, LibraryReadError* err) {
   bool ok = true;
-  // Go backwards through the streams; we refuse to load the same library twice, and the last one
-  // wins.
+  // Go backwards through the streams; we refuse to load the same library twice, and the last
+  // one wins.
   for (auto path = library_paths.rbegin(); path != library_paths.rend(); ++path) {
     AddPath(*path, err);
     if (err->value != LibraryReadError::kOk) {

@@ -195,7 +195,7 @@ class MessageDecoder {
   }
 
   // Decodes a whole message (request or response) and return a StructValue.
-  std::unique_ptr<StructValue> DecodeMessage(const Struct& message_format);
+  std::unique_ptr<StructValue> DecodeMessage(const Struct* message_format);
 
   // Decodes a field. Used by envelopes.
   std::unique_ptr<Value> DecodeValue(const Type* type, bool is_inline);

@@ -559,9 +559,9 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
   }
   if (matched_response() && (!is_request_ || unknown_direction_)) {
     printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent")
-            << ((method_->request() != nullptr) ? " response" : " event") << fidl_codec::ResetColor
-            << ' ' << fidl_codec::Green << method_->enclosing_interface().name() << '.'
-            << method_->name() << fidl_codec::ResetColor << " = ";
+            << (method_->has_request() ? " response" : " event") << fidl_codec::ResetColor << ' '
+            << fidl_codec::Green << method_->enclosing_interface().name() << '.' << method_->name()
+            << fidl_codec::ResetColor << " = ";
     if (printer.pretty_print()) {
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
@@ -594,7 +594,7 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
   }
   if (!response_errors_.empty()) {
     printer << fidl_codec::Red << (received_ ? "received" : "sent")
-            << ((method_->request() != nullptr) ? " response errors" : " event errors")
+            << (method_->has_request() ? " response errors" : " event errors")
             << fidl_codec::ResetColor << ":\n";
     {
       Indent indent(printer);
@@ -602,10 +602,9 @@ void FidlMessageValue::PrintMessageBody(PrettyPrinter& printer) const {
     }
     if (decoded_response_ != nullptr) {
       printer << fidl_codec::WhiteOnMagenta << (received_ ? "received" : "sent")
-              << ((method_->request() != nullptr) ? " response" : " event")
-              << fidl_codec::ResetColor << ' ' << fidl_codec::Green
-              << method_->enclosing_interface().name() << '.' << method_->name()
-              << fidl_codec::ResetColor << " = ";
+              << (method_->has_request() ? " response" : " event") << fidl_codec::ResetColor << ' '
+              << fidl_codec::Green << method_->enclosing_interface().name() << '.'
+              << method_->name() << fidl_codec::ResetColor << " = ";
       decoded_response_->PrettyPrint(nullptr, printer);
       printer << '\n';
     }

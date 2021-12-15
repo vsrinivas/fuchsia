@@ -112,6 +112,15 @@ TEST(LibraryLoader, FirstContentWins) {
     pos = frobinator_value.find(old_method, pos + new_method.size());
   }
 
+  // Do the same for the underlying FrogRequest type
+  const std::string old_payload_type_name = "\"fidl.test.frobinator/FrobinatorFrobRequest\"";
+  const std::string new_payload_type_name = "\"fidl.test.frobinator/FrobinatorFrogRequest\"";
+  pos = frobinator_value.find(old_payload_type_name);
+  while (pos != std::string::npos) {
+    frobinator_value.replace(pos, old_payload_type_name.size(), new_payload_type_name);
+    pos = frobinator_value.find(old_payload_type_name, pos + new_payload_type_name.size());
+  }
+
   LibraryReadError err;
   LibraryLoader loader;
 
@@ -145,7 +154,8 @@ TEST(LibraryLoader, FirstContentWins) {
   found_interface->GetMethodByFullName(kDesiredFullMethodName, &found_method);
 
   ASSERT_NE(found_method, nullptr) << "Could not find method " << kDesiredFullMethodName;
-  EXPECT_EQ("struct Frog {\n  string value;\n}", found_method->request()->ToString());
+  EXPECT_EQ("struct fidl.test.frobinator/FrobinatorFrogRequest {\n  string value;\n}",
+            found_method->request()->ToString());
   EXPECT_EQ(nullptr, found_method->response());
 }
 
@@ -172,7 +182,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct NullableXUnion {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceNullableXUnionRequest {\n"
       "  union test.fidlcodec.examples/IntStructXunion {\n"
       "    1: int32 variant_i;\n"
       "    2: struct test.fidlcodec.examples/TwoStringStruct {\n"
@@ -184,7 +194,7 @@ TEST(LibraryLoader, InspectTypes) {
       "}",
       found_method->request()->ToString(true));
   EXPECT_EQ(
-      "struct NullableXUnion {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceNullableXUnionRequest {\n"
       "  union test.fidlcodec.examples/IntStructXunion isu;\n"
       "  int32 i;\n"
       "}",
@@ -197,7 +207,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct I64BitsMessage {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceI64BitsMessageRequest {\n"
       "  bits test.fidlcodec.examples/I64Bits {\n"
       "    A = 4294967296;\n"
       "    B = 8589934592;\n"
@@ -214,7 +224,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct Table {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceTableRequest {\n"
       "  table test.fidlcodec.examples/ValueTable {\n"
       "    1: int16 first_int16;\n"
       "    2: struct test.fidlcodec.examples/TwoStringStruct {\n"
@@ -241,7 +251,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct DefaultEnumMessage {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceDefaultEnumMessageRequest {\n"
       "  enum test.fidlcodec.examples/DefaultEnum {\n"
       "    X = 23;\n"
       "  } ev;\n"
@@ -255,7 +265,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
   EXPECT_EQ(
-      "struct ShortUnionReserved {\n"
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceShortUnionReservedRequest {\n"
       "  union test.fidlcodec.examples/U8U16UnionReserved {\n"
       "    1: uint8 variant_u8;\n"
       "    2: reserved;\n"
@@ -271,7 +281,10 @@ TEST(LibraryLoader, InspectTypes) {
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
-  EXPECT_EQ("struct Array1 {\n  array<int32> b_1;\n}", found_method->request()->ToString(true));
+  EXPECT_EQ(
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceArray1Request {\n  array<int32> "
+      "b_1;\n}",
+      found_method->request()->ToString(true));
 
   found_method = nullptr;
   found_interface->GetMethodByFullName("test.fidlcodec.examples/FidlCodecTestInterface.Vector",
@@ -279,7 +292,10 @@ TEST(LibraryLoader, InspectTypes) {
 
   ASSERT_NE(nullptr, found_method);
   ASSERT_NE(nullptr, found_method->request());
-  EXPECT_EQ("struct Vector {\n  vector<int32> v_1;\n}", found_method->request()->ToString(true));
+  EXPECT_EQ(
+      "struct test.fidlcodec.examples/FidlCodecTestInterfaceVectorRequest {\n  vector<int32> "
+      "v_1;\n}",
+      found_method->request()->ToString(true));
 }
 
 TEST(LibraryLoader, LoadFromOrdinal) {

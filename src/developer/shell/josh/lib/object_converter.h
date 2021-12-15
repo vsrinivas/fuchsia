@@ -16,7 +16,7 @@ class ObjectConverter : public fidl_codec::TypeVisitor {
   static std::unique_ptr<fidl_codec::Value> Convert(JSContext* ctx, fidl_codec::Struct* st,
                                                     const JSValue& value) {
     ObjectConverter converter(ctx, value);
-    st->VisitAsType(&converter);
+    (st != nullptr ? st : &fidl_codec::Struct::Empty)->VisitAsType(&converter);
     return std::move(converter.result_);
   }
 

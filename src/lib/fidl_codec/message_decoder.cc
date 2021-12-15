@@ -136,8 +136,8 @@ Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_h
   // This is the first read or write we intercept for this handle/koid. If we
   // launched the process, we suppose we intercepted the very first read or
   // write.
-  // If this is not an event (which would mean method->request() is null), a
-  // write means that we are watching a client (a client starts by writing a
+  // If this is not an event (which would mean method->has_request() is false),
+  // a write means that we are watching a client (a client starts by writing a
   // request) and a read means that we are watching a server (a server starts
   // by reading the first client request).
   // If we attached to a running process, we can only determine correctly if
@@ -149,11 +149,11 @@ Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_h
     switch (type) {
       case SyscallFidlType::kOutputMessage:
         handle_directions_[std::make_tuple(handle, process_koid)] =
-            (method->request() != nullptr) ? Direction::kClient : Direction::kServer;
+            method->has_request() ? Direction::kClient : Direction::kServer;
         break;
       case SyscallFidlType::kInputMessage:
         handle_directions_[std::make_tuple(handle, process_koid)] =
-            (method->request() != nullptr) ? Direction::kServer : Direction::kClient;
+            method->has_request() ? Direction::kServer : Direction::kClient;
         break;
       case SyscallFidlType::kOutputRequest:
       case SyscallFidlType::kInputResponse:
@@ -190,11 +190,16 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
   version_ = container->version_;
 }
 
-std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct& message_format) {
+std::unique_ptr<StructValue> MessageDecoder::DecodeMessage(const Struct* message_format) {
+  if (message_format == nullptr) {
+    SkipObject(kTransactionHeaderSize);
+    return DecodeStruct(fidl_codec::Struct::Empty, kTransactionHeaderSize);
+  }
+
   // Set the offset for the next object (just after this one).
-  SkipObject(message_format.Size(version_));
+  SkipObject(message_format->Size(version_) + kTransactionHeaderSize);
   // Decode the message.
-  std::unique_ptr<StructValue> message = DecodeStruct(message_format, 0);
+  std::unique_ptr<StructValue> message = DecodeStruct(*message_format, kTransactionHeaderSize);
   // It's an error if we didn't use all the bytes in the buffer.
   if (next_object_offset_ != num_bytes_) {
     AddError() << "Message not fully decoded (decoded=" << next_object_offset_

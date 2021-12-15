@@ -181,7 +181,7 @@ TEST_F(WireParserTest, ParseSingleString) {
     MessageDecoder decoder(message.bytes().data(),                                                \
                            (num_bytes == -1) ? message.bytes().size() : num_bytes,                \
                            handle_dispositions, message.handles().size(), error_stream);          \
-    std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());              \
+    std::unique_ptr<StructValue> object = decoder.DecodeMessage(method->request());               \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                            \
       std::cerr << error_stream.str();                                                            \
       ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                             \
@@ -217,7 +217,7 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::stringstream error_stream;                                                             \
       MessageDecoder decoder(message.bytes().data(), actual, handle_dispositions,                 \
                              message.handles().size(), error_stream);                             \
-      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());            \
+      std::unique_ptr<StructValue> object = decoder.DecodeMessage(method->request());             \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for buffer size " << actual        \
                                       << " instead of " << message.bytes().actual();              \
     }                                                                                             \
@@ -226,7 +226,7 @@ TEST_F(WireParserTest, ParseSingleString) {
       std::stringstream error_stream;                                                             \
       MessageDecoder decoder(message.bytes().data(), message.bytes().size(), handle_dispositions, \
                              actual, error_stream);                                               \
-      std::unique_ptr<StructValue> object = decoder.DecodeMessage(*method->request());            \
+      std::unique_ptr<StructValue> object = decoder.DecodeMessage(method->request());             \
       ASSERT_TRUE(decoder.HasError()) << "expect decoder error for handle size " << actual        \
                                       << " instead of " << message.handles().actual();            \
     }                                                                                             \
@@ -1533,59 +1533,110 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
             "column": 5
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "primitive"
-              },
-              "name": "i32",
-              "location": {
-                "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
-                "line": 16,
-                "column": 17
-              },
-              "size": 4,
-              "max_out_of_line": 0,
-              "alignment": 4,
-              "offset": 16,
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "test.fidlcodec.examples/FidlCodecTestInterfaceRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
               "max_handles": 0,
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 4
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 4
-              }
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
             }
-          ],
-          "maybe_request_size": 24,
-          "maybe_request_alignment": 8,
-          "maybe_request_type_shape_v1": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
           },
           "has_response": false,
+          "has_error": false,
           "is_composed": false
         }
       ]
     }
   ],
-  "struct_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "test.fidlcodec.examples/FidlCodecTestInterfaceRequest",
+      "naming_context": [
+        "WithAndWithoutRequestResponse",
+        "Int32",
+        "Request"
+      ],
+      "location": {
+        "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
+        "line": 16,
+        "column": 5
+      },
+      "is_request_or_response": true,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "i32",
+          "location": {
+            "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",
+            "line": 16,
+            "column": 17
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false
+      }
+    }
+  ],
   "table_declarations": [],
   "union_declarations": [],
   "xunion_declarations": []

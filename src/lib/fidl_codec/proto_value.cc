@@ -309,23 +309,27 @@ std::unique_ptr<Value> DecodeValue(LibraryLoader* loader, const proto::Value& pr
         // don't have all the json we had when the event has been saved).
         bool ok = true;
         if (proto_message.has_request()) {
-          if (method->request() == nullptr) {
+          if (method->has_request()) {
+            Struct* request = method->request();
+            message->set_decoded_request(
+                DecodeStruct(loader, proto_message.decoded_request(),
+                             request != nullptr ? *request : Struct::Empty));
+          } else {
             FX_LOGS_OR_CAPTURE(ERROR)
                 << "Request without request defined in " << method->name() << '.';
             ok = false;
-          } else {
-            message->set_decoded_request(
-                DecodeStruct(loader, proto_message.decoded_request(), *method->request()));
           }
         }
         if (proto_message.has_response()) {
-          if (method->response() == nullptr) {
+          if (method->has_response()) {
+            Struct* response = method->response();
+            message->set_decoded_response(
+                DecodeStruct(loader, proto_message.decoded_response(),
+                             response != nullptr ? *response : Struct::Empty));
+          } else {
             FX_LOGS_OR_CAPTURE(ERROR)
                 << "Response without response defined in " << method->name() << '.';
             ok = false;
-          } else {
-            message->set_decoded_response(
-                DecodeStruct(loader, proto_message.decoded_response(), *method->response()));
           }
         }
         if (!ok) {

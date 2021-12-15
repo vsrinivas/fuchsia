@@ -138,13 +138,11 @@ JSValue EncodeRequest(JSContext* ctx, JSValueConst this_val, int argc, JSValueCo
   }
 
   auto method = (*methods)[0];
-  auto request = method->request();
-  if (request == nullptr) {
+  if (!method->has_request()) {
     return JS_ThrowInternalError(ctx, "Method missing request.");
   }
 
-  auto ast = ObjectConverter::Convert(ctx, request, argv[2]);
-
+  auto ast = ObjectConverter::Convert(ctx, method->request(), argv[2]);
   if (!ast || !ast->AsStructValue()) {
     return JS_EXCEPTION;
   }
