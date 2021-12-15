@@ -13,7 +13,7 @@ use {
     ffx_core::ffx_plugin,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
-    selectors,
+    selectors::{self, VerboseError},
     std::io::{stdout, Write},
 };
 
@@ -56,7 +56,7 @@ async fn select_moniker<W: Write>(
     selector: &str,
 ) -> Result<()> {
     let writer = &mut write;
-    let selector = selectors::parse_selector(selector).map_err(|e| {
+    let selector = selectors::parse_selector::<VerboseError>(selector).map_err(|e| {
         ffx_error!("Invalid selector '{}': {}\n{}", selector, e, SELECTOR_FORMAT_HELP)
     })?;
 

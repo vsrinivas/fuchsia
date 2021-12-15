@@ -303,6 +303,7 @@ mod test {
     use {
         super::*,
         fuchsia_async as fasync,
+        selectors::{self, VerboseError},
         std::collections::HashSet,
         std::fs::{create_dir_all, write},
         std::path::PathBuf,
@@ -318,7 +319,7 @@ mod test {
     }
 
     async fn exec_selector(base: PathBuf, selector_str: &str) -> Vec<PathEntry> {
-        let selector = selectors::parse_selector(selector_str).unwrap();
+        let selector = selectors::parse_selector::<VerboseError>(selector_str).unwrap();
 
         get_matching_paths(&base.to_string_lossy(), &selector).await.unwrap()
     }

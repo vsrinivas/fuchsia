@@ -575,7 +575,7 @@ mod test {
         fidl_fuchsia_diagnostics::{
             Interest, LogInterestSelector, LogSettingsRequest, Severity as FidlSeverity,
         },
-        selectors::parse_component_selector,
+        selectors::{parse_component_selector, VerboseError},
         std::{sync::Arc, time::Duration},
     };
 
@@ -939,7 +939,7 @@ mod test {
     async fn test_watch_with_select() {
         let mut formatter = FakeLogFormatter::new();
         let selectors = vec![LogInterestSelector {
-            selector: parse_component_selector("core/my_component").unwrap(),
+            selector: parse_component_selector::<VerboseError>("core/my_component").unwrap(),
             interest: Interest { min_severity: Some(FidlSeverity::Info), ..Interest::EMPTY },
         }];
         let cmd = LogCommand { select: selectors.clone(), ..empty_log_command() };
@@ -982,7 +982,7 @@ mod test {
     async fn test_watch_with_select_params_but_no_proxy() {
         let mut formatter = FakeLogFormatter::new();
         let selectors = vec![LogInterestSelector {
-            selector: parse_component_selector("core/my_component").unwrap(),
+            selector: parse_component_selector::<VerboseError>("core/my_component").unwrap(),
             interest: Interest { min_severity: Some(FidlSeverity::Info), ..Interest::EMPTY },
         }];
         let cmd = LogCommand { select: selectors.clone(), ..empty_log_command() };

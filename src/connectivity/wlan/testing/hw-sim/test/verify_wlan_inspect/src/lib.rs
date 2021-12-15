@@ -105,7 +105,8 @@ fn build_event_handler<'a>(
 }
 
 fn select_properties(hierarchy: DiagnosticsHierarchy, selector: &str) -> Vec<PropertyEntry> {
-    let parsed_selector = selectors::parse_selector(selector).expect("expect valid selector.");
+    let parsed_selector = selectors::parse_selector::<selectors::VerboseError>(selector)
+        .expect("expect valid selector.");
     diagnostics_hierarchy::select_from_hierarchy(hierarchy, parsed_selector)
         .expect("Selecting from hierarchy should succeed.")
 }

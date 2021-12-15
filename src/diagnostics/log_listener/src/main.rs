@@ -14,7 +14,7 @@ use fuchsia_syslog_listener as syslog_listener;
 use fuchsia_syslog_listener::LogProcessor;
 use fuchsia_zircon as zx;
 use regex::{Captures, Regex};
-use selectors;
+use selectors::{self, VerboseError};
 use std::collections::hash_set::HashSet;
 use std::collections::HashMap;
 use std::env;
@@ -651,10 +651,17 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     if let Some(_extra) = parts.next() {
                         return Err(invalid_selector.clone());
                     }
-                    let selector = match selectors::parse_component_selector(&component.to_string())
-                    {
+                    let selector = match selectors::parse_component_selector::<VerboseError>(
+                        &component.to_string(),
+                    ) {
                         Ok(s) => s,
-                        _ => return Err(invalid_selector.clone()),
+                        Err(e) => {
+                            return Err(format!(
+                                "Invalid selector: {:?}. Error: {}",
+                                component.to_string(),
+                                e
+                            ))
+                        }
                     };
 
                     let min_severity = match interest.to_uppercase().as_ref() {
@@ -1782,7 +1789,10 @@ mod tests {
 
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
-                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                selector: selectors::parse_component_selector::<VerboseError>(
+                    &"foo.cmx".to_string(),
+                )
+                .unwrap(),
                 interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
             expected.filter.min_severity = LogLevelFilter::Debug;
@@ -1797,7 +1807,10 @@ mod tests {
 
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
-                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                selector: selectors::parse_component_selector::<VerboseError>(
+                    &"foo.cmx".to_string(),
+                )
+                .unwrap(),
                 interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
             expected.filter.min_severity = LogLevelFilter::Info;
@@ -1811,11 +1824,17 @@ mod tests {
 
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
-                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                selector: selectors::parse_component_selector::<VerboseError>(
+                    &"foo.cmx".to_string(),
+                )
+                .unwrap(),
                 interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
             expected.selectors.push(LogInterestSelector {
-                selector: selectors::parse_component_selector(&"core/bar".to_string()).unwrap(),
+                selector: selectors::parse_component_selector::<VerboseError>(
+                    &"core/bar".to_string(),
+                )
+                .unwrap(),
                 interest: Interest { min_severity: Some(Severity::Warn), ..Interest::EMPTY },
             });
             expected.filter.min_severity = LogLevelFilter::Debug;
@@ -1829,7 +1848,10 @@ mod tests {
 
             let mut expected = LogListenerOptions::default();
             expected.selectors.push(LogInterestSelector {
-                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                selector: selectors::parse_component_selector::<VerboseError>(
+                    &"foo.cmx".to_string(),
+                )
+                .unwrap(),
                 interest: Interest { min_severity: None, ..Interest::EMPTY },
             });
             parse_flag_test_helper(&args, Some(&expected));

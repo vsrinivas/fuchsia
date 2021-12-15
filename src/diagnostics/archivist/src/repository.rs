@@ -642,6 +642,7 @@ mod tests {
         },
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
+        selectors::{self, FastError},
         std::io::Cursor,
     };
 
@@ -911,17 +912,17 @@ mod tests {
         assert_eq!(2, data_repo.read().fetch_inspect_data(&None, None).len());
 
         let selectors = Some(vec![Arc::new(
-            selectors::parse_selector("a/b/foo.cmx:root").expect("parse selector"),
+            selectors::parse_selector::<FastError>("a/b/foo.cmx:root").expect("parse selector"),
         )]);
         assert_eq!(1, data_repo.read().fetch_inspect_data(&selectors, None).len());
 
         let selectors = Some(vec![Arc::new(
-            selectors::parse_selector("a/b/f*.cmx:root").expect("parse selector"),
+            selectors::parse_selector::<FastError>("a/b/f*.cmx:root").expect("parse selector"),
         )]);
         assert_eq!(2, data_repo.read().fetch_inspect_data(&selectors, None).len());
 
         let selectors = Some(vec![Arc::new(
-            selectors::parse_selector("foo.cmx:root").expect("parse selector"),
+            selectors::parse_selector::<FastError>("foo.cmx:root").expect("parse selector"),
         )]);
         assert_eq!(0, data_repo.read().fetch_inspect_data(&selectors, None).len());
     }
@@ -952,7 +953,7 @@ mod tests {
 
         let filtered_stream = repo.logs_cursor(
             StreamMode::Snapshot,
-            Some(vec![selectors::parse_selector("foo:root").unwrap()]),
+            Some(vec![selectors::parse_selector::<FastError>("foo:root").unwrap()]),
         );
 
         let results =

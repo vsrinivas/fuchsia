@@ -8,13 +8,11 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    // TODO(fxbug.dev/55118): add better verbose errors. This is only good for situations where
-    // performance is desired over comprehensability.
-    #[error("Failed to parse the input. Failed at: {0:?} with: {1:?}")]
-    QuickParseError(String, ErrorKind),
-
     #[error("Static selector directories are expected to be flat")]
     NonFlatDirectory,
+
+    #[error(transparent)]
+    Parse(#[from] ParseError),
 
     #[error(transparent)]
     Io(#[from] std::io::Error),
@@ -33,6 +31,18 @@ pub enum Error {
 
     #[error("Selecter fails verification due to unmatched escape character")]
     UnmatchedEscapeCharacter,
+
+    #[error(transparent)]
+    Validation(#[from] ValidationError),
+}
+
+#[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("Failed to parse the input. Failed at: {0:?} with: {1:?}")]
+    Fast(String, ErrorKind),
+
+    #[error("Failed to parse the input. Error: {0}")]
+    Verbose(String),
 
     #[error(transparent)]
     Validation(#[from] ValidationError),
@@ -76,10 +86,4 @@ pub enum StringPatternError {
     UnescapedGlob,
     UnescapedColon,
     UnescapedForwardSlash,
-}
-
-impl From<(&str, ErrorKind)> for Error {
-    fn from((left, error_kind): (&str, ErrorKind)) -> Self {
-        Self::QuickParseError(left.to_owned(), error_kind)
-    }
 }

@@ -305,16 +305,10 @@ impl RemoteControlService {
 enum ForwardError {
     TcpToZx(anyhow::Error),
     ZxToTcp(anyhow::Error),
-    Both {
-        tcp_to_zx: anyhow::Error,
-        zx_to_tcp: anyhow::Error,
-    },
+    Both { tcp_to_zx: anyhow::Error, zx_to_tcp: anyhow::Error },
 }
 
-fn spawn_forward_traffic(
-    tcp_side: fasync::net::TcpStream,
-    zx_side: fasync::Socket,
-) {
+fn spawn_forward_traffic(tcp_side: fasync::net::TcpStream, zx_side: fasync::Socket) {
     fasync::Task::local(async move {
         match forward_traffic(tcp_side, zx_side).await {
             Ok(()) => {}
@@ -325,10 +319,15 @@ fn spawn_forward_traffic(
                 log::error!("error forwarding from zx to tcp socket: {:#}", err);
             }
             Err(ForwardError::Both { tcp_to_zx, zx_to_tcp }) => {
-                log::error!("error forwarding from zx to tcp socket:\n{:#}\n{:#}", tcp_to_zx, zx_to_tcp);
+                log::error!(
+                    "error forwarding from zx to tcp socket:\n{:#}\n{:#}",
+                    tcp_to_zx,
+                    zx_to_tcp
+                );
             }
         }
-    }).detach()
+    })
+    .detach()
 }
 
 async fn forward_traffic(
@@ -405,26 +404,26 @@ async fn forward_traffic(
 
     match join(tcp_to_zx, zx_to_tcp).await {
         (Ok(()), Ok(())) => Ok(()),
-        (Err(tcp_to_zx), Err(zx_to_tcp)) => {
-            Err(ForwardError::Both { tcp_to_zx, zx_to_tcp })
-        }
-        (Err(tcp_to_zx), Ok(())) => {
-            Err(ForwardError::TcpToZx(tcp_to_zx))
-        }
-        (Ok(()), Err(zx_to_tcp)) => {
-            Err(ForwardError::ZxToTcp(zx_to_tcp))
-        }
+        (Err(tcp_to_zx), Err(zx_to_tcp)) => Err(ForwardError::Both { tcp_to_zx, zx_to_tcp }),
+        (Err(tcp_to_zx), Ok(())) => Err(ForwardError::TcpToZx(tcp_to_zx)),
+        (Ok(()), Err(zx_to_tcp)) => Err(ForwardError::ZxToTcp(zx_to_tcp)),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
-        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io::NodeMarker,
+        super::*,
+        fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_device as fdevice, fidl_fuchsia_hwinfo as hwinfo,
+        fidl_fuchsia_io::NodeMarker,
         fidl_fuchsia_net as fnet, fidl_fuchsia_net_interfaces as fnet_interfaces,
-        fuchsia_zircon as zx, matches::assert_matches, selectors::parse_selector,
-        service_discovery::PathEntry, std::net::Ipv4Addr, std::path::PathBuf,
+        fuchsia_zircon as zx,
+        matches::assert_matches,
+        selectors::{parse_selector, VerboseError},
+        service_discovery::PathEntry,
+        std::net::Ipv4Addr,
+        std::path::PathBuf,
     };
 
     const NODENAME: &'static str = "thumb-set-human-shred";
@@ -644,7 +643,7 @@ mod tests {
     }
 
     fn wildcard_selector() -> Selector {
-        parse_selector("*:*:*").unwrap()
+        parse_selector::<VerboseError>("*:*:*").unwrap()
     }
 
     async fn no_paths_matcher() -> Result<Vec<PathEntry>> {

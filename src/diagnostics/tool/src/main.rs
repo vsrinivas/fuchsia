@@ -10,7 +10,7 @@ use {
         Difference::{Add, Rem, Same},
     },
     fidl_fuchsia_diagnostics::Selector,
-    selectors,
+    selectors::{self, VerboseError},
     std::cmp::{max, min},
     std::collections::HashSet,
     std::convert::TryInto,
@@ -249,7 +249,9 @@ fn filter_data_to_lines(
     requested_name_opt: &Option<String>,
 ) -> Result<Vec<Line>, Error> {
     let selector_vec: Vec<Selector> =
-        selectors::parse_selector_file(&PathBuf::from(selector_file))?.into_iter().collect();
+        selectors::parse_selector_file::<VerboseError>(&PathBuf::from(selector_file))?
+            .into_iter()
+            .collect();
 
     // Filter the source data that we diff against to only contain the component
     // of interest.

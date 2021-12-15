@@ -5,6 +5,7 @@
 use {
     fidl_fuchsia_diagnostics::StringSelector,
     fuchsia_inspect as inspect,
+    selectors::{self, FastError},
     serde::{de::Unexpected, Deserialize, Deserializer},
     std::sync::Arc,
 };
@@ -64,7 +65,7 @@ pub(crate) fn parse_selector<E>(selector_str: &str) -> Result<ParsedSelector, E>
 where
     E: serde::de::Error,
 {
-    let selector = selectors::parse_selector(selector_str)
+    let selector = selectors::parse_selector::<FastError>(selector_str)
         .or(Err(E::invalid_value(Unexpected::Str(selector_str), &"need a valid selector")))?;
     let component_selector = selector.component_selector.as_ref().ok_or(E::invalid_value(
         Unexpected::Str(selector_str),

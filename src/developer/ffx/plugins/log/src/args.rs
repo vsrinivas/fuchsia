@@ -10,6 +10,7 @@ use {
     ffx_core::ffx_command,
     fidl_fuchsia_developer_bridge::SessionSpec,
     fidl_fuchsia_diagnostics::{Interest, LogInterestSelector, Severity as FidlSeverity},
+    selectors::{self, VerboseError},
     std::time::Duration,
 };
 
@@ -227,9 +228,9 @@ pub fn parse_log_interest_selector(selector: &str) -> Result<LogInterestSelector
     if let Some(_extra) = parts.next() {
         return Err(invalid_selector.clone());
     }
-    let selector = match selectors::parse_component_selector(component) {
+    let selector = match selectors::parse_component_selector::<VerboseError>(component) {
         Ok(s) => s,
-        _ => return Err(invalid_selector.clone()),
+        Err(e) => return Err(format!("{} Error: {}", invalid_selector.clone(), e)),
     };
 
     let min_severity = match interest.to_uppercase().as_ref() {
@@ -271,14 +272,14 @@ mod test {
         assert_eq!(
             parse_log_interest_selector("core/network#FATAL").unwrap(),
             LogInterestSelector {
-                selector: parse_component_selector("core/network").unwrap(),
+                selector: parse_component_selector::<VerboseError>("core/network").unwrap(),
                 interest: Interest { min_severity: Some(FidlSeverity::Fatal), ..Interest::EMPTY }
             }
         );
         assert_eq!(
             parse_log_interest_selector("any/component#INFO").unwrap(),
             LogInterestSelector {
-                selector: parse_component_selector("any/component").unwrap(),
+                selector: parse_component_selector::<VerboseError>("any/component").unwrap(),
                 interest: Interest { min_severity: Some(FidlSeverity::Info), ..Interest::EMPTY }
             }
         );

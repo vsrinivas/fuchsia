@@ -7,7 +7,7 @@ use fuchsia_criterion::{
     FuchsiaCriterion,
 };
 
-use selectors;
+use selectors::{self, FastError};
 use std::mem;
 use std::time::Duration;
 
@@ -82,12 +82,14 @@ fn bench_parse_selector() -> criterion::Benchmark {
         .collect();
 
     let mut bench = criterion::Benchmark::new("parse_selector/empty", move |b| {
-        b.iter(|| criterion::black_box(selectors::parse_selector("").unwrap_err()));
+        b.iter(|| criterion::black_box(selectors::parse_selector::<FastError>("").unwrap_err()));
     });
 
     for case in cases.into_iter() {
         bench = bench.with_function(format!("parse_selector/{}", case.to_string()), move |b| {
-            b.iter(|| criterion::black_box(selectors::parse_selector(&case.val).unwrap()))
+            b.iter(|| {
+                criterion::black_box(selectors::parse_selector::<FastError>(&case.val).unwrap())
+            })
         });
     }
 

@@ -9,7 +9,7 @@ use {
     diagnostics_hierarchy::DiagnosticsHierarchy,
     lazy_static::lazy_static,
     regex::Regex,
-    selectors,
+    selectors::{self, VerboseError},
     serde_derive::Deserialize,
     serde_json::{map::Map as JsonMap, Value as JsonValue},
     std::{collections::HashMap, convert::TryFrom, str::FromStr, sync::Arc},
@@ -386,7 +386,7 @@ impl InspectFetcher {
     }
 
     fn try_fetch(&self, selector_string: &str) -> Result<Vec<MetricValue>, Error> {
-        let arc_selector = Arc::new(selectors::parse_selector(selector_string)?);
+        let arc_selector = Arc::new(selectors::parse_selector::<VerboseError>(selector_string)?);
         let mut values = Vec::new();
         let mut found_component = false;
         for component in self.components.iter() {
@@ -397,7 +397,7 @@ impl InspectFetcher {
                 continue;
             }
             found_component = true;
-            let selector = selectors::parse_selector(selector_string)?;
+            let selector = selectors::parse_selector::<VerboseError>(selector_string)?;
             for value in diagnostics_hierarchy::select_from_hierarchy(
                 component.processed_data.clone(),
                 selector,
@@ -740,8 +740,9 @@ mod test {
                 "INSPECT:*/fo/*:root.dataInt",
                 "Missing: No component found matching selector */fo/*:root.dataInt"
             );
-            assert_wrong!("INSPECT:*/foo/*:root:data:Int",
-                "SyntaxError: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Failed to parse the input. Failed at: \":Int\" with: Eof");
+            assert_wrong!(
+                "INSPECT:*/foo/*:root:data:Int",
+                "SyntaxError: Fetch SelectorString { full_selector: \"INSPECT:*/foo/*:root:data:Int\", selector_type: Inspect, body: \"*/foo/*:root:data:Int\" } -> Failed to parse the input. Error: 0: at line 0, in Eof:\n*/foo/*:root:data:Int\n                 ^\n\n");
             assert_eq!(inspect.fetch_str("INSPECT:*/foo/*:root/kid:dataInt"), vec![]);
             assert_eq!(inspect.fetch_str("INSPECT:*/bar/*:base/array:dataInt"), vec![]);
             assert_eq!(

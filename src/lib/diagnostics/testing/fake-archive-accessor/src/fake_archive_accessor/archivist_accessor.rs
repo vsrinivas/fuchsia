@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_diagnostics::{
         self, ClientSelectorConfiguration, DataType, Format, Selector, SelectorArgument, StreamMode,
     },
-    selectors,
+    selectors::{self, VerboseError},
     tracing::warn,
 };
 
@@ -32,7 +32,7 @@ fn validate_and_parse_inspect_selectors(
     }
 
     for selector_arg in selector_args {
-        let selector = selectors::take_from_argument(selector_arg)?;
+        let selector = selectors::take_from_argument::<VerboseError>(selector_arg)?;
         selectors.push(selector);
     }
 

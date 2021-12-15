@@ -22,6 +22,7 @@ use {
     futures::io::{AsyncRead, AsyncWrite},
     futures::prelude::*,
     futures::try_join,
+    selectors::{self, VerboseError},
     std::rc::Rc,
     std::time::Duration,
 };
@@ -346,7 +347,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
     async fn init_admin_proxy(&self) -> Result<AdminProxy> {
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<AdminMarker>().map_err(|e| anyhow!(e))?;
-        let selector = selectors::parse_selector(ADMIN_SELECTOR)?;
+        let selector = selectors::parse_selector::<VerboseError>(ADMIN_SELECTOR)?;
         self.get_remote_proxy()
             .await?
             .connect(selector, server_end.into_channel())

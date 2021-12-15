@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_driver_development::DriverDevelopmentMarker,
     fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
+    selectors::{self, VerboseError},
 };
 
 /// Combines pagination results into a single vector.
@@ -67,7 +68,7 @@ pub async fn remotecontrol_connect<S: ProtocolMarker>(
     let (proxy, server_end) = fidl::endpoints::create_proxy::<S>()
         .with_context(|| format!("failed to create proxy to {}", S::NAME))?;
     let _: fremotecontrol::ServiceMatch = remote_control
-        .connect(selectors::parse_selector(selector)?, server_end.into_channel())
+        .connect(selectors::parse_selector::<VerboseError>(selector)?, server_end.into_channel())
         .await?
         .map_err(|e| {
             anyhow::anyhow!("failed to connect to {} as {}: {:?}", S::NAME, selector, e)

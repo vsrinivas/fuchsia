@@ -10,5 +10,6 @@ mod types;
 mod validate;
 
 pub use error::*;
+pub use parser::{FastError, VerboseError};
 pub use selectors::*;
 pub use validate::*;

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    error::Error,
+    error::ParseError,
     types::*,
     validate::{ValidateComponentSelectorExt, ValidateExt},
 };
@@ -13,7 +13,7 @@ use nom::{
     bytes::complete::{escaped, is_not, tag, take_while, take_while1},
     character::complete::{alphanumeric1, char, digit1, hex_digit1, multispace0, none_of, one_of},
     combinator::{all_consuming, complete, cond, map, map_res, opt, peek, recognize, verify},
-    error::{ErrorKind, ParseError},
+    error::{ErrorKind, ParseError as NomParseError},
     multi::{many0, separated_nonempty_list},
     sequence::{delimited, pair, preceded, tuple},
     IResult,
@@ -26,7 +26,10 @@ macro_rules! comparison {
 }
 
 /// Parses comparison operators.
-fn comparison(input: &str) -> IResult<&str, ComparisonOperator> {
+fn comparison<'a, E>(input: &'a str) -> IResult<&'a str, ComparisonOperator, E>
+where
+    E: NomParseError<&'a str>,
+{
     alt((
         comparison!("=", Equal),
         comparison!(">=", GreaterEq),
@@ -38,18 +41,27 @@ fn comparison(input: &str) -> IResult<&str, ComparisonOperator> {
 }
 
 /// Recognizes 1 or more spaces or tabs.
-fn whitespace1<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, &'a str, E> {
+fn whitespace1<'a, E>(input: &'a str) -> IResult<&'a str, &'a str, E>
+where
+    E: NomParseError<&'a str>,
+{
     take_while1(move |c| c == ' ' || c == '\t')(input)
 }
 
 /// Recognizes 0 or more spaces or tabs.
-fn whitespace0<'a, E: ParseError<&'a str>>(input: &'a str) -> IResult<&'a str, &'a str, E> {
+fn whitespace0<'a, E>(input: &'a str) -> IResult<&'a str, &'a str, E>
+where
+    E: NomParseError<&'a str>,
+{
     take_while(move |c| c == ' ' || c == '\t')(input)
 }
 
 /// Parses the `has any` operator in the two flavors we support: all characters uppercase or all
 /// of them lowercase.
-fn has_any(input: &str) -> IResult<&str, (&str, &str)> {
+fn has_any<'a, E>(input: &'a str) -> IResult<&'a str, (&'a str, &'a str), E>
+where
+    E: NomParseError<&'a str>,
+{
     let (rest, (has, _, any)) = alt((
         tuple((tag("has"), whitespace1, tag("any"))),
         tuple((tag("HAS"), whitespace1, tag("ANY"))),
@@ -59,7 +71,10 @@ fn has_any(input: &str) -> IResult<&str, (&str, &str)> {
 
 /// Parses the `has all` operator in the two flavors we support: all characters uppercase or all
 /// of them lowercase.
-fn has_all(input: &str) -> IResult<&str, (&str, &str)> {
+fn has_all<'a, E>(input: &'a str) -> IResult<&'a str, (&'a str, &'a str), E>
+where
+    E: NomParseError<&'a str>,
+{
     let (rest, (has, _, all)) = alt((
         tuple((tag("has"), whitespace1, tag("all"))),
         tuple((tag("HAS"), whitespace1, tag("ALL"))),
@@ -69,7 +84,10 @@ fn has_all(input: &str) -> IResult<&str, (&str, &str)> {
 
 /// Parses any inclusion operator (`has any`, `has all`, `in`) in the two flavors we support: all
 /// characters uppercase or all of them lowercase.
-fn inclusion(input: &str) -> IResult<&str, InclusionOperator> {
+fn inclusion<'a, E>(input: &'a str) -> IResult<&'a str, InclusionOperator, E>
+where
+    E: NomParseError<&'a str>,
+{
     alt((
         map(has_any, move |_| InclusionOperator::HasAny),
         map(has_all, move |_| InclusionOperator::HasAll),
@@ -78,7 +96,10 @@ fn inclusion(input: &str) -> IResult<&str, InclusionOperator> {
 }
 
 /// Parses any operator (inclusion and comparison).
-fn operator(input: &str) -> IResult<&str, Operator> {
+fn operator<'a, E>(input: &'a str) -> IResult<&'a str, Operator, E>
+where
+    E: NomParseError<&'a str>,
+{
     alt((
         map(inclusion, move |o| Operator::Inclusion(o)),
         map(comparison, move |o| Operator::Comparison(o)),
@@ -103,12 +124,15 @@ macro_rules! reserved {
         ]
     ) => {
         $(
-            fn $tag_parser(input: &str) -> IResult<&str, $type> {
+            fn $tag_parser<'a, E>(input: &'a str) -> IResult<&'a str, $type, E>
+            where
+                E: NomParseError<&'a str>
+            {
                 map(alt(($(tag(stringify!($tag))),+)), move |_| $type::$variant_name)(input)
             }
         )+
 
-        fn $parser(input: &str) -> IResult<&str, $type> {
+        fn $parser<'a, E>(input: &'a str) -> IResult<&'a str, $type, E> where E: NomParseError<&'a str> {
             alt(($( $tag_parser ),+))(input)
         }
     };
@@ -202,14 +226,17 @@ reserved!(
 fn spaced<'a, E, F, O>(parser: F) -> impl Fn(&'a str) -> IResult<&'a str, O, E>
 where
     F: Fn(&'a str) -> IResult<&'a str, O, E>,
-    E: ParseError<&'a str>,
+    E: NomParseError<&'a str>,
 {
     preceded(whitespace0, parser)
 }
 
 /// Parses the input as a string literal wrapped in double quotes. Returns the value
 /// inside the quotes.
-fn string_literal(input: &str) -> IResult<&str, &str> {
+fn string_literal<'a, E>(input: &'a str) -> IResult<&'a str, &'a str, E>
+where
+    E: NomParseError<&'a str>,
+{
     // TODO(fxbug.dev/86963): this doesn't handle escape sequences.
     // Consider accepting escaped `"`: `\"` too.
     let (rest, value) = recognize(delimited(char('"'), many0(is_not("\"")), char('"')))(input)?;
@@ -217,19 +244,28 @@ fn string_literal(input: &str) -> IResult<&str, &str> {
 }
 
 /// Parses a 64 bit unsigned integer.
-fn integer(input: &str) -> IResult<&str, u64> {
+fn integer<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
+where
+    E: NomParseError<&'a str>,
+{
     map_res(digit1, |s: &str| s.parse::<u64>())(input)
 }
 
 /// Parses a hexadecimal number as 64 bit integer.
-fn hex_integer(input: &str) -> IResult<&str, u64> {
+fn hex_integer<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
+where
+    E: NomParseError<&'a str>,
+{
     map_res(preceded(tag("0x"), hex_digit1), |s: &str| u64::from_str_radix(&s, 16))(input)
 }
 
 /// Parses a unsigned decimal and hexadecimal numbers of 64 bits.
 /// For example: 123, 0x7b will be accepted as
 // TODO(fxbug.dev/86964): consider also accepting signed numbers.
-fn number(input: &str) -> IResult<&str, u64> {
+fn number<'a, E>(input: &'a str) -> IResult<&'a str, u64, E>
+where
+    E: NomParseError<&'a str>,
+{
     alt((hex_integer, integer))(input)
 }
 
@@ -247,7 +283,10 @@ macro_rules! comma_separated_value {
 /// - String literal
 /// - Number
 /// - Severity
-fn list_of_values(input: &str) -> IResult<&str, Vec<Value<'_>>> {
+fn list_of_values<'a, E>(input: &'a str) -> IResult<&'a str, Vec<Value<'a>>, E>
+where
+    E: NomParseError<&'a str>,
+{
     delimited(
         spaced(char('[')),
         alt((
@@ -260,7 +299,10 @@ fn list_of_values(input: &str) -> IResult<&str, Vec<Value<'_>>> {
 }
 
 /// Parses a single filter expression in a metadata selector.
-fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
+fn filter_expression<'a, E>(input: &'a str) -> IResult<&'a str, FilterExpression<'a>, E>
+where
+    E: NomParseError<&'a str>,
+{
     let (rest, identifier) = spaced(identifier)(input)?;
     let (rest, operator) = spaced(operator)(rest)?;
     let (rest, value) =
@@ -278,18 +320,23 @@ fn filter_expression(input: &str) -> IResult<&str, FilterExpression<'_>> {
 }
 
 /// Parses a metadata selector.
-fn metadata_selector(input: &str) -> IResult<&str, MetadataSelector<'_>> {
+fn metadata_selector<'a, E>(input: &'a str) -> IResult<&'a str, MetadataSelector<'a>, E>
+where
+    E: NomParseError<&'a str>,
+{
     let (rest, _) = spaced(alt((tag("WHERE"), tag("where"))))(input)?;
     let (rest, filters) = spaced(separated_nonempty_list(char(','), filter_expression))(rest)?;
     Ok((rest, MetadataSelector::new(filters)))
 }
 
 /// Parses a tree selector, which is a node selector and an optional property selector.
-fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
+fn tree_selector<'a, E>(input: &'a str) -> IResult<&'a str, TreeSelector<'a>, E>
+where
+    E: NomParseError<&'a str>,
+{
     let esc = escaped(none_of(":/\\ \t\n"), '\\', one_of("* \t/:\\"));
     let (rest, node_segments) = separated_nonempty_list(tag("/"), &esc)(input)?;
-    let (rest, property_segment) = if peek::<&str, _, (&str, ErrorKind), _>(tag(":"))(rest).is_ok()
-    {
+    let (rest, property_segment) = if peek::<&str, _, E, _>(tag(":"))(rest).is_ok() {
         let (rest, _) = tag(":")(rest)?;
         let (rest, property) = verify(esc, |value: &str| !value.is_empty())(rest)?;
         (rest, Some(property))
@@ -306,7 +353,10 @@ fn tree_selector(input: &str) -> IResult<&str, TreeSelector<'_>> {
 }
 
 /// Parses a component selector.
-fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
+fn component_selector<'a, E>(input: &'a str) -> IResult<&'a str, ComponentSelector<'a>, E>
+where
+    E: NomParseError<&'a str>,
+{
     let accepted_characters = escaped(
         alt((alphanumeric1, tag("*"), tag("."), tag("-"), tag("_"), tag(">"), tag("<"))),
         '\\',
@@ -318,7 +368,10 @@ fn component_selector(input: &str) -> IResult<&str, ComponentSelector<'_>> {
 }
 
 /// A comment allowed in selector files.
-fn comment(input: &str) -> IResult<&str, &str> {
+fn comment<'a, E>(input: &'a str) -> IResult<&'a str, &'a str, E>
+where
+    E: NomParseError<&'a str>,
+{
     let (rest, comment) = spaced(preceded(tag("//"), is_not("\n\r")))(input)?;
     if rest.len() > 0 {
         let (rest, _) = one_of("\n\r")(rest)?; // consume the newline character
@@ -330,15 +383,23 @@ fn comment(input: &str) -> IResult<&str, &str> {
 /// Parses a core selector (component + tree + property). It accepts both raw selectors or
 /// selectors wrapped in double quotes. Selectors wrapped in quotes accept spaces in the tree and
 /// property names and require internal quotes to be escaped.
-fn core_selector(input: &str) -> IResult<&str, (ComponentSelector<'_>, TreeSelector<'_>)> {
+fn core_selector<'a, E>(
+    input: &'a str,
+) -> IResult<&'a str, (ComponentSelector<'a>, TreeSelector<'a>), E>
+where
+    E: NomParseError<&'a str>,
+{
     let (rest, (component, _, tree)) = tuple((component_selector, tag(":"), tree_selector))(input)?;
     Ok((rest, (component, tree)))
 }
 
 /// Recognizes selectors, with comments allowed or disallowed.
-fn do_parse_selector<'a>(
+fn do_parse_selector<'a, E>(
     allow_inline_comment: bool,
-) -> impl Fn(&'a str) -> IResult<&'a str, Selector<'a>, (&'a str, ErrorKind)> {
+) -> impl Fn(&'a str) -> IResult<&'a str, Selector<'a>, E>
+where
+    E: NomParseError<&'a str>,
+{
     map(
         tuple((
             spaced(core_selector),
@@ -350,39 +411,96 @@ fn do_parse_selector<'a>(
     )
 }
 
+/// A fast efficient error that won't provide much information besides the name kind of nom parsers
+/// that failed and the position at which it failed.
+pub struct FastError;
+
+/// A slower but more user friendly error that will provide information about the chain of parsers
+/// that found the error and some context.
+pub struct VerboseError;
+
+mod private {
+    pub trait Sealed {}
+
+    impl<'a> Sealed for super::FastError {}
+    impl<'a> Sealed for super::VerboseError {}
+}
+
+/// Implemented by types which can be used to specify the error strategy the parsers should use.
+pub trait ParsingError<'a>: private::Sealed {
+    type Internal: NomParseError<&'a str>;
+
+    fn to_error(input: &str, err: Self::Internal) -> ParseError;
+}
+
+impl<'a> ParsingError<'a> for FastError {
+    type Internal = (&'a str, ErrorKind);
+
+    fn to_error(_: &str, (part, error_kind): Self::Internal) -> ParseError {
+        ParseError::Fast(part.to_owned(), error_kind)
+    }
+}
+
+impl<'a> ParsingError<'a> for VerboseError {
+    type Internal = nom::error::VerboseError<&'a str>;
+
+    fn to_error(input: &str, err: Self::Internal) -> ParseError {
+        ParseError::Verbose(nom::error::convert_error(input, err))
+    }
+}
+
 /// Parses the input into a `Selector`.
-pub fn selector(input: &str) -> Result<Selector<'_>, Error> {
-    let result = complete(all_consuming(do_parse_selector(/*allow_inline_comment=*/ false)))(input);
+pub fn selector<'a, E>(input: &'a str) -> Result<Selector<'a>, ParseError>
+where
+    E: ParsingError<'a>,
+{
+    let result = complete(all_consuming(do_parse_selector::<<E as ParsingError<'_>>::Internal>(
+        /*allow_inline_comment=*/ false,
+    )))(input);
     match result {
         Ok((_, selector)) => {
             selector.validate()?;
             Ok(selector)
         }
-        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e.into()),
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(E::to_error(input, e)),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
 
 /// Parses the input into a `ComponentSelector` ignoring any whitespace around the component
 /// selector.
-pub fn consuming_component_selector(input: &str) -> Result<ComponentSelector<'_>, Error> {
-    let result =
-        nom::combinator::all_consuming(pair(spaced(component_selector), multispace0))(input);
+pub fn consuming_component_selector<'a, E>(
+    input: &'a str,
+) -> Result<ComponentSelector<'a>, ParseError>
+where
+    E: ParsingError<'a>,
+{
+    let result = nom::combinator::all_consuming::<_, _, <E as ParsingError<'_>>::Internal, _>(
+        pair(spaced(component_selector), multispace0),
+    )(input);
     match result {
         Ok((_, (component_selector, _))) => {
             component_selector.validate()?;
             Ok(component_selector)
         }
-        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e.into()),
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(E::to_error(input, e)),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
 
 /// Parses the given input line into a Selector or None.
-pub fn selector_or_comment(input: &str) -> Result<Option<Selector<'_>>, Error> {
+pub fn selector_or_comment<'a, E>(input: &'a str) -> Result<Option<Selector<'a>>, ParseError>
+where
+    E: ParsingError<'a>,
+{
     let result = complete(all_consuming(alt((
         map(comment, |_| None),
-        map(do_parse_selector(/*allow_inline_comment=*/ true), |s| Some(s)),
+        map(
+            do_parse_selector::<<E as ParsingError<'_>>::Internal>(
+                /*allow_inline_comment=*/ true,
+            ),
+            |s| Some(s),
+        ),
     ))))(input);
     match result {
         Ok((_, maybe_selector)) => match maybe_selector {
@@ -392,7 +510,7 @@ pub fn selector_or_comment(input: &str) -> Result<Option<Selector<'_>>, Error> {
                 Ok(Some(selector))
             }
         },
-        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(e.into()),
+        Err(nom::Err::Error(e) | nom::Err::Failure(e)) => Err(E::to_error(input, e)),
         _ => unreachable!("through the complete combinator we get rid of Incomplete"),
     }
 }
@@ -460,7 +578,8 @@ mod tests {
         ];
 
         for (test_string, expected_segments) in test_vector {
-            let (_, component_selector) = component_selector(&test_string).unwrap();
+            let (_, component_selector) =
+                component_selector::<nom::error::VerboseError<&str>>(&test_string).unwrap();
 
             assert_eq!(
                 expected_segments, component_selector.segments,
@@ -473,7 +592,9 @@ mod tests {
     #[fuchsia::test]
     fn missing_path_component_selector_test() {
         let component_selector_string = "c";
-        let (_, component_selector) = component_selector(component_selector_string).unwrap();
+        let (_, component_selector) =
+            component_selector::<nom::error::VerboseError<&str>>(component_selector_string)
+                .unwrap();
         let mut path_vec = component_selector.segments;
         assert_eq!(path_vec.pop(), Some(Segment::ExactMatch("c".into())));
         assert!(path_vec.is_empty());
@@ -498,7 +619,8 @@ mod tests {
             "a$c/d",
         ];
         for test_string in test_vector {
-            let component_selector_result = consuming_component_selector(test_string);
+            let component_selector_result =
+                consuming_component_selector::<VerboseError>(test_string);
             assert!(component_selector_result.is_err(), "expected '{}' to fail", test_string);
         }
     }
@@ -530,7 +652,8 @@ mod tests {
         ];
 
         for (string, expected_path, expected_property) in test_vector {
-            let (_, tree_selector) = tree_selector(string).unwrap();
+            let (_, tree_selector) =
+                tree_selector::<nom::error::VerboseError<&str>>(string).unwrap();
             assert_eq!(
                 tree_selector,
                 TreeSelector { node: expected_path, property: expected_property }
@@ -561,7 +684,11 @@ mod tests {
         for string in test_vector {
             // prepend a placeholder component selector so that we exercise the validation code.
             let test_selector = format!("a:{}", string);
-            assert!(selector(&test_selector).is_err(), "{} should fail", test_selector);
+            assert!(
+                selector::<VerboseError>(&test_selector).is_err(),
+                "{} should fail",
+                test_selector
+            );
         }
     }
 
@@ -587,19 +714,24 @@ mod tests {
         ];
         for (string, node, property) in with_spaces {
             assert_eq!(
-                all_consuming(tree_selector)(string).unwrap().1,
+                all_consuming::<_, _, nom::error::VerboseError<&str>, _>(tree_selector)(string)
+                    .unwrap()
+                    .1,
                 TreeSelector { node, property }
             );
         }
 
         // Un-escaped quotes aren't accepted when parsing with spaces.
-        assert!(all_consuming(tree_selector)(r#"a/b:"xc"/d"#).is_err());
+        assert!(all_consuming::<_, _, nom::error::VerboseError<&str>, _>(tree_selector)(
+            r#"a/b:"xc"/d"#
+        )
+        .is_err());
     }
 
     #[fuchsia::test]
     fn parse_full_selector() {
         assert_eq!(
-            selector(
+            selector::<VerboseError>(
                 "core/**:some-node/he*re:prop where filename = \"baz\", severity in [info, error]"
             )
             .unwrap(),
@@ -631,7 +763,7 @@ mod tests {
 
         // Parses selectors without metadata. Also ignores whitespace.
         assert_eq!(
-            selector("   foo:bar  ").unwrap(),
+            selector::<VerboseError>("   foo:bar  ").unwrap(),
             Selector {
                 component: ComponentSelector { segments: vec![Segment::ExactMatch("foo".into())] },
                 tree: TreeSelector {
@@ -643,18 +775,18 @@ mod tests {
         );
 
         // At least one filter is required when `where` is provided.
-        assert!(selector("foo:bar where").is_err());
+        assert!(selector::<VerboseError>("foo:bar where").is_err());
     }
 
     #[fuchsia::test]
     fn assert_no_trailing_backward_slash() {
-        assert!(selector(r#"foo:bar:baz\"#).is_err());
+        assert!(selector::<VerboseError>(r#"foo:bar:baz\"#).is_err());
     }
 
     #[fuchsia::test]
     fn parse_full_selector_with_spaces() {
         assert_eq!(
-            selector(r#"core/foo:some\ node/*:prop where pid = 123"#).unwrap(),
+            selector::<VerboseError>(r#"core/foo:some\ node/*:prop where pid = 123"#).unwrap(),
             Selector {
                 component: ComponentSelector {
                     segments: vec![
@@ -681,9 +813,13 @@ mod tests {
             accepts: [$([$($accepted:literal),+] => $expected:expr),+]
         ) => {{
             // Verify we can parse all accepted values.
-            $($(assert_eq!(Ok(("", $expected)), $parser($accepted));)+)+
+            $($(
+                assert_eq!(
+                    Ok(("", $expected)),
+                    $parser::<nom::error::VerboseError<&str>>($accepted));
+            )+)+
             // Verify we reject all rejected values.
-            assert!($parser("").is_err());
+            assert!($parser::<nom::error::VerboseError<&str>>("").is_err());
 
             // Verify we fail to parse any of the accepted values with random case swaps.
             let accepted_values = vec![$($($accepted),+),+];
@@ -712,7 +848,7 @@ mod tests {
                         continue;
                     }
                     assert!(
-                        $parser(&rejected_value).is_err(),
+                        $parser::<nom::error::VerboseError<&str>>(&rejected_value).is_err(),
                         "{} should be rejected by {}", rejected_value, stringify!($operator));
                     break;
                 }
@@ -776,71 +912,75 @@ mod tests {
 
     #[fuchsia::test]
     fn parse_string_literal() {
+        let v_string_literal = move |arg| string_literal::<nom::error::VerboseError<&str>>(arg);
         // Only strings within quotes are accepted
-        assert_eq!(Ok(("", "foo")), string_literal("\"foo\""));
-        assert_eq!(Ok(("", "_2")), string_literal("\"_2\""));
-        assert_eq!(Ok(("", "$3.x")), string_literal("\"$3.x\""));
+        assert_eq!(Ok(("", "foo")), v_string_literal("\"foo\""));
+        assert_eq!(Ok(("", "_2")), v_string_literal("\"_2\""));
+        assert_eq!(Ok(("", "$3.x")), v_string_literal("\"$3.x\""));
 
         // The empty string is a valid string
-        assert_eq!(Ok(("", "")), string_literal("\"\""));
+        assert_eq!(Ok(("", "")), v_string_literal("\"\""));
 
         // Inputs with missing quotes aren't accepted.
-        assert!(string_literal("\"foo").is_err());
-        assert!(string_literal("foo\"").is_err());
-        assert!(string_literal("foo").is_err());
+        assert!(v_string_literal("\"foo").is_err());
+        assert!(v_string_literal("foo\"").is_err());
+        assert!(v_string_literal("foo").is_err());
     }
 
     #[fuchsia::test]
     fn parse_number() {
+        let v_number = |arg| number::<nom::error::VerboseError<&str>>(arg);
         // Unsigned 64 bit integers are accepted.
-        assert_eq!(Ok(("", 0)), number("0"));
-        assert_eq!(Ok(("", 1234567890)), number("1234567890"));
-        assert_eq!(Ok(("", std::u64::MAX)), number(&format!("{}", std::u64::MAX)));
+        assert_eq!(Ok(("", 0)), v_number("0"));
+        assert_eq!(Ok(("", 1234567890)), v_number("1234567890"));
+        let n = format!("{}", std::u64::MAX);
+        assert_eq!(Ok(("", std::u64::MAX)), v_number(&n));
 
         // Unsigned hexadecimal 64 bit integers are accepted.
-        assert_eq!(Ok(("", 0)), number("0x0"));
-        assert_eq!(Ok(("", 1311768467463790320)), number("0x123456789abcdef0"));
-        assert_eq!(Ok(("", std::u64::MAX)), number("0xffffffffffffffff"));
+        assert_eq!(Ok(("", 0)), v_number("0x0"));
+        assert_eq!(Ok(("", 1311768467463790320)), v_number("0x123456789abcdef0"));
+        assert_eq!(Ok(("", std::u64::MAX)), v_number("0xffffffffffffffff"));
 
         // Not hexadecimal chars are rejected
-        assert_eq!(Ok(("g", 171)), number("0xabg"));
+        assert_eq!(Ok(("g", 171)), v_number("0xabg"));
 
         // Negative numbers aren't accepted, for now.
-        assert!(number("-1").is_err());
-        assert!(number("-0xdf").is_err());
+        assert!(v_number("-1").is_err());
+        assert!(v_number("-0xdf").is_err());
 
         // Numbers that don't fit in 64 bits are rejected.
-        assert!(number("18446744073709551616").is_err()); //2^64
-        assert!(all_consuming(number)("0xffffffffffffffffff").is_err());
+        assert!(v_number("18446744073709551616").is_err()); //2^64
+        assert!(all_consuming(v_number)("0xffffffffffffffffff").is_err());
     }
 
     #[fuchsia::test]
     fn parse_list_of_values() {
         // Accepts values of the same type.
+        let v_list_of_values = move |arg| list_of_values::<nom::error::VerboseError<&str>>(arg);
         let expected = vec![0, 25, 149].into_iter().map(|n| Value::Number(n)).collect();
-        assert_eq!(Ok(("", expected)), list_of_values("[0, 25, 0x95]"));
-        assert_eq!(Ok(("", vec![Value::Number(3)])), list_of_values("[3]"));
+        assert_eq!(Ok(("", expected)), v_list_of_values("[0, 25, 0x95]"));
+        assert_eq!(Ok(("", vec![Value::Number(3)])), v_list_of_values("[3]"));
 
         let expected =
             vec![Severity::Info, Severity::Warn].into_iter().map(|s| Value::Severity(s)).collect();
-        assert_eq!(Ok(("", expected)), list_of_values("[INFO,warn]"));
+        assert_eq!(Ok(("", expected)), v_list_of_values("[INFO,warn]"));
 
         let expected = vec!["foo", "bar"].into_iter().map(|s| Value::StringLiteral(s)).collect();
-        assert_eq!(Ok(("", expected)), list_of_values(r#"[ "foo", "bar" ]"#));
+        assert_eq!(Ok(("", expected)), v_list_of_values(r#"[ "foo", "bar" ]"#));
 
         // Rejects values of mixed types
-        assert!(list_of_values("[INFO, 2]").is_err());
-        assert!(list_of_values(r#"[1, "foo"]"#).is_err());
-        assert!(list_of_values(r#"["bar", WARN]"#).is_err());
-        assert!(list_of_values(r#"["bar", 2, error]"#).is_err());
+        assert!(v_list_of_values("[INFO, 2]").is_err());
+        assert!(v_list_of_values(r#"[1, "foo"]"#).is_err());
+        assert!(v_list_of_values(r#"["bar", WARN]"#).is_err());
+        assert!(v_list_of_values(r#"["bar", 2, error]"#).is_err());
 
         // The empty list is rejected.
-        assert!(list_of_values("[]").is_err());
+        assert!(v_list_of_values("[]").is_err());
     }
 
     macro_rules! test_filter_expr {
         ($filter:expr) => {
-            selector(&format!("foo:bar where {}", $filter))
+            selector::<VerboseError>(&format!("foo:bar where {}", $filter))
                 .map(|result| result.metadata.unwrap().0.into_iter().next().unwrap())
         };
     }
@@ -1168,7 +1308,7 @@ mod tests {
         ]);
         assert_eq!(
             Ok(("", expected)),
-            metadata_selector(
+            metadata_selector::<nom::error::VerboseError<&str>>(
                 "where line_number = 10, filename in [\"foo.rs\"],\
                  severity <= ERROR, tags HAS ALL [\"foo\", \"bar\"]"
             )
@@ -1180,7 +1320,10 @@ mod tests {
             operator: Operator::Comparison(ComparisonOperator::Greater),
             value: OneOrMany::One(Value::Number(123)),
         }]);
-        assert_eq!(Ok(("", expected)), metadata_selector("WHERE timestamp > 123"));
-        assert!(metadata_selector("where").is_err());
+        assert_eq!(
+            Ok(("", expected)),
+            metadata_selector::<nom::error::VerboseError<&str>>("WHERE timestamp > 123")
+        );
+        assert!(metadata_selector::<nom::error::VerboseError<&str>>("where").is_err());
     }
 }

@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{error::*, parser, validate::*};
+use crate::{
+    error::*,
+    parser::{self, ParsingError, VerboseError},
+    validate::*,
+};
 use anyhow::{self, format_err};
 use fidl_fuchsia_diagnostics::{
     self, ComponentSelector, PropertySelector, Selector, SelectorArgument, StringSelector,
@@ -64,13 +68,16 @@ pub fn contains_recursive_glob(component_selector: &ComponentSelector) -> bool {
 }
 
 /// Extracts and validates or parses a selector from a `SelectorArgument`.
-pub fn take_from_argument(arg: SelectorArgument) -> Result<Selector, Error> {
+pub fn take_from_argument<E>(arg: SelectorArgument) -> Result<Selector, Error>
+where
+    E: for<'a> ParsingError<'a>,
+{
     match arg {
         SelectorArgument::StructuredSelector(s) => {
             s.validate()?;
             Ok(s)
         }
-        SelectorArgument::RawSelector(r) => parse_selector(&r),
+        SelectorArgument::RawSelector(r) => parse_selector::<VerboseError>(&r),
         _ => Err(Error::InvalidSelectorArgument),
     }
 }
@@ -138,21 +145,30 @@ pub fn tokenize_string(
 }
 
 /// Converts an unparsed component selector string into a ComponentSelector.
-pub fn parse_component_selector(
-    unparsed_component_selector: &str,
-) -> Result<ComponentSelector, Error> {
-    let result = parser::consuming_component_selector(&unparsed_component_selector)?;
+pub fn parse_component_selector<'a, E>(
+    unparsed_component_selector: &'a str,
+) -> Result<ComponentSelector, ParseError>
+where
+    E: ParsingError<'a>,
+{
+    let result = parser::consuming_component_selector::<E>(&unparsed_component_selector)?;
     Ok(result.into())
 }
 
 /// Converts an unparsed Inspect selector into a ComponentSelector and TreeSelector.
-pub fn parse_selector(unparsed_selector: &str) -> Result<Selector, Error> {
-    let result = parser::selector(&unparsed_selector)?;
+pub fn parse_selector<'a, E>(unparsed_selector: &'a str) -> Result<Selector, Error>
+where
+    E: ParsingError<'a>,
+{
+    let result = parser::selector::<E>(&unparsed_selector)?;
     Ok(result.into())
 }
 
 /// Remove any comments process a quoted line.
-pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error> {
+pub fn parse_selector_file<E>(selector_file: &Path) -> Result<Vec<Selector>, Error>
+where
+    E: for<'a> ParsingError<'a>,
+{
     let selector_file = fs::File::open(selector_file)?;
     let mut result = Vec::new();
     let reader = BufReader::new(selector_file);
@@ -161,7 +177,7 @@ pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error>
         if line.is_empty() {
             continue;
         }
-        if let Some(selector) = parser::selector_or_comment(&line)? {
+        if let Some(selector) = parser::selector_or_comment::<E>(&line)? {
             result.push(selector.into());
         }
     }
@@ -169,15 +185,18 @@ pub fn parse_selector_file(selector_file: &Path) -> Result<Vec<Selector>, Error>
 }
 
 /// Loads all the selectors in the given directory.
-pub fn parse_selectors(directory: impl Into<PathBuf>) -> Result<Vec<Selector>, Error> {
-    let path: PathBuf = directory.into();
+pub fn parse_selectors<E>(directory: &Path) -> Result<Vec<Selector>, Error>
+where
+    E: for<'a> ParsingError<'a>,
+{
+    let path: PathBuf = directory.to_path_buf();
     let mut selector_vec: Vec<Selector> = Vec::new();
     for entry in fs::read_dir(path)? {
         let entry = entry?;
         if entry.path().is_dir() {
             return Err(Error::NonFlatDirectory);
         } else {
-            selector_vec.append(&mut parse_selector_file(&entry.path())?);
+            selector_vec.append(&mut parse_selector_file::<E>(&entry.path())?);
         }
     }
     Ok(selector_vec)
@@ -624,7 +643,7 @@ a:b:c
             )
             .expect("writing test file");
 
-        assert!(parse_selectors(tempdir.path()).is_ok());
+        assert!(parse_selectors::<VerboseError>(tempdir.path()).is_ok());
     }
 
     #[fuchsia::test]
@@ -639,7 +658,7 @@ a:b:c
             .write_all(b"**:**:**")
             .expect("writing test file");
 
-        assert!(parse_selectors(tempdir.path()).is_err());
+        assert!(parse_selectors::<VerboseError>(tempdir.path()).is_err());
     }
 
     #[fuchsia::test]
@@ -659,7 +678,7 @@ a:b:c
             .expect("create file")
             .write_all(b"**:**:**")
             .expect("writing test file");
-        assert!(parse_selectors(tempdir.path()).is_err());
+        assert!(parse_selectors::<VerboseError>(tempdir.path()).is_err());
     }
 
     #[fuchsia::test]
@@ -688,7 +707,7 @@ a:b:c
             // hierarchy node paths don't, but we want to reuse the regex logic.
             sanitized_node_path.push('/');
 
-            let parsed_selector = parse_selector(selector).unwrap();
+            let parsed_selector = parse_selector::<VerboseError>(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector.unwrap();
             match tree_selector {
                 TreeSelector::SubtreeSelector(tree_selector) => {
@@ -733,7 +752,7 @@ a:b:c
             // hierarchy node paths don't, but we want to reuse the regex logic.
             sanitized_node_path.push('/');
 
-            let parsed_selector = parse_selector(selector).unwrap();
+            let parsed_selector = parse_selector::<VerboseError>(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector.unwrap();
             match tree_selector {
                 TreeSelector::SubtreeSelector(tree_selector) => {
@@ -767,7 +786,7 @@ a:b:c
             (r#"echo.cmx:a:b\ c"#, r#"b c"#),
         ];
         for (selector, string_to_match) in test_cases {
-            let parsed_selector = parse_selector(selector).unwrap();
+            let parsed_selector = parse_selector::<VerboseError>(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector.unwrap();
             match tree_selector {
                 TreeSelector::SubtreeSelector(_) => {
@@ -802,7 +821,7 @@ a:b:c
             (r#"echo.cmx:a:c"#, r#"cdog"#),
         ];
         for (selector, string_to_match) in test_cases {
-            let parsed_selector = parse_selector(selector).unwrap();
+            let parsed_selector = parse_selector::<VerboseError>(selector).unwrap();
             let tree_selector = parsed_selector.tree_selector.unwrap();
             match tree_selector {
                 TreeSelector::SubtreeSelector(_) => {
@@ -842,7 +861,7 @@ a:b:c
         ];
 
         for (selector, moniker) in passing_test_cases {
-            let parsed_selector = parse_selector(selector).unwrap();
+            let parsed_selector = parse_selector::<VerboseError>(selector).unwrap();
             assert!(
                 match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
                 "Selector {:?} failed to match {:?}",
@@ -861,7 +880,7 @@ a:b:c
         ];
 
         for (selector, moniker) in failing_test_cases {
-            let parsed_selector = parse_selector(selector).unwrap();
+            let parsed_selector = parse_selector::<VerboseError>(selector).unwrap();
             assert!(
                 !match_component_moniker_against_selector(&moniker, &parsed_selector).unwrap(),
                 "Selector {:?} matched {:?}, but was expected to fail",
@@ -878,7 +897,9 @@ a:b:c
 
         let component_selectors = selectors
             .into_iter()
-            .map(|selector| parse_component_selector(&selector.to_string()).unwrap())
+            .map(|selector| {
+                parse_component_selector::<VerboseError>(&selector.to_string()).unwrap()
+            })
             .collect::<Vec<_>>();
 
         let match_res =
@@ -908,7 +929,7 @@ a:b:c
         ];
 
         for input in cases {
-            let selector = parse_selector(input)
+            let selector = parse_selector::<VerboseError>(input)
                 .unwrap_or_else(|e| panic!("Failed to parse '{}': {}", input, e));
             let output = selector_to_string(selector).unwrap_or_else(|e| {
                 panic!("Failed to format parsed selector for '{}': {}", input, e)
@@ -935,7 +956,7 @@ a:b:c
         assert_eq!(r#"a:a\*\:"#, selector_string);
 
         // Parse the resultant selector, and check that it matches a moniker it is supposed to.
-        let parsed = parse_selector(&selector_string).unwrap();
+        let parsed = parse_selector::<VerboseError>(&selector_string).unwrap();
         assert!(match_moniker_against_component_selector(
             &["a"],
             parsed.component_selector.as_ref().unwrap()
@@ -945,9 +966,11 @@ a:b:c
 
     #[fuchsia::test]
     fn sanitize_moniker_for_selectors_result_is_usable() {
-        let selector =
-            parse_selector(&format!("{}:root", sanitize_moniker_for_selectors("foo/coll:bar/baz")))
-                .unwrap();
+        let selector = parse_selector::<VerboseError>(&format!(
+            "{}:root",
+            sanitize_moniker_for_selectors("foo/coll:bar/baz")
+        ))
+        .unwrap();
         let component_selector = selector.component_selector.as_ref().unwrap();
         let moniker = vec!["foo".to_string(), "coll:bar".to_string(), "baz".to_string()];
         assert!(match_moniker_against_component_selector(&moniker, &component_selector).unwrap());
@@ -956,7 +979,7 @@ a:b:c
     #[fuchsia::test]
     fn escaped_spaces() {
         let selector_str = "foo:bar\\ baz/a*\\ b:quux";
-        let selector = parse_selector(selector_str).unwrap();
+        let selector = parse_selector::<VerboseError>(selector_str).unwrap();
         assert_eq!(
             selector,
             Selector {

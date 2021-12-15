@@ -5,7 +5,7 @@
 use crate::{constants::DEFAULT_PIPELINES_PATH, error::Error};
 use fidl_fuchsia_diagnostics::Selector;
 use fuchsia_inspect as inspect;
-use selectors::{contains_recursive_glob, parse_selector_file};
+use selectors::{contains_recursive_glob, parse_selector_file, FastError};
 use serde::Deserialize;
 use std::{
     collections::BTreeMap,
@@ -100,7 +100,7 @@ impl PipelineConfig {
                 while let Some(Ok(entry)) = readdir.next() {
                     let path = entry.path();
                     if path.extension() == Some(&suffix) {
-                        match parse_selector_file(&path) {
+                        match parse_selector_file::<FastError>(&path) {
                             Ok(selectors) => {
                                 let mut validated_selectors = vec![];
                                 for selector in selectors.into_iter() {

@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fuchsia_diagnostics::Selector, lazy_static::lazy_static};
+use {
+    fidl_fuchsia_diagnostics::Selector,
+    lazy_static::lazy_static,
+    selectors::{self, FastError},
+};
 
 lazy_static! {
     #[derive(Clone)]
@@ -48,7 +52,9 @@ impl MonikerRewriter {
                 if selectors::match_component_moniker_against_selector(&[pair.legacy_str], &s)
                     .unwrap_or(false)
                 {
-                    if let Ok(selector) = selectors::parse_component_selector(pair.modern_str) {
+                    if let Ok(selector) =
+                        selectors::parse_component_selector::<FastError>(pair.modern_str)
+                    {
                         s.component_selector = Some(selector);
                         monikers_rewritten.push(pair.clone());
                     }
@@ -84,6 +90,7 @@ impl OutputRewriter {
 mod test {
     use super::*;
     use fidl_fuchsia_diagnostics::StringSelector;
+    use selectors::VerboseError;
 
     macro_rules! extract_moniker {
         ($selector:expr) => {
@@ -103,9 +110,12 @@ mod test {
     #[fuchsia::test]
     fn moniker_rewriter_works() {
         let rewriter = MonikerRewriter::new();
-        let legacy_selector = selectors::parse_selector("memory_monitor.cmx:path/to:data").unwrap();
-        let new_selector = selectors::parse_selector("core/memory_monitor:path/to:data").unwrap();
-        let irrelevant_selector = selectors::parse_selector("foo/bar.baz:path/to:data").unwrap();
+        let legacy_selector =
+            selectors::parse_selector::<VerboseError>("memory_monitor.cmx:path/to:data").unwrap();
+        let new_selector =
+            selectors::parse_selector::<VerboseError>("core/memory_monitor:path/to:data").unwrap();
+        let irrelevant_selector =
+            selectors::parse_selector::<VerboseError>("foo/bar.baz:path/to:data").unwrap();
 
         let (rewritten_legacy, legacy_rewriter) = rewriter.rewrite_selectors(vec![legacy_selector]);
         let (rewritten_new, new_rewriter) = rewriter.rewrite_selectors(vec![new_selector]);
@@ -156,9 +166,12 @@ mod test {
                 MonikerRewritePair { legacy_str: "legacy2", modern_str: "modern2" },
             ],
         };
-        let legacy_selector1 = selectors::parse_selector("legacy1:path/to:data").unwrap();
-        let legacy_selector2 = selectors::parse_selector("legacy2:path/to:data").unwrap();
-        let irrelevant_selector = selectors::parse_selector("irrelevant:path/to:data").unwrap();
+        let legacy_selector1 =
+            selectors::parse_selector::<VerboseError>("legacy1:path/to:data").unwrap();
+        let legacy_selector2 =
+            selectors::parse_selector::<VerboseError>("legacy2:path/to:data").unwrap();
+        let irrelevant_selector =
+            selectors::parse_selector::<VerboseError>("irrelevant:path/to:data").unwrap();
 
         let (rewritten_1_i, rewriter_1_i) =
             rewriter.rewrite_selectors(vec![legacy_selector1.clone(), irrelevant_selector.clone()]);

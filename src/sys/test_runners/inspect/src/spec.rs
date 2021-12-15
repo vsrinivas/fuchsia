@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::ComponentError, fidl_fuchsia_data as fdata, selectors,
-    std::collections::BTreeMap, std::convert::TryFrom,
+    crate::error::ComponentError,
+    fidl_fuchsia_data as fdata,
+    selectors::{self, VerboseError},
+    std::collections::BTreeMap,
+    std::convert::TryFrom,
 };
 
 #[derive(Debug)]
@@ -128,17 +131,15 @@ impl TryFrom<String> for TestCase {
         let splits: Vec<&str> = value.split(" WHERE ").collect();
         if splits.len() == 1 {
             let selector = splits[0].to_string();
-            selectors::parse_selector(&selector).map_err(|e| ComponentError::InvalidTestCase {
-                value: value.clone(),
-                reason: e.to_string(),
+            selectors::parse_selector::<VerboseError>(&selector).map_err(|e| {
+                ComponentError::InvalidTestCase { value: value.clone(), reason: e.to_string() }
             })?;
             Ok(TestCase { key: value, selector, expression: None })
         } else if splits.len() == 2 {
             let selector = splits[0].to_string();
             let expression = Some(splits[1].to_string());
-            selectors::parse_selector(&selector).map_err(|e| ComponentError::InvalidTestCase {
-                value: value.clone(),
-                reason: e.to_string(),
+            selectors::parse_selector::<VerboseError>(&selector).map_err(|e| {
+                ComponentError::InvalidTestCase { value: value.clone(), reason: e.to_string() }
             })?;
             Ok(TestCase { key: value, selector, expression })
         } else {

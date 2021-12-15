@@ -21,7 +21,7 @@ use {
     },
     fidl_fuchsia_diagnostics::ClientSelectorConfiguration,
     futures::{AsyncReadExt, StreamExt, TryFutureExt},
-    selectors::parse_selector,
+    selectors::{parse_selector, VerboseError},
     std::convert::TryInto,
     std::future::Future,
     std::rc::Weak,
@@ -381,7 +381,7 @@ impl Logger {
         let nodename = target.nodename_str();
 
         let (log_proxy, log_server_end) = create_proxy::<RemoteDiagnosticsBridgeMarker>()?;
-        let selector = parse_selector(BRIDGE_SELECTOR).unwrap();
+        let selector = parse_selector::<VerboseError>(BRIDGE_SELECTOR).unwrap();
 
         match remote_proxy.connect(selector, log_server_end.into_channel()).await? {
             Ok(_) => {}

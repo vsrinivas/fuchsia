@@ -21,6 +21,7 @@ use {
     futures::FutureExt,
     lazy_static::lazy_static,
     output_directory::{DirectoryError, DirectoryId, DirectoryManager},
+    selectors::{self, VerboseError},
     signal_hook::{
         consts::signal::{SIGINT, SIGTERM},
         iterator::Signals,
@@ -49,7 +50,7 @@ impl RunBuilderConnector {
             .expect(&format!("failed to create proxy to {}", RunBuilderMarker::DEBUG_NAME));
         self.remote_control
             .connect(
-                selectors::parse_selector(RUN_BUILDER_SELECTOR)
+                selectors::parse_selector::<VerboseError>(RUN_BUILDER_SELECTOR)
                     .expect("cannot parse run builder selector"),
                 server_end.into_channel(),
             )

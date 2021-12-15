@@ -11,7 +11,8 @@ use {
     fidl::endpoints::Proxy,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-    fidl_fuchsia_diagnostics as diagnostics, selectors,
+    fidl_fuchsia_diagnostics as diagnostics,
+    selectors::{self, VerboseError},
     std::rc::Rc,
 };
 
@@ -91,7 +92,10 @@ impl Context {
     {
         let (info, channel) = self
             .inner
-            .open_target_proxy_with_info(target_identifier, selectors::parse_selector(selector)?)
+            .open_target_proxy_with_info(
+                target_identifier,
+                selectors::parse_selector::<VerboseError>(selector)?,
+            )
             .await?;
         let proxy = P::Proxy::from_channel(
             fidl::AsyncChannel::from_channel(channel).context("making async channel")?,

@@ -11,6 +11,7 @@ use fidl_fuchsia_diagnostics::{
     Severity as FidlSeverity,
 };
 use futures::{Stream, StreamExt};
+use selectors::{self, VerboseError};
 
 #[fuchsia::test]
 async fn register_interest() {
@@ -42,7 +43,7 @@ async fn register_interest() {
         (Severity::Error, "error msg"),
     ];
 
-    let selector = selectors::parse_component_selector(&format!(
+    let selector = selectors::parse_component_selector::<VerboseError>(&format!(
         "fuchsia_component_test_collection\\:{}/test/child",
         instance.root.child_name()
     ))

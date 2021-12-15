@@ -7,6 +7,7 @@ use {
     lazy_static::lazy_static,
     proc_macro2::{Punct, Span, TokenStream},
     quote::{quote, ToTokens},
+    selectors::{self, VerboseError},
     std::collections::HashMap,
     syn::{
         parse::{Parse, ParseStream},
@@ -547,7 +548,7 @@ fn generate_proxy_from_selector(
         let (#output, #server_end) =
             fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Protocol>()?;
         let #selector =
-            selectors::parse_selector(#mapping_lit)?;
+            selectors::parse_selector::<selectors::VerboseError>(#mapping_lit)?;
         let #output_fut =
         async {
             // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
@@ -848,13 +849,14 @@ impl Parse for ProxyMap {
                         let selector = if selection.value() == DAEMON_SERVICE_IDENT {
                             selection.value()
                         } else {
-                            let parsed_selector = selectors::parse_selector(&selection.value())
-                                .map_err(|e| {
-                                    Error::new(
-                                        selection.span(),
-                                        format!("Invalid component selector string: {}", e),
-                                    )
-                                })?;
+                            let parsed_selector =
+                                selectors::parse_selector::<VerboseError>(&selection.value())
+                                    .map_err(|e| {
+                                        Error::new(
+                                            selection.span(),
+                                            format!("Invalid component selector string: {}", e),
+                                        )
+                                    })?;
 
                             if has_wildcards(selection.span(), &parsed_selector)? {
                                 return Err(Error::new(selection.span(), format!("Component selectors in plugin definitions cannot use wildcards ('*').")));

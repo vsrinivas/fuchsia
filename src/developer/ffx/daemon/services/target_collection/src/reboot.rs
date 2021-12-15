@@ -19,6 +19,7 @@ use {
     fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, RebootReason},
     fuchsia_async::futures::TryStreamExt,
     fuchsia_async::futures::{try_join, TryFutureExt},
+    selectors::{self, VerboseError},
     std::rc::Rc,
     tasks::TaskManager,
 };
@@ -65,7 +66,7 @@ impl RebootController {
     async fn init_admin_proxy(&self) -> Result<AdminProxy> {
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<AdminMarker>().map_err(|e| anyhow!(e))?;
-        let selector = selectors::parse_selector(ADMIN_SELECTOR)?;
+        let selector = selectors::parse_selector::<VerboseError>(ADMIN_SELECTOR)?;
         self.get_remote_proxy()
             .await?
             .connect(selector, server_end.into_channel())

@@ -348,6 +348,7 @@ mod tests {
         futures::future::join_all,
         futures::{FutureExt, StreamExt},
         parking_lot::RwLock,
+        selectors::{self, VerboseError},
         serde_json::json,
         std::path::PathBuf,
     };
@@ -807,9 +808,11 @@ mod tests {
     }
 
     async fn verify_reader_with_mode(path: PathBuf, mode: VerifyMode) {
-        let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
+        let child_1_1_selector =
+            selectors::parse_selector::<VerboseError>(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
-            selectors::parse_selector(r#"test_component.cmx:root/child_2:*"#).unwrap();
+            selectors::parse_selector::<VerboseError>(r#"test_component.cmx:root/child_2:*"#)
+                .unwrap();
         let inspect_repo = DataRepo::default();
         let static_selectors_opt =
             Some(vec![Arc::new(child_1_1_selector), Arc::new(child_2_selector)]);

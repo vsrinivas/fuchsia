@@ -26,7 +26,7 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc::UnboundedSender, prelude::*},
     parking_lot::RwLock,
-    selectors,
+    selectors::{self, FastError},
     serde::Serialize,
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
@@ -54,7 +54,7 @@ fn validate_and_parse_selectors(
     }
 
     for selector_arg in selector_args {
-        let selector = selectors::take_from_argument(selector_arg)?;
+        let selector = selectors::take_from_argument::<FastError>(selector_arg)?;
         selectors.push(selector);
     }
 

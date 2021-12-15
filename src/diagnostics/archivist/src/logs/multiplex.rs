@@ -203,6 +203,7 @@ where
 mod tests {
     use super::*;
     use futures::{prelude::*, stream::iter as iter2stream};
+    use selectors::{self, FastError};
 
     #[fuchsia::test]
     async fn empty_multiplexer_terminates() {
@@ -382,7 +383,7 @@ mod tests {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (send2, recv2) = futures::channel::mpsc::unbounded();
         let (mut mux, handle) = Multiplexer::<i32>::new();
-        mux.set_selectors(vec![selectors::parse_selector("recv1:root").unwrap()]);
+        mux.set_selectors(vec![selectors::parse_selector::<FastError>("recv1:root").unwrap()]);
 
         handle.send(vec!["recv1"].into(), Box::pin(recv1) as PinStream<i32>);
         handle.send(vec!["recv2"].into(), Box::pin(recv2) as PinStream<i32>);

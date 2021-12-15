@@ -937,7 +937,7 @@ pub struct LinearHistogramParams<T: Clone> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, selectors};
+    use {super::*, matches::assert_matches, selectors::VerboseError};
 
     fn validate_hierarchy_iteration(
         mut results_vec: Vec<(Vec<String>, Option<Property>)>,
@@ -1409,7 +1409,7 @@ mod tests {
             .into_iter()
             .map(|selector_string| {
                 Arc::new(
-                    selectors::parse_selector(selector_string)
+                    selectors::parse_selector::<VerboseError>(selector_string)
                         .expect("All test selectors are valid and parsable."),
                 )
             })
@@ -1429,7 +1429,7 @@ mod tests {
         hierarchy: DiagnosticsHierarchy,
         test_selector: &str,
     ) -> Vec<PropertyEntry> {
-        let parsed_selector = selectors::parse_selector(test_selector)
+        let parsed_selector = selectors::parse_selector::<VerboseError>(test_selector)
             .expect("All test selectors are valid and parsable.");
 
         select_from_hierarchy(hierarchy, parsed_selector)
