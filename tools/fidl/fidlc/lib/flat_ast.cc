@@ -1958,17 +1958,6 @@ SourceSpan Library::GeneratedSimpleName(std::string_view name) {
   return generated_source_file_.AddLine(name);
 }
 
-std::string Library::NextAnonymousName() {
-  // TODO(fxbug.dev/7920): Improve anonymous name generation. We want to be
-  // specific about how these names are generated once they appear in the
-  // JSON IR, and are exposed to the backends.
-  std::ostringstream data;
-  data << "SomeLongAnonymousPrefix";
-  data << anon_counter_++;
-
-  return data.str();
-}
-
 std::optional<Name> Library::CompileCompoundIdentifier(
     const raw::CompoundIdentifier* compound_identifier) {
   const auto& components = compound_identifier->components;
@@ -2127,13 +2116,6 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
   return true;
 }
 
-ConsumeStep Library::StartConsumeStep() { return ConsumeStep(this); }
-CompileStep Library::StartCompileStep() { return CompileStep(this); }
-VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
-  return VerifyResourcenessStep(this);
-}
-VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
-
 void Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                    std::unique_ptr<AttributeList>* out_attribute_list) {
   assert(out_attribute_list && "must provide out parameter");
@@ -2275,7 +2257,7 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
   declarations_.insert(declarations.begin(), declarations.end());
 }
 
-bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
+bool Library::ConsumeAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
   assert(alias_declaration->alias && alias_declaration->type_ctor != nullptr);
 
   std::unique_ptr<AttributeList> attributes;
@@ -2912,59 +2894,51 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
-  ConsumeAttributeList(std::move(file->library_decl->attributes), &attributes);
+  return ConsumeStep(this, std::move(file)).Run();
+}
 
+void ConsumeStep::RunImpl() {
   // All fidl files in a library should agree on the library name.
   std::vector<std::string_view> new_name;
-  for (const auto& part : file->library_decl->path->components) {
+  for (const auto& part : file_->library_decl->path->components) {
     new_name.push_back(part->span().data());
   }
-  if (!library_name_.empty()) {
-    if (new_name != library_name_) {
-      return Fail(ErrFilesDisagreeOnLibraryName, file->library_decl->path->components[0]->span());
+  if (!library_->library_name_.empty()) {
+    if (new_name != library_->library_name_) {
+      library_->Fail(ErrFilesDisagreeOnLibraryName,
+                     file_->library_decl->path->components[0]->span());
+      return;
     }
   } else {
-    library_name_ = new_name;
+    library_->library_name_ = new_name;
   }
 
-  auto step = StartConsumeStep();
+  // TODO(fxbug.dev/89947): Move all the Consume methods into ConsumeStep so
+  // that they can be called unqualified here.
 
-  auto using_list = std::move(file->using_list);
-  for (auto& using_directive : using_list) {
-    step.ForUsing(std::move(using_directive));
+  library_->ConsumeAttributeList(std::move(file_->library_decl->attributes), &library_->attributes);
+
+  for (auto& using_directive : std::move(file_->using_list)) {
+    library_->ConsumeUsing(std::move(using_directive));
   }
-
-  auto alias_list = std::move(file->alias_list);
-  for (auto& alias_declaration : alias_list) {
-    step.ForAliasDeclaration(std::move(alias_declaration));
+  for (auto& alias_declaration : std::move(file_->alias_list)) {
+    library_->ConsumeAliasDeclaration(std::move(alias_declaration));
   }
-
-  auto const_declaration_list = std::move(file->const_declaration_list);
-  for (auto& const_declaration : const_declaration_list) {
-    step.ForConstDeclaration(std::move(const_declaration));
+  for (auto& const_declaration : std::move(file_->const_declaration_list)) {
+    library_->ConsumeConstDeclaration(std::move(const_declaration));
   }
-
-  auto protocol_declaration_list = std::move(file->protocol_declaration_list);
-  for (auto& protocol_declaration : protocol_declaration_list) {
-    step.ForProtocolDeclaration(std::move(protocol_declaration));
+  for (auto& protocol_declaration : std::move(file_->protocol_declaration_list)) {
+    library_->ConsumeProtocolDeclaration(std::move(protocol_declaration));
   }
-
-  auto resource_declaration_list = std::move(file->resource_declaration_list);
-  for (auto& resource_declaration : resource_declaration_list) {
-    step.ForResourceDeclaration(std::move(resource_declaration));
+  for (auto& resource_declaration : std::move(file_->resource_declaration_list)) {
+    library_->ConsumeResourceDeclaration(std::move(resource_declaration));
   }
-
-  auto service_declaration_list = std::move(file->service_declaration_list);
-  for (auto& service_declaration : service_declaration_list) {
-    step.ForServiceDeclaration(std::move(service_declaration));
+  for (auto& service_declaration : std::move(file_->service_declaration_list)) {
+    library_->ConsumeServiceDeclaration(std::move(service_declaration));
   }
-
-  auto type_decls = std::move(file->type_decls);
-  for (auto& type_decl : type_decls) {
-    step.ForTypeDecl(std::move(type_decl));
+  for (auto& type_decl : std::move(file_->type_decls)) {
+    library_->ConsumeTypeDecl(std::move(type_decl));
   }
-
-  return step.Done();
 }
 
 bool Library::ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
@@ -3883,7 +3857,7 @@ void Library::VerifyDeclAttributes(const Decl* decl) {
   ForEachDeclMember(decl, [this](const Attributable* member) { ValidateAttributes(member); });
 }
 
-void VerifyResourcenessStep::ForDecl(const Decl* decl) {
+void VerifyResourcenessStep::VerifyDecl(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
   switch (decl->kind) {
     case Decl::Kind::kStruct: {
@@ -4598,51 +4572,64 @@ void Library::CompileTypeAlias(TypeAlias* type_alias) {
 }
 
 bool Library::Compile() {
-  CompileAttributeList(attributes.get());
-
-  // We process declarations in topologically sorted order. For
-  // example, we process a struct member's type before the entire
-  // struct.
-  auto compile_step = StartCompileStep();
-  for (auto& name_and_decl : declarations_) {
-    Decl* decl = name_and_decl.second;
-    compile_step.ForDecl(decl);
-  }
-  if (!compile_step.Done())
+  if (!CompileStep(this).Run())
+    return false;
+  if (!SortStep(this).Run())
+    return false;
+  if (!VerifyResourcenessStep(this).Run())
+    return false;
+  if (!VerifyAttributesStep(this).Run())
+    return false;
+  if (!VerifyInlineSizeStep(this).Run())
+    return false;
+  if (!VerifyDependenciesStep(this).Run())
     return false;
 
-  if (!SortDeclarations()) {
-    return false;
-  }
+  assert(reporter()->errors().empty() && "errors should have caused an early return");
+  return true;
+}
 
-  auto verify_resourceness_step = StartVerifyResourcenessStep();
-  for (const Decl* decl : declaration_order_) {
-    verify_resourceness_step.ForDecl(decl);
+void CompileStep::RunImpl() {
+  // TODO(fxbug.dev/89947): Move all the Compile methods into CompileStep so
+  // that they can be called unqualified here.
+  library_->CompileAttributeList(library_->attributes.get());
+  for (auto& [name, decl] : library_->declarations_) {
+    library_->CompileDecl(decl);
   }
-  if (!verify_resourceness_step.Done())
-    return false;
+}
 
-  auto verify_attributes_step = StartVerifyAttributesStep();
-  ValidateAttributes(this);
-  for (const Decl* decl : declaration_order_) {
-    verify_attributes_step.ForDecl(decl);
+void SortStep::RunImpl() {
+  // TODO(fxbug.dev/89947): Move SortDeclarations inline here.
+  library_->SortDeclarations();
+}
+
+void VerifyResourcenessStep::RunImpl() {
+  for (const Decl* decl : library_->declaration_order_) {
+    VerifyDecl(decl);
   }
-  if (!verify_attributes_step.Done())
-    return false;
+}
 
-  for (const Decl* decl : declaration_order_) {
+void VerifyAttributesStep::RunImpl() {
+  // TODO(fxbug.dev/89947): Move attribute validation methods into
+  // VerifyAttributesStep so that they can be called unqualified here.
+  library_->ValidateAttributes(library_);
+  for (const Decl* decl : library_->declaration_order_) {
+    library_->VerifyDeclAttributes(decl);
+  }
+}
+
+void VerifyInlineSizeStep::RunImpl() {
+  for (const Decl* decl : library_->declaration_order_) {
     if (decl->kind == Decl::Kind::kStruct) {
       auto struct_decl = static_cast<const Struct*>(decl);
-      if (!VerifyInlineSize(struct_decl)) {
-        return false;
-      }
+      // TODO(fxbug.dev/89947): Move VerifyInlineSize inline here.
+      library_->VerifyInlineSize(struct_decl);
     }
   }
+}
 
-  if (!dependencies_.VerifyAllDependenciesWereUsed(*this, reporter()))
-    return false;
-
-  return reporter()->errors().empty();
+void VerifyDependenciesStep::RunImpl() {
+  library_->dependencies_.VerifyAllDependenciesWereUsed(*library_, reporter());
 }
 
 void Library::CompileTypeConstructor(TypeConstructor* type_ctor) {

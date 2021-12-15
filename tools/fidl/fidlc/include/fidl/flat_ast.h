@@ -1185,9 +1185,12 @@ class Dependencies {
 
 class StepBase;
 class ConsumeStep;
+class SortStep;
 class CompileStep;
 class VerifyResourcenessStep;
 class VerifyAttributesStep;
+class VerifyInlineSizeStep;
+class VerifyDependenciesStep;
 
 using MethodHasher = fit::function<raw::Ordinal64(
     const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
@@ -1200,9 +1203,12 @@ class Library : private Attributable, private ReporterMixin {
   friend AttributeArgSchema;
   friend StepBase;
   friend ConsumeStep;
+  friend SortStep;
   friend CompileStep;
   friend VerifyResourcenessStep;
   friend VerifyAttributesStep;
+  friend VerifyInlineSizeStep;
+  friend VerifyDependenciesStep;
 
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
@@ -1228,7 +1234,6 @@ class Library : private Attributable, private ReporterMixin {
   // that is library scoped but derived from the concatenated components using
   // underscores as delimiters.
   SourceSpan GeneratedSimpleName(std::string_view name);
-  std::string NextAnonymousName();
 
   // Attempts to compile a compound identifier, and resolve it to a name
   // within the context of a library. On success, the name is returned.
@@ -1237,18 +1242,13 @@ class Library : private Attributable, private ReporterMixin {
   std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
   bool RegisterDecl(std::unique_ptr<Decl> decl);
 
-  ConsumeStep StartConsumeStep();
-  CompileStep StartCompileStep();
-  VerifyResourcenessStep StartVerifyResourcenessStep();
-  VerifyAttributesStep StartVerifyAttributesStep();
-
   bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
                        std::unique_ptr<Constant>* out_constant);
   void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
                               std::unique_ptr<LiteralConstant>* out_constant);
 
   void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
-  bool ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
+  bool ConsumeAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
   void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
   void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
@@ -1417,8 +1417,6 @@ class Library : private Attributable, private ReporterMixin {
   const MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
 
-  uint32_t anon_counter_ = 0;
-
   VirtualSourceFile generated_source_file_{"generated"};
   friend class LibraryMediator;
 };
@@ -1431,70 +1429,74 @@ struct LibraryComparator {
   }
 };
 
+// StepBase is the base class for compilation steps. Compiling a library
+// consists of performing all steps in sequence. Each step succeeds (no
+// additional errors) or fails (additional errors reported) as a unit, and
+// typically tries to process the entire library rather than stopping after the
+// first error. For certain major steps, we abort compilation if the step fails,
+// meaning later steps can rely on invariants from that step succeeding. See
+// Library::Compile for the logic.
 class StepBase : protected ReporterMixin {
  public:
-  StepBase(Library* library)
-      : ReporterMixin(library->reporter()),
-        library_(library),
-        checkpoint_(reporter()->Checkpoint()),
-        done_(false) {}
+  explicit StepBase(Library* library) : ReporterMixin(library->reporter()), library_(library) {}
+  StepBase(const StepBase&) = delete;
+  ~StepBase() { assert(done_ && "must call Run() before destroying"); }
 
-  ~StepBase() { assert(done_ && "Step must be completed before destructor is called"); }
-
-  bool Done() {
+  bool Run() {
+    assert(!done_ && "should only be called once");
+    auto checkpoint = reporter()->Checkpoint();
+    RunImpl();
     done_ = true;
-    return checkpoint_.NoNewErrors();
+    return checkpoint.NoNewErrors();
   }
 
  protected:
+  // Implementations must report errors via ReporterMixin. If no errors are
+  // reported, the step is considered successful.
+  virtual void RunImpl() = 0;
+
   Library* library_;  // link to library for which this step was created
 
  private:
-  Reporter::Counts checkpoint_;
-  bool done_;
+  bool done_ = false;
 };
 
+// We run a separate ConsumeStep for each file in the library.
 class ConsumeStep : public StepBase {
  public:
-  explicit ConsumeStep(Library* library) : StepBase(library) {}
+  explicit ConsumeStep(Library* library, std::unique_ptr<raw::File> file)
+      : StepBase(library), file_(std::move(file)) {}
 
-  void ForAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration) {
-    library_->ConsumeTypeAlias(std::move(alias_declaration));
-  }
-  void ForUsing(std::unique_ptr<raw::Using> using_directive) {
-    library_->ConsumeUsing(std::move(using_directive));
-  }
-  void ForConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration) {
-    library_->ConsumeConstDeclaration(std::move(const_declaration));
-  }
-  void ForProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration) {
-    library_->ConsumeProtocolDeclaration(std::move(protocol_declaration));
-  }
-  void ForResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration) {
-    library_->ConsumeResourceDeclaration(std::move(resource_declaration));
-  }
-  void ForServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl) {
-    library_->ConsumeServiceDeclaration(std::move(service_decl));
-  }
-  void ForTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
-    library_->ConsumeTypeDecl(std::move(type_decl));
-  }
+ private:
+  void RunImpl() override;
+
+  std::unique_ptr<raw::File> file_;
+};
+
+class SortStep : public StepBase {
+ public:
+  using StepBase::StepBase;
+
+ private:
+  void RunImpl() override;
 };
 
 class CompileStep : public StepBase {
  public:
-  CompileStep(Library* library) : StepBase(library) {}
+  using StepBase::StepBase;
 
-  void ForDecl(Decl* decl) { library_->CompileDecl(decl); }
+ private:
+  void RunImpl() override;
 };
 
 class VerifyResourcenessStep : public StepBase {
  public:
-  VerifyResourcenessStep(Library* library) : StepBase(library) {}
-
-  void ForDecl(const Decl* decl);
+  using StepBase::StepBase;
 
  private:
+  void RunImpl() override;
+  void VerifyDecl(const Decl* decl);
+
   // Returns the effective resourceness of |type|. The set of effective resource
   // types includes (1) nominal resource types per the FTP-057 definition, and
   // (2) declarations that have an effective resource member (or equivalently,
@@ -1509,9 +1511,26 @@ class VerifyResourcenessStep : public StepBase {
 
 class VerifyAttributesStep : public StepBase {
  public:
-  VerifyAttributesStep(Library* library) : StepBase(library) {}
+  using StepBase::StepBase;
 
-  void ForDecl(const Decl* decl) { library_->VerifyDeclAttributes(decl); }
+ private:
+  void RunImpl() override;
+};
+
+class VerifyInlineSizeStep : public StepBase {
+ public:
+  using StepBase::StepBase;
+
+ private:
+  void RunImpl() override;
+};
+
+class VerifyDependenciesStep : public StepBase {
+ public:
+  using StepBase::StepBase;
+
+ private:
+  void RunImpl() override;
 };
 
 // See the comment on Object::Visitor<T> for more details.
