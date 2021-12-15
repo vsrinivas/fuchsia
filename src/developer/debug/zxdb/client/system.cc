@@ -92,7 +92,8 @@ static const char* kSecondChanceExceptionsDescription =
    • "gen": general
    • "pf": page faults
    • "ui": undefined instruction
-   • "ua": unaligned access)";
+   • "ua": unaligned access
+   • "pe": policy error)";
 
 const char* ClientSettings::System::kSkipUnsymbolized = "skip-unsymbolized";
 static const char* kSkipUnsymbolizedDescription =
@@ -153,7 +154,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",
                     {"rust", "c++", "auto"});
   schema->AddList(ClientSettings::System::kSecondChanceExceptions,
-                  kSecondChanceExceptionsDescription, {kPageFaultExcpTypeShorthand},
+                  kSecondChanceExceptionsDescription,
+                  {kPageFaultExcpTypeShorthand, kPolicyErrorExcpTypeShorthand},
                   {
                       kGeneralExcpTypeShorthand,
                       kPageFaultExcpTypeShorthand,
