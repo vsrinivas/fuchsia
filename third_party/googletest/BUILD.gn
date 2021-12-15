@@ -95,6 +95,12 @@ source_set("gtest_prod") {
 }
 
 static_library("gtest_main") {
+  # In-tree tests should prefer //src/lib/fxl/tests:gtest_main which includes
+  # Fuchsia-specific setup.
+  visibility = [
+    ":*",
+    "//third_party/protobuf:*",
+  ]
   testonly = true
   sources = [ "src/googletest/src/gtest_main.cc" ]
   public_deps = [ ":gtest" ]
