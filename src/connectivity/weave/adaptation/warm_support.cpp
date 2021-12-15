@@ -151,14 +151,36 @@ PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
     FX_LOGS(ERROR) << "Failed to configure interface address to interface id "
                    << interface_id.value() << ": " << zx_status_get_string(status);
     return kPlatformResultFailure;
+  }
+
+  // Verify that the result from netstack confirms that the address was actually
+  // added or removed, and short-circuit operations if the interface state is
+  // already in the desired configuration.
+  if (result.status == fuchsia::netstack::Status::UNKNOWN_INTERFACE) {
+    // If adding an address, being informed of an unknown interface is fatal.
+    // However, this is acceptable if we're removing an address, which can
+    // happen when the lowpan service brings its interface down on reset.
+    if (add) {
+      FX_LOGS(ERROR) << "Failed to set address on already removed interface id "
+                     << interface_id.value();
+      return kPlatformResultFailure;
+    } else {
+      FX_LOGS(WARNING) << "Skipping removing address on already removed interface id "
+                       << interface_id.value();
+      return kPlatformResultSuccess;
+    }
   } else if (result.status == fuchsia::netstack::Status::UNKNOWN_ERROR) {
-    FX_LOGS(INFO) << "Interface address already configured on interface id "
-                  << interface_id.value();
-    return kPlatformResultSuccess;
-  } else if (result.status != fuchsia::netstack::Status::OK) {
-    FX_LOGS(ERROR) << "Unable to configure interface address to interface id "
-                   << interface_id.value() << ": " << result.message;
-    return kPlatformResultFailure;
+    // If removing an address, an unknown error is fatal. However, this is
+    // acceptable when adding an address, which can happen if the interface has
+    // already been configured with the same address.
+    if (add) {
+      FX_LOGS(WARNING) << "Skipping adding address on already configured interface id "
+                       << interface_id.value();
+      return kPlatformResultSuccess;
+    } else {
+      FX_LOGS(ERROR) << "Failed to remove address on interface id " << interface_id.value();
+      return kPlatformResultFailure;
+    }
   }
 
   FX_LOGS(INFO) << (add ? "Added" : "Removed") << " address from interface id "
