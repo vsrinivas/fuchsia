@@ -422,13 +422,6 @@
             subdir: "forensics",
         },
         {
-            directory: "pkgfs",
-            from: "parent",
-            as: "pkgfs-system",
-            to: "#pkg-resolver",
-            subdir: "system",
-        },
-        {
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
