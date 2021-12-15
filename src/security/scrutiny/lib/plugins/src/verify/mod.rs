@@ -614,7 +614,7 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/my-resolver", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/logger:0"]));
+        assert_eq!(response, json!(["/logger"]));
         Ok(())
     }
 
@@ -680,7 +680,7 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/logger:0"]));
+        assert_eq!(response, json!(["/logger"]));
         Ok(())
     }
 
@@ -764,7 +764,7 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/logger:0/log-child:0"]));
+        assert_eq!(response, json!(["/logger/log-child"]));
         Ok(())
     }
 

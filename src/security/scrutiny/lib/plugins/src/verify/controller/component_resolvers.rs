@@ -102,7 +102,7 @@ impl ComponentInstanceVisitor for ComponentResolversVisitor {
                     if let UseDecl::Protocol(name) = use_decl {
                         if name.source_name == CapabilityName(self.request.protocol.clone()) {
                             let moniker = instance.abs_moniker();
-                            self.monikers.push(moniker.to_string());
+                            self.monikers.push(moniker.to_string_without_instances());
                         }
                     }
                 }
