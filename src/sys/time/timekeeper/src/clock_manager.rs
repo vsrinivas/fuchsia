@@ -119,6 +119,8 @@ impl ClockCorrection {
 struct Step {
     /// Change in clock value being made.
     difference: zx::Duration,
+    /// Monotonic time at the step.
+    monotonic: zx::Time,
     /// UTC time after the step.
     utc: zx::Time,
     /// Rate adjust in PPM after the step.
@@ -132,6 +134,7 @@ impl Step {
     fn new(difference: zx::Duration, start_time: zx::Time, final_transform: &Transform) -> Self {
         Step {
             difference,
+            monotonic: start_time,
             utc: final_transform.synthetic(start_time),
             rate_adjust_ppm: final_transform.rate_adjust_ppm,
             error_bound: final_transform.error_bound(start_time),
@@ -141,7 +144,7 @@ impl Step {
     /// Returns a zx::ClockUpdate describing the update to make to a clock to implement this `Step`.
     fn clock_update(&self) -> zx::ClockUpdate {
         zx::ClockUpdate::builder()
-            .approximate_value(self.utc)
+            .absolute_value(self.monotonic, self.utc)
             .rate_adjust(self.rate_adjust_ppm)
             .error_bounds(self.error_bound)
             .build()

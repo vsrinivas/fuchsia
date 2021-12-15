@@ -61,14 +61,9 @@ impl Transform {
 
     /// Returns a `ClockUpdate` that will set a `Clock` onto this `Transform` using data
     /// from the supplied monotonic time.
-    ///
-    /// Currently, the difference between the monotonic time used to calculate an update and the
-    /// monotonic time at which the update is applied contributes to clock error. Monotonic time
-    /// should be as close as possible to the time this method is called and the `ClockUpdate`
-    /// should be used as soon as possible. RFC-0077 will resolve this situation.
     pub fn jump_to(&self, monotonic: zx::Time) -> zx::ClockUpdate {
         zx::ClockUpdate::builder()
-            .approximate_value(self.synthetic(monotonic))
+            .absolute_value(monotonic, self.synthetic(monotonic))
             .rate_adjust(self.rate_adjust_ppm)
             .error_bounds(self.error_bound(monotonic))
             .build()
@@ -265,7 +260,7 @@ mod test {
         assert_eq!(
             clock_update,
             zx::ClockUpdate::builder()
-                .approximate_value(transform.synthetic(monotonic))
+                .absolute_value(monotonic, transform.synthetic(monotonic))
                 .rate_adjust(-15)
                 .error_bounds(transform.error_bound(monotonic))
                 .build()
@@ -295,71 +290,44 @@ mod test {
     fn time_at_monotonic_clock_started() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
-        let mono_before = zx::Time::get_monotonic();
-        clock.update(zx::ClockUpdate::builder().approximate_value(BACKSTOP)).unwrap();
-        let mono_after = zx::Time::get_monotonic();
+        let mono = zx::Time::get_monotonic();
+        clock.update(zx::ClockUpdate::builder().absolute_value(mono, BACKSTOP)).unwrap();
 
-        let mono_radius = (mono_after - mono_before) / 2;
-        let mono_avg = mono_before + mono_radius;
-
-        let clock_time = time_at_monotonic(&clock, mono_avg + TIME_DIFF);
-        assert_geq!(clock_time, BACKSTOP + TIME_DIFF - mono_radius);
-        assert_leq!(clock_time, BACKSTOP + TIME_DIFF + mono_radius);
+        let clock_time = time_at_monotonic(&clock, mono + TIME_DIFF);
+        assert_eq!(clock_time, BACKSTOP + TIME_DIFF);
     }
 
     #[fuchsia::test]
     fn time_at_monotonic_clock_slew_fast() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
-        let mono_before = zx::Time::get_monotonic();
+        let mono = zx::Time::get_monotonic();
         clock
             .update(
-                zx::ClockUpdate::builder().approximate_value(BACKSTOP).rate_adjust(SLEW_RATE_PPM),
+                zx::ClockUpdate::builder()
+                    .absolute_value(mono, BACKSTOP)
+                    .rate_adjust(SLEW_RATE_PPM),
             )
             .unwrap();
-        let mono_after = zx::Time::get_monotonic();
 
-        let mono_radius = (mono_after - mono_before) / 2;
-        let mono_avg = mono_before + mono_radius;
-
-        let clock_time = time_at_monotonic(&clock, mono_avg + TIME_DIFF);
-        // min occurs if update occurred at exactly mono_after
-        assert_geq!(
-            clock_time,
-            BACKSTOP + (TIME_DIFF - mono_radius) * (ONE_MILLION + SLEW_RATE_PPM) / ONE_MILLION
-        );
-        // max occurs if update occurred at exactly mono_before
-        assert_leq!(
-            clock_time,
-            BACKSTOP + (mono_radius + TIME_DIFF) * (ONE_MILLION + SLEW_RATE_PPM) / ONE_MILLION
-        );
+        let clock_time = time_at_monotonic(&clock, mono + TIME_DIFF);
+        assert_eq!(clock_time, BACKSTOP + TIME_DIFF * (ONE_MILLION + SLEW_RATE_PPM) / ONE_MILLION);
     }
 
     #[fuchsia::test]
     fn time_at_monotonic_clock_slew_slow() {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
-        let mono_before = zx::Time::get_monotonic();
+        let mono = zx::Time::get_monotonic();
         clock
             .update(
-                zx::ClockUpdate::builder().approximate_value(BACKSTOP).rate_adjust(-SLEW_RATE_PPM),
+                zx::ClockUpdate::builder()
+                    .absolute_value(mono, BACKSTOP)
+                    .rate_adjust(-SLEW_RATE_PPM),
             )
             .unwrap();
-        let mono_after = zx::Time::get_monotonic();
 
-        let mono_radius = (mono_after - mono_before) / 2;
-        let mono_avg = mono_before + mono_radius;
-
-        let clock_time = time_at_monotonic(&clock, mono_avg + TIME_DIFF);
-        // min occurs if update occurred at exactly mono_after
-        assert_geq!(
-            clock_time,
-            BACKSTOP + (TIME_DIFF - mono_radius) * (ONE_MILLION - SLEW_RATE_PPM) / ONE_MILLION
-        );
-        // max occurs if update occurred at exactly mono_before
-        assert_leq!(
-            clock_time,
-            BACKSTOP + (mono_radius + TIME_DIFF) * (ONE_MILLION - SLEW_RATE_PPM) / ONE_MILLION
-        );
+        let clock_time = time_at_monotonic(&clock, mono + TIME_DIFF);
+        assert_eq!(clock_time, BACKSTOP + TIME_DIFF * (ONE_MILLION - SLEW_RATE_PPM) / ONE_MILLION);
     }
 }

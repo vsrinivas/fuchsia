@@ -189,7 +189,8 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
     diagnostics: Arc<D>,
 ) {
     info!("reading initial RTC time.");
-    let time = match rtc.get().await {
+    let mono_before = zx::Time::get_monotonic();
+    let rtc_time = match rtc.get().await {
         Err(err) => {
             error!("failed to read RTC time: {}", err);
             diagnostics.record(Event::InitializeRtc {
@@ -200,28 +201,32 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
         }
         Ok(time) => time,
     };
+    let mono_after = zx::Time::get_monotonic();
+    let mono_time = mono_before + (mono_after - mono_before) / 2;
 
-    let utc_chrono = Utc.timestamp_nanos(time.into_nanos());
+    let rtc_chrono = Utc.timestamp_nanos(rtc_time.into_nanos());
     let backstop = clock.get_details().expect("failed to get UTC clock details").backstop;
-    if time < backstop {
-        warn!("initial RTC time before backstop: {}", utc_chrono);
+    if rtc_time < backstop {
+        warn!("initial RTC time before backstop: {}", rtc_chrono);
         diagnostics.record(Event::InitializeRtc {
             outcome: InitializeRtcOutcome::InvalidBeforeBackstop,
-            time: Some(time),
+            time: Some(rtc_time),
         });
         return;
     }
 
     diagnostics.record(Event::InitializeRtc {
         outcome: InitializeRtcOutcome::Succeeded,
-        time: Some(time),
+        time: Some(rtc_time),
     });
-    if let Err(status) = clock.update(zx::ClockUpdate::builder().approximate_value(time)) {
-        error!("failed to start UTC clock from RTC at time {}: {}", utc_chrono, status);
+    if let Err(status) =
+        clock.update(zx::ClockUpdate::builder().absolute_value(mono_time, rtc_time))
+    {
+        error!("failed to start UTC clock from RTC at time {}: {}", rtc_chrono, status);
     } else {
         diagnostics
             .record(Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc });
-        info!("started UTC clock from RTC at time: {}", utc_chrono);
+        info!("started UTC clock from RTC at time: {}", rtc_chrono);
     }
 }
 
