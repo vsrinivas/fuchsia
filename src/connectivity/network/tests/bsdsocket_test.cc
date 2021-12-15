@@ -95,9 +95,8 @@ void AssertExpectedReventsAfterPeerShutdown(int fd) {
   // TODO(https://fxbug.dev/87541): Match Fuchsia after Linux version is >= 4.12.
   //
   // [1]: https://github.com/torvalds/linux/commit/3d4762639dd36a5f0f433f0c9d82e9743dc21a33
-  EXPECT_THAT(pfd.revents,
-              testing::AnyOf(testing::Eq(POLLERR), testing::Eq(POLLERR | POLLHUP | POLLRDHUP),
-                             testing::Eq(POLLERR | POLLHUP | POLLRDHUP | POLLIN)));
+  EXPECT_THAT(pfd.revents, testing::AnyOf(testing::Eq(POLLERR), testing::Eq(POLLERR | POLLHUP),
+                                          testing::Eq(POLLERR | POLLHUP | POLLRDHUP | POLLIN)));
 #endif
 }
 
