@@ -96,7 +96,7 @@ void vprintl(const zx::debuglog& log, const char* fmt, va_list ap) {
           goto bad_format;
         i = va_arg(ap, int);
         s = va_arg(ap, const char*);
-        while (avail && *s && i != 0) {
+        while (avail && i != 0 && *s) {
           *p++ = *s++;
           avail--;
           if (i > 0)
