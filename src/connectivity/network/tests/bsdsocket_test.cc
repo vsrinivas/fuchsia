@@ -375,7 +375,7 @@ std::string socketTypeToString(const int type) {
 
 using SocketKind = std::tuple<int, int>;
 
-std::string socketKindToString(const testing::TestParamInfo<SocketKind>& info) {
+std::string SocketKindToString(const testing::TestParamInfo<SocketKind>& info) {
   auto const& [domain, type] = info.param;
   return socketDomainToString(domain) + "_" + socketTypeToString(type);
 }
@@ -1591,11 +1591,11 @@ TEST_P(SocketOptsTest, UpdateAnyTimestampDisablesOtherTimestampOptions) {
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
                          testing::Combine(testing::Values(AF_INET, AF_INET6),
                                           testing::Values(SOCK_DGRAM, SOCK_STREAM)),
-                         socketKindToString);
+                         SocketKindToString);
 
-using typeMulticast = std::tuple<int, bool>;
+using TypeMulticast = std::tuple<int, bool>;
 
-std::string typeMulticastToString(const testing::TestParamInfo<typeMulticast>& info) {
+std::string TypeMulticastToString(const testing::TestParamInfo<TypeMulticast>& info) {
   auto const& [type, multicast] = info.param;
   std::string addr;
   if (multicast) {
@@ -1606,7 +1606,7 @@ std::string typeMulticastToString(const testing::TestParamInfo<typeMulticast>& i
   return socketTypeToString(type) + addr;
 }
 
-class ReuseTest : public testing::TestWithParam<typeMulticast> {};
+class ReuseTest : public testing::TestWithParam<TypeMulticast> {};
 
 TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
@@ -1674,7 +1674,7 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, ReuseTest,
                          testing::Combine(testing::Values(SOCK_DGRAM, SOCK_STREAM),
                                           testing::Values(false, true)),
-                         typeMulticastToString);
+                         TypeMulticastToString);
 
 TEST(LocalhostTest, Accept) {
   fbl::unique_fd serverfd;
@@ -1980,12 +1980,20 @@ constexpr const char* HangupMethodToString(const HangupMethod s) {
   }
 }
 
-using hangupParams = std::tuple<CloseTarget, HangupMethod>;
+void ExpectLastError(const fbl::unique_fd& fd, int expected) {
+  int err;
+  socklen_t optlen = sizeof(err);
+  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
+  ASSERT_EQ(optlen, sizeof(err));
+  EXPECT_EQ(err, expected) << " err=" << strerror(err) << " expected=" << strerror(expected);
+}
 
-class HangupTest : public testing::TestWithParam<hangupParams> {};
+using HangupParams = std::tuple<CloseTarget, HangupMethod>;
+
+class HangupTest : public testing::TestWithParam<HangupParams> {};
 
 TEST_P(HangupTest, DuringConnect) {
-  auto const& [closeTarget, hangupMethod] = GetParam();
+  auto const& [close_target, hangup_method] = GetParam();
 
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
@@ -1998,7 +2006,7 @@ TEST_P(HangupTest, DuringConnect) {
               .s_addr = htonl(INADDR_LOOPBACK),
           },
   };
-  auto addr = reinterpret_cast<struct sockaddr*>(&addr_in);
+  auto* addr = reinterpret_cast<struct sockaddr*>(&addr_in);
   socklen_t addr_len = sizeof(addr_in);
 
   ASSERT_EQ(bind(listener.get(), addr, addr_len), 0) << strerror(errno);
@@ -2026,14 +2034,6 @@ TEST_P(HangupTest, DuringConnect) {
     ASSERT_EQ(pfd.revents, POLLIN);
   }
 
-  auto ExpectLastError = [](const fbl::unique_fd& fd, int expected) {
-    int err;
-    socklen_t optlen = sizeof(err);
-    ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    ASSERT_EQ(optlen, sizeof(err));
-    EXPECT_EQ(err, expected) << " err=" << strerror(err) << " expected=" << strerror(expected);
-  };
-
   // Connect asynchronously since this one will end up in SYN-SENT.
   fbl::unique_fd connecting_client;
   ASSERT_TRUE(connecting_client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0)))
@@ -2041,9 +2041,9 @@ TEST_P(HangupTest, DuringConnect) {
   EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1);
   EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
 
-  switch (closeTarget) {
+  switch (close_target) {
     case CloseTarget::CLIENT:
-      switch (hangupMethod) {
+      switch (hangup_method) {
         case HangupMethod::kClose: {
           ASSERT_EQ(close(established_client.release()), 0) << strerror(errno);
           // Closing the established client isn't enough; the connection must be accepted before the
@@ -2123,7 +2123,7 @@ TEST_P(HangupTest, DuringConnect) {
       }
       break;
     case CloseTarget::SERVER: {
-      switch (hangupMethod) {
+      switch (hangup_method) {
         case HangupMethod::kClose:
           ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
           break;
@@ -2207,11 +2207,11 @@ TEST_P(HangupTest, DuringConnect) {
   }
 }
 
-std::string hangupParamsToString(const testing::TestParamInfo<hangupParams> info) {
-  auto const& [closeTarget, hangupMethod] = info.param;
+std::string HangupParamsToString(const testing::TestParamInfo<HangupParams> info) {
+  auto const& [close_target, hangup_method] = info.param;
   std::stringstream s;
-  s << HangupMethodToString(hangupMethod);
-  s << CloseTargetToString(closeTarget);
+  s << HangupMethodToString(hangup_method);
+  s << CloseTargetToString(close_target);
   return s.str();
 }
 
@@ -2219,7 +2219,7 @@ INSTANTIATE_TEST_SUITE_P(NetStreamTest, HangupTest,
                          testing::Combine(testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
                                           testing::Values(HangupMethod::kClose,
                                                           HangupMethod::kShutdown)),
-                         hangupParamsToString);
+                         HangupParamsToString);
 
 TEST(LocalhostTest, RaceLocalPeerClose) {
   fbl::unique_fd listener;
@@ -2922,11 +2922,11 @@ class AddrKind {
     V4MAPPEDV6,
   };
 
-  explicit AddrKind(enum Kind kind) : kind(kind) {}
-  enum Kind Kind() const { return kind; }
+  explicit AddrKind(Kind kind) : kind_(kind) {}
+  Kind Kind() const { return kind_; }
 
   constexpr const char* AddrKindToString() const {
-    switch (kind) {
+    switch (kind_) {
       case Kind::V4:
         return "V4";
       case Kind::V6:
@@ -2937,7 +2937,7 @@ class AddrKind {
   }
 
  private:
-  enum Kind kind;
+  const enum Kind kind_;
 };
 
 template <int socktype>
@@ -3055,10 +3055,10 @@ class IOMethod {
     SENDMSG,
   };
 
-  explicit IOMethod(enum Op op) : op(op) {}
-  enum Op Op() const { return op; }
+  explicit IOMethod(Op op) : op_(op) {}
+  Op Op() const { return op_; }
 
-  ssize_t executeIO(const int fd, char* const buf, const size_t len) const {
+  ssize_t ExecuteIO(const int fd, char* const buf, const size_t len) const {
     // Vectorize the provided buffer into multiple differently-sized iovecs.
     std::vector<struct iovec> iov;
 
@@ -3099,7 +3099,7 @@ class IOMethod {
         .msg_iovlen = static_cast<decltype(msg.msg_iovlen)>(iov.size()),
     };
 
-    switch (op) {
+    switch (op_) {
       case Op::READ:
         return read(fd, buf, len);
       case Op::READV:
@@ -3124,7 +3124,7 @@ class IOMethod {
   }
 
   bool isWrite() const {
-    switch (op) {
+    switch (op_) {
       case Op::READ:
       case Op::READV:
       case Op::RECV:
@@ -3142,7 +3142,7 @@ class IOMethod {
   }
 
   constexpr const char* IOMethodToString() const {
-    switch (op) {
+    switch (op_) {
       case Op::READ:
         return "Read";
       case Op::READV:
@@ -3167,26 +3167,26 @@ class IOMethod {
   }
 
  private:
-  enum Op op;
+  const enum Op op_;
 };
 
 #if !defined(__Fuchsia__)
-// disableSIGPIPE is typically invoked on Linux, in cases where the caller
+// DisableSigPipe is typically invoked on Linux, in cases where the caller
 // expects to perform stream socket writes on an unconnected socket. In such
 // cases, SIGPIPE is expected on Linux. This returns a fit::deferred_action object
 // whose destructor would undo the signal masking performed here.
 //
 // send{,to,msg} support the MSG_NOSIGNAL flag to suppress this behaviour, but
 // write and writev do not.
-auto disableSIGPIPE(bool isWrite) {
+auto DisableSigPipe(bool is_write) {
   struct sigaction act = {};
   act.sa_handler = SIG_IGN;
   struct sigaction oldact;
-  if (isWrite) {
+  if (is_write) {
     EXPECT_EQ(sigaction(SIGPIPE, &act, &oldact), 0) << strerror(errno);
   }
   return fit::defer([=]() {
-    if (isWrite) {
+    if (is_write) {
       EXPECT_EQ(sigaction(SIGPIPE, &oldact, nullptr), 0) << strerror(errno);
     }
   });
@@ -3195,11 +3195,11 @@ auto disableSIGPIPE(bool isWrite) {
 
 class IOMethodTest : public testing::TestWithParam<IOMethod> {};
 
-void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod ioMethod,
+void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod io_method,
                  bool datagram) {
-  // A version of ioMethod::executeIO with special handling for vectorized operations: a 1-byte
+  // A version of ioMethod::ExecuteIO with special handling for vectorized operations: a 1-byte
   // buffer is prepended to the argument.
-  auto executeIO = [ioMethod](int fd, char* buf, size_t len) {
+  auto ExecuteIO = [io_method](int fd, char* buf, size_t len) {
     char buffer[1];
     struct iovec iov[] = {
         {
@@ -3216,14 +3216,14 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
         .msg_iovlen = std::size(iov),
     };
 
-    switch (ioMethod.Op()) {
+    switch (io_method.Op()) {
       case IOMethod::Op::READ:
       case IOMethod::Op::RECV:
       case IOMethod::Op::RECVFROM:
       case IOMethod::Op::WRITE:
       case IOMethod::Op::SEND:
       case IOMethod::Op::SENDTO:
-        return ioMethod.executeIO(fd, buf, len);
+        return io_method.ExecuteIO(fd, buf, len);
       case IOMethod::Op::READV:
         return readv(fd, iov, std::size(iov));
       case IOMethod::Op::RECVMSG:
@@ -3254,7 +3254,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
     char buffer[1];
 #if defined(__Fuchsia__)
     if (!datagram) {
-      switch (ioMethod.Op()) {
+      switch (io_method.Op()) {
         case IOMethod::Op::WRITE:
         case IOMethod::Op::SEND:
         case IOMethod::Op::SENDTO:
@@ -3263,7 +3263,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
         case IOMethod::Op::SENDMSG: {
           // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
           // operations, so these vector operations end up having sent the byte provided in the
-          // executeIO closure. See https://fxbug.dev/67928 for more details.
+          // ExecuteIO closure. See https://fxbug.dev/67928 for more details.
           //
           // Wait for the packet to arrive since we are nonblocking.
           struct pollfd pfd = {
@@ -3278,7 +3278,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
           return;
         }
         default:
-          FAIL() << "unexpected method " << ioMethod.IOMethodToString();
+          FAIL() << "unexpected method " << io_method.IOMethodToString();
       }
     }
 #endif
@@ -3288,7 +3288,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
   };
 
   // Receive some data so we can attempt to read it below.
-  if (!ioMethod.isWrite()) {
+  if (!io_method.isWrite()) {
     char buffer[] = {0x74, 0x75};
     prepareForRead(buffer, sizeof(buffer));
   }
@@ -3296,7 +3296,7 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
   [&]() {
 #if defined(__Fuchsia__)
     if (!datagram) {
-      switch (ioMethod.Op()) {
+      switch (io_method.Op()) {
         case IOMethod::Op::READ:
         case IOMethod::Op::RECV:
         case IOMethod::Op::RECVFROM:
@@ -3311,34 +3311,34 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
         case IOMethod::Op::SENDMSG:
           // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
           // operations, so these vector operations report success on the byte provided in the
-          // executeIO closure.
-          EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1) << strerror(errno);
+          // ExecuteIO closure.
+          EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), 1) << strerror(errno);
           return;
       }
     }
 #endif
-    EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
+    EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), -1);
     EXPECT_EQ(errno, EFAULT) << strerror(errno);
   }();
 
-  if (ioMethod.isWrite()) {
+  if (io_method.isWrite()) {
     confirmWrite();
   } else {
     char buffer[1];
-    auto result = executeIO(fd.get(), buffer, sizeof(buffer));
+    auto result = ExecuteIO(fd.get(), buffer, sizeof(buffer));
     if (datagram) {
       // The datagram was consumed in spite of the buffer being null.
       EXPECT_EQ(result, -1);
       EXPECT_EQ(errno, EAGAIN) << strerror(errno);
     } else {
       ssize_t space = sizeof(buffer);
-      switch (ioMethod.Op()) {
+      switch (io_method.Op()) {
         case IOMethod::Op::READV:
         case IOMethod::Op::RECVMSG:
 #if defined(__Fuchsia__)
           // Fuchsia consumed one byte above.
 #else
-          // An additional byte of space was provided in the executeIO closure.
+          // An additional byte of space was provided in the ExecuteIO closure.
           space += 1;
 #endif
           [[fallthrough]];
@@ -3347,27 +3347,27 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
         case IOMethod::Op::RECVFROM:
           break;
         default:
-          FAIL() << "unexpected method " << ioMethod.IOMethodToString();
+          FAIL() << "unexpected method " << io_method.IOMethodToString();
       }
       EXPECT_EQ(result, space) << strerror(errno);
     }
   }
 
   // Do it again, but this time write less data so that vector operations can work normally.
-  if (!ioMethod.isWrite()) {
+  if (!io_method.isWrite()) {
     char buffer[] = {0x74};
     prepareForRead(buffer, sizeof(buffer));
   }
 
-  switch (ioMethod.Op()) {
+  switch (io_method.Op()) {
     case IOMethod::Op::WRITEV:
     case IOMethod::Op::SENDMSG:
 #if defined(__Fuchsia__)
       if (!datagram) {
         // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
         // operations, so these vector operations report success on the byte provided in the
-        // executeIO closure.
-        EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1) << strerror(errno);
+        // ExecuteIO closure.
+        EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), 1) << strerror(errno);
         break;
       }
 #endif
@@ -3378,27 +3378,27 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
     case IOMethod::Op::WRITE:
     case IOMethod::Op::SEND:
     case IOMethod::Op::SENDTO:
-      EXPECT_EQ(executeIO(fd.get(), nullptr, 1), -1);
+      EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), -1);
       EXPECT_EQ(errno, EFAULT) << strerror(errno);
       break;
     case IOMethod::Op::READV:
     case IOMethod::Op::RECVMSG:
       // These vectorized operations never reach the faulty buffer, so they work normally.
-      EXPECT_EQ(executeIO(fd.get(), nullptr, 1), 1) << strerror(errno);
+      EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), 1) << strerror(errno);
       break;
   }
 
-  if (ioMethod.isWrite()) {
+  if (io_method.isWrite()) {
     confirmWrite();
   } else {
     char buffer[1];
-    auto result = executeIO(fd.get(), buffer, sizeof(buffer));
+    auto result = ExecuteIO(fd.get(), buffer, sizeof(buffer));
     if (datagram) {
       // The datagram was consumed in spite of the buffer being null.
       EXPECT_EQ(result, -1);
       EXPECT_EQ(errno, EAGAIN) << strerror(errno);
     } else {
-      switch (ioMethod.Op()) {
+      switch (io_method.Op()) {
         case IOMethod::Op::READ:
         case IOMethod::Op::RECV:
         case IOMethod::Op::RECVFROM:
@@ -3406,12 +3406,12 @@ void doNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
           break;
         case IOMethod::Op::READV:
         case IOMethod::Op::RECVMSG:
-          // The byte we sent was consumed in the executeIO closure.
+          // The byte we sent was consumed in the ExecuteIO closure.
           EXPECT_EQ(result, -1);
           EXPECT_EQ(errno, EAGAIN) << strerror(errno);
           break;
         default:
-          FAIL() << "unexpected method " << ioMethod.IOMethodToString();
+          FAIL() << "unexpected method " << io_method.IOMethodToString();
       }
     }
   }
@@ -3421,14 +3421,14 @@ TEST_P(IOMethodTest, UnconnectedSocketIO) {
   fbl::unique_fd sockfd;
   ASSERT_TRUE(sockfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  IOMethod ioMethod = GetParam();
+  IOMethod io_method = GetParam();
   char buffer[1];
-  bool isWrite = ioMethod.isWrite();
+  bool is_write = io_method.isWrite();
 #if !defined(__Fuchsia__)
-  auto undo = disableSIGPIPE(isWrite);
+  auto undo = DisableSigPipe(is_write);
 #endif
-  ASSERT_EQ(ioMethod.executeIO(sockfd.get(), buffer, sizeof(buffer)), -1);
-  if (isWrite) {
+  ASSERT_EQ(io_method.ExecuteIO(sockfd.get(), buffer, sizeof(buffer)), -1);
+  if (is_write) {
     ASSERT_EQ(errno, EPIPE) << strerror(errno);
   } else {
     ASSERT_EQ(errno, ENOTCONN) << strerror(errno);
@@ -3451,14 +3451,14 @@ TEST_P(IOMethodTest, ListenerSocketIO) {
       << strerror(errno);
   ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
-  IOMethod ioMethod = GetParam();
+  IOMethod io_method = GetParam();
   char buffer[1];
-  bool isWrite = ioMethod.isWrite();
+  bool is_write = io_method.isWrite();
 #if !defined(__Fuchsia__)
-  auto undo = disableSIGPIPE(isWrite);
+  auto undo = DisableSigPipe(is_write);
 #endif
-  ASSERT_EQ(ioMethod.executeIO(listener.get(), buffer, sizeof(buffer)), -1);
-  if (isWrite) {
+  ASSERT_EQ(io_method.ExecuteIO(listener.get(), buffer, sizeof(buffer)), -1);
+  if (is_write) {
     ASSERT_EQ(errno, EPIPE) << strerror(errno);
   } else {
     ASSERT_EQ(errno, ENOTCONN) << strerror(errno);
@@ -3484,7 +3484,7 @@ TEST_P(IOMethodTest, NullptrFaultDGRAM) {
   ASSERT_EQ(connect(fd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
 
-  doNullPtrIO(fd, fd, GetParam(), true);
+  DoNullPtrIO(fd, fd, GetParam(), true);
 }
 
 TEST_P(IOMethodTest, NullptrFaultSTREAM) {
@@ -3530,7 +3530,7 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
       << strerror(errno);
   ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
 
-  doNullPtrIO(client, server, GetParam(), false);
+  DoNullPtrIO(client, server, GetParam(), false);
 }
 
 INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest,
@@ -3562,12 +3562,12 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
   }
 
   std::latch fut_started(1);
-  const auto fut = std::async(std::launch::async, [&, readMethod = GetParam()]() {
+  const auto fut = std::async(std::launch::async, [&, read_method = GetParam()]() {
     fut_started.count_down();
 
     char bytes[1];
     // Block while waiting for data to be received.
-    ASSERT_EQ(readMethod.executeIO(fd.get(), bytes, sizeof(bytes)), -1);
+    ASSERT_EQ(read_method.ExecuteIO(fd.get(), bytes, sizeof(bytes)), -1);
     ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
   });
   fut_started.wait();
@@ -3591,7 +3591,7 @@ TEST_P(IOReadingMethodTest, DatagramSocketErrorWhileBlocked) {
 
   {
     // Postcondition sanity check: no pending events on the socket, the POLLERR should've been
-    // cleared by the readMethod call.
+    // cleared by the read_method call.
     struct pollfd pfd = {
         .fd = fd.get(),
     };
@@ -3690,11 +3690,7 @@ TEST_P(NonBlockingOptionTest, DatagramSocketClearErrorWithGetSockOpt) {
   bool nonblocking = GetParam();
 
   TestDatagramSocketClearPoller(nonblocking, [&](const fbl::unique_fd& fd) {
-    int err;
-    socklen_t optlen = sizeof(err);
-    EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ERROR, &err, &optlen), 0) << strerror(errno);
-    EXPECT_EQ(optlen, sizeof(err));
-    EXPECT_EQ(err, ECONNREFUSED) << strerror(err);
+    ASSERT_NO_FATAL_FAILURE(ExpectLastError(fd, ECONNREFUSED));
   });
 }
 
@@ -3703,26 +3699,26 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramTest, NonBlockingOptionTest, testing::Values
                            return nonBlockingToString(info.param);
                          });
 
-using nonBlockingOptionIOParams = std::tuple<IOMethod, bool>;
+using NonBlockingOptionIOParams = std::tuple<IOMethod, bool>;
 
-class NonBlockingOptionIOTest : public testing::TestWithParam<nonBlockingOptionIOParams> {};
+class NonBlockingOptionIOTest : public testing::TestWithParam<NonBlockingOptionIOParams> {};
 
 TEST_P(NonBlockingOptionIOTest, DatagramSocketClearErrorWithIO) {
-  auto const& [ioMethod, nonblocking] = GetParam();
+  auto const& [io_method, nonblocking] = GetParam();
 
-  TestDatagramSocketClearPoller(nonblocking, [op = ioMethod](const fbl::unique_fd& fd) {
+  TestDatagramSocketClearPoller(nonblocking, [op = io_method](const fbl::unique_fd& fd) {
     char bytes[1];
-    EXPECT_EQ(op.executeIO(fd.get(), bytes, sizeof(bytes)), -1);
+    EXPECT_EQ(op.ExecuteIO(fd.get(), bytes, sizeof(bytes)), -1);
     EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
   });
 }
 
-std::string nonBlockingOptionIOParamsToString(
-    const testing::TestParamInfo<nonBlockingOptionIOParams> info) {
-  auto const& [ioMethod, nonblocking] = info.param;
+std::string NonBlockingOptionIOParamsToString(
+    const testing::TestParamInfo<NonBlockingOptionIOParams> info) {
+  auto const& [io_method, nonblocking] = info.param;
   std::stringstream s;
   s << nonBlockingToString(nonblocking);
-  s << ioMethod.IOMethodToString();
+  s << io_method.IOMethodToString();
   return s.str();
 }
 
@@ -3733,16 +3729,16 @@ INSTANTIATE_TEST_SUITE_P(
                                      IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
                                      IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
                      testing::Values(false, true)),
-    nonBlockingOptionIOParamsToString);
+    NonBlockingOptionIOParamsToString);
 
-using connectingIOParams = std::tuple<IOMethod, bool>;
+using ConnectingIOParams = std::tuple<IOMethod, bool>;
 
-class ConnectingIOTest : public testing::TestWithParam<connectingIOParams> {};
+class ConnectingIOTest : public testing::TestWithParam<ConnectingIOParams> {};
 
 // Tests the application behavior when we start to read and write from a stream socket that is not
 // yet connected.
 TEST_P(ConnectingIOTest, BlockedIO) {
-  auto const& [ioMethod, closeListener] = GetParam();
+  auto const& [io_method, close_listener] = GetParam();
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
@@ -3811,19 +3807,19 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   char sample_data[] = "Sample Data";
   // To correctly test reads, keep alteast one byte larger read buffer than what would be written.
   char recvbuf[sizeof(sample_data) + 1] = {};
-  bool isWrite = ioMethod.isWrite();
-  auto executeIO = [&, op = ioMethod]() {
-    if (isWrite) {
-      return op.executeIO(test_client.get(), sample_data, sizeof(sample_data));
+  bool is_write = io_method.isWrite();
+  auto ExecuteIO = [&, op = io_method]() {
+    if (is_write) {
+      return op.ExecuteIO(test_client.get(), sample_data, sizeof(sample_data));
     }
-    return op.executeIO(test_client.get(), recvbuf, sizeof(recvbuf));
+    return op.ExecuteIO(test_client.get(), recvbuf, sizeof(recvbuf));
   };
 #if !defined(__Fuchsia__)
-  auto undo = disableSIGPIPE(isWrite);
+  auto undo = DisableSigPipe(is_write);
 #endif
 
-  EXPECT_EQ(executeIO(), -1);
-  if (isWrite) {
+  EXPECT_EQ(ExecuteIO(), -1);
+  if (is_write) {
     EXPECT_EQ(errno, EPIPE) << strerror(errno);
   } else {
     EXPECT_EQ(errno, ENOTCONN) << strerror(errno);
@@ -3834,12 +3830,12 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   ASSERT_EQ(EINPROGRESS, errno) << strerror(errno);
 
   // Test socket I/O without waiting for connection to be established.
-  EXPECT_EQ(executeIO(), -1);
+  EXPECT_EQ(ExecuteIO(), -1);
   EXPECT_EQ(errno, EWOULDBLOCK) << strerror(errno);
 
   std::latch fut_started(1);
   // Asynchronously block on I/O from the test client socket.
-  const auto fut = std::async(std::launch::async, [&, err = closeListener]() {
+  const auto fut = std::async(std::launch::async, [&, err = close_listener]() {
     // Make the socket blocking.
     int flags;
     EXPECT_GE(flags = fcntl(test_client.get(), F_GETFL, 0), 0) << strerror(errno);
@@ -3849,16 +3845,16 @@ TEST_P(ConnectingIOTest, BlockedIO) {
     fut_started.count_down();
 
     if (err) {
-      EXPECT_EQ(executeIO(), -1);
+      EXPECT_EQ(ExecuteIO(), -1);
       EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
     } else {
-      EXPECT_EQ(executeIO(), ssize_t(sizeof(sample_data))) << strerror(errno);
+      EXPECT_EQ(ExecuteIO(), ssize_t(sizeof(sample_data))) << strerror(errno);
     }
   });
   fut_started.wait();
   ASSERT_NO_FATAL_FAILURE(AssertBlocked(fut));
 
-  if (closeListener) {
+  if (close_listener) {
     ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
   } else {
     // Accept the precursor connection to make room for the test client
@@ -3874,7 +3870,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
     ASSERT_TRUE(test_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
         << strerror(errno);
 
-    if (isWrite) {
+    if (is_write) {
       // Ensure that we read the data whose send request was enqueued until
       // the connection was established.
       ASSERT_EQ(read(test_accept.get(), recvbuf, sizeof(recvbuf)), ssize_t(sizeof(sample_data)))
@@ -3891,15 +3887,15 @@ TEST_P(ConnectingIOTest, BlockedIO) {
   EXPECT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 }
 
-std::string connectingIOParamsToString(const testing::TestParamInfo<connectingIOParams> info) {
-  auto const& [ioMethod, closeListener] = info.param;
+std::string ConnectingIOParamsToString(const testing::TestParamInfo<ConnectingIOParams> info) {
+  auto const& [io_method, close_listener] = info.param;
   std::stringstream s;
-  if (closeListener) {
+  if (close_listener) {
     s << "CloseListener";
   } else {
     s << "Accept";
   }
-  s << "During" << ioMethod.IOMethodToString();
+  s << "During" << io_method.IOMethodToString();
 
   return s.str();
 }
@@ -3911,11 +3907,11 @@ INSTANTIATE_TEST_SUITE_P(
                                      IOMethod::Op::WRITE, IOMethod::Op::WRITEV, IOMethod::Op::SEND,
                                      IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
                      testing::Values(false, true)),
-    connectingIOParamsToString);
+    ConnectingIOParamsToString);
 
 // Test close/shutdown of listening socket with multiple non-blocking connects.
 // This tests client sockets in connected and connecting states.
-void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::unique_fd&)) {
+void TestListenWhileConnect(const IOMethod& io_method, void (*stopListen)(fbl::unique_fd&)) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
   struct sockaddr_in addr = {
@@ -3976,7 +3972,7 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
     AssertExpectedReventsAfterPeerShutdown(fd);
 
     char c;
-    EXPECT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
+    EXPECT_EQ(io_method.ExecuteIO(fd, &c, sizeof(c)), -1);
     EXPECT_EQ(errno, expected_errno) << strerror(errno) << " vs " << strerror(expected_errno);
 
     {
@@ -3988,13 +3984,13 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
       ASSERT_EQ(err, 0) << strerror(err);
     }
 
-    bool isWrite = ioMethod.isWrite();
+    bool is_write = io_method.isWrite();
 #if !defined(__Fuchsia__)
-    auto undo = disableSIGPIPE(isWrite);
+    auto undo = DisableSigPipe(is_write);
 #endif
 
-    if (isWrite) {
-      ASSERT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), -1);
+    if (is_write) {
+      ASSERT_EQ(io_method.ExecuteIO(fd, &c, sizeof(c)), -1);
       EXPECT_EQ(errno, EPIPE) << strerror(errno);
 
       // The error should have been consumed.
@@ -4004,7 +4000,7 @@ void TestListenWhileConnect(const IOMethod& ioMethod, void (*stopListen)(fbl::un
       ASSERT_EQ(optlen, sizeof(err));
       ASSERT_EQ(err, 0) << strerror(err);
     } else {
-      ASSERT_EQ(ioMethod.executeIO(fd, &c, sizeof(c)), 0) << strerror(errno);
+      ASSERT_EQ(io_method.ExecuteIO(fd, &c, sizeof(c)), 0) << strerror(errno);
     }
   }
 }
@@ -4355,45 +4351,45 @@ TEST_F(NetStreamSocketsTest, ShutdownPendingWrite) {
   EXPECT_EQ(rcvd, wrote);
 }
 
-using blockedIOParams = std::tuple<IOMethod, CloseTarget, bool>;
+using BlockedIOParams = std::tuple<IOMethod, CloseTarget, bool>;
 
 class BlockedIOTest : public NetStreamSocketsTest,
-                      public testing::WithParamInterface<blockedIOParams> {};
+                      public testing::WithParamInterface<BlockedIOParams> {};
 
 TEST_P(BlockedIOTest, CloseWhileBlocked) {
-  auto const& [ioMethod, closeTarget, lingerEnabled] = GetParam();
+  auto const& [io_method, close_target, linger_enabled] = GetParam();
 
-  bool isWrite = ioMethod.isWrite();
+  bool is_write = io_method.isWrite();
 
 #if defined(__Fuchsia__)
-  if (isWrite) {
+  if (is_write) {
     GTEST_SKIP() << "TODO(https://fxbug.dev/60337): Enable socket write methods after we are able "
                     "to deterministically block on socket writes.";
   }
 #endif
 
   // If linger is enabled, closing the socket will cause a TCP RST (by definition).
-  bool closeRST = lingerEnabled;
-  if (isWrite) {
+  bool close_rst = linger_enabled;
+  if (is_write) {
     // Fill the send buffer of the client socket to cause write to block.
     fill_stream_send_buf(client().get(), server().get());
     // Buffes are full. Closing the socket will now cause a TCP RST.
-    closeRST = true;
+    close_rst = true;
   }
 
   // While blocked in I/O, close the peer.
   std::latch fut_started(1);
   // NB: lambdas are not allowed to capture reference to local binding declared
   // in enclosing function.
-  const auto fut = std::async(std::launch::async, [&, op = ioMethod]() {
+  const auto fut = std::async(std::launch::async, [&, op = io_method]() {
     fut_started.count_down();
 
     char c;
-    if (closeRST) {
-      ASSERT_EQ(op.executeIO(client().get(), &c, sizeof(c)), -1);
+    if (close_rst) {
+      ASSERT_EQ(op.ExecuteIO(client().get(), &c, sizeof(c)), -1);
       EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
     } else {
-      ASSERT_EQ(op.executeIO(client().get(), &c, sizeof(c)), 0) << strerror(errno);
+      ASSERT_EQ(op.ExecuteIO(client().get(), &c, sizeof(c)), 0) << strerror(errno);
     }
   });
   fut_started.wait();
@@ -4401,11 +4397,11 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
 
   // When enabled, causes `close` to send a TCP RST.
   struct linger opt = {
-      .l_onoff = lingerEnabled,
+      .l_onoff = linger_enabled,
       .l_linger = 0,
   };
 
-  switch (closeTarget) {
+  switch (close_target) {
     case CloseTarget::CLIENT: {
       ASSERT_EQ(setsockopt(client().get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
           << strerror(errno);
@@ -4433,40 +4429,40 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
   ASSERT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 
 #if !defined(__Fuchsia__)
-  auto undo = disableSIGPIPE(isWrite);
+  auto undo = DisableSigPipe(is_write);
 #endif
 
   char c;
-  switch (closeTarget) {
+  switch (close_target) {
     case CloseTarget::CLIENT: {
-      ASSERT_EQ(ioMethod.executeIO(client().get(), &c, sizeof(c)), -1);
+      ASSERT_EQ(io_method.ExecuteIO(client().get(), &c, sizeof(c)), -1);
       EXPECT_EQ(errno, EBADF) << strerror(errno);
       break;
     }
     case CloseTarget::SERVER: {
-      if (isWrite) {
-        ASSERT_EQ(ioMethod.executeIO(client().get(), &c, sizeof(c)), -1);
+      if (is_write) {
+        ASSERT_EQ(io_method.ExecuteIO(client().get(), &c, sizeof(c)), -1);
         EXPECT_EQ(errno, EPIPE) << strerror(errno);
       } else {
-        ASSERT_EQ(ioMethod.executeIO(client().get(), &c, sizeof(c)), 0) << strerror(errno);
+        ASSERT_EQ(io_method.ExecuteIO(client().get(), &c, sizeof(c)), 0) << strerror(errno);
       }
       break;
     }
   }
 }
 
-std::string blockedIOParamsToString(const testing::TestParamInfo<blockedIOParams> info) {
+std::string BlockedIOParamsToString(const testing::TestParamInfo<BlockedIOParams> info) {
   // NB: this is a freestanding function because structured binding declarations are not allowed in
   // lambdas.
-  auto const& [ioMethod, closeTarget, lingerEnabled] = info.param;
+  auto const& [io_method, close_target, linger_enabled] = info.param;
   std::stringstream s;
-  s << "close" << CloseTargetToString(closeTarget) << "Linger";
-  if (lingerEnabled) {
+  s << "close" << CloseTargetToString(close_target) << "Linger";
+  if (linger_enabled) {
     s << "Foreground";
   } else {
     s << "Background";
   }
-  s << "During" << ioMethod.IOMethodToString();
+  s << "During" << io_method.IOMethodToString();
 
   return s.str();
 }
@@ -4479,7 +4475,7 @@ INSTANTIATE_TEST_SUITE_P(
                                      IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
                      testing::Values(CloseTarget::CLIENT, CloseTarget::SERVER),
                      testing::Values(false, true)),
-    blockedIOParamsToString);
+    BlockedIOParamsToString);
 
 // Use this routine to test blocking socket reads. On failure, this attempts to recover the blocked
 // thread.
@@ -4488,7 +4484,7 @@ INSTANTIATE_TEST_SUITE_P(
 //      (2) 0, when we abort a blocked recv
 //      (3) -1, on failure of both of the above operations.
 ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flags,
-                        struct sockaddr_in* addr, const socklen_t* addrlen, int socketType,
+                        struct sockaddr_in* addr, const socklen_t* addrlen, int socket_type,
                         std::chrono::duration<double> timeout) {
   std::future<ssize_t> recv = std::async(std::launch::async, [recvfd, buf, len, flags]() {
     memset(buf, 0xde, len);
@@ -4500,7 +4496,7 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
   }
 
   // recover the blocked receiver thread
-  switch (socketType) {
+  switch (socket_type) {
     case SOCK_STREAM: {
       // shutdown() would unblock the receiver thread with recv returning 0.
       EXPECT_EQ(shutdown(recvfd, SHUT_RD), 0) << strerror(errno);
@@ -4537,7 +4533,7 @@ ssize_t asyncSocketRead(int recvfd, int sendfd, char* buf, ssize_t len, int flag
 class DatagramSendTest : public testing::TestWithParam<IOMethod> {};
 
 TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
-  auto ioMethod = GetParam();
+  auto io_method = GetParam();
 
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
@@ -4570,7 +4566,7 @@ TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
   ASSERT_TRUE(IN6_IS_ADDR_V4MAPPED(&addr6.sin6_addr))
       << inet_ntop(addr6.sin6_family, &addr6.sin6_addr, buf, sizeof(buf));
 
-  switch (ioMethod.Op()) {
+  switch (io_method.Op()) {
     case IOMethod::Op::SENDTO: {
       ASSERT_EQ(sendto(fd.get(), nullptr, 0, 0, reinterpret_cast<const struct sockaddr*>(&addr6),
                        sizeof(addr6)),
@@ -4595,7 +4591,7 @@ TEST_P(DatagramSendTest, SendToIPv4MappedIPv6FromIPv4) {
 }
 
 TEST_P(DatagramSendTest, DatagramSend) {
-  auto ioMethod = GetParam();
+  auto io_method = GetParam();
   fbl::unique_fd recvfd;
   ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
 
@@ -4630,7 +4626,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
 
   fbl::unique_fd sendfd;
   ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
-  switch (ioMethod.Op()) {
+  switch (io_method.Op()) {
     case IOMethod::Op::SENDTO: {
       EXPECT_EQ(sendto(sendfd.get(), msg.data(), msg.size(), 0,
                        reinterpret_cast<struct sockaddr*>(&addr), addrlen),
@@ -4660,7 +4656,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
   EXPECT_EQ(connect(sendfd.get(), reinterpret_cast<struct sockaddr*>(&addr), addrlen), 0)
       << strerror(errno);
-  switch (ioMethod.Op()) {
+  switch (io_method.Op()) {
     case IOMethod::Op::SENDTO: {
       EXPECT_EQ(sendto(sendfd.get(), msg.data(), msg.size(), 0,
                        reinterpret_cast<struct sockaddr*>(&addr), addrlen),
@@ -4700,7 +4696,7 @@ TEST_P(DatagramSendTest, DatagramSend) {
   //      https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt
   const uint16_t orig_sin_port = addr.sin_port;
   addr.sin_port = htons(ntohs(orig_sin_port) - 1);
-  switch (ioMethod.Op()) {
+  switch (io_method.Op()) {
     case IOMethod::Op::SENDTO: {
       EXPECT_EQ(sendto(sendfd.get(), msg.data(), msg.size(), 0,
                        reinterpret_cast<struct sockaddr*>(&addr), addrlen),
@@ -5076,7 +5072,7 @@ class NetSocketTest : public testing::TestWithParam<int> {};
 // TODO(fxbug.dev/33100): change this test to use recvmsg instead of recvfrom to exercise MSG_PEEK
 // with scatter/gather.
 TEST_P(NetSocketTest, SocketPeekTest) {
-  int socketType = GetParam();
+  int socket_type = GetParam();
   struct sockaddr_in addr = {
       .sin_family = AF_INET,
       .sin_addr =
@@ -5092,12 +5088,12 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   char recvbuf[2 * sizeof(sendbuf)] = {};
   ssize_t sendlen = sizeof(sendbuf);
 
-  ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, socketType, 0))) << strerror(errno);
+  ASSERT_TRUE(sendfd = fbl::unique_fd(socket(AF_INET, socket_type, 0))) << strerror(errno);
   // Setup the sender and receiver sockets.
-  switch (socketType) {
+  switch (socket_type) {
     case SOCK_STREAM: {
       fbl::unique_fd acptfd;
-      ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, socketType, 0))) << strerror(errno);
+      ASSERT_TRUE(acptfd = fbl::unique_fd(socket(AF_INET, socket_type, 0))) << strerror(errno);
       EXPECT_EQ(bind(acptfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
                 0)
           << strerror(errno);
@@ -5116,7 +5112,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
       break;
     }
     case SOCK_DGRAM: {
-      ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, socketType, 0))) << strerror(errno);
+      ASSERT_TRUE(recvfd = fbl::unique_fd(socket(AF_INET, socket_type, 0))) << strerror(errno);
       EXPECT_EQ(bind(recvfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
                 0)
           << strerror(errno);
@@ -5149,7 +5145,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   auto start = std::chrono::steady_clock::now();
   // First peek on first byte.
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, &addr, &addrlen,
-                            socketType, kTimeout),
+                            socket_type, kTimeout),
             1);
   auto success_rcv_duration = std::chrono::steady_clock::now() - start;
   EXPECT_EQ(recvbuf[0], sendbuf[0]);
@@ -5164,7 +5160,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
     // TODO(https://fxbug.dev/74639) : Use SO_RCVLOWAT instead of retry.
     do {
       readLen = asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, sizeof(recvbuf), flags, &addr,
-                                &addrlen, socketType, kTimeout);
+                                &addrlen, socket_type, kTimeout);
       if (HasFailure()) {
         break;
       }
@@ -5188,7 +5184,7 @@ TEST_P(NetSocketTest, SocketPeekTest) {
   // As we expect failure, to keep the recv wait time minimal, we base it on the time taken for a
   // successful recv.
   EXPECT_EQ(asyncSocketRead(recvfd.get(), sendfd.get(), recvbuf, 1, MSG_PEEK, &addr, &addrlen,
-                            socketType, success_rcv_duration * 10),
+                            socket_type, success_rcv_duration * 10),
             0);
   EXPECT_EQ(close(recvfd.release()), 0) << strerror(errno);
   EXPECT_EQ(close(sendfd.release()), 0) << strerror(errno);
@@ -5475,7 +5471,7 @@ TEST(IoctlTest, IoctlGetInterfaceAddressesPartialRecord) {
 INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
                          testing::Combine(testing::Values(AF_INET, AF_INET6),
                                           testing::Values(SOCK_DGRAM, SOCK_STREAM)),
-                         socketKindToString);
+                         SocketKindToString);
 
 using DomainProtocol = std::tuple<int, int>;
 class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {};
@@ -5577,7 +5573,7 @@ struct CmsgSocketOption {
 
 using SocketDomainAndOption = std::tuple<sa_family_t, CmsgSocketOption>;
 
-std::string socketDomainAndOptionToString(
+std::string SocketDomainAndOptionToString(
     const testing::TestParamInfo<SocketDomainAndOption>& info) {
   auto const& [domain, cmsg_sockopt] = info.param;
   auto const& [level, cmsg_type, optname_to_enable_receive] = cmsg_sockopt;
@@ -5816,7 +5812,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsg
                                                   .cmsg_type = SO_TIMESTAMPNS,
                                                   .optname_to_enable_receive = SO_TIMESTAMPNS,
                                               })),
-                         socketDomainAndOptionToString);
+                         SocketDomainAndOptionToString);
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
                          testing::Combine(testing::Values(AF_INET),
@@ -5825,7 +5821,7 @@ INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSockets
                                               .cmsg_type = IP_TOS,
                                               .optname_to_enable_receive = IP_RECVTOS,
                                           })),
-                         socketDomainAndOptionToString);
+                         SocketDomainAndOptionToString);
 
 class NetDatagramSocketsCmsgTimestampTest : public NetDatagramSocketsCmsgTestBase,
                                             public testing::TestWithParam<sa_family_t> {
