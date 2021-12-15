@@ -43,10 +43,8 @@ Engine::Engine(std::shared_ptr<flatland::DisplayCompositor> flatland_compositor,
 void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_time,
                                   const FlatlandDisplay& display,
                                   scheduling::FrameRenderer::FramePresentedCallback callback) {
-  // NOTE: this will fail if there exists a Gfx DisplayCompositor which renders some frames, which
-  // is later replaced by a FlatlandDisplay, as this will result in a gap in frame numbers.  This is
-  // a temporary situation; soon FlatlandDisplay will be the only way to connect content to a
-  // display.
+  // NOTE: This is a temporary situation; soon FlatlandDisplay will be the only way to connect
+  // content to a display.
   FX_CHECK(frame_number == last_rendered_frame_ + 1);
   last_rendered_frame_ = frame_number;
 

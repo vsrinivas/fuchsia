@@ -40,6 +40,9 @@ class TemporaryFrameRendererDelegator : public scheduling::FrameRenderer {
   std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::shared_ptr<flatland::Engine> flatland_engine_;
   std::shared_ptr<gfx::Engine> gfx_engine_;
+
+  uint64_t gfx_frame_count_ = 0;
+  uint64_t flatland_frame_count_ = 0;
 };
 
 }  // namespace scenic_impl

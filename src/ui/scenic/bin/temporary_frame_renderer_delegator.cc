@@ -22,12 +22,13 @@ TemporaryFrameRendererDelegator::TemporaryFrameRendererDelegator(
 void TemporaryFrameRendererDelegator::RenderScheduledFrame(uint64_t frame_number,
                                                            zx::time presentation_time,
                                                            FramePresentedCallback callback) {
+  FX_CHECK(flatland_frame_count_ + gfx_frame_count_ == frame_number - 1);
   if (auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering()) {
-    flatland_engine_->RenderScheduledFrame(frame_number, presentation_time, *display.get(),
-                                           std::move(callback));
+    flatland_engine_->RenderScheduledFrame(++flatland_frame_count_, presentation_time,
+                                           *display.get(), std::move(callback));
   } else {
     // Render the good ol' Gfx Engine way.
-    gfx_engine_->RenderScheduledFrame(frame_number, presentation_time, std::move(callback));
+    gfx_engine_->RenderScheduledFrame(++gfx_frame_count_, presentation_time, std::move(callback));
   }
 }
 
