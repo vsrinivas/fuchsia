@@ -434,7 +434,7 @@ impl fmt::Display for CapabilityId {
 }
 
 /// A list of rights.
-#[derive(CheckedVec, Debug, PartialEq)]
+#[derive(CheckedVec, Debug, PartialEq, Clone)]
 #[checked_vec(
     expected = "a nonempty array of rights, with unique elements",
     min_length = 1,
@@ -443,7 +443,7 @@ impl fmt::Display for CapabilityId {
 pub struct Rights(pub Vec<Right>);
 
 /// A list of event modes.
-#[derive(CheckedVec, Debug, PartialEq)]
+#[derive(CheckedVec, Debug, PartialEq, Clone)]
 #[checked_vec(
     expected = "a nonempty array of event modes, with unique elements",
     min_length = 1,
@@ -697,7 +697,7 @@ pub enum EventMode {
     Sync,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct EventSubscription {
     pub event: OneOrMany<Name>,
@@ -813,7 +813,7 @@ impl Right {
     }
 }
 
-#[derive(ReferenceDoc, Deserialize, Debug)]
+#[derive(ReferenceDoc, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 /// A `.cml` file contains a single json5 object literal with the keys below.
 ///
@@ -1399,12 +1399,69 @@ macro_rules! merge_from_field {
     };
 }
 
+macro_rules! flatten_on_capability_type {
+    ($input_clause:ident, $type:ident) => {
+        match &$input_clause.$type {
+            Some(OneOrMany::Many(ref clause_vec)) => {
+                clause_vec.iter().map(|c| {
+                    let mut clause_clone = $input_clause.clone();
+                    clause_clone.$type = Some(OneOrMany::One(c.clone()));
+                    clause_clone
+                }).collect::<Vec<_>>()
+            }
+            Some(OneOrMany::One(_)) => vec![$input_clause.clone()],
+            _ => unreachable!("unable to flatten empty capability type")
+        }
+    };
+}
+
+// flatten_field expands capability clauses which have multiple specifications
+// e.g. a Use clause that has a list of protocols. This is done on both the source
+// and destination Document before merging in order to correctly deduplicate capabilities
+// specified in both Documents.
+macro_rules! flatten_field {
+    ($input_doc:ident, $field_name:ident,$($sub_field: ident),* ) => {
+        match &$input_doc.$field_name {
+
+            Some(in_vals) => {
+                let mut new_vals = Vec::new();
+                for curr_val in in_vals {
+                    let val = match curr_val.capability_type() {
+                        $( stringify!($sub_field) => flatten_on_capability_type!(curr_val, $sub_field),)*
+                        _ =>  vec![curr_val.clone()],
+                    };
+                    new_vals.extend(val);
+                }
+                $input_doc.$field_name = Some(new_vals);
+            },
+            _ => {}
+        }
+    };
+}
+
+// flatten_docs updates one or more Documents by expanding fields where one entry
+// can represent multiple capabilities. This prepares the Document to be merged with
+// the correct deduplication behavior.
+macro_rules! flatten_docs {
+    ($($doc: ident),+ ) => {
+        $({
+            flatten_field!($doc, r#use, protocol, service, event);
+            flatten_field!($doc, offer, protocol, service, event);
+            flatten_field!($doc, expose, protocol, service);
+            flatten_field!($doc, capabilities, protocol, service);
+        })+
+    };
+}
+
 impl Document {
     pub fn merge_from(
         &mut self,
         other: &mut Document,
         include_path: &path::Path,
     ) -> Result<(), Error> {
+        // Flatten the mergable fields that may contain a
+        // list of capabilities in one clause.
+        flatten_docs!(self, other);
         merge_from_field!(self, other, include);
         merge_from_field!(self, other, r#use);
         merge_from_field!(self, other, expose);
@@ -1815,7 +1872,7 @@ pub struct ResolverRegistration {
     pub scheme: cm_types::UrlScheme,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Capability {
     pub service: Option<OneOrMany<Name>>,
@@ -1844,7 +1901,7 @@ pub struct DebugRegistration {
 }
 
 /// A list of event modes.
-#[derive(CheckedVec, Debug, PartialEq)]
+#[derive(CheckedVec, Debug, PartialEq, Clone)]
 #[checked_vec(
     expected = "a nonempty array of event subscriptions",
     min_length = 1,
@@ -1931,7 +1988,7 @@ impl<'de> de::Deserialize<'de> for Program {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Use {
     pub service: Option<OneOrMany<Name>>,
@@ -1951,7 +2008,7 @@ pub struct Use {
     pub dependency: Option<DependencyType>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Expose {
     pub service: Option<OneOrMany<Name>>,
@@ -1967,7 +2024,7 @@ pub struct Expose {
     pub modes: Option<EventModes>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Offer {
     pub service: Option<OneOrMany<Name>>,
@@ -3064,5 +3121,74 @@ mod tests {
             Err(Error::Validate { schema_name: None, err, .. })
                 if err == format!("manifest include had a conflicting `{}`: some/path", field)
         );
+    }
+
+    #[test_case(
+        document(json!({ "use": [{ "protocol": "foo.bar.Baz", "from": "self"}]})),
+        document(json!({ "use": [{ "protocol": ["foo.bar.Baz", "some.other.Protocol"], "from": "self"}]})),
+        document(json!({ "use": [{ "protocol": "foo.bar.Baz", "from": "self" },{"protocol": "some.other.Protocol", "from": "self"}]}))
+        ; "merge duplicate protocols in use clause"
+    )]
+    #[test_case(
+        document(json!({ "use": [{ "service": "foo.bar.Baz", "from": "self"}]})),
+        document(json!({ "use": [{ "service": ["foo.bar.Baz", "some.other.Service"], "from": "self"}]})),
+        document(json!({ "use": [{ "service": "foo.bar.Baz", "from": "self" },{"service": "some.other.Service", "from": "self"}]}))
+        ; "merge duplicate capabilities service use clause"
+    )]
+    #[test_case(
+        document(json!({ "use": [{ "event": "EventFoo", "from": "self"}]})),
+        document(json!({ "use": [{ "event": ["EventFoo", "EventBar"], "from": "self"}]})),
+        document(json!({ "use": [{ "event": "EventFoo", "from": "self" },{"event": "EventBar", "from": "self"}]}))
+        ; "merge duplicate capabilities events use clause"
+    )]
+    #[test_case(
+        document(json!({ "offer": [{ "protocol": "foo.bar.Baz", "from": "self", "to": "#elements"}], "collections" :[{"name": "elements", "durability": "transient" }]})),
+        document(json!({ "offer": [{ "protocol": ["foo.bar.Baz", "some.other.Protocol"], "from": "self", "to": "#elements"}], "collections":[{"name": "elements", "durability": "transient"}]})),
+        document(json!({ "offer": [{ "protocol": "foo.bar.Baz", "from": "self", "to": "#elements" },{"protocol": "some.other.Protocol", "from": "self", "to": "#elements"}], "collections":[{"name": "elements", "durability": "transient"}]}))
+        ; "merge duplicate protocols in offer clause"
+    )]
+    #[test_case(
+        document(json!({ "offer": [{ "service": "foo.bar.Baz", "from": "self", "to": "#elements"}], "collections" :[{"name": "elements", "durability": "transient" }]})),
+        document(json!({ "offer": [{ "service": ["foo.bar.Baz", "some.other.Service"], "from": "self", "to": "#elements"}], "collections":[{"name": "elements", "durability": "transient"}]})),
+        document(json!({ "offer": [{ "service": "foo.bar.Baz", "from": "self", "to": "#elements" },{"service": "some.other.Service", "from": "self", "to": "#elements"}], "collections":[{"name": "elements", "durability": "transient"}]}))
+        ; "merge duplicate capabilities service offer clause"
+    )]
+    #[test_case(
+        document(json!({ "offer": [{ "event": "EventFoo", "from": "self", "to": "#elements"}], "collections" :[{"name": "elements", "durability": "transient" }]})),
+        document(json!({ "offer": [{ "event": ["EventFoo", "EventBar"], "from": "self", "to": "#elements"}], "collections":[{"name": "elements", "durability": "transient"}]})),
+        document(json!({ "offer": [{ "event": "EventFoo", "from": "self", "to": "#elements" },{"event": "EventBar", "from": "self", "to": "#elements"}], "collections":[{"name": "elements", "durability": "transient"}]}))
+        ; "merge duplicate capabilities events offer clause"
+    )]
+    #[test_case(
+        document(json!({ "expose": [{ "protocol": "foo.bar.Baz", "from": "self"}]})),
+        document(json!({ "expose": [{ "protocol": ["foo.bar.Baz", "some.other.Protocol"], "from": "self"}]})),
+        document(json!({ "expose": [{ "protocol": "foo.bar.Baz", "from": "self" },{"protocol": "some.other.Protocol", "from": "self"}]}))
+        ; "merge duplicate protocols in expose clause"
+    )]
+    #[test_case(
+        document(json!({ "expose": [{ "service": "foo.bar.Baz", "from": "self"}]})),
+        document(json!({ "expose": [{ "service": ["foo.bar.Baz", "some.other.Service"], "from": "self"}]})),
+        document(json!({ "expose": [{ "service": "foo.bar.Baz", "from": "self" },{"service": "some.other.Service", "from": "self"}]}))
+        ; "merge duplicate service capabilities in expose clause"
+    )]
+    #[test_case(
+        document(json!({ "capabilities": [{ "protocol": "foo.bar.Baz", "from": "self"}]})),
+        document(json!({ "capabilities": [{ "protocol": ["foo.bar.Baz", "some.other.Protocol"], "from": "self"}]})),
+        document(json!({ "capabilities": [{ "protocol": "foo.bar.Baz", "from": "self" },{"protocol": "some.other.Protocol", "from": "self"}]}))
+        ; "merge duplicate protocols in capabilities clause"
+    )]
+    #[test_case(
+        document(json!({ "capabilities": [{ "service": "foo.bar.Baz", "from": "self"}]})),
+        document(json!({ "capabilities": [{ "service": ["foo.bar.Baz", "some.other.Service"], "from": "self"}]})),
+        document(json!({ "capabilities": [{ "service": "foo.bar.Baz", "from": "self" },{"service": "some.other.Service", "from": "self"}]}))
+        ; "merge duplicate services in capabilities clause"
+    )]
+    fn test_merge_from_duplicate_capability(
+        mut my: Document,
+        mut other: Document,
+        result: Document,
+    ) {
+        my.merge_from(&mut other, &path::Path::new("some/path")).unwrap();
+        assert_eq!(my, result);
     }
 }
