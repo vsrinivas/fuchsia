@@ -21,7 +21,10 @@ executable("no-op-success") {
 zbi_test("smoke-zbi-test") {
   assert(current_cpu != "")
 
-  args = [ "userboot.next=bin/no-op-success" ]
+  args = [
+    "userboot.next=bin/no-op-success",
+    "userboot.shutdown",
+  ]
 
   deps = [
     ":no-op-success",
@@ -37,6 +40,7 @@ zbi_test("entropy-zbi-test") {
 
   args = [
     "userboot.next=bin/no-op-success",
+    "userboot.shutdown",
     "kernel.cprng-seed-require.cmdline=true",
   ]
 

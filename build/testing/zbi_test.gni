@@ -16,7 +16,11 @@ import("//build/zbi/zbi_input.gni")
 # Parameters
 #
 #   args (optional)
-#     [list of strings] Command line arguments for the resulting zbi.
+#     [list of strings] Command line arguments for the resulting zbi. ZBI tests
+#     using the kernel and a non-default `userboot.next` options must add
+#     `userboot.{shutdown,reboot}` as well in order to guarantee that a success
+#     string is printed. See //zircon/system/utest/core:core-tests for a
+#     canonical example.
 #
 #   device_types
 #     [list of strings] Devices the test should run on.
@@ -24,11 +28,10 @@ import("//build/zbi/zbi_input.gni")
 #     //build/testing/platforms.gni; others will be ignored.
 #     Defaults to [ "QEMU" ].
 #
-#   replace, complete, compress
+#   deps, data_deps, replace, complete, compress
 #     See //build/zbi/zbi.gni.
 template("zbi_test") {
   main_target = target_name
-  input_target = "${target_name}_input"
   zbi_target = "${target_name}.zbi"
 
   not_needed(invoker,
@@ -37,21 +40,26 @@ template("zbi_test") {
                "timeout",
              ])
 
+  input_deps = []
   group_deps = []
 
   entries = []
   if (defined(invoker.args)) {
     entries += invoker.args
   }
-  entries += [ "userboot.shutdown" ]
 
-  zbi_input(input_target) {
-    forward_variables_from(invoker, [ "deps" ])
-    testonly = true
-    type = "cmdline"
-    args = []
-    foreach(entry, entries) {
-      args += [ "--entry=$entry" ]
+  if (entries != []) {
+    input_target = "${target_name}_input"
+    input_deps += [ ":$input_target" ]
+
+    zbi_input(input_target) {
+      forward_variables_from(invoker, [ "deps" ])
+      testonly = true
+      type = "cmdline"
+      args = []
+      foreach(entry, entries) {
+        args += [ "--entry=$entry" ]
+      }
     }
   }
 
@@ -74,7 +82,7 @@ template("zbi_test") {
     if (!defined(output_name)) {
       output_name = main_target
     }
-    deps = invoker.deps + [ ":$input_target" ]
+    deps = invoker.deps + input_deps
     if (defined(invoker.qemu_kernel)) {
       data_deps += [ invoker.qemu_kernel ]
     }

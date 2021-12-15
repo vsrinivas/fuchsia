@@ -34,7 +34,7 @@ import("//build/testing/zbi_test.gni")
 #     when not specified.
 #
 #   * args
-#     - Optional: List of additonal kernel command line arguments
+#     - Optional: List of additional kernel command line arguments
 #     The documentation above details specific arguments provided by
 #     default by the template; no argument that overrides these should be
 #     provided here.

@@ -201,6 +201,7 @@ zbi_test("core-tests") {
 
   args = [
     "userboot.next=test/core-standalone-test",
+    "userboot.shutdown",
     "kernel.vdso.always_use_next=true",
     "kernel.enable-debugging-syscalls=true",
     "kernel.ram.reserve.test=0x8000,0xXXXXXXXXXXXXXXXX",
@@ -232,6 +233,7 @@ if (current_cpu == "x64") {
   zbi_test("core-tests-hpet") {
     args = [
       "userboot.next=test/core-standalone-test",
+      "userboot.shutdown",
       "kernel.wallclock=hpet",
       "kernel.vdso.always_use_next=true",
       "kernel.enable-debugging-syscalls=true",
