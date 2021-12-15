@@ -317,7 +317,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
 }
 
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
-  SetEthernetStatusUnlocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   wlanif_join_req_t impl_req = {};
 
@@ -344,7 +344,7 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
 }
 
 void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
-  SetEthernetStatusUnlocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   wlanif_auth_req_t impl_req = {};
 
@@ -379,7 +379,7 @@ void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
 }
 
 void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
-  SetEthernetStatusUnlocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   wlanif_deauth_req_t impl_req = {};
 
@@ -434,7 +434,7 @@ void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
 }
 
 void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
-  SetEthernetStatusUnlocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   wlanif_disassoc_req_t impl_req = {};
 
@@ -448,7 +448,7 @@ void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
 }
 
 void Device::ResetReq(wlan_mlme::ResetRequest req) {
-  SetEthernetStatusUnlocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   wlanif_reset_req_t impl_req = {};
 
@@ -464,7 +464,7 @@ void Device::ResetReq(wlan_mlme::ResetRequest req) {
 void Device::StartReq(wlan_mlme::StartRequest req) {
   {
     std::lock_guard<std::mutex> lock(lock_);
-    if (eth_online_) {
+    if (eth_device_.IsEthernetOnline()) {
       SendStartConfLocked(WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED);
       return;
     }
@@ -494,7 +494,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
 }
 
 void Device::StopReq(wlan_mlme::StopRequest req) {
-  SetEthernetStatusUnlocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   wlanif_stop_req_t impl_req = {};
   CloneIntoCSsid(req.ssid, impl_req.ssid);
@@ -724,10 +724,10 @@ void Device::GetMeshPathTableReq(::fuchsia::wlan::mlme::GetMeshPathTableRequest 
 void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
   switch (req.state) {
     case wlan_mlme::ControlledPortState::OPEN:
-      SetEthernetStatusUnlocked(true);
+      eth_device_.SetEthernetStatus(&wlanif_impl_, true);
       break;
     case wlan_mlme::ControlledPortState::CLOSED:
-      SetEthernetStatusUnlocked(false);
+      eth_device_.SetEthernetStatus(&wlanif_impl_, false);
       break;
   }
 }
@@ -814,7 +814,7 @@ void Device::SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) {
 void Device::JoinConf(const wlanif_join_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  SetEthernetStatusLocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   if (binding_ == nullptr) {
     return;
@@ -831,7 +831,7 @@ void Device::JoinConf(const wlanif_join_confirm_t* resp) {
 void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  SetEthernetStatusLocked(false);
+  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
 
   if (binding_ == nullptr) {
     return;
@@ -873,7 +873,7 @@ void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    SetEthernetStatusLocked(false);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -892,7 +892,7 @@ void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    SetEthernetStatusLocked(false);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -919,7 +919,7 @@ void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
   // For unprotected network, set data state to online immediately. For protected network, do
   // nothing. Later on upper layer would send message to open controlled port.
   if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS && !protected_bss_) {
-    SetEthernetStatusLocked(true);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, true);
   }
 
   if (binding_ == nullptr) {
@@ -961,7 +961,7 @@ void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    SetEthernetStatusLocked(false);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -980,7 +980,7 @@ void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    SetEthernetStatusLocked(false);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -1005,7 +1005,7 @@ void Device::StartConf(const wlanif_start_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (resp->result_code == WLAN_START_RESULT_SUCCESS) {
-    SetEthernetStatusLocked(true);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, true);
   }
 
   SendStartConfLocked(resp->result_code);
@@ -1015,7 +1015,7 @@ void Device::StopConf(const wlanif_stop_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (resp->result_code == WLAN_STOP_RESULT_SUCCESS) {
-    SetEthernetStatusLocked(false);
+    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -1158,21 +1158,10 @@ void Device::OnPmkAvailable(const wlanif_pmk_info_t* info) {
 }
 
 zx_status_t Device::EthStart(const ethernet_ifc_protocol_t* ifc) {
-  std::lock_guard<std::mutex> lock(lock_);
-  ethernet_ifc_ = *ifc;
-  eth_started_ = true;
-  if (eth_online_) {
-    ethernet_ifc_status(&ethernet_ifc_, ETHERNET_STATUS_ONLINE);
-  }
-  // TODO(fxbug.dev/51009): Inform SME that ethernet has started.
-  return ZX_OK;
+  return eth_device_.EthStart(ifc);
 }
 
-void Device::EthStop() {
-  std::lock_guard<std::mutex> lock(lock_);
-  eth_started_ = false;
-  ethernet_ifc_ = {};
-}
+void Device::EthStop() { return eth_device_.EthStop(); }
 
 zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
   std::lock_guard<std::mutex> lock(lock_);
@@ -1200,14 +1189,50 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
 
 void Device::EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                         ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-  if (wlanif_impl_.ops->data_queue_tx != nullptr) {
-    wlanif_impl_data_queue_tx(&wlanif_impl_, options, netbuf, completion_cb, cookie);
+  eth_device_.EthQueueTx(&wlanif_impl_, options, netbuf, completion_cb, cookie);
+}
+
+zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size) {
+  return eth_device_.EthSetParam(&wlanif_impl_, param, value, data, data_size);
+}
+
+void Device::EthRecv(const uint8_t* data, size_t length, uint32_t flags) {
+  eth_device_.EthRecv(data, length, flags);
+}
+
+EthDevice::EthDevice() { ltrace_fn(); }
+
+EthDevice::~EthDevice() { ltrace_fn(); }
+
+zx_status_t EthDevice::EthStart(const ethernet_ifc_protocol_t* ifc) {
+  std::lock_guard<std::mutex> lock(lock_);
+  ethernet_ifc_ = *ifc;
+  eth_started_ = true;
+  if (eth_online_) {
+    ethernet_ifc_status(&ethernet_ifc_, ETHERNET_STATUS_ONLINE);
+  }
+  // TODO(fxbug.dev/51009): Inform SME that ethernet has started.
+  return ZX_OK;
+}
+
+void EthDevice::EthStop() {
+  std::lock_guard<std::mutex> lock(lock_);
+  eth_started_ = false;
+  ethernet_ifc_ = {};
+}
+
+void EthDevice::EthQueueTx(wlanif_impl_protocol_t* wlanif_impl_proto, uint32_t options,
+                           ethernet_netbuf_t* netbuf, ethernet_impl_queue_tx_callback completion_cb,
+                           void* cookie) {
+  if (wlanif_impl_proto->ops->data_queue_tx != nullptr) {
+    wlanif_impl_data_queue_tx(wlanif_impl_proto, options, netbuf, completion_cb, cookie);
   } else {
     completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, netbuf);
   }
 }
 
-zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size) {
+zx_status_t EthDevice::EthSetParam(wlanif_impl_protocol_t* wlanif_impl_proto, uint32_t param,
+                                   int32_t value, const void* data, size_t data_size) {
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 
   switch (param) {
@@ -1222,8 +1247,8 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
       status = ZX_OK;
       break;
     case ETHERNET_SETPARAM_MULTICAST_PROMISC:
-      if (wlanif_impl_.ops->set_multicast_promisc != nullptr) {
-        return wlanif_impl_set_multicast_promisc(&wlanif_impl_, !!value);
+      if (wlanif_impl_proto->ops->set_multicast_promisc != nullptr) {
+        return wlanif_impl_set_multicast_promisc(wlanif_impl_proto, !!value);
       } else {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -1233,25 +1258,27 @@ zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data,
   return status;
 }
 
-void Device::SetEthernetStatusLocked(bool online) {
+void EthDevice::SetEthernetStatus(wlanif_impl_protocol_t* wlanif_impl_proto, bool online) {
+  std::lock_guard<std::mutex> lock(lock_);
+
   // TODO(fxbug.dev/51009): Let SME handle these changes.
   if (online != eth_online_) {
     eth_online_ = online;
     if (eth_started_) {
       ethernet_ifc_status(&ethernet_ifc_, online ? ETHERNET_STATUS_ONLINE : 0);
     }
-    if (wlanif_impl_.ops->on_link_state_changed) {
-      wlanif_impl_on_link_state_changed(&wlanif_impl_, online);
+    if (wlanif_impl_proto->ops->on_link_state_changed) {
+      wlanif_impl_on_link_state_changed(wlanif_impl_proto, online);
     }
   }
 }
 
-void Device::SetEthernetStatusUnlocked(bool online) {
+bool EthDevice::IsEthernetOnline() {
   std::lock_guard<std::mutex> lock(lock_);
-  SetEthernetStatusLocked(online);
+  return eth_online_;
 }
 
-void Device::EthRecv(const uint8_t* data, size_t length, uint32_t flags) {
+void EthDevice::EthRecv(const uint8_t* data, size_t length, uint32_t flags) {
   std::lock_guard<std::mutex> lock(lock_);
   if (eth_started_) {
     ethernet_ifc_recv(&ethernet_ifc_, data, length, flags);

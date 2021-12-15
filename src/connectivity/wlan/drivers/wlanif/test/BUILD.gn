@@ -40,7 +40,11 @@ test("convert_unittest") {
 test("device_unittest") {
   output_name = "wlanif_device_unittest"
 
-  sources = [ "device_unittest.cc" ]
+  sources = [
+    "device_unittest.cc",
+    "test_bss.cc",
+    "test_bss.h",
+  ]
 
   deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",

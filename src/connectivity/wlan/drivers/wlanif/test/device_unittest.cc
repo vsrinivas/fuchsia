@@ -28,6 +28,7 @@
 
 #include "fuchsia/hardware/wlan/fullmac/c/banjo.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
+#include "test_bss.h"
 
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -888,6 +889,71 @@ TEST_F(EthernetTestFixture, GetIfaceHistogramStatsReqDoesNotDeadlockWithEthRecv)
   device_->EthStart(&eth_proto_);
 
   device_->GetIfaceHistogramStats([](auto resp) {});
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, JoinReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.join_req = [](void* ctx, const wlanif_join_req_t* req) {
+    ETH_DEV(ctx)->CallDataRecv();
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->JoinReq(wlanif_test::CreateJoinReq());
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, AuthReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.auth_req = [](void* ctx, const wlanif_auth_req_t* req) {
+    ETH_DEV(ctx)->CallDataRecv();
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->AuthenticateReq(wlanif_test::CreateAuthenticateReq());
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, DeauthReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.deauth_req = [](void* ctx, const wlanif_deauth_req_t* req) {
+    ETH_DEV(ctx)->CallDataRecv();
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->DeauthenticateReq(wlanif_test::CreateDeauthenticateReq());
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, DisassociateReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.disassoc_req = [](void* ctx, const wlanif_disassoc_req_t* req) {
+    ETH_DEV(ctx)->CallDataRecv();
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  wlan_mlme::DisassociateRequest disassoc_req;
+  device_->DisassociateReq(disassoc_req);
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, StartReqDoesNotDeadlockWithEthRecv) {
+  start_req_cb_ = [this](const wlanif_start_req_t* req) { this->CallDataRecv(); };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->StartReq(wlanif_test::CreateStartReq());
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, StopReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.stop_req = [](void* ctx, const wlanif_stop_req_t* req) {
+    ETH_DEV(ctx)->CallDataRecv();
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->StopReq(wlanif_test::CreateStopReq());
   ASSERT_TRUE(eth_recv_called_);
 }
 

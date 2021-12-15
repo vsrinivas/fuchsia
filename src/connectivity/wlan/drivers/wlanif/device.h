@@ -17,6 +17,34 @@
 
 namespace wlanif {
 
+class EthDevice {
+ public:
+  EthDevice();
+  ~EthDevice();
+
+  // wlanif_protocol_t (ethernet_impl_protocol -> wlanif_impl_protocol)
+  zx_status_t EthStart(const ethernet_ifc_protocol_t* ifc);
+  void EthStop();
+  void EthQueueTx(wlanif_impl_protocol_t* wlanif_impl_proto, uint32_t options,
+                  ethernet_netbuf_t* netbuf, ethernet_impl_queue_tx_callback completion_cb,
+                  void* cookie);
+  zx_status_t EthSetParam(wlanif_impl_protocol_t* wlanif_impl_proto, uint32_t param, int32_t value,
+                          const void* data, size_t data_size);
+
+  // wlanif_impl_ifc (wlanif-impl -> ethernet_ifc_t)
+  void EthRecv(const uint8_t* data, size_t length, uint32_t flags);
+
+  void SetEthernetStatus(wlanif_impl_protocol_t* wlanif_impl_proto, bool online);
+  bool IsEthernetOnline();
+
+ private:
+  std::mutex lock_;
+
+  bool eth_started_ __TA_GUARDED(lock_) = false;
+  bool eth_online_ __TA_GUARDED(lock_) = false;
+  ethernet_ifc_protocol_t ethernet_ifc_ __TA_GUARDED(lock_) = {};
+};
+
 class Device : public ::fuchsia::wlan::mlme::MLME {
  public:
   Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto);
@@ -110,8 +138,6 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   //   Locked: Assumes lock_ already acquired prior to this function being called.
   //   Unlocked: Acquires lock_ at the beginning at the beginning of the function.
   //   BindingChecked: Assumes binding_ is not equal to nullptr.
-  void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
-  void SetEthernetStatusUnlocked(bool online) __TA_EXCLUDES(lock_);
   void SendScanEndLockedBindingChecked(::fuchsia::wlan::mlme::ScanEnd scan_end)
       __TA_REQUIRES(lock_);
   void SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) __TA_EXCLUDES(lock_);
@@ -124,12 +150,9 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_device_t* device_ = nullptr;
 
   wlanif_impl_protocol_t wlanif_impl_;
+  EthDevice eth_device_;
 
   bool protected_bss_ __TA_GUARDED(lock_) = false;
-
-  bool eth_started_ __TA_GUARDED(lock_) = false;
-  bool eth_online_ __TA_GUARDED(lock_) = false;
-  ethernet_ifc_protocol_t ethernet_ifc_ __TA_GUARDED(lock_) = {};
 
   wlanif_query_info query_info_;
 
