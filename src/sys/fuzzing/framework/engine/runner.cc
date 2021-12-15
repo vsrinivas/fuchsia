@@ -348,13 +348,16 @@ void RunnerImpl::FuzzLoop() {
   auto* prev_input = &inputs[1];
   next_input->Reserve(options_->max_input_size());
   prev_input->Reserve(options_->max_input_size());
+  auto max_time = zx::duration(options_->max_total_time());
+  auto deadline = max_time.get() ? zx::deadline_after(max_time) : zx::time::infinite();
+  auto runs = options_->runs();
   // TODO(fxbug.dev/84364): |FuzzLoopRelaxed| is preferred here, but using that causes some test
   // flake. Switch to that version once the source of it is resolved.
   FuzzLoopStrict(/* next_input */
-                 [this, &next_input, &prev_input](bool first) -> Input* {
-                   auto runs = options_->runs();
+                 [this, deadline, runs, &next_input, &prev_input](bool first) -> Input* {
                    std::swap(next_input, prev_input);
-                   if ((runs != 0 && run_ >= runs) || (zx::clock::get_monotonic() >= deadline_)) {
+                   if (stopping_ || (zx::clock::get_monotonic() >= deadline) ||
+                       (runs != 0 && run_ >= runs)) {
                      return nullptr;
                    }
                    // Change the input after |options_->mutation_depth()| mutations. Doing so
@@ -671,17 +674,28 @@ bool RunnerImpl::HasError(const Input* last_input) {
 
 void RunnerImpl::ResetTimer() {
   auto run_limit = zx::duration(options_->run_limit());
-  run_deadline_ = run_limit.get() ? zx::deadline_after(run_limit) : zx::time::infinite();
-  timer_sync_.Signal();
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    run_deadline_ = run_limit.get() ? zx::deadline_after(run_limit) : zx::time::infinite();
+    timer_sync_.Signal();
+  }
 }
 
 void RunnerImpl::Timer() {
-  while (run_deadline_ != zx::time::infinite_past()) {
-    if (run_deadline_ < zx::clock::get_monotonic()) {
+  while (true) {
+    zx::time run_deadline;
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      run_deadline = run_deadline_;
+    }
+    if (run_deadline == zx::time::infinite_past()) {
+      break;
+    }
+    if (run_deadline < zx::clock::get_monotonic()) {
       OnError(kTimeout);
       timer_sync_.WaitFor("error to be handled");
     } else {
-      timer_sync_.WaitUntil(run_deadline_);
+      timer_sync_.WaitUntil(run_deadline);
     }
     timer_sync_.Reset();
   }
@@ -693,15 +707,16 @@ void RunnerImpl::Timer() {
 fit::deferred_action<fit::closure> RunnerImpl::SyncScope() {
   ClearErrors();
   run_ = 0;
-  auto max_time = zx::duration(options_->max_total_time());
   start_ = zx::clock::get_monotonic();
-  deadline_ = max_time.get() ? zx::deadline_after(max_time) : zx::time::infinite();
   ResetTimer();
   stopped_ = false;
   UpdateMonitors(UpdateReason::INIT);
   return fit::defer<fit::closure>([this]() {
-    run_deadline_ = zx::time::infinite();
-    timer_sync_.Signal();
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      run_deadline_ = zx::time::infinite();
+      timer_sync_.Signal();
+    }
     stopped_ = true;
     UpdateMonitors(UpdateReason::DONE);
   });
@@ -752,9 +767,12 @@ void RunnerImpl::CloseImpl() { Runner::Close(); }
 
 void RunnerImpl::InterruptImpl() {
   Runner::Interrupt();
-  deadline_ = zx::time::infinite_past();
-  run_deadline_ = zx::time::infinite_past();
-  timer_sync_.Signal();
+  stopping_ = true;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    run_deadline_ = zx::time::infinite_past();
+    timer_sync_.Signal();
+  }
 }
 
 void RunnerImpl::JoinImpl() {

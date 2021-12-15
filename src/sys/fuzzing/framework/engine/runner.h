@@ -93,14 +93,14 @@ class RunnerImpl final : public Runner {
   // deadlines, and run counts, and update monitors with an INIT update. When the object falls out
   // of scope, it will ensure the fuzzer is stopped, disable timers, and send a DONE update. Each
   // fuzzing workflow should begin with a call to this function.
-  fit::deferred_action<fit::closure> SyncScope();
+  fit::deferred_action<fit::closure> SyncScope() FXL_LOCKS_EXCLUDED(mutex_);
 
   // Resets the timer thread's alarm, setting a new run deadline and delaying how long until the
   // TIMEOUT error is triggered.
-  void ResetTimer();
+  void ResetTimer() FXL_LOCKS_EXCLUDED(mutex_);
 
   // The timer thread body.
-  void Timer();
+  void Timer() FXL_LOCKS_EXCLUDED(mutex_);
 
   // Sends the test input to the target adapter.
   void TestOne(const Input& input);
@@ -163,11 +163,11 @@ class RunnerImpl final : public Runner {
   std::shared_ptr<Options> options_;
   uint32_t run_ = 0;
   zx::time start_ = zx::time::infinite_past();
-  zx::time deadline_ = zx::time::infinite();
   zx::time next_pulse_ = zx::time::infinite();
 
   // Variables to synchronize between the worker and run-loop.
   std::atomic<bool> stopped_ = true;
+  std::atomic<bool> stopping_ = false;
   Input* next_input_ = nullptr;
   Input* last_input_ = nullptr;
   SyncWait next_input_ready_;
@@ -179,7 +179,7 @@ class RunnerImpl final : public Runner {
   // Timer variables
   std::thread timer_;
   SyncWait timer_sync_;
-  zx::time run_deadline_ = zx::time::infinite();
+  zx::time run_deadline_ FXL_GUARDED_BY(mutex_) = zx::time::infinite();
 
   // Input generation and management variables.
   std::shared_ptr<Corpus> seed_corpus_;
