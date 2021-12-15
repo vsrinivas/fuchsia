@@ -219,7 +219,7 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
   stream_constraints.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                                     kOutputStreamMlFRPixelFormat);
   stream_constraints.set_buffer_count_for_camping(kIspBufferForCamping);
-  stream_constraints.set_min_buffer_count(kIspBufferForCamping + kNumClientBuffers);
+  stream_constraints.set_min_buffer_count(kIspBufferForCamping + kNumMonitorMLFRBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
