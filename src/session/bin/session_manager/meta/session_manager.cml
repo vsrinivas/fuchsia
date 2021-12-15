@@ -64,6 +64,9 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.BatteryManager",
                 "fuchsia.settings.Intl",
+
+                // Passed to scene manager that runs inside the session.
+                "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
 

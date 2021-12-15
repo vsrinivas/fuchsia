@@ -1,7 +1,6 @@
 {
     include: [
         "//sdk/lib/inspect/client.shard.cml",
-        "//src/ui/lib/input_pipeline/meta/input_keymap_configuration.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
@@ -26,6 +25,9 @@
         },
         {
             protocol: [
+                // Used by the input pipeline library which is linked into the
+                // scene manager.
+                "fuchsia.settings.Keyboard",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

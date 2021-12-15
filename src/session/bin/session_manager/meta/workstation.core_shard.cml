@@ -72,6 +72,7 @@
         {
             protocol: [
                 "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
             ],
             from: "#setui_service",
