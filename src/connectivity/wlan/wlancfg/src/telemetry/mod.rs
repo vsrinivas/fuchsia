@@ -12,18 +12,19 @@ use {
         GetIfaceCounterStatsResponse, GetIfaceHistogramStatsResponse,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_inspect::{
         ArrayProperty, InspectType, Inspector, Node as InspectNode, NumericProperty, UintProperty,
     },
     fuchsia_inspect_contrib::{
-        inspect_insert, inspect_log, log::InspectBytes, make_inspect_loggable,
-        nodes::BoundedListNode,
+        inspect_insert, inspect_log, inspectable::InspectableBool, log::InspectBytes,
+        make_inspect_loggable, nodes::BoundedListNode,
     },
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
         channel::{mpsc, oneshot},
-        select, Future, FutureExt, StreamExt,
+        select, Future, FutureExt, StreamExt, TryFutureExt,
     },
     log::{info, warn},
     num_traits::SaturatingAdd,
@@ -41,6 +42,9 @@ use {
     wlan_common::{bss::BssDescription, format::MacFmt, hasher::WlanHasher},
     wlan_metrics_registry as metrics,
 };
+
+// Include a timeout on stats calls so that if the driver deadlocks, telemtry doesn't get stuck.
+const GET_IFACE_STATS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
 #[derive(Clone, Debug)]
 pub struct TelemetrySender {
@@ -296,7 +300,7 @@ pub fn serve_telemetry(
     (sender, fut)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum ConnectionState {
     // Like disconnected, but no downtime is tracked.
     Idle(IdleState),
@@ -304,12 +308,12 @@ enum ConnectionState {
     Disconnected(DisconnectedState),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct IdleState {
     connect_start_time: Option<fasync::Time>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct ConnectedState {
     iface_id: u16,
     /// Time when the user manually initiates connecting to another network via the
@@ -318,9 +322,12 @@ struct ConnectedState {
     prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceCounterStats>,
     multiple_bss_candidates: bool,
     latest_ap_state: BssDescription,
+
+    last_signal_report: fasync::Time,
+    is_driver_unresponsive: InspectableBool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DisconnectedState {
     disconnected_since: fasync::Time,
     disconnect_info: DisconnectInfo,
@@ -460,7 +467,12 @@ fn inspect_record_external_data(
                     },
                 });
 
-                match dev_svc_proxy.get_iface_histogram_stats(iface_id).await {
+                // TODO(fxbug.dev/90121): This timeout is no longer needed once diagnostics
+                //                        has a timeout on reading LazyNode.
+                match dev_svc_proxy.get_iface_histogram_stats(iface_id)
+                        .map_err(|_e| ())
+                        .on_timeout(GET_IFACE_STATS_TIMEOUT, || Err(()))
+                        .await {
                     Ok(GetIfaceHistogramStatsResponse::Stats(stats)) => {
                         let mut histograms = HistogramsNode::new(
                             inspector.root().create_child("histograms"),
@@ -619,6 +631,9 @@ impl ExternalInspectNode {
     }
 }
 
+/// Duration without signal before we determine driver as unresponsive
+const UNRESPONSIVE_FLAG_MIN_DURATION: zx::Duration = zx::Duration::from_seconds(60);
+
 pub struct Telemetry {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     connection_state: ConnectionState,
@@ -629,7 +644,7 @@ pub struct Telemetry {
     hasher: WlanHasher,
 
     // Inspect properties/nodes that telemetry hangs onto
-    _inspect_node: InspectNode,
+    inspect_node: InspectNode,
     get_iface_stats_fail_count: UintProperty,
     connect_events_node: Mutex<BoundedListNode>,
     disconnect_events_node: Mutex<BoundedListNode>,
@@ -672,7 +687,7 @@ impl Telemetry {
             last_checked_connection_state: fasync::Time::now(),
             stats_logger,
             hasher,
-            _inspect_node: inspect_node,
+            inspect_node,
             get_iface_stats_fail_count,
             connect_events_node: Mutex::new(BoundedListNode::new(
                 connect_events,
@@ -696,8 +711,25 @@ impl Telemetry {
         match &mut self.connection_state {
             ConnectionState::Idle(..) => (),
             ConnectionState::Connected(state) => {
+                if now - state.last_signal_report > UNRESPONSIVE_FLAG_MIN_DURATION {
+                    let mut is_driver_unresponsive = state.is_driver_unresponsive.get_mut();
+                    if !*is_driver_unresponsive {
+                        warn!(
+                            "Have not received signal report for at least {} seconds",
+                            UNRESPONSIVE_FLAG_MIN_DURATION.into_seconds()
+                        );
+                        *is_driver_unresponsive = true;
+                    }
+                }
+
                 self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
-                match self.dev_svc_proxy.get_iface_counter_stats(state.iface_id).await {
+                match self
+                    .dev_svc_proxy
+                    .get_iface_counter_stats(state.iface_id)
+                    .map_err(|_e| ())
+                    .on_timeout(GET_IFACE_STATS_TIMEOUT, || Err(()))
+                    .await
+                {
                     Ok(GetIfaceCounterStatsResponse::Stats(stats)) => {
                         if let Some(prev_counters) = state.prev_counters.as_ref() {
                             diff_and_log_counters(
@@ -869,6 +901,16 @@ impl Telemetry {
                         prev_counters: None,
                         multiple_bss_candidates,
                         latest_ap_state,
+
+                        // We have not received a signal report yet, but since this is used as
+                        // indicator for whether driver is still responsive, set it to the
+                        // connection start time for now.
+                        last_signal_report: now,
+                        is_driver_unresponsive: InspectableBool::new(
+                            false,
+                            &self.inspect_node,
+                            "is_driver_unresponsive",
+                        ),
                     });
                     self.last_checked_connection_state = now;
                 }
@@ -922,6 +964,8 @@ impl Telemetry {
                 if let ConnectionState::Connected(state) = &mut self.connection_state {
                     state.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                     state.latest_ap_state.snr_db = ind.snr_db;
+                    state.last_signal_report = now;
+                    *state.is_driver_unresponsive.get_mut() = false;
                     self.stats_logger.log_signal_report_metrics(ind.rssi_dbm, rssi_velocity).await;
                 }
             }
@@ -2304,6 +2348,49 @@ mod tests {
                 }
             }
         }}
+    }
+
+    #[fuchsia::test]
+    fn test_detect_driver_unresponsive() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                is_driver_unresponsive: false,
+            }
+        });
+
+        test_helper.advance_by(
+            UNRESPONSIVE_FLAG_MIN_DURATION - TELEMETRY_QUERY_INTERVAL,
+            test_fut.as_mut(),
+        );
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                is_driver_unresponsive: false,
+            }
+        });
+
+        // Send a signal, which resets timing information for determining driver unresponsiveness
+        let ind = fidl_internal::SignalReportIndication { rssi_dbm: -40, snr_db: 30 };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::OnSignalReport { ind: ind.clone(), rssi_velocity: Some(1.2) });
+
+        test_helper.advance_by(UNRESPONSIVE_FLAG_MIN_DURATION, test_fut.as_mut());
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                is_driver_unresponsive: false,
+            }
+        });
+
+        // On the next telemetry interval, driver is recognized as unresponsive
+        test_helper.advance_by(TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                is_driver_unresponsive: true,
+            }
+        });
     }
 
     #[fuchsia::test]
