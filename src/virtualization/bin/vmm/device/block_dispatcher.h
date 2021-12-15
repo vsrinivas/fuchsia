@@ -45,16 +45,16 @@ class IoGuard : public fbl::RefCounted<IoGuard> {
 //   CreateVolatileWriteBlockDispatcher(size, std::move(disp),
 //                                      std::move(callback));
 // };
-// CreateRawBlockDispatcher(std::move(file), std::move(nested));
+// CreateFileBlockDispatcher(std::move(file), std::move(nested));
 using NestedBlockDispatcherCallback =
     fit::function<void(size_t size, std::unique_ptr<BlockDispatcher>)>;
 
 // Creates a BlockDispatcher based on a file.
-void CreateRawBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
-                              NestedBlockDispatcherCallback callback);
+void CreateFileBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
+                               NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on a file, by acquiring a vmo representing the file. Falls back
-// to CreateRawBlockDispatcher when failing to acquire a vmo.
+// to CreateFileBlockDispatcher when failing to acquire a vmo.
 void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
                               uint32_t vmo_flags, NestedBlockDispatcherCallback callback);
 
