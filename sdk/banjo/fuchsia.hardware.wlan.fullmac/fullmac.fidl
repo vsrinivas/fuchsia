@@ -29,15 +29,19 @@ type WlanifScanReq = struct {
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return a WlanifScanEnd with code INVALID_ARGS.
     ///
-    /// There is no limit on the number of channels specified, but invalid channels
-    /// may be ignored or cause the error ZX_ERR_INVALID_ARGS to be returned.
-    channels vector<uint8>:MAX;
+    /// Invalid channel numbers will be silently ignored. The validity of a channel
+    /// number depends on the current regulatory region, and a FullMAC driver cannot
+    /// always determine the region setting. This is especially the case when
+    /// firmware changes the region setting dynamically.
+    channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
     /// List of SSIDs to scan for. An empty list of ssids is the same as specifying
     /// a list containing only the wildcard SSID.
     ///
-    /// There is no limit on the number of SSIDs specified, but a large number of
-    /// SSIDs may result in extended scan times or the error ZX_ERR_INVALID_ARGS to be
-    /// returned.
+    /// There is no limit on the number of SSIDs specified. A large number of
+    /// SSIDs may result in extended scan times because of hardware limitations on
+    /// the number of SSIDs permitted per scan request and the technical limitation
+    /// in IEEE 802.11-2016 that limits the number of SSIDs in a single Probe Request
+    /// frame to ieee80211.SSID_LIST_MAX SSIDs.
     ssids vector<ieee80211.CSsid>:MAX;
     min_channel_time uint32;
     max_channel_time uint32;

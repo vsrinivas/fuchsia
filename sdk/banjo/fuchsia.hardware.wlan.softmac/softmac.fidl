@@ -238,8 +238,12 @@ protocol WlanmacIfc {
 /// Argument struct to be passed as the single argument to Wlanmac.StartPassiveScan.
 type WlanmacPassiveScanArgs = struct {
     /// List of channels to scan on. An empty list of channels will cause a
-    /// scan request to immediately return ZX_ERR_INVALID_ARGS. Invalid channel numbers
-    /// may also return ZX_ERR_INVALID_ARGS, but they may also be silently ignored.
+    /// scan request to immediately return ZX_ERR_INVALID_ARGS.
+    ///
+    /// Invalid channel numbers will be silently ignored. The validity of a channel
+    /// number depends on the current regulatory region, and a SoftMAC driver cannot
+    /// always determine the region setting. This is especially the case when
+    /// firmware changes the region setting dynamically.
     channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
 
     /// Minimum duration to spend on each channel during the scan.
@@ -257,8 +261,12 @@ type WlanmacPassiveScanArgs = struct {
 /// Argument struct to be passed as the single argument to Wlanmac.StartActiveScan
 type WlanmacActiveScanArgs = struct {
     /// List of channels to scan on. An empty list of channels will cause a
-    /// scan request to immediately return ZX_ERR_INVALID_ARGS. Invalid channel numbers
-    /// may also return ZX_ERR_INVALID_ARGS, but they may also be silently ignored.
+    /// scan request to immediately return ZX_ERR_INVALID_ARGS.
+    ///
+    /// Invalid channel numbers will be silently ignored. The validity of a channel
+    /// number depends on the current regulatory region, and a SoftMAC driver cannot
+    /// always determine the region setting. This is especially the case when
+    /// firmware changes the region setting dynamically.
     channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
 
     /// List of SSIDs to scan for. For a list with a single SSID, the SSID will be placed in
