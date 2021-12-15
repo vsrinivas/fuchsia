@@ -15,6 +15,7 @@ ffx_plugin("ffx_assembly") {
     "src/base_package.rs",
     "src/blobfs.rs",
     "src/config.rs",
+    "src/config/product_config.rs",
     "src/extra_hash_descriptor.rs",
     "src/fvm.rs",
     "src/lib.rs",

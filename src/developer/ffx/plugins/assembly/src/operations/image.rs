@@ -6,7 +6,7 @@ use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
 use crate::config::{BoardConfig, PartialProductConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
-use crate::util::{from_reader, pkg_manifest_from_path};
+use crate::util;
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
 
@@ -159,7 +159,7 @@ fn create_package_manifest(
     let mut packages_manifest = UpdatePackagesManifest::V1(BTreeSet::new());
     let mut add_packages_to_update = |packages: &Vec<PathBuf>| -> Result<()> {
         for package_path in packages {
-            let manifest = pkg_manifest_from_path(package_path)?;
+            let manifest = util::pkg_manifest_from_path(package_path)?;
             packages_manifest.add_by_manifest(manifest)?;
         }
         Ok(())
@@ -184,21 +184,12 @@ fn read_configs(
 ) -> Result<(Vec<PartialProductConfig>, BoardConfig)> {
     let products = products
         .iter()
-        .map(read_config)
+        .map(util::read_config)
         .collect::<Result<Vec<PartialProductConfig>>>()
         .context("Unable to parse product configs")?;
 
-    let board: BoardConfig = read_config(board).context("Failed to read the board config")?;
+    let board: BoardConfig = util::read_config(board).context("Failed to read the board config")?;
     Ok((products, board))
-}
-
-fn read_config<T>(path: impl AsRef<Path>) -> Result<T>
-where
-    T: serde::de::DeserializeOwned,
-{
-    let mut file = File::open(path.as_ref())
-        .context(format!("Unable to open file: {}", path.as_ref().display()))?;
-    from_reader(&mut file)
 }
 
 fn has_base_package(product: &ProductConfig) -> bool {

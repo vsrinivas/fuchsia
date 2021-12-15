@@ -148,7 +148,23 @@ fn config_data_change(value: &str) -> Result<ConfigDataChange, String> {
 /// Arguments for performing a high-level product assembly operation.
 #[derive(Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "product")]
-pub struct ProductArgs {}
+pub struct ProductArgs {
+    /// the configuration file that describes the product assembly to perform.
+    #[argh(option)]
+    pub product: PathBuf,
+
+    /// the directory to write assembled outputs to.
+    #[argh(option)]
+    pub outdir: PathBuf,
+
+    /// the directory to write generated intermediate files to.
+    #[argh(option)]
+    pub gendir: Option<PathBuf>,
+
+    /// the directory in which to find the platform assembly input bundles
+    #[argh(option)]
+    pub input_bundles_dir: PathBuf,
+}
 
 #[cfg(test)]
 mod tests {

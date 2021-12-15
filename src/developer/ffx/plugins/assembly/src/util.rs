@@ -26,6 +26,17 @@ where
     serde_json5::from_str(&data).context("Cannot parse the config")
 }
 
+/// Read a config file (or really any JSON/JSON5 file) into a instance of type
+/// T, with a useful error context if it fails.
+pub fn read_config<T>(path: impl AsRef<Path>) -> Result<T>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let mut file = File::open(path.as_ref())
+        .context(format!("Unable to open file: {}", path.as_ref().display()))?;
+    from_reader(&mut file)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,6 +46,11 @@ mod tests {
     use std::io::Cursor;
     use std::str::FromStr;
     use tempfile::NamedTempFile;
+
+    #[derive(Debug, Deserialize, PartialEq)]
+    struct MyStruct {
+        key1: String,
+    }
 
     #[test]
     fn invalid_path() {
@@ -80,11 +96,6 @@ mod tests {
 
     #[test]
     fn reader_valid_json5() {
-        #[derive(Deserialize)]
-        struct MyStruct {
-            key1: String,
-        }
-
         let json5: String = r#"{key1: "value1",}"#.to_string();
         let mut cursor = Cursor::new(json5);
         let value: MyStruct = from_reader(&mut cursor).unwrap();
@@ -100,5 +111,18 @@ mod tests {
         let mut cursor = Cursor::new(json5);
         let value: Result<MyStruct> = from_reader(&mut cursor);
         assert!(value.is_err());
+    }
+
+    #[test]
+    fn test_read_config() {
+        let json = json!({
+            "key1": "value1",
+        });
+        let file = tempfile::NamedTempFile::new().unwrap();
+        serde_json::ser::to_writer(&file, &json).unwrap();
+
+        let value: MyStruct = read_config(file.path()).unwrap();
+        let expected: MyStruct = serde_json::from_value(json).unwrap();
+        assert_eq!(expected, value);
     }
 }

@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
+pub mod product_config;
+
 /// The set of information that defines a fuchsia product.  All fields are
 /// optional to allow for specifying incomplete configurations.
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
