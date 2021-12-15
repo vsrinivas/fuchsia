@@ -147,9 +147,6 @@ class MyDevice : fidl::WireAsyncEventHandler<MyProtocol> {
     // accessed in the callback. This is safe because destroying
     // |client_| cancels all in-flight calls.
     client_.Foo(args, [this] (fidl::WireResponse<Foo>*) { ... });
-
-    // Alternatively, bind a member function.
-    client_.Foo(args, fit::bind_member(this, &MyDevice::FooReplyHandler));
   }
 
  private:

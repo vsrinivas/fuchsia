@@ -81,13 +81,17 @@ void OwnedEventHandler(async_dispatcher_t* dispatcher, fidl::ClientEnd<Echo> cli
 
   // Make an EchoString call, passing it a callback that captures the event
   // handler.
-  client->EchoString("hello", fit::bind_member(handler_ptr, &EventHandler::OnEchoStringResponse));
+  client->EchoString("hello", [handler_ptr](fidl::WireResponse<Echo::EchoString>* response) {
+    handler_ptr->OnEchoStringResponse(response);
+  });
   got_reply.wait();
 
   // Make another call but immediately start binding teardown afterwards.
   // The reply may race with teardown; the callback is always canceled if
   // teardown finishes before a response is received.
-  client->EchoString("hello", fit::bind_member(handler_ptr, &EventHandler::OnEchoStringResponse));
+  client->EchoString("hello", [handler_ptr](fidl::WireResponse<Echo::EchoString>* response) {
+    handler_ptr->OnEchoStringResponse(response);
+  });
 
   // Begin tearing down the client.
   // This does not have to happen on the dispatcher thread.
