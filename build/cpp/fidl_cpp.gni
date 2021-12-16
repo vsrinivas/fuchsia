@@ -26,6 +26,10 @@ template("_fidl_cpp_codegen_impl") {
     "${invoker.fidlgen_tool}:*",
   ]
 
+  if (defined(invoker.additional_visibility)) {
+    generation_visibility += invoker.additional_visibility
+  }
+
   if (defined(invoker.fuzzers)) {
     foreach(fuzzer, invoker.fuzzers) {
       assert(
@@ -99,7 +103,7 @@ template("_fidl_cpp_codegen_impl") {
 #    Name of the GN target corresponding to the FIDL library.
 #
 #  bindings_flavor (required)
-#    Identifies which kind of library (hlcpp, llcpp, ...).
+#    Identifies which kind of bindings (hlcpp, llcpp, ...).
 #    This should be the same flavor as the one used when instantiating
 #    the fidl_cpp_library template.
 #
@@ -117,6 +121,9 @@ template("_fidl_cpp_codegen_impl") {
 #   fuzzers (optional)
 #     A list of { protocol = ..., methods = ... } scopes declaring which
 #     methods will be fuzzed by a fuzzer.
+#
+#   additional_visibility (optional)
+#     A list of labels which are allowed to depend on the generated code.
 
 template("fidl_cpp_codegen") {
   if (current_toolchain == fidl_toolchain) {
@@ -193,12 +200,20 @@ template("_fidl_cpp_library_impl") {
     ]
 
     # Map FIDL library dependencies to generated library dependencies
-    # of the same type (identified by bindings_flavor).
+    # of the same type (identified by bindings_flavor or bindings_layer).
     not_needed(invoker, [ "bindings_flavor" ])
+    not_needed(invoker, [ "bindings_layer" ])
     if (defined(invoker.public_deps)) {
-      foreach(dep, invoker.public_deps) {
-        label = get_label_info(dep, "label_no_toolchain")
-        public_deps += [ "${label}_${invoker.bindings_flavor}" ]
+      if (invoker.public_deps != []) {
+        if (defined(invoker.bindings_layer)) {
+          bindings_layer = invoker.bindings_layer
+        } else {
+          bindings_layer = invoker.bindings_flavor
+        }
+        foreach(dep, invoker.public_deps) {
+          label = get_label_info(dep, "label_no_toolchain")
+          public_deps += [ "${label}_${bindings_layer}" ]
+        }
       }
     }
 
@@ -224,9 +239,23 @@ template("_fidl_cpp_library_impl") {
 #    Name of the GN target corresponding to the FIDL library.
 #
 #  bindings_flavor (required)
-#    Identifies which kind of library (hlcpp, llcpp, ...).
+#    Identifies which kind of bindings (hlcpp, llcpp, ...).
 #    This should be the same suffix as the one used when instantiating
 #    the fidl_cpp_codegen template.
+#
+#  bindings_layer (optional)
+#    A particular binding may be decomposed into multiple layers. In that case,
+#    this identifies the particular layer that makes up this library (e.g.
+#    domain objects layer, messaging layer, ...). When adding dependencies,
+#    a particular layer for a FIDL library depends on the corresponding
+#    layers of the dependencies of that FIDL library.
+#
+#    In LLCPP the valid layers are:
+#      * llcpp: Wire messaging over channel transport
+#      * llcpp_wire_types: Wire domain objects
+#      * driver: Wire messaging over driver transport
+#
+#    If missing, defaults to bindings_flavor.
 #
 #  generated_sources (optional)
 #    A list of source files that will be generated for this binding, relative
@@ -398,20 +427,18 @@ template("fidl_cpp_family") {
 
   # Define LLCPP target, if requested.
   if (llcpp_public_deps != []) {
-    llcpp_wire_types_options = {
-      bindings_flavor = "llcpp_wire_types"
-      generated_headers = [
-        "fidl/$library_name/cpp/markers.h",
-        "fidl/$library_name/cpp/wire_types.h",
-      ]
-      generated_sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
+    wire_types_headers = [
+      "fidl/$library_name/cpp/markers.h",
+      "fidl/$library_name/cpp/wire_types.h",
+    ]
+    wire_types_sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
+    wire_types_options = {
+      bindings_flavor = "llcpp"
+      bindings_layer = "llcpp_wire_types"
+      generated_headers = wire_types_headers
+      generated_sources = wire_types_sources
     }
-    wire_types_target = "${target_name}_llcpp_wire_types"
-    fidl_cpp_codegen(wire_types_target) {
-      forward_variables_from(common_options, "*")
-      forward_variables_from(llcpp_wire_types_options, "*")
-      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
-    }
+    wire_types_target = "${target_name}_${wire_types_options.bindings_layer}"
     fidl_cpp_library(wire_types_target) {
       forward_variables_from(invoker,
                              [
@@ -419,60 +446,81 @@ template("fidl_cpp_family") {
                                "visibility",
                              ])
       forward_variables_from(common_options, "*")
-      forward_variables_from(llcpp_wire_types_options, "*")
+      forward_variables_from(wire_types_options, "*")
       additional_public_deps = llcpp_public_deps
     }
 
-    llcpp_options = {
+    wire_channel_messaging_headers = [
+      "fidl/$library_name/cpp/wire.h",
+      "fidl/$library_name/cpp/wire_messaging.h",
+      "fidl/$library_name/cpp/wire_test_base.h",
+    ]
+    wire_channel_messaging_sources =
+        [ "fidl/$library_name/cpp/wire_messaging.cc" ]
+    wire_channel_messaging_options = {
       bindings_flavor = "llcpp"
-      generated_headers = [
-        "fidl/$library_name/cpp/wire.h",
-        "fidl/$library_name/cpp/wire_messaging.h",
-      ]
-      generated_sources = [ "fidl/$library_name/cpp/wire_messaging.cc" ]
+      generated_headers = wire_channel_messaging_headers
+      generated_sources = wire_channel_messaging_sources
     }
-    fidl_cpp_codegen("${target_name}_llcpp") {
-      forward_variables_from(common_options, "*")
-      forward_variables_from(llcpp_options, "*")
-      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
-    }
-    fidl_cpp_library("${target_name}_llcpp") {
+    wire_channel_messaging_target = "${target_name}_llcpp"
+    fidl_cpp_library(wire_channel_messaging_target) {
       forward_variables_from(invoker,
                              [
                                "public_deps",
                                "visibility",
                              ])
       forward_variables_from(common_options, "*")
-      forward_variables_from(llcpp_options, "*")
+      forward_variables_from(wire_channel_messaging_options, "*")
       additional_public_deps = llcpp_public_deps + [ ":" + wire_types_target ]
     }
 
-    driver_options = {
-      bindings_flavor = "driver"
-      generated_headers = [
-        "fidl/$library_name/cpp/driver/wire.h",
-        "fidl/$library_name/cpp/driver/wire_messaging.h",
-        "fidl/$library_name/cpp/wire_test_base.h",
-      ]
-      generated_sources = [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
+    wire_driver_messaging_headers = [
+      "fidl/$library_name/cpp/driver/wire.h",
+      "fidl/$library_name/cpp/driver/wire_messaging.h",
+    ]
+    wire_driver_messaging_sources =
+        [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
+    wire_driver_messaging_options = {
+      bindings_flavor = "llcpp"
+      bindings_layer = "driver"
+      generated_headers = wire_driver_messaging_headers
+      generated_sources = wire_driver_messaging_sources
     }
-    fidl_cpp_codegen("${target_name}_driver") {
-      forward_variables_from(common_options, "*")
-      forward_variables_from(driver_options, "*")
-      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
-    }
-    fidl_cpp_library("${target_name}_driver") {
+    wire_driver_messaging_target =
+        "${target_name}_${wire_driver_messaging_options.bindings_layer}"
+    fidl_cpp_library(wire_driver_messaging_target) {
       forward_variables_from(invoker,
                              [
                                "public_deps",
                                "visibility",
                              ])
       forward_variables_from(common_options, "*")
-      forward_variables_from(driver_options, "*")
+      forward_variables_from(wire_driver_messaging_options, "*")
       additional_public_deps = llcpp_public_deps + [
                                  ":" + wire_types_target,
                                  "//sdk/lib/fidl_driver",
                                ]
+    }
+
+    # Single codegen target that generates all the files needed by the LLCPP
+    # libraries above.
+    llcpp_codegen_options = {
+      bindings_flavor = "llcpp"
+      generated_headers = wire_types_headers + wire_channel_messaging_headers +
+                          wire_driver_messaging_headers
+      generated_sources = wire_types_sources + wire_channel_messaging_sources +
+                          wire_driver_messaging_sources
+    }
+    llcpp_codegen_target = "${target_name}_llcpp"
+    fidl_cpp_codegen(llcpp_codegen_target) {
+      forward_variables_from(common_options, "*")
+      forward_variables_from(llcpp_codegen_options, "*")
+      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+      additional_visibility = [
+        ":$wire_types_target",
+        ":$wire_channel_messaging_target",
+        ":$wire_driver_messaging_target",
+      ]
     }
   }
 
