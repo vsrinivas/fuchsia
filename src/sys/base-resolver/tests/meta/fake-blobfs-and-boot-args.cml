@@ -1,0 +1,47 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "driver_test_realm/meta/client.shard.cml",
+        "driver_test_realm/platform/meta/client.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/base_resolver_fake_blobfs_and_boot_args_bin",
+    },
+    capabilities: [
+        { protocol: "fuchsia.boot.Arguments" },
+        {
+            directory: "blob",
+            rights: [ "rx*" ],
+            path: "/blob",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+        },
+        {
+            protocol: "fuchsia.kernel.VmexResource",
+            from: "parent",
+            path: "/svc_blobfs/fuchsia.kernel.VmexResource",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.boot.Arguments",
+            from: "self",
+        },
+        {
+            directory: "blob",
+            from: "self",
+        },
+    ],
+}

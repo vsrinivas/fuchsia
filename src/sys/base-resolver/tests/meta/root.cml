@@ -2,18 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "//src/sys/test_manager/system-test.shard.cml" ],
     children: [
         {
             name: "fake_pkgfs",
-            url: "fuchsia-pkg://fuchsia.com/base-resolver-tests#meta/fake-pkgfs.cm",
+            url: "#meta/fake-pkgfs.cm",
+        },
+        {
+            name: "fake_blobfs_and_boot_args",
+            url: "#meta/fake-blobfs-and-boot-args.cm",
         },
         {
             name: "base_resolver",
-            url: "fuchsia-pkg://fuchsia.com/base-resolver-tests#meta/base-resolver-component.cm",
+            url: "#meta/base-resolver.cm",
         },
         {
             name: "integration_test",
-            url: "fuchsia-pkg://fuchsia.com/base-resolver-tests#meta/integration-test.cm",
+            url: "#meta/integration-test.cm",
         },
     ],
     offer: [
@@ -28,16 +33,46 @@
             to: "#base_resolver",
         },
         {
+            directory: "blob",
+            from: "#fake_blobfs_and_boot_args",
+            to: "#base_resolver",
+        },
+        {
+            protocol: "fuchsia.boot.Arguments",
+            from: "#fake_blobfs_and_boot_args",
+            to: "#base_resolver",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#fake_blobfs_and_boot_args",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: "#fake_blobfs_and_boot_args",
+        },
+        {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
                 "#base_resolver",
+                "#fake_blobfs_and_boot_args",
                 "#fake_pkgfs",
                 "#integration_test",
             ],
         },
         {
             resolver: "base_resolver",
+            from: "#base_resolver",
+            to: "#integration_test",
+        },
+        {
+            resolver: "pkg_cache_resolver",
             from: "#base_resolver",
             to: "#integration_test",
         },

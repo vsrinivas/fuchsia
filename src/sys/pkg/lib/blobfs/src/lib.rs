@@ -64,6 +64,16 @@ impl Client {
         Ok(Client { proxy })
     }
 
+    /// Returns a client connected to blobfs from the current component's namespace with
+    /// OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE.
+    pub fn open_from_namespace_executable() -> Result<Self, BlobfsError> {
+        let proxy = io_util::directory::open_in_namespace(
+            "/blob",
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        )?;
+        Ok(Client { proxy })
+    }
+
     /// Forward an open request directly to BlobFs.
     pub fn forward_open(
         &self,

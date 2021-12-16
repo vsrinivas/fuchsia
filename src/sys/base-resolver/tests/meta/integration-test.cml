@@ -12,15 +12,32 @@
     children: [
         // This will be resolved by the base package resolver.
         {
-            name: "component",
+            name: "base-component",
             url: "fuchsia-pkg://fuchsia.com/mock-package#meta/mock-component.cm",
             environment: "#base_resolver_env",
+        },
+
+        // This will be resolved by the pkg cache resolver.
+        {
+            name: "pkg-cache-stand-in",
+            url: "fuchsia-pkg-cache:///#meta/pkg-cache.cm",
+            environment: "#pkg_cache_resolver_env",
         },
     ],
     use: [
         {
             protocol: "fuchsia.component.Realm",
             from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#base-component",
+                "#pkg-cache-stand-in",
+            ],
         },
     ],
 
@@ -34,6 +51,17 @@
                     resolver: "base_resolver",
                     from: "parent",
                     scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+        {
+            name: "pkg_cache_resolver_env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "pkg_cache_resolver",
+                    from: "parent",
+                    scheme: "fuchsia-pkg-cache",
                 },
             ],
         },

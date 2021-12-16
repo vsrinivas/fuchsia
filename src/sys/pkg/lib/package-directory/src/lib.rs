@@ -29,6 +29,7 @@ mod non_meta_subdir;
 mod root_dir;
 
 pub use root_dir::{ReadFileError, RootDir};
+pub use vfs::execution_scope::ExecutionScope;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {

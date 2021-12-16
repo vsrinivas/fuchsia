@@ -63,6 +63,47 @@ fuchsia_component("fake-pkgfs") {
   deps = [ ":fake_pkgfs_bin" ]
 }
 
+rustc_binary("fake_blobfs_and_boot_args_bin") {
+  testonly = true
+  name = "base_resolver_fake_blobfs_and_boot_args_bin"
+  source_root = "fake_blobfs_and_boot_args.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/pkg/lib/fuchsia-hash",
+    "//src/sys/pkg/lib/fuchsia-pkg-testing",
+    "//src/sys/pkg/lib/system-image",
+    "//src/sys/pkg/testing/blobfs-ramdisk",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+  sources = [ "fake_blobfs_and_boot_args.rs" ]
+}
+
+fuchsia_component("fake-blobfs-and-boot-args") {
+  testonly = true
+  manifest = "meta/fake-blobfs-and-boot-args.cml"
+  deps = [
+    ":driver_test_realm",
+    ":fake_blobfs_and_boot_args_bin",
+    "//src/storage/bin/blobfs",
+    "//src/sys/pkg/bin/pm:pm_bin",
+  ]
+}
+
+group("driver_test_realm") {
+  testonly = true
+  deps = [
+    "//sdk/lib/driver_test_realm/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
+}
+
 rustc_binary("mock_component_bin") {
   testonly = true
   name = "base_resolver_mock_component_bin"
@@ -82,16 +123,31 @@ fuchsia_component("mock-component") {
   deps = [ ":mock_component_bin" ]
 }
 
+fuchsia_component("mock-pkg-cache-component") {
+  testonly = true
+  manifest = "meta/mock-component.cml"
+  component_name = "pkg-cache"
+  deps = [ ":mock_component_bin" ]
+}
+
 fidl("test.ping") {
   sources = [ "ping.test.fidl" ]
+}
+
+fuchsia_component("base-resolver-component-for-integration-test") {
+  manifest = "meta/base-resolver-for-integration-test.cml"
+  component_name = "base-resolver"
+  deps = [ "//src/sys/base-resolver:bin" ]
 }
 
 fuchsia_test_package("base-resolver-tests") {
   test_components = [ ":root" ]
   deps = [
+    ":base-resolver-component-for-integration-test",
+    ":fake-blobfs-and-boot-args",
     ":fake-pkgfs",
     ":integration-test",
     ":mock-component",
-    "//src/sys/base-resolver:base-resolver-component",
+    ":mock-pkg-cache-component",
   ]
 }

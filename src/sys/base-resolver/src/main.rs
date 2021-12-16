@@ -19,22 +19,43 @@ use {
     thiserror::Error,
 };
 
+mod pkg_cache_resolver;
+
 #[fuchsia::component]
 async fn main() -> anyhow::Result<()> {
     info!("started");
+
     let mut service_fs = ServiceFs::new_local();
-    service_fs.dir("svc").add_fidl_service(|stream: ComponentResolverRequestStream| stream);
+    service_fs.dir("svc").add_fidl_service(Services::BaseResolver);
+    service_fs.dir("pkg-cache-resolver").add_fidl_service(Services::PkgCacheResolver);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
-    service_fs
-        .for_each_concurrent(None, |stream| async move {
-            match serve(stream).await {
-                Ok(()) => {}
-                Err(err) => error!("failed to serve resolve request: {:?}", err),
+    let () = service_fs
+        .for_each_concurrent(None, |request| async {
+            match request {
+                Services::BaseResolver(stream) => {
+                    serve(stream)
+                        .unwrap_or_else(|e| {
+                            error!("failed to serve base resolver request: {:#}", e)
+                        })
+                        .await
+                }
+                Services::PkgCacheResolver(stream) => {
+                    pkg_cache_resolver::serve(stream)
+                        .unwrap_or_else(|e| {
+                            error!("failed to serve pkg cache resolver request: {:#}", e)
+                        })
+                        .await
+                }
             }
         })
         .await;
 
     Ok(())
+}
+
+enum Services {
+    BaseResolver(ComponentResolverRequestStream),
+    PkgCacheResolver(ComponentResolverRequestStream),
 }
 
 async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
@@ -49,8 +70,13 @@ async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()>
         match resolve_component(&component_url, &packages_dir).await {
             Ok(result) => responder.send(&mut Ok(result)),
             Err(err) => {
-                error!("failed to resolve component URL {}: {}", &component_url, &err);
-                responder.send(&mut Err(err.into()))
+                let fidl_err = (&err).into();
+                error!(
+                    "failed to resolve component URL {}: {:#}",
+                    &component_url,
+                    anyhow::anyhow!(err)
+                );
+                responder.send(&mut Err(fidl_err))
             }
         }
         .context("failed sending response")?;
@@ -70,20 +96,7 @@ async fn resolve_component(
     })?;
     let package_dir = resolve_package(&package_url, packages_dir).await?;
 
-    // Read the component manifest (.cm file) from the package directory.
-    let cm_file = io_util::directory::open_file(&package_dir, cm_path, fio::OPEN_RIGHT_READABLE)
-        .await
-        .map_err(ResolverError::ComponentNotFound)?;
-
-    let (status, buffer) =
-        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
-    Status::ok(status).map_err(ResolverError::VmoFailure)?;
-    let data = match buffer {
-        Some(buffer) => fmem::Data::Buffer(*buffer),
-        None => fmem::Data::Bytes(
-            io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
-        ),
-    };
+    let data = get_manifest_data(&package_dir, cm_path).await?;
 
     let package_dir = ClientEnd::new(
         package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
@@ -123,38 +136,61 @@ async fn resolve_package(
     Ok(dir)
 }
 
+async fn get_manifest_data(
+    package: &fio::DirectoryProxy,
+    cm_path: &str,
+) -> Result<fmem::Data, ResolverError> {
+    let cm_file = io_util::directory::open_file(&package, cm_path, fio::OPEN_RIGHT_READABLE)
+        .await
+        .map_err(ResolverError::ComponentNotFound)?;
+    let (status, buffer) =
+        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
+    let () = Status::ok(status).map_err(ResolverError::VmoFailure)?;
+    Ok(match buffer {
+        Some(buffer) => fmem::Data::Buffer(*buffer),
+        None => fmem::Data::Bytes(
+            io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
+        ),
+    })
+}
+
 #[derive(Error, Debug)]
 enum ResolverError {
-    #[error("invalid component URL: {}", .0)]
+    #[error("invalid component URL")]
     InvalidUrl(#[from] PkgUrlParseError),
     #[error("component URL with package hash not supported")]
     PackageHashNotSupported,
     #[error("the hostname refers to an unsupported repo")]
     UnsupportedRepo,
-    #[error("component not found: {}", .0)]
+    #[error("component not found")]
     ComponentNotFound(#[source] io_util::node::OpenError),
-    #[error("package not found: {}", .0)]
+    #[error("package not found")]
     PackageNotFound(#[source] io_util::node::OpenError),
-    #[error("read manifest error: {}", .0)]
+    #[error("read manifest error")]
     ReadManifest(#[source] io_util::file::ReadError),
-    #[error("IO error: {}", .0)]
+    #[error("IO error")]
     IOError(#[source] fidl::Error),
-    #[error("failed to get manifest VMO: {}", .0)]
+    #[error("failed to get manifest VMO")]
     VmoFailure(#[source] Status),
+    #[error("failed to create FIDL endpoints")]
+    CreateEndpoints(#[source] fidl::Error),
+    #[error("serve package directory")]
+    ServePackageDirectory(#[source] package_directory::Error),
 }
 
-impl From<ResolverError> for fsys::ResolverError {
-    fn from(err: ResolverError) -> fsys::ResolverError {
+impl From<&ResolverError> for fsys::ResolverError {
+    fn from(err: &ResolverError) -> fsys::ResolverError {
+        use ResolverError::*;
         match err {
-            ResolverError::InvalidUrl(_) | ResolverError::PackageHashNotSupported => {
-                fsys::ResolverError::InvalidArgs
-            }
-            ResolverError::UnsupportedRepo => fsys::ResolverError::NotSupported,
-            ResolverError::ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
-            ResolverError::PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
-            ResolverError::ReadManifest(_)
-            | ResolverError::IOError(_)
-            | ResolverError::VmoFailure(_) => fsys::ResolverError::Io,
+            InvalidUrl(_) | PackageHashNotSupported => fsys::ResolverError::InvalidArgs,
+            UnsupportedRepo => fsys::ResolverError::NotSupported,
+            ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
+            PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
+            ReadManifest(_)
+            | IOError(_)
+            | VmoFailure(_)
+            | CreateEndpoints(_)
+            | ServePackageDirectory(_) => fsys::ResolverError::Io,
         }
     }
 }
