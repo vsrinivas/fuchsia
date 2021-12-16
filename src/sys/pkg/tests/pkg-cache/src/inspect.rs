@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
     fuchsia_inspect::{
-        assert_data_tree, testing::AnyProperty, tree_assertion, DiagnosticsHierarchy,
+        assert_data_tree, hierarchy::DiagnosticsHierarchy, testing::AnyProperty, tree_assertion,
     },
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder},
     fuchsia_zircon as zx,

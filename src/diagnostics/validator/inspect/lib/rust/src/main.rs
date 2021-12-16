@@ -18,6 +18,7 @@ use {
     },
     fidl_test_inspect_validate::*,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
+    fuchsia_inspect::hierarchy::*,
     fuchsia_inspect::*,
     fuchsia_zircon::HandleBased,
     futures::prelude::*,

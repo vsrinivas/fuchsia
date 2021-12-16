@@ -82,12 +82,13 @@ pub mod reader;
 pub mod stats;
 mod writer;
 
-pub use diagnostics_hierarchy::{
-    DiagnosticsHierarchy, ExponentialHistogramParams, LinearHistogramParams,
-};
+pub mod hierarchy {
+    pub use diagnostics_hierarchy::*;
+}
 
 pub use {
     crate::{state::Stats, writer::*},
+    diagnostics_hierarchy::{ExponentialHistogramParams, LinearHistogramParams},
     testing::*,
 };
 
