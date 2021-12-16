@@ -24,6 +24,12 @@ class WiFiSettings extends StatelessWidget {
           Expanded(
             child: SettingDetails(
               title: Strings.wifi,
+              // TODO(cwhitten): Uncomment switch when fxb/90428 is fixed.
+              /*trailing: Switch(
+                value: state.clientConnectionsEnabled,
+                onChanged: (value) =>
+                    state.setClientConnectionsEnabled(enabled: value),
+              ),*/
               onBack: state.showAllSettings,
               child: SingleChildScrollView(
                 child: Column(

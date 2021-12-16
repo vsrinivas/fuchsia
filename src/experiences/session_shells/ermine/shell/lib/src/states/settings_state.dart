@@ -84,6 +84,7 @@ abstract class SettingsState implements TaskService {
   List<NetworkInformation> get savedNetworks;
   TextEditingController get networkPasswordTextController;
   String get currentNetwork;
+  bool get clientConnectionsEnabled;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -121,4 +122,5 @@ abstract class SettingsState implements TaskService {
   void increaseVolume();
   void decreaseVolume();
   void toggleMute();
+  void setClientConnectionsEnabled({bool enabled});
 }

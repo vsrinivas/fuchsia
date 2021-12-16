@@ -28,12 +28,15 @@ class WiFiService implements TaskService {
   StreamSubscription? _connectToWPA2NetworkSubscription;
   StreamSubscription? _savedNetworksSubscription;
   StreamSubscription? _removeNetworkSubscription;
+  StreamSubscription? _startClientConnectionsSubscription;
+  StreamSubscription? _stopClientConnectionsSubscription;
 
   Timer? _timer;
   int scanIntervalInSeconds = 20;
   final _scannedNetworks = <policy.ScanResult>{};
   NetworkInformation _targetNetwork = NetworkInformation();
   final _savedNetworks = <policy.NetworkConfig>{};
+  bool _clientConnectionsEnabled = false;
 
   WiFiService();
 
@@ -49,11 +52,7 @@ class WiFiService implements TaskService {
         InterfaceRequest(_clientController?.ctrl.request().passChannel()),
         _monitor.getInterfaceHandle());
 
-    final requestStatus = await _clientController?.startClientConnections();
-    if (requestStatus != RequestStatus.acknowledged) {
-      log.warning(
-          'Failed to start wlan client connection. Request status: $requestStatus');
-    }
+    clientConnectionsEnabled = true;
 
     await getSavedNetworks();
 
@@ -68,6 +67,8 @@ class WiFiService implements TaskService {
     await _connectToWPA2NetworkSubscription?.cancel();
     await _savedNetworksSubscription?.cancel();
     await _removeNetworkSubscription?.cancel();
+    await _startClientConnectionsSubscription?.cancel();
+    await _stopClientConnectionsSubscription?.cancel();
     dispose();
   }
 
@@ -85,6 +86,47 @@ class WiFiService implements TaskService {
   set targetNetwork(NetworkInformation network) {
     _targetNetwork = network;
     onChanged();
+  }
+
+  bool get clientConnectionsEnabled => _clientConnectionsEnabled;
+  set clientConnectionsEnabled(bool enabled) {
+    _clientConnectionsEnabled = enabled;
+    if (enabled) {
+      _startClientConnections();
+    } else {
+      _stopClientConnections();
+    }
+    onChanged();
+  }
+
+  Future<void> _startClientConnections() async {
+    if (_stopClientConnectionsSubscription != null) {
+      await _stopClientConnectionsSubscription!.cancel();
+    }
+    _startClientConnectionsSubscription = () async {
+      final requestStatus = await _clientController?.startClientConnections();
+      if (requestStatus != RequestStatus.acknowledged) {
+        log.warning(
+            'Failed to start wlan client connection. Request status: $requestStatus');
+      }
+    }()
+        .asStream()
+        .listen((_) {});
+  }
+
+  Future<void> _stopClientConnections() async {
+    if (_startClientConnectionsSubscription != null) {
+      await _startClientConnectionsSubscription!.cancel();
+    }
+    _stopClientConnectionsSubscription = () async {
+      final requestStatus = await _clientController?.stopClientConnections();
+      if (requestStatus != RequestStatus.acknowledged) {
+        log.warning(
+            'Failed to stop wlan client connection. Request status: $requestStatus');
+      }
+    }()
+        .asStream()
+        .listen((_) {});
   }
 
   Future<void> scanForNetworks() async {
