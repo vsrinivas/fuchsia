@@ -25,6 +25,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/qemu"
 
 	"github.com/creack/pty"
@@ -100,10 +101,9 @@ type QEMUConfig struct {
 	FVMTool string `json:"fvm_tool"`
 }
 
-var _ Target = (*QEMUTarget)(nil)
-
 // QEMUTarget is a QEMU target.
 type QEMUTarget struct {
+	*target
 	binary  string
 	builder EMUCommandBuilder
 	config  QEMUConfig
@@ -133,7 +133,7 @@ type EMUCommandBuilder interface {
 }
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
-func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
+func NewQEMUTarget(ctx context.Context, config QEMUConfig, opts Options) (*QEMUTarget, error) {
 	qemuTarget, ok := qemuTargetMapping[config.Target]
 	if !ok {
 		return nil, fmt.Errorf("invalid target %q", config.Target)
@@ -165,7 +165,11 @@ func NewQEMUTarget(config QEMUConfig, opts Options) (*QEMUTarget, error) {
 			return nil, fmt.Errorf("failed to create ptm/pts pair: %w", err)
 		}
 	}
-
+	base, err := newTarget(ctx, DefaultQEMUNodename, "", []string{opts.SSHKey}, t.serial)
+	if err != nil {
+		return nil, err
+	}
+	t.target = base
 	return t, nil
 }
 
@@ -184,8 +188,17 @@ func (t *QEMUTarget) SSHKey() string {
 	return t.opts.SSHKey
 }
 
+// SSHClient creates and returns an SSH client connected to the QEMU target.
+func (t *QEMUTarget) SSHClient() (*sshutil.Client, error) {
+	addr, err := t.IPv6()
+	if err != nil {
+		return nil, err
+	}
+	return t.sshClient(addr)
+}
+
 // Start starts the QEMU target.
-func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string, _ string) (err error) {
+func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) (err error) {
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
 	}
@@ -374,13 +387,14 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 }
 
 // Stop stops the QEMU target.
-func (t *QEMUTarget) Stop(ctx context.Context) error {
+func (t *QEMUTarget) Stop() error {
 	if t.process == nil {
 		return fmt.Errorf("QEMU target has not yet been started")
 	}
-	logger.Debugf(ctx, "Sending SIGKILL to %d", t.process.Pid)
+	logger.Debugf(t.targetCtx, "Sending SIGKILL to %d", t.process.Pid)
 	err := t.process.Kill()
 	t.process = nil
+	t.target.Stop()
 	return err
 }
 

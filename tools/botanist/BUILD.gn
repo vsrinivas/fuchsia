@@ -7,23 +7,15 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("botanist_lib") {
-  sources = [
-    "ip.go",
-    "pkg.go",
-    "pkg_test.go",
-  ]
+  sources = [ "pkg.go" ]
   deps = [
     ":constants",
     "//src/sys/pkg/bin/pm:pm_lib",
-    "//src/sys/pkg/lib/repo",
-    "//third_party/golibs:github.com/kr/pretty",
     "//tools/build",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/retry",
     "//tools/lib/subprocess",
-    "//tools/lib/syslog",
-    "//tools/net/mdns",
     "//tools/net/netboot",
     "//tools/net/tftp",
   ]
@@ -39,12 +31,16 @@ go_library("target") {
     "errors.go",
     "gce.go",
     "gce_test.go",
+    "ip.go",
     "qemu.go",
     "target.go",
+    "target_test.go",
   ]
   deps = [
     ":constants",
+    "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/creack/pty",
+    "//third_party/golibs:github.com/kr/pretty",
     "//third_party/golibs:golang.org/x/crypto",
     "//third_party/golibs:golang.org/x/sync",
     "//tools/bootserver:bootserver_lib",
@@ -54,6 +50,8 @@ go_library("target") {
     "//tools/lib/retry",
     "//tools/lib/serial",
     "//tools/lib/serial:constants",
+    "//tools/lib/syslog",
+    "//tools/net/mdns",
     "//tools/net/netutil",
     "//tools/net/sshutil",
     "//tools/qemu",
@@ -84,11 +82,6 @@ go_binary("botanist") {
   deps = [ ":main" ]
 }
 
-go_test("botanist_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist" ]
-  deps = [ ":botanist_lib" ]
-}
-
 go_test("botanist_target_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/target" ]
   deps = [ ":target" ]
@@ -102,8 +95,5 @@ go_library("constants") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":botanist_lib_tests",
-    ":botanist_target_tests",
-  ]
+  deps = [ ":botanist_target_tests" ]
 }
