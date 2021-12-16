@@ -65,10 +65,12 @@ constexpr size_t kNumRetries = 5;
 constexpr auto kRetryDelay = zx::msec(100);
 constexpr const char kBlockPath[] = "/dev/class/block";
 constexpr auto kGuidSize = fuchsia::hardware::block::partition::GUID_LENGTH;
-constexpr std::array<uint8_t, kGuidSize> kGuestGuid = {
+constexpr const char kGuestPartitionName[] = "guest";
+constexpr std::array<uint8_t, kGuidSize> kGuestPartitionGuid = {
     0x9a, 0x17, 0x7d, 0x2d, 0x8b, 0x24, 0x4a, 0x4c, 0x87, 0x11, 0x1f, 0x99, 0x05, 0xb7, 0x6e, 0xd1,
 };
 constexpr std::array<uint8_t, kGuidSize> kFvmGuid = GUID_FVM_VALUE;
+constexpr std::array<uint8_t, kGuidSize> kGptFvmGuid = GPT_FVM_TYPE_GUID;
 
 using VolumeHandle = fidl::InterfaceHandle<fuchsia::hardware::block::volume::Volume>;
 using ManagerHandle = fidl::InterfaceHandle<fuchsia::hardware::block::volume::VolumeManager>;
@@ -120,13 +122,15 @@ zx::status<std::tuple<VolumeHandle, ManagerHandle>> FindPartitions(DIR* dir) {
     status = partition->GetTypeGuid(&guid_status, &guid);
     if (status != ZX_OK || guid_status != ZX_OK || !guid) {
       continue;
-    } else if (std::equal(kGuestGuid.begin(), kGuestGuid.end(), guid->value.begin())) {
+    } else if (std::equal(kGuestPartitionGuid.begin(), kGuestPartitionGuid.end(),
+                          guid->value.begin())) {
       // If we find the guest FVM partition, then we can break out of the loop.
       // We only need to find the FVM GPT partition if there is no guest FVM
       // partition, in order to create the guest FVM partition.
       volume.set_channel(partition.Unbind().TakeChannel());
       break;
-    } else if (std::equal(kFvmGuid.begin(), kFvmGuid.end(), guid->value.begin())) {
+    } else if (std::equal(kFvmGuid.begin(), kFvmGuid.end(), guid->value.begin()) ||
+               std::equal(kGptFvmGuid.begin(), kGptFvmGuid.end(), guid->value.begin())) {
       fuchsia::device::ControllerSyncPtr controller;
       controller.Bind(partition.Unbind().TakeChannel());
       fuchsia::device::Controller_GetTopologicalPath_Result topo_result;
@@ -202,7 +206,8 @@ zx::status<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t p
     }
     size_t slices = partition_size / info->slice_size;
     zx_status_t part_status = ZX_OK;
-    status = sync->AllocatePartition(slices, {.value = kGuestGuid}, {}, "guest", 0, &part_status);
+    status = sync->AllocatePartition(slices, {.value = kGuestPartitionGuid}, {},
+                                     kGuestPartitionName, 0, &part_status);
     if (status != ZX_OK || part_status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to allocate partition: " << zx_status_get_string(status) << " and "
                      << zx_status_get_string(part_status);
