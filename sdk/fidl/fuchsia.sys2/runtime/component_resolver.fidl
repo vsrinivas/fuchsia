@@ -51,4 +51,6 @@ type ResolverError = strict enum {
     NO_SPACE = 7;
     /// The component is temporarily unavailable.
     RESOURCE_UNAVAILABLE = 8;
+    /// The component manifest could not be parsed or it contained invalid configuration.
+    INVALID_MANIFEST = 9;
 };

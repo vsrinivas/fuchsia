@@ -39,4 +39,8 @@ type Component = resource table {
     // and launching of the component's runner.  Moreover, sometimes we only
     // need the component's declarative information.
     3: package Package;
+
+    /// Binary representation of the component's configuration values
+    /// (`fuchsia.component.config.ValuesData`).
+    4: config_values fuchsia.mem.Data;
 };

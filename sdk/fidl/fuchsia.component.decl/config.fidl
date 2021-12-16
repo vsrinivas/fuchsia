@@ -21,6 +21,15 @@ type Config = table {
 
     /// Checksum over the config declaration.
     2: declaration_checksum ConfigChecksum;
+
+    /// Strategy used to resolve config values.
+    3: value_source ConfigValueSource;
+};
+
+/// Strategies available for resolving configuration values.
+type ConfigValueSource = flexible union {
+    /// The path within the component's package at which to find config value files.
+    1: package_path string:MAX;
 };
 
 /// Declares a single config field (key + value type)

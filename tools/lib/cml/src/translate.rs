@@ -21,7 +21,10 @@ use {
 /// Compiles the Document into a FIDL `Component`.
 /// Note: This function ignores the `include` section of the document. It is
 /// assumed that those entries were already processed.
-pub fn compile(document: &Document) -> Result<fdecl::Component, Error> {
+pub fn compile(
+    document: &Document,
+    config_package_path: Option<&str>,
+) -> Result<fdecl::Component, Error> {
     let all_capability_names = document.all_capability_names();
     let all_children = document.all_children_names().into_iter().collect();
     let all_collections = document.all_collection_names().into_iter().collect();
@@ -57,7 +60,19 @@ pub fn compile(document: &Document) -> Result<fdecl::Component, Error> {
             .map(|env| translate_environments(env, &all_capability_names))
             .transpose()?,
         facets: document.facets.clone().map(dictionary_from_nested_map).transpose()?,
-        config: document.config.as_ref().map(|c| translate_config(c)),
+        config: document
+            .config
+            .as_ref()
+            .map(|c| {
+                if let Some(p) = config_package_path {
+                    Ok(translate_config(c, p))
+                } else {
+                    Err(Error::invalid_args(
+                        "can't translate config: no package path for value file",
+                    ))
+                }
+            })
+            .transpose()?,
         ..fdecl::Component::EMPTY
     })
 }
@@ -669,7 +684,10 @@ fn translate_value_type(value_type: &ConfigValueType) -> fdecl::ConfigValueType 
 }
 
 /// Translates a map of [`String`] -> [`ConfigValueType`] to a [`fuchsia.sys2.Config`]
-fn translate_config(fields: &BTreeMap<ConfigKey, ConfigValueType>) -> fdecl::Config {
+fn translate_config(
+    fields: &BTreeMap<ConfigKey, ConfigValueType>,
+    package_path: &str,
+) -> fdecl::Config {
     let mut fidl_fields = vec![];
 
     // Compute a SHA-256 hash from each field
@@ -696,6 +714,8 @@ fn translate_config(fields: &BTreeMap<ConfigKey, ConfigValueType>) -> fdecl::Con
     fdecl::Config {
         fields: Some(fidl_fields),
         declaration_checksum: Some(hash),
+        // for now we only support ELF components that look up config by package path
+        value_source: Some(fdecl::ConfigValueSource::PackagePath(package_path.to_owned())),
         ..fdecl::Config::EMPTY
     }
 }
@@ -1414,7 +1434,7 @@ mod tests {
             #[test]
             fn $test_name() {
                 let input = serde_json::from_str(&$input.to_string()).expect("deserialization failed");
-                let actual = compile(&input).expect("compilation failed");
+                let actual = compile(&input, Some("fake.cvf")).expect("compilation failed");
                 assert_eq!(actual, $expected);
             }
         )+

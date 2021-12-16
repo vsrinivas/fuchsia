@@ -26,6 +26,7 @@ use {
     fidl::prelude::*,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fidl_examples_routing_echo::{EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fuchsia_component_config::ValuesData,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
@@ -146,11 +147,12 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
 #[derive(Debug, Clone)]
 pub struct MockResolver {
     components: HashMap<String, ComponentDecl>,
+    configs: HashMap<String, ValuesData>,
 }
 
 impl MockResolver {
     pub fn new() -> Self {
-        MockResolver { components: HashMap::new() }
+        MockResolver { components: HashMap::new(), configs: HashMap::new() }
     }
 
     async fn resolve_async(
@@ -164,15 +166,35 @@ impl MockResolver {
             .components
             .get(name)
             .ok_or(ResolverError::manifest_not_found(format_err!("not in the hashmap")))?;
+        let config_values = if let Some(config_decl) = &decl.config {
+            let config_path = match &config_decl.value_source {
+                cm_rust::ConfigValueSource::PackagePath(path) => path,
+            };
+            Some(
+                self.configs
+                    .get(config_path)
+                    .ok_or_else(|| {
+                        ResolverError::manifest_invalid(format_err!("config values not provided"))
+                    })?
+                    .clone(),
+            )
+        } else {
+            None
+        };
         Ok(ResolvedComponent {
             resolved_url: format!("test:///{}_resolved", name),
             decl: decl.clone(),
             package: None,
+            config_values,
         })
     }
 
     pub fn add_component(&mut self, name: &str, component: ComponentDecl) {
         self.components.insert(name.to_string(), component);
+    }
+
+    pub fn add_config_values(&mut self, path: &str, values: ValuesData) {
+        self.configs.insert(path.to_string(), values);
     }
 
     pub fn get_component_decl(&self, name: &str) -> Option<ComponentDecl> {

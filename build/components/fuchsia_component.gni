@@ -160,6 +160,11 @@ template("fuchsia_component") {
         deps += [ ":$validate_target" ]
       }
 
+      if (manifest_extension == "cml") {
+        # NOTE: must be kept in sync with path in fuchsia_structured_config.gni
+        config_values_package_path = "meta/$component_name.cvf"
+      }
+
       metadata = {
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")

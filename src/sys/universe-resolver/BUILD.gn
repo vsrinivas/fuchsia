@@ -45,6 +45,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//src/lib/fuchsia-component-test",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:matches",

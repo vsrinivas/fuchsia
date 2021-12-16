@@ -134,8 +134,11 @@ mod tests {
             assert_eq!(self.expected_url, component_url);
             Ok(ResolvedComponent {
                 resolved_url: self.resolved_url.clone(),
+                // We don't actually need to return a valid component here as these unit tests only
+                // cover the process of going from relative -> full URL.
                 decl: cm_rust::ComponentDecl::default(),
                 package: None,
+                config_values: None,
             })
         }
     }

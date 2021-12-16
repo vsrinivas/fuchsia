@@ -12,6 +12,7 @@ use {
     cm_fidl_validator,
     cm_rust::FidlIntoNative,
     fidl::endpoints::{ClientEnd, Proxy},
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fidl_fuchsia_sys::LoaderProxy,
     fidl_fuchsia_sys2 as fsys,
@@ -77,6 +78,29 @@ impl FuchsiaPkgResolver {
         cm_fidl_validator::validate(&component_decl)
             .map_err(|e| ResolverError::manifest_invalid(e))?;
 
+        // Get config values from the package if needed
+        let config_values = if let Some(config_decl) = &component_decl.config {
+            let strategy = config_decl.value_source.as_ref().ok_or_else(|| {
+                ResolverError::manifest_invalid(anyhow::format_err!(
+                    "missing a strategy for resolving config values"
+                ))
+            })?;
+            let config_path = match strategy {
+                fdecl::ConfigValueSource::PackagePath(path) => Path::new(path),
+                other => {
+                    return Err(ResolverError::manifest_invalid(anyhow::format_err!(
+                        "unrecognized config value strategy: {:?}",
+                        other
+                    )))
+                }
+            };
+            let file = io_util::open_file(&dir, config_path, fio::OPEN_RIGHT_READABLE)
+                .map_err(|e| ResolverError::Io(e.into()))?;
+            Some(io_util::read_file_fidl(&file).await.map_err(|e| ResolverError::Io(e.into()))?)
+        } else {
+            None
+        };
+
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
         );
@@ -89,6 +113,7 @@ impl FuchsiaPkgResolver {
             resolved_url: component_url.to_string(),
             decl: component_decl.fidl_into_native(),
             package: Some(package),
+            config_values,
         })
     }
 }

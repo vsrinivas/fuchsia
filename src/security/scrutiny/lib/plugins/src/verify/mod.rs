@@ -347,7 +347,7 @@ mod tests {
         let mut components = vec![];
         let mut manifests = vec![];
         for (uri, json) in cmls {
-            let decl = cml::compile(&serde_json::from_value(json)?)?.fidl_into_native();
+            let decl = cml::compile(&serde_json::from_value(json)?, None)?.fidl_into_native();
             let manifest = make_v2_manifest(id, decl)?;
             let component = make_v2_component(id, uri.to_owned());
 

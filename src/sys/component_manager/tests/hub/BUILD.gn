@@ -69,6 +69,12 @@ fuchsia_component("resolver") {
   restricted_features = [ "structured_config" ]
 }
 
+fuchsia_structured_config_values("resolver_config") {
+  testonly = true
+  component = ":resolver"
+  values = "components/resolver/config/resolver_config.json5"
+}
+
 fuchsia_component("child") {
   testonly = true
   manifest = "components/visibility/meta/child.cml"
@@ -92,6 +98,7 @@ fuchsia_unittest_package("hub_integration_test") {
     ":hub_client",
     ":hub_integration_test_bin",
     ":resolver",
+    ":resolver_config",
     ":simple",
     ":visibility_reporter",
     "//examples/components/routing/echo_server:echo_server_component",

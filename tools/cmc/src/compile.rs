@@ -20,6 +20,7 @@ pub fn compile(
     depfile: Option<PathBuf>,
     includepath: &Vec<PathBuf>,
     includeroot: &PathBuf,
+    config_package_path: Option<&str>,
     features: &FeatureSet,
     experimental_force_runner: &Option<String>,
 ) -> Result<(), Error> {
@@ -59,7 +60,7 @@ pub fn compile(
     util::ensure_directory_exists(&output)?;
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
-    let mut out_data = cml::compile(&document)?;
+    let mut out_data = cml::compile(&document, config_package_path)?;
     out_file.write(&encode_persistent(&mut out_data)?)?;
 
     // Write includes to depfile
@@ -110,6 +111,7 @@ mod tests {
     use std::io::{self, Read, Write};
     use tempfile::TempDir;
 
+    #[track_caller]
     fn compile_test_with_forced_runner(
         in_path: PathBuf,
         out_path: PathBuf,
@@ -128,6 +130,7 @@ mod tests {
             None,
             &vec![includepath.clone()],
             &includepath.clone(),
+            Some("test.cvf"),
             features.clone(),
             experimental_force_runner,
         )?;
@@ -135,11 +138,12 @@ mod tests {
         fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
 
         let output: fdecl::Component = decode_persistent(&buffer).unwrap();
-        assert_eq!(output, expected_output);
+        assert_eq!(output, expected_output, "compiled output did not match expected");
 
         Ok(())
     }
 
+    #[track_caller]
     fn compile_test(
         in_path: PathBuf,
         out_path: PathBuf,
@@ -744,6 +748,7 @@ mod tests {
                         29, 216, 58, 250, 74, 84, 151, 187, 165, 124, 211, 208, 215, 241, 78, 166,
                         54, 186, 142, 201, 10, 136, 180, 16, 171, 129, 154, 142, 44, 7, 46, 146
                     ]),
+                    value_source: Some(fdecl::ConfigValueSource::PackagePath("test.cvf".to_string())),
                     ..fdecl::Config::EMPTY
                 }),
                 ..fdecl::Component::EMPTY
@@ -770,6 +775,7 @@ mod tests {
                 None,
                 &vec![],
                 &PathBuf::new(),
+                None,
                 &FeatureSet::empty(),
                 &None,
             );

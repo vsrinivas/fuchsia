@@ -76,7 +76,13 @@ impl Resolver for RealmBuilderResolver {
             self.resolve_async(component_url).await?;
         let resolved_url = resolved_url.unwrap();
         let decl = resolver::read_and_validate_manifest(decl.unwrap()).await?;
-        Ok(ResolvedComponent { resolved_url, decl, package })
+        Ok(ResolvedComponent {
+            resolved_url,
+            decl,
+            package,
+            // TODO(https://fxbug.dev/88958) may need to support structured config
+            config_values: None,
+        })
     }
 }
 

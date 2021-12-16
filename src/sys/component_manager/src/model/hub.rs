@@ -691,14 +691,15 @@ mod tests {
         },
         cm_rust::{
             self, CapabilityName, CapabilityPath, ComponentDecl, ConfigBooleanType, ConfigDecl,
-            ConfigField, ConfigStringType, ConfigValueType, ConfigVectorElementType,
-            ConfigVectorType, DependencyType, DirectoryDecl, EventMode, EventSubscription,
-            ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
-            ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
-            UseProtocolDecl, UseSource,
+            ConfigField, ConfigStringType, ConfigValueSource, ConfigValueType,
+            ConfigVectorElementType, ConfigVectorType, DependencyType, DirectoryDecl, EventMode,
+            EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource,
+            ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
+            UseEventStreamDecl, UseProtocolDecl, UseSource,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
+        fidl_fuchsia_component_config as fconfig,
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
@@ -754,6 +755,7 @@ mod tests {
     struct ComponentDescriptor {
         pub name: &'static str,
         pub decl: ComponentDecl,
+        pub config: Option<(&'static str, fconfig::ValuesData)>,
         pub host_fn: Option<DirectoryCallback>,
         pub runtime_host_fn: Option<DirectoryCallback>,
     }
@@ -773,10 +775,12 @@ mod tests {
     ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let decls = components.iter().map(|c| (c.name, c.decl.clone())).collect();
+        let configs = components.iter().filter_map(|c| c.config.clone()).collect();
 
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
             TestEnvironmentBuilder::new()
                 .set_components(decls)
+                .set_config_values(configs)
                 .set_component_id_index_path(index_file_path)
                 .build()
                 .await;
@@ -801,8 +805,7 @@ mod tests {
         model.root().hooks.install(additional_hooks).await;
 
         let root_moniker = PartialAbsoluteMoniker::root();
-        let res = model.bind(&root_moniker, &BindReason::Root).await;
-        assert!(res.is_ok());
+        model.bind(&root_moniker, &BindReason::Root).await.unwrap();
 
         (model, builtin_environment, hub_proxy)
     }
@@ -816,12 +819,14 @@ mod tests {
                 ComponentDescriptor {
                     name: "root",
                     decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
+                    config: None,
                     host_fn: None,
                     runtime_host_fn: None,
                 },
                 ComponentDescriptor {
                     name: "a",
                     decl: component_decl_with_test_runner(),
+                    config: None,
                     host_fn: None,
                     runtime_host_fn: None,
                 },
@@ -854,6 +859,7 @@ mod tests {
             vec![ComponentDescriptor {
                 name: "root",
                 decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
+                config: None,
                 host_fn: Some(foo_out_dir_fn()),
                 runtime_host_fn: None,
             }],
@@ -875,6 +881,7 @@ mod tests {
             vec![ComponentDescriptor {
                 name: "root",
                 decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: Some(bleep_runtime_dir_fn()),
             }],
@@ -903,6 +910,7 @@ mod tests {
                         subdir: None,
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -943,6 +951,12 @@ mod tests {
     #[fuchsia::test]
     async fn hub_config_dir_in_resolved() {
         let root_component_url = "test:///root".to_string();
+        let checksum = vec![
+            0x07, 0xA8, 0xE6, 0x85, 0xC8, 0x79, 0xA9, 0x79, 0xC3, 0x26, 0x17, 0xDC, 0x4E, 0x74,
+            0x65, 0x7F, 0xF1, 0xF7, 0x73, 0xE7, 0x12, 0xEE, 0x51, 0xFD, 0xF6, 0x57, 0x43, 0x07,
+            0xA7, 0xAF, 0x2E, 0x64,
+        ];
+
         let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
             root_component_url.clone(),
             vec![ComponentDescriptor {
@@ -970,13 +984,37 @@ mod tests {
                                 }),
                             },
                         ],
-                        declaration_checksum: vec![
-                            0x07, 0xA8, 0xE6, 0x85, 0xC8, 0x79, 0xA9, 0x79, 0xC3, 0x26, 0x17, 0xDC,
-                            0x4E, 0x74, 0x65, 0x7F, 0xF1, 0xF7, 0x73, 0xE7, 0x12, 0xEE, 0x51, 0xFD,
-                            0xF6, 0x57, 0x43, 0x07, 0xA7, 0xAF, 0x2E, 0x64,
-                        ],
+                        declaration_checksum: checksum.clone(),
+                        value_source: ConfigValueSource::PackagePath("meta/root.cvf".into()),
                     })
                     .build(),
+                config: Some((
+                    "meta/root.cvf",
+                    fconfig::ValuesData {
+                        values: Some(vec![
+                            fconfig::ValueSpec {
+                                value: Some(fconfig::Value::Single(fconfig::SingleValue::Flag(
+                                    true,
+                                ))),
+                                ..fconfig::ValueSpec::EMPTY
+                            },
+                            fconfig::ValueSpec {
+                                value: Some(fconfig::Value::Single(fconfig::SingleValue::Text(
+                                    "DEBUG".to_string(),
+                                ))),
+                                ..fconfig::ValueSpec::EMPTY
+                            },
+                            fconfig::ValueSpec {
+                                value: Some(fconfig::Value::List(fconfig::ListValue::TextList(
+                                    vec!["foo".into(), "bar".into()],
+                                ))),
+                                ..fconfig::ValueSpec::EMPTY
+                            },
+                        ]),
+                        declaration_checksum: Some(checksum),
+                        ..fconfig::ValuesData::EMPTY
+                    },
+                )),
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1019,6 +1057,7 @@ mod tests {
                         subdir: Some("resolved".into()),
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1056,6 +1095,7 @@ mod tests {
                         subdir: None,
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1117,12 +1157,14 @@ mod tests {
                             subdir: Some("resolved".into()),
                         }))
                         .build(),
+                    config: None,
                     host_fn: None,
                     runtime_host_fn: None,
                 },
                 ComponentDescriptor {
                     name: "a",
                     decl: component_decl_with_test_runner(),
+                    config: None,
                     host_fn: None,
                     runtime_host_fn: None,
                 },
@@ -1186,6 +1228,7 @@ mod tests {
                         subdir: None,
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1233,6 +1276,7 @@ mod tests {
                         dependency_type: DependencyType::Strong,
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1284,6 +1328,7 @@ mod tests {
                         }],
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1332,6 +1377,7 @@ mod tests {
                         subdir: None,
                     }))
                     .build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: None,
             }],
@@ -1355,6 +1401,7 @@ mod tests {
             vec![ComponentDescriptor {
                 name: "root",
                 decl: ComponentDeclBuilder::new().add_lazy_child("a").build(),
+                config: None,
                 host_fn: None,
                 runtime_host_fn: Some(bleep_runtime_dir_fn()),
             }],

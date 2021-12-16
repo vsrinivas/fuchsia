@@ -27,6 +27,7 @@ use {
     diagnostics_message::{LoggerMessage, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
     fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_config::ValuesData,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
@@ -297,6 +298,7 @@ pub struct TestModelResult {
 pub struct TestEnvironmentBuilder {
     root_component: String,
     components: Vec<(&'static str, ComponentDecl)>,
+    config_values: Vec<(&'static str, ValuesData)>,
     runtime_config: RuntimeConfig,
     enable_hub: bool,
     component_id_index_path: Option<String>,
@@ -307,6 +309,7 @@ impl TestEnvironmentBuilder {
         Self {
             root_component: "root".to_owned(),
             components: vec![],
+            config_values: vec![],
             runtime_config: Default::default(),
             enable_hub: true,
             component_id_index_path: None,
@@ -320,6 +323,11 @@ impl TestEnvironmentBuilder {
 
     pub fn set_components(mut self, components: Vec<(&'static str, ComponentDecl)>) -> Self {
         self.components = components;
+        self
+    }
+
+    pub fn set_config_values(mut self, config_values: Vec<(&'static str, ValuesData)>) -> Self {
+        self.config_values = config_values;
         self
     }
 
@@ -350,6 +358,10 @@ impl TestEnvironmentBuilder {
         let mut mock_resolver = MockResolver::new();
         for (name, decl) in &self.components {
             mock_resolver.add_component(name, decl.clone());
+        }
+
+        for (path, config) in &self.config_values {
+            mock_resolver.add_config_values(path, config.clone());
         }
 
         self.runtime_config.root_component_url =

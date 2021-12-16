@@ -5,6 +5,7 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_mem as fmem,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
@@ -69,18 +70,22 @@ async fn resolve_component(
     let package_dir = resolve_package(&package_url, package_resolver).await?;
 
     // Read the component manifest (.cm file) from the package directory.
-    let cm_file = io_util::directory::open_file(&package_dir, cm_path, fio::OPEN_RIGHT_READABLE)
-        .await
-        .map_err(ResolverError::ComponentNotFound)?;
+    let data = get_data_from_package_path(&package_dir, cm_path).await?;
+    let raw_bytes = raw_bytes_from_data(&data)?;
 
-    let (status, buffer) =
-        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IoError)?;
-    Status::ok(status).map_err(ResolverError::VmoFailure)?;
-    let data = match buffer {
-        Some(buffer) => fmem::Data::Buffer(*buffer),
-        None => fmem::Data::Bytes(
-            io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
-        ),
+    let decl: fdecl::Component = fidl::encoding::decode_persistent(&raw_bytes[..])
+        .map_err(ResolverError::ParsingManifest)?;
+    let config_values = if let Some(config_decl) = decl.config.as_ref() {
+        // if we have a config declaration, we need to read the value file from the package dir
+        let strategy =
+            config_decl.value_source.as_ref().ok_or(ResolverError::MissingConfigSource)?;
+        let config_path = match strategy {
+            fdecl::ConfigValueSource::PackagePath(path) => path,
+            other => return Err(ResolverError::UnsupportedConfigStrategy(other.to_owned())),
+        };
+        Some(get_data_from_package_path(&package_dir, &config_path).await?)
+    } else {
+        None
     };
 
     let package_dir = ClientEnd::new(
@@ -94,7 +99,44 @@ async fn resolve_component(
             package_dir: Some(package_dir),
             ..fsys::Package::EMPTY
         }),
+        config_values,
         ..fsys::Component::EMPTY
+    })
+}
+
+async fn get_data_from_package_path(
+    package_dir: &DirectoryProxy,
+    path: &str,
+) -> Result<fmem::Data, ResolverError> {
+    let file = io_util::directory::open_file(&package_dir, path, fio::OPEN_RIGHT_READABLE)
+        .await
+        .map_err(|source| ResolverError::FileNotFound { source, path: path.to_owned() })?;
+
+    let (status, buffer) =
+        file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IoError)?;
+    Status::ok(status).map_err(ResolverError::VmoFailure)?;
+
+    Ok(match buffer {
+        Some(buffer) => fmem::Data::Buffer(*buffer),
+        None => fmem::Data::Bytes(
+            io_util::file::read(&file)
+                .await
+                .map_err(|source| ResolverError::ReadFile { source, path: path.to_owned() })?,
+        ),
+    })
+}
+
+fn raw_bytes_from_data(data: &fmem::Data) -> Result<Vec<u8>, ResolverError> {
+    Ok(match data {
+        fmem::Data::Buffer(buf) => {
+            let size = buf.size as usize;
+            let mut raw_bytes = Vec::with_capacity(size);
+            raw_bytes.resize(size, 0);
+            buf.vmo.read(&mut raw_bytes, 0).map_err(ResolverError::VmoFailure)?;
+            raw_bytes
+        }
+        fmem::Data::Bytes(b) => b.clone(),
+        _ => return Err(ResolverError::UnrecognizedDataVariant),
     })
 }
 
@@ -127,20 +169,36 @@ enum ResolverError {
     Internal,
     #[error("invalid component URL: {}", .0)]
     InvalidUrl(#[from] PkgUrlParseError),
-    #[error("component not found: {}", .0)]
-    ComponentNotFound(#[source] io_util::node::OpenError),
+    #[error("{path} not found: {source}")]
+    FileNotFound {
+        path: String,
+        #[source]
+        source: io_util::node::OpenError,
+    },
     #[error("package not found")]
     PackageNotFound,
-    #[error("read manifest error: {}", .0)]
-    ReadManifest(#[source] io_util::file::ReadError),
+    #[error("error reading {path}: {source}")]
+    ReadFile {
+        path: String,
+        #[source]
+        source: io_util::file::ReadError,
+    },
     #[error("IO error: {}", .0)]
     IoError(#[source] fidl::Error),
     #[error("failed to get manifest VMO: {}", .0)]
     VmoFailure(#[source] Status),
+    #[error("failed to parse compiled manifest to check for config: {_0}")]
+    ParsingManifest(#[source] fidl::Error),
     #[error("insufficient space to store package")]
     NoSpace,
     #[error("the component's package is temporarily unavailable")]
     Unavailable,
+    #[error("encountered unrecognized fuchsia.mem.Data variant")]
+    UnrecognizedDataVariant,
+    #[error("component has config fields but does not have a config value lookup strategy")]
+    MissingConfigSource,
+    #[error("unsupported config value resolution strategy {_0:?}")]
+    UnsupportedConfigStrategy(fdecl::ConfigValueSource),
 }
 
 impl From<ResolverError> for fsys::ResolverError {
@@ -148,13 +206,17 @@ impl From<ResolverError> for fsys::ResolverError {
         match err {
             ResolverError::Internal => fsys::ResolverError::Internal,
             ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
-            ResolverError::ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
+            ResolverError::FileNotFound { .. } => fsys::ResolverError::ManifestNotFound,
             ResolverError::PackageNotFound => fsys::ResolverError::PackageNotFound,
-            ResolverError::ReadManifest(_)
+            ResolverError::ReadFile { .. }
             | ResolverError::VmoFailure(_)
-            | ResolverError::IoError(_) => fsys::ResolverError::Io,
+            | ResolverError::IoError(_)
+            | ResolverError::UnrecognizedDataVariant => fsys::ResolverError::Io,
             ResolverError::NoSpace => fsys::ResolverError::NoSpace,
             ResolverError::Unavailable => fsys::ResolverError::ResourceUnavailable,
+            ResolverError::ParsingManifest(..)
+            | ResolverError::MissingConfigSource
+            | ResolverError::UnsupportedConfigStrategy(..) => fsys::ResolverError::InvalidManifest,
         }
     }
 }
@@ -165,8 +227,9 @@ mod tests {
         super::*,
         anyhow::Error,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
-        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_mem,
-        fidl_fuchsia_pkg::PackageResolverRequest,
+        fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_mem,
+        fidl_fuchsia_pkg::{PackageResolverRequest, PackageResolverRequestStream},
         fidl_fuchsia_sys2::{self as fsys, ComponentResolverMarker},
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
@@ -464,6 +527,7 @@ mod tests {
                             .expect("failed to encode ComponentDecl FIDL");
                         let capacity = cm_bytes.len() as u64;
                         let vmo = Vmo::create(capacity)?;
+                        vmo.write(&cm_bytes, 0).expect("failed to write manifest bytes to vmo");
                         Ok(NewVmo { vmo, size: capacity, capacity })
                     }),
                 },
@@ -552,9 +616,133 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Err(ResolverError::ComponentNotFound(_))
+                Err(ResolverError::FileNotFound { path, .. }) if path == "meta/test.cm"
             );
         };
         join!(server, client);
+    }
+
+    fn spawn_pkg_resolver(
+        fs: Arc<impl vfs::directory::entry::DirectoryEntry>,
+        mut server: PackageResolverRequestStream,
+    ) -> fasync::Task<()> {
+        fasync::Task::spawn(async move {
+            while let Some(request) = server.try_next().await.unwrap() {
+                match request {
+                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
+                        assert_eq!(
+                            package_url, "fuchsia-pkg://fuchsia.com/test",
+                            "unexpected package URL"
+                        );
+                        assert!(
+                            selectors.is_empty(),
+                            "Call to Resolve should not contain any selectors"
+                        );
+                        fs.clone().open(
+                            ExecutionScope::new(),
+                            fio::OPEN_RIGHT_READABLE,
+                            fio::MODE_TYPE_DIRECTORY,
+                            Path::dot(),
+                            ServerEnd::new(dir.into_channel()),
+                        );
+                        responder.send(&mut Ok(())).unwrap();
+                    }
+                    _ => panic!("unexpected API call"),
+                }
+            }
+        })
+    }
+
+    #[fuchsia::test]
+    async fn resolve_component_succeeds_with_config() {
+        let (proxy, server) =
+            fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
+        let cm_bytes = encode_persistent(&mut fdecl::Component {
+            config: Some(fdecl::Config {
+                value_source: Some(fdecl::ConfigValueSource::PackagePath(
+                    "meta/test_with_config.cvf".to_string(),
+                )),
+                ..fdecl::Config::EMPTY
+            }),
+            ..fdecl::Component::EMPTY
+        })
+        .expect("failed to encode ComponentDecl FIDL");
+        let cvf_bytes =
+            encode_persistent(&mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY })
+                .expect("failed to encode ValuesData FIDL");
+        let fs = pseudo_directory! {
+            "meta" => pseudo_directory! {
+                "test_with_config.cm" => read_only_static(cm_bytes),
+                "test_with_config.cvf" => read_only_static(cvf_bytes),
+            },
+        };
+        let _pkg_resolver = spawn_pkg_resolver(fs, server);
+        assert_matches!(
+            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
+                .await
+                .unwrap(),
+            fsys::Component {
+                decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
+                config_values: Some(fidl_fuchsia_mem::Data::Buffer(
+                    fidl_fuchsia_mem::Buffer { .. }
+                )),
+                ..
+            }
+        );
+    }
+
+    #[fuchsia::test]
+    async fn resolve_component_fails_missing_config_value_file() {
+        let (proxy, server) =
+            fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
+        let cm_bytes = encode_persistent(&mut fdecl::Component {
+            config: Some(fdecl::Config {
+                value_source: Some(fdecl::ConfigValueSource::PackagePath(
+                    "meta/test_with_config.cvf".to_string(),
+                )),
+                ..fdecl::Config::EMPTY
+            }),
+            ..fdecl::Component::EMPTY
+        })
+        .expect("failed to encode ComponentDecl FIDL");
+        let fs = pseudo_directory! {
+            "meta" => pseudo_directory! {
+                "test_with_config.cm" => read_only_static(cm_bytes),
+            },
+        };
+        let _pkg_resolver = spawn_pkg_resolver(fs, server);
+        assert_matches!(
+            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
+                .await
+                .unwrap_err(),
+            ResolverError::FileNotFound { path, .. } if path == "meta/test_with_config.cvf"
+        );
+    }
+
+    #[fuchsia::test]
+    async fn resolve_component_fails_bad_config_strategy() {
+        let (proxy, server) =
+            fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
+        let cm_bytes = encode_persistent(&mut fdecl::Component {
+            config: Some(fdecl::Config { ..fdecl::Config::EMPTY }),
+            ..fdecl::Component::EMPTY
+        })
+        .expect("failed to encode ComponentDecl FIDL");
+        let cvf_bytes =
+            encode_persistent(&mut fconfig::ValuesData { ..fconfig::ValuesData::EMPTY })
+                .expect("failed to encode ValuesData FIDL");
+        let fs = pseudo_directory! {
+            "meta" => pseudo_directory! {
+                "test_with_config.cm" => read_only_static(cm_bytes),
+                "test_with_config.cvf" => read_only_static(cvf_bytes),
+            },
+        };
+        let _pkg_resolver = spawn_pkg_resolver(fs, server);
+        assert_matches!(
+            resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
+                .await
+                .unwrap_err(),
+            ResolverError::MissingConfigSource
+        );
     }
 }

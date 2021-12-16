@@ -99,6 +99,7 @@ fn run_cmc() -> Result<(), Error> {
             depfile,
             includepath,
             includeroot,
+            config_package_path,
             features,
             experimental_force_runner,
         } => {
@@ -109,6 +110,7 @@ fn run_cmc() -> Result<(), Error> {
                 depfile,
                 &includepath,
                 &includeroot,
+                config_package_path.as_ref().map(String::as_str),
                 &features.into(),
                 &experimental_force_runner,
             )?

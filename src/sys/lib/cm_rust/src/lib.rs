@@ -784,6 +784,13 @@ impl EnvironmentDecl {
 pub struct ConfigDecl {
     pub fields: Vec<ConfigField>,
     pub declaration_checksum: Vec<u8>,
+    pub value_source: ConfigValueSource,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fdecl::ConfigValueSource")]
+pub enum ConfigValueSource {
+    PackagePath(String),
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
@@ -2120,6 +2127,9 @@ mod tests {
                         0x03, 0x6B, 0xC3, 0x58, 0x85, 0x70, 0xB4, 0x4D, 0x8A, 0x11, 0x16, 0x20,
                         0x5B, 0x11, 0x87, 0x96, 0x5E, 0x14, 0x67, 0xF8
                     ]),
+                    value_source: Some(
+                        fdecl::ConfigValueSource::PackagePath("fake.cvf".to_string())
+                    ),
                     ..fdecl::Config::EMPTY
                 }),
                 ..fdecl::Component::EMPTY
@@ -2397,7 +2407,8 @@ mod tests {
                             0x66, 0x3E, 0x10, 0x72, 0x26, 0xA7, 0x5F, 0x0B, 0x23, 0x1D, 0x6C, 0x8D,
                             0x03, 0x6B, 0xC3, 0x58, 0x85, 0x70, 0xB4, 0x4D, 0x8A, 0x11, 0x16, 0x20,
                             0x5B, 0x11, 0x87, 0x96, 0x5E, 0x14, 0x67, 0xF8
-                        ]
+                        ],
+                        value_source: ConfigValueSource::PackagePath("fake.cvf".to_string())
                     }),
                 }
             },

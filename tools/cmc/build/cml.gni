@@ -95,13 +95,20 @@ template("cm") {
     depfile = "${target_out_dir}/${target_name}.d"
 
     args = [
-             "compile",
-             rebase_path(inputs[0], root_build_dir),
-             "--output",
-             rebase_path(compiled_output, root_build_dir),
-             "--depfile",
-             rebase_path(depfile, root_build_dir),
-           ] + include_paths
+      "compile",
+      rebase_path(inputs[0], root_build_dir),
+      "--output",
+      rebase_path(compiled_output, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+    if (defined(invoker.config_values_package_path)) {
+      args += [
+        "--config-package-path",
+        invoker.config_values_package_path,
+      ]
+    }
+    args += include_paths
 
     if (!defined(restricted_features)) {
       restricted_features = []

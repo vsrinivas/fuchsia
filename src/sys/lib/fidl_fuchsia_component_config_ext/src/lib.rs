@@ -119,6 +119,7 @@ macro_rules! config_decl {
         cm_rust::ConfigDecl {
             fields,
             declaration_checksum: $checksum,
+            value_source: cm_rust::ConfigValueSource::PackagePath("fake.cvf".to_string()),
         }
     }};
 }

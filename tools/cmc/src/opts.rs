@@ -191,6 +191,10 @@ pub enum Commands {
         /// base path for resolving include paths that start with "//"
         includeroot: PathBuf,
 
+        #[structopt(long = "config-package-path")]
+        /// path within the component's package at which its configuration will be available
+        config_package_path: Option<String>,
+
         #[structopt(short = "f", long = "features")]
         /// The set of non-standard features to compile with.
         /// Only applies to CML files.

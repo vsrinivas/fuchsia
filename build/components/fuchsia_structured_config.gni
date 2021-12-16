@@ -109,6 +109,8 @@ template("fuchsia_structured_config_values") {
     resource(manifest_resource_target) {
       forward_variables_from(invoker, [ "testonly" ])
       sources = get_target_outputs(":${invoker.target_name}")
+
+      # NOTE: must be kept in sync with path in fuchsia_component.gni
       outputs = [ "meta/$component_name.cvf" ]
       visibility = [ ":*" ]
     }

@@ -41,6 +41,7 @@ table/member fuchsia.component.decl/Component.uses vector<fuchsia.component.decl
 table fuchsia.component.decl/Component
 table/member fuchsia.component.decl/Config.declaration_checksum vector<uint8>:32
 table/member fuchsia.component.decl/Config.fields vector<fuchsia.component.decl/ConfigField>
+table/member fuchsia.component.decl/Config.value_source fuchsia.component.decl/ConfigValueSource
 table fuchsia.component.decl/Config
 table fuchsia.component.decl/ConfigBooleanType
 table/member fuchsia.component.decl/ConfigField.key string:64
@@ -56,6 +57,8 @@ table fuchsia.component.decl/ConfigUnsigned16Type
 table fuchsia.component.decl/ConfigUnsigned32Type
 table fuchsia.component.decl/ConfigUnsigned64Type
 table fuchsia.component.decl/ConfigUnsigned8Type
+union/member fuchsia.component.decl/ConfigValueSource.package_path string
+flexible union fuchsia.component.decl/ConfigValueSource
 union/member fuchsia.component.decl/ConfigValueType.bool fuchsia.component.decl/ConfigBooleanType
 union/member fuchsia.component.decl/ConfigValueType.int16 fuchsia.component.decl/ConfigSigned16Type
 union/member fuchsia.component.decl/ConfigValueType.int32 fuchsia.component.decl/ConfigSigned32Type

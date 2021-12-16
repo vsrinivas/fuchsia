@@ -13,8 +13,8 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     cm_rust::{FidlIntoNative, ResolverRegistration},
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
     std::{collections::HashMap, sync::Arc},
     thiserror::Error,
@@ -43,6 +43,7 @@ pub struct ResolvedComponent {
     pub resolved_url: String,
     pub decl: cm_rust::ComponentDecl,
     pub package: Option<fsys::Package>,
+    pub config_values: Option<fconfig::ValuesData>,
 }
 
 /// Resolves a component URL using a resolver selected based on the URL's scheme.
@@ -151,10 +152,19 @@ impl Resolver for RemoteResolver {
         .map_err(ResolverError::routing_error)?;
         let component = proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
         let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
+        let decl = read_and_validate_manifest(decl_buffer).await?;
+        let config_values = if decl.config.is_some() {
+            Some(read_and_validate_config_values(
+                component.config_values.ok_or(ResolverError::RemoteInvalidData)?,
+            )?)
+        } else {
+            None
+        };
         Ok(ResolvedComponent {
             resolved_url: component.resolved_url.ok_or(ResolverError::RemoteInvalidData)?,
-            decl: read_and_validate_manifest(decl_buffer).await?,
+            decl,
             package: component.package,
+            config_values,
         })
     }
 }
@@ -193,6 +203,25 @@ pub async fn read_and_validate_manifest(
     Ok(component_decl.fidl_into_native())
 }
 
+fn read_and_validate_config_values(data: fmem::Data) -> Result<fconfig::ValuesData, ResolverError> {
+    let bytes = match data {
+        fmem::Data::Bytes(bytes) => bytes,
+        fmem::Data::Buffer(buffer) => {
+            let mut contents = Vec::<u8>::new();
+            contents.resize(buffer.size as usize, 0);
+            buffer.vmo.read(&mut contents, 0).map_err(ResolverError::ConfigValuesIo)?;
+            contents
+        }
+        _ => return Err(ResolverError::RemoteInvalidData),
+    };
+    let values: fconfig::ValuesData = fidl::encoding::decode_persistent(&bytes)
+        .map_err(|err| ResolverError::config_values_invalid(err))?;
+
+    // TODO(https://fxbug.dev/88971) validate the value file before returning
+
+    Ok(values)
+}
+
 /// Errors produced by `Resolver`.
 #[derive(Debug, Error, Clone)]
 pub enum ResolverError {
@@ -206,8 +235,12 @@ pub enum ResolverError {
     PackageNotFound(#[source] ClonableError),
     #[error("component manifest invalid: {0}")]
     ManifestInvalid(#[source] ClonableError),
+    #[error("config values file invalid: {0}")]
+    ConfigValuesInvalid(#[source] ClonableError),
     #[error("failed to read manifest: {0}")]
     ManifestIo(Status),
+    #[error("failed to read config values: {0}")]
+    ConfigValuesIo(Status),
     #[error("Model not available")]
     ModelNotAvailable,
     #[error("scheme not registered")]
@@ -245,6 +278,10 @@ impl ResolverError {
         ResolverError::ManifestInvalid(err.into().into())
     }
 
+    pub fn config_values_invalid(err: impl Into<Error>) -> ResolverError {
+        ResolverError::ConfigValuesInvalid(err.into().into())
+    }
+
     pub fn malformed_url(err: impl Into<Error>) -> ResolverError {
         ResolverError::MalformedUrl(err.into().into())
     }
@@ -273,6 +310,9 @@ impl From<fsys::ResolverError> for ResolverError {
                 ResolverError::manifest_not_found(RemoteError(err))
             }
             fsys::ResolverError::InvalidArgs => ResolverError::malformed_url(RemoteError(err)),
+            fsys::ResolverError::InvalidManifest => {
+                ResolverError::ManifestInvalid(anyhow::Error::from(RemoteError(err)).into())
+            }
         }
     }
 }
@@ -312,6 +352,7 @@ mod tests {
                 resolved_url: self.resolved_url.clone(),
                 decl: cm_rust::ComponentDecl::default(),
                 package: None,
+                config_values: None,
             })
         }
     }

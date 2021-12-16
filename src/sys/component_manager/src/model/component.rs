@@ -41,8 +41,8 @@ use {
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::{self, Proxy, ServerEnd},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_config as fconfig,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol,
     fidl_fuchsia_io::{
         self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -142,6 +142,8 @@ pub struct Component {
     pub decl: ComponentDecl,
     /// The package info, if the component came from a package.
     pub package: Option<Package>,
+    /// The configuration values, if the component came with them.
+    pub config_values: Option<fconfig::ValuesData>,
 }
 
 /// Package information possibly returned by the resolver.
@@ -157,10 +159,10 @@ impl TryFrom<ResolvedComponent> for Component {
     type Error = ModelError;
 
     fn try_from(
-        ResolvedComponent { resolved_url, decl, package }: ResolvedComponent,
+        ResolvedComponent { resolved_url, decl, package, config_values }: ResolvedComponent,
     ) -> Result<Self, Self::Error> {
         let package = package.map(|p| p.try_into()).transpose()?;
-        Ok(Self { resolved_url, decl, package })
+        Ok(Self { resolved_url, decl, package, config_values })
     }
 }
 
