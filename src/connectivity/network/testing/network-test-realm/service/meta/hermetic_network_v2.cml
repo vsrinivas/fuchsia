@@ -84,6 +84,7 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",
+                "fuchsia.posix.socket.Provider",
             ],
             from: "#netstack",
         },

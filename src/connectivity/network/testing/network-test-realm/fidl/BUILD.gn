@@ -10,5 +10,6 @@ fidl("fuchsia.net.test.realm") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.url",
+    "//zircon/vdso/zx",
   ]
 }

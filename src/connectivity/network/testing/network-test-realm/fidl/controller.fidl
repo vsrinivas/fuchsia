@@ -6,6 +6,7 @@ library fuchsia.net.test.realm;
 using fuchsia.net;
 using fuchsia.net.interfaces;
 using fuchsia.url;
+using zx;
 
 /// Standard error codes for the `Controller` protocol.
 type Error = strict enum {
@@ -23,6 +24,10 @@ type Error = strict enum {
     INVALID_ARGUMENTS = 5;
     /// The relevant component was not found.
     COMPONENT_NOT_FOUND = 6;
+    /// The operation could not be performed within the specified timeout.
+    TIMEOUT_EXCEEDED = 7;
+    /// A ping unexpectedly failed.
+    PING_FAILED = 8;
 };
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -73,7 +78,7 @@ protocol Controller {
     ///     realm.
     StopHermeticNetworkRealm() -> (struct {}) error Error;
 
-    /// Attaches an interface to the hermetic Netsack.
+    /// Attaches an interface to the hermetic Netstack.
     ///
     /// The interface that corresponds to `mac_address` will disabled on the
     /// system's Netstack, but enabled on the hermetic Netstack.
@@ -120,4 +125,35 @@ protocol Controller {
     /// * error `INTERNAL` for internal errors, including failure to destroy the
     ///     stub component.
     StopStub() -> (struct {}) error Error;
+
+    /// Sends an ICMP echo request to the `target` using a socket provided by
+    /// the hermetic Netstack.
+    ///
+    /// + request `target` the address to ping.
+    /// + request `payload_length` the body size of the ICMP packet.
+    ///     Specifically, the packet body will be filled with zeros of
+    ///     `payload_length`.
+    /// + request `interface_name` an optional interface to bind the socket to.
+    /// + request `timeout` a timeout in nanoseconds to wait for a reply. If
+    ///     less than or equal to 0, then returns success immediately after the
+    ///     ping is sent.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `INTERFACE_NOT_FOUND` if `interface_name` does not exist in the
+    ///     hermetic Netstack.
+    /// * error `INTERNAL` for internal errors, including failure to create a
+    ///     socket or generate the ping request and response.
+    /// * error `INVALID_ARGUMENTS` if `target` corresponds to a link-local
+    ///     address and an `interface_name` is not specified or the
+    ///     `payload_length` exceeds the maximum allowable size.
+    /// * error `PING_FAILED` if there was an error sending or receiving the
+    ///     ping.
+    /// * error `TIMEOUT_EXCEEDED` if the ping reply is not received before the
+    ///     specifed `timeout`.
+    Ping(struct {
+        target fuchsia.net.IpAddress;
+        payload_length uint16;
+        interface_name string:<fuchsia.net.interfaces.INTERFACE_NAME_LENGTH, optional>;
+        timeout zx.duration;
+    }) -> (struct {}) error Error;
 };

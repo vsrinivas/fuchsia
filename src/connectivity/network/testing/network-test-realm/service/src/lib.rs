@@ -5,6 +5,9 @@
 use anyhow::{anyhow, Context as _, Result};
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fdecl;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+use std::collections::HashMap;
 
 /// Name of the collection that contains the hermetic network realm.
 pub const HERMETIC_NETWORK_COLLECTION_NAME: &'static str = "enclosed-network";
@@ -112,4 +115,27 @@ pub fn create_stub_child_ref() -> fdecl::ChildRef {
         name: STUB_COMPONENT_NAME.to_string(),
         collection: Some(STUB_COLLECTION_NAME.to_string()),
     }
+}
+
+/// Returns the id for the interface with `interface_name`.
+///
+/// If the interface is not found then, None is returned.
+pub async fn get_interface_id<'a>(
+    interface_name: &'a str,
+    state_proxy: &'a fnet_interfaces::StateProxy,
+) -> Result<Option<u64>> {
+    let stream = fnet_interfaces_ext::event_stream_from_state(&state_proxy)
+        .context("failed to get interface stream")?;
+    let interfaces = fnet_interfaces_ext::existing(stream, HashMap::new())
+        .await
+        .context("failed to get existing interfaces")?;
+    Ok(interfaces.values().find_map(
+        |fidl_fuchsia_net_interfaces_ext::Properties { id, name, .. }| {
+            if name == interface_name {
+                Some(*id)
+            } else {
+                None
+            }
+        },
+    ))
 }

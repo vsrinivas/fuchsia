@@ -9,15 +9,20 @@ use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fdecl;
 use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_ext as fnet_ext;
+use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_net_test_realm as fntr;
 use fidl_fuchsia_netstack as fnetstack;
-use fuchsia_async::futures::StreamExt as _;
-use futures::TryFutureExt as _;
+use fidl_fuchsia_posix_socket as fposix_socket;
+use fuchsia_async::{self as fasync, futures::StreamExt as _, TimeoutExt as _};
+use fuchsia_zircon as zx;
+use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::{error, warn};
+use std::convert::TryFrom as _;
 use std::path;
 
 /// URL for the realm that contains the hermetic network components with a
@@ -381,6 +386,145 @@ impl Connector for HermeticNetworkConnector {
     }
 }
 
+async fn create_icmp_socket(
+    domain: fposix_socket::Domain,
+    connector: &HermeticNetworkConnector,
+) -> Result<fasync::net::DatagramSocket, fntr::Error> {
+    let socket_provider = connector.connect_to_protocol::<fposix_socket::ProviderMarker>()?;
+    let sock = socket_provider
+        .datagram_socket(domain, fposix_socket::DatagramSocketProtocol::IcmpEcho)
+        .await
+        .map_err(|e| {
+            error!("datagram_socket failed: {:?}", e);
+            fntr::Error::Internal
+        })?
+        .map_err(|e| {
+            error!("datagram_socket error: {:?}", e);
+            fntr::Error::Internal
+        })?;
+
+    let socket_fd = fdio::create_fd(sock.into()).map_err(|e| {
+        error!("create_fd from socket failed: {:?}", e);
+        fntr::Error::Internal
+    })?;
+    Ok(fasync::net::DatagramSocket::new_from_socket(socket_fd).map_err(|e| {
+        error!("new_from_socket failed: {:?}", e);
+        fntr::Error::Internal
+    })?)
+}
+
+/// Returns the scope ID needed for the provided `address`.
+///
+/// See https://tools.ietf.org/html/rfc2553#section-3.3 for more information.
+async fn get_interface_scope_id(
+    interface_name: &Option<String>,
+    address: &std::net::Ipv6Addr,
+    connector: &impl Connector,
+) -> Result<u32, fntr::Error> {
+    const DEFAULT_SCOPE_ID: u32 = 0;
+    let is_link_local_address =
+        net_types::ip::Ipv6Addr::from_bytes(address.octets()).is_unicast_link_local();
+
+    match (interface_name, is_link_local_address) {
+        // If a link-local address is specified, then an interface name
+        // must be provided.
+        (None, true) => Err(fntr::Error::InvalidArguments),
+        // The default scope ID should be used for any non link-local
+        // address.
+        (Some(_), false) | (None, false) => Ok(DEFAULT_SCOPE_ID),
+        (Some(interface_name), true) => network_test_realm::get_interface_id(
+            &interface_name,
+            &connector.connect_to_protocol::<fnet_interfaces::StateMarker>()?,
+        )
+        .await
+        .map_err(|e| {
+            error!(
+                "failed to obtain interface ID for interface named: {} with error: {:?}",
+                interface_name, e
+            );
+            fntr::Error::Internal
+        })?
+        .ok_or(fntr::Error::InterfaceNotFound)
+        .and_then(|id| {
+            u32::try_from(id).map_err(|e| {
+                error!("failed to convert interface ID to u32, {:?}", e);
+                fntr::Error::Internal
+            })
+        }),
+    }
+}
+
+/// Sends a single ICMP echo request to `address`.
+async fn ping_once<Ip: ping::IpExt>(
+    address: Ip::Addr,
+    payload_length: usize,
+    interface_name: Option<String>,
+    timeout: zx::Duration,
+    connector: &HermeticNetworkConnector,
+) -> Result<(), fntr::Error> {
+    let socket = create_icmp_socket(Ip::DOMAIN_FIDL, connector).await?;
+
+    if let Some(interface_name) = interface_name {
+        socket.bind_device(Some(interface_name.as_bytes())).map_err(|e| match e.kind() {
+            std::io::ErrorKind::InvalidInput => fntr::Error::InterfaceNotFound,
+            _kind => {
+                error!("bind_device for interface: {} failed: {:?}", interface_name, e);
+                fntr::Error::Internal
+            }
+        })?;
+    }
+
+    // The body of the packet is filled with `payload_length` 0 bytes.
+    let payload: Vec<u8> = std::iter::repeat(0).take(payload_length).collect();
+
+    let (mut sink, mut stream) = ping::new_unicast_sink_and_stream::<Ip, _, { u16::MAX as usize }>(
+        &socket, &address, &payload,
+    );
+
+    const SEQ: u16 = 1;
+    sink.send(SEQ).await.map_err(|e| {
+        warn!("failed to send ping: {:?}", e);
+        match e {
+            ping::PingError::Send(error) => match error.kind() {
+                // `InvalidInput` corresponds to an oversized `payload_length`.
+                std::io::ErrorKind::InvalidInput => fntr::Error::InvalidArguments,
+                // TODO(https://github.com/rust-lang/rust/issues/86442): Consider
+                // defining more granular error codes once the relevant
+                // `std::io::Error` variants are stable (e.g. `HostUnreachable`,
+                // `NetworkUnreachable`, etc.).
+                _kind => fntr::Error::PingFailed,
+            },
+            ping::PingError::Body { .. }
+            | ping::PingError::Parse
+            | ping::PingError::Recv(_)
+            | ping::PingError::ReplyCode(_)
+            | ping::PingError::ReplyType { .. }
+            | ping::PingError::SendLength { .. } => fntr::Error::PingFailed,
+        }
+    })?;
+
+    if timeout.into_nanos() <= 0 {
+        return Ok(());
+    }
+
+    match stream.try_next().map(Some).on_timeout(timeout, || None).await {
+        None => Err(fntr::Error::TimeoutExceeded),
+        Some(Err(e)) => {
+            warn!("failed to receive ping response: {:?}", e);
+            Err(fntr::Error::PingFailed)
+        }
+        Some(Ok(None)) => {
+            error!("ping reply stream ended unexpectedly");
+            Err(fntr::Error::Internal)
+        }
+        Some(Ok(Some(got))) if got == SEQ => Ok(()),
+        Some(Ok(Some(got))) => {
+            error!("received unexpected ping sequence number; got: {}, want: {}", got, SEQ);
+            Err(fntr::Error::PingFailed)
+        }
+    }
+}
+
 /// A controller for creating and manipulating the Network Test Realm.
 ///
 /// The Network Test Realm corresponds to a hermetic network realm with a
@@ -446,6 +590,18 @@ impl Controller {
                 let mut result = self.stop_stub().await;
                 responder.send(&mut result)?;
             }
+            fntr::ControllerRequest::Ping {
+                target,
+                payload_length,
+                interface_name,
+                timeout,
+                responder,
+            } => {
+                let mut result = self
+                    .ping(target, payload_length, interface_name, zx::Duration::from_nanos(timeout))
+                    .await;
+                responder.send(&mut result)?;
+            }
         }
         Ok(())
     }
@@ -472,7 +628,9 @@ impl Controller {
                 | fntr::Error::HermeticNetworkRealmNotRunning
                 | fntr::Error::Internal
                 | fntr::Error::InterfaceNotFound
-                | fntr::Error::InvalidArguments => e,
+                | fntr::Error::InvalidArguments
+                | fntr::Error::PingFailed
+                | fntr::Error::TimeoutExceeded => e,
             })?;
         }
 
@@ -499,6 +657,54 @@ impl Controller {
                 DestroyChildError::Internal => fntr::Error::Internal,
                 DestroyChildError::NotRunning => fntr::Error::StubNotRunning,
             })
+    }
+
+    /// Pings the `target` using a socket created on the hermetic Netstack.
+    async fn ping(
+        &self,
+        target: fnet::IpAddress,
+        payload_length: u16,
+        interface_name: Option<String>,
+        timeout: zx::Duration,
+    ) -> Result<(), fntr::Error> {
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
+
+        let fnet_ext::IpAddress(target) = target.into();
+        const UNSPECIFIED_PORT: u16 = 0;
+        match target {
+            std::net::IpAddr::V4(addr) => {
+                ping_once::<ping::Ipv4>(
+                    std::net::SocketAddrV4::new(addr, UNSPECIFIED_PORT),
+                    payload_length.into(),
+                    interface_name,
+                    timeout,
+                    hermetic_network_connector,
+                )
+                .await
+            }
+            std::net::IpAddr::V6(addr) => {
+                const DEFAULT_FLOW_INFO: u32 = 0;
+                let scope_id =
+                    get_interface_scope_id(&interface_name, &addr, hermetic_network_connector)
+                        .await?;
+                ping_once::<ping::Ipv6>(
+                    std::net::SocketAddrV6::new(
+                        addr,
+                        UNSPECIFIED_PORT,
+                        DEFAULT_FLOW_INFO,
+                        scope_id,
+                    ),
+                    payload_length.into(),
+                    interface_name,
+                    timeout,
+                    hermetic_network_connector,
+                )
+                .await
+            }
+        }
     }
 
     /// Adds an interface to the hermetic Netstack.
@@ -613,7 +819,9 @@ impl Controller {
                 | fntr::Error::Internal
                 | fntr::Error::InterfaceNotFound
                 | fntr::Error::InvalidArguments
-                | fntr::Error::StubNotRunning => e,
+                | fntr::Error::PingFailed
+                | fntr::Error::StubNotRunning
+                | fntr::Error::TimeoutExceeded => e,
             })?;
         }
 
