@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, HandleBased};
+use fuchsia_zircon as zx;
 use parking_lot::{Mutex, RwLock};
 use std::cmp;
 use std::collections::HashSet;
@@ -18,7 +18,6 @@ use crate::error;
 use crate::from_status_like_fdio;
 use crate::fs::*;
 use crate::loader::*;
-use crate::logging::*;
 use crate::mm::MemoryManager;
 use crate::not_implemented;
 use crate::signals::signal_handling::dequeue_signal;
@@ -350,13 +349,8 @@ impl Task {
             .create_thread(name.as_bytes())
             .map_err(|status| from_status_like_fdio!(status))?;
 
-        // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
-        // handle is not needed to implement read_memory or write_memory.
-        let duplicate_process =
-            process.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
         let mm = Arc::new(
-            MemoryManager::new(duplicate_process, root_vmar)
-                .map_err(|status| from_status_like_fdio!(status))?,
+            MemoryManager::new(root_vmar).map_err(|status| from_status_like_fdio!(status))?,
         );
 
         let thread_group = Arc::new(ThreadGroup::new(kernel.clone(), process, pid));

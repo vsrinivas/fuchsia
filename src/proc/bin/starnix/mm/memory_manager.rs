@@ -106,6 +106,53 @@ impl Mapping {
             name: self.name.clone(),
         }
     }
+
+    /// Converts a `UserAddress` to an offset in this mapping's VMO.
+    fn address_to_offset(&self, addr: UserAddress) -> u64 {
+        (addr.ptr() - self.base.ptr()) as u64 + self.vmo_offset
+    }
+
+    /// Reads exactly `bytes.len()` bytes of memory from `addr`.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to read data from.
+    /// - `bytes`: The byte array to read into.
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        self.vmo.read(bytes, self.address_to_offset(addr)).map_err(|e| {
+            log::warn!("Got an error when reading from vmo: {:?}", e);
+            errno!(EFAULT)
+        })
+    }
+
+    /// Reads bytes starting at `addr`, continuing until either `bytes.len()` bytes have been read
+    /// or the end of the VMO containing `addr` is reached.
+    ///
+    /// This is used, for example, to read null-terminated strings where the exact length is not
+    /// known, only the maximum length is.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to read data from.
+    /// - `bytes`: The byte array to read into.
+    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
+        let offset = self.address_to_offset(addr);
+        let max_read_length = (self.vmo.get_size().map_err(|_| errno!(EFAULT))? - offset) as usize;
+        let num_bytes_to_read = std::cmp::min(max_read_length, bytes.len());
+        let bytes: &mut [u8] = &mut bytes[..num_bytes_to_read];
+        self.vmo.read(bytes, offset).map_err(|e| {
+            log::warn!("Got an error when reading from vmo: {:?}", e);
+            errno!(EFAULT)
+        })?;
+        Ok(num_bytes_to_read)
+    }
+
+    /// Writes the provided bytes to `addr`.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to write to.
+    /// - `bytes`: The bytes to write to the VMO.
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
+        self.vmo.write(bytes, self.address_to_offset(addr)).map_err(|_| errno!(EFAULT))
+    }
 }
 
 const PROGRAM_BREAK_LIMIT: u64 = 64 * 1024 * 1024;
@@ -569,6 +616,72 @@ impl MemoryManagerState {
     fn max_address(&self) -> UserAddress {
         UserAddress::from_ptr(self.user_vmar_info.base + self.user_vmar_info.len)
     }
+
+    /// Returns a mapping to read or write at `addr`.
+    ///
+    /// A `Ok(None)` indicates that the address was within range, but there was no mapping.
+    /// An `EFAULT` indicates that the address was invalid.
+    fn get_mapping_for_read_write(
+        &self,
+        addr: UserAddress,
+        bytes: &[u8],
+    ) -> Result<Option<&Mapping>, Errno> {
+        if addr > self.max_address() {
+            return error!(EFAULT);
+        }
+
+        match self.mappings.get(&addr) {
+            Some((_range, mapping)) => Ok(Some(mapping)),
+            None => {
+                // It's ok for a read of 0 bytes to have an invalid address, as long as the address
+                // is within the bounds of the VMAR.
+                return if bytes.len() == 0 { Ok(None) } else { error!(EFAULT) };
+            }
+        }
+    }
+
+    /// Reads exactly `bytes.len()` bytes of memory from this mapping's VMO.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to read data from. Note that this address should be provided without
+    /// adjusting for this mapping's offsets.
+    /// - `bytes`: The byte array to read into.
+    fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        match self.get_mapping_for_read_write(addr, bytes)? {
+            None => Ok(()),
+            Some(mapping) => mapping.read_memory(addr, bytes),
+        }
+    }
+
+    /// Reads bytes starting at `addr`, continuing until either `bytes.len()` bytes have been read
+    /// or the end of the VMO is reached.
+    ///
+    /// This is used, for example, to read null-terminated strings where the exact length is not
+    /// known, only the maximum length is.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to read data from. Note that this address should be provided without
+    /// adjusting for this mapping's offsets.
+    /// - `bytes`: The byte array to read into.
+    fn read_memory_partial(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<usize, Errno> {
+        match self.get_mapping_for_read_write(addr, bytes)? {
+            None => Ok(0),
+            Some(mapping) => mapping.read_memory_partial(addr, bytes),
+        }
+    }
+
+    /// Writes the provided bytes to this mapping's VMO.
+    ///
+    /// # Parameters
+    /// - `addr`: The address to write to. Note that this address should be provided without
+    /// adjusting for this mapping's offsets.
+    /// - `bytes`: The bytes to write to the VMO.
+    fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
+        match self.get_mapping_for_read_write(addr, bytes)? {
+            None => Ok(()),
+            Some(mapping) => mapping.write_memory(addr, bytes),
+        }
+    }
 }
 
 fn create_user_vmar(vmar: &zx::Vmar, vmar_info: &zx::VmarInfo) -> Result<zx::Vmar, zx::Status> {
@@ -586,10 +699,6 @@ fn create_user_vmar(vmar: &zx::Vmar, vmar_info: &zx::VmarInfo) -> Result<zx::Vma
 }
 
 pub struct MemoryManager {
-    /// A handle to the underlying Zircon process object.
-    // TODO: Remove this handle once we can read and write process memory directly.
-    process: zx::Process,
-
     /// The root VMAR for the child process.
     ///
     /// Instead of mapping memory directly in this VMAR, we map the memory in
@@ -610,12 +719,11 @@ pub struct MemoryManager {
 }
 
 impl MemoryManager {
-    pub fn new(process: zx::Process, root_vmar: zx::Vmar) -> Result<Self, zx::Status> {
+    pub fn new(root_vmar: zx::Vmar) -> Result<Self, zx::Status> {
         let info = root_vmar.info()?;
         let user_vmar = create_user_vmar(&root_vmar, &info)?;
         let user_vmar_info = user_vmar.info()?;
         Ok(MemoryManager {
-            process,
             root_vmar,
             base_addr: UserAddress::from_ptr(info.base),
             futex: FutexTable::default(),
@@ -922,17 +1030,8 @@ impl MemoryManager {
     }
 
     pub fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
-        if addr > self.state.read().max_address() {
-            return error!(EFAULT);
-        }
-        if bytes.len() == 0 {
-            return Ok(());
-        }
-        let actual = self.process.read_memory(addr.ptr(), bytes).map_err(|_| errno!(EFAULT))?;
-        if actual != bytes.len() {
-            return error!(EFAULT);
-        }
-        Ok(())
+        let state = self.state.read();
+        state.read_memory(addr, bytes)
     }
 
     pub fn read_object<T: AsBytes + FromBytes>(
@@ -948,7 +1047,7 @@ impl MemoryManager {
         string: UserCString,
         buffer: &'a mut [u8],
     ) -> Result<&'a [u8], Errno> {
-        let actual = self.process.read_memory(string.ptr(), buffer).map_err(|_| errno!(EFAULT))?;
+        let actual = self.state.read().read_memory_partial(string.addr(), buffer)?;
         let buffer = &mut buffer[..actual];
         let null_index = memchr::memchr(b'\0', buffer).ok_or(errno!(ENAMETOOLONG))?;
         Ok(&buffer[..null_index])
@@ -1003,17 +1102,7 @@ impl MemoryManager {
     }
 
     pub fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
-        if addr > self.state.read().max_address() {
-            return error!(EFAULT);
-        }
-        if bytes.len() == 0 {
-            return Ok(());
-        }
-        let actual = self.process.write_memory(addr.ptr(), bytes).map_err(|_| errno!(EFAULT))?;
-        if actual != bytes.len() {
-            return error!(EFAULT);
-        }
-        Ok(())
+        self.state.read().write_memory(addr, bytes)
     }
 
     pub fn write_object<T: AsBytes + FromBytes>(
