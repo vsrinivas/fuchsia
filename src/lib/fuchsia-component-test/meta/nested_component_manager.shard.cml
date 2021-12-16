@@ -10,10 +10,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [
-                "#fuchsia_component_test_collection",
-                "#realm_builder",
-            ],
+            to: [ "#realm_builder" ],
         },
     ],
 }
