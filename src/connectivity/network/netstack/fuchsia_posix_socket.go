@@ -1071,10 +1071,10 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 	// endpoint is attempted to be removed from the map.
 	ns.onAddEndpoint(&eps.endpoint)
 
-	eps.onHUp = waiter.NewFunctionEntry(waiter.EventHUp, func(waiter.EventMask) {
+	eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 		eps.HUp()
 	})
-	eps.wq.EventRegister(&eps.onHUp)
+	eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
 
 	return eps, nil
 }
@@ -1241,10 +1241,10 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 			}
 			panic(err)
 		}
-		entry = waiter.NewFunctionEntry(eps.pending.supported, func(waiter.EventMask) {
+		entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 			cb()
 		})
-		eps.wq.EventRegister(&entry)
+		eps.wq.EventRegister(&entry, eps.pending.supported)
 
 		// We're registering after calling Listen, so we might've missed an event.
 		// Call the callback once to check for already-present incoming
@@ -1303,8 +1303,10 @@ func (eps *endpointWithSocket) Connect(_ fidl.Context, address fidlnet.SocketAdd
 					}
 				})
 			}
-			entry = waiter.NewFunctionEntry(waiter.EventOut|waiter.EventErr, cb)
-			eps.wq.EventRegister(&entry)
+			entry.Callback = callback(func(_ *waiter.Entry, m waiter.EventMask) {
+				cb(m)
+			})
+			eps.wq.EventRegister(&entry, waiter.EventOut|waiter.EventErr)
 
 			// We're registering after calling Connect, so we might've missed an
 			// event. Call the callback once to check for an already-complete (even
@@ -1391,8 +1393,8 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 
 	const sigs = zx.SignalSocketReadable | zx.SignalSocketPeerWriteDisabled | localSignalClosing
 
-	waitEntry, notifyCh := waiter.NewChannelEntry(waiter.EventOut)
-	eps.wq.EventRegister(&waitEntry)
+	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
+	eps.wq.EventRegister(&waitEntry, waiter.EventOut)
 	defer eps.wq.EventUnregister(&waitEntry)
 
 	reader := socketReader{
@@ -1505,8 +1507,8 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled | localSignalClosing
 
-	inEntry, inCh := waiter.NewChannelEntry(waiter.EventIn)
-	eps.wq.EventRegister(&inEntry)
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	eps.wq.EventRegister(&inEntry, waiter.EventIn)
 	defer eps.wq.EventUnregister(&inEntry)
 
 	writer := socketWriter{
@@ -2491,6 +2493,12 @@ func toNetProto(domain socket.Domain) (posix.Errno, tcpip.NetworkProtocolNumber)
 	}
 }
 
+type callback func(*waiter.Entry, waiter.EventMask)
+
+func (cb callback) Callback(e *waiter.Entry, m waiter.EventMask) {
+	cb(e, m)
+}
+
 func makeDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ns *Netstack) (datagramSocket, error) {
 	var localE, peerE zx.Handle
 	if status := zx.Sys_eventpair_create(0, &localE, &peerE); status != zx.ErrOk {
@@ -2517,13 +2525,13 @@ func makeDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProtocolNumber,
 		},
 	}
 
-	s.entry = waiter.NewFunctionEntry(s.pending.supported, func(waiter.EventMask) {
+	s.entry.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
 		if err := s.pending.update(); err != nil {
 			panic(err)
 		}
 	})
 
-	s.wq.EventRegister(&s.entry)
+	s.wq.EventRegister(&s.entry, s.pending.supported)
 
 	return s, nil
 }

@@ -75,10 +75,7 @@ type endpoint struct {
 	dispatcher stack.NetworkDispatcher
 	remote     []*endpoint
 	// onWritePacket returns the packet to send or nil if no packets should be sent.
-	//
-	// Returns true if the returned packet buffer is newly allocated instead of the
-	// provided packet buffer.
-	onWritePacket func(*stack.PacketBuffer) (*stack.PacketBuffer, bool)
+	onWritePacket func(*stack.PacketBuffer) *stack.PacketBuffer
 	// onPacketDelivered is called after a packet is delivered to each of remote's
 	// network dispatchers.
 	onPacketDelivered func()
@@ -116,13 +113,13 @@ func (e *endpoint) IsAttached() bool {
 func (*endpoint) ARPHardwareType() header.ARPHardwareType { return header.ARPHardwareNone }
 
 func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
-	newBuf := false
 	if protocol == ipv4.ProtocolNumber {
 		if fn := e.onWritePacket; fn != nil {
-			pkt, newBuf = fn(pkt)
-			if pkt == nil {
+			p := fn(pkt)
+			if p == nil {
 				return nil
 			}
+			pkt = p
 		}
 	}
 
@@ -140,24 +137,15 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocol
 	//
 	// TODO(gvisor.dev/issue/5289): don't use a new goroutine once we support
 	// send and receive queues.
-	if !newBuf {
-		pkt.IncRef()
-	}
 	go func() {
-		defer pkt.DecRef()
-
 		for _, remote := range e.remote {
 			if !remote.IsAttached() {
 				panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))
 			}
 			// the "remote" address for `other` is our local address and vice versa.
-			func() {
-				newPkt := pkt.CloneToInbound()
-				defer newPkt.DecRef()
-				newPkt.PktType = tcpip.PacketBroadcast
-
-				remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, newPkt)
-			}()
+			newPkt := pkt.CloneToInbound()
+			newPkt.PktType = tcpip.PacketBroadcast
+			remote.dispatcher.DeliverNetworkPacket(r.LocalLinkAddress, r.RemoteLinkAddress, protocol, newPkt)
 		}
 
 		if protocol == ipv4.ProtocolNumber {
@@ -222,14 +210,14 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 	cond := sync.Cond{L: &mu.Mutex}
 	serverLinkEP := endpoint{
-		onWritePacket: func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+		onWritePacket: func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 			mu.Lock()
 			mu.buffered++
 			for mu.buffered < len(clientLinkEPs) {
 				cond.Wait()
 			}
 			mu.Unlock()
-			return pkt, false
+			return pkt
 		},
 	}
 	serverStack := createTestStack()
@@ -453,7 +441,7 @@ func TestDelayRetransmission(t *testing.T) {
 			defer cancel()
 
 			_, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
-			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				func() {
 					switch mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) {
 					case dhcpOFFER:
@@ -475,7 +463,7 @@ func TestDelayRetransmission(t *testing.T) {
 					// notice it has been timed out.
 					time.Sleep(10 * time.Millisecond)
 				}()
-				return pkt, false
+				return pkt
 			}
 
 			info := c.Info()
@@ -647,48 +635,46 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			c.now = stubTimeNow(ctx, time.Now(), tc.durations, clientTransitionsDone)
 
 			var ackCnt uint32
-			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				if mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) != dhcpACK {
-					return pkt, false
+					return pkt
 				}
 
 				ackCnt++
-				if ackCnt != tc.nakNthReq {
-					return pkt, false
-				}
+				if ackCnt == tc.nakNthReq {
+					pkt = mustCloneWithNewMsgType(t, pkt, dhcpNAK)
 
-				pkt = mustCloneWithNewMsgType(t, pkt, dhcpNAK)
+					// Add a message option. An earlier version of the client incorrectly
+					// rejected dhcpNAK with a populated message.
+					h := hdr(pkt.Data().AsRange().AsView())
+					opts, err := h.options()
+					if err != nil {
+						t.Fatalf("failed to get options from header: %s", err)
+					}
+					messageOption := option{
+						code: optMessage,
+						body: []byte("no lease for you"),
+					}
+					opts = append(opts, messageOption)
+					b := make(hdr, len(h)+1+len(messageOption.body))
+					if n, l := copy(b, h), len(h); n != l {
+						t.Errorf("failed to copy header bytes, want=%d got=%d", l, n)
+					}
+					b.setOptions(opts)
+					pkt.Data().CapLength(0)
+					pkt.Data().AppendView(buffer.NewViewFromBytes(b))
 
-				// Add a message option. An earlier version of the client incorrectly
-				// rejected dhcpNAK with a populated message.
-				h := hdr(pkt.Data().AsRange().AsView())
-				opts, err := h.options()
-				if err != nil {
-					t.Fatalf("failed to get options from header: %s", err)
+					// Rewrite all the headers and IP checksum. Yes, this is all
+					// required.
+					delta := uint16(len(b) - len(h))
+					udpHeader := header.UDP(pkt.TransportHeader().View())
+					udpHeader.SetLength(udpHeader.Length() + delta)
+					ipv4Header := header.IPv4(pkt.NetworkHeader().View())
+					ipv4Header.SetTotalLength(ipv4Header.TotalLength() + delta)
+					ipv4Header.SetChecksum(0)
+					ipv4Header.SetChecksum(^ipv4Header.CalculateChecksum())
 				}
-				messageOption := option{
-					code: optMessage,
-					body: []byte("no lease for you"),
-				}
-				opts = append(opts, messageOption)
-				b := make(hdr, len(h)+1+len(messageOption.body))
-				if n, l := copy(b, h), len(h); n != l {
-					t.Errorf("failed to copy header bytes, want=%d got=%d", l, n)
-				}
-				b.setOptions(opts)
-				pkt.Data().CapLength(0)
-				pkt.Data().AppendView(buffer.NewViewFromBytes(b))
-
-				// Rewrite all the headers and IP checksum. Yes, this is all
-				// required.
-				delta := uint16(len(b) - len(h))
-				udpHeader := header.UDP(pkt.TransportHeader().View())
-				udpHeader.SetLength(udpHeader.Length() + delta)
-				ipv4Header := header.IPv4(pkt.NetworkHeader().View())
-				ipv4Header.SetTotalLength(ipv4Header.TotalLength() + delta)
-				ipv4Header.SetChecksum(0)
-				ipv4Header.SetChecksum(^ipv4Header.CalculateChecksum())
-				return pkt, true
+				return pkt
 			}
 
 			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
@@ -840,20 +826,20 @@ func TestRetransmissionExponentialBackoff(t *testing.T) {
 			}
 
 			requestSent := make(chan struct{})
-			clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
-				signal(ctx, requestSent)
+			clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
+				defer signal(ctx, requestSent)
 
-				return pkt, false
+				return pkt
 			}
 
 			unblockResponse := make(chan struct{})
 			var dropServerPackets bool
-			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 				waitForSignal(ctx, unblockResponse)
 				if dropServerPackets {
-					return nil, false
+					return nil
 				}
-				return pkt, false
+				return pkt
 			}
 
 			var wg sync.WaitGroup
@@ -978,10 +964,10 @@ func TestRenewRebindBackoff(t *testing.T) {
 			info.LeaseExpiration = now.Add(tc.leaseExpiration)
 			c.info.Store(info)
 
-			serverEP.onWritePacket = func(*stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+			serverEP.onWritePacket = func(*stack.PacketBuffer) *stack.PacketBuffer {
 				// Don't send any response, keep the client renewing / rebinding
 				// to test backoff in these states.
-				return nil, false
+				return nil
 			}
 
 			// Start from time 0, and then advance time in test based on expected
@@ -1107,13 +1093,13 @@ func TestRetransmissionTimeoutWithUnexpectedPackets(t *testing.T) {
 	responseSent := make(chan struct{})
 
 	var serverShouldDecline bool
-	serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+	serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 		waitForSignal(ctx, unblockResponse)
 
 		if serverShouldDecline {
-			return mustCloneWithNewMsgType(t, pkt, dhcpDECLINE), true
+			pkt = mustCloneWithNewMsgType(t, pkt, dhcpDECLINE)
 		}
-		return pkt, false
+		return pkt
 	}
 	serverEP.onPacketDelivered = func() {
 		signal(ctx, responseSent)
@@ -1209,7 +1195,7 @@ func TestClientDropsIrrelevantFrames(t *testing.T) {
 		unblockResponse := make(chan struct{})
 		responseSent := make(chan struct{})
 
-		serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+		serverEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 			waitForSignal(ctx, unblockResponse)
 
 			// Here, we modify fields in the DHCP packet based on the parameters
@@ -1231,7 +1217,7 @@ func TestClientDropsIrrelevantFrames(t *testing.T) {
 			ip.SetChecksum(0)
 			ip.SetChecksum(^ip.CalculateChecksum())
 
-			return pkt, true
+			return pkt
 		}
 		serverEP.onPacketDelivered = func() {
 			signal(ctx, responseSent)
@@ -1851,7 +1837,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 	const iterations = 3
 
 	packets := make(chan Packet, len(types)*iterations)
-	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 		var packet Packet
 		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
 		packet.Addresses.Source = ipv4Packet.SourceAddress()
@@ -1867,7 +1853,7 @@ func TestClientRestartIPHeader(t *testing.T) {
 		packet.Options = options
 		packets <- packet
 
-		return pkt, false
+		return pkt
 	}
 
 	for i := 0; i < iterations; i++ {
@@ -1978,9 +1964,9 @@ func TestDecline(t *testing.T) {
 	}
 
 	ch := make(chan *stack.PacketBuffer, 3)
-	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 		ch <- pkt.Clone()
-		return pkt, false
+		return pkt
 	}
 
 	timeoutCh := make(chan time.Time)
@@ -2004,13 +1990,9 @@ func TestDecline(t *testing.T) {
 
 	seenDecline := false
 	for {
-		ipv4Packet := func() header.IPv4 {
-			pkt := <-ch
-			defer pkt.DecRef()
-			return header.IPv4(pkt.Data().AsRange().ToOwnedView())
-		}()
-		isValid := ipv4Packet.IsValid(len(ipv4Packet))
-		if !isValid {
+		pkt := <-ch
+		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
+		if !ipv4Packet.IsValid(pkt.Size()) {
 			t.Fatal("sent invalid IPv4 packet")
 		}
 		if got, want := ipv4Packet.TransportProtocol(), udp.ProtocolNumber; got != want {
@@ -2129,7 +2111,7 @@ func TestClientRestartLeaseTime(t *testing.T) {
 
 	writeIntercept := make(chan struct{})
 	intercepts := 0
-	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+	clientEP.onWritePacket = func(pkt *stack.PacketBuffer) *stack.PacketBuffer {
 		ipv4Packet := header.IPv4(pkt.Data().AsRange().ToOwnedView())
 		udpPacket := header.UDP(ipv4Packet.Payload())
 		dhcpPacket := hdr(udpPacket.Payload())
@@ -2148,13 +2130,13 @@ func TestClientRestartLeaseTime(t *testing.T) {
 			const maxIntercepts = 3
 			if intercepts < maxIntercepts {
 				intercepts++
-				return nil, false
+				return nil
 			}
 			if intercepts == maxIntercepts {
 				writeIntercept <- struct{}{}
 			}
 		}
-		return pkt, false
+		return pkt
 	}
 	// Restart client and transition to bound.
 	go c.Run(clientCtx)

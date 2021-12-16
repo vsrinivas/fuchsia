@@ -46,23 +46,14 @@ type DeliverNetworkPacketArgs struct {
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
-var _ stack.NetworkDispatcher = (dispatcherChan)(nil)
+var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
 
-func (ch dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
-	pkt.IncRef()
-
-	ch <- DeliverNetworkPacketArgs{
+func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+	*ch <- DeliverNetworkPacketArgs{
 		SrcLinkAddr: srcLinkAddr,
 		DstLinkAddr: dstLinkAddr,
 		Protocol:    protocol,
 		Pkt:         pkt,
-	}
-}
-
-func (ch dispatcherChan) release() {
-	close(ch)
-	for args := range ch {
-		args.Pkt.DecRef()
 	}
 }
 
@@ -395,19 +386,14 @@ func TestClient_WritePacket(t *testing.T) {
 	}()
 
 	dispatcher := make(dispatcherChan)
-	dispatcher.release()
+	close(dispatcher)
 	linkEndpoint := setupPortAndCreateEndpoint(t, port, &dispatcher)
 
-	func() {
-		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
-		})
-		defer pkt.DecRef()
-
-		if err := linkEndpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, pkt); err != nil {
-			t.Fatalf("WritePacket({}, %d, _): %s", header.IPv4ProtocolNumber, err)
-		}
-	}()
+	if err := linkEndpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
+		ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
+	})); err != nil {
+		t.Fatalf("WritePacket failed: %s", err)
+	}
 
 	// This is unfortunate, but we don't have a way of being notified.
 	now := time.Now()
@@ -475,27 +461,25 @@ func TestWritePacket(t *testing.T) {
 			})
 
 			dispatcher := make(dispatcherChan)
-			defer dispatcher.release()
 			linkEndpoint := setupPortAndCreateEndpoint(t, port, &dispatcher)
 
 			tunMac := getTunMac()
 			otherMac := getOtherMac()
 			const protocol = tcpip.NetworkProtocolNumber(45)
 			const pktBody = "bar"
-			func() {
-				var r stack.RouteInfo
-				r.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
-				r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
-				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+			var r stack.RouteInfo
+			r.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
+			r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
+			if err := linkEndpoint.WritePacket(
+				r,
+				protocol,
+				stack.NewPacketBuffer(stack.PacketBufferOptions{
 					ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 					Data:               buffer.View(pktBody).ToVectorisedView(),
-				})
-				defer pkt.DecRef()
-
-				if err := linkEndpoint.WritePacket(r, protocol, pkt); err != nil {
-					t.Fatalf("WritePacket(%#v, %d, _): %s", r, protocol, err)
-				}
-			}()
+				}),
+			); err != nil {
+				t.Fatalf("WritePacket failed: %s", err)
+			}
 			readFrameResult, err := tunDev.ReadFrame(ctx)
 			if err != nil {
 				t.Fatalf("failed to read frame from tun device: %s", err)
@@ -579,7 +563,6 @@ func TestReceivePacket(t *testing.T) {
 	runClient(t, client)
 
 	dispatcher := make(dispatcherChan, 1)
-	defer dispatcher.release()
 	_ = setupPortAndCreateEndpoint(t, port, &dispatcher)
 
 	tunMac := getTunMac()
@@ -613,7 +596,6 @@ func TestReceivePacket(t *testing.T) {
 	select {
 	case <-time.After(200 * time.Millisecond):
 	case args := <-dispatcher:
-		args.Pkt.DecRef()
 		t.Fatalf("unexpected packet received: %#v", args)
 	}
 
@@ -635,31 +617,26 @@ func TestReceivePacket(t *testing.T) {
 		len(pktPayload),
 	} {
 		send(header.EthernetMinimumSize + extra)
-		func() {
-			args, ok := <-dispatcher
-			if !ok {
-				t.Fatal("expected to receive packet from dispatcher")
-			}
-			defer args.Pkt.DecRef()
-
-			vv := wantLinkHdr.ToVectorisedView()
-			vv.AppendView(buffer.View(pktPayload[:extra]))
-			pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-				Data: vv,
-			})
-			defer pkt.DecRef()
-			if _, ok := pkt.LinkHeader().Consume(header.EthernetMinimumSize); !ok {
-				t.Fatalf("failed to consume %d bytes for link header", header.EthernetMinimumSize)
-			}
-			if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
-				SrcLinkAddr: tcpip.LinkAddress(otherMac.Octets[:]),
-				DstLinkAddr: tcpip.LinkAddress(tunMac.Octets[:]),
-				Protocol:    protocol,
-				Pkt:         pkt,
-			}, testutil.PacketBufferCmpTransformer); diff != "" {
-				t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
-			}
-		}()
+		args := <-dispatcher
+		if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
+			SrcLinkAddr: tcpip.LinkAddress(otherMac.Octets[:]),
+			DstLinkAddr: tcpip.LinkAddress(tunMac.Octets[:]),
+			Protocol:    protocol,
+			Pkt: func() *stack.PacketBuffer {
+				vv := wantLinkHdr.ToVectorisedView()
+				vv.AppendView(buffer.View(pktPayload[:extra]))
+				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+					Data: vv,
+				})
+				_, ok := pkt.LinkHeader().Consume(header.EthernetMinimumSize)
+				if !ok {
+					t.Fatalf("failed to consume %d bytes for link header", header.EthernetMinimumSize)
+				}
+				return pkt
+			}(),
+		}, testutil.PacketBufferCmpTransformer); diff != "" {
+			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
+		}
 	}
 }
 
@@ -677,7 +654,6 @@ func TestReceivePacketNoMemoryLeak(t *testing.T) {
 	runClient(t, client)
 
 	dispatcher := make(dispatcherChan, 1)
-	defer dispatcher.release()
 	_ = setupPortAndCreateEndpoint(t, port, &dispatcher)
 
 	const protocol = tcpip.NetworkProtocolNumber(45)
@@ -708,7 +684,7 @@ func TestReceivePacketNoMemoryLeak(t *testing.T) {
 		if status.Which() == tun.DeviceWriteFrameResultErr {
 			t.Fatalf("unexpected error on WriteFrame: %s", zx.Status(status.Err))
 		}
-		(<-dispatcher).Pkt.DecRef()
+		<-dispatcher
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -821,7 +797,6 @@ func TestStateChange(t *testing.T) {
 	})
 
 	dispatcher := make(dispatcherChan)
-	defer dispatcher.release()
 	port.Attach(&dispatcher)
 
 	// First link state should be Started, because  we set tunDev to online by
@@ -920,7 +895,6 @@ func TestShutdown(t *testing.T) {
 			port.SetOnLinkOnlineChanged(func(bool) {})
 
 			dispatcher := make(dispatcherChan)
-			defer dispatcher.release()
 			port.Attach(&dispatcher)
 
 			testCase.shutdown(t, testData{
@@ -1077,9 +1051,7 @@ func TestPairExchangePackets(t *testing.T) {
 	}
 
 	lDispatcher := make(dispatcherChan, 1)
-	defer lDispatcher.release()
 	rDispatcher := make(dispatcherChan, 1)
-	defer rDispatcher.release()
 	lPort.Attach(&lDispatcher)
 	rPort.Attach(&rDispatcher)
 	packetCount := lClient.deviceInfo.RxDepth * 4
@@ -1118,25 +1090,18 @@ func TestPairExchangePackets(t *testing.T) {
 
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {
 		for i := uint16(0); i < packetCount; i++ {
-			func() {
-				pkt := makeTestPacket(prefix, i)
-				defer pkt.DecRef()
-
-				if err := endpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, pkt); err != nil {
-					errs <- fmt.Errorf("WritePacket error: %s", err)
-					return
-				}
-			}()
+			if err := endpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, makeTestPacket(prefix, i)); err != nil {
+				errs <- fmt.Errorf("WritePacket error: %s", err)
+				return
+			}
 		}
 		errs <- nil
 	}
 
-	validate := func(pktArgs DeliverNetworkPacketArgs, prefix uint8, index uint16) {
-		pkt := makeTestPacket(prefix, index)
-		defer pkt.DecRef()
-		if diff := cmp.Diff(pktArgs, DeliverNetworkPacketArgs{
+	validate := func(pkt DeliverNetworkPacketArgs, prefix uint8, index uint16) {
+		if diff := cmp.Diff(pkt, DeliverNetworkPacketArgs{
 			Protocol: header.IPv4ProtocolNumber,
-			Pkt:      pkt,
+			Pkt:      makeTestPacket(prefix, index),
 		}, testutil.PacketBufferCmpTransformer); diff != "" {
 			t.Fatalf("delivered network packet mismatch (prefix=%d, index=%d) (-want +got):\n%s", prefix, index, diff)
 		}
@@ -1163,16 +1128,10 @@ func TestPairExchangePackets(t *testing.T) {
 				t.Fatalf("left send failed: %s", err)
 			}
 		case pkt := <-lDispatcher:
-			func() {
-				defer pkt.Pkt.DecRef()
-				validate(pkt, rPrefix, lReceived)
-			}()
+			validate(pkt, rPrefix, lReceived)
 			lReceived++
 		case pkt := <-rDispatcher:
-			func() {
-				defer pkt.Pkt.DecRef()
-				validate(pkt, lPrefix, rReceived)
-			}()
+			validate(pkt, lPrefix, rReceived)
 			rReceived++
 		}
 

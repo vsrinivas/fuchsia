@@ -678,7 +678,7 @@ func TestFilterUpdates(t *testing.T) {
 				NetworkProtocols: []stack.NetworkProtocolFactory{ipv4.NewProtocol, ipv6.NewProtocol},
 			})
 
-			defaultTables := stack.DefaultTables(s.Clock(), s.Rand())
+			defaultTables := stack.DefaultTables(0x5eed, s.Clock())
 
 			expectedV4Table := test.v4Table(defaultTables)
 			expectedV6Table := test.v6Table(defaultTables)

@@ -160,16 +160,11 @@ func (ep *Endpoint) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
 		i++
 		// Need to clone when writing to all but the last endpoint, since callee
 		// takes ownership.
-		err := func() tcpip.Error {
-			pkt := pkt
-			clonedPkt := i != len(ep.links)
-			if clonedPkt {
-				pkt = pkt.Clone()
-				defer pkt.DecRef()
-			}
-			return l.WriteRawPacket(pkt)
-		}()
-		switch err.(type) {
+		pkt := pkt
+		if i != len(ep.links) {
+			pkt = pkt.Clone()
+		}
+		switch err := l.WriteRawPacket(pkt); err.(type) {
 		case nil:
 		case *tcpip.ErrClosedForSend:
 			// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
@@ -225,11 +220,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 		// Need to clone as callee takes ownership and the packet still needs to be
 		// written to constituent links.
 		if dispatcher != nil {
-			func() {
-				pkt := pkt.Clone()
-				defer pkt.DecRef()
-				dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt)
-			}()
+			dispatcher.DeliverNetworkPacket(srcLinkAddr, dstLinkAddr, protocol, pkt.Clone())
 		}
 	}
 
@@ -248,25 +239,21 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, srcLi
 
 		// Shadow pkt so that changes the link makes to the packet buffer
 		// are not visible to links we write the packet to after.
-		err := func() tcpip.Error {
-			pkt := pkt
-			switch i {
-			case len(ep.links):
-				// The last call never needs cloning.
-			case len(ep.links) - 1:
-				// The second-to-last call needs cloning iff the last endpoint is not rxEP.
-				if !rxFound {
-					break
-				}
-				fallthrough
-			default:
-				pkt = pkt.Clone()
-				defer pkt.DecRef()
+		pkt := pkt
+		switch i {
+		case len(ep.links):
+			// The last call never needs cloning.
+		case len(ep.links) - 1:
+			// The second-to-last call needs cloning iff the last endpoint is not rxEP.
+			if !rxFound {
+				break
 			}
+			fallthrough
+		default:
+			pkt = pkt.Clone()
+		}
 
-			return l.WriteRawPacket(pkt)
-		}()
-		switch err.(type) {
+		switch err := l.WriteRawPacket(pkt); err.(type) {
 		case nil:
 		case *tcpip.ErrClosedForSend:
 			// TODO(https://fxbug.dev/86959): Handle bridged interface removal.

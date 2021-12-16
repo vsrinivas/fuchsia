@@ -762,15 +762,14 @@ func (e *endpoint) protocolListenLoop(rcvWnd seqnum.Size) {
 	}()
 
 	var s sleep.Sleeper
-	s.AddWaker(&e.notificationWaker)
-	s.AddWaker(&e.newSegmentWaker)
-	defer s.Done()
+	s.AddWaker(&e.notificationWaker, wakerForNotification)
+	s.AddWaker(&e.newSegmentWaker, wakerForNewSegment)
 	for {
 		e.mu.Unlock()
-		w := s.Fetch(true)
+		index, _ := s.Fetch(true)
 		e.mu.Lock()
-		switch w {
-		case &e.notificationWaker:
+		switch index {
+		case wakerForNotification:
 			n := e.fetchNotifications()
 			if n&notifyClose != 0 {
 				return
@@ -789,7 +788,7 @@ func (e *endpoint) protocolListenLoop(rcvWnd seqnum.Size) {
 				e.mu.Lock()
 			}
 
-		case &e.newSegmentWaker:
+		case wakerForNewSegment:
 			// Process at most maxSegmentsPerWake segments.
 			mayRequeue := true
 			for i := 0; i < maxSegmentsPerWake; i++ {
