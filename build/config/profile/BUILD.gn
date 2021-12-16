@@ -69,7 +69,7 @@ variant("coverage-cts") {
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
     deps = [ "//src/zircon/lib/zircon" ]
 
-    dynamic_linker_flags = "-dynamic-linker=coverage/ld.so.1"
+    dynamic_linker_flags = "-dynamic-linker=coverage-cts/ld.so.1"
     ldflags = [ "-Wl,$dynamic_linker_flags" ]
     rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
 
