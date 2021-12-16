@@ -21,8 +21,6 @@
 namespace camera {
 namespace {
 
-constexpr uint32_t kNumControllerCampingBuffers = 5;
-
 using ConfigPtr = std::unique_ptr<fuchsia::camera2::hal::Config>;
 
 fpromise::promise<fuchsia::camera2::DeviceInfo> FetchDeviceInfo(
@@ -303,7 +301,7 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
   oss << "camera_c" << current_configuration_index_ << "_s" << index;
 
   auto allocation_complete =
-      [this, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
+      [this, index, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
           fpromise::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
         if (result.is_error()) {
           FX_LOGS(WARNING) << "Failed to allocate buffers";
@@ -315,7 +313,10 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
         deallocation_events_.push_back(std::move(buffer_collection_lifetime.deallocation_complete));
 
         // Inform the stream of the maxmimum number of buffers it may hand out.
-        uint32_t max_camping_buffers = buffers.buffer_count - kNumControllerCampingBuffers;
+        uint32_t max_camping_buffers =
+            buffers.buffer_count - configs_[current_configuration_index_]
+                                       .stream_configs[index]
+                                       .constraints.min_buffer_count_for_camping;
         max_camping_buffers_callback(max_camping_buffers);
       };
 
