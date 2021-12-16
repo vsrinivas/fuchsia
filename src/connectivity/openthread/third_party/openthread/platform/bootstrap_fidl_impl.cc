@@ -91,10 +91,14 @@ void BootstrapThreadImpl::ImportSettings(ImportSettingsRequestView request,
   }
 
   if (!files::WriteFile(GetSettingsPath(), data.data(), data.size())) {
-    FX_LOGS(ERROR) << "Failed to write data to internal config location";
+    FX_LOGS(ERROR) << "Failed to write data to internal config location.";
     StopServingFidl();
     CloseBinding(ZX_ERR_IO, completer);
     return;
+  }
+
+  if (!files::WriteFile(kThreadInitialSettingsPath, data.data(), data.size())) {
+    FX_LOGS(ERROR) << "Failed to write config data to initial location.";
   }
 
   completer.Reply();
