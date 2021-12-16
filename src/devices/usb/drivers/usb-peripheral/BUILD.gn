@@ -94,11 +94,11 @@ test("usb-peripheral-unittest-bin") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
+    "//src/lib/utf_conversion",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/utf_conversion",
     "//zircon/system/ulib/zxtest",
   ]
 

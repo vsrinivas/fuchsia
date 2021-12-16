@@ -323,7 +323,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/uart/*",
     "//zircon/system/ulib/usb-peripheral-utils/*",
     "//zircon/system/ulib/usb-virtual-bus-launcher/*",
-    "//zircon/system/ulib/utf_conversion/*",
     "//zircon/system/ulib/virtio/*",
     "//zircon/system/ulib/xdc-host-utils/*",
     "//zircon/system/ulib/xdc-server-utils/*",

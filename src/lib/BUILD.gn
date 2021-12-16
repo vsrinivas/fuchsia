@@ -144,6 +144,7 @@ group("tests") {
     "ui:rust-ui-crates-tests",
     "ui:tests",
     "usb_bulk:tests",
+    "utf_conversion:tests",
     "vmo_store:tests",
     "vulkan:tests",
     "watch_handler:tests",

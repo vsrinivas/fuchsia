@@ -78,7 +78,6 @@ group("tests") {
     "trace-vthread:tests",
     "uart:tests",
     "uart/test",
-    "utf_conversion:tests",
     "zbitl:tests",
     "zircon-internal:tests",
     "zxtest:tests",

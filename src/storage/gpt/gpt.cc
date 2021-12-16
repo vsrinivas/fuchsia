@@ -30,9 +30,9 @@
 #include <range/range.h>
 #include <safemath/checked_math.h>
 #include <src/lib/uuid/uuid.h>
-#include <utf_conversion/utf_conversion.h>
 
 #include "gpt.h"
+#include "src/lib/utf_conversion/utf_conversion.h"
 
 namespace gpt {
 

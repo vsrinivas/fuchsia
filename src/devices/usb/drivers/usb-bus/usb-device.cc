@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "usb-device.h"
+#include "src/devices/usb/drivers/usb-bus/usb-device.h"
 
 #include <fidl/fuchsia.hardware.usb.device/cpp/wire.h>
 #include <fuchsia/hardware/usb/bus/c/banjo.h>
@@ -14,9 +14,9 @@
 
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
-#include <utf_conversion/utf_conversion.h>
 
-#include "usb-bus.h"
+#include "src/devices/usb/drivers/usb-bus/usb-bus.h"
+#include "src/lib/utf_conversion/utf_conversion.h"
 
 namespace usb_bus {
 

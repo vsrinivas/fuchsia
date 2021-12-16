@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../usb-device.h"
+#include "src/devices/usb/drivers/usb-bus/usb-device.h"
 
 #include <fidl/fuchsia.hardware.usb.device/cpp/wire.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -12,10 +12,10 @@
 
 #include <fbl/ref_counted.h>
 #include <usb/request-cpp.h>
-#include <utf_conversion/utf_conversion.h>
 #include <zxtest/zxtest.h>
 
 #include "lib/ddk/driver.h"
+#include "src/lib/utf_conversion/utf_conversion.h"
 
 namespace usb_bus {
 

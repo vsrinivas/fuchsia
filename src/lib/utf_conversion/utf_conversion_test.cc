@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/utf_conversion/utf_conversion.h"
+
 #include <endian.h>
 #include <stdio.h>
 
 #include <iterator>
 
 #include <fbl/algorithm.h>
-#include <utf_conversion/utf_conversion.h>
 #include <zxtest/zxtest.h>
 
 #if (BYTE_ORDER == BIG_ENDIAN)

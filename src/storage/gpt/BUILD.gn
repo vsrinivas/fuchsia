@@ -28,9 +28,9 @@ zx_library("gpt") {
     deps = [
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
       "//sdk/lib/fit",
+      "//src/lib/utf_conversion",
       "//zircon/system/ulib/mbr",
       "//zircon/system/ulib/range",
-      "//zircon/system/ulib/utf_conversion",
       "//zircon/third_party/ulib/cksum",
       "//zircon/third_party/ulib/safemath",
     ]

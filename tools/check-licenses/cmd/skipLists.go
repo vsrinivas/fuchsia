@@ -54,7 +54,6 @@ var additionalSkipDirs = []string{
 	"zircon/system/ulib/elfload/test",
 	"zircon/system/ulib/fs/test",
 	"zircon/system/ulib/ktrace/test",
-	"zircon/system/ulib/utf_conversion/test",
 
 	// Skip template directories.
 	"src/devices/tools/banjo/src/backends/templates",

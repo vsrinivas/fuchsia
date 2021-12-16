@@ -5,8 +5,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-#ifndef UTF_CONVERSION_UTF_CONVERSION_H_
-#define UTF_CONVERSION_UTF_CONVERSION_H_
+#ifndef SRC_LIB_UTF_CONVERSION_UTF_CONVERSION_H_
+#define SRC_LIB_UTF_CONVERSION_UTF_CONVERSION_H_
 
 __BEGIN_CDECLS
 
@@ -76,4 +76,4 @@ zx_status_t utf16_to_utf8(const uint16_t* src, size_t src_len, uint8_t* dst, siz
 
 __END_CDECLS
 
-#endif  // UTF_CONVERSION_UTF_CONVERSION_H_
+#endif  // SRC_LIB_UTF_CONVERSION_UTF_CONVERSION_H_

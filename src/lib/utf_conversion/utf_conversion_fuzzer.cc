@@ -1,6 +1,10 @@
-#include <utf_conversion/utf_conversion.h>
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include <cstdint>
+
+#include "src/lib/utf_conversion/utf_conversion.h"
 
 static uint8_t dstBuffer[4 * 1024 * 1024] = {0};
 
