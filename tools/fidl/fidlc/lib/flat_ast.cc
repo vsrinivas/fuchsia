@@ -1482,11 +1482,15 @@ bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view
   }
 }
 
-bool Library::VerifyInlineSize(const Struct* struct_decl) {
-  if (struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() >= 65536) {
-    return Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
+void VerifyInlineSizeStep::RunImpl() {
+  for (const Decl* decl : library_->declaration_order_) {
+    if (decl->kind == Decl::Kind::kStruct) {
+      auto struct_decl = static_cast<const Struct*>(decl);
+      if (struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() >= 65536) {
+        Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
+      }
+    }
   }
-  return true;
 }
 
 bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
@@ -1920,8 +1924,7 @@ bool Dependencies::Lookup(std::string_view filename, const std::vector<std::stri
   return true;
 }
 
-bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter) {
-  auto checkpoint = reporter->Checkpoint();
+void Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter) {
   for (const auto& [filename, per_file] : by_filename_) {
     for (const auto& [name, ref] : per_file->refs) {
       if (!ref->used) {
@@ -1930,7 +1933,6 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Rep
       }
     }
   }
-  return checkpoint.NoNewErrors();
 }
 
 // Consuming the AST is primarily concerned with walking the tree and
@@ -1946,10 +1948,10 @@ std::string LibraryName(const Library* library, std::string_view separator) {
   return std::string();
 }
 
-void Library::ValidateAttributes(const Attributable* attributable) {
+void VerifyAttributesStep::VerifyAttributes(const Attributable* attributable) {
   for (const auto& attribute : attributable->attributes->attributes) {
     const AttributeSchema& schema =
-        all_libraries_->RetrieveAttributeSchema(reporter(), attribute.get());
+        library_->all_libraries_->RetrieveAttributeSchema(reporter(), attribute.get());
     schema.Validate(reporter(), attribute.get(), attributable);
   }
 }
@@ -3471,11 +3473,11 @@ Decl* Library::LookupDeclByName(Name::Key name) const {
   return iter->second;
 }
 
-bool Library::AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges) {
+bool SortStep::AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges) {
   switch (constant->kind) {
     case Constant::Kind::kIdentifier: {
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
-      auto decl = LookupDeclByName(identifier->name.memberless_key());
+      auto decl = library_->LookupDeclByName(identifier->name.memberless_key());
       if (decl == nullptr) {
         return Fail(ErrFailedConstantLookup, identifier->name.span().value(), identifier->name);
       }
@@ -3512,7 +3514,7 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<const D
 // Notes:
 // - Nullable structs do not require dependency edges since they are boxed via a
 // pointer indirection, and their content placed out-of-line.
-bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges) {
+bool SortStep::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges) {
   std::set<const Decl*> edges;
 
   auto maybe_add_decl = [&edges](const TypeConstructor* type_ctor) {
@@ -3601,18 +3603,18 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
     case Decl::Kind::kProtocol: {
       auto protocol_decl = static_cast<const Protocol*>(decl);
       for (const auto& composed_protocol : protocol_decl->composed_protocols) {
-        if (auto type_decl = LookupDeclByName(composed_protocol.name); type_decl) {
+        if (auto type_decl = library_->LookupDeclByName(composed_protocol.name); type_decl) {
           edges.insert(type_decl);
         }
       }
       for (const auto& method : protocol_decl->methods) {
         if (method.maybe_request != nullptr) {
-          if (auto type_decl = LookupDeclByName(method.maybe_request->name); type_decl) {
+          if (auto type_decl = library_->LookupDeclByName(method.maybe_request->name); type_decl) {
             edges.insert(type_decl);
           }
         }
         if (method.maybe_response != nullptr) {
-          if (auto type_decl = LookupDeclByName(method.maybe_response->name); type_decl) {
+          if (auto type_decl = library_->LookupDeclByName(method.maybe_response->name); type_decl) {
             edges.insert(type_decl);
           }
         }
@@ -3697,16 +3699,16 @@ struct CmpDeclInLibrary {
 };
 }  // namespace
 
-bool Library::SortDeclarations() {
+void SortStep::RunImpl() {
   // |degree| is the number of undeclared dependencies for each decl.
   std::map<const Decl*, uint32_t, CmpDeclInLibrary> degrees;
   // |inverse_dependencies| records the decls that depend on each decl.
   std::map<const Decl*, std::vector<const Decl*>, CmpDeclInLibrary> inverse_dependencies;
-  for (const auto& name_and_decl : declarations_) {
+  for (const auto& name_and_decl : library_->declarations_) {
     const Decl* decl = name_and_decl.second;
     std::set<const Decl*> deps;
     if (!DeclDependencies(decl, &deps))
-      return false;
+      return;
     degrees[decl] = static_cast<uint32_t>(deps.size());
     for (const Decl* dep : deps) {
       inverse_dependencies[dep].push_back(decl);
@@ -3726,7 +3728,7 @@ bool Library::SortDeclarations() {
     auto decl = decls_without_deps.back();
     decls_without_deps.pop_back();
     assert(degrees[decl] == 0u);
-    declaration_order_.push_back(decl);
+    library_->declaration_order_.push_back(decl);
 
     // Decrement the incoming degree of all the other decls it
     // points to.
@@ -3740,12 +3742,10 @@ bool Library::SortDeclarations() {
     }
   }
 
-  if (declaration_order_.size() != degrees.size()) {
+  if (library_->declaration_order_.size() != degrees.size()) {
     // We didn't visit all the edges! There was a cycle.
-    return FailNoSpan(ErrIncludeCycle);
+    library_->FailNoSpan(ErrIncludeCycle);
   }
-
-  return true;
 }
 
 void Library::CompileDecl(Decl* decl) {
@@ -3851,10 +3851,10 @@ static void ForEachDeclMember(Decl* decl, MemberFn f) {
   ForEachDeclMemberHelper<std::remove_const_t>(decl, f);
 }
 
-void Library::VerifyDeclAttributes(const Decl* decl) {
+void VerifyAttributesStep::VerifyDecl(const Decl* decl) {
   assert(decl->compiled && "verification must happen after compilation of decls");
-  ValidateAttributes(decl);
-  ForEachDeclMember(decl, [this](const Attributable* member) { ValidateAttributes(member); });
+  VerifyAttributes(decl);
+  ForEachDeclMember(decl, [this](const Attributable* member) { VerifyAttributes(member); });
 }
 
 void VerifyResourcenessStep::VerifyDecl(const Decl* decl) {
@@ -4598,11 +4598,6 @@ void CompileStep::RunImpl() {
   }
 }
 
-void SortStep::RunImpl() {
-  // TODO(fxbug.dev/89947): Move SortDeclarations inline here.
-  library_->SortDeclarations();
-}
-
 void VerifyResourcenessStep::RunImpl() {
   for (const Decl* decl : library_->declaration_order_) {
     VerifyDecl(decl);
@@ -4610,21 +4605,9 @@ void VerifyResourcenessStep::RunImpl() {
 }
 
 void VerifyAttributesStep::RunImpl() {
-  // TODO(fxbug.dev/89947): Move attribute validation methods into
-  // VerifyAttributesStep so that they can be called unqualified here.
-  library_->ValidateAttributes(library_);
+  VerifyAttributes(library_);
   for (const Decl* decl : library_->declaration_order_) {
-    library_->VerifyDeclAttributes(decl);
-  }
-}
-
-void VerifyInlineSizeStep::RunImpl() {
-  for (const Decl* decl : library_->declaration_order_) {
-    if (decl->kind == Decl::Kind::kStruct) {
-      auto struct_decl = static_cast<const Struct*>(decl);
-      // TODO(fxbug.dev/89947): Move VerifyInlineSize inline here.
-      library_->VerifyInlineSize(struct_decl);
-    }
+    VerifyDecl(decl);
   }
 }
 

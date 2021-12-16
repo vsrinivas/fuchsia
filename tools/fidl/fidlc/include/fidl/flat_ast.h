@@ -1151,11 +1151,9 @@ class Dependencies {
   bool Lookup(std::string_view filename, const std::vector<std::string_view>& name, LookupMode mode,
               Library** out_library) const;
 
-  // VerifyAllDependenciesWereUsed verifies that all regisered dependencies
-  // were used, i.e. at least one lookup was made to retrieve them.
-  // Reports errors directly, and returns true if one error or more was
-  // reported.
-  bool VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter);
+  // VerifyAllDependenciesWereUsed reports an error for each dependency imported
+  // with `using` that was never used in the file.
+  void VerifyAllDependenciesWereUsed(const Library& for_library, Reporter* reporter);
 
   const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
@@ -1309,11 +1307,6 @@ class Library : private Attributable, private ReporterMixin {
   bool ResolveAsOptional(Constant* constant) const;
   bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
 
-  bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
-  bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
-
-  bool SortDeclarations();
-
   void CompileAttributeList(AttributeList* attributes);
   void CompileAttribute(Attribute* attribute);
   void CompileBits(Bits* bits_declaration);
@@ -1369,10 +1362,6 @@ class Library : private Attributable, private ReporterMixin {
   bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
   template <typename MemberType>
   bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
-
-  void VerifyDeclAttributes(const Decl* decl);
-  void ValidateAttributes(const Attributable* attributable);
-  bool VerifyInlineSize(const Struct* decl);
 
  public:
   void CompileDecl(Decl* decl);
@@ -1479,6 +1468,8 @@ class SortStep : public StepBase {
 
  private:
   void RunImpl() override;
+  bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
+  bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
 };
 
 class CompileStep : public StepBase {
@@ -1515,6 +1506,8 @@ class VerifyAttributesStep : public StepBase {
 
  private:
   void RunImpl() override;
+  void VerifyDecl(const Decl* decl);
+  void VerifyAttributes(const Attributable* attributable);
 };
 
 class VerifyInlineSizeStep : public StepBase {
