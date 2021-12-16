@@ -28,7 +28,7 @@ Look for instructions in test runner's respective subdirectories.
 
 Look for instructions in test runner's respective subdirectories.
 
-[trf]: /docs/development/testing/components/test_runner_framework.md
+[trf]: https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework
 [fidl-test-suite]: /sdk/fidl/fuchsia.test/suite.fidl
 [fidl-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 

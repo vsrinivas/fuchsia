@@ -71,7 +71,7 @@ Note: This test runner will ignore `--parallel` flag passed using [this guide](o
 
 ## Arguments
 
-See [passing-arguments](passing-arguments) to learn more.
+See [passing arguments][passing-arguments] to learn more.
 
 ## Limitations
 
@@ -93,5 +93,5 @@ The entry point is located in `main.cc`, the FIDL service implementation and
 all the test logic exists other source files. Integration tests are located in `tests` folder.
 
 [test-runner]: ../README.md
-[override-parallel]: /docs/concepts/testing/modern/test_component.md#running_test_cases_in_parallel
-[passing-arguments]: /docs/concepts/testing/modern/test_runner_framework.md#passing_arguments
+[override-parallel]: https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework#controlling_parallel_execution_of_test_cases
+[passing-arguments]: https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework#passing_arguments

@@ -32,7 +32,7 @@ Test cases are executed sequentially by default.
 
 ## Arguments
 
-See [passsing-arguments](passing-arguments) to learn more.
+See [passing arguments][passing-arguments] to learn more.
 
 ## Limitations
 
@@ -55,6 +55,5 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
-[override-parallel]: /docs/development/testing/components/test_component.md#running_test_cases_in_parallel
-[passing-arguments]: /docs/development/testing/components/test_runner_framework.md#passing_arguments
-
+[override-parallel]: https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework#controlling_parallel_execution_of_test_cases
+[passing-arguments]: https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework#passing_arguments

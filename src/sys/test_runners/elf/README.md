@@ -22,7 +22,7 @@ fx build
 
 ## Arguments
 
-See [passsing-arguments](passing-arguments) to learn more.
+See [passing arguments][passing-arguments] to learn more.
 
 ## Testing
 
@@ -39,4 +39,4 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
-[passing-arguments]: /docs/development/testing/components/test_runner_framework.md#passing_arguments
+[passing-arguments]: https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework#passing_arguments
