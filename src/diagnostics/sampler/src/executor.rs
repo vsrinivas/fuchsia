@@ -4,7 +4,7 @@
 use {
     crate::diagnostics::*,
     anyhow::{format_err, Context, Error},
-    diagnostics_data,
+    diagnostics_data::{self, Data},
     diagnostics_hierarchy::{ArrayContent, DiagnosticsHierarchy, Property},
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_cobalt::{
@@ -123,6 +123,15 @@ use {
 // its own data from Archivist, so there's no need for a moniker_to_project_map. But
 // on reboot, all projects' data is fetched at once, and needs to be sorted out.
 
+// An event to be logged to the legacy or cobalt logger. Events are generated first,
+// then logged. (This permits unit-testing the code that generates events from
+// Diagnostic data.)
+#[derive(Debug)]
+enum EventToLog {
+    MetricEvent(MetricEvent),
+    CobaltEvent(CobaltEvent),
+}
+
 pub struct TaskCancellation {
     senders: Vec<oneshot::Sender<()>>,
     _sampler_executor_stats: Arc<SamplerExecutorStats>,
@@ -206,7 +215,10 @@ impl RebootSnapshotProcessor {
                 None => {
                     process_schema_errors(&data_packet.metadata.errors, &moniker);
                 }
-                Some(payload) => self.process_single_payload(payload, &moniker).await,
+                Some(payload) => {
+                    self.process_single_payload(payload, &data_packet.metadata.filename, &moniker)
+                        .await
+                }
             }
         }
         Ok(())
@@ -215,16 +227,25 @@ impl RebootSnapshotProcessor {
     async fn process_single_payload(
         &mut self,
         hierarchy: DiagnosticsHierarchy<String>,
+        diagnostics_filename: &str,
         moniker: &String,
     ) {
         if let Some(project_indexes) = self.moniker_to_projects_map.get(moniker) {
             for index in project_indexes {
                 let project_sampler = &mut self.project_samplers[*index];
-                if let Err(err) = project_sampler.process_component_data(&hierarchy, moniker).await
+                // If processing the final sample failed, just log the
+                // error and proceed, everything's getting shut down
+                // soon anyway.
+                let maybe_err = match project_sampler
+                    .process_component_data(&hierarchy, diagnostics_filename, moniker)
+                    .await
                 {
-                    // If processing the final sample failed, just log the
-                    // error and proceed, everything's getting shut down
-                    // soon anyway.
+                    Err(err) => Some(err),
+                    Ok((_selector_changes, events_to_log)) => {
+                        project_sampler.log_events(events_to_log).await.err()
+                    }
+                };
+                if let Some(err) = maybe_err {
                     warn!(?err, "A project sampler failed to process a reboot sample");
                 }
             }
@@ -366,7 +387,7 @@ pub struct ProjectSampler {
     metrics: Vec<MetricConfig>,
     // Cache from Inspect selector to last sampled property. This is the selector from
     // MetricConfig; it may contain wildcards.
-    metric_cache: HashMap<String, Property>,
+    metric_cache: HashMap<MetricCacheKey, Property>,
     // Cobalt logger proxy using this ProjectSampler's project id.
     cobalt_logger: Option<LoggerProxy>,
     // fuchsia.metrics logger proxy using this ProjectSampler's project id.
@@ -380,6 +401,12 @@ pub struct ProjectSampler {
     // It's an arc since a single project can have multiple samplers at
     // different frequencies, but we want a single project to have one node.
     project_sampler_stats: Arc<ProjectSamplerStats>,
+}
+
+#[derive(Debug, Eq, Hash, PartialEq)]
+struct MetricCacheKey {
+    filename: String,
+    selector: String,
 }
 
 #[derive(Clone, Debug)]
@@ -570,25 +597,41 @@ impl ProjectSampler {
 
     async fn process_next_snapshot(&mut self) -> Result<(), Error> {
         let snapshot_data = self.archive_reader.snapshot::<Inspect>().await?;
+        let events_to_log = self.process_snapshot(snapshot_data).await?;
+        self.log_events(events_to_log).await?;
+        Ok(())
+    }
+
+    async fn process_snapshot(
+        &mut self,
+        snapshot: Vec<Data<Inspect>>,
+    ) -> Result<Vec<EventToLog>, Error> {
         let mut selectors_changed = false;
-        for data_packet in snapshot_data.iter() {
+        let mut events_to_log = vec![];
+        for data_packet in snapshot.iter() {
             match &data_packet.payload {
                 None => {
                     process_schema_errors(&data_packet.metadata.errors, &data_packet.moniker);
                 }
                 Some(payload) => {
-                    if self.process_component_data(payload, &data_packet.moniker).await?
-                        == SnapshotOutcome::SelectorsChanged
-                    {
+                    let (selector_outcome, mut events) = self
+                        .process_component_data(
+                            payload,
+                            &data_packet.metadata.filename,
+                            &data_packet.moniker,
+                        )
+                        .await?;
+                    if selector_outcome == SnapshotOutcome::SelectorsChanged {
                         selectors_changed = true;
                     }
+                    events_to_log.append(&mut events);
                 }
             }
         }
         if selectors_changed {
             self.rebuild_selector_data_structures();
         }
-        Ok(())
+        Ok(events_to_log)
     }
 
     fn is_all_done(&self) -> bool {
@@ -631,18 +674,20 @@ impl ProjectSampler {
     async fn process_component_data(
         &mut self,
         payload: &DiagnosticsHierarchy,
+        diagnostics_filename: &str,
         moniker: &String,
-    ) -> Result<SnapshotOutcome, Error> {
+    ) -> Result<(SnapshotOutcome, Vec<EventToLog>), Error> {
         let indexes_opt = &self.moniker_to_selector_map.get(moniker);
         let selector_indexes = match indexes_opt {
             None => {
                 warn!(%moniker, "Moniker not found in map");
-                return Ok(SnapshotOutcome::SelectorsUnchanged);
+                return Ok((SnapshotOutcome::SelectorsUnchanged, vec![]));
             }
             Some(indexes) => indexes.to_vec(),
         };
         // We cloned the selector indexes. Whatever we do in this function must not invalidate them.
         let mut selectors_changed = false;
+        let mut events_to_log = vec![];
         for index_info in selector_indexes.iter() {
             let SelectorIndexes { metric_index, selector_index } = index_info;
             let metric = &self.metrics[*metric_index];
@@ -666,17 +711,24 @@ impl ProjectSampler {
                         let metric_type = metric.metric_type;
                         let metric_id = metric.metric_id;
                         let codes = metric.event_codes.clone();
-                        let selector_string = selector_string.to_owned();
+                        let metric_cache_key = MetricCacheKey {
+                            filename: diagnostics_filename.to_string(),
+                            selector: selector_string.to_string(),
+                        };
                         let use_cobalt = metric.use_legacy_cobalt == Some(true);
-                        self.export_sample(
-                            metric_type,
-                            metric_id,
-                            codes,
-                            &selector_string,
-                            &found_values[0].property,
-                            use_cobalt,
-                        )
-                        .await?;
+                        if let Some(event) = self
+                            .prepare_sample(
+                                metric_type,
+                                metric_id,
+                                codes,
+                                metric_cache_key,
+                                &found_values[0].property,
+                                use_cobalt,
+                            )
+                            .await?
+                        {
+                            events_to_log.push(event);
+                        }
                         selectors_changed = selectors_changed
                             || self.update_metric_selectors(index_info)
                                 == SnapshotOutcome::SelectorsChanged;
@@ -687,10 +739,13 @@ impl ProjectSampler {
                 }
             }
         }
-        match selectors_changed {
-            true => Ok(SnapshotOutcome::SelectorsChanged),
-            false => Ok(SnapshotOutcome::SelectorsUnchanged),
-        }
+        Ok((
+            match selectors_changed {
+                true => SnapshotOutcome::SelectorsChanged,
+                false => SnapshotOutcome::SelectorsUnchanged,
+            },
+            events_to_log,
+        ))
     }
 
     fn update_metric_selectors(&mut self, index_info: &SelectorIndexes) -> SnapshotOutcome {
@@ -714,51 +769,66 @@ impl ProjectSampler {
         }
     }
 
-    async fn export_sample(
+    async fn prepare_sample(
         &mut self,
         metric_type: DataType,
         metric_id: u32,
         event_codes: Vec<u32>,
-        selector: &String,
+        metric_cache_key: MetricCacheKey,
         new_sample: &Property,
         use_legacy_logger: bool,
-    ) -> Result<(), Error> {
-        let previous_sample_opt: Option<&Property> = self.metric_cache.get(selector);
+    ) -> Result<Option<EventToLog>, Error> {
+        let previous_sample_opt: Option<&Property> = self.metric_cache.get(&metric_cache_key);
 
-        if let Some(payload) =
-            process_sample_for_data_type(new_sample, previous_sample_opt, selector, &metric_type)
-        {
-            self.maybe_update_cache(new_sample, &metric_type, selector);
-
-            if use_legacy_logger {
+        if let Some(payload) = process_sample_for_data_type(
+            new_sample,
+            previous_sample_opt,
+            &metric_cache_key,
+            &metric_type,
+        ) {
+            self.maybe_update_cache(new_sample, &metric_type, metric_cache_key);
+            Ok(Some(if use_legacy_logger {
                 let transformed_payload: EventPayload =
                     transform_metrics_payload_to_cobalt(payload);
-                let mut cobalt_event = CobaltEvent {
+                EventToLog::CobaltEvent(CobaltEvent {
                     metric_id,
                     event_codes,
                     payload: transformed_payload,
                     component: None,
-                };
-                self.cobalt_logger.as_ref().unwrap().log_cobalt_event(&mut cobalt_event).await?;
+                })
             } else {
-                let mut metric_events = vec![MetricEvent { metric_id, event_codes, payload }];
-                // Note: The MetricEvent vector can't be marked send because it
-                // is a dyn object stream and rust can't confirm that it doesn't have handles. This
-                // is fine because we don't actually need to "send" to make the API call. But if we chain
-                // the creation of the future with the await on the future, rust interperets all variables
-                // including the reference to the event vector as potentially being needed across the await.
-                // So we have to split the creation of the future out from the await on the future. :(
-                let log_future = self
-                    .metrics_logger
-                    .as_ref()
-                    .unwrap()
-                    .log_metric_events(&mut metric_events.iter_mut());
+                EventToLog::MetricEvent(MetricEvent { metric_id, event_codes, payload })
+            }))
+        } else {
+            Ok(None)
+        }
+    }
 
-                log_future.await?;
+    async fn log_events(&mut self, events: Vec<EventToLog>) -> Result<(), Error> {
+        for event in events.into_iter() {
+            match event {
+                EventToLog::CobaltEvent(mut event) => {
+                    self.cobalt_logger.as_ref().unwrap().log_cobalt_event(&mut event).await?;
+                }
+                EventToLog::MetricEvent(event) => {
+                    let mut metric_events = vec![event];
+                    // Note: The MetricEvent vector can't be marked send because it
+                    // is a dyn object stream and rust can't confirm that it doesn't have handles. This
+                    // is fine because we don't actually need to "send" to make the API call. But if we chain
+                    // the creation of the future with the await on the future, rust interperets all variables
+                    // including the reference to the event vector as potentially being needed across the await.
+                    // So we have to split the creation of the future out from the await on the future. :(
+                    let log_future = self
+                        .metrics_logger
+                        .as_ref()
+                        .unwrap()
+                        .log_metric_events(&mut metric_events.iter_mut());
+
+                    log_future.await?;
+                }
             }
             self.project_sampler_stats.cobalt_logs_sent.add(1);
         }
-
         Ok(())
     }
 
@@ -766,11 +836,11 @@ impl ProjectSampler {
         &mut self,
         new_sample: &Property,
         data_type: &DataType,
-        selector: &String,
+        metric_cache_key: MetricCacheKey,
     ) {
         match data_type {
             DataType::Occurrence | DataType::IntHistogram => {
-                self.metric_cache.insert(selector.clone(), new_sample.clone());
+                self.metric_cache.insert(metric_cache_key, new_sample.clone());
             }
             DataType::Integer => (),
         }
@@ -806,20 +876,22 @@ fn transform_metrics_payload_to_cobalt(payload: MetricEventPayload) -> EventPayl
 fn process_sample_for_data_type(
     new_sample: &Property,
     previous_sample_opt: Option<&Property>,
-    selector: &String,
+    data_source: &MetricCacheKey,
     data_type: &DataType,
 ) -> Option<MetricEventPayload> {
     let event_payload_res = match data_type {
-        DataType::Occurrence => process_occurence(new_sample, previous_sample_opt, selector),
-        DataType::IntHistogram => process_int_histogram(new_sample, previous_sample_opt, selector),
+        DataType::Occurrence => process_occurence(new_sample, previous_sample_opt, data_source),
+        DataType::IntHistogram => {
+            process_int_histogram(new_sample, previous_sample_opt, data_source)
+        }
         DataType::Integer => {
             // If we previously cached a metric with an int-type, log a warning and ignore it.
             // This may be a case of using a single selector for two metrics, one event count
             // and one int.
             if previous_sample_opt.is_some() {
-                error!("Sampler has erroneously cached an Int type metric: {:?}", selector);
+                error!("Sampler has erroneously cached an Int type metric: {:?}", data_source);
             }
-            process_int(new_sample, selector)
+            process_int(new_sample, data_source)
         }
     };
 
@@ -835,7 +907,7 @@ fn process_sample_for_data_type(
 // It's possible for Inspect numerical properties to experience overflows/conversion
 // errors when being mapped to cobalt types. Sanitize these numericals, and provide
 // meaningful errors.
-fn sanitize_unsigned_numerical(diff: u64, selector: &str) -> Result<i64, Error> {
+fn sanitize_unsigned_numerical(diff: u64, data_source: &MetricCacheKey) -> Result<i64, Error> {
     match diff.try_into() {
         Ok(diff) => Ok(diff),
         Err(e) => {
@@ -848,7 +920,7 @@ fn sanitize_unsigned_numerical(diff: u64, selector: &str) -> Result<i64, Error> 
                     " a single sample being larger than i64, or a diff between",
                     " samples being larger than i64. Error: {:?}"
                 ),
-                selector,
+                data_source,
                 e
             ));
         }
@@ -858,16 +930,16 @@ fn sanitize_unsigned_numerical(diff: u64, selector: &str) -> Result<i64, Error> 
 fn process_int_histogram(
     new_sample: &Property,
     prev_sample_opt: Option<&Property>,
-    selector: &String,
+    data_source: &MetricCacheKey,
 ) -> Result<Option<MetricEventPayload>, Error> {
     let diff = match prev_sample_opt {
-        None => convert_inspect_histogram_to_cobalt_histogram(new_sample, selector)?,
+        None => convert_inspect_histogram_to_cobalt_histogram(new_sample, data_source)?,
         Some(prev_sample) => {
             // If the data type changed then we just reset the cache.
             if std::mem::discriminant(new_sample) == std::mem::discriminant(prev_sample) {
-                compute_histogram_diff(new_sample, prev_sample, selector)?
+                compute_histogram_diff(new_sample, prev_sample, data_source)?
             } else {
-                convert_inspect_histogram_to_cobalt_histogram(new_sample, selector)?
+                convert_inspect_histogram_to_cobalt_histogram(new_sample, data_source)?
             }
         }
     };
@@ -882,12 +954,12 @@ fn process_int_histogram(
 fn compute_histogram_diff(
     new_sample: &Property,
     old_sample: &Property,
-    selector: &String,
+    data_source: &MetricCacheKey,
 ) -> Result<Vec<HistogramBucket>, Error> {
     let new_histogram_buckets =
-        convert_inspect_histogram_to_cobalt_histogram(new_sample, selector)?;
+        convert_inspect_histogram_to_cobalt_histogram(new_sample, data_source)?;
     let old_histogram_buckets =
-        convert_inspect_histogram_to_cobalt_histogram(old_sample, selector)?;
+        convert_inspect_histogram_to_cobalt_histogram(old_sample, data_source)?;
 
     if old_histogram_buckets.len() != new_histogram_buckets.len() {
         return Err(format_err!(
@@ -898,7 +970,7 @@ fn compute_histogram_diff(
                 " samples, which is incompatible with Cobalt.",
                 " Selector: {:?}, Inspect type: {}"
             ),
-            selector,
+            data_source,
             new_sample.discriminant_name()
         ));
     }
@@ -917,7 +989,7 @@ fn compute_histogram_diff(
                         " need for monotonically increasing counts.",
                         " Selector: {:?}, Inspect type: {}"
                     ),
-                    selector,
+                    data_source,
                     new_sample.discriminant_name()
                 ));
             }
@@ -931,7 +1003,7 @@ fn compute_histogram_diff(
 
 fn convert_inspect_histogram_to_cobalt_histogram(
     inspect_histogram: &Property,
-    selector: &String,
+    data_source: &MetricCacheKey,
 ) -> Result<Vec<HistogramBucket>, Error> {
     let histogram_bucket_constructor =
         |index: usize, count: u64| -> Result<HistogramBucket, Error> {
@@ -946,7 +1018,7 @@ fn convert_inspect_histogram_to_cobalt_histogram(
                         " support positive histogram counts.",
                         " vector. Selector: {:?}, Inspect type: {}"
                     ),
-                    selector,
+                    data_source,
                     inspect_histogram.discriminant_name()
                 )),
             }
@@ -967,7 +1039,7 @@ fn convert_inspect_histogram_to_cobalt_histogram(
                             " support positive histogram counts.",
                             " vector. Selector: {:?}, Inspect type: {}"
                         ),
-                        selector,
+                        data_source,
                         inspect_histogram.discriminant_name()
                     ));
                 }
@@ -993,7 +1065,7 @@ fn convert_inspect_histogram_to_cobalt_histogram(
                     " but is unable to be encoded in a cobalt HistogramBucket",
                     " vector. Selector: {:?}, Inspect type: {}"
                 ),
-                selector,
+                data_source,
                 inspect_histogram.discriminant_name()
             ));
         }
@@ -1002,10 +1074,10 @@ fn convert_inspect_histogram_to_cobalt_histogram(
 
 fn process_int(
     new_sample: &Property,
-    selector: &String,
+    data_source: &MetricCacheKey,
 ) -> Result<Option<MetricEventPayload>, Error> {
     let sampled_int = match new_sample {
-        Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), selector)?,
+        Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), data_source)?,
         Property::Int(_, val) => val.clone(),
         _ => {
             return Err(format_err!(
@@ -1015,7 +1087,7 @@ fn process_int(
                     " but is unable to be encoded in an i64",
                     " Selector: {:?}, Inspect type: {}"
                 ),
-                selector,
+                data_source,
                 new_sample.discriminant_name()
             ));
         }
@@ -1027,11 +1099,11 @@ fn process_int(
 fn process_occurence(
     new_sample: &Property,
     prev_sample_opt: Option<&Property>,
-    selector: &String,
+    data_source: &MetricCacheKey,
 ) -> Result<Option<MetricEventPayload>, Error> {
     let diff = match prev_sample_opt {
-        None => compute_initial_event_count(new_sample, selector)?,
-        Some(prev_sample) => compute_event_count_diff(new_sample, prev_sample, selector)?,
+        None => compute_initial_event_count(new_sample, data_source)?,
+        Some(prev_sample) => compute_event_count_diff(new_sample, prev_sample, data_source)?,
     };
 
     if diff < 0 {
@@ -1040,7 +1112,7 @@ fn process_occurence(
                 "Event count must be monotonically increasing,",
                 " but we observed a negative event count diff for: {:?}"
             ),
-            selector
+            data_source
         ));
     }
 
@@ -1053,9 +1125,12 @@ fn process_occurence(
     Ok(Some(MetricEventPayload::Count(diff as u64)))
 }
 
-fn compute_initial_event_count(new_sample: &Property, selector: &String) -> Result<i64, Error> {
+fn compute_initial_event_count(
+    new_sample: &Property,
+    data_source: &MetricCacheKey,
+) -> Result<i64, Error> {
     match new_sample {
-        Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), selector),
+        Property::Uint(_, val) => sanitize_unsigned_numerical(val.clone(), data_source),
         Property::Int(_, val) => Ok(val.clone()),
         _ => Err(format_err!(
             concat!(
@@ -1064,7 +1139,7 @@ fn compute_initial_event_count(new_sample: &Property, selector: &String) -> Resu
                 " transformation to an event count.",
                 " Selector: {:?}, {}"
             ),
-            selector,
+            data_source,
             new_sample.discriminant_name()
         )),
     }
@@ -1073,7 +1148,7 @@ fn compute_initial_event_count(new_sample: &Property, selector: &String) -> Resu
 fn compute_event_count_diff(
     new_sample: &Property,
     old_sample: &Property,
-    selector: &String,
+    data_source: &MetricCacheKey,
 ) -> Result<i64, Error> {
     match (new_sample, old_sample) {
         // We don't need to validate that old_count and new_count are positive here.
@@ -1084,17 +1159,17 @@ fn compute_event_count_diff(
         // produce an errorful state.
         (Property::Int(_, new_count), Property::Int(_, old_count)) => Ok(new_count - old_count),
         (Property::Uint(_, new_count), Property::Uint(_, old_count)) => {
-            sanitize_unsigned_numerical(new_count - old_count, selector)
+            sanitize_unsigned_numerical(new_count - old_count, data_source)
         }
         // If we have a correctly typed new sample, but it didn't match either of the above cases,
         // this means the new sample changed types compared to the old sample. We should just
         // restart the cache, and treat the new sample as a first observation.
         (_, Property::Uint(_, _)) | (_, Property::Int(_, _)) => {
             warn!(
-                "Inspect type of sampled data changed between samples. Restarting cache. {}",
-                selector
+                "Inspect type of sampled data changed between samples. Restarting cache. {:?}",
+                data_source
             );
-            compute_initial_event_count(new_sample, selector)
+            compute_initial_event_count(new_sample, data_source)
         }
         _ => Err(format_err!(
             concat!(
@@ -1102,7 +1177,7 @@ fn compute_event_count_diff(
                 " to a type incompatible with event counters.",
                 " Selector: {:?}, New type: {:?}"
             ),
-            selector,
+            data_source,
             new_sample.discriminant_name()
         )),
     }
@@ -1165,12 +1240,14 @@ mod tests {
             use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
-        match executor::block_on(
-            sampler.process_component_data(&hierarchy, &"my/component".to_string()),
-        ) {
+        match executor::block_on(sampler.process_component_data(
+            &hierarchy,
+            "a_filename",
+            &"my/component".to_string(),
+        )) {
             // This selector will be found and removed from the map, resulting in a
             // SelectorsChanged response.
-            Ok(SnapshotOutcome::SelectorsChanged) => (),
+            Ok((SnapshotOutcome::SelectorsChanged, _events)) => (),
             _ => panic!("Expecting SelectorsChanged from process_component_data."),
         }
 
@@ -1190,12 +1267,14 @@ mod tests {
             use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
-        match executor::block_on(
-            sampler.process_component_data(&hierarchy, &"my/component".to_string()),
-        ) {
+        match executor::block_on(sampler.process_component_data(
+            &hierarchy,
+            "a_filename",
+            &"my/component".to_string(),
+        )) {
             // This selector will be found and removed from the map, resulting in a
             // SelectorsChanged response.
-            Ok(SnapshotOutcome::SelectorsChanged) => (),
+            Ok((SnapshotOutcome::SelectorsChanged, _events)) => (),
             _ => panic!("Expecting SelectorsChanged from process_component_data."),
         }
 
@@ -1214,11 +1293,13 @@ mod tests {
             use_legacy_cobalt: Some(false),
         });
         sampler.rebuild_selector_data_structures();
-        match executor::block_on(
-            sampler.process_component_data(&hierarchy, &"my/component".to_string()),
-        ) {
+        match executor::block_on(sampler.process_component_data(
+            &hierarchy,
+            "a_filename",
+            &"my/component".to_string(),
+        )) {
             // This selector will not be found and removed from the map, resulting in SelectorsUnchanged.
-            Ok(SnapshotOutcome::SelectorsUnchanged) => (),
+            Ok((SnapshotOutcome::SelectorsUnchanged, _events)) => (),
             _ => panic!("Expecting SelectorsUnchanged from process_component_data."),
         }
     }
@@ -1232,8 +1313,11 @@ mod tests {
     }
 
     fn process_occurence_tester(params: EventCountTesterParams) {
-        let selector: String = "test:root:count".to_string();
-        let event_res = process_occurence(&params.new_val, params.old_val.as_ref(), &selector);
+        let data_source = MetricCacheKey {
+            filename: "foo.file".to_string(),
+            selector: "test:root:count".to_string(),
+        };
+        let event_res = process_occurence(&params.new_val, params.old_val.as_ref(), &data_source);
 
         if !params.process_ok {
             assert!(event_res.is_err());
@@ -1381,8 +1465,11 @@ mod tests {
     }
 
     fn process_int_tester(params: IntTesterParams) {
-        let selector: String = "test:root:count".to_string();
-        let event_res = process_int(&params.new_val, &selector);
+        let data_source = MetricCacheKey {
+            filename: "foo.file".to_string(),
+            selector: "test:root:count".to_string(),
+        };
+        let event_res = process_int(&params.new_val, &data_source);
 
         if !params.process_ok {
             assert!(event_res.is_err());
@@ -1391,9 +1478,7 @@ mod tests {
 
         assert!(event_res.is_ok());
 
-        let event_opt = event_res.unwrap();
-        assert!(event_opt.is_some());
-        let event = event_opt.unwrap();
+        let event = event_res.expect("event should be Ok").expect("event should be Some");
         match event {
             MetricEventPayload::IntegerValue(val) => {
                 assert_eq!(val, params.sample);
@@ -1503,8 +1588,12 @@ mod tests {
         diff: Vec<u64>,
     }
     fn process_int_histogram_tester(params: IntHistogramTesterParams) {
-        let selector: String = "test:root:count".to_string();
-        let event_res = process_int_histogram(&params.new_val, params.old_val.as_ref(), &selector);
+        let data_source = MetricCacheKey {
+            filename: "foo.file".to_string(),
+            selector: "test:root:count".to_string(),
+        };
+        let event_res =
+            process_int_histogram(&params.new_val, params.old_val.as_ref(), &data_source);
 
         if !params.process_ok {
             assert!(event_res.is_err());
@@ -1682,5 +1771,96 @@ mod tests {
             event_made: false,
             diff: Vec::new(),
         });
+    }
+
+    #[fuchsia::test]
+    async fn test_filename_distinguishes_data() {
+        // Ensure that data distinguished only by metadata-filename - with the same moniker and
+        // selector path - is kept properly separate in the previous-value cache. The same
+        // MetricConfig should match each data source, but the occurrence counts
+        // should reflect that the distinct values are individually tracked.
+        let mut sampler = ProjectSampler {
+            archive_reader: ArchiveReader::new(),
+            moniker_to_selector_map: HashMap::new(),
+            metrics: vec![],
+            metric_cache: HashMap::new(),
+            cobalt_logger: None,
+            metrics_logger: None,
+            poll_rate_sec: 3600,
+            project_sampler_stats: Arc::new(ProjectSamplerStats::new()),
+        };
+        let selector: String = "my/component:root/branch:leaf".to_string();
+        let metric_id = 1;
+        let event_codes = vec![];
+        sampler.metrics.push(MetricConfig {
+            selectors: SelectorList(vec![sampler_config::parse_selector_for_test(&selector)]),
+            metric_id,
+            metric_type: DataType::Occurrence,
+            event_codes,
+            upload_once: Some(false),
+            use_legacy_cobalt: Some(false),
+        });
+        sampler.rebuild_selector_data_structures();
+
+        let file1_value4 = vec![Data::for_inspect(
+            "my/component",
+            Some(hierarchy! { root: {branch: {leaf: 4i32}}}),
+            0, /* timestamp */
+            "component-url",
+            "file1",
+            vec![], /* errors */
+        )];
+        let file2_value3 = vec![Data::for_inspect(
+            "my/component",
+            Some(hierarchy! { root: {branch: {leaf: 3i32}}}),
+            0, /* timestamp */
+            "component-url",
+            "file2",
+            vec![], /* errors */
+        )];
+        let file1_value6 = vec![Data::for_inspect(
+            "my/component",
+            Some(hierarchy! { root: {branch: {leaf: 6i32}}}),
+            0, /* timestamp */
+            "component-url",
+            "file1",
+            vec![], /* errors */
+        )];
+        let file2_value8 = vec![Data::for_inspect(
+            "my/component",
+            Some(hierarchy! { root: {branch: {leaf: 8i32}}}),
+            0, /* timestamp */
+            "component-url",
+            "file2",
+            vec![], /* errors */
+        )];
+
+        fn expect_one_metric_event_value(
+            events: Result<Vec<EventToLog>, Error>,
+            value: u64,
+            context: &'static str,
+        ) {
+            let events = events.expect(context);
+            assert_eq!(events.len(), 1, "Events len not 1: {}: {}", context, events.len());
+            let event = &events[0];
+            if let EventToLog::MetricEvent(MetricEvent { payload, .. }) = event {
+                if let fidl_fuchsia_metrics::MetricEventPayload::Count(payload) = payload {
+                    assert_eq!(
+                        payload, &value,
+                        "Wrong payload, expected {} got {} at {}",
+                        value, payload, context
+                    );
+                } else {
+                    panic!("Expected MetricEventPayload::Count at {}, got {:?}", context, payload);
+                }
+            } else {
+                panic!("Expected EventToLog::MetricEvent at {}, got {:?}", context, event);
+            }
+        }
+
+        expect_one_metric_event_value(sampler.process_snapshot(file1_value4).await, 4, "first");
+        expect_one_metric_event_value(sampler.process_snapshot(file2_value3).await, 3, "second");
+        expect_one_metric_event_value(sampler.process_snapshot(file1_value6).await, 2, "third");
+        expect_one_metric_event_value(sampler.process_snapshot(file2_value8).await, 5, "fourth");
     }
 }
