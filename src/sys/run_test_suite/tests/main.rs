@@ -133,7 +133,8 @@ async fn launch_and_test_no_clean_exit() {
     .await
     .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -196,7 +197,8 @@ async fn launch_and_test_passing_v2_test() {
     )
     .await;
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -278,7 +280,8 @@ async fn launch_and_test_stderr_test() {
     )
     .await;
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -456,7 +459,8 @@ async fn launch_and_test_with_filter() {
     let (outcome, output, output_dir) =
         run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test3
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm'
+[RUNNING]	Example.Test3
 log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
@@ -499,7 +503,8 @@ async fn launch_and_test_with_multiple_filter() {
     let (outcome, output, output_dir) =
         run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -638,7 +643,8 @@ async fn launch_and_test_disabled_test_exclude_disabled() {
     .await
     .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -686,7 +692,8 @@ async fn launch_and_test_disabled_test_include_disabled() {
     let (outcome, output, output_dir) =
         run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -743,7 +750,8 @@ async fn launch_and_test_failing_test() {
     .await
     .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -839,7 +847,8 @@ async fn launch_and_test_incomplete_test() {
     .await
     .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm'
+[RUNNING]	Example.Test1
 [RUNNING]	Example.Test2
 log1 for Example.Test1
 log2 for Example.Test1
@@ -898,7 +907,8 @@ async fn launch_and_test_invalid_test() {
     .await
     .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	Example.Test1
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm'
+[RUNNING]	Example.Test1
 log1 for Example.Test1
 log2 for Example.Test1
 log3 for Example.Test1
@@ -959,7 +969,8 @@ async fn launch_and_run_echo_test() {
     .await
     .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	EchoTest
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm'
+[RUNNING]	EchoTest
 [PASSED]	EchoTest
 
 1 out of 1 tests passed...
@@ -978,7 +989,8 @@ async fn test_timeout() {
     test_params.timeout = std::num::NonZeroU32::new(1);
     let (outcome, output, _) =
         run_test_once(test_params, None).await.expect("Running test should not fail");
-    let expected_output = "[RUNNING]	LongRunningTest.LongRunning
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
+[RUNNING]	LongRunningTest.LongRunning
 [TIMED_OUT]	LongRunningTest.LongRunning
 
 Failed tests: LongRunningTest.LongRunning
@@ -1010,7 +1022,8 @@ async fn test_timeout_multiple_times() {
     .await;
     assert_eq!(outcome, Outcome::Timedout);
 
-    let expected_output = "[RUNNING]	LongRunningTest.LongRunning
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm'
+[RUNNING]	LongRunningTest.LongRunning
 [TIMED_OUT]	LongRunningTest.LongRunning
 
 Failed tests: LongRunningTest.LongRunning
@@ -1207,7 +1220,8 @@ async fn test_passes_with_large_timeout() {
     let (outcome, output, _) =
         run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	EchoTest
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm'
+[RUNNING]	EchoTest
 [PASSED]	EchoTest
 
 1 out of 1 tests passed...
@@ -1234,7 +1248,8 @@ async fn test_logging_component() {
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message
 ";
 
-    let expected_output = format!("[RUNNING]	log_and_exit
+    let expected_output = format!("Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm'
+[RUNNING]	log_and_exit
 {}[PASSED]	log_and_exit
 
 1 out of 1 tests passed...
@@ -1278,7 +1293,8 @@ async fn test_logging_component_min_severity() {
         .await
         .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	log_and_exit
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm'
+[RUNNING]	log_and_exit
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message\n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message\n\
 [PASSED]	log_and_exit
@@ -1300,7 +1316,8 @@ async fn test_stdout_and_log_ansi() {
         .await
         .expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	log_ansi_test
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm'
+[RUNNING]	log_ansi_test
 [TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m
 [PASSED]	log_ansi_test
 [RUNNING]	stdout_ansi_test
@@ -1334,7 +1351,8 @@ async fn test_stdout_and_log_filter_ansi() {
     )
     .await;
 
-    let expected_output = "[RUNNING]	log_ansi_test
+    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm'
+[RUNNING]	log_ansi_test
 [TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: red log
 [PASSED]	log_ansi_test
 [RUNNING]	stdout_ansi_test
@@ -1372,7 +1390,8 @@ async fn test_max_severity(max_severity: Severity) {
     let (outcome, output, _output_dir) =
         run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output_prefix = "[RUNNING]	log_and_exit
+    let expected_output_prefix = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm'
+[RUNNING]	log_and_exit
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message
 [TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message
