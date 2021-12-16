@@ -1361,6 +1361,9 @@ pub struct Document {
     /// A JSON object containing all configuration fields for this component. Each field must have
     /// a key and a value type.
     ///
+    /// NOTE: This feature is currently experimental and access is controlled through an allowlist
+    /// in fuchsia.git at `//tools/cmc/build/restricted_features/BUILD.gn`.
+    ///
     /// Example:
     ///
     /// ```json5
