@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{protocol::response::Response, request_builder::RequestParams};
-use futures::future::BoxFuture;
+use futures::future::{BoxFuture, LocalBoxFuture};
 
 pub mod stub;
 
@@ -39,18 +39,18 @@ pub trait Installer {
         &'a mut self,
         install_plan: &'a Self::InstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> BoxFuture<'a, Vec<Result<Self::InstallResult, Self::Error>>>;
+    ) -> LocalBoxFuture<'a, Vec<Result<Self::InstallResult, Self::Error>>>;
 
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
     /// a reboot.  This fn should not return unless reboot failed.
-    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>>;
+    fn perform_reboot(&mut self) -> LocalBoxFuture<'_, Result<(), anyhow::Error>>;
 
     /// Try to create a new Plan from the given response, returning a Error if unable to do so.
-    fn try_create_install_plan(
-        &self,
-        request_params: &RequestParams,
-        response: &Response,
-    ) -> Result<Self::InstallPlan, Self::Error>;
+    fn try_create_install_plan<'a>(
+        &'a self,
+        request_params: &'a RequestParams,
+        response: &'a Response,
+    ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>>;
 }
 
 /// The trait for observing progress on the initiated installation.

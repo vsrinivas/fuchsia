@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::{protocol::response::Response, request_builder::RequestParams};
-use futures::future::BoxFuture;
+use futures::future::LocalBoxFuture;
 use futures::prelude::*;
 use thiserror::Error;
 
@@ -48,27 +48,27 @@ impl Installer for StubInstaller {
         &mut self,
         _install_plan: &StubPlan,
         _observer: Option<&dyn ProgressObserver>,
-    ) -> BoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
+    ) -> LocalBoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
         if self.should_fail {
-            future::ready(vec![Err(StubInstallErrors::Failed)]).boxed()
+            future::ready(vec![Err(StubInstallErrors::Failed)]).boxed_local()
         } else {
-            future::ready(vec![Ok(())]).boxed()
+            future::ready(vec![Ok(())]).boxed_local()
         }
     }
 
-    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
-        future::ready(Ok(())).boxed()
+    fn perform_reboot(&mut self) -> LocalBoxFuture<'_, Result<(), anyhow::Error>> {
+        future::ready(Ok(())).boxed_local()
     }
 
-    fn try_create_install_plan(
-        &self,
-        _request_params: &RequestParams,
-        response: &Response,
-    ) -> Result<Self::InstallPlan, Self::Error> {
+    fn try_create_install_plan<'a>(
+        &'a self,
+        _request_params: &'a RequestParams,
+        response: &'a Response,
+    ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
         if response.protocol_version != "3.0" {
-            Err(StubInstallErrors::Failed)
+            future::ready(Err(StubInstallErrors::Failed)).boxed_local()
         } else {
-            Ok(StubPlan)
+            future::ready(Ok(StubPlan)).boxed_local()
         }
     }
 }

@@ -184,6 +184,12 @@ pub struct Packages {
     pub package: Vec<Package>,
 }
 
+impl Packages {
+    pub fn new(package: Vec<Package>) -> Self {
+        Self { package }
+    }
+}
+
 #[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Package {
     /// Package name, append to the URL base to form a full URL.
@@ -201,6 +207,12 @@ pub struct Package {
 
     #[serde(flatten)]
     pub extra_attributes: Map<String, Value>,
+}
+
+impl Package {
+    pub fn with_name(name: impl Into<String>) -> Self {
+        Self { name: name.into(), ..Self::default() }
+    }
 }
 
 /// Parse a slice of bytes into a Response object (stripping out the ResponseWrapper in the process)

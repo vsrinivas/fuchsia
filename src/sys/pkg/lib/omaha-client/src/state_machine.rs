@@ -845,7 +845,7 @@ where
                 })
                 .collect();
             let install_plan =
-                match self.installer.try_create_install_plan(&request_params, &response) {
+                match self.installer.try_create_install_plan(&request_params, &response).await {
                     Ok(plan) => plan,
                     Err(e) => {
                         error!("Unable to construct install plan! {}", e);
@@ -1356,7 +1356,7 @@ mod tests {
         },
     };
     use futures::executor::{block_on, LocalPool};
-    use futures::future::BoxFuture;
+    use futures::future::LocalBoxFuture;
     use futures::task::LocalSpawnExt;
     use log::info;
     use matches::assert_matches;
@@ -2563,7 +2563,7 @@ mod tests {
             &'a mut self,
             _install_plan: &StubPlan,
             observer: Option<&'a dyn ProgressObserver>,
-        ) -> BoxFuture<'a, Vec<Result<(), Self::Error>>> {
+        ) -> LocalBoxFuture<'a, Vec<Result<(), Self::Error>>> {
             if self.install_fails > 0 {
                 self.install_fails -= 1;
                 future::ready(vec![Err(StubInstallErrors::Failed)]).boxed()
@@ -2578,21 +2578,21 @@ mod tests {
                     }
                     vec![Ok(())]
                 }
-                .boxed()
+                .boxed_local()
             }
         }
 
-        fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        fn perform_reboot(&mut self) -> LocalBoxFuture<'_, Result<(), anyhow::Error>> {
             self.reboot_called.replace(true);
-            future::ready(Ok(())).boxed()
+            future::ready(Ok(())).boxed_local()
         }
 
-        fn try_create_install_plan(
-            &self,
-            _request_params: &RequestParams,
-            _response: &Response,
-        ) -> Result<Self::InstallPlan, Self::Error> {
-            Ok(StubPlan)
+        fn try_create_install_plan<'a>(
+            &'a self,
+            _request_params: &'a RequestParams,
+            _response: &'a Response,
+        ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
+            future::ready(Ok(StubPlan)).boxed_local()
         }
     }
 
@@ -3383,7 +3383,7 @@ mod tests {
             &mut self,
             _install_plan: &StubPlan,
             _observer: Option<&dyn ProgressObserver>,
-        ) -> BoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
+        ) -> LocalBoxFuture<'_, Vec<Result<(), StubInstallErrors>>> {
             let (send, recv) = oneshot::channel::<Result<(), StubInstallErrors>>();
             let send_fut = self.on_install.send(send);
 
@@ -3391,10 +3391,10 @@ mod tests {
                 send_fut.await.unwrap();
                 vec![recv.await.unwrap()]
             }
-            .boxed()
+            .boxed_local()
         }
 
-        fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        fn perform_reboot(&mut self) -> LocalBoxFuture<'_, Result<(), anyhow::Error>> {
             match &mut self.on_reboot {
                 Some(on_reboot) => {
                     let (send, recv) = oneshot::channel();
@@ -3404,18 +3404,18 @@ mod tests {
                         send_fut.await.unwrap();
                         recv.await.unwrap()
                     }
-                    .boxed()
+                    .boxed_local()
                 }
-                None => future::ready(Ok(())).boxed(),
+                None => future::ready(Ok(())).boxed_local(),
             }
         }
 
-        fn try_create_install_plan(
-            &self,
-            _request_params: &RequestParams,
-            _response: &Response,
-        ) -> Result<Self::InstallPlan, Self::Error> {
-            Ok(StubPlan)
+        fn try_create_install_plan<'a>(
+            &'a self,
+            _request_params: &'a RequestParams,
+            _response: &'a Response,
+        ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
+            future::ready(Ok(StubPlan)).boxed_local()
         }
     }
 
