@@ -993,7 +993,7 @@ impl ComponentInstance {
                     return Err(ModelError::instance_not_found(self.partial_abs_moniker.clone()));
                 }
                 InstanceState::New | InstanceState::Discovered => {
-                    panic!("bind_at: not resoled")
+                    panic!("bind_at: not resolved")
                 }
             }
         };

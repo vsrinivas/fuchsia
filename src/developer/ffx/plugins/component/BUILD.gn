@@ -19,6 +19,7 @@ ffx_plugin("ffx_component") {
     "run-legacy:ffx_component_run_legacy",
     "select:ffx_component_select",
     "show:ffx_component_show",
+    "start:ffx_component_start",
     "stop:ffx_component_stop",
   ]
 
@@ -41,6 +42,7 @@ group("tests") {
     "run-legacy:ffx_component_run_legacy_tests",
     "select:ffx_component_select_tests",
     "show:ffx_component_show_tests",
+    "start:ffx_component_start_tests",
     "stop:ffx_component_stop_tests",
   ]
 }
