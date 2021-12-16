@@ -38,6 +38,10 @@ class EndpointBuilder {
         EpIndexToAddress(endpoint_index + (in ? kInEndpointStart : kOutEndpointStart));
   }
 
+  void set_max_packet_size(uint16_t max_packet_size) {
+    base_desc_.w_max_packet_size = max_packet_size;
+  }
+
   std::vector<uint8_t> Generate() const {
     size_t total = sizeof(base_desc_) + descriptors_.size();
     std::vector<uint8_t> data;
@@ -122,6 +126,10 @@ class DeviceDescriptorBuilder {
     base_desc_.b_length = sizeof(base_desc_);
     base_desc_.b_descriptor_type = USB_DT_DEVICE;
   }
+
+  void set_vendor_id(uint16_t vendor_id) { base_desc_.id_vendor = vendor_id; }
+
+  void set_product_id(uint16_t product_id) { base_desc_.id_product = product_id; }
 
   void AddConfiguration(const ConfigurationBuilder& builder) {
     auto data = builder.Generate();

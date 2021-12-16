@@ -35,7 +35,11 @@ fuchsia_driver_component("bt-transport-usb") {
 }
 
 source_set("common") {
-  sources = [ "bt-transport-usb.c" ]
+  sources = [
+    "bt_transport_usb.cc",
+    "bt_transport_usb.h",
+  ]
+
   public_deps = [
     ":bt_transport_usb_bind",
     "//sdk/banjo/fuchsia.hardware.bt.hci:fuchsia.hardware.bt.hci_banjo_cpp",
@@ -54,14 +58,16 @@ executable("tests_executable") {
 
   output_name = "bt-transport-usb-tests"
 
-  sources = [ "bt-transport-usb-unittest.cc" ]
+  sources = [ "bt_transport_usb_unittest.cc" ]
 
   deps = [
     ":common",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/testing/mock-ddk",
     "//src/devices/usb/testing/descriptor-builder",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }
