@@ -16,7 +16,8 @@ use std::str;
 
 /// List of packages for which config data can be added if they already exist.
 /// Config data for packages not already in config-data will always be allowed.
-const ALLOWLIST: &'static [&'static str] = &["session_launcher", "session_manager"];
+const ALLOWLIST: &'static [&'static str] =
+    &["session_launcher", "session_manager", "pkg-resolver", "system-update-checker"];
 
 /// Creates a new config data package using supplied package and changes.
 pub fn create_config_data(args: ConfigDataArgs) -> Result<()> {
