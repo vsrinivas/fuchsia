@@ -99,6 +99,14 @@ async fn add_flatland_touch_handler(
     assembly
 }
 
+// Maximum pointer movement during a clickpad press for the gesture to
+// be guaranteed to be interpreted as a click. For movement greater than
+// this value, upper layers may, e.g., interpret the gesture as a drag.
+//
+// This value has been tuned for Atlas, and may need further tuning or
+// configuration for other devices.
+const CLICK_TO_DRAG_THRESHOLD: f32 = 16.0;
+
 async fn build_input_pipeline_assembly(
     use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
@@ -119,6 +127,10 @@ async fn build_input_pipeline_assembly(
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
+        // Add the click-drag handler before the mouse handler, to allow
+        // the click-drag handler to filter events seen by the mouse
+        // handler.
+        assembly = add_click_drag_handler(assembly);
 
         if use_flatland {
             assembly = add_flatland_touch_handler(scene_manager.clone(), assembly).await;
@@ -205,6 +217,12 @@ async fn add_ime(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {
         assembly = assembly.add_handler(ime_handler);
     }
     assembly
+}
+
+fn add_click_drag_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly.add_handler(input_pipeline::click_drag_handler::ClickDragHandler::new(
+        CLICK_TO_DRAG_THRESHOLD,
+    ))
 }
 
 pub async fn handle_input_device_registry_request_streams(
