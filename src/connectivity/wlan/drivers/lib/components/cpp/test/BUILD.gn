@@ -9,6 +9,7 @@ test("components_test") {
     "frame_container_test.cc",
     "frame_storage_test.cc",
     "frame_test.cc",
+    "priority_queue_test.cc",
   ]
   deps = [
     "//src/connectivity/wlan/drivers/lib/components:cpp",

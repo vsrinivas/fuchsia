@@ -9,9 +9,13 @@ config("wlan_drivers_components_cpp_config") {
 
 source_set("cpp") {
   public_configs = [ ":wlan_drivers_components_cpp_config" ]
-  public_deps = [ "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp" ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/lib/stdcompat",
+  ]
   sources = [
     "cpp/frame.cc",
     "cpp/frame_container.cc",
+    "cpp/priority_queue.cc",
   ]
 }
