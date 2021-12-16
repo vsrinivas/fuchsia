@@ -271,7 +271,8 @@ fn create_reporter<W: 'static + Write + Send + Sync>(
     writer: W,
 ) -> Result<run_test_suite_lib::output::RunReporter> {
     let stdout_reporter = run_test_suite_lib::output::ShellReporter::new(writer);
-    let dir_reporter = dir.map(run_test_suite_lib::output::DirectoryReporter::new).transpose()?;
+    let dir_reporter =
+        dir.map(run_test_suite_lib::output::DirectoryWithStdoutReporter::new).transpose()?;
     let reporter = match (dir_reporter, filter_ansi) {
         (Some(dir_reporter), false) => run_test_suite_lib::output::RunReporter::new(
             run_test_suite_lib::output::MultiplexedReporter::new(stdout_reporter, dir_reporter),

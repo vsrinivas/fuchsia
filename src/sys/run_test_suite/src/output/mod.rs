@@ -7,6 +7,7 @@ use std::io::{Error, Write};
 use std::path::Path;
 
 mod directory;
+mod directory_with_stdout;
 mod line;
 mod mux;
 mod noop;
@@ -14,6 +15,7 @@ mod shell;
 pub use line::AnsiFilterWriter;
 
 pub use directory::DirectoryReporter;
+pub use directory_with_stdout::DirectoryWithStdoutReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
 pub use mux::MultiplexedReporter;
 pub use noop::NoopReporter;

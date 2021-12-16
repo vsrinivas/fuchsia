@@ -10,7 +10,8 @@
                         "STDOUT",
                         "STDERR",
                         "CUSTOM",
-                        "RESTRICTED_LOG"
+                        "RESTRICTED_LOG",
+                        "REPORT"
                     ]
                 },
                 "component_moniker": {

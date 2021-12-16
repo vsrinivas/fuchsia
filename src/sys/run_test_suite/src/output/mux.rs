@@ -119,9 +119,15 @@ impl<A: Reporter, B: Reporter> Reporter for MultiplexedReporter<A, B> {
 }
 
 /// A directory artifact writer that writes to two contained directory artifact writers.
-struct MultiplexedDirectoryWriter {
+pub(super) struct MultiplexedDirectoryWriter {
     a: Box<DynDirectoryArtifact>,
     b: Box<DynDirectoryArtifact>,
+}
+
+impl MultiplexedDirectoryWriter {
+    pub(super) fn new(a: Box<DynDirectoryArtifact>, b: Box<DynDirectoryArtifact>) -> Self {
+        Self { a, b }
+    }
 }
 
 impl DirectoryWrite for MultiplexedDirectoryWriter {

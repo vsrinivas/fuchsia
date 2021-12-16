@@ -18,6 +18,7 @@ use test_output_directory as directory;
 const STDOUT_FILE: &str = "stdout.txt";
 const STDERR_FILE: &str = "stderr.txt";
 const SYSLOG_FILE: &str = "syslog.txt";
+const REPORT_FILE: &str = "report.txt";
 const RESTRICTED_LOG_FILE: &str = "restricted_logs.txt";
 const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
 
@@ -112,6 +113,10 @@ impl DirectoryReporter {
         Ok(new_self)
     }
 
+    pub(super) fn add_report(&self, entity: &EntityId) -> Result<File, Error> {
+        self.new_artifact_inner(entity, directory::ArtifactType::Report)
+    }
+
     fn ensure_directory_exists(absolute: &Path) -> Result<(), Error> {
         match absolute.exists() {
             true => Ok(()),
@@ -133,6 +138,29 @@ impl DirectoryReporter {
         summary_file.sync_all()?;
         let final_path = self.root.join(directory::RUN_SUMMARY_NAME);
         std::fs::rename(tmp_path, final_path)
+    }
+
+    fn new_artifact_inner(
+        &self,
+        entity: &EntityId,
+        artifact_type: directory::ArtifactType,
+    ) -> Result<File, Error> {
+        let mut lock = self.entries.lock();
+        let entry = lock
+            .get_mut(entity)
+            .expect("Attempting to create an artifact for an entity that does not exist");
+        let name = filename_for_type(&artifact_type);
+
+        let artifact_dir = self.root.join(&entry.artifact_dir);
+        Self::ensure_directory_exists(&artifact_dir)?;
+
+        let artifact = File::create(artifact_dir.join(name))?;
+
+        entry.artifacts.push((
+            name.to_string(),
+            directory::ArtifactMetadataV0 { artifact_type, component_moniker: None },
+        ));
+        Ok(artifact)
     }
 }
 
@@ -240,25 +268,8 @@ impl Reporter for DirectoryReporter {
         entity: &EntityId,
         artifact_type: &ArtifactType,
     ) -> Result<Box<DynArtifact>, Error> {
-        let mut lock = self.entries.lock();
-        let entry = lock
-            .get_mut(entity)
-            .expect("Attempting to create an artifact for an entity that does not exist");
-        let name = filename_for_type(artifact_type);
-
-        let artifact_dir = self.root.join(&entry.artifact_dir);
-        Self::ensure_directory_exists(&artifact_dir)?;
-
-        let artifact = File::create(artifact_dir.join(name))?;
-
-        entry.artifacts.push((
-            name.to_string(),
-            directory::ArtifactMetadataV0 {
-                artifact_type: (*artifact_type).into(),
-                component_moniker: None,
-            },
-        ));
-        Ok(Box::new(artifact))
+        let file = self.new_artifact_inner(entity, (*artifact_type).into())?;
+        Ok(Box::new(file))
     }
 
     async fn new_directory_artifact(
@@ -321,12 +332,14 @@ fn suite_json_name(suite_id: u32) -> String {
     format!("{:?}.json", suite_id)
 }
 
-fn filename_for_type(artifact_type: &ArtifactType) -> &'static str {
+fn filename_for_type(artifact_type: &directory::ArtifactType) -> &'static str {
     match artifact_type {
-        ArtifactType::Stdout => STDOUT_FILE,
-        ArtifactType::Stderr => STDERR_FILE,
-        ArtifactType::Syslog => SYSLOG_FILE,
-        ArtifactType::RestrictedLog => RESTRICTED_LOG_FILE,
+        directory::ArtifactType::Stdout => STDOUT_FILE,
+        directory::ArtifactType::Stderr => STDERR_FILE,
+        directory::ArtifactType::Syslog => SYSLOG_FILE,
+        directory::ArtifactType::RestrictedLog => RESTRICTED_LOG_FILE,
+        directory::ArtifactType::Report => REPORT_FILE,
+        directory::ArtifactType::Custom => unreachable!("Custom artifact is not a file"),
     }
 }
 

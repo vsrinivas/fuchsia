@@ -60,6 +60,7 @@ rustc_library("lib") {
     "src/error.rs",
     "src/lib.rs",
     "src/output/directory.rs",
+    "src/output/directory_with_stdout.rs",
     "src/output/line.rs",
     "src/output/mod.rs",
     "src/output/mux.rs",
