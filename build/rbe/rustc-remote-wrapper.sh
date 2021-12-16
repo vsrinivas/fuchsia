@@ -808,7 +808,14 @@ then
   "${check_determinism_prefix[@]}" \
     "${local_trace_prefix[@]}" \
     "${rustc_command[@]}"
-  exit "$?"
+  determinism_status="$?"
+  case "$output" in
+    host_arm64*/obj/third_party/rust_crates/*libpem-*.rlib)
+      # TODO(https://fxbug.dev/86896): nondeterministic
+      exit 0
+      ;;
+  esac
+  exit "$determinism_status"
 fi
 
 # Otherwise, prepare for remote execution.
