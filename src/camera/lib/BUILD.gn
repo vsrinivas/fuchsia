@@ -27,5 +27,6 @@ group("tests") {
     "image_utils:tests",
     "stream_utils:tests",
     "virtual_camera:tests",
+    "vmo_pool_wrapper:tests",
   ]
 }

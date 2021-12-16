@@ -1,0 +1,14 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/vmo_pool_wrapper_unittest_bin",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+}

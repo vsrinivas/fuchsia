@@ -15,6 +15,8 @@
 #include <deque>
 #include <mutex>
 
+#include "src/camera/lib/vmo_pool_wrapper/vmo_pool_wrapper.h"
+
 namespace generictask {
 // The |Task| class store all the information pertaining to
 // a task when registered. It maintains the VMO pool for the
@@ -146,7 +148,7 @@ class GenericTask {
   const hw_accel_frame_callback_t* frame_callback_;
   const hw_accel_res_change_callback_t* res_callback_;
   const hw_accel_remove_task_callback_t* remove_task_callback_;
-  fzl::VmoPool output_buffers_;
+  camera::VmoPoolWrapper output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;
   std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;
 };
