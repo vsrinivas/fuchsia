@@ -30,14 +30,15 @@ def main():
     depfiles = []
 
     # Add a file's path to one of the lists, relative to CWD.
-    # The destination of the file is the same as the source, but moved to the
-    # same directory as the build output.
+    # The destination is the path when placed inside "built/artifacts".
+    # If the path is prefixed with ../../, the prefix is removed.
     def add_file(file_path):
         source = os.path.relpath(file_path, os.getcwd())
-        destination = source
         prefix = "../../"
         if source.startswith(prefix):
             destination = source[len(prefix):]
+        else:
+            destination = os.path.join("built/artifacts", source)
         file_mapping[source] = destination
 
     def add_depfile(file_path):
@@ -45,6 +46,7 @@ def main():
 
     # Add all the blobs in a package to the list.
     def add_package(package_manifest_path):
+        add_file(package_manifest_path)
         add_depfile(package_manifest_path)
         with open(package_manifest_path, 'r') as f:
             package_manifest = json.load(f)
