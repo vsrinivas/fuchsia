@@ -36,6 +36,11 @@ namespace brcmfmac {
 SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
 
 SdioDevice::~SdioDevice() {
+  if (async_loop_) {
+    // Explicitly shut down the async loop before further destruction to prevent asynchronous tasks
+    // from using resources as they are being deallocated.
+    async_loop_->Shutdown();
+  }
   if (brcmf_bus_) {
     brcmf_sdio_exit(brcmf_bus_.get());
   }

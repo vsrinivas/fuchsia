@@ -22,7 +22,14 @@ namespace brcmfmac {
 
 PcieDevice::PcieDevice(zx_device_t* parent) : Device(parent) {}
 
-PcieDevice::~PcieDevice() { brcmf_detach(drvr()); }
+PcieDevice::~PcieDevice() {
+  if (async_loop_) {
+    // Explicitly shut down the async loop before further destruction to prevent asynchronous tasks
+    // from using resources as they are being deallocated.
+    async_loop_->Shutdown();
+  }
+  brcmf_detach(drvr());
+}
 
 // static
 zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
