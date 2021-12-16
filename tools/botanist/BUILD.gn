@@ -21,8 +21,8 @@ go_library("botanist_lib") {
   ]
 }
 
-go_library("target") {
-  source_dir = "target"
+go_library("targets") {
+  source_dir = "targets"
   sources = [
     "aemu.go",
     "aemu_test.go",
@@ -67,7 +67,7 @@ go_library("main") {
   deps = [
     ":botanist_lib",
     ":constants",
-    ":target",
+    ":targets",
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:golang.org/x/sync",
     "//tools/lib/color",
@@ -82,9 +82,9 @@ go_binary("botanist") {
   deps = [ ":main" ]
 }
 
-go_test("botanist_target_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/target" ]
-  deps = [ ":target" ]
+go_test("botanist_targets_tests") {
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/botanist/targets" ]
+  deps = [ ":targets" ]
 }
 
 go_library("constants") {
@@ -95,5 +95,5 @@ go_library("constants") {
 group("tests") {
   testonly = true
 
-  deps = [ ":botanist_target_tests" ]
+  deps = [ ":botanist_targets_tests" ]
 }

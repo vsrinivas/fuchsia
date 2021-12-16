@@ -27,7 +27,7 @@ import (
 	"time"
 
 	botanistconstants "go.fuchsia.dev/fuchsia/tools/botanist/constants"
-	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/botanist/targets"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -504,7 +504,7 @@ func runTestOnce(
 	//
 	// This is a bit of a hack, but is a lesser evil than extending the
 	// testrunner CLI just to sidecar the information of 'is QEMU'.
-	againstQEMU := os.Getenv(botanistconstants.NodenameEnvKey) == target.DefaultQEMUNodename
+	againstQEMU := os.Getenv(botanistconstants.NodenameEnvKey) == targets.DefaultQEMUNodename
 	if _, ok := t.(*testrunner.FuchsiaSerialTester); ok && againstQEMU {
 		multistdout = io.MultiWriter(stdio, stdout)
 	}

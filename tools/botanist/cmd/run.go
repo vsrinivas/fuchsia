@@ -19,7 +19,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
-	"go.fuchsia.dev/fuchsia/tools/botanist/target"
+	"go.fuchsia.dev/fuchsia/tools/botanist/targets"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -32,8 +32,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// Target represents a generic fuchsia instance.
-type Target interface {
+// target represents a generic fuchsia instance.
+type target interface {
 	// AddPackageRepository adds a given package repository to the target.
 	AddPackageRepository(client *sshutil.Client, repoURL, blobURL string) error
 
@@ -190,17 +190,17 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	r.zirconArgs = append(r.zirconArgs, "driver.usb_mass_storage.disable")
 
 	// Parse targets out from the target configuration file.
-	targets, err := r.deriveTargetsFromFile(ctx)
+	targetSlice, err := r.deriveTargetsFromFile(ctx)
 	if err != nil {
 		return err
 	}
 	// This is the primary target that a command will be run against and that
 	// logs will be streamed from.
-	t0 := targets[0]
+	t0 := targetSlice[0]
 
 	// Start serial servers for all targets. Will no-op for targets that
 	// already have serial servers.
-	for _, t := range targets {
+	for _, t := range targetSlice {
 		if err := t.StartSerialServer(); err != nil {
 			return err
 		}
@@ -214,10 +214,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		})
 	}
 
-	for _, t := range targets {
+	for _, t := range targetSlice {
 		t := t
 		eg.Go(func() error {
-			if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented && ctx.Err() == nil {
+			if err := t.Wait(ctx); err != nil && err != targets.ErrUnimplemented && ctx.Err() == nil {
 				return fmt.Errorf("target %s failed: %w", t.Nodename(), err)
 			}
 			return nil
@@ -227,12 +227,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	eg.Go(func() error {
 		// Signal other goroutines to exit.
 		defer cancel()
-		if err := r.startTargets(ctx, targets); err != nil {
+		if err := r.startTargets(ctx, targetSlice); err != nil {
 			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
 		logger.Debugf(ctx, "successfully started all targets")
 		if !r.netboot {
-			for i, t := range targets {
+			for i, t := range targetSlice {
 				client, err := t.SSHClient()
 				if err != nil {
 					if err := r.dumpSyslogOverSerial(ctx, t.SerialSocketPath()); err != nil {
@@ -256,7 +256,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		defer func() {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 			defer cancel()
-			r.stopTargets(ctx, targets)
+			r.stopTargets(ctx, targetSlice)
 		}()
 		return r.runAgainstTarget(ctx, t0, args)
 	})
@@ -264,7 +264,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	return eg.Wait()
 }
 
-func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
+func (r *RunCommand) startTargets(ctx context.Context, targetSlice []target) error {
 	bootMode := bootserver.ModePave
 	if r.netboot {
 		bootMode = bootserver.ModeNetboot
@@ -272,7 +272,7 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
 
 	// We wait until targets have started before running the subcommand against the zeroth one.
 	eg, ctx := errgroup.WithContext(ctx)
-	for _, t := range targets {
+	for _, t := range targetSlice {
 		t := t
 		eg.Go(func() error {
 			// TODO(fxbug.dev/47910): Move outside gofunc once we get rid of downloading or ensure that it only happens once.
@@ -288,10 +288,10 @@ func (r *RunCommand) startTargets(ctx context.Context, targets []Target) error {
 	return eg.Wait()
 }
 
-func (r *RunCommand) stopTargets(ctx context.Context, targets []Target) {
+func (r *RunCommand) stopTargets(ctx context.Context, targetSlice []target) {
 	// Stop the targets in parallel.
 	var eg errgroup.Group
-	for _, t := range targets {
+	for _, t := range targetSlice {
 		t := t
 		eg.Go(func() error {
 			return t.Stop()
@@ -323,7 +323,7 @@ func (r *RunCommand) dumpSyslogOverSerial(ctx context.Context, socketPath string
 	return nil
 }
 
-func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string) error {
+func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []string) error {
 	subprocessEnv := map[string]string{
 		constants.NodenameEnvKey:     t.Nodename(),
 		constants.SerialSocketEnvKey: t.SerialSocketPath(),
@@ -401,7 +401,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 	return subcommands.ExitSuccess
 }
 
-func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target, error) {
+func deriveTarget(ctx context.Context, obj []byte, opts targets.Options) (target, error) {
 	type typed struct {
 		Type string `json:"type"`
 	}
@@ -412,37 +412,37 @@ func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target,
 	}
 	switch x.Type {
 	case "aemu":
-		var cfg target.QEMUConfig
+		var cfg targets.QEMUConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
 		}
-		return target.NewAEMUTarget(ctx, cfg, opts)
+		return targets.NewAEMUTarget(ctx, cfg, opts)
 	case "qemu":
-		var cfg target.QEMUConfig
+		var cfg targets.QEMUConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid QEMU config found: %w", err)
 		}
-		return target.NewQEMUTarget(ctx, cfg, opts)
+		return targets.NewQEMUTarget(ctx, cfg, opts)
 	case "device":
-		var cfg target.DeviceConfig
+		var cfg targets.DeviceConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid device config found: %w", err)
 		}
-		t, err := target.NewDeviceTarget(ctx, cfg, opts)
+		t, err := targets.NewDeviceTarget(ctx, cfg, opts)
 		return t, err
 	case "gce":
-		var cfg target.GCEConfig
+		var cfg targets.GCEConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid GCE config found: %w", err)
 		}
-		return target.NewGCETarget(ctx, cfg, opts)
+		return targets.NewGCETarget(ctx, cfg, opts)
 	default:
 		return nil, fmt.Errorf("unknown type found: %q", x.Type)
 	}
 }
 
-func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]Target, error) {
-	opts := target.Options{
+func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]target, error) {
+	opts := targets.Options{
 		Netboot: r.netboot,
 		SSHKey:  r.sshKey,
 	}
@@ -456,16 +456,16 @@ func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]Target, error
 		return nil, fmt.Errorf("could not unmarshal config file as a JSON list: %w", err)
 	}
 
-	var targets []Target
+	var targetSlice []target
 	for _, obj := range objs {
 		t, err := deriveTarget(ctx, obj, opts)
 		if err != nil {
 			return nil, err
 		}
-		targets = append(targets, t)
+		targetSlice = append(targetSlice, t)
 	}
-	if len(targets) == 0 {
+	if len(targetSlice) == 0 {
 		return nil, fmt.Errorf("no targets found")
 	}
-	return targets, nil
+	return targetSlice, nil
 }

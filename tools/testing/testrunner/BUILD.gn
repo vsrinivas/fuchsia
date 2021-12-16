@@ -52,7 +52,7 @@ go_library("main") {
   deps = [
     ":lib",
     "//tools/botanist:constants",
-    "//tools/botanist:target",
+    "//tools/botanist:targets",
     "//tools/lib/color",
     "//tools/lib/environment",
     "//tools/lib/streams",
