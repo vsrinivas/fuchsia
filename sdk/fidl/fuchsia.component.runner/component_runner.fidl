@@ -7,6 +7,7 @@ using fuchsia.component;
 using fuchsia.data;
 using fuchsia.diagnostics.types;
 using fuchsia.io;
+using fuchsia.mem;
 using fuchsia.process;
 using fuchsia.url;
 
@@ -97,6 +98,18 @@ type ComponentStartInfo = resource table {
     /// If the component does not support numbered handles, the runner is expected
     /// to close the handles.
     6: numbered_handles vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT;
+
+    /// Binary representation of the component's configuration.
+    ///
+    /// # Layout
+    ///
+    /// The first 2 bytes of the data should be interpreted as an unsigned 16-bit
+    /// little-endian integer which denotes the number of bytes following it that
+    /// contain the configuration checksum. After the checksum, all the remaining
+    /// bytes are a persistent FIDL message of a top-level struct. The struct's
+    /// fields match the configuration fields of the component's compiled manifest
+    /// in the same order.
+    7: encoded_config fuchsia.mem.Data;
 };
 
 /// A protocol for binding and controlling the lifetime of a component instance

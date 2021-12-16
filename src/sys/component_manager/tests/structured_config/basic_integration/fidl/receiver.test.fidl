@@ -4,9 +4,15 @@
 
 library test.structuredconfig.receiver;
 
+@discoverable
+protocol ConfigReceiverPuppet {
+    GetConfig() -> (struct {
+        config ReceiverConfig;
+    });
+};
 
 // the lines are sorted alphabetically by field name to match cmc's current behavior
-// TODO(https://fxbug.dev/86136) replace with a generated library
+// TODO(https://fxbug.dev/86136) remove comment and sort lines according to decl
 type ReceiverConfig = struct {
     my_flag bool;
     my_int16 int16;

@@ -74,6 +74,12 @@ pub enum ElfRunnerError {
     },
     #[error("failed to duplicate UTC clock for component with url \"{}\": {}", url, status)]
     DuplicateUtcClockError { url: String, status: zx::Status },
+    #[error("failed to populate component's structured config vmo: {_0}")]
+    ConfigVmoError(
+        #[from]
+        #[source]
+        ConfigError,
+    ),
 }
 
 impl ElfRunnerError {
@@ -151,4 +157,15 @@ impl ElfRunnerError {
             _ => zx::Status::INTERNAL,
         }
     }
+}
+
+/// Errors from populating a component's structured configuration.
+#[derive(Debug, Clone, Error)]
+pub enum ConfigError {
+    #[error("failed to create a vmo: {_0}")]
+    VmoCreate(zx::Status),
+    #[error("failed to write to vmo: {_0}")]
+    VmoWrite(zx::Status),
+    #[error("encountered an unrecognized variant of fuchsia.mem.Data")]
+    UnrecognizedDataVariant,
 }

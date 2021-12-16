@@ -5,8 +5,50 @@
 use cm_rust::FidlIntoNative;
 use fidl::encoding::decode_persistent;
 use fidl_fuchsia_component_config::{ListValue, SingleValue, Value, ValuesData};
-use fidl_test_structuredconfig_receiver::ReceiverConfig;
+use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
 use std::path::Path;
+
+fn expected_my_flag() -> bool {
+    // there's an empty file at this path if the puppet has been packaged with my_flag==true
+    Path::new("/pkg/data/my_flag_is_true").exists()
+}
+
+fn expected_config() -> ReceiverConfig {
+    ReceiverConfig {
+        my_flag: expected_my_flag(),
+        my_uint8: 255,
+        my_uint16: 65535,
+        my_uint32: 4_000_000_000,
+        my_uint64: 8_000_000_000,
+        my_int8: -127,
+        my_int16: -32766,
+        my_int32: -2_000_000_000,
+        my_int64: -4_000_000_000,
+        my_string: "hello, world!".into(),
+        my_vector_of_flag: vec![true, false],
+        my_vector_of_uint8: vec![1, 2, 3],
+        my_vector_of_uint16: vec![2, 3, 4],
+        my_vector_of_uint32: vec![3, 4, 5],
+        my_vector_of_uint64: vec![4, 5, 6],
+        my_vector_of_int8: vec![-1, -2, 3],
+        my_vector_of_int16: vec![-2, -3, 4],
+        my_vector_of_int32: vec![-3, -4, 5],
+        my_vector_of_int64: vec![-4, -5, 6],
+        my_vector_of_string: vec!["hello, world!".into(), "hello, again!".into()],
+    }
+}
+
+#[fuchsia::test]
+async fn resolve_structured_config_in_child() {
+    // this is routed from our child component
+    let puppet =
+        fuchsia_component::client::connect_to_protocol::<ConfigReceiverPuppetMarker>().unwrap();
+    assert_eq!(
+        puppet.get_config().await.unwrap(),
+        expected_config(),
+        "child must receive expected configuration"
+    );
+}
 
 #[fuchsia::test]
 fn manually_resolve_structured_config() {
@@ -38,12 +80,9 @@ fn manually_resolve_structured_config() {
     let observed_values =
         resolved_fields.fields.iter().map(|field| field.value.clone()).collect::<Vec<_>>();
 
-    // there's an empty file at this path if the puppet has been packaged with my_flag==true
-    let expected_my_flag = Path::new("/pkg/data/my_flag_is_true").exists();
-
     // NOTE: these are sorted to match the key-alpha-sorted order cmc creates
     let expected_values = vec![
-        Value::Single(SingleValue::Flag(expected_my_flag)),
+        Value::Single(SingleValue::Flag(expected_my_flag())),
         Value::Single(SingleValue::Signed16(-32766)),
         Value::Single(SingleValue::Signed32(-2_000_000_000)),
         Value::Single(SingleValue::Signed64(-4_000_000_000)),
@@ -87,30 +126,5 @@ fn manually_resolve_structured_config() {
     let encoded_checksum = &encoded[2..fidl_start];
     assert_eq!(value_checksum, encoded_checksum);
     let decoded: ReceiverConfig = decode_persistent(&encoded[fidl_start..]).unwrap();
-
-    assert_eq!(
-        decoded,
-        ReceiverConfig {
-            my_flag: expected_my_flag,
-            my_uint8: 255,
-            my_uint16: 65535,
-            my_uint32: 4_000_000_000,
-            my_uint64: 8_000_000_000,
-            my_int8: -127,
-            my_int16: -32766,
-            my_int32: -2_000_000_000,
-            my_int64: -4_000_000_000,
-            my_string: "hello, world!".into(),
-            my_vector_of_flag: vec![true, false],
-            my_vector_of_uint8: vec![1, 2, 3],
-            my_vector_of_uint16: vec![2, 3, 4],
-            my_vector_of_uint32: vec![3, 4, 5],
-            my_vector_of_uint64: vec![4, 5, 6],
-            my_vector_of_int8: vec![-1, -2, 3],
-            my_vector_of_int16: vec![-2, -3, 4],
-            my_vector_of_int32: vec![-3, -4, 5],
-            my_vector_of_int64: vec![-4, -5, 6],
-            my_vector_of_string: vec!["hello, world!".into(), "hello, again!".into()],
-        }
-    );
+    assert_eq!(decoded, expected_config());
 }

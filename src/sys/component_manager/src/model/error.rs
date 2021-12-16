@@ -151,6 +151,16 @@ pub enum ModelError {
         #[from]
         err: ComponentIdIndexError,
     },
+    #[error("component has a config schema but resolver did not provide values")]
+    ConfigValuesMissing,
+    #[error("failed to resolve component's config: {_0}")]
+    ConfigResolutionFailed(#[source] config_encoder::ResolutionError),
+    #[error("failed to encode config wrapper into persistent FIDL: {_0}")]
+    ConfigWrapperEncodingFailed(#[source] fidl::Error),
+    #[error("couldn't create vmo: {_0}")]
+    VmoCreateFailed(#[source] zx::Status),
+    #[error("couldn't write to vmo: {_0}")]
+    VmoWriteFailed(#[source] zx::Status),
 }
 
 impl ModelError {

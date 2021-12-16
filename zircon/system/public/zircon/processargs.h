@@ -165,6 +165,7 @@ struct zx_proc_args {
 #define PA_IOPORT_RESOURCE 0x52
 #define PA_SMC_RESOURCE 0x53
 #define PA_SYSTEM_RESOURCE 0x54
+#define PA_CONFIG_VMO 0x55
 
 // --- Various ---
 

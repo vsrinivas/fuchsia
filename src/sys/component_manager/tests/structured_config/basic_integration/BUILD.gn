@@ -5,18 +5,34 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
-# TODO(https://fxbug.dev/86136) replace with a generated library
 fidl("test.structuredconfig.receiver") {
   sources = [ "fidl/receiver.test.fidl" ]
+}
+
+rustc_binary("basic_config_receiver_bin") {
+  testonly = true
+  source_root = "src/receiver.rs"
+  sources = [ "src/receiver.rs" ]
+  deps = [
+    ":test.structuredconfig.receiver-rustc",
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
 fuchsia_component("basic_config_receiver") {
   testonly = true
   manifest = "meta/receiver.cml"
   restricted_features = [ "structured_config" ]
-  check_references = false  # we don't intend to execute this manifest
+  deps = [ ":basic_config_receiver_bin" ]
 }
 
 rustc_test("basic_integration_tests") {
@@ -28,6 +44,7 @@ rustc_test("basic_integration_tests") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/config_encoder",
   ]
@@ -52,6 +69,7 @@ template("my_flag_test") {
   }
 
   fuchsia_unittest_package(target_name) {
+    manifest = "meta/tests.cml"
     deps = [
       ":$values_target",
       ":basic_config_receiver",

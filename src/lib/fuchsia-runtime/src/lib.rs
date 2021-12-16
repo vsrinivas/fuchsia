@@ -183,6 +183,11 @@ pub enum HandleType {
     /// Equivalent to PA_SYSTEM_RESOURCE.
     SystemResource = 0x54,
 
+    /// A Handle to a component's process' configuration VMO.
+    ///
+    /// Equivalent to PA_CONFIG_VMO.
+    ConfigVmo = 0x55,
+
     /// A handle type with user-defined meaning.
     ///
     /// Equivalent to PA_USER0.

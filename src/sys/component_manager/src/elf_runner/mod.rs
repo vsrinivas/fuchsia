@@ -12,8 +12,11 @@ mod stdout;
 
 use {
     self::{
-        component::ElfComponent, config::ElfProgramConfig, error::ElfRunnerError,
-        launcher::ProcessLauncherConnector, runtime_dir::RuntimeDirBuilder,
+        component::ElfComponent,
+        config::ElfProgramConfig,
+        error::{ConfigError, ElfRunnerError},
+        launcher::ProcessLauncherConnector,
+        runtime_dir::RuntimeDirBuilder,
         stdout::bind_streams_to_syslog,
     },
     crate::builtin::{crash_introspect::CrashRecords, runner::BuiltinRunnerFactory},
@@ -27,13 +30,13 @@ use {
     fidl_fuchsia_diagnostics_types::{
         ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
     },
-    fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::LifecycleMarker,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_runtime::{duplicate_utc_clock_handle, job_default, HandleInfo, HandleType},
     fuchsia_zircon::{
         self as zx, AsHandleRef, Clock, Duration, HandleBased, Job, ProcessInfo, Signals, Status,
-        Time,
+        Time, Vmo,
     },
     futures::channel::oneshot,
     io_util,
@@ -259,6 +262,26 @@ impl ElfRunner {
             handle_infos.push(fproc::HandleInfo {
                 handle: custom_vdso.into_handle(),
                 id: HandleInfo::new(HandleType::VdsoVmo, 0).as_raw(),
+            });
+        }
+
+        if let Some(encoded) = start_info.encoded_config {
+            let handle = match encoded {
+                fmem::Data::Buffer(fmem::Buffer {
+                    vmo,
+                    size: _, // we get this vmo from component manager which sets the content size
+                }) => vmo.into_handle(),
+                fmem::Data::Bytes(bytes) => {
+                    let size = bytes.len() as u64;
+                    let vmo = Vmo::create(size).map_err(ConfigError::VmoCreate)?;
+                    vmo.write(&bytes, 0).map_err(ConfigError::VmoWrite)?;
+                    vmo.into_handle()
+                }
+                _ => return Err(ConfigError::UnrecognizedDataVariant.into()),
+            };
+            handle_infos.push(fproc::HandleInfo {
+                handle,
+                id: HandleInfo::new(HandleType::ConfigVmo, 0).as_raw(),
             });
         }
 

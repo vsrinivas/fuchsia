@@ -7,6 +7,7 @@ table/member fuchsia.component.runner/ComponentNamespaceEntry.path string:1024
 resource table fuchsia.component.runner/ComponentNamespaceEntry
 protocol/member fuchsia.component.runner/ComponentRunner.Start(fuchsia.component.runner/ComponentStartInfo start_info,server_end:fuchsia.component.runner/ComponentController controller)
 protocol fuchsia.component.runner/ComponentRunner
+table/member fuchsia.component.runner/ComponentStartInfo.encoded_config fuchsia.mem/Data
 table/member fuchsia.component.runner/ComponentStartInfo.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
 table/member fuchsia.component.runner/ComponentStartInfo.numbered_handles vector<fuchsia.process/HandleInfo>:128
 table/member fuchsia.component.runner/ComponentStartInfo.outgoing_dir server_end:fuchsia.io/Directory

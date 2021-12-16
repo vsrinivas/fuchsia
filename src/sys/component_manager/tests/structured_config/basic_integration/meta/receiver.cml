@@ -4,6 +4,17 @@
         runner: "elf",
         binary: "bin/basic_config_receiver_bin",
     },
+    capabilities: [
+        {
+            protocol: [ "test.structuredconfig.receiver.ConfigReceiverPuppet" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
+            from: "self",
+        },
+    ],
     config: {
         my_flag: { type: "bool" },
         my_uint8: { type: "uint8" },
