@@ -4,16 +4,12 @@
 
 static_library("ffi-bridge") {
   sources = [
-    "blobfs-export.cc",
-    "blobfs-export.h",
     "chunked-decompressor.cc",
     "chunked-decompressor.h",
   ]
 
   deps = [
     "//src/lib/chunked-compression",
-    "//src/lib/digest",
-    "//src/storage/blobfs",
     "//zircon/system/ulib/fbl",
   ]
 }

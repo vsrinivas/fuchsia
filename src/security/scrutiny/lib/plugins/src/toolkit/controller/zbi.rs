@@ -9,7 +9,7 @@ use {
         model::controller::{ConnectionMode, DataController, HintDataType},
         model::model::*,
     },
-    scrutiny_utils::{blobfs_export::blobfs_export, bootfs::*, fvm::*, usage::*, zbi::*},
+    scrutiny_utils::{blobfs::*, bootfs::*, fvm::*, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::collections::HashMap,
@@ -97,10 +97,8 @@ impl DataController for ZbiExtractController {
                         };
                         let mut fvm_partition_path = fvm_dir.clone();
                         fvm_partition_path.push(file_name);
-                        {
-                            let mut fvm_file = File::create(fvm_partition_path.clone())?;
-                            fvm_file.write_all(&partition.buffer)?;
-                        }
+                        let mut fvm_file = File::create(fvm_partition_path)?;
+                        fvm_file.write_all(&partition.buffer)?;
 
                         // Write out the blobfs data.
                         if partition.partition_type == FvmPartitionType::BlobFs {
@@ -108,10 +106,15 @@ impl DataController for ZbiExtractController {
                             let mut blobfs_dir = fvm_dir.clone();
                             blobfs_dir.push("blobfs");
                             fs::create_dir_all(blobfs_dir.clone())?;
-                            blobfs_export(
-                                &fvm_partition_path.to_str().unwrap(),
-                                &blobfs_dir.to_str().unwrap(),
-                            )?;
+                            let mut reader = BlobFsReader::new(partition.buffer.clone());
+                            let blobs = reader.parse()?;
+
+                            for blob in blobs {
+                                let mut path = blobfs_dir.clone();
+                                path.push(blob.merkle.clone());
+                                let mut file = File::create(path)?;
+                                file.write_all(&blob.buffer)?;
+                            }
                         }
                     }
                 } else {

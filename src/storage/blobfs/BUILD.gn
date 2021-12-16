@@ -25,7 +25,6 @@ static_library("blobfs") {
     "test/integration:*",
   ]
   visibility = [
-    "//src/security/scrutiny/lib/utils/*",
     "//src/storage/*",
     "//zircon/system/ulib/fvm-host",
     "//zircon/system/utest/blobfs-bench",

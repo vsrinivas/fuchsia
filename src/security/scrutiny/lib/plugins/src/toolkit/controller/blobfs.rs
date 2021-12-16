@@ -8,9 +8,11 @@ use {
         model::controller::{ConnectionMode, DataController, HintDataType},
         model::model::*,
     },
-    scrutiny_utils::{blobfs_export::blobfs_export, usage::*},
+    scrutiny_utils::{blobfs::*, usage::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
+    std::fs::{self, File},
+    std::io::prelude::*,
     std::path::PathBuf,
     std::sync::Arc,
 };
@@ -29,9 +31,20 @@ pub struct BlobFsExtractController {}
 impl DataController for BlobFsExtractController {
     fn query(&self, _model: Arc<DataModel>, query: Value) -> Result<Value> {
         let request: BlobFsExtractRequest = serde_json::from_value(query)?;
-        let blobfs_path = PathBuf::from(request.input);
+        let mut blobfs_file = File::open(request.input)?;
         let output_path = PathBuf::from(request.output);
-        blobfs_export(&blobfs_path.to_str().unwrap(), &output_path.to_str().unwrap())?;
+        let mut blobfs_buffer = Vec::new();
+        blobfs_file.read_to_end(&mut blobfs_buffer)?;
+        let mut reader = BlobFsReader::new(blobfs_buffer);
+        let blobs = reader.parse()?;
+
+        fs::create_dir_all(&output_path)?;
+        for blob in blobs {
+            let mut path = output_path.clone();
+            path.push(blob.merkle.clone());
+            let mut file = File::create(path)?;
+            file.write_all(&blob.buffer)?;
+        }
         Ok(json!({"status": "ok"}))
     }
 
