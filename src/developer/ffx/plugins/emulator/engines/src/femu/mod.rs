@@ -24,11 +24,6 @@ pub struct FemuEngine {
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) pid: u32,
     pub(crate) engine_type: EngineType,
-
-    pub(crate) args: Vec<String>,
-    pub(crate) features: Vec<String>,
-    pub(crate) kernel_args: Vec<String>,
-    pub(crate) options: Vec<String>,
 }
 
 #[async_trait]
@@ -153,12 +148,31 @@ impl FemuEngine {
     /// Build the Command to launch Android emulator running Fuchsia.
     fn build_emulator_cmd(&mut self, aemu: &PathBuf) -> Result<Command> {
         let mut cmd = Command::new(&aemu);
-        let feature_arg = self.features.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(",");
-        cmd.arg("-feature").arg(feature_arg).args(&self.options).arg("-fuchsia").args(&self.args);
-        let extra_args =
-            self.kernel_args.iter().map(|x| x.to_string()).collect::<Vec<_>>().join(" ");
-        cmd.args(["-append", &extra_args]);
-
+        let feature_arg = self
+            .emulator_configuration
+            .flags
+            .features
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        if feature_arg.len() > 0 {
+            cmd.arg("-feature").arg(feature_arg);
+        }
+        cmd.args(&self.emulator_configuration.flags.options)
+            .arg("-fuchsia")
+            .args(&self.emulator_configuration.flags.args);
+        let extra_args = self
+            .emulator_configuration
+            .flags
+            .kernel_args
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(" ");
+        if extra_args.len() > 0 {
+            cmd.args(["-append", &extra_args]);
+        }
         // Environment key-value pairs are expected to be command line friendly.
         // (no leading/trailing whitespace, etc.)
         for (k, v) in &self.emulator_configuration.runtime.environment {

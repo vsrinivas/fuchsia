@@ -60,9 +60,30 @@ pub trait EmulatorEngine {
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct EmulatorConfiguration {
     pub device: DeviceConfig,
+    pub flags: FlagData,
     pub guest: GuestConfig,
     pub host: HostConfig,
     pub runtime: RuntimeConfig,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+pub struct FlagData {
+    /// Arguments. The set of flags which follow the "-fuchsia" option. These are not processed by
+    /// Femu, but are passed through to Qemu.
+    pub args: Vec<String>,
+
+    /// Features. A Femu-only field. Features are the first set of command line flags passed to the
+    /// Femu binary. These are single words, capitalized, comma-separated, and immediately follow
+    /// the flag "-feature".
+    pub features: Vec<String>,
+
+    /// Kernel Arguments. The last part of the command line. A set of text values that are passed
+    /// through the emulator executable directly to the guest system's kernel.
+    pub kernel_args: Vec<String>,
+
+    /// Options. A Femu-only field. Options come immediately after features. Options may be boolean
+    /// flags (e.g. -no-hidpi-scaling) or have associated values (e.g. -window-size 1280x800).
+    pub options: Vec<String>,
 }
 
 /// Specifications of the virtual device to be emulated.

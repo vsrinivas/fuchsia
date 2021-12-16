@@ -25,9 +25,6 @@ pub struct QemuEngine {
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) pid: u32,
     pub(crate) engine_type: EngineType,
-
-    pub(crate) args: Vec<String>,
-    pub(crate) kernel_args: Vec<String>,
 }
 
 #[async_trait]
