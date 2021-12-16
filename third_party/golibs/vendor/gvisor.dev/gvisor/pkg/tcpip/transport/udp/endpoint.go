@@ -37,8 +37,8 @@ type udpPacket struct {
 	senderAddress      tcpip.FullAddress
 	destinationAddress tcpip.FullAddress
 	packetInfo         tcpip.IPPacketInfo
-	pkt                *stack.PacketBuffer
-	receivedAt         time.Time `state:".(int64)"`
+	data               buffer.VectorisedView `state:".(buffer.VectorisedView)"`
+	receivedAt         time.Time             `state:".(int64)"`
 	// tos stores either the receiveTOS or receiveTClass value.
 	tos uint8
 }
@@ -191,7 +191,6 @@ func (e *endpoint) Close() {
 	for !e.rcvList.Empty() {
 		p := e.rcvList.Front()
 		e.rcvList.Remove(p)
-		p.pkt.DecRef()
 	}
 	e.rcvMu.Unlock()
 
@@ -227,8 +226,7 @@ func (e *endpoint) Read(dst io.Writer, opts tcpip.ReadOptions) (tcpip.ReadResult
 	p := e.rcvList.Front()
 	if !opts.Peek {
 		e.rcvList.Remove(p)
-		defer p.pkt.DecRef()
-		e.rcvBufSize -= p.pkt.Data().Size()
+		e.rcvBufSize -= p.data.Size()
 	}
 	e.rcvMu.Unlock()
 
@@ -274,14 +272,14 @@ func (e *endpoint) Read(dst io.Writer, opts tcpip.ReadOptions) (tcpip.ReadResult
 
 	// Read Result
 	res := tcpip.ReadResult{
-		Total:           p.pkt.Data().Size(),
+		Total:           p.data.Size(),
 		ControlMessages: cm,
 	}
 	if opts.NeedRemoteAddr {
 		res.RemoteAddr = p.senderAddress
 	}
 
-	n, err := p.pkt.Data().ReadTo(dst, opts.Peek)
+	n, err := p.data.ReadTo(dst, opts.Peek)
 	if n == 0 && err != nil {
 		return res, &tcpip.ErrBadBuffer{}
 	}
@@ -515,7 +513,7 @@ func (e *endpoint) GetSockOptInt(opt tcpip.SockOptInt) (int, tcpip.Error) {
 		e.rcvMu.Lock()
 		if !e.rcvList.Empty() {
 			p := e.rcvList.Front()
-			v = p.pkt.Data().Size()
+			v = p.data.Size()
 		}
 		e.rcvMu.Unlock()
 		return v, nil
@@ -919,11 +917,10 @@ func (e *endpoint) HandlePacket(id stack.TransportEndpointID, pkt *stack.PacketB
 			Addr: id.LocalAddress,
 			Port: hdr.DestinationPort(),
 		},
-		pkt: pkt,
+		data: pkt.Data().ExtractVV(),
 	}
-	pkt.IncRef()
 	e.rcvList.PushBack(packet)
-	e.rcvBufSize += pkt.Data().Size()
+	e.rcvBufSize += packet.data.Size()
 
 	// Save any useful information from the network header to the packet.
 	switch pkt.NetworkProtocolNumber {

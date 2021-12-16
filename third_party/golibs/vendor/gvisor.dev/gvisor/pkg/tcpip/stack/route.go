@@ -52,7 +52,6 @@ type Route struct {
 	linkRes *linkResolver
 }
 
-// +stateify savable
 type routeInfo struct {
 	RemoteAddress tcpip.Address
 
@@ -98,8 +97,6 @@ func (r *Route) Loop() PacketLooping {
 }
 
 // RouteInfo contains all of Route's exported fields.
-//
-// +stateify savable
 type RouteInfo struct {
 	routeInfo
 

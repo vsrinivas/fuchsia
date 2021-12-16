@@ -892,7 +892,6 @@ async fn inspect_stat_counters() {
             SegmentsAckedWithDSACK: AnyProperty,
             SegmentsSent: AnyProperty,
             SlowStartRetransmits: AnyProperty,
-            SpuriousRTORecovery: AnyProperty,
             SpuriousRecovery: AnyProperty,
             TLPRecovery: AnyProperty,
             Timeouts: AnyProperty,
