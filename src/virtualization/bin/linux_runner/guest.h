@@ -45,8 +45,18 @@ struct AppLaunchRequest {
 };
 
 struct GuestConfig {
+  std::string_view env_label;
   size_t stateful_image_size;
 };
+
+struct GuestInfo {
+  uint32_t cid;
+  fuchsia::virtualization::ContainerStatus container_status;
+  int32_t download_percent;
+  std::string failure_reason;
+};
+
+using GuestInfoCallback = fit::function<void(GuestInfo)>;
 
 class Guest : public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
@@ -54,9 +64,10 @@ class Guest : public vm_tools::StartupListener::Service,
  public:
   // Creates a new |Guest|
   static zx_status_t CreateAndStart(sys::ComponentContext* context, GuestConfig config,
-                                    std::unique_ptr<Guest>* guest);
+                                    GuestInfoCallback callback, std::unique_ptr<Guest>* guest);
 
-  Guest(sys::ComponentContext* context, GuestConfig config, fuchsia::virtualization::RealmPtr env);
+  Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
+        fuchsia::virtualization::RealmPtr env);
   ~Guest();
 
   void Launch(AppLaunchRequest request);
@@ -140,10 +151,14 @@ class Guest : public vm_tools::StartupListener::Service,
                        fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view, uint32_t id);
   void OnComponentTerminated(uint32_t id);
   void CreateTerminalComponent(AppLaunchRequest app, std::vector<std::string> args);
+  void PostContainerStatus(fuchsia::virtualization::ContainerStatus container_status);
+  void PostContainerDownloadProgress(int32_t download_progress);
+  void PostContainerFailure(std::string failure_reason);
 
   async_dispatcher_t* async_;
   async::Executor executor_;
   GuestConfig config_;
+  GuestInfoCallback callback_;
   std::unique_ptr<GrpcVsockServer> grpc_server_;
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint_;
   fuchsia::virtualization::RealmPtr guest_env_;

@@ -43,6 +43,7 @@
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.update.Manager",
+            "fuchsia.virtualization.LinuxManager",
             "fuchsia.virtualization.Manager"
         ]
     }

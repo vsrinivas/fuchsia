@@ -31,6 +31,7 @@ namespace {
 // want to verify we can correctly create the image.
 static constexpr off_t kStatefulImageSizeForTest = 10ul * 1024 * 1024;
 static constexpr const char* kStatefulImagePath = "/data/stateful.img";
+static constexpr std::string_view kEnvironmentLabelForTest("test");
 
 // Mounts a memfs filesystem at a given path and unmounts it when this object
 // goes out of scope.
@@ -103,9 +104,11 @@ class DISABLED_LinuxRunnerGuestTest : public gtest::TestLoopFixture {
  protected:
   void StartGuest() {
     GuestConfig config = {
+        .env_label = kEnvironmentLabelForTest,
         .stateful_image_size = kStatefulImageSizeForTest,
     };
-    Guest::CreateAndStart(provider_.context(), config, &guest_);
+    Guest::CreateAndStart(
+        provider_.context(), config, [](GuestInfo) {}, &guest_);
     RunLoopUntilIdle();
   }
 

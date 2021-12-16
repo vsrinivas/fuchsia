@@ -40,7 +40,6 @@
 
 namespace {
 
-constexpr const char kLinuxEnvirionmentName[] = "termina";
 constexpr const char kLinuxGuestPackage[] =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
 constexpr const char kContainerName[] = "buster";
@@ -359,22 +358,23 @@ namespace linux_runner {
 
 // static
 zx_status_t Guest::CreateAndStart(sys::ComponentContext* context, GuestConfig config,
-                                  std::unique_ptr<Guest>* guest) {
+                                  GuestInfoCallback callback, std::unique_ptr<Guest>* guest) {
   TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
   fuchsia::virtualization::ManagerPtr guestmgr;
   context->svc()->Connect(guestmgr.NewRequest());
   fuchsia::virtualization::RealmPtr guest_env;
-  guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
+  guestmgr->Create(config.env_label, guest_env.NewRequest());
 
-  *guest = std::make_unique<Guest>(context, config, std::move(guest_env));
+  *guest = std::make_unique<Guest>(context, config, std::move(callback), std::move(guest_env));
   return ZX_OK;
 }
 
-Guest::Guest(sys::ComponentContext* context, GuestConfig config,
+Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallback callback,
              fuchsia::virtualization::RealmPtr env)
     : async_(async_get_default_dispatcher()),
       executor_(async_),
       config_(config),
+      callback_(std::move(callback)),
       guest_env_(std::move(env)),
       wayland_dispatcher_(context, GetBridgePackage(context),
                           fit::bind_member(this, &Guest::OnNewView),
@@ -447,14 +447,16 @@ void Guest::StartGuest() {
 
   auto vm_create_nonce = TRACE_NONCE();
   TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
-  guest_env_->LaunchInstance(kLinuxGuestPackage, cpp17::nullopt, std::move(cfg),
-                             guest_controller_.NewRequest(), [this, vm_create_nonce](uint32_t cid) {
-                               TRACE_DURATION("linux_runner", "LaunchInstance Callback");
-                               TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
-                               FX_LOGS(INFO) << "Guest launched with CID " << cid;
-                               guest_cid_ = cid;
-                               TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
-                             });
+  guest_env_->LaunchInstance(
+      kLinuxGuestPackage, cpp17::nullopt, std::move(cfg), guest_controller_.NewRequest(),
+      [this, vm_create_nonce](uint32_t cid) {
+        TRACE_DURATION("linux_runner", "LaunchInstance Callback");
+        TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
+        FX_LOGS(INFO) << "Guest launched with CID " << cid;
+        guest_cid_ = cid;
+        PostContainerStatus(fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST);
+        TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
+      });
 }
 
 void Guest::MountVmTools() {
@@ -554,6 +556,8 @@ void Guest::StartTermina() {
   FX_CHECK(maitred_) << "Called StartTermina without a maitre'd connection";
   FX_LOGS(INFO) << "Starting Termina...";
 
+  PostContainerStatus(fuchsia::virtualization::ContainerStatus::STARTING_VM);
+
   grpc::ClientContext context;
   vm_tools::StartTerminaRequest request;
   vm_tools::StartTerminaResponse response;
@@ -639,11 +643,11 @@ void Guest::CreateContainer() {
       StartContainer();
       break;
     case vm_tools::tremplin::CreateContainerResponse::FAILED:
-      FX_LOGS(ERROR) << "Failed to create container: " << response.failure_reason();
+      PostContainerFailure("Failed to create container: " + response.failure_reason());
       break;
     case vm_tools::tremplin::CreateContainerResponse::UNKNOWN:
     default:
-      FX_LOGS(ERROR) << "Unknown status: " << response.status();
+      PostContainerFailure("Unknown status: " + std::to_string(response.status()));
       break;
   }
 }
@@ -652,6 +656,8 @@ void Guest::StartContainer() {
   TRACE_DURATION("linux_runner", "Guest::StartContainer");
   FX_CHECK(tremplin_) << "StartContainer called without a Tremplin connection";
   FX_LOGS(INFO) << "Starting Container...";
+
+  PostContainerStatus(fuchsia::virtualization::ContainerStatus::STARTING);
 
   grpc::ClientContext context;
   vm_tools::tremplin::StartContainerRequest request;
@@ -678,11 +684,11 @@ void Guest::StartContainer() {
       FX_LOGS(INFO) << "Container starting";
       break;
     case vm_tools::tremplin::StartContainerResponse::FAILED:
-      FX_LOGS(ERROR) << "Failed to start container: " << response.failure_reason();
+      PostContainerFailure("Failed to start container: " + response.failure_reason());
       break;
     case vm_tools::tremplin::StartContainerResponse::UNKNOWN:
     default:
-      FX_LOGS(ERROR) << "Unknown status: " << response.status();
+      PostContainerFailure("Unknown status: " + std::to_string(response.status()));
       break;
   }
 }
@@ -713,11 +719,11 @@ void Guest::SetupUser() {
       LaunchContainerShell();
       break;
     case vm_tools::tremplin::SetUpUserResponse::FAILED:
-      FX_LOGS(ERROR) << "Failed to create user: " << response.failure_reason();
+      PostContainerFailure("Failed to create user: " + response.failure_reason());
       break;
     case vm_tools::tremplin::SetUpUserResponse::UNKNOWN:
     default:
-      FX_LOGS(ERROR) << "Unknown status: " << response.status();
+      PostContainerFailure("Unknown status: " + std::to_string(response.status()));
       break;
   }
 }
@@ -772,22 +778,26 @@ grpc::Status Guest::UpdateCreateStatus(grpc::ServerContext* context,
       StartContainer();
       break;
     case vm_tools::tremplin::ContainerCreationProgress::DOWNLOADING:
+      PostContainerDownloadProgress(request->download_progress());
       FX_LOGS(INFO) << "Downloading " << request->container_name() << ": "
                     << request->download_progress() << "%";
+      if (request->download_progress() >= 100) {
+        PostContainerStatus(fuchsia::virtualization::ContainerStatus::EXTRACTING);
+        FX_LOGS(INFO) << "Extracting " << request->container_name();
+      }
       break;
     case vm_tools::tremplin::ContainerCreationProgress::DOWNLOAD_TIMED_OUT:
-      FX_LOGS(INFO) << "Download timed out for " << request->container_name();
+      PostContainerFailure("Download timed out");
       break;
     case vm_tools::tremplin::ContainerCreationProgress::CANCELLED:
-      FX_LOGS(INFO) << "Download cancelled for " << request->container_name();
+      PostContainerFailure("Download cancelled");
       break;
     case vm_tools::tremplin::ContainerCreationProgress::FAILED:
-      FX_LOGS(INFO) << "Download failed for " << request->container_name() << ": "
-                    << request->failure_reason();
+      PostContainerFailure("Download failed: " + request->failure_reason());
       break;
     case vm_tools::tremplin::ContainerCreationProgress::UNKNOWN:
     default:
-      FX_LOGS(INFO) << "Unknown download status: " << request->status();
+      PostContainerFailure("Unknown download status: " + std::to_string(request->status()));
       break;
   }
   return grpc::Status::OK;
@@ -811,7 +821,7 @@ grpc::Status Guest::UpdateStartStatus(::grpc::ServerContext* context,
       SetupUser();
       break;
     default:
-      FX_LOGS(ERROR) << "Unknown start status: " << request->status();
+      PostContainerFailure("Unknown start status: " + std::to_string(request->status()));
       break;
   }
   return grpc::Status::OK;
@@ -860,6 +870,9 @@ grpc::Status Guest::ContainerReady(grpc::ServerContext* context,
       NewGrpcVsockStub<vm_tools::container::Garcon>(socket_endpoint_, guest_cid_, garcon_port)
           .then(start_garcon);
   executor_.schedule_task(std::move(task));
+
+  PostContainerStatus(fuchsia::virtualization::ContainerStatus::READY);
+
   return grpc::Status::OK;
 }
 
@@ -1110,6 +1123,30 @@ void Guest::CreateTerminalComponent(AppLaunchRequest app, std::vector<std::strin
       std::move(app_dir_request), std::move(app.controller_request), std::move(vsh_controller),
       svc.Connect<fuchsia::ui::app::ViewProvider>(), term_id);
   terminals_.insert({term_id, std::move(component)});
+}
+
+void Guest::PostContainerStatus(fuchsia::virtualization::ContainerStatus container_status) {
+  callback_(GuestInfo{
+      .cid = guest_cid_,
+      .container_status = container_status,
+  });
+}
+
+void Guest::PostContainerDownloadProgress(int32_t download_progress) {
+  callback_(GuestInfo{
+      .cid = guest_cid_,
+      .container_status = fuchsia::virtualization::ContainerStatus::DOWNLOADING,
+      .download_percent = download_progress,
+  });
+}
+
+void Guest::PostContainerFailure(std::string failure_reason) {
+  FX_LOGS(ERROR) << failure_reason;
+  callback_(GuestInfo{
+      .cid = guest_cid_,
+      .container_status = fuchsia::virtualization::ContainerStatus::FAILED,
+      .failure_reason = failure_reason,
+  });
 }
 
 }  // namespace linux_runner

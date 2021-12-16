@@ -1,0 +1,56 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.virtualization;
+
+using zx;
+
+/// The status of the Linux container.
+type ContainerStatus = strict enum {
+    TRANSIENT = 1;
+    LAUNCHING_GUEST = 2;
+    STARTING_VM = 3;
+    DOWNLOADING = 4;
+    EXTRACTING = 5;
+    STARTING = 6;
+    READY = 7;
+    FAILED = 8;
+};
+
+/// Linux guest information.
+type LinuxGuestInfo = table {
+    /// Linux guest CID.
+    1: cid uint32;
+
+    /// The current container status.
+    2: container_status ContainerStatus;
+
+    /// Container download in percentage. Download percent is only
+    /// available if container status is DOWNLOADING.
+    3: download_percent int32;
+
+    /// The reason for failure if the container could not be created,
+    /// set if container status is FAILED.
+    4: failure_reason string;
+};
+
+/// A `LinuxManager` provides access to the status of Linux guest instances.
+@discoverable
+protocol LinuxManager {
+    /// Get Linux guest environment info.
+    ///
+    /// Returns ZX_ERR_UNAVAILABLE if the Linux guest is not available.
+    StartAndGetLinuxGuestInfo(struct {
+        label string;
+    }) -> (struct {
+        info LinuxGuestInfo;
+    }) error zx.status;
+
+    /// Linux guest info event.
+    ///
+    /// Sent to the client when the status of the container changed.
+    -> OnGuestInfoChanged(struct {
+        label string;
+        info LinuxGuestInfo;
+    });
+};

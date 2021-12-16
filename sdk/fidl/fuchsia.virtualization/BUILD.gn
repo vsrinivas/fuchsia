@@ -15,6 +15,7 @@ fidl("fuchsia.virtualization") {
     "balloon_controller.fidl",
     "guest.fidl",
     "guest_config.fidl",
+    "linux_manager.fidl",
     "manager.fidl",
     "realm.fidl",
     "vsock.fidl",

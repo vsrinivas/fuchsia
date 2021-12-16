@@ -357,10 +357,137 @@ static bool init_shell(const zx::socket& usock, std::vector<std::string> args) {
   return true;
 }
 
+static void log_container_status(const fuchsia::virtualization::LinuxGuestInfo& info) {
+  switch (info.container_status()) {
+    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
+      std::cout << "Launching Linux guest ..| ";
+      break;
+    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
+      std::cout << "Starting Termina VM ..| ";
+      break;
+    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
+      std::cout << "\rDownloading container image (" << info.download_percent() << "%) ";
+      break;
+    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
+      std::cout << "Extracting container image ..| ";
+      break;
+    case fuchsia::virtualization::ContainerStatus::STARTING:
+      std::cout << "Starting container ..| ";
+      break;
+    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
+    case fuchsia::virtualization::ContainerStatus::READY:
+      break;
+    case fuchsia::virtualization::ContainerStatus::FAILED:
+      std::cout << "Failed to start container: " << info.failure_reason();
+      break;
+  }
+}
+
+static void log_spinner(fuchsia::virtualization::ContainerStatus container_status, size_t ticks) {
+  const char kSpinner[] = {'|', '/', '-', '\\'};
+
+  switch (container_status) {
+    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
+    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
+    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
+    case fuchsia::virtualization::ContainerStatus::STARTING:
+      // Move cursor 2 columns to the left.
+      std::cout << "\E[2D";
+      // Add progress indicator for every 20 ticks.
+      if ((ticks % 20) == 0) {
+        std::cout << ".";
+      }
+      // Write the current spinner character.
+      std::cout << kSpinner[ticks % countof(kSpinner)] << " ";
+      break;
+    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
+    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
+    case fuchsia::virtualization::ContainerStatus::READY:
+    case fuchsia::virtualization::ContainerStatus::FAILED:
+      break;
+  }
+}
+
+static void log_done(fuchsia::virtualization::ContainerStatus container_status) {
+  switch (container_status) {
+    case fuchsia::virtualization::ContainerStatus::LAUNCHING_GUEST:
+    case fuchsia::virtualization::ContainerStatus::STARTING_VM:
+    case fuchsia::virtualization::ContainerStatus::EXTRACTING:
+    case fuchsia::virtualization::ContainerStatus::STARTING:
+      // Move cursor 2 columns to the left and end line with ". Done".
+      std::cout << "\E[2D. Done\n";
+      break;
+    case fuchsia::virtualization::ContainerStatus::DOWNLOADING:
+      std::cout << "\rDownloading container image ..... Done\n";
+      break;
+    case fuchsia::virtualization::ContainerStatus::TRANSIENT:
+    case fuchsia::virtualization::ContainerStatus::READY:
+    case fuchsia::virtualization::ContainerStatus::FAILED:
+      break;
+  }
+}
+
 zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t> o_cid,
                        std::optional<uint32_t> o_port, std::vector<std::string> args,
                        async::Loop* loop, sys::ComponentContext* context) {
   uint32_t env_id, cid, port = o_port.value_or(vsh::kVshPort);
+  std::optional<std::string_view> linux_env_name;
+  std::optional<uint32_t> linux_guest_cid;
+
+  // This is hard-coded for now. A flag can be added if needed in the future.
+  constexpr std::string_view kLinuxEnvironmentName("termina");
+
+  // Wait for Linux environment to be ready if we have a non-empty
+  // set of arguments.
+  if (!args.empty()) {
+    linux_env_name = kLinuxEnvironmentName;
+
+    // Connect to the Linux manager.
+    async::Loop linux_manager_loop(&kAsyncLoopConfigNeverAttachToThread);
+    fuchsia::virtualization::LinuxManagerPtr linux_manager;
+    zx_status_t status =
+        context->svc()->Connect(linux_manager.NewRequest(linux_manager_loop.dispatcher()));
+    if (status != ZX_OK) {
+      std::cerr << "Unable to access /svc/" << fuchsia::virtualization::LinuxManager::Name_ << "\n";
+      return status;
+    }
+
+    fuchsia::virtualization::ContainerStatus container_status =
+        fuchsia::virtualization::ContainerStatus::FAILED;
+    size_t status_ticks = 0;
+
+    linux_manager.events().OnGuestInfoChanged = [&container_status, &status_ticks](
+                                                    std::string label,
+                                                    fuchsia::virtualization::LinuxGuestInfo info) {
+      if (info.container_status() != container_status) {
+        log_done(container_status);
+        container_status = info.container_status();
+        // Reset status ticks after status changed.
+        status_ticks = 0;
+      }
+      log_container_status(info);
+    };
+
+    // Get the initial state of the container and start it if needed.
+    linux_manager->StartAndGetLinuxGuestInfo(
+        std::string(kLinuxEnvironmentName), [&container_status, &linux_guest_cid](auto result) {
+          linux_guest_cid = result.response().info.cid();
+          container_status = result.response().info.container_status();
+          log_container_status(result.response().info);
+          std::cout << std::flush;
+        });
+    linux_manager_loop.Run(zx::time::infinite(), /*once*/ true);
+
+    // Loop until container is ready. We intentionally continue on failure in
+    // case we recover and it gives the user a chance to see the error when
+    // exiting would result in the terminal being closed.
+    while (container_status != fuchsia::virtualization::ContainerStatus::READY) {
+      // 20 ticks per second for the spinner.
+      linux_manager_loop.Run(zx::deadline_after(zx::msec(50)), /*once*/ true);
+      log_spinner(container_status, status_ticks++);
+      std::cout << std::flush;
+    }
+  }
 
   // Connect to the manager.
   zx::status<fuchsia::virtualization::ManagerSyncPtr> manager = ConnectToManager(context);
@@ -378,7 +505,17 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
     std::cerr << "Unable to find any environments.\n";
     return ZX_ERR_NOT_FOUND;
   }
-  env_id = o_env_id.value_or(env_infos[0].id);
+  std::optional<uint32_t> linux_env_id;
+  if (linux_env_name.has_value()) {
+    for (auto info : env_infos) {
+      if (info.label == *linux_env_name) {
+        linux_env_id = info.id;
+        break;
+      }
+    }
+  }
+  // Fallback to Linux environment if available.
+  env_id = o_env_id.value_or(linux_env_id.value_or(env_infos[0].id));
 
   fuchsia::virtualization::RealmSyncPtr realm;
   manager->Connect(env_id, realm.NewRequest());
@@ -392,7 +529,12 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
     std::cerr << "Unable to find any instances in environment " << env_id << '\n';
     return ZX_ERR_NOT_FOUND;
   }
-  cid = o_cid.value_or(instances[0].cid);
+  // Fallback to Linux guest CID when using a Linux environment.
+  if (std::optional<uint32_t>(env_id) == linux_env_id) {
+    cid = o_cid.value_or(linux_guest_cid.value_or(instances[0].cid));
+  } else {
+    cid = o_cid.value_or(instances[0].cid);
+  }
 
   // Verify the environment and instance specified exist
   if (std::find_if(env_infos.begin(), env_infos.end(),
