@@ -68,13 +68,17 @@ executable("feedback_integration_test_exe") {
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fostr/fidl/fuchsia.feedback",
     "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/uuid:uuid",
     "//src/ui/lib/escher/test/common:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
     "//zircon/system/ulib/zx",
+
+    # TODO(https://fxbug.dev/90302): switch back to
+    # //src/lib/fxl/test:gtest_main when this test is no longer
+    # order-dependent.
+    "//third_party/googletest:gtest_main",
   ]
 }
 

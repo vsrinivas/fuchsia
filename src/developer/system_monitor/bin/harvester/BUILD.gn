@@ -154,13 +154,17 @@ executable("system_monitor_harvester_test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/loop_fixture",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
+
+    # TODO(https://fxbug.dev/90302): switch back to
+    # //src/lib/fxl/test:gtest_main when this test is no longer
+    # order-dependent.
+    "//third_party/googletest:gtest_main",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
