@@ -68,7 +68,7 @@ class DeviceInterface {
   virtual zx_status_t StartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                                       uint64_t* out_scan_id) = 0;
   virtual zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) = 0;
-  virtual zx_status_t ClearAssoc(const common::MacAddr& peer_addr) = 0;
+  virtual zx_status_t ClearAssoc(const uint8_t[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) = 0;
 
   virtual fbl::RefPtr<DeviceState> GetState() = 0;
   virtual const wlan_softmac_info_t& GetWlanSoftmacInfo() const = 0;

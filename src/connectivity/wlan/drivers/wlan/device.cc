@@ -391,8 +391,8 @@ zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
   return wlan_softmac_proxy_.ConfigureAssoc(0u, assoc_ctx);
 }
 
-zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
-  return wlan_softmac_proxy_.ClearAssoc(0u, peer_addr.byte);
+zx_status_t Device::ClearAssoc(const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
+  return wlan_softmac_proxy_.ClearAssoc(0u, peer_addr);
 }
 
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }

@@ -97,7 +97,7 @@ zx_status_t ApMlme::Init() {
         return MLME(mlme)->device_->ConfigureAssoc(assoc_ctx);
       },
       .clear_assoc = [](void* mlme, const uint8_t(*addr)[6]) -> zx_status_t {
-        return MLME(mlme)->device_->ClearAssoc(common::MacAddr(*addr));
+        return MLME(mlme)->device_->ClearAssoc(*addr);
       },
   };
   auto bssid = device_->GetState()->address();

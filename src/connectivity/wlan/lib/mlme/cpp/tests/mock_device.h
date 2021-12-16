@@ -197,7 +197,7 @@ struct MockDevice : public DeviceInterface {
     sta_assoc_ctx_ = *assoc_ctx;
     return ZX_OK;
   }
-  zx_status_t ClearAssoc(const common::MacAddr& peer_addr) final {
+  zx_status_t ClearAssoc(const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) final {
     std::memset(&sta_assoc_ctx_, 0, sizeof(sta_assoc_ctx_));
     return ZX_OK;
   }

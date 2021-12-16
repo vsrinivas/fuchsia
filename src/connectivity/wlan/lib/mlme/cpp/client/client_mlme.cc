@@ -115,7 +115,7 @@ zx_status_t ClientMlme::Init() {
         return DEVICE(device)->ConfigureAssoc(assoc_ctx);
       },
       .clear_assoc = [](void* device, const uint8_t(*addr)[6]) -> zx_status_t {
-        return DEVICE(device)->ClearAssoc(common::MacAddr(*addr));
+        return DEVICE(device)->ClearAssoc(*addr);
       },
   };
   if (run_as_test_) {
