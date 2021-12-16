@@ -124,7 +124,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
       minimum_size_bytes = 64 * kMebibyte;
       break;
     case Partition::kFuchsiaVolumeManager:
-      minimum_size_bytes = 16 * kGibibyte;
+      minimum_size_bytes = 56 * kGibibyte;
       break;
     case Partition::kVbMetaA:
     case Partition::kVbMetaB:

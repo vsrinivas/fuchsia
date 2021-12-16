@@ -75,9 +75,6 @@ constexpr uint8_t kNewFvmType[GPT_GUID_LEN] = GPT_FVM_TYPE_GUID;
 constexpr uint8_t kBootloaderType[GPT_GUID_LEN] = GUID_BOOTLOADER_VALUE;
 constexpr uint8_t kEfiType[GPT_GUID_LEN] = GUID_EFI_VALUE;
 constexpr uint8_t kCrosKernelType[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
-constexpr uint8_t kCrosRootfsType[GPT_GUID_LEN] = GUID_CROS_ROOTFS_VALUE;
-constexpr uint8_t kCrosReservedType[GPT_GUID_LEN] = GUID_CROS_RESERVED_VALUE;
-constexpr uint8_t kCrosFirmwareType[GPT_GUID_LEN] = GUID_CROS_FIRMWARE_VALUE;
 constexpr uint8_t kZirconAType[GPT_GUID_LEN] = GUID_ZIRCON_A_VALUE;
 constexpr uint8_t kZirconBType[GPT_GUID_LEN] = GUID_ZIRCON_B_VALUE;
 constexpr uint8_t kZirconRType[GPT_GUID_LEN] = GUID_ZIRCON_R_VALUE;
@@ -88,7 +85,6 @@ constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
 constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
 constexpr uint8_t kSysConfigType[GPT_GUID_LEN] = GUID_SYS_CONFIG_VALUE;
 constexpr uint8_t kAbrMetaType[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
-constexpr uint8_t kStateCrosGuid[GPT_GUID_LEN] = GUID_CROS_STATE_VALUE;
 constexpr uint8_t kStateLinuxGuid[GPT_GUID_LEN] = GUID_LINUX_FILESYSTEM_DATA_VALUE;
 
 constexpr uint8_t kBoot0Type[GPT_GUID_LEN] = GUID_EMMC_BOOT1_VALUE;
@@ -533,8 +529,8 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithoutGptFails) {
 
 TEST_F(EfiDevicePartitionerTests, InitializeWithoutFvmSucceeds) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  // 32GiB disk.
-  constexpr uint64_t kBlockCount = (32LU << 30) / kBlockSize;
+  // 64GiB disk.
+  constexpr uint64_t kBlockCount = (64LU << 30) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kBlockCount, &gpt_dev));
 
@@ -578,7 +574,7 @@ TEST_F(EfiDevicePartitionerTests, AddPartitionZirconB) {
 
 TEST_F(EfiDevicePartitionerTests, AddPartitionFvm) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(16 * kGibibyte, &gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
   auto status = CreatePartitioner(gpt_fd);
@@ -613,7 +609,7 @@ TEST_F(EfiDevicePartitionerTests, AddedPartitionIsFindable) {
 
 TEST_F(EfiDevicePartitionerTests, InitializePartitionsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(16 * kGibibyte, &gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev));
   fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
 
   auto status = CreatePartitioner(std::move(gpt_fd));
@@ -628,7 +624,7 @@ TEST_F(EfiDevicePartitionerTests, InitializePartitionsWithoutExplicitDevice) {
 
 TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(16 * kGibibyte, &gpt_dev1));
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
 
   auto status = CreatePartitioner(std::move(gpt_fd));
@@ -637,7 +633,7 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithou
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   status.value().reset();
 
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(16 * kGibibyte, &gpt_dev2));
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev2));
   gpt_fd.reset(dup(gpt_dev2->fd()));
 
   auto status2 = CreatePartitioner(std::move(gpt_fd));
@@ -651,7 +647,7 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithMultipleCandidateGPTsFailsWithou
 
 TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWipingOne) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(16 * kGibibyte, &gpt_dev1));
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev1));
   fbl::unique_fd gpt_fd(dup(gpt_dev1->fd()));
 
   auto status = CreatePartitioner(std::move(gpt_fd));
@@ -660,7 +656,7 @@ TEST_F(EfiDevicePartitionerTests, InitializeWithTwoCandidateGPTsSucceedsAfterWip
   ASSERT_OK(status->AddPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
   status.value().reset();
 
-  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(16 * kGibibyte, &gpt_dev2));
+  ASSERT_NO_FATAL_FAILURES(CreateDiskWithGpt(56 * kGibibyte, &gpt_dev2));
   gpt_fd.reset(dup(gpt_dev2->fd()));
 
   auto status2 = CreatePartitioner(std::move(gpt_fd));
@@ -720,7 +716,7 @@ TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
 
 TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
   std::unique_ptr<BlockDevice> gpt_dev;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &gpt_dev));
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kGibibyte, &gpt_dev));
 
   {
     // Pause the block watcher while we write partitions to the disk.
@@ -775,7 +771,7 @@ TEST_F(EfiDevicePartitionerTests, InitPartitionTables) {
       PartitionDescription{GUID_VBMETA_B_NAME, kVbMetaBType, 0xe80a3, 0x80},
       PartitionDescription{GUID_VBMETA_R_NAME, kVbMetaRType, 0xe8123, 0x80},
       PartitionDescription{GUID_ABR_META_NAME, kAbrMetaType, 0xe81a3, 0x8},
-      PartitionDescription{GUID_FVM_NAME, kFvmType, 0xe81ab, 0x2000000},
+      PartitionDescription{GUID_FVM_NAME, kFvmType, 0xe81ab, 0x7000000},
   };
   ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
 
@@ -865,7 +861,7 @@ class CrosDevicePartitionerTests : public GptDevicePartitionerTests {
 
 TEST_F(CrosDevicePartitionerTests, InitPartitionTables) {
   std::unique_ptr<BlockDevice> disk;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &disk));
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kGibibyte, &disk));
 
   {
     // Pause the block watcher while we write partitions to the disk.
@@ -909,129 +905,11 @@ TEST_F(CrosDevicePartitionerTests, InitPartitionTables) {
       PartitionDescription{GPT_VBMETA_A_NAME, kVbMetaType, 0x60022, 0x80},
       PartitionDescription{GPT_VBMETA_B_NAME, kVbMetaType, 0x600a2, 0x80},
       PartitionDescription{GPT_VBMETA_R_NAME, kVbMetaType, 0x60122, 0x80},
-      PartitionDescription{GPT_FVM_NAME, kNewFvmType, 0x601a2, 0x2000000},
+      PartitionDescription{GPT_FVM_NAME, kNewFvmType, 0x601a2, 0x7000000},
   };
   ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
 
   // Make sure we can find the important partitions.
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
-}
-
-TEST_F(CrosDevicePartitionerTests, InitFromChromeOS) {
-  std::unique_ptr<BlockDevice> disk;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kGibibyte, &disk));
-  constexpr uint64_t kStateStart = 0x104d000;
-  constexpr uint64_t kDiskSizeBlocks = 64 * kGibibyte / 0x200;
-  constexpr uint64_t kStateSize = kDiskSizeBlocks - (kStateStart + 0x1000);
-  ASSERT_EQ(kStateSize, 0x6fb2000);
-
-  {
-    // Pause the block watcher while we write partitions to the disk.
-    // This is to avoid the block watcher seeing an intermediate state of the partition table
-    // and incorrectly treating it as an MBR.
-    // The watcher is automatically resumed when this goes out of scope.
-    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
-    ASSERT_OK(pauser);
-
-    std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-    // Obtained from an atlas running ChromeOS.
-    const std::array<PartitionDescription, 12> partitions_at_start{
-        PartitionDescription{"STATE", kStateCrosGuid, kStateStart, kStateSize},
-        PartitionDescription{"KERN-A", kCrosKernelType, 0x5000, 0x8000},
-        PartitionDescription{"ROOT-A", kCrosRootfsType, 0x84d000, 0x800000},
-        PartitionDescription{"KERN-B", kCrosKernelType, 0xd000, 0x8000},
-        PartitionDescription{"ROOT-B", kCrosRootfsType, 0x4d000, 0x800000},
-        PartitionDescription{"KERN-C", kCrosKernelType, 0x4040, 1},
-        PartitionDescription{"ROOT-C", kCrosRootfsType, 0x4041, 1},
-        PartitionDescription{"OEM", kStateLinuxGuid, 0x15000, 0x8000},
-        PartitionDescription{"reserved", kCrosReservedType, 0x4042, 1},
-        PartitionDescription{"reserved", kCrosReservedType, 0x4043, 1},
-        PartitionDescription{"RWFW", kCrosFirmwareType, 0x40, 0x4000},
-        PartitionDescription{"EFI-SYSTEM", kEfiType, 0x3d000, 0x10000},
-    };
-    for (auto& part : partitions_at_start) {
-      ASSERT_OK(
-          gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
-          "%s", part.name);
-    }
-    ASSERT_OK(gpt->Sync());
-  }
-  // Create CrOS device partitioner and initialise partition tables.
-  std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
-  ASSERT_OK(partitioner->InitPartitionTables());
-
-  std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-  // Check that the important CrOS partitions are still there.
-  // The paver will halve the size of the STATE partition and move it down so that we have
-  // enough room to make the Fuchsia partitions.
-  const std::array<PartitionDescription, 8> partitions_at_end{
-      PartitionDescription{"STATE", kStateCrosGuid, kStateStart + (kStateSize / 2), kStateSize / 2},
-      PartitionDescription{"KERN-A", kCrosKernelType, 0x5000, 0x8000},
-      PartitionDescription{"ROOT-A", kCrosRootfsType, 0x84d000, 0x800000},
-      PartitionDescription{"KERN-B", kCrosKernelType, 0xd000, 0x8000},
-      PartitionDescription{"ROOT-B", kCrosRootfsType, 0x4d000, 0x800000},
-      PartitionDescription{"OEM", kStateLinuxGuid, 0x15000, 0x8000},
-      PartitionDescription{"RWFW", kCrosFirmwareType, 0x40, 0x4000},
-      PartitionDescription{"EFI-SYSTEM", kEfiType, 0x3d000, 0x10000},
-  };
-  ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
-
-  // Make sure we can find the important Fuchsia partitions.
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
-}
-
-TEST_F(CrosDevicePartitionerTests, InitFromLegacyFuchsia) {
-  std::unique_ptr<BlockDevice> disk;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &disk));
-  {
-    // Pause the block watcher while we write partitions to the disk.
-    // This is to avoid the block watcher seeing an intermediate state of the partition table
-    // and incorrectly treating it as an MBR.
-    // The watcher is automatically resumed when this goes out of scope.
-    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
-    ASSERT_OK(pauser);
-
-    std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-    // Obtained from an atlas running ChromeOS.
-    const std::array<PartitionDescription, 5> partitions_at_start{
-        PartitionDescription{GUID_ZIRCON_A_NAME, kCrosKernelType, 0x100, 0x20000},
-        PartitionDescription{GUID_ZIRCON_B_NAME, kCrosKernelType, 0x20100, 0x20000},
-        PartitionDescription{GUID_ZIRCON_R_NAME, kCrosKernelType, 0x40100, 0x20000},
-        PartitionDescription{GUID_FVM_NAME, kFvmType, 0x60100, 16 * kGibibyte / disk->block_size()},
-        PartitionDescription{"STATE", kStateCrosGuid, 0x2060100,
-                             15 * kGibibyte / disk->block_size()},
-    };
-    for (auto& part : partitions_at_start) {
-      ASSERT_OK(
-          gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
-          "%s", part.name);
-    }
-    ASSERT_OK(gpt->Sync());
-  }
-  // Create CrOS device partitioner and initialise partition tables.
-  std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
-  ASSERT_OK(partitioner->InitPartitionTables());
-
-  std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-  // Make sure we can find the important Fuchsia partitions.
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
@@ -1098,75 +976,6 @@ TEST_F(CrosDevicePartitionerTests, ValidatePayload) {
                                          cpp20::span<uint8_t>()));
 }
 
-TEST_F(CrosDevicePartitionerTests, InitPartitionTablesForRecoveredDevice) {
-  std::unique_ptr<BlockDevice> disk;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &disk));
-  {
-    // Pause the block watcher while we write partitions to the disk.
-    // This is to avoid the block watcher seeing an intermediate state of the partition table
-    // and incorrectly treating it as an MBR.
-    // The watcher is automatically resumed when this goes out of scope.
-    auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
-    ASSERT_OK(pauser);
-
-    // Write initial partitions to disk.
-    std::unique_ptr<gpt::GptDevice> gpt;
-    ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-
-    // Write initial partitions to disk. (reflective of state resulting
-    // from CrOS recovery)
-    const std::array<PartitionDescription, 9> partitions_at_start{
-        PartitionDescription{"efi-system", kEfiType, 0x22, 0x1},
-        PartitionDescription{"KERN-A", kCrosKernelType, 0x23, 0x1},
-        PartitionDescription{"KERN_B", kCrosKernelType, 0x24, 0x1},
-        PartitionDescription{"KERN_C", kCrosKernelType, 0x25, 0x1},
-        PartitionDescription{"ROOT_A", kCrosRootfsType, 0x26, 0x1},
-        PartitionDescription{"ROOT_B", kCrosRootfsType, 0x27, 0x1},
-        PartitionDescription{"ROOT_C", kCrosRootfsType, 0x28, 0x1},
-        PartitionDescription{"STATE", kStateLinuxGuid, 0x29, 0x1},
-        PartitionDescription{"sys-config", kSysConfigType, 0x2A, 0x1},
-    };
-
-    for (auto& part : partitions_at_start) {
-      ASSERT_OK(
-          gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
-          "%s", part.name);
-    }
-
-    ASSERT_OK(gpt->Sync());
-  }
-
-  // Create CrOS device partitioner and initialise partition tables.
-  std::unique_ptr<paver::DevicePartitioner> partitioner;
-  ASSERT_NO_FATAL_FAILURES(CreatePartitioner(disk.get(), &partitioner));
-  ASSERT_OK(partitioner->InitPartitionTables());
-
-  // Ensure the final partition layout looks like we expect it to.
-  std::unique_ptr<gpt::GptDevice> gpt;
-  ASSERT_NO_FATAL_FAILURES(CreateGptDevice(disk.get(), &gpt));
-  const std::array<PartitionDescription, 7> partitions_at_end{
-      PartitionDescription{GPT_ZIRCON_A_NAME, kCrosKernelType, 0x2B, 0x20000},
-      PartitionDescription{GPT_ZIRCON_B_NAME, kCrosKernelType, 0x2002B, 0x20000},
-      PartitionDescription{GPT_ZIRCON_R_NAME, kCrosKernelType, 0x4002B, 0x20000},
-      PartitionDescription{GPT_VBMETA_A_NAME, kVbMetaType, 0x6002B, 0x80},
-      PartitionDescription{GPT_VBMETA_B_NAME, kVbMetaType, 0x600AB, 0x80},
-      PartitionDescription{GPT_VBMETA_R_NAME, kVbMetaType, 0x6012B, 0x80},
-
-      PartitionDescription{GPT_FVM_NAME, kNewFvmType, 0x601AB, 0x2000000},
-  };
-
-  ASSERT_NO_FATAL_FAILURES(EnsurePartitionsMatch(gpt.get(), partitions_at_end));
-
-  // Make sure we can find the important partitions.
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
-  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
-}
-
 // Get Cros GPT flags for a kernel with the given priority.
 uint64_t CrosGptPriorityFlags(uint8_t priority) {
   uint64_t flags = 0;
@@ -1177,7 +986,7 @@ uint64_t CrosGptPriorityFlags(uint8_t priority) {
 TEST_F(CrosDevicePartitionerTests, KernelPriority) {
   // Create a 32 GiB disk.
   std::unique_ptr<BlockDevice> disk;
-  ASSERT_NO_FATAL_FAILURES(CreateDisk(32 * kGibibyte, &disk));
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(64 * kGibibyte, &disk));
 
   {
     // Pause the block watcher while we write partitions to the disk.

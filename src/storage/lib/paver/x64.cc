@@ -106,7 +106,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
       minimum_size_bytes = 4 * kKibibyte;
       break;
     case Partition::kFuchsiaVolumeManager:
-      minimum_size_bytes = 16 * kGibibyte;
+      minimum_size_bytes = 56 * kGibibyte;
       break;
     default:
       ERROR("EFI partitioner cannot add unknown partition type\n");
