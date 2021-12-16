@@ -32,7 +32,6 @@ go_library("fidlgen_cpp") {
     "template_funcs.go",
     "testutils_test.go",
     "union.go",
-    "zircon_names.go",
   ]
 }
 

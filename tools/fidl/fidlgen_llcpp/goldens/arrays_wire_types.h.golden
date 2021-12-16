@@ -275,7 +275,8 @@ class UnionSmallArray {
  public:
   UnionSmallArray()
       : ordinal_(::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   UnionSmallArray(const UnionSmallArray&) = default;
   UnionSmallArray& operator=(const UnionSmallArray&) = default;
@@ -368,7 +369,8 @@ class UnionLargeArray {
  public:
   UnionLargeArray()
       : ordinal_(::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   UnionLargeArray(const UnionLargeArray&) = default;
   UnionLargeArray& operator=(const UnionLargeArray&) = default;

@@ -1818,9 +1818,9 @@ TEST(Sysmem, DuplicateSync) {
 
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
 
-  zx_rights_t rights_attenuation_masks[] = {ZX_RIGHT_SAME_RIGHTS};
-  auto duplicate_result =
-      token_1->DuplicateSync(fidl::VectorView<zx_rights_t>::FromExternal(rights_attenuation_masks));
+  zx::wire::Rights rights_attenuation_masks[] = {zx::wire::Rights::kSameRights};
+  auto duplicate_result = token_1->DuplicateSync(
+      fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks));
   ASSERT_OK(duplicate_result);
   ASSERT_EQ(duplicate_result->tokens.count(), 1);
   auto token_client_2 = std::move(duplicate_result->tokens[0]);
@@ -1860,10 +1860,10 @@ TEST(Sysmem, DuplicateSync) {
 
   auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
   // Remove write from last token
-  zx_rights_t rights_attenuation_masks_2[] = {ZX_RIGHT_SAME_RIGHTS,
-                                              ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE};
+  zx::wire::Rights rights_attenuation_masks_2[] = {zx::wire::Rights::kSameRights,
+                                                   ~zx::wire::Rights::kWrite};
   auto duplicate_result_2 = token_2->DuplicateSync(
-      fidl::VectorView<zx_rights_t>::FromExternal(rights_attenuation_masks_2));
+      fidl::VectorView<zx::wire::Rights>::FromExternal(rights_attenuation_masks_2));
   ASSERT_OK(duplicate_result_2);
   ASSERT_EQ(duplicate_result_2->tokens.count(), 2);
 

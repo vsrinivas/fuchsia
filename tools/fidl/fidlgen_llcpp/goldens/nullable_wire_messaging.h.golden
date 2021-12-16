@@ -16,6 +16,8 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/zx/cpp/wire_messaging.h>
+
 namespace fidl_test_nullable {
 class SimpleProtocol;
 

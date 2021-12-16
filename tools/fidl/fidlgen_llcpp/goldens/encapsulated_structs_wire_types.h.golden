@@ -20,6 +20,7 @@
 #endif  // __Fuchsia__
 
 #include <fidl/fidl.test.encapsulatedstructs/cpp/markers.h>
+#include <fidl/zx/cpp/wire_types.h>
 
 namespace fidl_test_encapsulatedstructs {
 namespace wire {

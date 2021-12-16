@@ -40,7 +40,8 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
       : ordinal_(::fidl_test_errorsyntax::wire::
                      ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::
                          Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   ExampleUseOfErrorSyntaxCallWhichMayFailResult(
       const ExampleUseOfErrorSyntaxCallWhichMayFailResult&) = default;

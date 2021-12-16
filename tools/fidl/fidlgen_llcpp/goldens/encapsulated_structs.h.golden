@@ -5,3 +5,4 @@
 #include <fidl/fidl.test.encapsulatedstructs/cpp/markers.h>
 #include <fidl/fidl.test.encapsulatedstructs/cpp/wire_messaging.h>
 #include <fidl/fidl.test.encapsulatedstructs/cpp/wire_types.h>
+#include <fidl/zx/cpp/wire.h>

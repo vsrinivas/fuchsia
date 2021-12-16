@@ -16,4 +16,6 @@
 
 #endif  // __Fuchsia__
 
+#include <fidl/zx/cpp/wire_messaging.h>
+
 namespace fidl {}  // namespace fidl

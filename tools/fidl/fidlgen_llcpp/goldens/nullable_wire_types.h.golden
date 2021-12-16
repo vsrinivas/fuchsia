@@ -21,6 +21,7 @@
 #endif  // __Fuchsia__
 
 #include <fidl/fidl.test.nullable/cpp/markers.h>
+#include <fidl/zx/cpp/wire_types.h>
 
 namespace fidl_test_nullable {
 namespace wire {
@@ -139,7 +140,8 @@ class SimpleUnion {
  public:
   SimpleUnion()
       : ordinal_(::fidl_test_nullable::wire::SimpleUnion::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   SimpleUnion(const SimpleUnion&) = default;
   SimpleUnion& operator=(const SimpleUnion&) = default;
