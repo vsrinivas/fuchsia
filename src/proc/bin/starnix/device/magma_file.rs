@@ -176,6 +176,26 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_SIZE as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2 => {
+                let (control, mut response): (
+                    virtio_magma_get_buffer_handle2_ctrl_t,
+                    virtio_magma_get_buffer_handle2_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                let infos = self.infos.lock();
+                // Note that this only stores handles for images. Once other buffer types are
+                // supported this will need to be updated if they aren't stored in the same
+                // collection.
+                let image_info = infos.get(&(control.buffer as usize)).ok_or(errno!(EINVAL))?;
+                let file = ImageFile::new(task.kernel(), image_info.clone());
+                let fd = task.files.add_with_flags(file, FdFlags::empty())?;
+
+                response.handle_out = fd.raw() as usize;
+                response.result_return = MAGMA_STATUS_OK as u64;
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2 as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
