@@ -23,7 +23,7 @@ use packet_formats::igmp::{
 use packet_formats::ip::Ipv4Proto;
 use packet_formats::ipv4::{
     options::{Ipv4Option, Ipv4OptionData},
-    Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
+    Ipv4OptionsTooLongError, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions,
 };
 use thiserror::Error;
 use zerocopy::ByteSlice;
@@ -286,8 +286,8 @@ where
         Ipv4PacketBuilder::new(src_ip, dst_ip, 1, Ipv4Proto::Igmp),
         &[Ipv4Option { copied: true, data: Ipv4OptionData::RouterAlert { data: 0 } }],
     ) {
-        None => return Err(IgmpError::SendFailure { addr: *group_addr }),
-        Some(builder) => builder,
+        Err(Ipv4OptionsTooLongError) => return Err(IgmpError::SendFailure { addr: *group_addr }),
+        Ok(builder) => builder,
     };
     let body = body.into_serializer().encapsulate(builder);
 

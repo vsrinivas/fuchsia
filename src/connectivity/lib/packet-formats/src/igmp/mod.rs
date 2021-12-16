@@ -2,9 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Internet Group Management Protocol.
+//! Parsing and serialization of Internet Group Management Protocol (IGMP)
+//! packets.
 //!
-//! Wire serialization and deserialization functions.
+//! This module supports both IGMPv2 and IGMPv3.
+//!
+//! The IGMPv2 packet format is defined in [RFC 2236 Section 2], and the IGMPv3
+//! packet format is defined in [RFC 3376 Section 4].
+//!
+//! [RFC 2236 Section 2]: https://datatracker.ietf.org/doc/html/rfc2236#section-2
+//! [RFC 3376 Section 4]: https://datatracker.ietf.org/doc/html/rfc3376#section-4
 
 pub mod messages;
 mod types;

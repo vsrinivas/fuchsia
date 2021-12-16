@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Parsing of IPv6 Extension Headers.
+//! Parsing and serialization of IPv6 extension headers.
+//!
+//! The IPv6 extension header format is defined in [RFC 8200 Section 4].
+//!
+//! [RFC 8200 Section 4]: https://datatracker.ietf.org/doc/html/rfc8200#section-4
 
 use core::convert::TryFrom;
 use core::marker::PhantomData;

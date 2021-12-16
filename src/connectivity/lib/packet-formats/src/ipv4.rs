@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 //! Parsing and serialization of IPv4 packets.
+//!
+//! The IPv4 packet format is defined in [RFC 791 Section 3.1].
+//!
+//! [RFC 791 Section 3.1]: https://datatracker.ietf.org/doc/html/rfc791#section-3.1
 
 use alloc::vec::Vec;
 use core::borrow::Borrow;
@@ -26,13 +30,14 @@ use crate::U16;
 pub(crate) use self::inner::IPV4_MIN_HDR_LEN;
 use self::options::{Ipv4Option, Ipv4OptionsImpl};
 
-const HDR_PREFIX_LEN: usize = 20;
+/// The length of the fixed prefix of an IPv4 header (preceding the options).
+pub const HDR_PREFIX_LEN: usize = 20;
 
 /// The maximum length of an IPv4 header.
-const IPV4_MAX_HDR_LEN: usize = 60;
+pub const MAX_HDR_LEN: usize = 60;
 
 /// The maximum length for options in an IPv4 header.
-const MAX_OPTIONS_LEN: usize = IPV4_MAX_HDR_LEN - HDR_PREFIX_LEN;
+pub const MAX_OPTIONS_LEN: usize = MAX_HDR_LEN - HDR_PREFIX_LEN;
 
 /// The range of bytes within an IPv4 header buffer that the fragment data fields uses.
 const IPV4_FRAGMENT_DATA_BYTE_RANGE: Range<usize> = 4..8;
@@ -131,7 +136,7 @@ impl HeaderPrefix {
 /// Provides common access to IPv4 header fields.
 ///
 /// `Ipv4Header` provides access to IPv4 header fields as a common
-/// implementation for both [`Ipv4Packet`] and [`Ipv4PacketRaw`]
+/// implementation for both [`Ipv4Packet`] and [`Ipv4PacketRaw`].
 pub trait Ipv4Header {
     /// Gets a reference to the IPv4 [`HeaderPrefix`].
     fn get_header_prefix(&self) -> &HeaderPrefix;
@@ -479,6 +484,11 @@ impl<B: ByteSlice> Ipv4PacketRaw<B> {
 /// [`Options`]: packet::records::options::Options
 type Options<B> = packet::records::options::Options<B, Ipv4OptionsImpl>;
 
+/// Options provided to [`Ipv4PacketBuilderWithOptions::new`] exceed
+/// [`MAX_OPTIONS_LEN`] when serialized.
+#[derive(Debug)]
+pub struct Ipv4OptionsTooLongError;
+
 /// A PacketBuilder for Ipv4 Packets but with options.
 #[derive(Debug)]
 pub struct Ipv4PacketBuilderWithOptions<'a, I> {
@@ -492,28 +502,25 @@ where
     I::Item: Borrow<Ipv4Option<'a>>,
 {
     /// Creates a new IPv4 packet builder without options.
-    pub fn new<T: IntoIterator<Item = I::Item, IntoIter = I>>(
+    ///
+    /// Returns `Err` if the packet header would exceed the maximum length of
+    /// [`MAX_HDR_LEN`]. This happens if the `options`, when serialized, would
+    /// exceed [`MAX_OPTIONS_LEN`].
+    pub fn new<T: IntoIterator<IntoIter = I>>(
         prefix_builder: Ipv4PacketBuilder,
         options: T,
-    ) -> Option<Ipv4PacketBuilderWithOptions<'a, I>> {
+    ) -> Result<Ipv4PacketBuilderWithOptions<'a, I>, Ipv4OptionsTooLongError> {
         let options = OptionSequenceBuilder::new(options.into_iter());
-        // The maximum header length for IPv4 packet is 60 bytes, minus the fixed 40 bytes,
-        // we only have 40 bytes for options.
         if options.serialized_len() > MAX_OPTIONS_LEN {
-            return None;
+            return Err(Ipv4OptionsTooLongError);
         }
-        Some(Ipv4PacketBuilderWithOptions { prefix_builder, options })
+        Ok(Ipv4PacketBuilderWithOptions { prefix_builder, options })
     }
 
     fn aligned_options_len(&self) -> usize {
-        let raw_len = self.options.serialized_len();
-        // align to the next 4-byte boundary.
-        next_multiple_of_four(raw_len)
+        // Round up to the next 4-byte boundary.
+        crate::utils::round_to_next_multiple_of_four(self.options.serialized_len())
     }
-}
-
-fn next_multiple_of_four(x: usize) -> usize {
-    (x + 3) & !3
 }
 
 impl<'a, I> PacketBuilder for Ipv4PacketBuilderWithOptions<'a, I>
@@ -528,13 +535,14 @@ where
     }
 
     fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
-        let (mut header, body, _) = buffer.parts();
-        // implements BufferViewMut
+        let (mut header, _body, _footer) = buffer.parts();
+        // Implements BufferViewMut.
         let mut header = &mut header;
         let opt_len = self.aligned_options_len();
-        let options = header.take_back_zero(opt_len).expect("too few bytes for Ipv4 options");
-        self.options.serialize_into(options);
-        self.prefix_builder.write_header_prefix(header, options, body.len());
+        let opts = header.take_back_zero(opt_len).expect("too few bytes for Ipv4 options");
+        let Ipv4PacketBuilderWithOptions { prefix_builder, options } = self;
+        options.serialize_into(opts);
+        prefix_builder.serialize(buffer);
     }
 }
 
@@ -625,19 +633,19 @@ impl Ipv4PacketBuilder {
         assert!(fragment_offset < 1 << 13, "invalid fragment offset: {}", fragment_offset);
         self.frag_off = fragment_offset;
     }
+}
 
-    /// Writes a `HeaderPrefix` to the beginning of `buffer` according to the
-    /// given `options` and `body`.
-    fn write_header_prefix<B: ByteSliceMut, BV: BufferViewMut<B>>(
-        &self,
-        mut buffer: BV,
-        options: &[u8],
-        body_len: usize,
-    ) {
-        let header_len = core::mem::size_of::<HeaderPrefix>() + options.len();
-        let total_len = header_len + body_len;
-        assert_eq!(header_len % 4, 0);
-        let ihl: u8 = u8::try_from(header_len / 4).expect("Header too large");
+impl PacketBuilder for Ipv4PacketBuilder {
+    fn constraints(&self) -> PacketConstraints {
+        PacketConstraints::new(IPV4_MIN_HDR_LEN, 0, 0, (1 << 16) - 1 - IPV4_MIN_HDR_LEN)
+    }
+
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
+        let (mut header, body, _footer) = buffer.parts();
+
+        let total_len = header.len() + body.len();
+        assert_eq!(header.len() % 4, 0);
+        let ihl: u8 = u8::try_from(header.len() / 4).expect("Header too large");
 
         // As Per [RFC 6864 Section 2]:
         //
@@ -680,20 +688,11 @@ impl Ipv4PacketBuilder {
             self.dst_ip,
         );
 
+        let options = &header[HDR_PREFIX_LEN..];
         let checksum = compute_header_checksum(hdr_prefix.as_bytes(), options);
         hdr_prefix.hdr_checksum = checksum;
-        buffer.write_obj_front(&hdr_prefix).expect("too few bytes for IPv4 header prefix");
-    }
-}
-
-impl PacketBuilder for Ipv4PacketBuilder {
-    fn constraints(&self) -> PacketConstraints {
-        PacketConstraints::new(IPV4_MIN_HDR_LEN, 0, 0, (1 << 16) - 1 - IPV4_MIN_HDR_LEN)
-    }
-
-    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
-        let (mut header, body, _) = buffer.parts();
-        self.write_header_prefix(&mut header, &[][..], body.len());
+        let mut header = &mut header;
+        header.write_obj_front(&hdr_prefix).expect("too few bytes for IPv4 header prefix");
     }
 }
 
@@ -1258,19 +1257,5 @@ mod tests {
         let bytes = &hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[0..10];
         assert!(buf.parse::<Ipv4PacketRaw<_>>().is_err());
-    }
-
-    #[test]
-    fn test_next_multiple_of_four() {
-        for x in 0usize..=(std::u16::MAX - 3) as usize {
-            let y = next_multiple_of_four(x);
-            assert_eq!(y % 4, 0);
-            assert!(y >= x);
-            if x % 4 == 0 {
-                assert_eq!(x, y);
-            } else {
-                assert_eq!(x + (4 - x % 4), y);
-            }
-        }
     }
 }

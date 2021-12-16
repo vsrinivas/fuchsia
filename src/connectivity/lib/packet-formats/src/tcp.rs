@@ -3,18 +3,25 @@
 // found in the LICENSE file.
 
 //! Parsing and serialization of TCP segments.
+//!
+//! The TCP segment format is defined in [RFC 791 Section 3.3].
+//!
+//! [RFC 793 Section 3.1]: https://datatracker.ietf.org/doc/html/rfc793#section-3.1
 
+use core::borrow::Borrow;
+use core::convert::TryInto as _;
+use core::fmt::Debug;
 #[cfg(test)]
-use core::fmt::{self, Debug, Formatter};
+use core::fmt::{self, Formatter};
 use core::num::NonZeroU16;
 use core::ops::Range;
 
 use explicit::ResultExt as _;
 use net_types::ip::IpAddress;
-use packet::records::options::{Options, OptionsRaw};
+use packet::records::options::OptionsRaw;
 use packet::{
-    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
-    ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, FragmentedByteSlice, FromRaw, InnerPacketBuilder, MaybeParsed,
+    PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -23,13 +30,19 @@ use crate::ip::IpProto;
 use crate::{compute_transport_checksum_parts, compute_transport_checksum_serialize, U16, U32};
 
 use self::data_offset_reserved_flags::DataOffsetReservedFlags;
-use self::options::TcpOptionsImpl;
+use self::options::{TcpOption, TcpOptionsImpl};
 
-const HDR_PREFIX_LEN: usize = 20;
+/// The length of the fixed prefix of a TCP header (preceding the options).
+pub const HDR_PREFIX_LEN: usize = 20;
+
+/// The maximum length of a TCP header.
+pub const MAX_HDR_LEN: usize = 60;
+
+/// The maximum length of the options in a TCP header.
+pub const MAX_OPTIONS_LEN: usize = MAX_HDR_LEN - HDR_PREFIX_LEN;
+
 const CHECKSUM_OFFSET: usize = 16;
 const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
-const MIN_DATA_OFFSET: u8 = 5;
-pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 
 #[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
@@ -191,7 +204,7 @@ mod data_offset_reserved_flags {
 /// valid.
 pub struct TcpSegment<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
-    options: Options<B, TcpOptionsImpl>,
+    options: Options<B>,
     body: B,
 }
 
@@ -276,7 +289,7 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
 
 impl<B: ByteSlice> TcpSegment<B> {
     /// Iterate over the TCP header options.
-    pub fn iter_options(&self) -> impl Iterator<Item = options::TcpOption<'_>> {
+    pub fn iter_options(&self) -> impl Iterator<Item = TcpOption<'_>> + Debug + Clone {
         self.options.iter()
     }
 
@@ -359,16 +372,32 @@ impl<B: ByteSlice> TcpSegment<B> {
     }
 
     /// Constructs a builder with the same contents as this packet.
-    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
-        TcpSegmentBuilder {
-            src_ip,
-            dst_ip,
-            src_port: Some(self.src_port()),
-            dst_port: Some(self.dst_port()),
-            seq_num: self.seq_num(),
-            ack_num: self.hdr_prefix.ack.get(),
-            data_offset_reserved_flags: self.hdr_prefix.data_offset_reserved_flags,
-            window_size: self.window_size(),
+    pub fn builder<A: IpAddress>(
+        &self,
+        src_ip: A,
+        dst_ip: A,
+    ) -> TcpSegmentBuilderWithOptions<A, &[u8]> {
+        TcpSegmentBuilderWithOptions {
+            prefix_builder: TcpSegmentBuilder {
+                src_ip,
+                dst_ip,
+                src_port: Some(self.src_port()),
+                dst_port: Some(self.dst_port()),
+                seq_num: self.seq_num(),
+                ack_num: self.hdr_prefix.ack.get(),
+                data_offset_reserved_flags: self.hdr_prefix.data_offset_reserved_flags,
+                window_size: self.window_size(),
+            },
+            // By using the raw bytes rather than parsing and using the
+            // resulting iterator to construct a new builder for the options, we
+            // ensure that:
+            // - even if we fail to parse some options, we can still construct a
+            //   builder
+            // - even if our serializing code makes different choices about how
+            //   to serialize (in cases in which multiple serializations are
+            //   valid), the resulting builder still produces an identical
+            //   packet to the original
+            options: self.options.bytes(),
         }
     }
 }
@@ -478,25 +507,112 @@ impl<B: ByteSlice> TcpSegmentRaw<B> {
     ///
     /// [Service Name and Transport Protocol Port Number Registry]: https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
     /// [RFC 793]: https://datatracker.ietf.org/doc/html/rfc793
-    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> Option<TcpSegmentBuilder<A>> {
-        self.hdr_prefix.as_ref().complete().ok_checked::<&PartialHeaderPrefix<B>>().map(
-            |hdr_prefix| TcpSegmentBuilder {
-                src_ip,
-                dst_ip,
-                // Might be zero, which is illegal.
-                src_port: NonZeroU16::new(hdr_prefix.src_port.get()),
-                // Might be zero, which is illegal.
-                dst_port: NonZeroU16::new(hdr_prefix.dst_port.get()),
-                // All values are valid.
-                seq_num: hdr_prefix.seq_num.get(),
-                // Might be nonzero even if the ACK flag is not set.
-                ack_num: hdr_prefix.ack.get(),
-                // Reserved zero bits may be set.
-                data_offset_reserved_flags: hdr_prefix.data_offset_reserved_flags,
-                // All values are valid.
-                window_size: hdr_prefix.window_size.get(),
-            },
-        )
+    pub fn builder<A: IpAddress>(
+        &self,
+        src_ip: A,
+        dst_ip: A,
+    ) -> Option<TcpSegmentBuilderWithOptions<A, &[u8]>> {
+        self.hdr_prefix
+            .as_ref()
+            .complete()
+            .ok_checked::<&PartialHeaderPrefix<B>>()
+            .zip(self.options.as_ref().complete().ok_checked::<&B>())
+            .map(|(hdr_prefix, options)| TcpSegmentBuilderWithOptions {
+                prefix_builder: TcpSegmentBuilder {
+                    src_ip,
+                    dst_ip,
+                    // Might be zero, which is illegal.
+                    src_port: NonZeroU16::new(hdr_prefix.src_port.get()),
+                    // Might be zero, which is illegal.
+                    dst_port: NonZeroU16::new(hdr_prefix.dst_port.get()),
+                    // All values are valid.
+                    seq_num: hdr_prefix.seq_num.get(),
+                    // Might be nonzero even if the ACK flag is not set.
+                    ack_num: hdr_prefix.ack.get(),
+                    // Reserved zero bits may be set.
+                    data_offset_reserved_flags: hdr_prefix.data_offset_reserved_flags,
+                    // All values are valid.
+                    window_size: hdr_prefix.window_size.get(),
+                },
+                options: options.bytes(),
+            })
+    }
+}
+
+/// An options parser for TCP options.
+///
+/// See [`Options`] for more details.
+///
+/// [`Options`]: packet::records::options::Options
+type Options<B> = packet::records::options::Options<B, TcpOptionsImpl>;
+
+/// An option sequence builder for TCP options.
+///
+/// See [`OptionSequenceBuilder`] for more details.
+///
+/// [`OptionSequenceBuilder`]: packet::records::options::OptionSequenceBuilder
+type OptionSequenceBuilder<'a, I> =
+    packet::records::options::OptionSequenceBuilder<TcpOption<'a>, I>;
+
+/// Options provided to [`TcpSegmentBuilderWithOptions::new`] exceed
+/// [`MAX_OPTIONS_LEN`] when serialized.
+#[derive(Debug)]
+pub struct TcpOptionsTooLongError;
+
+/// A builder for TCP segments with options
+#[derive(Debug)]
+pub struct TcpSegmentBuilderWithOptions<A: IpAddress, O> {
+    prefix_builder: TcpSegmentBuilder<A>,
+    options: O,
+}
+
+impl<'a, A, I> TcpSegmentBuilderWithOptions<A, OptionSequenceBuilder<'a, I>>
+where
+    A: IpAddress,
+    I: Iterator + Clone,
+    I::Item: Borrow<TcpOption<'a>>,
+{
+    /// Creates a `TcpSegmentBuilderWithOptions`.
+    ///
+    /// Returns `Err` if the segment header would exceed the maximum length of
+    /// [`MAX_HDR_LEN`]. This happens if the `options`, when serialized, would
+    /// exceed [`MAX_OPTIONS_LEN`].
+    pub fn new<T: IntoIterator<IntoIter = I>>(
+        prefix_builder: TcpSegmentBuilder<A>,
+        options: T,
+    ) -> Result<TcpSegmentBuilderWithOptions<A, OptionSequenceBuilder<'a, I>>, TcpOptionsTooLongError>
+    {
+        let options = OptionSequenceBuilder::new(options.into_iter());
+        if options.serialized_len() > MAX_OPTIONS_LEN {
+            return Err(TcpOptionsTooLongError);
+        }
+        Ok(TcpSegmentBuilderWithOptions { prefix_builder, options })
+    }
+}
+
+impl<A: IpAddress, O: InnerPacketBuilder> TcpSegmentBuilderWithOptions<A, O> {
+    fn aligned_options_len(&self) -> usize {
+        // Round up to the next 4-byte boundary.
+        crate::utils::round_to_next_multiple_of_four(self.options.bytes_len())
+    }
+}
+impl<A: IpAddress, O: InnerPacketBuilder> PacketBuilder for TcpSegmentBuilderWithOptions<A, O> {
+    fn constraints(&self) -> PacketConstraints {
+        let header_len = HDR_PREFIX_LEN + self.aligned_options_len();
+        assert_eq!(header_len % 4, 0);
+        PacketConstraints::new(header_len, 0, 0, (1 << 16) - 1 - header_len)
+    }
+
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
+        let (mut header, _body, _footer): (_, &mut FragmentedByteSlice<'_, _>, &mut [u8]) =
+            buffer.parts();
+        // `&mut header` has type `&mut &mut [u8]`, which implements
+        // `BufferViewMut`, giving us the `take_back_zero` method.
+        let mut header = &mut header;
+        let opt_len = self.aligned_options_len();
+        let options = header.take_back_zero(opt_len).expect("too few bytes for TCP options");
+        self.options.serialize(options);
+        self.prefix_builder.serialize(buffer);
     }
 }
 
@@ -570,17 +686,20 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
 
 impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
     fn constraints(&self) -> PacketConstraints {
-        PacketConstraints::new(TCP_MIN_HDR_LEN, 0, 0, core::usize::MAX)
+        PacketConstraints::new(HDR_PREFIX_LEN, 0, 0, core::usize::MAX)
     }
 
     fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let mut header = buffer.header();
-        // implements BufferViewMut, giving us write_obj_front method
+        let hdr_len = header.len();
+        // Implements BufferViewMut, giving us write_obj_front method.
         let mut header = &mut header;
 
+        debug_assert_eq!(hdr_len % 4, 0, "header length isn't a multiple of 4: {}", hdr_len);
         let mut data_offset_reserved_flags = self.data_offset_reserved_flags;
-        // Hard-coded until we support serializing options.
-        data_offset_reserved_flags.set_data_offset(MIN_DATA_OFFSET);
+        data_offset_reserved_flags.set_data_offset(
+            (hdr_len / 4).try_into().expect("header length too long for TCP segment"),
+        );
         header
             .write_obj_front(&HeaderPrefix::new(
                 self.src_port.map_or(0, NonZeroU16::get),
@@ -616,10 +735,12 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
 
 /// Parsing and serialization of TCP options.
 pub mod options {
-    use packet::records::options::{OptionLayout, OptionParseLayout, OptionsImpl};
+    use packet::records::options::{OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl};
+    use packet::BufferViewMut as _;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
+    use super::*;
     use crate::U32;
 
     const OPTION_KIND_EOL: u8 = 0;
@@ -639,7 +760,6 @@ pub mod options {
     ///
     /// [Wikipedia]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
     /// [RFC 793]: https://tools.ietf.org/html/rfc793#page-17
-    #[allow(missing_docs)]
     #[derive(Copy, Clone, Eq, PartialEq, Debug)]
     pub enum TcpOption<'a> {
         /// A Maximum Segment Size (MSS) option.
@@ -654,6 +774,7 @@ pub mod options {
         /// the range [0, 4].
         Sack(&'a [TcpSackBlock]),
         /// A timestamp option.
+        #[allow(missing_docs)]
         Timestamp { ts_val: u32, ts_echo_reply: u32 },
     }
 
@@ -690,7 +811,7 @@ pub mod options {
     }
 
     /// An implementation of [`OptionsImpl`] for TCP options.
-    #[derive(Debug)]
+    #[derive(Copy, Clone, Debug)]
     pub struct TcpOptionsImpl;
 
     impl OptionLayout for TcpOptionsImpl {
@@ -746,6 +867,46 @@ pub mod options {
                 }
                 _ => Ok(None),
             }
+        }
+    }
+
+    impl<'a> OptionBuilder for TcpOption<'a> {
+        type Layout = TcpOptionsImpl;
+
+        fn serialized_len(&self) -> usize {
+            match self {
+                TcpOption::Mss(mss) => mss.as_bytes().len(),
+                TcpOption::WindowScale(ws) => ws.as_bytes().len(),
+                TcpOption::SackPermitted => 0,
+                TcpOption::Sack(sack) => sack.as_bytes().len(),
+                TcpOption::Timestamp { ts_val, ts_echo_reply } => {
+                    ts_val.as_bytes().len() + ts_echo_reply.as_bytes().len()
+                }
+            }
+        }
+
+        fn option_kind(&self) -> u8 {
+            match self {
+                TcpOption::Mss(_) => OPTION_KIND_MSS,
+                TcpOption::WindowScale(_) => OPTION_KIND_WINDOW_SCALE,
+                TcpOption::SackPermitted => OPTION_KIND_SACK_PERMITTED,
+                TcpOption::Sack(_) => OPTION_KIND_SACK,
+                TcpOption::Timestamp { .. } => OPTION_KIND_TIMESTAMP,
+            }
+        }
+
+        fn serialize_into(&self, mut buffer: &mut [u8]) {
+            let mut buffer = &mut buffer;
+            match self {
+                TcpOption::Mss(mss) => buffer.write_obj_front(&U16::new(*mss)),
+                TcpOption::WindowScale(ws) => buffer.write_obj_front(ws),
+                TcpOption::SackPermitted => Some(()),
+                TcpOption::Sack(block) => buffer.write_obj_front(*block),
+                TcpOption::Timestamp { ts_val, ts_echo_reply } => buffer
+                    .write_obj_front(&U32::new(*ts_val))
+                    .and(buffer.write_obj_front(&U32::new(*ts_echo_reply))),
+            }
+            .expect("buffer too short for TCP header option")
         }
     }
 
@@ -812,13 +973,45 @@ mod tests {
             .unwrap();
         verify_tcp_segment(&segment, TCP_SEGMENT);
 
-        // TODO(joshlf): Uncomment once we support serializing options
-        // let buffer = segment.body()
-        //     .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
-        //     .encapsulate(packet.builder())
-        //     .encapsulate(frame.builder())
-        //     .serialize_vec_outer().unwrap();
-        // assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        // Serialize using `segment.builder()` to construct a
+        // `TcpSegmentBuilderWithOptions`, which simply copies the bytes of the
+        // options without parsing or iterating over them.
+        let buffer = Buf::new(segment.body().to_vec(), ..)
+            .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
+            .encapsulate(packet.builder())
+            .encapsulate(frame.builder())
+            .serialize_vec_outer()
+            .unwrap();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
+
+        // Serialize using a manually-created `TcpSegmentBuilderWithOptions`
+        // which uses `segment.iter_options()` as its options. This allows us to
+        // test both `iter_options` and serializing from an options iterator.
+        //
+        // Note that we cannot compare the serialized bytes verbatim. The reason
+        // is that the TCP segment in `ETHERNET_FRAME` uses a different strategy
+        // to ensure that the options are a multiple of four bytes in length
+        // than we do (`ETHERNET_FRAME`'s approach is to add NOP options in the
+        // middle of the sequence, while ours is to pad with End of Options
+        // options at the end). Instead, we parse and verify the parsed segment.
+        let mut buffer = Buf::new(segment.body().to_vec(), ..)
+            .encapsulate(
+                TcpSegmentBuilderWithOptions::new(
+                    segment.builder(packet.src_ip(), packet.dst_ip()).prefix_builder,
+                    segment.iter_options(),
+                )
+                .unwrap(),
+            )
+            .encapsulate(packet.builder())
+            .encapsulate(frame.builder())
+            .serialize_vec_outer()
+            .unwrap();
+        let _: EthernetFrame<_> = buffer.parse_with(EthernetFrameLengthCheck::Check).unwrap();
+        let _: Ipv4Packet<_> = buffer.parse().unwrap();
+        let segment = buffer
+            .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(packet.src_ip(), packet.dst_ip()))
+            .unwrap();
+        verify_tcp_segment(&segment, TCP_SEGMENT);
     }
 
     #[test]
@@ -839,13 +1032,45 @@ mod tests {
             .unwrap();
         verify_tcp_segment(&segment, TCP_SEGMENT);
 
-        // TODO(joshlf): Uncomment once we support serializing options
-        // let buffer = segment.body()
-        //     .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
-        //     .encapsulate(packet.builder())
-        //     .encapsulate(frame.builder())
-        //     .serialize_outer().unwrap();
-        // assert_eq!(buffer.as_ref(), ETHERNET_FRAME_BYTES);
+        // Serialize using `segment.builder()` to construct a
+        // `TcpSegmentBuilderWithOptions`, which simply copies the bytes of the
+        // options without parsing or iterating over them.
+        let buffer = Buf::new(segment.body().to_vec(), ..)
+            .encapsulate(segment.builder(packet.src_ip(), packet.dst_ip()))
+            .encapsulate(packet.builder())
+            .encapsulate(frame.builder())
+            .serialize_vec_outer()
+            .unwrap();
+        assert_eq!(buffer.as_ref(), ETHERNET_FRAME.bytes);
+
+        // Serialize using a manually-created `TcpSegmentBuilderWithOptions`
+        // which uses `segment.iter_options()` as its options. This allows us to
+        // test both `iter_options` and serializing from an options iterator.
+        //
+        // Note that we cannot compare the serialized bytes verbatim. The reason
+        // is that the TCP segment in `ETHERNET_FRAME` uses a different strategy
+        // to ensure that the options are a multiple of four bytes in length
+        // than we do (`ETHERNET_FRAME`'s approach is to add NOP options in the
+        // middle of the sequence, while ours is to pad with End of Options
+        // options at the end). Instead, we parse and verify the parsed segment.
+        let mut buffer = Buf::new(segment.body().to_vec(), ..)
+            .encapsulate(
+                TcpSegmentBuilderWithOptions::new(
+                    segment.builder(packet.src_ip(), packet.dst_ip()).prefix_builder,
+                    segment.iter_options(),
+                )
+                .unwrap(),
+            )
+            .encapsulate(packet.builder())
+            .encapsulate(frame.builder())
+            .serialize_vec_outer()
+            .unwrap();
+        let _: EthernetFrame<_> = buffer.parse_with(EthernetFrameLengthCheck::Check).unwrap();
+        let _: Ipv6Packet<_> = buffer.parse().unwrap();
+        let segment = buffer
+            .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(packet.src_ip(), packet.dst_ip()))
+            .unwrap();
+        verify_tcp_segment(&segment, TCP_SEGMENT);
     }
 
     fn hdr_prefix_to_bytes(hdr_prefix: HeaderPrefix) -> [u8; HDR_PREFIX_LEN] {
@@ -861,16 +1086,7 @@ mod tests {
     // checksum (assuming no body and the src/dst IPs TEST_SRC_IPV4 and
     // TEST_DST_IPV4).
     fn new_hdr_prefix() -> HeaderPrefix {
-        HeaderPrefix::new(
-            1,
-            2,
-            0,
-            0,
-            DataOffsetReservedFlags::new(MIN_DATA_OFFSET),
-            0,
-            [0x9f, 0xce],
-            0,
-        )
+        HeaderPrefix::new(1, 2, 0, 0, DataOffsetReservedFlags::new(5), 0, [0x9f, 0xce], 0)
     }
 
     #[test]

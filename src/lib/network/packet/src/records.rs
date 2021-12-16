@@ -183,8 +183,17 @@ where
     }
 }
 
+impl<B: Deref<Target = [u8]>, R: RecordsImplLayout> RecordsRaw<B, R> {
+    /// Gets the underlying bytes.
+    ///
+    /// `bytes` returns a reference to the byte slice backing this `RecordsRaw`.
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
 /// An iterator over the records contained inside a [`Records`] instance.
-#[derive(Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct RecordsIter<'a, R: RecordsImpl<'a>> {
     bytes: &'a [u8],
     records_left: usize,
@@ -1495,7 +1504,7 @@ pub mod options {
     ///
     /// `OptionsImplBridge` is `#[doc(hidden)]`; it is only `pub` because it
     /// appears in the type aliases `Options` and `OptionsRaw`.
-    #[derive(Debug)]
+    #[derive(Copy, Clone, Debug)]
     #[doc(hidden)]
     pub struct OptionsImplBridge<O>(PhantomData<O>);
 

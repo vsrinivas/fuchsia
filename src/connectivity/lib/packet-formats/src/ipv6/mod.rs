@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 //! Parsing and serialization of IPv6 packets.
+//!
+//! The IPv6 packet format is defined in [RFC 8200] Sections 3 and 4.
+//!
+//! [RFC 8200]: https://datatracker.ietf.org/doc/html/rfc8200
 
 pub mod ext_hdrs;
 

@@ -2,7 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Parsing and serialization of Internet Control Message Protocol (ICMP) packets.
+//! Parsing and serialization of Internet Control Message Protocol (ICMP)
+//! packets.
+//!
+//! This module supports both ICMPv4 and ICMPv6.
+//!
+//! The ICMPv4 packet format is defined in [RFC 792], and the ICMPv6
+//! packet format is defined in [RFC 4443 Section 2.1].
+//!
+//! [RFC 792]: https://datatracker.ietf.org/doc/html/rfc792
+//! [RFC 4443 Section 2.1]: https://datatracker.ietf.org/doc/html/rfc4443#section-2.1
 
 #[macro_use]
 mod macros;

@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 //! Parsing and serialization of UDP packets.
+//!
+//! The UDP packet format is defined in [RFC 768].
+//!
+//! [RFC 768]: https://datatracker.ietf.org/doc/html/rfc768
 
 use core::convert::TryInto;
 #[cfg(test)]
