@@ -397,6 +397,7 @@ if (current_toolchain == dart_toolchain) {
                    _all_deps_sources_file,
                    _packages_path,
                    _pubspec,
+                   prebuilt_dart,
                    source_file,
                  ] + rebase_path(rebased_sources, ".", root_build_dir)
 
