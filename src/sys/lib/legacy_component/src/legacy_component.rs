@@ -43,7 +43,11 @@ impl LegacyComponent {
         // svc.
         let namespace = start_info.ns.ok_or(format_err!("ns cannot be NONE"))?;
         if namespace.len() > 2 {
-            return Err(format_err!("v1 component namespace contains unexpected directories"));
+            return Err(format_err!(
+                "v1 component namespace contains unexpected directories. \
+            This error happens when wrapped cml file explicitly uses a storage capability. \
+            Remove the use clause and let your cmx file handle the storage capability."
+            ));
         }
         let mut svc_names = vec![];
         let mut svc_dir_proxy = None;
