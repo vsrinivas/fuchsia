@@ -196,6 +196,22 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2 as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXPORT => {
+                let (control, mut response): (
+                    virtio_magma_export_ctrl_t,
+                    virtio_magma_export_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                let infos = self.infos.lock();
+                let image_info = infos.get(&(control.buffer as usize)).ok_or(errno!(EINVAL))?;
+                let file = ImageFile::new(task.kernel(), image_info.clone());
+                let fd = task.files.add_with_flags(file, FdFlags::empty())?;
+
+                response.buffer_handle_out = fd.raw() as usize;
+                response.result_return = MAGMA_STATUS_OK as u64;
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
