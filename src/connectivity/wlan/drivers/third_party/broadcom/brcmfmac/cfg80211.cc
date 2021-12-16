@@ -1899,6 +1899,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   // Attempt to clear counters here and ignore the error. Synaptics indicates that
   // some counters might be active even when the client is not connected.
   brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
+  brcmf_fil_iovar_data_set(ifp, "wme_clear_counters", nullptr, 0, &fw_err);
   BRCMF_DBG(CONN, "Sending join request");
   err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, join_params_size, &fw_err);
   if (err != ZX_OK) {
@@ -2058,6 +2059,36 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
          ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
          ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
 
+  // Get the WME counters
+  wl_wme_cnt_t wme_cnt;
+  err = brcmf_fil_iovar_data_get(ifp, "wme_counters", &wme_cnt, sizeof(wl_wme_cnt_t), &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_INFO("Unable to get WME counters err: %s fw err %s", zx_status_get_string(err),
+               brcmf_fil_get_errstr(fw_err));
+  } else {
+    zxlogf(INFO, "WME counters - Rx: %d; Rx Bad: %d; Tx: %d; Tx Bad: %d",
+           wme_cnt.rx[AC_VO].packets + wme_cnt.rx[AC_VI].packets + wme_cnt.rx[AC_BE].packets +
+               wme_cnt.rx[AC_BK].packets,
+           wme_cnt.rx_failed[AC_VO].packets + wme_cnt.rx_failed[AC_VI].packets +
+               wme_cnt.rx_failed[AC_BE].packets + wme_cnt.rx_failed[AC_BK].packets,
+           wme_cnt.tx[AC_VO].packets + wme_cnt.tx[AC_VI].packets + wme_cnt.tx[AC_BE].packets +
+               wme_cnt.tx[AC_BK].packets,
+           wme_cnt.tx_failed[AC_VO].packets + wme_cnt.tx_failed[AC_VI].packets +
+               wme_cnt.tx_failed[AC_BE].packets + wme_cnt.tx_failed[AC_BK].packets);
+    zxlogf(INFO, "VO AC - Rx: %d; Rx Bad: %d; Tx: %d; Tx Bad: %d", wme_cnt.rx[AC_VO].packets,
+           wme_cnt.rx_failed[AC_VO].packets, wme_cnt.tx[AC_VO].packets,
+           wme_cnt.tx_failed[AC_VO].packets);
+    zxlogf(INFO, "VI AC - Rx: %d; Rx Bad: %d; Tx: %d; Tx Bad: %d", wme_cnt.rx[AC_VI].packets,
+           wme_cnt.rx_failed[AC_VI].packets, wme_cnt.tx[AC_VI].packets,
+           wme_cnt.tx_failed[AC_VI].packets);
+    zxlogf(INFO, "BE AC - Rx: %d; Rx Bad: %d; Tx: %d; Tx Bad: %d", wme_cnt.rx[AC_BE].packets,
+           wme_cnt.rx_failed[AC_BE].packets, wme_cnt.tx[AC_BE].packets,
+           wme_cnt.tx_failed[AC_BE].packets);
+    zxlogf(INFO, "BK AC - Rx: %d; Rx Bad: %d; Tx: %d; Tx Bad: %d", wme_cnt.rx[AC_BK].packets,
+           wme_cnt.rx_failed[AC_BK].packets, wme_cnt.tx[AC_BK].packets,
+           wme_cnt.tx_failed[AC_BK].packets);
+  }
+
   brcmf_bus_log_stats(cfg->pub->bus_if);
   // If the client is connected to a 2.4 GHz channel, log some BT Coex related info
   if (ctl_chan <= CH_MAX_2G_CHANNEL) {
@@ -2120,6 +2151,11 @@ static void brcmf_disconnect_done(struct brcmf_cfg80211_info* cfg) {
     zx_status_t status = brcmf_fil_iovar_data_get(ifp, "reset_cnts", nullptr, 0, &fw_err);
     if (status != ZX_OK) {
       BRCMF_WARN("Failed to clear counters: %s, fw err %s", zx_status_get_string(status),
+                 brcmf_fil_get_errstr(fw_err));
+    }
+    status = brcmf_fil_iovar_data_set(ifp, "wme_clear_counters", nullptr, 0, &fw_err);
+    if (status != ZX_OK) {
+      BRCMF_WARN("Failed to clear WME counters: %s, fw err %s", zx_status_get_string(status),
                  brcmf_fil_get_errstr(fw_err));
     }
   }
