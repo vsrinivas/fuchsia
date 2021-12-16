@@ -476,7 +476,7 @@ void Guest::LaunchContainerShell() {
 
 void Guest::AddMagmaDeviceToContainer() {
   FX_CHECK(maitred_) << "Called AddMagma without a maitre'd connection";
-  FX_LOGS(INFO) << "Adding magma device to container...";
+  FX_LOGS(INFO) << "Adding magma device to container";
   MaitredRunCommandSync(*maitred_,
                         {"/usr/bin/lxc", "config", "device", "add", kContainerName, "magma0",
                          "unix-char", "source=/dev/magma0", "mode=0666"},
@@ -485,6 +485,23 @@ void Guest::AddMagmaDeviceToContainer() {
                             {"LXD_CONF", "/mnt/stateful/lxd_conf"},
                             {"LXD_UNPRIVILEGED_ONLY", "true"},
                         });
+}
+
+void Guest::SetupGPUDriversInContainer() {
+  FX_CHECK(maitred_) << "Called SetupGPUDrivers without a maitre'd connection";
+  FX_LOGS(INFO) << "Setup GPU drivers in container";
+  MaitredRunCommandSync(
+      *maitred_,
+      {"/usr/bin/lxc", "exec", kContainerName, "--", "sh", "-c",
+       "mkdir -p /usr/share/vulkan/icd.d; /usr/bin/update-alternatives --install "
+       "/usr/share/vulkan/icd.d/intel_icd.x86_64.json vulkan-icd "
+       "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.x86_64.json 20; echo "
+       "/opt/google/cros-containers/lib/drivers > /etc/ld.so.conf.d/cros.conf; /sbin/ldconfig"},
+      {
+          {"LXD_DIR", "/mnt/stateful/lxd"},
+          {"LXD_CONF", "/mnt/stateful/lxd_conf"},
+          {"LXD_UNPRIVILEGED_ONLY", "true"},
+      });
 }
 
 void Guest::CreateContainer() {
@@ -582,8 +599,9 @@ void Guest::SetupUser() {
     case vm_tools::tremplin::SetUpUserResponse::EXISTS:
     case vm_tools::tremplin::SetUpUserResponse::SUCCESS:
       FX_LOGS(INFO) << "User created.";
-      LaunchContainerShell();
       AddMagmaDeviceToContainer();
+      SetupGPUDriversInContainer();
+      LaunchContainerShell();
       break;
     case vm_tools::tremplin::SetUpUserResponse::FAILED:
       FX_LOGS(ERROR) << "Failed to create user: " << response.failure_reason();

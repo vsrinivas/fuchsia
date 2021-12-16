@@ -71,6 +71,7 @@ class Guest : public vm_tools::StartupListener::Service,
   void StartTermina();
   void LaunchContainerShell();
   void AddMagmaDeviceToContainer();
+  void SetupGPUDriversInContainer();
   void CreateContainer();
   void StartContainer();
   void SetupUser();
