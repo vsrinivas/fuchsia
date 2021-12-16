@@ -7,11 +7,8 @@
 //! types will be directly deserializable from the PBM, and converted into engine-specific types at
 //! runtime.
 
-use anyhow::Result;
-use sdk_metadata::TargetArchitecture;
+use sdk_metadata::{display_impl, TargetArchitecture};
 use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
 
 /// Selector for which type of hardware acceleration will be enabled for the emulator.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -33,22 +30,7 @@ impl Default for AccelerationMode {
     }
 }
 
-impl FromStr for AccelerationMode {
-    type Err = std::string::String;
-    fn from_str(text: &str) -> Result<Self, std::string::String> {
-        let result = serde_json::from_str(&format!("\"{}\"", text));
-        return match result {
-            Err(e) => {
-                return Err(format!(
-                    "could not parse '{}' as a valid AccelerationMode. \
-                    Please check the help text for allowed values and try again: {:?}",
-                    text, e
-                ))
-            }
-            Ok(v) => Ok(v),
-        };
-    }
-}
+display_impl!(AccelerationMode);
 
 /// Selector for the launcher's output once the system is running.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -70,6 +52,8 @@ impl Default for ConsoleType {
     }
 }
 
+display_impl!(ConsoleType);
+
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum EngineType {
@@ -86,22 +70,7 @@ impl Default for EngineType {
     }
 }
 
-impl FromStr for EngineType {
-    type Err = std::string::String;
-    fn from_str(text: &str) -> Result<Self, std::string::String> {
-        let result = serde_json::from_str(&format!("\"{}\"", text));
-        return match result {
-            Err(e) => {
-                return Err(format!(
-                    "could not parse '{}' as a valid EngineType. \
-                    Please check the help text for allowed values and try again: {:?}",
-                    text, e
-                ))
-            }
-            Ok(v) => Ok(v),
-        };
-    }
-}
+display_impl!(EngineType);
 
 /// Selector for which type of graphics acceleration to enable for the emulator.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
@@ -134,29 +103,7 @@ impl Default for GpuType {
     }
 }
 
-impl fmt::Display for GpuType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let trim: &[char] = &['"'];
-        write!(f, "{}", serde_json::to_value(self).unwrap().to_string().trim_matches(trim))
-    }
-}
-
-impl FromStr for GpuType {
-    type Err = std::string::String;
-    fn from_str(text: &str) -> Result<Self, std::string::String> {
-        let result = serde_json::from_str(&format!("\"{}\"", text));
-        return match result {
-            Err(e) => {
-                return Err(format!(
-                    "could not parse '{}' as a valid GpuType. \
-                    Please check the help text for allowed values and try again: {:?}",
-                    text, e
-                ))
-            }
-            Ok(v) => Ok(v),
-        };
-    }
-}
+display_impl!(GpuType);
 
 /// Selector for the verbosity level of the logs for this instance.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -174,6 +121,8 @@ impl Default for LogLevel {
         LogLevel::Info
     }
 }
+
+display_impl!(LogLevel);
 
 /// Selector for the mode of networking to enable between the guest and host systems.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -195,6 +144,8 @@ impl Default for NetworkingMode {
     }
 }
 
+display_impl!(NetworkingMode);
+
 /// Definition of the CPU type(s) and how many of them to emulate.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct VirtualCpu {
@@ -208,32 +159,34 @@ pub struct VirtualCpu {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
+    use std::str::FromStr;
 
     #[test]
     fn test_accel() -> Result<()> {
-        // Verify it returns a default
+        // Verify it returns a default.
         let _default = AccelerationMode::default();
-        // Deserialize a valid value
+        // Deserialize a valid value.
         assert!(AccelerationMode::from_str("auto").is_ok());
-        // Fail to deserialize and invalid value
+        // Fail to deserialize an invalid value.
         assert!(AccelerationMode::from_str("bad_value").is_err());
         Ok(())
     }
 
     #[test]
     fn test_console() -> Result<()> {
-        // Verify it returns a default
+        // Verify it returns a default.
         let _default = ConsoleType::default();
         Ok(())
     }
 
     #[test]
     fn test_engine() -> Result<()> {
-        // Verify it returns a default
+        // Verify it returns a default.
         let _default = EngineType::default();
-        // Deserialize a valid value
+        // Deserialize a valid value.
         assert!(EngineType::from_str("qemu").is_ok());
-        // Fail to deserialize and invalid value
+        // Fail to deserialize an invalid value.
         assert!(EngineType::from_str("bad_value").is_err());
         Ok(())
     }
@@ -242,32 +195,32 @@ mod tests {
     fn test_gpu() -> Result<()> {
         // Verify it returns a default
         let default = GpuType::default();
-        // Verify we can use default formatting to print it
+        // Verify we can use default formatting to print it.
         println!("{}", default);
-        // Deserialize a valid value
+        // Deserialize a valid value.
         assert!(GpuType::from_str("auto").is_ok());
-        // Fail to deserialize and invalid value
+        // Fail to deserialize an invalid value.
         assert!(GpuType::from_str("bad_value").is_err());
         Ok(())
     }
 
     #[test]
     fn test_log() -> Result<()> {
-        // Verify it returns a default
+        // Verify it returns a default.
         let _default = LogLevel::default();
         Ok(())
     }
 
     #[test]
     fn test_net() -> Result<()> {
-        // Verify it returns a default
+        // Verify it returns a default.
         let _default = NetworkingMode::default();
         Ok(())
     }
 
     #[test]
     fn test_cpu() -> Result<()> {
-        // Verify it returns a default
+        // Verify it returns a default.
         let _default = VirtualCpu::default();
         Ok(())
     }

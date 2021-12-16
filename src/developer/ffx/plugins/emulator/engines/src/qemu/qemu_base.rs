@@ -8,7 +8,7 @@
 use anyhow::{anyhow, bail, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper};
-use ffx_emulator_config::{DataUnits, DeviceConfig, GuestConfig};
+use ffx_emulator_config::{DeviceConfig, GuestConfig};
 use std::{fs, path::PathBuf, process::Command, str};
 
 /// QemuBasedEngine collects the interface for
@@ -80,13 +80,11 @@ pub(crate) trait QemuBasedEngine {
                 fs::copy(src_fvm, &fvm_path).expect("cannot stage fvm file");
 
                 // Resize the fvm image if needed.
-                let image_size = match &device_config.storage.units {
-                    DataUnits::Bytes => format!("{}", device_config.storage.quantity),
-                    DataUnits::Kilobytes => format!("{}K", device_config.storage.quantity),
-                    DataUnits::Megabytes => format!("{}M", device_config.storage.quantity),
-                    DataUnits::Gigabytes => format!("{}G", device_config.storage.quantity),
-                    DataUnits::Terabytes => format!("{}T", device_config.storage.quantity),
-                };
+                let image_size = format!(
+                    "{}{}",
+                    device_config.storage.quantity,
+                    device_config.storage.units.abbreviate()
+                );
                 let fvm_tool = config
                     .get_host_tool(config::FVM_HOST_TOOL)
                     .await
