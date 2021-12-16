@@ -31,7 +31,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import Union
+from typing import List, Union
 import urllib.parse
 
 HELP = """\
@@ -154,6 +154,7 @@ class SyncToCommand:
         self.help: bool = args.help
         self.state: str = args.state
         self.dry_run: bool = args.dry_run
+        self.force: bool = args.force
 
     @property
     def integration_dir(self) -> pathlib.Path:
@@ -203,7 +204,9 @@ class SyncToCommand:
         # intentionally fail if there are any uncommitted changes (which should
         # have been detected by `confirm_ok_to_change_source_code` anyway) to
         # avoid permanently deleting code.
-        self.jiri("runp", "git checkout JIRI_HEAD")
+        self.jiri(
+            "runp", f"-exit-on-error={str(not self.force).lower()}",
+            "git checkout --quiet JIRI_HEAD")
 
         if self.state == "reset":
             self.reset_checkout()
@@ -618,29 +621,51 @@ class SyncToCommand:
         output = self.jiri(
             "runp", "git diff-index --quiet HEAD",
             capture_output=True).stdout or ""
-        dirty_repos = [
-            remove_prefix(line, "FAILED: ").split("=")[0]
-            for line in output.strip().splitlines()
-            if line.startswith("FAILED: ")
-        ]
+        dirty_repos = self.jiri_runp_failures(output)
         if dirty_repos:
             repos_list = "\n".join(f" - {repo}" for repo in dirty_repos)
-            discard_cmd = "jiri runp 'git reset HEAD && git checkout .'"
-            raise Error(
-                "Cannot sync to a different version as the following projects"
-                f" have uncommitted changes:\n{repos_list}"
-                "\nCommit or discard these changes and try again."
-                "\nTo *permanently* discard all staged and unstaged changes, run:"
-                f"\n  {colorize(discard_cmd, Color.RED)}")
+            if self.force:
+                warning = colorize("WARNING", Color.YELLOW)
+                print(
+                    f"{warning}: "
+                    " rebasing on current main branch instead.")
+            else:
+                discard_cmd = f"jiri runp 'git checkout -f HEAD'"
+                force_cmd = f"fx sync-to --force {self.state!r}"
+                # Suggest running `git checkout JIRI_HEAD` *after* rerunning fx
+                # sync-to instead of automatically discarding changes before,
+                # because the workarounds for some Jiri bugs require making
+                # temporary local modifications before syncing.
+                # TODO(olivernewman): Run this automatically if the sync fails
+                # with an "untracked changes" error.
+                fixup_cmd = "jiri runp -uncommitted=true 'git checkout --force JIRI_HEAD'"
+                raise Error(
+                    f"Cannot sync to a different version as the following projects"
+                    f" have uncommitted changes:\n{repos_list}"
+                    f"\nCommit or discard these changes and try again."
+                    f"\n To discard changes in all projects, run the following and then"
+                    f" retry `fx sync-to`:"
+                    f"\n  {colorize(discard_cmd, Color.RED)}"
+                    f"\nOr if that still doesn't work, run:"
+                    f"\n  {colorize(force_cmd, Color.RED)}"
+                    f"\n  {colorize(fixup_cmd, Color.RED)}")
 
         print("Dry-run: nothing will be changed on your local repo.")
 
         while True:  # Loop until we get a valid input.
+            if self.force:
+                uncomitted_info = (
+                    f"Because you set --force, "
+                    f"{colorize('ANY UNCOMMITTED CHANGES WILL BE DISCARDED', Color.RED)}."
+                )
+            else:
+                uncomitted_info = (
+                    "No untracked changes will be discarded, but any"
+                    " repos not currently on JIRI_HEAD will not be"
+                    " automatically restored to their original revisions.")
             print(
-                "I'm about to change the state of your source code."
-                " No untracked changes will be discarded, but any"
-                " repos not currently on JIRI_HEAD will not be"
-                " automatically restored to their original revisions.")
+                f"I'm about to change the state of your source code.\n{uncomitted_info}"
+            )
             yn = input("Are you sure you want to continue [y/n]? ")
             if yn.startswith(("y", "Y")):
                 return
@@ -648,6 +673,15 @@ class SyncToCommand:
                 raise Error("Aborting.", fail=False)
             else:
                 print(colorize(f"Invalid choice: {yn!r}", Color.RED))
+
+    def jiri_runp_failures(self, output: str) -> List[str]:
+        """Return the projects on which `jiri runp` failed."""
+        failed_prefix = "FAILED: "
+        return [
+            remove_prefix(line, failed_prefix).split("=")[0]
+            for line in output.strip().splitlines()
+            if line.startswith(failed_prefix)
+        ]
 
 
 def remove_prefix(s, prefix: str) -> str:
@@ -660,6 +694,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("-h", "--help", action="store_true")
     parser.add_argument("-n", "--dry-run", dest="dry_run", action="store_true")
+    parser.add_argument("-f", "--force", dest="force", action="store_true")
     parser.add_argument("state", nargs="?", default="")
     return parser.parse_args()
 
