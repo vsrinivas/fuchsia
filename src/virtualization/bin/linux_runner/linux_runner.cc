@@ -11,8 +11,7 @@
 namespace linux_runner {
 
 constexpr std::string_view kLinuxEnvironmentName("termina");
-
-constexpr size_t kStatefulImageSize = 12ul * 1024 * 1024 * 1024;  // 12 GB
+constexpr size_t kStatefulImageSize = 40ul * 1024 * 1024 * 1024;  // 40 GB
 
 LinuxRunner::LinuxRunner() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
   context_->outgoing()->AddPublicService(runner_bindings_.GetHandler(this));
