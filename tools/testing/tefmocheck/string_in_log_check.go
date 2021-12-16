@@ -229,6 +229,7 @@ func fuchsiaLogChecks() []FailureModeCheck {
 				// Kernel out-of-memory test "OOMHard" may report false positive leaks.
 				{startString: "RUN   TestOOMHard", endString: "PASS: TestOOMHard"},
 			}},
+			&stringInLogCheck{String: "WARNING: ThreadSanitizer", Type: lt, AttributeToTest: true},
 			&stringInLogCheck{String: "SUMMARY: UndefinedBehaviorSanitizer", Type: lt, AttributeToTest: true},
 			// Match specific OOPS types before finally matching the generic type.
 			&stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks},
