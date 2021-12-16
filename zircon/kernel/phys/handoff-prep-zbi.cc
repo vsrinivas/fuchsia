@@ -43,6 +43,23 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
         handoff_->platform_id = *reinterpret_cast<const zbi_platform_id_t*>(payload.data());
         break;
 
+      case ZBI_TYPE_MEM_CONFIG: {
+        // TODO(fxbug.dev/84107): Hand off the incoming ZBI item data directly
+        // rather than using normalized data from memalloc::Pool so that the
+        // kernel's ingestion of RAM vs RESERVED regions is unperturbed.
+        // Later this will be replaced by proper memory handoff.
+        const ktl::span mem_config{
+            reinterpret_cast<const zbi_mem_range_t*>(payload.data()),
+            payload.size_bytes() / sizeof(zbi_mem_range_t),
+        };
+        fbl::AllocChecker ac;
+        ktl::span handoff_mem_config = New(handoff()->mem_config, ac, mem_config.size());
+        ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for memory handoff",
+                      mem_config.size_bytes());
+        ktl::copy(mem_config.begin(), mem_config.end(), handoff_mem_config.begin());
+        break;
+      }
+
       case ZBI_TYPE_CPU_CONFIG:
       case ZBI_TYPE_CPU_TOPOLOGY:
         // Normalize either item type into zbi_topology_node_t[] for handoff.
