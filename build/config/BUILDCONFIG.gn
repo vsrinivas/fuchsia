@@ -237,6 +237,10 @@ is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
 is_efi_toolchain =
     toolchain_variant.tags + [ "efi" ] - [ "efi" ] != toolchain_variant.tags
 
+# Whether we are in the context of a TSan toolchain.
+is_tsan =
+    toolchain_variant.tags + [ "tsan" ] - [ "tsan" ] != toolchain_variant.tags
+
 # Very unfortunately, GN never sets `current_toolchain` when executing
 # BUILDCONFIG.gn, so the logic below is used to detect when this file
 # is executed in the context of the default toolchain.
