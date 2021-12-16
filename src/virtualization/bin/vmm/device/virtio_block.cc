@@ -298,6 +298,11 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
       callback(size);
     };
 
+    if (format == fuchsia::virtualization::BlockFormat::BLOCK) {
+      CreateRemoteBlockDispatcher(std::move(client), phys_mem_, std::move(nested));
+      return;
+    }
+
     if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
       nested = [nested = std::move(nested)](size_t size,
                                             std::unique_ptr<BlockDispatcher> disp) mutable {

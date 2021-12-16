@@ -8,8 +8,11 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/vmo.h>
+#include <zircon/status.h>
 
 #include <bitmap/rle-bitmap.h>
+#include <block-client/cpp/remote-block-device.h>
+#include <safemath/checked_math.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
@@ -314,4 +317,92 @@ void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base,
     callback(size, std::move(disp));
   };
   file_ptr->Load(base_ptr, std::move(load));
+}
+
+// Dispatcher that fulfills block requests using Block IO.
+class RemoteBlockDispatcher : public BlockDispatcher {
+ public:
+  RemoteBlockDispatcher(std::unique_ptr<block_client::RemoteBlockDevice> device, storage::Vmoid id,
+                        uint32_t block_size, const PhysMem& phys_mem)
+      : device_(std::move(device)),
+        id_(std::move(id)),
+        block_size_(block_size),
+        phys_mem_(phys_mem) {}
+
+  ~RemoteBlockDispatcher() {
+    zx_status_t status = device_->BlockDetachVmo(std::move(id_));
+    FX_CHECK(status == ZX_OK) << "Failed to detach VMO from block device: "
+                              << zx_status_get_string(status);
+  }
+
+ private:
+  std::unique_ptr<block_client::RemoteBlockDevice> device_;
+  storage::Vmoid id_;
+  uint32_t block_size_;
+  const PhysMem& phys_mem_;
+
+  void Sync(Callback callback) override {
+    TRACE_DURATION("machina", "RemoteBlockDispatcher::Sync");
+
+    block_fifo_request_t request{.opcode = BLOCKIO_FLUSH};
+    zx_status_t status = device_->FifoTransaction(&request, 1);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to send sync request";
+    }
+    callback(status);
+  }
+
+  void ReadAt(void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "RemoteBlockDispatcher::ReadAt", "size", size, "off", off);
+    block_fifo_request_t request{
+        .opcode = BLOCKIO_READ,
+        .vmoid = id_.get(),
+        .length = safemath::checked_cast<uint32_t>(size / block_size_),
+        .vmo_offset = phys_mem_.offset(data, size) / block_size_,
+        .dev_offset = off / block_size_,
+    };
+    zx_status_t status = device_->FifoTransaction(&request, 1);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to send read request of " << size << " at " << off
+                              << " block " << block_size_;
+    }
+    callback(status);
+  }
+
+  void WriteAt(const void* data, uint64_t size, uint64_t off, Callback callback) override {
+    TRACE_DURATION("machina", "RemoteBlockDispatcher::WriteAt", "size", size, "off", off);
+    block_fifo_request_t request{
+        .opcode = BLOCKIO_WRITE,
+        .vmoid = id_.get(),
+        .length = safemath::checked_cast<uint32_t>(size / block_size_),
+        .vmo_offset = phys_mem_.offset(data, size) / block_size_,
+        .dev_offset = off / block_size_,
+    };
+    zx_status_t status = device_->FifoTransaction(&request, 1);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to send write request of " << size << " at " << off
+                              << " block " << block_size_;
+    }
+    callback(status);
+  }
+};
+
+void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
+                                 NestedBlockDispatcherCallback callback) {
+  std::unique_ptr<block_client::RemoteBlockDevice> device;
+  zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(client), &device);
+  FX_CHECK(status == ZX_OK) << "Failed to create block device";
+
+  storage::Vmoid id;
+  status = device->BlockAttachVmo(phys_mem.vmo(), &id);
+  FX_CHECK(status == ZX_OK) << "Failed to attach VMO to block device";
+
+  fuchsia_hardware_block_BlockInfo block_info;
+  status = device->BlockGetInfo(&block_info);
+  FX_CHECK(status == ZX_OK) << "Failed to get FIFO for block device";
+
+  size_t size = block_info.block_count * block_info.block_size;
+  auto disp = std::make_unique<RemoteBlockDispatcher>(std::move(device), std::move(id),
+                                                      block_info.block_size, phys_mem);
+  callback(size, std::move(disp));
 }

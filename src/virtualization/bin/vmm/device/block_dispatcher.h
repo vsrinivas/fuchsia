@@ -9,6 +9,8 @@
 
 #include <fbl/ref_counted.h>
 
+#include "src/virtualization/bin/vmm/device/phys_mem.h"
+
 // An abstraction around a data source for a block device.
 struct BlockDispatcher {
   virtual ~BlockDispatcher() = default;
@@ -67,5 +69,9 @@ void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDi
 // image.
 void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base,
                                NestedBlockDispatcherCallback callback);
+
+// Creates a BlockDispatcher based on fuchsia.hardware.block.Block.
+void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
+                                 NestedBlockDispatcherCallback callback);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEVICE_BLOCK_DISPATCHER_H_

@@ -133,7 +133,9 @@ source_set("block") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/trace",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 
