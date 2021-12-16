@@ -95,7 +95,7 @@ async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
 
 /// Find and connect to the ChromeOS ACPI device.
 fn find_chromeos_acpi_device() -> Result<chrome_acpi::DeviceProxy, anyhow::Error> {
-    let path = "/dev/sys/platform/acpi/acpi-CRHW/chromeos_acpi";
+    let path = "/dev/sys/platform/platform-passthrough/acpi/acpi-CRHW/chromeos_acpi";
     Ok(connect_to_protocol_at_path::<chrome_acpi::DeviceMarker>(path)
         .context("Connecting to chromeos_acpi device")?)
 }

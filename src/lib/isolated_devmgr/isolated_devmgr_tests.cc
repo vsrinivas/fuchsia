@@ -123,8 +123,8 @@ TEST_F(DevmgrTest, DeviceEntryEnumerationTest) {
 
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(devmgr->devfs_root(),
                                                                  "sys/platform", &fd));
-  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(devmgr->devfs_root(),
-                                                                 "sys/platform/test-board", &fd));
+  ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(
+                       devmgr->devfs_root(), "sys/platform/platform-passthrough/test-board", &fd));
   ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(
                        devmgr->devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
 }

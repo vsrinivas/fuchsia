@@ -18,8 +18,8 @@
             "class/goldfish-control",
             "class/goldfish-pipe",
             "class/goldfish-sync",
-            "sys/platform/acpi/goldfish",
-            "sys/platform/acpi/goldfish-sync"
+            "sys/platform/platform-passthrough/acpi/goldfish",
+            "sys/platform/platform-passthrough/acpi/goldfish-sync"
         ],
         "services": [
             "fuchsia.sysmem.Allocator",

@@ -28,7 +28,7 @@ constexpr uint32_t kGiB = 1024 * 1024 * 1024;
 using fuchsia_hardware_acpi::Acpi;
 using fuchsia_hardware_acpi::wire::TableInfo;
 
-const char kAcpiDevicePath[] = "/dev/sys/platform/acpi";
+const char kAcpiDevicePath[] = "/dev/sys/platform/platform-passthrough/acpi";
 
 // Open up channel to ACPI device.
 fdio_cpp::FdioCaller OpenChannel() {

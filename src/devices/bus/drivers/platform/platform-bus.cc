@@ -29,6 +29,40 @@
 #include "src/devices/bus/drivers/platform/cpu-trace.h"
 #include "src/devices/bus/drivers/platform/platform-bus-bind.h"
 
+namespace {
+// Adds a passthrough device which forwards all banjo connections to the parent device.
+// The device will be added as a child of |parent| with the name |name|, and |props| will
+// be applied to the new device's add_args.
+// Returns ZX_OK if the device is successfully added.
+zx_status_t AddProtocolPassthrough(const char* name, cpp20::span<const zx_device_prop_t> props,
+                                   zx_device_t* parent) {
+  if (!parent || !name) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  static zx_protocol_device_t passthrough_proto = {
+      .version = DEVICE_OPS_VERSION,
+      .get_protocol =
+          [](void* ctx, uint32_t id, void* proto) {
+            return device_get_protocol(reinterpret_cast<zx_device_t*>(ctx), id, proto);
+          },
+      .release = [](void* ctx) {},
+  };
+
+  device_add_args_t args = {
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = name,
+      .ctx = parent,
+      .ops = &passthrough_proto,
+      .props = props.data(),
+      .prop_count = static_cast<uint32_t>(props.size()),
+  };
+
+  return device_add(parent, &args, nullptr);
+}
+
+}  // anonymous namespace
+
 namespace platform_bus {
 
 zx_status_t PlatformBus::IommuGetBti(uint32_t iommu_index, uint32_t bti_id, zx::bti* out_bti) {
@@ -660,11 +694,17 @@ zx_status_t PlatformBus::Init() {
   }
 
   // Then we attach the platform-bus device below it.
-  zx_device_prop_t props[] = {
+  status = DdkAdd(ddk::DeviceAddArgs("platform").set_flags(DEVICE_ADD_NON_BINDABLE));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx_device_prop_t passthrough_props[] = {
+      {BIND_PROTOCOL, 0, ZX_PROTOCOL_PBUS},
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
   };
-  return DdkAdd(ddk::DeviceAddArgs("platform").set_props(props));
+  return AddProtocolPassthrough("platform-passthrough", passthrough_props, zxdev());
 }
 
 void PlatformBus::DdkInit(ddk::InitTxn txn) {

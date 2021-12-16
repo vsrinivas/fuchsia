@@ -36,7 +36,8 @@ TEST(PbusTest, Enumeration) {
 
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                 "sys/platform/platform-passthrough/test-board", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2", &fd));
@@ -72,7 +73,7 @@ TEST(PbusTest, Enumeration) {
 
   const int dirfd = devmgr.devfs_root().get();
   struct stat st;
-  EXPECT_EQ(fstatat(dirfd, "sys/platform/test-board", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/platform-passthrough/test-board", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2", &st, 0), 0);

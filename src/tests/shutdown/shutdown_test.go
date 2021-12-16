@@ -32,7 +32,7 @@ func TestShutdown(t *testing.T) {
 
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up before we attempt a shutdown.
-		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/acpi; echo ACPI_READY")
+		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/platform-passthrough/acpi; echo ACPI_READY")
 		i.WaitForLogMessage("ACPI_READY")
 	}
 

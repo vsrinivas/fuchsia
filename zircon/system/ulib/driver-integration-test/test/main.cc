@@ -43,7 +43,8 @@ TEST(DriverIntegrationTest, EnumerationTest) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/test-board", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
+                                 "sys/platform/platform-passthrough/test-board", &fd));
 
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
 }

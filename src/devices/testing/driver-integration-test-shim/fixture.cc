@@ -125,8 +125,8 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
   }
 
   fbl::unique_fd platform_fd;
-  status = device_watcher::RecursiveWaitForFile(devmgr.devfs_root_, "sys/platform/test-board",
-                                                &platform_fd);
+  status = device_watcher::RecursiveWaitForFile(
+      devmgr.devfs_root_, "sys/platform/platform-passthrough/test-board", &platform_fd);
   if (status != ZX_OK) {
     return status;
   }

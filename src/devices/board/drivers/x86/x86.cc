@@ -139,7 +139,7 @@ zx_status_t X86::Bind() {
   status = DdkAdd("acpi", DEVICE_ADD_NON_BINDABLE);
 
   if (status != ZX_OK) {
-    zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/acpi)", status);
+    zxlogf(ERROR, "acpi: error %d in device_add(sys/platform/platform-passthrough/acpi)", status);
     return status;
   }
 

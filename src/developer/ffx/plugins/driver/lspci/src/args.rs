@@ -16,7 +16,7 @@ use {argh::FromArgs, ffx_core::ffx_command, lspci::filter::Filter};
 )]
 pub struct DriverLspci {
     // Show PCI Info
-    #[argh(positional, default = "String::from(\"sys/platform/PCI0/bus\")")]
+    #[argh(positional, default = "String::from(\"sys/platform/platform-passthrough/PCI0/bus\")")]
     /// path to the fuchsia.hardware.pci service
     pub service: String,
     #[argh(switch, short = 'v')]

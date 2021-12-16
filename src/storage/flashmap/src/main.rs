@@ -33,7 +33,7 @@ async fn main() -> Result<(), anyhow::Error> {
     inspect_runtime::serve(component::inspector(), &mut service_fs)?;
     component::health().set_starting_up();
 
-    let acpi_path = "/dev/sys/platform/acpi/acpi-CRHW/chromeos_acpi";
+    let acpi_path = "/dev/sys/platform/platform-passthrough/acpi/acpi-CRHW/chromeos_acpi";
     let device = fuchsia_component::client::connect_to_protocol_at_path::<DeviceMarker>(acpi_path)
         .context("Connecting to ChromeOS ACPI service")?;
     let address =

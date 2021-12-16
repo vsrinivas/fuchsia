@@ -14,7 +14,10 @@ use argh::FromArgs;
 #[derive(FromArgs)]
 /// Display PCI information
 pub struct Args {
-    #[argh(positional, default = "String::from(\"/dev/sys/platform/PCI0/bus\")")]
+    #[argh(
+        positional,
+        default = "String::from(\"/dev/sys/platform/platform-passthrough/PCI0/bus\")"
+    )]
     /// path to the fuchsia.hardware.pci service
     pub service: String,
     #[argh(switch, short = 'v')]

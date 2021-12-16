@@ -33,7 +33,7 @@ namespace acpidump {
 using fuchsia_hardware_acpi::Acpi;
 using fuchsia_hardware_acpi::wire::TableInfo;
 
-const char kAcpiDevicePath[] = "/dev/sys/platform/acpi";
+const char kAcpiDevicePath[] = "/dev/sys/platform/platform-passthrough/acpi";
 
 // Set up an argument parser. We attempt to follow the conventions of
 // Linux's "acpidump" commands where possible, though we also add long

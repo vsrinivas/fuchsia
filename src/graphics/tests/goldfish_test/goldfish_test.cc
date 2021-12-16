@@ -1455,7 +1455,7 @@ TEST_P(GoldfishCreateColorBufferTest, CreateColorBufferWithFormat) {
 }
 
 TEST(GoldfishControlTests, CreateSyncKhr) {
-  if (access("/dev/sys/platform/acpi/goldfish-sync", F_OK) != 0) {
+  if (access("/dev/sys/platform/platform-passthrough/acpi/goldfish-sync", F_OK) != 0) {
     GTEST_FAIL() << "Cannot access goldfish-sync device";
   }
 
@@ -1500,7 +1500,7 @@ INSTANTIATE_TEST_SUITE_P(
     });
 
 int main(int argc, char** argv) {
-  if (access("/dev/sys/platform/acpi/goldfish", F_OK) != -1) {
+  if (access("/dev/sys/platform/platform-passthrough/acpi/goldfish", F_OK) != -1) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
   }

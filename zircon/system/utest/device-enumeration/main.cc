@@ -140,7 +140,7 @@ class DeviceEnumerationTest : public zxtest::Test {
 
 TEST_F(DeviceEnumerationTest, QemuArm64Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/qemu-bus",
+      "sys/platform/platform-passthrough/qemu-bus",
       "sys/platform/00:00:6/rtc",
       "sys/platform/pci/00:00.0",
   };
@@ -150,7 +150,7 @@ TEST_F(DeviceEnumerationTest, QemuArm64Test) {
 
 TEST_F(DeviceEnumerationTest, Vim3Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/vim3",
+      "sys/platform/platform-passthrough/vim3",
       "sys/platform/00:00:1b/sysmem",
       "sys/platform/05:06:1/aml-axg-gpio",
       "sys/platform/05:00:14/clocks",
@@ -198,7 +198,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
 
 TEST_F(DeviceEnumerationTest, AstroTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/astro",
+      "sys/platform/platform-passthrough/astro",
       "sys/platform/05:03:1/aml-axg-gpio",
       "astro-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c",
@@ -287,7 +287,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
 
 TEST_F(DeviceEnumerationTest, NelsonTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/nelson",
+      "sys/platform/platform-passthrough/nelson",
       "sys/platform/05:03:1/aml-axg-gpio",
       "nelson-buttons/hid-buttons",
       "class/bt-transport/000",
@@ -382,7 +382,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
 
 TEST_F(DeviceEnumerationTest, SherlockTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/sherlock",
+      "sys/platform/platform-passthrough/sherlock",
       "sys/platform/05:04:1/aml-axg-gpio",
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
@@ -555,12 +555,12 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/platform/pci/00:1f.3/intel-hda-000/output-stream-001",
       "sys/platform/pci/00:02.0/intel_i915/intel-gpu-core/msd-intel-gen",
       "sys/platform/pci/00:02.0/intel_i915/display-controller",
-      "sys/platform/acpi/TSR0",
-      "sys/platform/acpi/TSR1",
-      "sys/platform/acpi/TSR2",
-      "sys/platform/acpi/TSR3",
-      "sys/platform/acpi/acpi-lid/hid-device/InputReport",
-      "sys/platform/acpi/acpi-pwrbtn/hid-device/InputReport",
+      "sys/platform/platform-passthrough/acpi/TSR0",
+      "sys/platform/platform-passthrough/acpi/TSR1",
+      "sys/platform/platform-passthrough/acpi/TSR2",
+      "sys/platform/platform-passthrough/acpi/TSR3",
+      "sys/platform/platform-passthrough/acpi/acpi-lid/hid-device/InputReport",
+      "sys/platform/platform-passthrough/acpi/acpi-pwrbtn/hid-device/InputReport",
       "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device/InputReport",
   };
 
@@ -574,12 +574,10 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "pci-00:00.0",
       "pci-00:1f.2/ahci",
 
-      "sys/platform/acpi",
-      "sys/platform/acpi/acpi-pwrbtn",
-      "sys/platform/acpi/acpi-KBD_/i8042-keyboard/hid-device/"
-      "InputReport",
-      "sys/platform/acpi/acpi-KBD_/i8042-mouse/hid-device/"
-      "InputReport",
+      "sys/platform/platform-passthrough/acpi",
+      "sys/platform/platform-passthrough/acpi/acpi-pwrbtn",
+      "sys/platform/platform-passthrough/acpi/acpi-KBD_/i8042-keyboard/hid-device/InputReport",
+      "sys/platform/platform-passthrough/acpi/acpi-KBD_/i8042-mouse/hid-device/InputReport",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -594,14 +592,16 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "pci-00:02.0/virtio-input",
       "pci-00:0b.0/goldfish-address-space",
 
-      "sys/platform/acpi/acpi-GFPP",
+      "sys/platform/platform-passthrough/acpi/acpi-GFPP",
       // Verify goldfish pipe root device created.
-      "sys/platform/acpi/acpi-GFPP/goldfish-pipe",
+      "sys/platform/platform-passthrough/acpi/acpi-GFPP/goldfish-pipe",
       // Verify goldfish pipe child devices created.
-      "sys/platform/acpi/acpi-GFPP/goldfish-pipe/goldfish-pipe-control",
-      "sys/platform/acpi/acpi-GFPP/goldfish-pipe/goldfish-pipe-sensor",
-      "sys/platform/acpi/acpi-GFSK",
-      "sys/platform/acpi/acpi-GFSK/goldfish-sync",
+      "sys/platform/platform-passthrough/acpi/acpi-GFPP/goldfish-pipe/"
+      "goldfish-pipe-control",
+      "sys/platform/platform-passthrough/acpi/acpi-GFPP/goldfish-pipe/"
+      "goldfish-pipe-sensor",
+      "sys/platform/platform-passthrough/acpi/acpi-GFSK",
+      "sys/platform/platform-passthrough/acpi/acpi-GFSK/goldfish-sync",
 
       "goldfish-control-2",
       "goldfish-control-2/goldfish-control",
