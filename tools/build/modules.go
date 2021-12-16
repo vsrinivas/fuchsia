@@ -26,6 +26,7 @@ type Modules struct {
 	args               Args
 	binaries           []Binary
 	checkoutArtifacts  []CheckoutArtifact
+	clippyTargets      []ClippyTarget
 	generatedSources   []string
 	images             []Image
 	packageManifests   []string
@@ -48,6 +49,7 @@ func NewModules(buildDir string) (*Modules, error) {
 		"args.json":                       &m.args,
 		"binaries.json":                   &m.binaries,
 		"checkout_artifacts.json":         &m.checkoutArtifacts,
+		"clippy_target_mapping.json":      &m.clippyTargets,
 		"generated_sources.json":          &m.generatedSources,
 		imageManifestName:                 &m.images,
 		"all_package_manifest_paths.json": &m.packageManifests,
@@ -97,6 +99,10 @@ func (m Modules) Binaries() []Binary {
 
 func (m Modules) CheckoutArtifacts() []CheckoutArtifact {
 	return m.checkoutArtifacts
+}
+
+func (m Modules) ClippyTargets() []ClippyTarget {
+	return m.clippyTargets
 }
 
 func (m Modules) GeneratedSources() []string {

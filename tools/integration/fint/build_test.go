@@ -27,6 +27,7 @@ import (
 
 type fakeBuildModules struct {
 	archives         []build.Archive
+	clippyTargets    []build.ClippyTarget
 	generatedSources []string
 	images           []build.Image
 	pbinSets         []build.PrebuiltBinarySet
@@ -36,6 +37,7 @@ type fakeBuildModules struct {
 }
 
 func (m fakeBuildModules) Archives() []build.Archive                     { return m.archives }
+func (m fakeBuildModules) ClippyTargets() []build.ClippyTarget           { return m.clippyTargets }
 func (m fakeBuildModules) GeneratedSources() []string                    { return m.generatedSources }
 func (m fakeBuildModules) Images() []build.Image                         { return m.images }
 func (m fakeBuildModules) PrebuiltBinarySets() []build.PrebuiltBinarySet { return m.pbinSets }
@@ -362,6 +364,66 @@ func TestBuild(t *testing.T) {
 			},
 		},
 		{
+			name: "all lint targets",
+			staticSpec: &fintpb.Static{
+				IncludeLintTargets: fintpb.Static_ALL_LINT_TARGETS,
+			},
+			modules: fakeBuildModules{
+				clippyTargets: []build.ClippyTarget{
+					{
+						Output: "gen/src/foo.clippy",
+						Sources: []string{
+							"../../src/foo/x.rs",
+							"../../src/foo/y.rs",
+						},
+					},
+					{
+						Output: "gen/src/bar.clippy",
+						Sources: []string{
+							"../../src/bar/x.rs",
+							"../../src/bar/y.rs",
+						},
+					},
+				},
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"gen/src/foo.clippy", "gen/src/bar.clippy"},
+			},
+		},
+		{
+			name: "affected lint targets",
+			staticSpec: &fintpb.Static{
+				IncludeLintTargets: fintpb.Static_AFFECTED_LINT_TARGETS,
+			},
+			contextSpec: &fintpb.Context{
+				ChangedFiles: []*fintpb.Context_ChangedFile{
+					{Path: "src/foo/x.rs"},
+					{Path: "src/foo/y.rs"},
+				},
+			},
+			modules: fakeBuildModules{
+				clippyTargets: []build.ClippyTarget{
+					{
+						Output: "gen/src/foo.clippy",
+						Sources: []string{
+							"../../src/foo/x.rs",
+							"../../src/foo/y.rs",
+						},
+					},
+					{
+						Output: "gen/src/bar.clippy",
+						Sources: []string{
+							"../../src/bar/x.rs",
+							"../../src/bar/y.rs",
+						},
+					},
+				},
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"gen/src/foo.clippy"},
+			},
+		},
+		{
 			name: "nonexistent tool",
 			staticSpec: &fintpb.Static{
 				Tools: []string{"tool1"},
@@ -453,7 +515,7 @@ func TestBuild(t *testing.T) {
 			resetArtifactDir(t)
 
 			checkoutDir := t.TempDir()
-			buildDir := filepath.Join(t.TempDir(), "out", "default")
+			buildDir := filepath.Join(checkoutDir, "out", "default")
 
 			defaultContextSpec := &fintpb.Context{
 				SkipNinjaNoopCheck: !tc.ninjaNoopCheck,

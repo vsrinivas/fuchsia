@@ -32,6 +32,7 @@ go_library("build") {
     "binaries.go",
     "binaries_test.go",
     "checkout_artifacts.go",
+    "clippy.go",
     "images.go",
     "modules.go",
     "prebuilt_binaries.go",

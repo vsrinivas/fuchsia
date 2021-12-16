@@ -150,4 +150,20 @@ message Static {
   //
   // Ignored if `enable_go_cache` is set.
   bool use_temporary_go_cache = 34;
+
+  enum LintTargets {
+    // Don't build any lint targets.
+    NO_LINT_TARGETS = 0;
+
+    // Build all lint targets.
+    ALL_LINT_TARGETS = 1;
+
+    // Only build the lint targets that are affected by the change under test,
+    // determined by comparing each target's declared source files to the
+    // `changed_files` declared in the context spec.
+    AFFECTED_LINT_TARGETS = 2;
+  }
+
+  // Which language-specific lint targets to include.
+  LintTargets include_lint_targets = 35;
 }

@@ -52,6 +52,7 @@ var (
 
 type buildModules interface {
 	Archives() []build.Archive
+	ClippyTargets() []build.ClippyTarget
 	GeneratedSources() []string
 	Images() []build.Image
 	PrebuiltBinarySets() []build.PrebuiltBinarySet
@@ -93,7 +94,7 @@ func buildImpl(
 ) (*fintpb.BuildArtifacts, error) {
 	artifacts := &fintpb.BuildArtifacts{}
 
-	targets, targetArtifacts, err := constructNinjaTargets(modules, staticSpec, platform)
+	targets, targetArtifacts, err := constructNinjaTargets(modules, staticSpec, contextSpec, platform)
 	if err != nil {
 		return artifacts, err
 	}
@@ -277,6 +278,7 @@ func ninjaNoopFailureMessage(platform string) string {
 func constructNinjaTargets(
 	modules buildModules,
 	staticSpec *fintpb.Static,
+	contextSpec *fintpb.Context,
 	platform string,
 ) ([]string, *fintpb.BuildArtifacts, error) {
 	var targets []string
@@ -387,6 +389,12 @@ func constructNinjaTargets(
 		}
 	}
 
+	lintTargets, err := chooseLintTargets(modules, staticSpec, contextSpec)
+	if err != nil {
+		return nil, nil, err
+	}
+	targets = append(targets, lintTargets...)
+
 	// We only support specifying tools for the current platform. Tools
 	// needed for other platforms can be included in the build indirectly
 	// via higher-level targets.
@@ -438,6 +446,53 @@ func isTestingImage(image build.Image, pave bool) bool {
 	default:
 		return false
 	}
+}
+
+func chooseLintTargets(
+	modules buildModules,
+	staticSpec *fintpb.Static,
+	contextSpec *fintpb.Context,
+) ([]string, error) {
+	if staticSpec.IncludeLintTargets == fintpb.Static_NO_LINT_TARGETS {
+		return nil, nil
+	}
+
+	changed := make(map[string]bool)
+	for _, f := range contextSpec.ChangedFiles {
+		changed[f.Path] = true
+	}
+
+	shouldInclude := func(sources []string) (bool, error) {
+		if staticSpec.IncludeLintTargets == fintpb.Static_ALL_LINT_TARGETS {
+			return true, nil
+		} else if staticSpec.IncludeLintTargets != fintpb.Static_AFFECTED_LINT_TARGETS {
+			return false, fmt.Errorf("unknown include_lint_targets value: %s", staticSpec.IncludeLintTargets)
+		}
+		for _, source := range sources {
+			checkoutPath, err := filepath.Rel(
+				contextSpec.CheckoutDir,
+				filepath.Clean(filepath.Join(contextSpec.BuildDir, source)))
+			if err != nil {
+				return false, err
+			}
+			if changed[filepath.ToSlash(checkoutPath)] {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	var targets []string
+	for _, clippy := range modules.ClippyTargets() {
+		include, err := shouldInclude(clippy.Sources)
+		if err != nil {
+			return nil, err
+		}
+		if include {
+			targets = append(targets, clippy.Output)
+		}
+	}
+	return targets, nil
 }
 
 // toolAbsPath returns the absolute path to a tool specified in tool_paths.json.
