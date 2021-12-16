@@ -48,7 +48,7 @@ CARGO_PACKAGE_NO_WORKSPACE = """\
 
 CARGO_PACKAGE_DEP = """\
 [%(dep_type)s.%(crate_name)s]
-version = "0.0.1"
+version = "%(version)s"
 path = "%(crate_path)s"
 
 """
@@ -68,6 +68,12 @@ def extract_toolchain(target):
         raise ValueError("target %s missing closing `)`")
     return substr[:-1]  # remove closing `)`
 
+def version_from_toolchain(toolchain):
+    """ Return a version to use to allow host and target crates to coexist. """
+    version = "0.0.1"
+    if toolchain != None and toolchain.startswith("//build/toolchain:host_"):
+        version = "0.0.2"
+    return version
 
 def lookup_gn_pkg_name(project, target, *, for_workspace):
     if for_workspace:
@@ -174,7 +180,7 @@ class Project(object):
 
 def write_toml_file(
         fout, metadata, project, target, lookup, root_path, root_build_dir,
-        gn_cargo_dir, for_workspace):
+        gn_cargo_dir, for_workspace, version):
     rust_crates_path = os.path.join(root_path, "third_party/rust_crates")
 
     edition = "2018" if "--edition=2018" in metadata["rustflags"] else "2015"
@@ -208,7 +214,7 @@ def write_toml_file(
             "target": target,
             "package_name": package_name,
             "crate_name": metadata["crate_name"],
-            "version": "0.0.1",
+            "version": version,
             "year": datetime.datetime.now().year,
             "bin_or_lib": target_type,
             "is_proc_macro": is_proc_macro,
@@ -302,6 +308,8 @@ def write_toml_file(
                         fout.write("default-features = false\n")
             # this is a in-tree rust target
             elif "crate_name" in project.targets[dep]:
+                toolchain = extract_toolchain(dep)
+                version = version_from_toolchain(toolchain)
                 crate_name = lookup_gn_pkg_name(project, dep, for_workspace=for_workspace)
                 output_name = project.targets[dep]["crate_name"]
                 dep_dir = os.path.join(gn_cargo_dir, str(lookup[dep]))
@@ -310,6 +318,7 @@ def write_toml_file(
                         "dep_type": dep_type,
                         "crate_path": dep_dir,
                         "crate_name": crate_name,
+                        "version": version,
                     })
 
     write_deps(deps, "dependencies")
@@ -382,6 +391,8 @@ def main():
     workspace_dirs_by_toolchain = collections.defaultdict(list)
 
     for target in project.rust_targets:
+        toolchain = extract_toolchain(target)
+        version = version_from_toolchain(toolchain)
         cargo_toml_dir = os.path.join(gn_cargo_dir, str(lookup[target]))
         try:
             os.makedirs(cargo_toml_dir)
@@ -408,11 +419,11 @@ def main():
                 root_path,
                 root_build_dir,
                 gn_cargo_dir,
-                for_workspace=False)
+                for_workspace=False,
+                version = version)
 
         if (not target.startswith("//third_party/rust_crates:")
            ) and target in project.reachable_targets:
-            toolchain = extract_toolchain(target)
             workspace_dirs_by_toolchain[toolchain].append(
                 (
                     target,
@@ -429,7 +440,8 @@ def main():
                     root_path,
                     root_build_dir,
                     os.path.join(gn_cargo_dir, "for_workspace"),
-                    for_workspace=True)
+                    for_workspace=True,
+                    version = version)
 
     # TODO: refactor into separate function
     for toolchain, workspace_dirs in workspace_dirs_by_toolchain.items():
