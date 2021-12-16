@@ -12,8 +12,7 @@
 
 use alloc::vec::Vec;
 
-use super::id_map;
-use super::id_map::{EntryKey, IdMap};
+use super::id_map::{self, EntryKey, IdMap};
 
 /// A key that can index items in [`IdMapCollection`].
 ///
