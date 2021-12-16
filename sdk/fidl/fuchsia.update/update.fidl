@@ -54,12 +54,12 @@ protocol Manager {
         rebooting bool;
     });
 
-    /// Monitor all update attempts as they start, as well as an in-progress attempt, if there is
-    /// one.
+    /// Monitor all update attempts as they start, as well as an in-progress
+    /// attempt, if there is one.
     ///
     /// Arguments:
-    /// * |attempts_monitor| A protocol on which to receive |Monitor| instances as update attempts
-    /// start.
+    /// * |attempts_monitor| A protocol on which to receive |Monitor| instances
+    /// as update attempts start.
     MonitorAllUpdateChecks(resource struct {
         attempts_monitor client_end:AttemptsMonitor;
     });
@@ -277,6 +277,9 @@ type UpdateInfo = table {
 
     /// The total number of bytes that may be downloaded to apply this update.
     2: download_size uint64;
+
+    /// Whether the update was marked as urgent. Default is false.
+    3: urgent bool;
 };
 
 /// This is the maximum length of a version string that will be returned by the

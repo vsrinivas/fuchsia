@@ -51,6 +51,7 @@ union/member fuchsia.update/State.no_update_available fuchsia.update/NoUpdateAva
 union/member fuchsia.update/State.waiting_for_reboot fuchsia.update/InstallingData
 strict union fuchsia.update/State
 table/member fuchsia.update/UpdateInfo.download_size uint64
+table/member fuchsia.update/UpdateInfo.urgent bool
 table/member fuchsia.update/UpdateInfo.version_available string:128
 table fuchsia.update/UpdateInfo
 library fuchsia.update
