@@ -14,6 +14,8 @@
 namespace ot {
 namespace Fuchsia {
 
+constexpr char kThreadInitialSettingsPath[] = "/data/thread-settings-init.json";
+
 /// Handler for all fuchsia.lowpan.bootstrap/Thread FIDL protocol calls. Registers as a
 /// public service with the ComponentContext and handles incoming connections.
 class BootstrapThreadImpl : public fidl::WireServer<fuchsia_lowpan_bootstrap::Thread> {
