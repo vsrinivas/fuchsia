@@ -16,12 +16,14 @@ use core::fmt::{self, Formatter};
 use core::num::NonZeroU16;
 use core::ops::Range;
 
+use arrayvec::ArrayVec;
 use explicit::ResultExt as _;
 use net_types::ip::IpAddress;
 use packet::records::options::OptionsRaw;
 use packet::{
-    BufferView, BufferViewMut, FragmentedByteSlice, FromRaw, InnerPacketBuilder, MaybeParsed,
-    PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, ByteSliceInnerPacketBuilder, EmptyBuf, FragmentedByteSlice, FromRaw,
+    InnerPacketBuilder, MaybeParsed, PacketBuilder, PacketConstraints, ParsablePacket,
+    ParseMetadata, SerializeBuffer, Serializer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -204,6 +206,8 @@ mod data_offset_reserved_flags {
 /// valid.
 pub struct TcpSegment<B> {
     hdr_prefix: LayoutVerified<B, HeaderPrefix>,
+    // Invariant: At most MAX_OPTIONS_LEN bytes long. This guarantees that we
+    // can store these in an `ArrayVec<u8, MAX_OPTIONS_LEN>` in `builder`.
     options: Options<B>,
     body: B,
 }
@@ -376,7 +380,7 @@ impl<B: ByteSlice> TcpSegment<B> {
         &self,
         src_ip: A,
         dst_ip: A,
-    ) -> TcpSegmentBuilderWithOptions<A, &[u8]> {
+    ) -> TcpSegmentBuilderWithOptions<A, ArrayVec<u8, MAX_OPTIONS_LEN>> {
         TcpSegmentBuilderWithOptions {
             prefix_builder: TcpSegmentBuilder {
                 src_ip,
@@ -397,8 +401,43 @@ impl<B: ByteSlice> TcpSegment<B> {
             //   to serialize (in cases in which multiple serializations are
             //   valid), the resulting builder still produces an identical
             //   packet to the original
-            options: self.options.bytes(),
+            options: {
+                let mut options = ArrayVec::new();
+                // Safe because we validate that `self.options` is no longer
+                // than MAX_OPTIONS_LEN.
+                expect!(
+                    options.try_extend_from_slice(self.options.bytes()),
+                    "TCP segment options longer than {} bytes",
+                    MAX_OPTIONS_LEN
+                );
+                options
+            },
         }
+    }
+
+    /// Consumes this segment and constructs a [`Serializer`] with the same
+    /// contents.
+    ///
+    /// The returned `Serializer` has the [`Buffer`] type [`EmptyBuf`], which
+    /// means it is not able to reuse the buffer backing this `TcpSegment` when
+    /// serializing, and will always need to allocate a new buffer.
+    ///
+    /// By consuming `self` instead of taking it by-reference, `into_serializer`
+    /// is able to return a `Serializer` whose lifetime is restricted by the
+    /// lifetime of the buffer from which this `TcpSegment` was parsed rather
+    /// than by the lifetime on `&self`, which may be more restricted.
+    ///
+    /// [`Buffer`]: packet::Serializer::Buffer
+    pub fn into_serializer<'a, A: IpAddress>(
+        self,
+        src_ip: A,
+        dst_ip: A,
+    ) -> impl Serializer<Buffer = EmptyBuf> + 'a
+    where
+        B: 'a,
+    {
+        let builder = self.builder(src_ip, dst_ip);
+        ByteSliceInnerPacketBuilder(self.body).into_serializer().encapsulate(builder)
     }
 }
 
@@ -434,6 +473,8 @@ struct PartialHeaderPrefix<B: ByteSlice> {
 /// validate a `TcpSegmentRaw`.
 pub struct TcpSegmentRaw<B: ByteSlice> {
     hdr_prefix: MaybeParsed<LayoutVerified<B, HeaderPrefix>, PartialHeaderPrefix<B>>,
+    // Invariant: At most MAX_OPTIONS_LEN bytes long. This guarantees that we
+    // can store these in an `ArrayVec<u8, MAX_OPTIONS_LEN>` in `builder`.
     options: MaybeParsed<OptionsRaw<B, TcpOptionsImpl>, B>,
     body: B,
 }
@@ -462,9 +503,16 @@ where
             // Even though this will end up being MaybeParsed::Complete, the
             // data_offset value is validated when transforming TcpSegmentRaw to
             // TcpSegment.
-            let option_bytes = ((pfx.data_offset() * 4) as usize).saturating_sub(HDR_PREFIX_LEN);
+            //
+            // `options_bytes` upholds the invariant of being no more than
+            // `MAX_OPTIONS_LEN` (40) bytes long because the Data Offset field
+            // is a 4-bit field with a maximum value of 15. Thus, the maximum
+            // value of `pfx.data_offset() * 4` is 15 * 4 = 60, so subtracting
+            // `HDR_PREFIX_LEN` (20) leads to a maximum possible value of 40.
+            let options_bytes = usize::from(pfx.data_offset() * 4).saturating_sub(HDR_PREFIX_LEN);
+            debug_assert!(options_bytes <= MAX_OPTIONS_LEN, "options_bytes: {}", options_bytes);
             let options =
-                MaybeParsed::take_from_buffer_with(&mut buffer, option_bytes, OptionsRaw::new);
+                MaybeParsed::take_from_buffer_with(&mut buffer, options_bytes, OptionsRaw::new);
             let hdr_prefix = MaybeParsed::Complete(pfx);
             (hdr_prefix, options)
         } else {
@@ -511,7 +559,7 @@ impl<B: ByteSlice> TcpSegmentRaw<B> {
         &self,
         src_ip: A,
         dst_ip: A,
-    ) -> Option<TcpSegmentBuilderWithOptions<A, &[u8]>> {
+    ) -> Option<TcpSegmentBuilderWithOptions<A, ArrayVec<u8, MAX_OPTIONS_LEN>>> {
         self.hdr_prefix
             .as_ref()
             .complete()
@@ -534,8 +582,49 @@ impl<B: ByteSlice> TcpSegmentRaw<B> {
                     // All values are valid.
                     window_size: hdr_prefix.window_size.get(),
                 },
-                options: options.bytes(),
+                options: {
+                    let mut opts = ArrayVec::new();
+                    // Safe because we validate that `self.options` is no longer
+                    // than MAX_OPTIONS_LEN.
+                    expect!(
+                        opts.try_extend_from_slice(options.bytes()),
+                        "TCP segment options longer than {} bytes",
+                        MAX_OPTIONS_LEN
+                    );
+                    opts
+                },
             })
+    }
+
+    /// Consumes this segment and constructs a [`Serializer`] with the same
+    /// contents.
+    ///
+    /// Returns `None` if an entire TCP header was not successfully parsed.
+    ///
+    /// This method has the same validity caveats as [`builder`].
+    ///
+    /// The returned `Serializer` has the [`Buffer`] type [`EmptyBuf`], which
+    /// means it is not able to reuse the buffer backing this `TcpSegmentRaw`
+    /// when serializing, and will always need to allocate a new buffer.
+    ///
+    /// By consuming `self` instead of taking it by-reference, `into_serializer`
+    /// is able to return a `Serializer` whose lifetime is restricted by the
+    /// lifetime of the buffer from which this `TcpSegmentRaw` was parsed rather
+    /// than by the lifetime on `&self`, which may be more restricted.
+    ///
+    /// [`builder`]: TcpSegmentRaw::builder
+    /// [`Buffer`]: packet::Serializer::Buffer
+    pub fn into_serializer<'a, A: IpAddress>(
+        self,
+        src_ip: A,
+        dst_ip: A,
+    ) -> Option<impl Serializer<Buffer = EmptyBuf> + 'a>
+    where
+        B: 'a,
+    {
+        self.builder(src_ip, dst_ip).map(|builder| {
+            ByteSliceInnerPacketBuilder(self.body).into_serializer().encapsulate(builder)
+        })
     }
 }
 
@@ -596,6 +685,7 @@ impl<A: IpAddress, O: InnerPacketBuilder> TcpSegmentBuilderWithOptions<A, O> {
         crate::utils::round_to_next_multiple_of_four(self.options.bytes_len())
     }
 }
+
 impl<A: IpAddress, O: InnerPacketBuilder> PacketBuilder for TcpSegmentBuilderWithOptions<A, O> {
     fn constraints(&self) -> PacketConstraints {
         let header_len = HDR_PREFIX_LEN + self.aligned_options_len();

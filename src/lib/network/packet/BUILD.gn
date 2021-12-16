@@ -13,6 +13,7 @@ rustc_library("packet") {
 
   deps = [
     "//src/lib/zerocopy",
+    "//third_party/rust_crates:arrayvec",
     "//third_party/rust_crates:nonzero_ext",
   ]
 

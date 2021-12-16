@@ -16,8 +16,9 @@ use core::ops::Range;
 
 use net_types::ip::{Ip, IpAddress, IpVersionMarker};
 use packet::{
-    BufferView, BufferViewMut, FromRaw, MaybeParsed, PacketBuilder, PacketConstraints,
-    ParsablePacket, ParseMetadata, SerializeBuffer,
+    BufferView, BufferViewMut, ByteSliceInnerPacketBuilder, EmptyBuf, FromRaw, InnerPacketBuilder,
+    MaybeParsed, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata, SerializeBuffer,
+    Serializer,
 };
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
@@ -179,6 +180,31 @@ impl<B: ByteSlice> UdpPacket<B> {
             dst_port: Some(self.dst_port()),
         }
     }
+
+    /// Consumes this packet and constructs a [`Serializer`] with the same
+    /// contents.
+    ///
+    /// The returned `Serializer` has the [`Buffer`] type [`EmptyBuf`], which
+    /// means it is not able to reuse the buffer backing this `UdpPacket` when
+    /// serializing, and will always need to allocate a new buffer.
+    ///
+    /// By consuming `self` instead of taking it by-reference, `into_serializer`
+    /// is able to return a `Serializer` whose lifetime is restricted by the
+    /// lifetime of the buffer from which this `UdpPacket` was parsed rather
+    /// than by the lifetime on `&self`, which may be more restricted.
+    ///
+    /// [`Buffer`]: packet::Serializer::Buffer
+    pub fn into_serializer<'a, A: IpAddress>(
+        self,
+        src_ip: A,
+        dst_ip: A,
+    ) -> impl Serializer<Buffer = EmptyBuf> + 'a
+    where
+        B: 'a,
+    {
+        let builder = self.builder(src_ip, dst_ip);
+        ByteSliceInnerPacketBuilder(self.body).into_serializer().encapsulate(builder)
+    }
 }
 
 /// The minimal information required from a UDP packet header.
@@ -332,6 +358,39 @@ impl<B: ByteSlice> UdpPacketRaw<B> {
     /// destination port will be zero, which is illegal.
     pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
         UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
+    }
+
+    /// Consumes this packet and constructs a [`Serializer`] with the same
+    /// contents.
+    ///
+    /// Returns `None` if the body was not fully parsed.
+    ///
+    /// This method has the same validity caveats as [`builder`].
+    ///
+    /// The returned `Serializer` has the [`Buffer`] type [`EmptyBuf`], which
+    /// means it is not able to reuse the buffer backing this `UdpPacket` when
+    /// serializing, and will always need to allocate a new buffer.
+    ///
+    /// By consuming `self` instead of taking it by-reference, `into_serializer`
+    /// is able to return a `Serializer` whose lifetime is restricted by the
+    /// lifetime of the buffer from which this `UdpPacket` was parsed rather
+    /// than by the lifetime on `&self`, which may be more restricted.
+    ///
+    /// [`builder`]: UdpPacketRaw::builder
+    /// [`Buffer`]: packet::Serializer::Buffer
+    pub fn into_serializer<'a, A: IpAddress>(
+        self,
+        src_ip: A,
+        dst_ip: A,
+    ) -> Option<impl Serializer<Buffer = EmptyBuf> + 'a>
+    where
+        B: 'a,
+    {
+        let builder = self.builder(src_ip, dst_ip);
+        self.body
+            .complete()
+            .ok()
+            .map(|body| ByteSliceInnerPacketBuilder(body).into_serializer().encapsulate(builder))
     }
 }
 

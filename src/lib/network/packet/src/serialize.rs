@@ -8,6 +8,9 @@ use std::cmp;
 use std::convert::Infallible as Never;
 use std::ops::{Range, RangeBounds};
 
+use arrayvec::ArrayVec;
+use zerocopy::ByteSlice;
+
 use crate::{
     canonicalize_range, take_back, take_back_mut, take_front, take_front_mut,
     AsFragmentedByteSlice, BufferMut, BufferView, BufferViewMut, ContiguousBuffer,
@@ -820,7 +823,7 @@ impl PacketBuilder for () {
 
 impl PacketBuilder for Never {
     fn constraints(&self) -> PacketConstraints {
-        unreachable!()
+        match *self {}
     }
     fn serialize(&self, _buffer: &mut SerializeBuffer<'_, '_>) {}
 }
@@ -1073,6 +1076,29 @@ impl<'a> InnerPacketBuilder for Vec<u8> {
     #[inline]
     fn serialize(&self, buffer: &mut [u8]) {
         buffer.copy_from_slice(self.as_slice());
+    }
+}
+impl<const N: usize> InnerPacketBuilder for ArrayVec<u8, N> {
+    fn bytes_len(&self) -> usize {
+        self.as_slice().bytes_len()
+    }
+    fn serialize(&self, buffer: &mut [u8]) {
+        self.as_slice().serialize(buffer);
+    }
+}
+
+/// An [`InnerPacketBuilder`] created from any `B: ByteSlice`.
+///
+/// `ByteSliceInnerPacketBuilder<B>` implements `InnerPacketBuilder` so long as
+/// `B: ByteSlice`.
+pub struct ByteSliceInnerPacketBuilder<B>(pub B);
+
+impl<B: ByteSlice> InnerPacketBuilder for ByteSliceInnerPacketBuilder<B> {
+    fn bytes_len(&self) -> usize {
+        self.0.deref().bytes_len()
+    }
+    fn serialize(&self, buffer: &mut [u8]) {
+        self.0.deref().serialize(buffer)
     }
 }
 

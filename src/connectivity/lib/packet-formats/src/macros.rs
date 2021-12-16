@@ -327,6 +327,14 @@ macro_rules! create_protocol_enum {
     };
 }
 
+/// Like `Result::expect`, but takes a format string and arguments which will be
+/// evaluated only when panicking.
+macro_rules! expect {
+    ($e:expr, $fmt:literal $(, $args:expr)*) => {
+        $e.unwrap_or_else(|_| panic!($fmt $(, $args)*))
+    }
+}
+
 /// Declare a benchmark function.
 ///
 /// The function will be named `$name`. If the `benchmark` feature is enabled,
