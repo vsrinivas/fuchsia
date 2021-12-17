@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_H_
 
 #include <lib/fidl/coding.h>
+#include <lib/fidl/llcpp/internal/any.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
@@ -107,47 +108,7 @@ struct TransportWaiter {
 // Storage for |TransportWaiter|.
 // This avoids heap allocation while using a virtual waiter interface.
 // |kCapacity| must be larger than the sizes of all of the individual transport waiters.
-class AnyTransportWaiter {
-  static constexpr size_t kCapacity = 256ull;
-  static constexpr size_t kAlignment = 16ull;
-
- public:
-  AnyTransportWaiter() = default;
-  AnyTransportWaiter(const AnyTransportWaiter& any_transport_waiter) = delete;
-  AnyTransportWaiter(AnyTransportWaiter&& any_transport_waiter) = delete;
-  AnyTransportWaiter& operator=(const AnyTransportWaiter&&) = delete;
-  AnyTransportWaiter& operator=(AnyTransportWaiter&&) = delete;
-
-  ~AnyTransportWaiter() { reset(); }
-
-  template <typename T, typename... Args>
-  T& emplace(Args&&... args) {
-    static_assert(std::is_base_of<TransportWaiter, T>::value, "only stores TransportWaiters");
-    static_assert(sizeof(T) <= kCapacity,
-                  "type does not fit inside waiter storage, consider increase the storage limit");
-    static_assert(alignof(T) <= kAlignment, "type has stricter alignment constraints than storage");
-
-    reset();
-
-    is_assigned = true;
-    return *new (&storage) T(std::forward<Args>(args)...);
-  }
-
-  TransportWaiter* operator->() {
-    ZX_DEBUG_ASSERT(is_assigned);
-    return reinterpret_cast<TransportWaiter*>(&storage);
-  }
-
- private:
-  void reset() {
-    if (is_assigned) {
-      reinterpret_cast<TransportWaiter*>(&storage)->~TransportWaiter();
-    }
-  }
-
-  std::aligned_storage_t<kCapacity, kAlignment> storage;
-  bool is_assigned = false;
-};
+using AnyTransportWaiter = Any<TransportWaiter, /* kCapacity= */ 256ull>;
 
 // Function receiving notification of successful waits on a TransportWaiter.
 using TransportWaitSuccessHandler =

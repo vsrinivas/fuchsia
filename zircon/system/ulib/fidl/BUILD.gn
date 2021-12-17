@@ -105,6 +105,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/vector_view.h",
                     "lib/fidl/llcpp/wire_messaging.h",
                     "lib/fidl/llcpp/wire_types.h",
+                    "lib/fidl/llcpp/internal/any.h",
                     "lib/fidl/llcpp/internal/client_details.h",
                     "lib/fidl/llcpp/internal/transport_end.h",
                     "lib/fidl/llcpp/internal/server_details.h",
@@ -115,6 +116,7 @@ if (is_fuchsia) {
 
     sdk_private_headers =
         [
+          "lib/fidl/llcpp/internal/any.h",
           "include/lib/fidl/llcpp/internal/client_details.h",
           "include/lib/fidl/llcpp/internal/transport_end.h",
           "include/lib/fidl/llcpp/internal/server_details.h",
