@@ -10,8 +10,6 @@
 
 namespace fuzzing {
 
-FakeTransceiver::FakeTransceiver() { transceiver_.SetWaitThreshold(SyncWait::kDefaultThreshold); }
-
 FidlInput FakeTransceiver::Transmit(Input input) {
   std::lock_guard<std::mutex> lock(mutex_);
   FidlInput fidl_input;

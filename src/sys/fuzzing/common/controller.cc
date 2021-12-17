@@ -20,7 +20,6 @@ ControllerImpl::ControllerImpl()
   dispatcher_ = binding_.dispatcher();
   options_ = std::make_shared<Options>();
   transceiver_ = std::make_shared<Transceiver>();
-  SetWaitThreshold(zx::duration(0));
   reader_ = std::thread([this]() { ReadCorpusLoop(); });
 }
 
@@ -30,14 +29,6 @@ ControllerImpl::~ControllerImpl() {
   Join();
 }
 
-void ControllerImpl::SetWaitThreshold(zx::duration threshold) {
-  pending_readers_.set_threshold(threshold);
-  transceiver_->SetWaitThreshold(threshold);
-  if (runner_) {
-    runner_->SetWaitThreshold(threshold);
-  }
-}
-
 void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
   FX_DCHECK(runner_);
   binding_.Bind(std::move(request));
@@ -45,7 +36,6 @@ void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
 
 void ControllerImpl::SetRunner(std::unique_ptr<Runner> runner) {
   runner_ = std::move(runner);
-  runner_->SetWaitThreshold(pending_readers_.threshold());
   AddDefaults();
   runner_->Configure(options_);
 }

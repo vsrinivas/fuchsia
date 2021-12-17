@@ -11,7 +11,6 @@ namespace {
 
 TEST(TransceiverTest, Receive) {
   Transceiver transceiver;
-  transceiver.SetWaitThreshold(SyncWait::kDefaultThreshold);
   Input input({0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed, 0xfa, 0xce});
   zx::socket sender;
   zx_status_t rx_result;
@@ -74,7 +73,6 @@ TEST(TransceiverTest, Receive) {
 
 TEST(TransceiverTest, Transmit) {
   Transceiver transceiver;
-  transceiver.SetWaitThreshold(SyncWait::kDefaultThreshold);
   Input input({0xfe, 0xed, 0xfa, 0xce});
 
   FidlInput fidl_input;

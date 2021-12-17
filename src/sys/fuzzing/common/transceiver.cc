@@ -40,7 +40,6 @@ struct Transceiver::Request {
 };
 
 Transceiver::Transceiver() : close_([this]() { CloseImpl(); }), join_([this]() { JoinImpl(); }) {
-  SetWaitThreshold(zx::duration(0));
   worker_ = std::thread([this]() { Worker(); });
 }
 
@@ -48,8 +47,6 @@ Transceiver::~Transceiver() {
   Close();
   Join();
 }
-
-void Transceiver::SetWaitThreshold(zx::duration threshold) { sync_.set_threshold(threshold); }
 
 zx_status_t Transceiver::Pend(std::unique_ptr<Request> request) {
   bool stopped;

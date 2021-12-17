@@ -12,7 +12,6 @@
 namespace fuzzing {
 
 FakeRunner::FakeRunner() {
-  SetWaitThreshold(SyncWait::kDefaultThreshold);
   seed_corpus_.push_back(Input());
   live_corpus_.push_back(Input());
 }

@@ -31,10 +31,6 @@ class Transceiver final {
   Transceiver();
   ~Transceiver();
 
-  // Sets the threshold after which an indefinite wait will log a warning. This is disabled by
-  // default, but is set in tests to help diagnose flake.
-  void SetWaitThreshold(zx::duration threshold);
-
   // Asynchronously reads bytes from |input|'s socket into the |Input| passed to |callback|. Invokes
   // |callback| with |ZX_ERR_BAD_STATE| if |Shutdown| has been called.
   using ReceiveCallback = fit::function<void(zx_status_t, Input)>;

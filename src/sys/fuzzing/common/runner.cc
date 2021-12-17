@@ -31,7 +31,6 @@ Runner::Runner()
       interrupt_([this] { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
   // Start the worker and ensure is up and running.
-  SetWaitThreshold(zx::duration(0));
   worker_ = std::thread([this]() { Worker(); });
   bool idle = true;
   do {
@@ -48,8 +47,6 @@ Runner::~Runner() {
   interrupt_.Run();
   join_.Run();
 }
-
-void Runner::SetWaitThreshold(zx::duration threshold) { worker_sync_.set_threshold(threshold); }
 
 zx_status_t Runner::Configure(const std::shared_ptr<Options>& options) {
   std::lock_guard<std::mutex> lock(mutex_);

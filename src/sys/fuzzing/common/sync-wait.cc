@@ -9,46 +9,60 @@
 
 namespace fuzzing {
 
-SyncWait::~SyncWait() { FX_DCHECK(waiters_ == 0); }
+using Waiter = fit::function<zx_status_t(zx::time)>;
 
-void SyncWait::WaitFor(const char* what) {
-  if (threshold_ <= zx::duration(0)) {
-    WaitUntil(zx::time::infinite());
-    return;
+zx_duration_t gThreshold = ZX_SEC(30);
+
+// Waiter functions
+
+zx_status_t WaitFor(const char* what, Waiter* waiter) {
+  if (gThreshold <= 0) {
+    return (*waiter)(zx::time::infinite());
   }
-  if (TimedWait(threshold_) == ZX_OK) {
-    return;
+  zx::duration threshold(gThreshold);
+  auto deadline = zx::deadline_after(threshold);
+  auto status = (*waiter)(deadline);
+  if (status != ZX_ERR_TIMED_OUT) {
+    return status;
   }
-  exceeded_ = true;
-  auto elapsed = threshold_ / zx::sec(1);
+  auto elapsed = threshold / zx::sec(1);
   FX_LOGS(WARNING) << "Still waiting for " << what << " after " << elapsed << " seconds...";
-  auto start = zx::clock::get_monotonic() - threshold_;
-  WaitUntil(zx::time::infinite());
+  auto start = zx::clock::get_monotonic() - threshold;
+  status = (*waiter)(zx::time::infinite());
   elapsed = (zx::clock::get_monotonic() - start) / zx::sec(1);
   FX_LOGS(WARNING) << "Done waiting for " << what << " after " << elapsed << " seconds.";
+  return status;
 }
+
+void SetThreshold(zx::duration threshold) { gThreshold = threshold.get(); }
+
+void ResetThreshold() { gThreshold = ZX_SEC(30); }
+
+void DisableSlowWaitLogging() { gThreshold = 0; }
+
+// SyncWait methods
+
+SyncWait::SyncWait()
+    : waiter_([this](zx::time deadline) {
+        ++waiters_;
+        auto status = sync_completion_wait_deadline(&sync_, deadline.get());
+        auto waiters = waiters_.fetch_sub(1);
+        FX_DCHECK(waiters != 0);
+        return status;
+      }) {}
+
+SyncWait::~SyncWait() { FX_DCHECK(waiters_ == 0); }
+
+void SyncWait::WaitFor(const char* what) { ::fuzzing::WaitFor(what, &waiter_); }
 
 zx_status_t SyncWait::TimedWait(zx::duration duration) {
-  ++waiters_;
-  auto status = sync_completion_wait(&sync_, duration.get());
-  auto waiters = waiters_.fetch_sub(1);
-  FX_DCHECK(waiters != 0);
-  return status;
+  return waiter_(zx::deadline_after(duration));
 }
 
-zx_status_t SyncWait::WaitUntil(zx::time deadline) {
-  ++waiters_;
-  auto status = sync_completion_wait_deadline(&sync_, deadline.get());
-  auto waiters = waiters_.fetch_sub(1);
-  FX_DCHECK(waiters != 0);
-  return status;
-}
+zx_status_t SyncWait::WaitUntil(zx::time deadline) { return waiter_(deadline); }
 
 void SyncWait::Signal() { sync_completion_signal(&sync_); }
 
-void SyncWait::Reset() {
-  sync_completion_reset(&sync_);
-  exceeded_ = false;
-}
+void SyncWait::Reset() { sync_completion_reset(&sync_); }
 
 }  // namespace fuzzing

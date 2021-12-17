@@ -20,7 +20,6 @@ std::shared_ptr<Options> RunnerTest::DefaultOptions(Runner* runner) {
 }
 
 void RunnerTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
-  runner->SetWaitThreshold(SyncWait::kDefaultThreshold);
   options_ = options;
   options_->set_seed(1);
   runner->Configure(options_);

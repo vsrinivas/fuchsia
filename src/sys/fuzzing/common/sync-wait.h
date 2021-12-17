@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_FUZZING_COMMON_SYNC_WAIT_H_
 #define SRC_SYS_FUZZING_COMMON_SYNC_WAIT_H_
 
+#include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 
@@ -15,44 +16,65 @@
 
 namespace fuzzing {
 
+// Defines a function that takes a deadline and may return ZX_ERR_TIMED_OUT if that deadline is
+// passed.
+using Waiter = fit::function<zx_status_t(zx::time)>;
+
+// Waiter functions
+
+// Calls |waiter| with no deadline (i.e. the deadline is |zx::time::infinite|). Returns the result
+// of calling |waiter|.
+//
+// If |waiter| completes within a configured threshold, no further action is taken. Otherwise, it
+// logs a warning and logs an additional message if |waiter| eventually completes.
+//
+// Example:
+//
+//   auto waiter = [](zx::time deadline){
+//     return channel.wait_one(ZX_CHANNEL_READABLE, deadline.get(), nullptr);
+//   };
+//   auto status = WaitFor("channel to become readable", &waiter);
+//
+zx_status_t WaitFor(const char* what, Waiter* waiter);
+
+// Configures the |threshold| after which |WaitFor| should log a warning. If the value is less than
+// or equal to zero, logging is disabled. This should only be used for testing |WaitFor| and
+// |SyncWait| themselves.
+void SetThreshold(zx::duration threshold);
+
+// Resets the |threshold| after which |WaitFor| should log a warning to the default value. This
+// should only be used for testing |WaitFor| and |SyncWait| themselves.
+void ResetThreshold();
+
+// Equivalent to |SetThreshold(zx::duration(0)|. This disables all logging by |WaitFor|. Slow waits
+// are logged by default for tests; other |main| functions may want to disable them since normal
+// operation may involve slow waits (e.g. slow fuzzing iterations, waiting for the user, etc.).
+void DisableSlowWaitLogging();
+
 // This class is a thin wrapper around |sync_completion_t| that adds diagnostics when an indefinite
 // wait exceeds a threshold, and ensures no waiters remain when the object goes out of scope.
 class SyncWait final {
  public:
-  static constexpr zx::duration kDefaultThreshold{ZX_SEC(30)};
-
-  SyncWait() = default;
+  SyncWait();
   ~SyncWait();
 
   bool is_signaled() const { return sync_completion_signaled(&sync_); }
-  zx::duration threshold() const { return threshold_; }
 
-  // Sets the |threshold| after which |WaitFor| will produce diagnostic messages and
-  // |has_exceeded_threshold| will return true until a call to |Reset|. A |threshold| less than or
-  // equal to zero will disable the threshold checks.
-  void set_threshold(zx::duration threshold) { threshold_ = threshold; }
-
-  // Returns whether a call to |WaitFor| exceeded the configured threshold without a subsequent call
-  // to |Reset|.
-  bool has_exceeded_threshold() const { return exceeded_; }
-
-  // Like |WaitUntil(zx::time::infinite())|, but logs a warning after the configured threshold if it
-  // is positive, and a subsequent informational message if eventually |Signal|led.
+  // Like |WaitFor| with a waiter that waits for this object to be |Signal|led.
   //
   // For example,
   //
   //   SyncWait sync;
-  //   sync.set_threshold(zx::sec(3));
   //   std::thread t([&](){
-  //     zx::nanosleep(zx::deadline_after(zx::sec(5)));
+  //     zx::nanosleep(zx::deadline_after(zx::min(1)));
   //     sync.Signal();
   //   });
   //   sync.WaitFor("event to happen");
   //
   // will log something similar to:
   //
-  //   WARNING: Still waiting for event to happen after 3 seconds...
-  //   WARNING: Done waiting for event to happen after 5 seconds.
+  //   WARNING: Still waiting for event to happen after 30 seconds...
+  //   WARNING: Done waiting for event to happen after 60 seconds.
   //
   void WaitFor(const char* what);
 
@@ -67,10 +89,9 @@ class SyncWait final {
   void Reset();
 
  private:
+  Waiter waiter_;
   sync_completion_t sync_;
-  zx::duration threshold_ = kDefaultThreshold;
   std::atomic<size_t> waiters_ = 0;
-  std::atomic<bool> exceeded_ = false;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(SyncWait);
 };

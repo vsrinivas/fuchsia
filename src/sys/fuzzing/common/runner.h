@@ -45,10 +45,6 @@ class Runner {
   Result result() const { return result_; }
   Input result_input() const { return result_input_.Duplicate(); }
 
-  // Sets the threshold after which an indefinite wait will log a warning. This is disabled by
-  // default, but is set in tests to help diagnose flake.
-  void SetWaitThreshold(zx::duration threshold);
-
   // Adds default values to unspecified options that are needed by objects of this class.
   virtual void AddDefaults(Options* options) = 0;
 

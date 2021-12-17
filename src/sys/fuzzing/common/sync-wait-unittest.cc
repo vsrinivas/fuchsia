@@ -14,11 +14,15 @@
 
 namespace fuzzing {
 
-TEST(SyncWaitTest, WaitFor) {
+class SyncWaitTest : public ::testing::Test {
+ protected:
+  void SetUp() override { SetThreshold(zx::msec(1)); }
+  void TearDown() override { ResetThreshold(); }
+};
+
+TEST_F(SyncWaitTest, WaitFor) {
   SyncWait sync;
-  sync.set_threshold(zx::msec(1));
   EXPECT_FALSE(sync.is_signaled());
-  EXPECT_FALSE(sync.has_exceeded_threshold());
 
   std::thread t([&]() { sync.WaitFor("`Signal` to be called"); });
   zx::nanosleep(zx::deadline_after(zx::msec(5)));
@@ -27,17 +31,16 @@ TEST(SyncWaitTest, WaitFor) {
   sync.Signal();
   t.join();
   EXPECT_TRUE(sync.is_signaled());
-  EXPECT_TRUE(sync.has_exceeded_threshold());
 }
 
-TEST(SyncWaitTest, TimedWait) {
+TEST_F(SyncWaitTest, TimedWait) {
   SyncWait sync;
   EXPECT_EQ(sync.TimedWait(zx::msec(1)), ZX_ERR_TIMED_OUT);
   sync.Signal();
   EXPECT_EQ(sync.TimedWait(zx::msec(1)), ZX_OK);
 }
 
-TEST(SyncWaitTest, WaitUntil) {
+TEST_F(SyncWaitTest, WaitUntil) {
   SyncWait sync;
   auto now = zx::clock::get_monotonic();
   EXPECT_EQ(sync.WaitUntil(now), ZX_ERR_TIMED_OUT);
@@ -45,19 +48,15 @@ TEST(SyncWaitTest, WaitUntil) {
   EXPECT_EQ(sync.WaitUntil(now), ZX_OK);
 }
 
-TEST(SyncWaitTest, Reset) {
+TEST_F(SyncWaitTest, Reset) {
   SyncWait sync;
-  sync.set_threshold(zx::usec(1));
   EXPECT_FALSE(sync.is_signaled());
-  EXPECT_FALSE(sync.has_exceeded_threshold());
 
   sync.Signal();
   EXPECT_TRUE(sync.is_signaled());
-  EXPECT_FALSE(sync.has_exceeded_threshold());
 
   sync.Reset();
   EXPECT_FALSE(sync.is_signaled());
-  EXPECT_FALSE(sync.has_exceeded_threshold());
 
   std::thread t([&]() { sync.WaitFor("`Signal` to be called again"); });
   zx::nanosleep(zx::deadline_after(zx::msec(5)));
@@ -66,11 +65,9 @@ TEST(SyncWaitTest, Reset) {
   sync.Signal();
   t.join();
   EXPECT_TRUE(sync.is_signaled());
-  EXPECT_TRUE(sync.has_exceeded_threshold());
 
   sync.Reset();
   EXPECT_FALSE(sync.is_signaled());
-  EXPECT_FALSE(sync.has_exceeded_threshold());
 }
 
 }  // namespace fuzzing

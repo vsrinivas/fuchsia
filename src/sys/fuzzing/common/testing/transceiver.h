@@ -17,7 +17,7 @@ namespace fuzzing {
 // Wraps a |Transceiver| and provides for synchronous transmission and receipt of data.
 class FakeTransceiver final {
  public:
-  FakeTransceiver();
+  FakeTransceiver() = default;
   ~FakeTransceiver() = default;
 
   // Synchronously send an |Input|. The input can be read from the returned |FidlInput|.
