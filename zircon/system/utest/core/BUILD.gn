@@ -182,10 +182,10 @@ test("standalone") {
     "standalone-init.cc",
     "standalone-io.cc",
     "standalone-options.cc",
-    "standalone.h",
     "test-main-with-filter.cc",
   ]
   deps += [
+    ":maybe-standalone",
     "//sdk/lib/stdcompat",
     "//zircon/kernel/lib/boot-options",
     "//zircon/system/ulib/lazy_init",
@@ -195,27 +195,44 @@ test("standalone") {
   ]
 }
 
+source_set("maybe-standalone") {
+  visibility = [ "./*" ]
+  testonly = true
+  public = [ "standalone.h" ]
+  public_deps = [
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 # Make that into a bootable ZBI with just the kernel.
-zbi_test("core-tests") {
-  assert(current_cpu != "")
+template("core_tests") {
+  zbi_test(target_name) {
+    assert(current_cpu != "")
 
-  args = [
-    "userboot.next=test/core-standalone-test",
-    "userboot.shutdown",
-    "kernel.vdso.always_use_next=true",
-    "kernel.enable-debugging-syscalls=true",
-    "kernel.ram.reserve.test=0x8000,0xXXXXXXXXXXXXXXXX",
-  ]
+    args = [
+             "userboot.next=test/core-standalone-test",
+             "userboot.shutdown",
+             "kernel.vdso.always_use_next=true",
+             "kernel.enable-debugging-syscalls=true",
+             "kernel.test.ram.reserve=0x8000",
+           ] + invoker.args
 
-  deps = [
-    ":standalone",
-    "//zircon/kernel",
-  ]
-  assert_no_deps = [
-    "//zircon/system/core/*",
-    "//zircon/system/dev/*",
-  ]
+    deps = [
+      ":standalone",
+      "//zircon/kernel",
+    ]
+    assert_no_deps = [
+      "//zircon/system/core/*",
+      "//zircon/system/dev/*",
+    ]
 
+    device_types = invoker.device_types
+  }
+}
+
+core_tests("core-tests") {
+  args = []
   device_types = [
     "AEMU",
     "Astro",
@@ -229,24 +246,8 @@ zbi_test("core-tests") {
 # has been configured to force selection of HPET as the timing source instead
 # of choosing TSC if possible.
 if (current_cpu == "x64") {
-  # Make that into a bootable ZBI with just the kernel.
-  zbi_test("core-tests-hpet") {
-    args = [
-      "userboot.next=test/core-standalone-test",
-      "userboot.shutdown",
-      "kernel.wallclock=hpet",
-      "kernel.vdso.always_use_next=true",
-      "kernel.enable-debugging-syscalls=true",
-      "kernel.ram.reserve.test=0x8000,0xXXXXXXXXXXXXXXXX",
-    ]
-    deps = [
-      ":standalone",
-      "//zircon/kernel",
-    ]
-    assert_no_deps = [
-      "//zircon/system/core/*",
-      "//zircon/system/dev/*",
-    ]
+  core_tests("core-tests-hpet") {
+    args = [ "kernel.wallclock=hpet" ]
     device_types = [ "Intel NUC Kit NUC7i5DNHE" ]
   }
 }

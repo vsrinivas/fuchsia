@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/boot-options/boot-options.h>
 #include <lib/zbitl/items/cpu-topology.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
@@ -48,15 +49,34 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
         // rather than using normalized data from memalloc::Pool so that the
         // kernel's ingestion of RAM vs RESERVED regions is unperturbed.
         // Later this will be replaced by proper memory handoff.
+
         const ktl::span mem_config{
             reinterpret_cast<const zbi_mem_range_t*>(payload.data()),
             payload.size_bytes() / sizeof(zbi_mem_range_t),
         };
+
+        ktl::optional<zbi_mem_range_t> test_ram_reserve;
+        if (gBootOptions->test_ram_reserve && gBootOptions->test_ram_reserve->paddr) {
+          test_ram_reserve = {
+              .paddr = *gBootOptions->test_ram_reserve->paddr,
+              .length = gBootOptions->test_ram_reserve->size,
+              .type = ZBI_MEM_RANGE_RESERVED,
+          };
+        }
+
         fbl::AllocChecker ac;
-        ktl::span handoff_mem_config = New(handoff()->mem_config, ac, mem_config.size());
+        ktl::span handoff_mem_config =
+            New(handoff()->mem_config, ac, mem_config.size() + (test_ram_reserve ? 1 : 0));
         ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for memory handoff",
                       mem_config.size_bytes());
+
         ktl::copy(mem_config.begin(), mem_config.end(), handoff_mem_config.begin());
+        if (test_ram_reserve) {
+          // TODO(mcgrathr): Note this will persist into the mexec handoff from
+          // the kernel and be elided from the next kernel.  But that will be
+          // fixed shortly when mexec handoff is handled directly here instead.
+          handoff_mem_config.back() = *test_ram_reserve;
+        }
         break;
       }
 

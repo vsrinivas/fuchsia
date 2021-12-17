@@ -100,7 +100,7 @@ class Mapping {
 
 // A simple struct and function which can be used to attempt to fetch a VMO
 // created using zx_vmo_create_physical from a region which should have been
-// reserved using the kernel.ram.reserve command line arguments.
+// reserved using the kernel.test.ram.reserve boot option.
 struct PhysVmo {
   uintptr_t addr = 0;
   size_t size = 0;

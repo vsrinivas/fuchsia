@@ -38,11 +38,12 @@ DEFINE_OPTION("kernel.cprng-seed-require.hw-rng", bool, cprng_seed_require_hw_rn
 When enabled and if HW RNG fails at initial seeding, CPRNG panics.
 )""")
 
-DEFINE_OPTION("kernel.cprng-disable.jitterentropy", bool, cprng_disable_jitterentropy, {false}, R"""(
+DEFINE_OPTION("kernel.cprng-disable.jitterentropy", bool, cprng_disable_jitterentropy, {false},
+              R"""(
 Determines whether jitterentropy will be used as an entropy source (used for testing)
 )""")
 
-DEFINE_OPTION("kernel.cprng-disable.hw-rng", bool, cprng_disable_hw_rng, {false},R"""(
+DEFINE_OPTION("kernel.cprng-disable.hw-rng", bool, cprng_disable_hw_rng, {false}, R"""(
 Determines whether HW RNG will be used as an entropy source (used for testing)
 )""")
 
@@ -539,15 +540,15 @@ When `always`, Unused page tables are evicted periodically. The period can be co
 )""")
 
 DEFINE_OPTION("kernel.page-scanner.page-table-eviction-period", uint32_t,
-page_scanner_page_table_eviction_period, {10}, R"""(
+              page_scanner_page_table_eviction_period, {10}, R"""(
 Sets the rate, in seconds, that page tables will be scanned. Any page tables not used between two
 successive scans are candidates for eviction.
 
 This option only has an effect if `kernel.page-scanner.page-table-eviction-policy=always`.
 )""")
 
-DEFINE_OPTION("kernel.page-scanner.min-aging-interval", uint32_t,
-page_scanner_min_aging_interval, {5}, R"""(
+DEFINE_OPTION("kernel.page-scanner.min-aging-interval", uint32_t, page_scanner_min_aging_interval,
+              {5}, R"""(
 Sets the minimum time, in seconds, between successive aging events. Higher values here will provide
 a more stable active set with less chance of thrashing like behavior and less time spent harvesting
 page access information. Lower values will allow for smaller active sets, increasing opportunities
@@ -556,8 +557,8 @@ for eviction.
 This value should be less than or equal to `kernel.page-scanner.max-aging-interval`.
 )""")
 
-DEFINE_OPTION("kernel.page-scanner.max-aging-interval", uint32_t,
-page_scanner_max_aging_interval, {5}, R"""(
+DEFINE_OPTION("kernel.page-scanner.max-aging-interval", uint32_t, page_scanner_max_aging_interval,
+              {5}, R"""(
 Sets the maximum time, in seconds, between successive aging events. This time is the potential worst
 case coarseness of page age information, and higher values can result in not having sufficient age
 information to perform eviction if system behavior rapidly changes. Lower values will cause pages to
@@ -568,7 +569,7 @@ This value should be greater than or equal to `kernel.page-scanner.min-aging-int
 )""")
 
 DEFINE_OPTION("kernel.page-scanner.active-ratio-multiplier", uint32_t,
-page_scanner_active_ratio_multiplier, {0}, R"""(
+              page_scanner_active_ratio_multiplier, {0}, R"""(
 Controls the allowable ratio of active pages, compared to inactive pages, before aging is triggered.
 The ratio is represented as a multiplier to simplify the kernel algorithm which is
 `should_age = active_page_count * active_ratio_multiplier > inactive_page_count`. Higher multipliers
@@ -684,7 +685,14 @@ Tells the kernel to start its own shell on the kernel console instead of a users
 )""")
 
 DEFINE_OPTION("kernel.smp.ht", bool, smp_ht_enabled, {true}, R"""(
-This options specifies whether the HyperThreading(ht) logical CPUs should be enabled or not.
+This option specifies whether the HyperThreading (HT) logical CPUs should be enabled or not.
+)""")
+
+DEFINE_OPTION("kernel.test.ram.reserve", std::optional<RamReservation>, test_ram_reserve, {}, R"""(
+Specifies a range of physical RAM to be reserved for testing purposes.
+This should be written as just SIZE (an integer byte quantity, which should
+be page-aligned) but will be read back as SIZE,ADDRESS after the kernel
+assigns an address in early boot.
 )""")
 
 // Machine-specific options are included here for all the kernel places.

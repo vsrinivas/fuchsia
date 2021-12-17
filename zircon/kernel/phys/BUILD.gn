@@ -371,10 +371,13 @@ if (toolchain_environment == "kernel.phys" ||
     ]
     public_deps = [ ":handoff-prep.h" ]
     deps = [
+      ":allocation",
       ":handoff",
       ":symbolize",
       "//src/lib/llvm-profdata",
       "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
+      "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/phys/lib/memalloc",
       "//zircon/system/ulib/zbitl",
     ]
   }

@@ -76,7 +76,7 @@ struct BootOptions {
   }
 
   // Parse a string to an integer in C syntax.
-  static std::optional<int64_t> ParseInt(std::string_view);
+  static std::optional<int64_t> ParseInt(std::string_view, std::string_view* rest = nullptr);
 
   // Split the command line into words and parse each one as an option.  This
   // can be called multiple times with separate command line fragments.  Each
@@ -117,6 +117,7 @@ struct BootOptions {
   OPTION_TYPE(PageTableEvictionPolicy);
   OPTION_TYPE(RootJobBehavior);
   OPTION_TYPE(WallclockType);
+  OPTION_TYPE(std::optional<RamReservation>);
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
   OPTION_TYPE(TestEnum);
   OPTION_TYPE(TestStruct);

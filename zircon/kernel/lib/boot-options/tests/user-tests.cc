@@ -56,6 +56,11 @@ RedactedHex GetValue<RedactedHex>(const BootOptions& options) {
   return options.test_redacted_hex;
 }
 
+template <>
+std::optional<RamReservation> GetValue<std::optional<RamReservation>>(const BootOptions& options) {
+  return options.test_ram_reserve;
+}
+
 //
 // Updates the BootOptions test-only member backed by a given type.
 //
@@ -97,6 +102,12 @@ void SetManyValue<RedactedHex>(BootOptions* options, RedactedHex value) {
   options->test_redacted_hex = value;
 }
 
+template <>
+void SetManyValue<std::optional<RamReservation>>(BootOptions* options,
+                                                 std::optional<RamReservation> value) {
+  options->test_ram_reserve = value;
+}
+
 //
 // Compares values of a particular test option type.
 //
@@ -111,6 +122,19 @@ void CompareValues<SmallString>(const SmallString& lhs, const SmallString& rhs) 
   EXPECT_STR_EQ(lhs.data(), rhs.data());
 }
 
+template <>
+void CompareValues<std::optional<RamReservation>>(const std::optional<RamReservation>& lhs,
+                                                  const std::optional<RamReservation>& rhs) {
+  ASSERT_EQ(lhs.has_value(), rhs.has_value());
+  if (lhs.has_value()) {
+    EXPECT_EQ(lhs->size, rhs->size);
+    ASSERT_EQ(lhs->paddr.has_value(), rhs->paddr.has_value());
+    if (lhs->paddr.has_value()) {
+      EXPECT_EQ(*lhs->paddr, *rhs->paddr);
+    }
+  }
+}
+
 //
 // Tests, templated by test option type.
 //
@@ -122,6 +146,7 @@ void TestParsing(std::string_view name, std::string_view to_set, OptionType expe
   BootOptions options;
   options.SetMany(to_set, f);
 
+  rewind(f);
   char buff[kFileSizeMax];
   size_t n = fread(buff, 1, kFileSizeMax, f);
   ASSERT_EQ(0, ferror(f), "failed to read file: %s", strerror(errno));
@@ -489,6 +514,44 @@ TEST(BootOptionTests, StringSanitization) {
     ASSERT_EQ(expected.size(), sanitized.size());
     EXPECT_BYTES_EQ(expected.data(), sanitized.data(), expected.size());
   }
+}
+
+TEST(ParsingTests, EmptyRamReservation) {
+  ASSERT_NO_FATAL_FAILURES(TestParsing<std::optional<RamReservation>>(
+      "kernel.test.ram.reserve", "kernel.test.ram.reserve=", std::nullopt));
+}
+
+TEST(UnparsingTests, EmptyRamReservation) {
+  ASSERT_NO_FATAL_FAILURES(TestUnparsing<std::optional<RamReservation>>(
+      "kernel.test.ram.reserve", std::nullopt, "kernel.test.ram.reserve=\n"));
+}
+
+constexpr RamReservation kTestRamReservation = {.size = 0x8000};
+constexpr RamReservation kTestRamReservationWithPaddr = {
+    .paddr = 0x1234000,
+    .size = 0x8000,
+};
+
+TEST(ParsingTests, RamReservation) {
+  ASSERT_NO_FATAL_FAILURES(TestParsing<std::optional<RamReservation>>(
+      "kernel.test.ram.reserve", "kernel.test.ram.reserve=0x8000", kTestRamReservation));
+}
+
+TEST(UnparsingTests, RamReservation) {
+  ASSERT_NO_FATAL_FAILURES(TestUnparsing<std::optional<RamReservation>>(
+      "kernel.test.ram.reserve", kTestRamReservation, "kernel.test.ram.reserve=0x8000\n"));
+}
+
+TEST(ParsingTests, RamReservationWithPaddr) {
+  ASSERT_NO_FATAL_FAILURES(TestParsing<std::optional<RamReservation>>(
+      "kernel.test.ram.reserve", "kernel.test.ram.reserve=0x8000,0x1234000",
+      kTestRamReservationWithPaddr));
+}
+
+TEST(UnparsingTests, RamReservationWithPaddr) {
+  ASSERT_NO_FATAL_FAILURES(TestUnparsing<std::optional<RamReservation>>(
+      "kernel.test.ram.reserve", kTestRamReservationWithPaddr,
+      "kernel.test.ram.reserve=0x8000,0x1234000\n"));
 }
 
 }  // namespace

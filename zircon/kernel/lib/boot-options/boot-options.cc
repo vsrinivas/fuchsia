@@ -36,7 +36,7 @@ using namespace std::string_view_literals;
 // not to require NUL termination.
 //
 // TODO(fxbug.dev/62052): Reconsider the overflow policy below.
-std::optional<int64_t> BootOptions::ParseInt(std::string_view value) {
+std::optional<int64_t> BootOptions::ParseInt(std::string_view value, std::string_view* rest) {
   int64_t neg = 1;
   if (value.substr(0, 1) == "-") {
     neg = -1;
@@ -46,7 +46,8 @@ std::optional<int64_t> BootOptions::ParseInt(std::string_view value) {
   }
 
   std::optional<int64_t> result;
-  auto from_chars = [&](std::string_view prefix, int base, bool trim = false) {
+  auto from_chars = [neg, rest, &result](std::string_view prefix, int base, std::string_view value,
+                                         bool trim = false) {
     if (value.substr(0, prefix.size()) == prefix) {
       if (trim) {
         value.remove_prefix(prefix.size());
@@ -56,23 +57,31 @@ std::optional<int64_t> BootOptions::ParseInt(std::string_view value) {
       }
       int64_t result_value = 0;
       for (char c : value) {
-        mul_overflow(result_value, base, &result_value);
+        std::optional<unsigned int> digit;
         switch (c) {
           case '0' ... '9':
-            if (c - '0' >= base) {
-              return false;
+            if (c - '0' < base) {
+              digit = c - '0';
             }
-            add_overflow(result_value, c - '0', &result_value);
             break;
           case 'a' ... 'f':
-            if (base != 16) {
-              return false;
+            if (base == 16) {
+              digit = c - 'a' + 10;
             }
-            add_overflow(result_value, c - 'a' + 10, &result_value);
             break;
-          default:
-            return false;
         }
+        if (digit) {
+          mul_overflow(result_value, base, &result_value);
+          add_overflow(result_value, *digit, &result_value);
+          value.remove_prefix(1);
+        } else if (rest) {
+          break;
+        } else {
+          return false;
+        }
+      }
+      if (rest) {
+        *rest = value;
       }
       mul_overflow(result_value, neg, &result_value);
       result = result_value;  // Finally set the result.
@@ -81,7 +90,7 @@ std::optional<int64_t> BootOptions::ParseInt(std::string_view value) {
     return false;
   };
 
-  from_chars("0x", 16, true) || from_chars("0", 8) || from_chars("", 10);
+  from_chars("0x", 16, value, true) || from_chars("0", 8, value) || from_chars("", 10, value);
   return result;
 }
 
@@ -410,6 +419,38 @@ bool BootOptions::Parse(std::string_view value, WallclockType BootOptions::*memb
 
 void BootOptions::PrintValue(const WallclockType& value, FILE* out) {
   Enum<WallclockType>(EnumPrinter{value, out});
+}
+
+bool BootOptions::Parse(std::string_view value,
+                        std::optional<RamReservation> BootOptions::*member) {
+  if (value.empty()) {
+    this->*member = std::nullopt;
+  } else if (auto size = ParseInt(value, &value); !size) {
+    return false;
+  } else {
+    RamReservation ram = {.size = static_cast<uint64_t>(*size)};
+    if (!value.empty()) {
+      if (value[0] != ',') {
+        return false;
+      }
+      auto paddr = ParseInt(value.substr(1));
+      if (!paddr) {
+        return false;
+      }
+      ram.paddr = static_cast<uint64_t>(*paddr);
+    }
+    this->*member = ram;
+  }
+  return true;
+}
+
+void BootOptions::PrintValue(const std::optional<RamReservation>& value, FILE* out) {
+  if (value) {
+    fprintf(out, "%#" PRIx64, value->size);
+    if (value->paddr) {
+      fprintf(out, ",%#" PRIx64, *value->paddr);
+    }
+  }
 }
 
 #if BOOT_OPTIONS_TESTONLY_OPTIONS

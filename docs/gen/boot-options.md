@@ -719,7 +719,14 @@ Tells the kernel to start its own shell on the kernel console instead of a users
 ### kernel.smp.ht=\<bool>
 **Default:** `true`
 
-This options specifies whether the HyperThreading(ht) logical CPUs should be enabled or not.
+This option specifies whether the HyperThreading (HT) logical CPUs should be enabled or not.
+
+### kernel.test.ram.reserve=\<std::optional<RamReservation>>
+
+Specifies a range of physical RAM to be reserved for testing purposes.
+This should be written as just SIZE (an integer byte quantity, which should
+be page-aligned) but will be read back as SIZE,ADDRESS after the kernel
+assigns an address in early boot.
 
 
 ## Options available only on arm64 machines

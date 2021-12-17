@@ -144,6 +144,11 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   HandoffPrep prep;
   prep.Init(handoff_item->payload);
 
+  // Hand off the boot options first, which don't really change.  But keep a
+  // mutable reference to update boot_options.serial later to include live
+  // driver state and not just configuration like other BootOptions members do.
+  BootOptions& handoff_options = prep.SetBootOptions(*gBootOptions);
+
   prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
 
   prep.SetInstrumentation();
@@ -154,16 +159,12 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   // hand-off.
   prep.handoff()->times = gBootTimes;
 
-  fbl::AllocChecker ac;
-  BootOptions* handoff_options = prep.New(prep.handoff()->boot_options, ac, *gBootOptions);
-  ZX_ASSERT_MSG(ac.check(), "cannot allocate handoff BootOptions!");
-
   // Copy any post-Init() serial state from the live driver here in physboot
   // into the handoff BootOptions.  There should be no more printing from here
   // on.  TODO(fxbug.dev/84107): Actually there is some printing in BootZbi,
   // but no current drivers carry post-Init() state so it's harmless for now.
   GetUartDriver().Visit(
-      [handoff_options](const auto& driver) { handoff_options->serial = driver.uart(); });
+      [&handoff_options](const auto& driver) { handoff_options.serial = driver.uart(); });
 
   // Even though the kernel is still a ZBI and mostly using the ZBI protocol
   // for booting, the PhysHandoff pointer (physical address) is now the

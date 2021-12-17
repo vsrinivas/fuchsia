@@ -73,10 +73,6 @@ void RootResourceFilter::Finalize() {
             error.item_offset, static_cast<int>(error.zbi_error.size()), error.zbi_error.data());
   }
 
-  // Attempt to reserve any regions specified by the command line
-  gCmdline.ProcessRamReservations(
-      [this](size_t size, std::string_view name) { return ProcessCmdLineReservation(size, name); });
-
   // Dump the deny list at spew level for debugging purposes.
   if (DPRINTF_ENABLED_FOR_LEVEL(SPEW)) {
     dprintf(SPEW, "Final MMIO Deny list is:\n");
@@ -85,87 +81,6 @@ void RootResourceFilter::Finalize() {
       return true;  // Keep printing, don't stop now!
     });
   }
-}
-
-std::optional<uintptr_t> RootResourceFilter::ProcessCmdLineReservation(size_t size,
-                                                                       std::string_view name) {
-  // Sadly, the compiler's printf format string argument checking does not
-  // understand the kernel's special %V extension for string view.  We
-  // suppress the warning by indirecting through a local printf lambda which
-  // is not annotated to have the check.
-  auto Printf = [](const char* fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    vprintf(fmt, args);
-    va_end(args);
-  };
-
-  // Sanity check our args before proceeding.
-  if (size & (static_cast<uintptr_t>(PAGE_SIZE) - 1)) {
-    Printf(
-        "WARNING - RAM reservation \"%V\" request must be a multiple of page size (size=0x%zx).\n",
-        name, size);
-    return std::nullopt;
-  }
-
-  // Create the node we will use to hold our pointer and unpin our VMO on destruction.
-  fbl::AllocChecker ac;
-  auto node = ktl::make_unique<CommandLineReservedRegion>(&ac);
-  if (!ac.check()) {
-    Printf("WARNING - Failed to allocate storage for command line RAM reservation \"%V\"\n", name);
-    return std::nullopt;
-  }
-
-  // Attempt to allocate a contiguous region of RAM to satisfy this reservation.
-  // Do not store the result in the node just yet, we want to make sure that the
-  // pin succeeds first (since the node destructor will unconditionally unpin
-  // the VMO).
-  fbl::RefPtr<VmObjectPaged> tmp;
-  zx_status_t status;
-  status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, size, PAGE_SIZE_SHIFT, &tmp);
-  if (status == ZX_OK) {
-    // Make sure that we have pages backing this VMO and that they are pinned.
-    // We want to make sure that this memory is off limits to the PMM from here
-    // on out.
-    status = tmp->CommitRangePinned(0, size);
-    if (status == ZX_OK) {
-      node->vmo = std::move(tmp);
-    }
-  }
-
-  if (status != ZX_OK) {
-    Printf("WARNING - Failed to reserve RAM for command line reservation \"%V\" (status=%d)\n",
-           name, status);
-    return std::nullopt;
-  }
-
-  // Great, we have the region reserved.  All we need to do now is to update the
-  // deny list.  Start by fetching the phys addr of the region we allocated and
-  // pinned.
-  paddr_t phys = 0;
-  status = node->vmo->GetPage(0, 0, nullptr, nullptr, nullptr, &phys);
-  if (status != ZX_OK) {
-    Printf("WARNING - Failed to fetch physaddr for command line reservation \"%V\" (status=%d)\n",
-           name, status);
-    return std::nullopt;
-  }
-
-  // Allow user mode access to the RAM we just reserved.
-  status = mmio_deny_.SubtractRegion({.base = phys, .size = size},
-                                     RegionAllocator::AllowIncomplete::Yes);
-  if (status != ZX_OK) {
-    Printf(
-        "WARNING - Failed to add region [%lx, %lx) command line reservation \"%V\" to deny "
-        "list (status=%d)\n",
-        phys, phys + size, name, status);
-    return std::nullopt;
-  }
-
-  // Everything went well.  Hold onto the VMO we are using to enforce our
-  // reservation and return the address we reserved.
-  Printf("Created command line RAM reservation \"%V\" at [%lx, %lx)\n", name, phys, phys + size);
-  cmd_line_reservations_.push_front(std::move(node));
-  return phys;
 }
 
 bool RootResourceFilter::IsRegionAllowed(uintptr_t base, size_t size, zx_rsrc_kind_t kind) const {

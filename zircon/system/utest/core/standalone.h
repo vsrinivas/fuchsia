@@ -5,6 +5,7 @@
 #ifndef ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
 #define ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
 
+#include <lib/boot-options/boot-options.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
@@ -15,7 +16,9 @@
 
 void StandaloneInitIo(zx::unowned_resource root_resource);
 
-zx::unowned_vmo StandaloneGetVmo(const std::string& name);
+[[gnu::weak]] zx::unowned_vmo StandaloneGetVmo(const std::string& name);
+
+[[gnu::weak]] const BootOptions& StandaloneGetBootOptions();
 
 struct StandaloneOption {
   std::string_view prefix;

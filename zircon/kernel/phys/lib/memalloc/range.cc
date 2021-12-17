@@ -49,6 +49,8 @@ std::string_view ToString(Type type) {
       return "memalloc::Pool test payload"sv;
     case Type::kZbiTestPayload:
       return "ZBI test payload"sv;
+    case Type::kTestRamReserve:
+      return "kernel.test.ram.reserve"sv;
     case Type::kMaxExtended:
       return "kMaxExtended"sv;
   }

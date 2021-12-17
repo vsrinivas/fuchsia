@@ -19,6 +19,7 @@
 #include <ktl/span.h>
 #include <phys/handoff-ptr.h>
 
+struct BootOptions;
 struct PhysHandoff;
 class PhysBootTimes;
 
@@ -60,6 +61,10 @@ class HandoffPrep {
     }
     return {};
   }
+
+  // Fills in handoff()->boot_options and returns the mutable reference to
+  // update its fields later so that `.serial` can be transferred last.
+  BootOptions& SetBootOptions(const BootOptions& boot_options);
 
   // Summarizes the provided data ZBI's miscellaneous simple items for the
   // kernel, filling in corresponding handoff()->item fields.

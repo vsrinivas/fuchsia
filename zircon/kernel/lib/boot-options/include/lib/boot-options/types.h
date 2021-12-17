@@ -10,6 +10,7 @@
 #include <zircon/limits.h>
 
 #include <array>
+#include <optional>
 #include <string_view>
 
 // This declares special types used for BootOptions members.  These, as well
@@ -89,6 +90,20 @@ enum class WallclockType {
   kPit,
   kHpet,
 };
+
+// See kernel.test.ram.reserve.
+struct RamReservation {
+  std::optional<uint64_t> paddr;
+  uint64_t size;
+};
+
+constexpr bool operator==(const RamReservation& lhs, const RamReservation& rhs) {
+  return lhs.paddr == rhs.paddr && lhs.size == rhs.size;
+}
+
+constexpr bool operator!=(const RamReservation& lhs, const RamReservation& rhs) {
+  return !(lhs == rhs);
+}
 
 // List of command lines argument names that are explicitly referenced in code.
 // TODO(fxb/74740): remove all usages of this.

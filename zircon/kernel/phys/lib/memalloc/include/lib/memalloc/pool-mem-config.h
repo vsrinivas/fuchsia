@@ -71,8 +71,13 @@ class PoolMemConfig {
       while (last_ != end_) {
         size_ += last_->size;
         Pool::iterator next = std::next(last_);
-        if (next == end_ || next->addr != last_->addr + last_->size ||
-            ReduceType(*next) != ReduceType(*last_)) {
+        if (next == end_) {
+          break;
+        }
+        if (next->type == Type::kTestRamReserve) {
+          continue;
+        }
+        if (next->addr != last_->end() || ReduceType(*next) != ReduceType(*last_)) {
           break;
         }
         last_ = next;

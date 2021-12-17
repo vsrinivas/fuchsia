@@ -72,24 +72,10 @@ class RootResourceFilter {
   bool IsRegionAllowed(uintptr_t base, size_t size, zx_rsrc_kind_t kind) const;
 
  private:
-  struct CommandLineReservedRegion
-      : public fbl::SinglyLinkedListable<ktl::unique_ptr<CommandLineReservedRegion>> {
-    ~CommandLineReservedRegion() {
-      if (vmo != nullptr) {
-        vmo->Unpin(0, vmo->size());
-      }
-    }
-    fbl::RefPtr<VmObject> vmo;
-  };
-
-  std::optional<uintptr_t> ProcessCmdLineReservation(size_t size, std::string_view name);
-
   // By default, RegionAllocators are thread safe (protected by a fbl::Mutex),
   // so aside from making sure that the scheduler is up and running, we have no
   // additional locking requirements here.
   RegionAllocator mmio_deny_;
-
-  fbl::SinglyLinkedList<ktl::unique_ptr<CommandLineReservedRegion>> cmd_line_reservations_;
 };
 
 #endif  // ZIRCON_KERNEL_LIB_ROOT_RESOURCE_FILTER_INCLUDE_LIB_ROOT_RESOURCE_FILTER_INTERNAL_H_

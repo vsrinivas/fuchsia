@@ -80,6 +80,9 @@ enum class Type : uint64_t {
   // A generic allocated type for ZBI tests.
   kZbiTestPayload,
 
+  // Memory carved out for the kernel.test.ram.reserve boot option.
+  kTestRamReserve,
+
   // A placeholder value signifying the last extended type. It must not be used
   // as an actual type value.
   kMaxExtended,
