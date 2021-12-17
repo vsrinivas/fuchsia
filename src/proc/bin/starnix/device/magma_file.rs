@@ -214,6 +214,17 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2 as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_RELEASE_BUFFER => {
+                let (control, mut response): (
+                    virtio_magma_release_buffer_ctrl_t,
+                    virtio_magma_release_buffer_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                self.infos.lock().remove(&(control.buffer as usize));
+
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_BUFFER as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXPORT => {
                 let (control, mut response): (
                     virtio_magma_export_ctrl_t,
