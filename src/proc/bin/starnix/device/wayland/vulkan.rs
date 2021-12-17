@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: Remove once file is used.
-#![allow(dead_code)]
-
 // TODO(fxb/89887): Remove this dependency in favor of a vulkan-extension specific import.
 use carnelian::render::generic::spinel::*;
 use fidl::endpoints::ClientEnd;

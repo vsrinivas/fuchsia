@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![allow(non_upper_case_globals)]
-#![allow(dead_code)]
 
 use fidl_fuchsia_sysmem as fsysmem;
 use fidl_fuchsia_ui_composition as fuicomp;
