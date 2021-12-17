@@ -376,7 +376,7 @@ template("bindc") {
     if (defined(invoker.disable_autobind) && invoker.disable_autobind) {
       args += [ "--disable-autobind" ]
     }
-    if (defined(invoker.generate_bytecode) && invoker.generate_bytecode) {
+    if (generate_bytecode) {
       args += [ "--output-bytecode" ]
     }
     if (defined(invoker.rules)) {
@@ -395,8 +395,8 @@ template("bindc") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
-    if (defined(invoker.generate_bytecode) && invoker.generate_bytecode) {
-      metadata = {
+    metadata = {
+      if (generate_bytecode) {
         # This metadata lets the packaging system know where to put the bytecode file.
         distribution_entries = [
           {
@@ -405,6 +405,10 @@ template("bindc") {
             label = get_label_info(":$target_name", "label_with_toolchain")
           },
         ]
+      } else {
+        # This ensures the generated header files are made available for static
+        # analysis without doing a full build.
+        generated_sources = rebase_path(outputs, root_build_dir)
       }
     }
   }
