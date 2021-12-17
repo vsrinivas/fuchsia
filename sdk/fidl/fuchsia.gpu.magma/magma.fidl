@@ -164,7 +164,6 @@ type BufferRange = struct {
 };
 
 /// If a system driver error occurs, the connection will be closed and a zx.status sent via epitaph.
-/// If negative, the Epitaph represents a Zircon error.
 protocol Primary {
     /// Imports an object for use in the system driver.
     ImportObject(resource struct {
