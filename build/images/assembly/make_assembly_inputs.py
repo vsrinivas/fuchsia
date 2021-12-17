@@ -72,7 +72,19 @@ def main():
         for bootfs_file in product_config["bootfs_files"]:
             add_file(bootfs_file["source"])
 
-    # TODO: Add the board config.
+    # Add the board config.
+    add_file(args.board_config.name)
+    board_config = json.load(args.board_config)
+    if "vbmeta" in board_config:
+        add_file(board_config["vbmeta"]["key"])
+        add_file(board_config["vbmeta"]["key_metadata"])
+        if "additional_descriptor_files" in board_config["vbmeta"]:
+            for descriptor in board_config["vbmeta"][
+                    "additional_descriptor_files"]:
+                add_file(descriptor)
+    if "zbi" in board_config:
+        if "signing_script" in board_config["zbi"]:
+            add_file(board_config["zbi"]["signing_script"]["tool"])
 
     # Convert the map into a list of maps.
     files = []
