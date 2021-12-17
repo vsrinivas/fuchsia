@@ -165,6 +165,8 @@ type GuestConfig = resource table {
    19: virtio_vsock bool;
     /// Enable virtio-sound (assumed if absent).
    20: virtio_sound bool;
+    /// Enable input streams (capture) for virtio-sound (false if absent).
+   21: virtio_sound_input bool;
 };
 
 /// Protocol to provide a guest's configuration.

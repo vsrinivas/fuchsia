@@ -329,9 +329,10 @@ static constexpr QueueConfig kQueueConfigs[4] = {
     {16, PAGE_SIZE},
 };
 
-class VirtioSoundTest : public TestWithDevice {
+template <bool EnableInput>
+class VirtioSoundTestBase : public TestWithDevice {
  protected:
-  VirtioSoundTest() {
+  VirtioSoundTestBase() {
     zx_gpaddr_t addr = 0;
     for (int k = 0; k < 4; k++) {
       queue_data_addrs_[k] = addr;
@@ -358,10 +359,15 @@ class VirtioSoundTest : public TestWithDevice {
     RunLoopUntilIdle();
 
     uint32_t features, jacks, streams, chmaps;
-    ASSERT_EQ(ZX_OK, sound_->Start(std::move(start_info), &features, &jacks, &streams, &chmaps));
+    ASSERT_EQ(ZX_OK, sound_->Start(std::move(start_info), EnableInput, &features, &jacks, &streams,
+                                   &chmaps));
     ASSERT_EQ(features, 0u);
     ASSERT_EQ(jacks, kNumJacks);
-    ASSERT_EQ(streams, kNumStreams);
+    if (EnableInput) {
+      ASSERT_EQ(streams, kNumStreams);
+    } else {
+      ASSERT_EQ(streams, 1u);
+    }
     ASSERT_EQ(chmaps, kNumChmaps);
 
     // Configure device queues.
@@ -506,6 +512,9 @@ class VirtioSoundTest : public TestWithDevice {
   std::unique_ptr<FakeAudio> audio_service_;
   std::unordered_map<VirtioQueueFake*, std::unordered_set<uint32_t>> used_descriptors_;
 };
+
+using VirtioSoundTest = VirtioSoundTestBase<true>;
+using VirtioSoundInputDisabledTest = VirtioSoundTestBase<false>;
 
 }  // namespace
 
@@ -652,6 +661,48 @@ TEST_F(VirtioSoundTest, GetPcmInfos) {
       // 5.14.6.6.2.1: The device MUST initialize the padding bytes to 0
       EXPECT_EQ(resp[k].padding[n], 0);
     }
+  }
+}
+
+TEST_F(VirtioSoundInputDisabledTest, GetPcmInfos) {
+  virtio_snd_query_info_t query = {
+      .hdr = {.code = VIRTIO_SND_R_PCM_INFO},
+      .start_id = 0,
+      .count = 1,
+      .size = sizeof(virtio_snd_pcm_info_t),
+  };
+  virtio_snd_hdr* resphdr;
+  virtio_snd_pcm_info_t* resp;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+
+  ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
+
+  uint64_t supported_formats = bit(VIRTIO_SND_PCM_FMT_U8) | bit(VIRTIO_SND_PCM_FMT_S16) |
+                               bit(VIRTIO_SND_PCM_FMT_S24) | bit(VIRTIO_SND_PCM_FMT_FLOAT);
+  uint64_t supported_rates = bit(VIRTIO_SND_PCM_RATE_8000) | bit(VIRTIO_SND_PCM_RATE_11025) |
+                             bit(VIRTIO_SND_PCM_RATE_16000) | bit(VIRTIO_SND_PCM_RATE_22050) |
+                             bit(VIRTIO_SND_PCM_RATE_32000) | bit(VIRTIO_SND_PCM_RATE_44100) |
+                             bit(VIRTIO_SND_PCM_RATE_48000) | bit(VIRTIO_SND_PCM_RATE_64000) |
+                             bit(VIRTIO_SND_PCM_RATE_88200) | bit(VIRTIO_SND_PCM_RATE_96000) |
+                             bit(VIRTIO_SND_PCM_RATE_176400) | bit(VIRTIO_SND_PCM_RATE_192000);
+
+  EXPECT_EQ(resp->hdr.hda_fn_nid, 0u);
+  EXPECT_EQ(resp->features, 0u);
+  EXPECT_EQ(resp->formats, supported_formats);
+  EXPECT_EQ(resp->rates, supported_rates);
+  EXPECT_EQ(resp->direction, VIRTIO_SND_D_OUTPUT);
+  EXPECT_EQ(resp->channels_min, 1u);
+  EXPECT_EQ(resp->channels_max, 2u);
+
+  for (size_t n = 0; n < sizeof(resp->padding); n++) {
+    // 5.14.6.6.2.1: The device MUST initialize the padding bytes to 0
+    EXPECT_EQ(resp->padding[n], 0);
   }
 }
 
@@ -928,12 +979,20 @@ TEST_F(VirtioSoundTest, BadPcmSetParamsBadPadding) {
   ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
 }
 
+TEST_F(VirtioSoundInputDisabledTest, BadPcmSetParamsInputDisabled) {
+  auto params = kGoodPcmSetParams;
+  params.hdr.stream_id = 1;  // 0=output, 1=input
+  params.channels = 1;       // input is mono only
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
 //
 // Pcm Output SetParameters+Prepare tests
 // These test that AudioRenderer parameters are configured correctly.
 //
 
-void VirtioSoundTest::TestPcmOutputSetParamsAndPrepare(
+template <bool EnableInput>
+void VirtioSoundTestBase<EnableInput>::TestPcmOutputSetParamsAndPrepare(
     uint8_t channels, uint8_t wire_format, uint8_t wire_rate,
     fuchsia::media::AudioSampleFormat fidl_format, uint32_t fidl_rate, uint32_t buffer_bytes,
     uint32_t period_bytes) {
@@ -1034,7 +1093,8 @@ TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono192khz) {
 // Illegal state transitions are exercised in tests named BadPcmOutputTransition*.
 //
 
-void VirtioSoundTest::TestPcmOutputStateTraversal(size_t renderer_id) {
+template <bool EnableInput>
+void VirtioSoundTestBase<EnableInput>::TestPcmOutputStateTraversal(size_t renderer_id) {
   {
     SCOPED_TRACE("SET_PARAMS");
     // The specific parameters don't matter except for stream_id.
@@ -1180,7 +1240,9 @@ TEST_F(VirtioSoundTest, PcmOutputTransitionPrepareRelease) {
   }
 }
 
-void VirtioSoundTest::TestPcmBadTransition(uint32_t stream_id, std::vector<uint32_t> commands) {
+template <bool EnableInput>
+void VirtioSoundTestBase<EnableInput>::TestPcmBadTransition(uint32_t stream_id,
+                                                            std::vector<uint32_t> commands) {
   {
     SCOPED_TRACE("SET_PARAMS");
     // The specific parameters don't matter except for stream_id.
@@ -1237,8 +1299,10 @@ TEST_F(VirtioSoundTest, BadPcmOutputTransitionReleaseStop) {
 // Pcm Output data tests
 //
 
-void VirtioSoundTest::SetUpOutputForXfer(uint32_t buffer_bytes, uint32_t period_bytes,
-                                         uint32_t* expected_latency_bytes) {
+template <bool EnableInput>
+void VirtioSoundTestBase<EnableInput>::SetUpOutputForXfer(uint32_t buffer_bytes,
+                                                          uint32_t period_bytes,
+                                                          uint32_t* expected_latency_bytes) {
   // 2 bytes/frame, so the caller must set period_bytes to a multiple of 2.
   const auto bytes_per_frame = 2;
   ASSERT_TRUE(period_bytes % bytes_per_frame == 0);
@@ -1494,11 +1558,11 @@ TEST_F(VirtioSoundTest, BadPcmOutputXferPacketNonintegralFrames) {
 // These test that AudioCapturer parameters are configured correctly.
 //
 
-void VirtioSoundTest::TestPcmInputSetParamsAndPrepare(uint8_t channels, uint8_t wire_format,
-                                                      uint8_t wire_rate,
-                                                      fuchsia::media::AudioSampleFormat fidl_format,
-                                                      uint32_t fidl_rate, uint32_t buffer_bytes,
-                                                      uint32_t period_bytes) {
+template <>
+void VirtioSoundTestBase<true>::TestPcmInputSetParamsAndPrepare(
+    uint8_t channels, uint8_t wire_format, uint8_t wire_rate,
+    fuchsia::media::AudioSampleFormat fidl_format, uint32_t fidl_rate, uint32_t buffer_bytes,
+    uint32_t period_bytes) {
   {
     SCOPED_TRACE("Call SET_PARAMS");
     ASSERT_NO_FATAL_FAILURE(
@@ -1590,7 +1654,8 @@ TEST_F(VirtioSoundTest, PcmInputPrepareFloatMono192khz) {
 // Illegal state transitions are exercised in tests named BadPcmInputTransition*.
 //
 
-void VirtioSoundTest::TestPcmInputStateTraversal(size_t capturer_id) {
+template <>
+void VirtioSoundTestBase<true>::TestPcmInputStateTraversal(size_t capturer_id) {
   {
     SCOPED_TRACE("SET_PARAMS");
     // The specific parameters don't matter except for stream_id.
@@ -1747,8 +1812,10 @@ TEST_F(VirtioSoundTest, BadPcmInputTransitionReleaseStop) {
 // Pcm Input data tests
 //
 
-void VirtioSoundTest::SetUpInputForXfer(uint32_t buffer_bytes, uint32_t period_bytes,
-                                        uint32_t* bytes_per_frame, uint32_t* bytes_per_second) {
+template <>
+void VirtioSoundTestBase<true>::SetUpInputForXfer(uint32_t buffer_bytes, uint32_t period_bytes,
+                                                  uint32_t* bytes_per_frame,
+                                                  uint32_t* bytes_per_second) {
   // 2 bytes/frame, so the caller must set period_bytes to a multiple of 2.
   *bytes_per_frame = 2;
   ASSERT_TRUE(period_bytes % *bytes_per_frame == 0);

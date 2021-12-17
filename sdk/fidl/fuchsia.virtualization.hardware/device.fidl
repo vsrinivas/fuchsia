@@ -209,12 +209,14 @@ protocol VirtioSound {
     /// The response contains the device's expected static configuration.
     ///
     /// + request `start_info` basic info to start the device
+    /// + request `enable_input` whether audio input (capture) should be enabled
     /// - response `features` supported features
     /// - response `jacks` the virtio_snd_config.jacks value to advertise
     /// - response `streams` the virtio_snd_config.streams value to advertise
     /// - response `chmaps` the virtio_snd_config.chaps value to advertise
     Start(resource struct {
         start_info StartInfo;
+        enable_input bool;
     }) -> (struct {
         features uint32;
         jacks uint32;

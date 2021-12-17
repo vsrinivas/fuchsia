@@ -69,7 +69,7 @@ const JACK_HDA_REG_CAPS: u32 = (1 << 5) | (1 << 4);
 // We support a single "built-in" jack, which is never unplugged, that contains a single output
 // stream and a single input stream. This simulates a device with one built-in speaker and one
 // built-in microphone. Streams can be mono or stero.
-static JACKS: Lazy<Vec<wire::VirtioSndJackInfo>> = Lazy::new(|| {
+fn builtin_jacks() -> Vec<wire::VirtioSndJackInfo> {
     vec![wire::VirtioSndJackInfo {
         hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
         features: LE32::new(0),
@@ -78,25 +78,25 @@ static JACKS: Lazy<Vec<wire::VirtioSndJackInfo>> = Lazy::new(|| {
         connected: 1,
         padding: Default::default(),
     }]
-});
+}
 
-static STREAMS: Lazy<Vec<wire::VirtioSndPcmInfo>> = Lazy::new(|| {
-    vec![
-        wire::VirtioSndPcmInfo {
-            hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
-            // TODO(fxbug.dev/90029): support?
-            // VIRTIO_SND_PCM_F_MSG_POLLING
-            // VIRTIO_SND_PCM_F_EVT_SHMEM_PERIODS
-            // VIRTIO_SND_PCM_F_EVT_XRUNS
-            features: LE32::new(0),
-            formats: LE64::new(*WIRE_FORMATS_SUPPORTED_BITMASK),
-            rates: LE64::new(*WIRE_RATES_SUPPORTED_BITMASK),
-            direction: wire::VIRTIO_SND_D_OUTPUT,
-            channels_min: 1, // mono or stereo
-            channels_max: 2,
-            padding: Default::default(),
-        },
-        wire::VirtioSndPcmInfo {
+fn builtin_streams(enable_input: bool) -> Vec<wire::VirtioSndPcmInfo> {
+    let mut out = vec![wire::VirtioSndPcmInfo {
+        hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
+        // TODO(fxbug.dev/90029): support?
+        // VIRTIO_SND_PCM_F_MSG_POLLING
+        // VIRTIO_SND_PCM_F_EVT_SHMEM_PERIODS
+        // VIRTIO_SND_PCM_F_EVT_XRUNS
+        features: LE32::new(0),
+        formats: LE64::new(*WIRE_FORMATS_SUPPORTED_BITMASK),
+        rates: LE64::new(*WIRE_RATES_SUPPORTED_BITMASK),
+        direction: wire::VIRTIO_SND_D_OUTPUT,
+        channels_min: 1, // mono or stereo
+        channels_max: 2,
+        padding: Default::default(),
+    }];
+    if enable_input {
+        out.push(wire::VirtioSndPcmInfo {
             hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
             // TODO(fxbug.dev/90029): support?
             // VIRTIO_SND_PCM_F_MSG_POLLING
@@ -109,9 +109,10 @@ static STREAMS: Lazy<Vec<wire::VirtioSndPcmInfo>> = Lazy::new(|| {
             channels_min: 1, // mono only; stereo input is uncommon
             channels_max: 1,
             padding: Default::default(),
-        },
-    ]
-});
+        });
+    }
+    out
+}
 
 static MONO: Lazy<[u8; wire::VIRTIO_SND_CHMAP_MAX_SIZE]> = Lazy::new(|| {
     let mut out: [u8; wire::VIRTIO_SND_CHMAP_MAX_SIZE] = Default::default();
@@ -126,7 +127,7 @@ static STEREO: Lazy<[u8; wire::VIRTIO_SND_CHMAP_MAX_SIZE]> = Lazy::new(|| {
     out
 });
 
-static CHMAPS: Lazy<Vec<wire::VirtioSndChmapInfo>> = Lazy::new(|| {
+fn builtin_chmaps() -> Vec<wire::VirtioSndChmapInfo> {
     vec![
         wire::VirtioSndChmapInfo {
             hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
@@ -147,21 +148,17 @@ static CHMAPS: Lazy<Vec<wire::VirtioSndChmapInfo>> = Lazy::new(|| {
             positions: *MONO,
         },
     ]
-});
-
-static CONFIG: Lazy<wire::VirtioSndConfig> = Lazy::new(|| wire::VirtioSndConfig {
-    jacks: LE32::new(JACKS.len() as u32),
-    streams: LE32::new(STREAMS.len() as u32),
-    chmaps: LE32::new(CHMAPS.len() as u32),
-});
+}
 
 async fn run_virtio_sound(
     mut con: VirtioSoundRequestStream,
     audio: &fidl_fuchsia_media::AudioProxy,
 ) -> Result<(), Error> {
     // First method call must be Start().
-    let (start_info, responder) = match con.try_next().await? {
-        Some(VirtioSoundRequest::Start { start_info, responder }) => (start_info, responder),
+    let (start_info, enable_input, responder) = match con.try_next().await? {
+        Some(VirtioSoundRequest::Start { start_info, enable_input, responder }) => {
+            (start_info, enable_input, responder)
+        }
         Some(msg) => {
             return Err(anyhow!("Expected Start message, got {:?}", msg));
         }
@@ -170,8 +167,18 @@ async fn run_virtio_sound(
         }
     };
 
+    let jacks = builtin_jacks();
+    let streams = builtin_streams(enable_input);
+    let chmaps = builtin_chmaps();
+
+    let config = wire::VirtioSndConfig {
+        jacks: LE32::new(jacks.len() as u32),
+        streams: LE32::new(streams.len() as u32),
+        chmaps: LE32::new(chmaps.len() as u32),
+    };
+
     let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
-    responder.send(FEATURES, CONFIG.jacks.get(), CONFIG.streams.get(), CONFIG.chmaps.get())?;
+    responder.send(FEATURES, config.jacks.get(), config.streams.get(), config.chmaps.get())?;
 
     // Create the virtio device.
     let mut con = con.cast_stream();
@@ -191,12 +198,13 @@ async fn run_virtio_sound(
     ready_responder.send()?;
 
     // Create a VirtSoundService to handle all virtq requests.
-    let vss = Rc::new(VirtSoundService::new(&JACKS, &STREAMS, &CHMAPS, audio));
+    let vss = Rc::new(VirtSoundService::new(&jacks, &streams, &chmaps, audio));
 
     tracing::info!(
-        "Virtio sound device initialized with features = {:?}, config = {:?}",
+        "Virtio sound device initialized with features = {:?}, enable_input = {}, config = {:?}",
         FEATURES,
-        *CONFIG
+        enable_input,
+        config
     );
 
     // Process everything to completion.

@@ -390,6 +390,9 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   handlers.emplace("virtio-sound",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_sound,
                                                        &GuestConfig::mutable_virtio_sound, true));
+  handlers.emplace("virtio-sound-input", std::make_unique<BoolOptionHandler>(
+                                             &GuestConfig::has_virtio_sound_input,
+                                             &GuestConfig::mutable_virtio_sound_input, false));
   handlers.emplace("virtio-vsock",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_vsock,
                                                        &GuestConfig::mutable_virtio_vsock, true));
@@ -439,6 +442,8 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
   std::cerr << "\t--virtio-gpu            Enable virtio-gpu and virtio-input (default)\n";
   std::cerr << "\t--virtio-rng            Enable virtio-rng (default)\n";
+  std::cerr << "\t--virtio-sound          Enable virtio-sound (default)\n";
+  std::cerr << "\t--virtio-sound-input    Enable virtio-sound input (default false)\n";
   std::cerr << "\t--virtio-vsock          Enable virtio-vsock (default)\n";
   std::cerr << "\n";
   std::cerr << "NET SPEC\n";

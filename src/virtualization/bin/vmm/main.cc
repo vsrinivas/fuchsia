@@ -421,7 +421,8 @@ int main(int argc, char** argv) {
       FX_PLOGS(ERROR, status) << "Failed to connect sound device";
       return status;
     }
-    status = sound.Start(guest.object(), launcher.get(), device_loop.dispatcher());
+    status = sound.Start(guest.object(), launcher.get(), device_loop.dispatcher(),
+                         cfg.virtio_sound_input());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start sound device";
       return status;

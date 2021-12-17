@@ -21,7 +21,7 @@ class VirtioSound
   explicit VirtioSound(const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                    async_dispatcher_t* dispatcher);
+                    async_dispatcher_t* dispatcher, bool enable_input);
 
  private:
   fuchsia::sys::ComponentControllerPtr controller_;

@@ -18,7 +18,7 @@ VirtioSound::VirtioSound(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioSound::Ready)) {}
 
 zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
-                               async_dispatcher_t* dispatcher) {
+                               async_dispatcher_t* dispatcher, bool enable_input) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioSoundUrl;
   auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
@@ -32,7 +32,7 @@ zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::sys::Launcher* l
   }
 
   uint32_t features, jacks, streams, chmaps;
-  status = sound_->Start(std::move(start_info), &features, &jacks, &streams, &chmaps);
+  status = sound_->Start(std::move(start_info), enable_input, &features, &jacks, &streams, &chmaps);
   if (status != ZX_OK) {
     return status;
   }
