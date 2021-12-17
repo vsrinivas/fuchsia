@@ -266,12 +266,6 @@ zx_status_t ZirconEnclosedGuest::LaunchInfo(std::string* url,
   *url = kZirconGuestUrl;
   // Disable netsvc to avoid spamming the net device with logs.
   cfg->mutable_cmdline_add()->emplace_back("netsvc.disable=true");
-  // The default memory configuration is insufficient under ASAN. Ideally we'd only enable this
-  // when the guest is built with ASAN, but that information is not available here.
-  cfg->mutable_memory()->push_back({
-      .size = uint64_t(3) << 30,  // 3 GiB
-      .policy = fuchsia::virtualization::MemoryPolicy::GUEST_CACHED,
-  });
   return ZX_OK;
 }
 

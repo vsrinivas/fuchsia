@@ -25,7 +25,13 @@ namespace {
 
 using fuchsia::virtualization::GuestConfig;
 
+#if __aarch64__
+// Reduce the default maximum memory usage on ARM64, due to the lack of memory
+// on the devices we test against.
 constexpr uint64_t kDefaultMemory = 1ul << 30;
+#else
+constexpr uint64_t kDefaultMemory = 3584ul << 20;
+#endif
 
 // This is a locally administered MAC address (first byte 0x02) mixed with the
 // Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
