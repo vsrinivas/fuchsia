@@ -54,7 +54,8 @@ pub fn sys_mmap(
             | MAP_FIXED_NOREPLACE
             | MAP_POPULATE
             | MAP_NORESERVE
-            | MAP_STACK)
+            | MAP_STACK
+            | MAP_DENYWRITE)
         != 0
     {
         not_implemented!("mmap: flags: 0x{:x}", flags);
