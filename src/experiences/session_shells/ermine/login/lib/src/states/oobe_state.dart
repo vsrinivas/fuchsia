@@ -41,6 +41,7 @@ abstract class OobeState {
   bool get privacyVisible;
   bool get launchOobe;
   bool get ready;
+  bool get hasAccount;
   bool get loginDone;
   bool get wait;
   String get authError;

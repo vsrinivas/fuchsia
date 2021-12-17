@@ -36,11 +36,10 @@ class AuthService {
     Incoming.fromSvcPath().connectToService(_accountManager);
     _accountManager.getAccountIds().then((ids) {
       _ready.value = true;
+      _accountIds.addAll(ids);
       if (ids.length > 1) {
         log.shout(
             'Multiple (${ids.length}) accounts found, will use the first.');
-      } else {
-        _accountIds.addAll(ids);
       }
     });
   }
@@ -52,7 +51,7 @@ class AuthService {
   /// Returns [true] after [_accountManager.getAccountIds()] completes.
   bool get ready => _ready.value;
 
-  /// Returns [true] if not accounts exists on device.
+  /// Returns [true] if no accounts exists on device.
   bool get hasAccount {
     assert(ready, 'Called before list of accounts could be retrieved.');
     return _accountIds.isNotEmpty;
@@ -60,8 +59,11 @@ class AuthService {
 
   /// Creates an account with password and sets up the account data directory.
   Future<void> createAccountWithPassword(String password) async {
-    assert(_accountIds.isEmpty, 'An account already exists.');
-    _account?.ctrl.close();
+    assert(_account == null, 'An account already exists.');
+    if (_account != null) {
+      await _account!.lock();
+      _account!.ctrl.close();
+    }
 
     final metadata = AccountMetadata(name: kAccountName);
     _account = AccountProxy();
@@ -70,6 +72,10 @@ class AuthService {
       metadata,
       _account!.ctrl.request(),
     );
+    final ids = await _accountManager.getAccountIds();
+    _accountIds
+      ..clear()
+      ..addAll(ids);
     log.info('Account creation succeeded.');
 
     await _publishAccountDirectory(_account!);
@@ -79,7 +85,10 @@ class AuthService {
   /// directory.
   Future<void> loginWithPassword(String password) async {
     assert(_accountIds.isNotEmpty, 'No account exist to login to.');
-    _account?.ctrl.close();
+    if (_account != null) {
+      await _account!.lock();
+      _account!.ctrl.close();
+    }
 
     _account = AccountProxy();
     await _accountManager.deprecatedGetAccount(
@@ -94,9 +103,7 @@ class AuthService {
 
   /// Logs out of an account by locking it.
   Future<void> logout() async {
-    assert(_accountIds.isNotEmpty || _account == null,
-        'No account exist to logout from.');
-
+    assert(_account == null, 'No account exist to logout from.');
     return _account!.lock();
   }
 

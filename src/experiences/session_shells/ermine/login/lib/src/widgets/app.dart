@@ -49,9 +49,9 @@ class OobeApp extends StatelessWidget {
           return Material(
             type: MaterialType.canvas,
             child: Observer(builder: (_) {
-              return oobe.launchOobe
-                  ? WidgetFactory.create(() => Oobe(oobe))
-                  : WidgetFactory.create(() => Login(oobe));
+              return oobe.hasAccount
+                  ? WidgetFactory.create(() => Login(oobe))
+                  : WidgetFactory.create(() => Oobe(oobe));
             }),
           );
         }),

@@ -84,28 +84,36 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   bool get launchOobe => _launchOobe.value;
-  set launchOobe(bool value) => runInAction(() => _launchOobe.value = value);
   late final Observable<bool> _launchOobe = Observable<bool>(() {
     // This should be called only after startup services are ready.
     assert(ready, 'Startup services are not initialized.');
 
-    // Skip OOBE if an account already exists on the device.
-    if (authService.hasAccount) {
-      return false;
+    // Check if the build allows OOBE.
+    final startOOBE = () {
+      File config = File(kDefaultConfigJson);
+      // If default config is missing, log error and return defaults.
+      if (!config.existsSync()) {
+        log.severe('Missing startup and default configs. Skipping OOBE.');
+        return false;
+      }
+      final data = json.decode(config.readAsStringSync()) ?? {};
+      return data['launch_oobe'] == true;
+    }();
+
+    // TODO(http://fxb/85576): Remove once login and OOBE are mandatory.
+    // If we are skipping OOBE, authenticate using empty password.
+    if (!startOOBE) {
+      log.info('Skipped OOBE, authenticating with empty password.');
+      final result = authService.hasAccount
+          ? authService.loginWithPassword('')
+          : authService.createAccountWithPassword('');
+      result.then((_) => _loginDone.value = true).catchError((e) {
+        log.shout('Account found: ${authService.hasAccount}.'
+            ' Caught exception during authentication: $e');
+      });
     }
 
-    File config = File(kStartupConfigJson);
-    // If startup config does not exist, open the default config.
-    if (!config.existsSync()) {
-      config = File(kDefaultConfigJson);
-    }
-    // If default config is missing, log error and return defaults.
-    if (!config.existsSync()) {
-      log.severe('Missing startup and default configs. Skipping OOBE.');
-      return false;
-    }
-    final data = json.decode(config.readAsStringSync()) ?? {};
-    return data['launch_oobe'] == true;
+    return startOOBE;
   }());
 
   @override
@@ -115,9 +123,15 @@ class OobeStateImpl with Disposable implements OobeState {
   }).asComputed();
 
   @override
-  bool get loginDone => _loginDone.value;
-  // TODO(http://fxb/85576): Initialize to false when password authentication is enabled.
-  final _loginDone = true.asObservable();
+  bool get hasAccount {
+    // This should be called only after startup services are ready.
+    assert(ready, 'Startup services are not initialized.');
+    return authService.hasAccount;
+  }
+
+  @override
+  bool get loginDone => _loginDone.value || !launchOobe;
+  final _loginDone = false.asObservable();
 
   @override
   Locale? get locale => _localeStream.value;
@@ -308,14 +322,8 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   void finish() => runInAction(() {
-        // Dismiss OOBE UX.
-        launchOobe = false;
-
         // Mark login step as done.
         _loginDone.value = true;
-
-        // Persistently record OOBE done.
-        File(kStartupConfigJson).writeAsStringSync('{"launch_oobe":false}');
       });
 
   @override
