@@ -450,7 +450,7 @@ const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcp::protocol::CLIENT_PORT);
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
             port: DHCP_CLIENT_PORT,
         }
-    ])]
+    ]; "invalid_trans_proto")]
 #[test_case(
     "invalid_port",
     vec![
@@ -458,7 +458,7 @@ const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcp::protocol::CLIENT_PORT);
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
             port: INVALID_PORT,
         }
-    ])]
+    ]; "invalid_port")]
 #[test_case(
     "valid",
     vec![
@@ -466,7 +466,7 @@ const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcp::protocol::CLIENT_PORT);
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
             port: DHCP_CLIENT_PORT,
         }
-    ])]
+    ]; "valid")]
 #[test_case(
     "multiple_invalid_port_and_single_invalid_trans_proto",
     vec![
@@ -482,7 +482,7 @@ const DHCP_CLIENT_PORT: NonZeroU16 = nonzero!(dhcp::protocol::CLIENT_PORT);
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
             port: DHCP_CLIENT_PORT,
         }
-    ])]
+    ]; "multiple_invalid_port_and_single_invalid_trans_proto")]
 async fn inspect_dhcp<E: netemul::Endpoint>(
     variants_test_name: &str,
     test_case_name: &str,
