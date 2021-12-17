@@ -121,6 +121,26 @@ type RunCommand struct {
 	localRepo string
 }
 
+// targetInfo is the schema for a JSON object used to communicate target
+// information (device properties, serial paths, SSH properties, etc.) to
+// subprocesses.
+type targetInfo struct {
+	// Nodename is the Fuchsia nodename of the target.
+	Nodename string `json:"nodename"`
+
+	// IPv4 is the IPv4 address of the target.
+	IPv4 string `json:"ipv4"`
+
+	// IPv6 is the IPv6 address of the target.
+	IPv6 string `json:"ipv6"`
+
+	// SerialSocket is the path to the serial socket, if one exists.
+	SerialSocket string `json:"serial_socket"`
+
+	// SSHKey is a path to a private key that can be used to access the target.
+	SSHKey string `json:"ssh_key"`
+}
+
 func (*RunCommand) Name() string {
 	return "run"
 }
@@ -231,6 +251,15 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			return fmt.Errorf("%s: %w", constants.FailedToStartTargetMsg, err)
 		}
 		logger.Debugf(ctx, "successfully started all targets")
+
+		// Create a testbed config file. We have to do this after starting the
+		// targets so that we can get their IP addresses.
+		testbedConfig, err := r.createTestbedConfig(targetSlice)
+		if err != nil {
+			return err
+		}
+		defer os.Remove(testbedConfig)
+
 		if !r.netboot {
 			for i, t := range targetSlice {
 				client, err := t.SSHClient()
@@ -258,10 +287,52 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			defer cancel()
 			r.stopTargets(ctx, targetSlice)
 		}()
-		return r.runAgainstTarget(ctx, t0, args)
+		return r.runAgainstTarget(ctx, t0, args, testbedConfig)
 	})
 
 	return eg.Wait()
+}
+
+// createTestbedConfig creates a configuration file that describes the targets
+// attached and returns the path to the file.
+func (r *RunCommand) createTestbedConfig(targetSlice []target) (string, error) {
+	var testbedConfig []targetInfo
+	for _, t := range targetSlice {
+		cfg := targetInfo{
+			Nodename:     t.Nodename(),
+			SerialSocket: t.SerialSocketPath(),
+		}
+		if !r.netboot {
+			cfg.SSHKey = t.SSHKey()
+			if ipv4, err := t.IPv4(); err != nil {
+				return "", err
+			} else if ipv4 != nil {
+				cfg.IPv4 = ipv4.String()
+			}
+
+			if ipv6, err := t.IPv6(); err != nil {
+				return "", err
+			} else if ipv6 != nil {
+				cfg.IPv6 = ipv6.String()
+			}
+		}
+		testbedConfig = append(testbedConfig, cfg)
+	}
+
+	data, err := json.Marshal(testbedConfig)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := ioutil.TempFile("", "testbed_config")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	if _, err := f.Write(data); err != nil {
+		return "", err
+	}
+	return f.Name(), nil
 }
 
 func (r *RunCommand) startTargets(ctx context.Context, targetSlice []target) error {
@@ -323,10 +394,11 @@ func (r *RunCommand) dumpSyslogOverSerial(ctx context.Context, socketPath string
 	return nil
 }
 
-func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []string) error {
+func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []string, testbedConfig string) error {
 	subprocessEnv := map[string]string{
-		constants.NodenameEnvKey:     t.Nodename(),
-		constants.SerialSocketEnvKey: t.SerialSocketPath(),
+		constants.NodenameEnvKey:      t.Nodename(),
+		constants.SerialSocketEnvKey:  t.SerialSocketPath(),
+		constants.TestbedConfigEnvKey: testbedConfig,
 	}
 
 	// If |netboot| is true, then we assume that fuchsia is not provisioned
