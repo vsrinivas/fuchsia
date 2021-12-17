@@ -369,7 +369,7 @@ pub fn create_mouse_input_report(
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_mouse_event_with_handled(
     location: mouse_binding::MouseLocation,
-    phase: fidl_ui_input::PointerEventPhase,
+    phase: mouse_binding::MousePhase,
     buttons: HashSet<mouse_binding::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
@@ -395,7 +395,7 @@ pub fn create_mouse_event_with_handled(
 /// - `device_descriptor`: The device descriptor to add to the event.
 pub fn create_mouse_event(
     location: mouse_binding::MouseLocation,
-    phase: fidl_ui_input::PointerEventPhase,
+    phase: mouse_binding::MousePhase,
     buttons: HashSet<mouse_binding::MouseButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,

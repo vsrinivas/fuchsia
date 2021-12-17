@@ -27,6 +27,13 @@ pub enum MouseLocation {
     Absolute(Position),
 }
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum MousePhase {
+    Down, // One or more buttons were newly pressed.
+    Move, // The mouse moved with no change in button state.
+    Up,   // One or more buttons were newly released.
+}
+
 /// A [`MouseEvent`] represents a pointer event with a specified phase, and the buttons
 /// involved in said phase. The supported phases for mice include Up, Down, and Move.
 ///
@@ -37,7 +44,7 @@ pub enum MouseLocation {
 /// ```
 /// let mouse_device_event = input_device::InputDeviceEvent::Mouse(MouseEvent::new(
 ///     MouseLocation::Relative(Position { x: 40.0, y: 20.0 }),
-///     fidl_fuchsia_ui_input::PointerEventPhase::Move,
+///     MousePhase::Move,
 ///     HashSet::<mouse::MouseButton>::new(),
 /// ));
 /// ```
@@ -47,7 +54,7 @@ pub struct MouseEvent {
     pub location: MouseLocation,
 
     /// The phase of the [`buttons`] associated with this input event.
-    pub phase: fidl_fuchsia_ui_input::PointerEventPhase,
+    pub phase: MousePhase,
 
     /// The buttons relevant to this event.
     pub buttons: HashSet<MouseButton>,
@@ -62,7 +69,7 @@ impl MouseEvent {
     /// - `buttons`: The buttons relevant to this event.
     pub fn new(
         location: MouseLocation,
-        phase: fidl_fuchsia_ui_input::PointerEventPhase,
+        phase: MousePhase,
         buttons: HashSet<MouseButton>,
     ) -> MouseEvent {
         MouseEvent { location, phase, buttons }
@@ -211,7 +218,7 @@ impl MouseBinding {
         // i.e. that are in the current report, but were not in the previous report.
         send_mouse_event(
             MouseLocation::Relative(Position::zero()),
-            fidl_fuchsia_ui_input::PointerEventPhase::Down,
+            MousePhase::Down,
             current_buttons.difference(&previous_buttons).cloned().collect(),
             device_descriptor,
             event_time,
@@ -234,7 +241,7 @@ impl MouseBinding {
         // report and the previous report.
         send_mouse_event(
             location,
-            fidl_fuchsia_ui_input::PointerEventPhase::Move,
+            MousePhase::Move,
             current_buttons.union(&previous_buttons).cloned().collect(),
             device_descriptor,
             event_time,
@@ -245,7 +252,7 @@ impl MouseBinding {
         // i.e. that were in the previous report, but are not in the current report.
         send_mouse_event(
             MouseLocation::Relative(Position::zero()),
-            fidl_fuchsia_ui_input::PointerEventPhase::Up,
+            MousePhase::Up,
             previous_buttons.difference(&current_buttons).cloned().collect(),
             device_descriptor,
             event_time,
@@ -258,7 +265,7 @@ impl MouseBinding {
 
 /// Sends an InputEvent over `sender`.
 ///
-/// When no buttons are present, only [`fidl_fuchsia_ui_input::PointerEventPhase::Move`] events will
+/// When no buttons are present, only [`MousePhase::Move`] events will
 /// be sent.
 ///
 /// # Parameters
@@ -270,22 +277,20 @@ impl MouseBinding {
 /// - `sender`: The stream to send the MouseEvent to.
 fn send_mouse_event(
     location: MouseLocation,
-    phase: fidl_fuchsia_ui_input::PointerEventPhase,
+    phase: MousePhase,
     buttons: HashSet<MouseButton>,
     device_descriptor: &input_device::InputDeviceDescriptor,
     event_time: input_device::EventTime,
     sender: &mut Sender<input_device::InputEvent>,
 ) {
     // Only send move events when there are no buttons pressed.
-    if phase != fidl_fuchsia_ui_input::PointerEventPhase::Move && buttons.is_empty() {
+    if phase != MousePhase::Move && buttons.is_empty() {
         return;
     }
 
     // Don't send move events when there is no relative movement.
     // However, absolute movement is always reported.
-    if phase == fidl_fuchsia_ui_input::PointerEventPhase::Move
-        && location == MouseLocation::Relative(Position::zero())
-    {
+    if phase == MousePhase::Move && location == MouseLocation::Relative(Position::zero()) {
         return;
     }
 
@@ -415,7 +420,7 @@ mod tests {
         let input_reports = vec![first_report];
         let expected_events = vec![testing_utilities::create_mouse_event(
             location,
-            fidl_fuchsia_ui_input::PointerEventPhase::Move,
+            MousePhase::Move,
             HashSet::new(),
             event_time_u64,
             &descriptor,
@@ -444,7 +449,7 @@ mod tests {
         let input_reports = vec![first_report];
         let expected_events = vec![testing_utilities::create_mouse_event(
             MouseLocation::Relative(Position::zero()),
-            fidl_fuchsia_ui_input::PointerEventPhase::Down,
+            MousePhase::Down,
             HashSet::from_iter(vec![mouse_button].into_iter()),
             event_time_u64,
             &descriptor,
@@ -476,14 +481,14 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Down,
+                MousePhase::Down,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 location,
-                fidl_fuchsia_ui_input::PointerEventPhase::Move,
+                MousePhase::Move,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -519,14 +524,14 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Down,
+                MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Up,
+                MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -561,21 +566,21 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Down,
+                MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 location,
-                fidl_fuchsia_ui_input::PointerEventPhase::Move,
+                MousePhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Up,
+                MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -617,21 +622,21 @@ mod tests {
         let expected_events = vec![
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Down,
+                MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 location,
-                fidl_fuchsia_ui_input::PointerEventPhase::Move,
+                MousePhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_mouse_event(
                 MouseLocation::Relative(Position::zero()),
-                fidl_fuchsia_ui_input::PointerEventPhase::Up,
+                MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 event_time_u64,
                 &descriptor,
@@ -657,7 +662,7 @@ mod tests {
             vec![testing_utilities::create_mouse_input_report(location, vec![], event_time_i64)];
         let expected_events = vec![testing_utilities::create_mouse_event(
             location,
-            fidl_fuchsia_ui_input::PointerEventPhase::Move,
+            MousePhase::Move,
             HashSet::new(),
             event_time_u64,
             &descriptor,
@@ -703,7 +708,7 @@ mod tests {
         }];
         let expected_events = vec![testing_utilities::create_mouse_event(
             expected_location,
-            fidl_fuchsia_ui_input::PointerEventPhase::Move,
+            MousePhase::Move,
             HashSet::new(),
             event_time_u64,
             &descriptor,

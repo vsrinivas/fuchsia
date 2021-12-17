@@ -471,7 +471,7 @@ mod tests {
         crate::utils::Position,
         fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
         fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::channel::mpsc::Sender,
         futures::FutureExt,
         rand::Rng,
@@ -492,7 +492,7 @@ mod tests {
         let input_event = input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
                 mouse_binding::MouseLocation::Relative(offset),
-                fidl_ui_input::PointerEventPhase::Move,
+                mouse_binding::MousePhase::Move,
                 HashSet::new(),
             )),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(

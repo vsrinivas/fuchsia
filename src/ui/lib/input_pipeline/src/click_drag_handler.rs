@@ -5,7 +5,6 @@
 use {
     crate::{input_device, input_handler::InputHandler, mouse_binding, utils::Position},
     async_trait::async_trait,
-    fidl_fuchsia_ui_input::PointerEventPhase as FidlPhase,
     fuchsia_syslog::{fx_log_debug, fx_log_warn},
     std::{
         cell::{Cell, RefCell},
@@ -15,47 +14,13 @@ use {
     },
 };
 
-/// Represents precisely the set of device-layer phases relevant to
-/// this handler. Excludes phases (like Hover), which are not applicable
-/// to mouse devices.
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum Phase {
-    Down, // One or more buttons were newly pressed.
-    Move, // The mouse moved with no change in button state.
-    Up,   // One or more buttons were newly released.
-}
-
-impl TryFrom<FidlPhase> for Phase {
-    type Error = FidlPhase;
-    fn try_from(fidl_phase: FidlPhase) -> Result<Phase, FidlPhase> {
-        match fidl_phase {
-            FidlPhase::Down => Ok(Phase::Down),
-            FidlPhase::Move => Ok(Phase::Move),
-            FidlPhase::Up => Ok(Phase::Up),
-            FidlPhase::Add | FidlPhase::Hover | FidlPhase::Remove | FidlPhase::Cancel => {
-                Err(fidl_phase)
-            }
-        }
-    }
-}
-
-impl From<Phase> for FidlPhase {
-    fn from(phase: Phase) -> FidlPhase {
-        match phase {
-            Phase::Down => FidlPhase::Down,
-            Phase::Move => FidlPhase::Move,
-            Phase::Up => FidlPhase::Up,
-        }
-    }
-}
-
 /// Represents an InputEvent that is relevant to this handler.
 /// Notably excludes absolutely positioned pointers, and events
 /// not associated with a mouse device.
 #[derive(Debug)]
 struct RelativeMouseEvent {
     displacement: Position, // Change in position since the previous event
-    phase: Phase,
+    phase: mouse_binding::MousePhase,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
     mouse_descriptor: mouse_binding::MouseDeviceDescriptor,
     event_time: u64,
@@ -78,36 +43,14 @@ impl TryFrom<input_device::InputEvent> for RelativeMouseEvent {
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
                 handled,
-            } => {
-                match Phase::try_from(phase) {
-                    Ok(phase) => Ok(RelativeMouseEvent {
-                        displacement: position,
-                        phase,
-                        pressed_buttons: buttons,
-                        mouse_descriptor,
-                        event_time,
-                        handled,
-                    }),
-                    Err(_) => {
-                        fx_log_warn!("unexpected phase: {:?}", phase);
-                        // Put the pieces back together.
-                        Err(input_device::InputEvent {
-                            device_event: input_device::InputDeviceEvent::Mouse(
-                                mouse_binding::MouseEvent {
-                                    location: mouse_binding::MouseLocation::Relative(position),
-                                    phase,
-                                    buttons,
-                                },
-                            ),
-                            device_descriptor: input_device::InputDeviceDescriptor::Mouse(
-                                mouse_descriptor,
-                            ),
-                            event_time,
-                            handled,
-                        })
-                    }
-                }
-            }
+            } => Ok(RelativeMouseEvent {
+                displacement: position,
+                phase,
+                pressed_buttons: buttons,
+                mouse_descriptor,
+                event_time,
+                handled,
+            }),
             _ => Err(input_event),
         }
     }
@@ -252,7 +195,8 @@ impl ClickDragHandler {
         // The state machine update logic does not update total displacement
         // from Down or Up events, as those are expected to have zero displacement
         // (see MouseBinding::process_reports(), which generates those events).
-        if event.displacement != Position::zero() && event.phase != Phase::Move {
+        if event.displacement != Position::zero() && event.phase != mouse_binding::MousePhase::Move
+        {
             fx_log_warn!("non-zero displacement in phase {:?}", event.phase)
         }
 
@@ -268,7 +212,10 @@ impl ClickDragHandler {
             // a gesture. Tracked for debugging purposes.
             completed_gesture_displacement,
         ) = match (old_state, event.phase) {
-            (HandlerState::NoActiveGesture | HandlerState::ClickGesture, Phase::Down) => (
+            (
+                HandlerState::NoActiveGesture | HandlerState::ClickGesture,
+                mouse_binding::MousePhase::Down,
+            ) => (
                 HandlerState::AmbiguousGesture {
                     delta_x: 0.0,
                     delta_y: 0.0,
@@ -277,24 +224,28 @@ impl ClickDragHandler {
                 vec![event],
                 None,
             ),
-            (HandlerState::NoActiveGesture | HandlerState::ClickGesture, Phase::Move) => {
-                (HandlerState::NoActiveGesture, vec![event], None)
-            }
-            (HandlerState::NoActiveGesture | HandlerState::ClickGesture, Phase::Up) => {
+            (
+                HandlerState::NoActiveGesture | HandlerState::ClickGesture,
+                mouse_binding::MousePhase::Move,
+            ) => (HandlerState::NoActiveGesture, vec![event], None),
+            (
+                HandlerState::NoActiveGesture | HandlerState::ClickGesture,
+                mouse_binding::MousePhase::Up,
+            ) => {
                 fx_log_warn!(
-                    "Phase::Up with no button pressed; remaining in NoActiveGesture state"
+                    "mouse_binding::MousePhase::Up with no button pressed; remaining in NoActiveGesture state"
                 );
                 (HandlerState::NoActiveGesture, vec![event], None)
             }
-            (state @ HandlerState::AmbiguousGesture { .. }, Phase::Down) => {
+            (state @ HandlerState::AmbiguousGesture { .. }, mouse_binding::MousePhase::Down) => {
                 fx_log_warn!(
-                    "Phase::Down with gesture in progress; remaining in AmbiguousGesture state"
+                    "mouse_binding::MousePhase::Down with gesture in progress; remaining in AmbiguousGesture state"
                 );
                 (state, vec![event], None)
             }
             (
                 HandlerState::AmbiguousGesture { delta_x, delta_y, mut buffered_events },
-                Phase::Move,
+                mouse_binding::MousePhase::Move,
             ) => {
                 let (delta_x, delta_y) =
                     (delta_x + event.displacement.x, delta_y + event.displacement.y);
@@ -340,7 +291,10 @@ impl ClickDragHandler {
                     )
                 }
             }
-            (HandlerState::AmbiguousGesture { delta_x, delta_y, buffered_events }, Phase::Up) => (
+            (
+                HandlerState::AmbiguousGesture { delta_x, delta_y, buffered_events },
+                mouse_binding::MousePhase::Up,
+            ) => (
                 HandlerState::ClickGesture,
                 buffered_events
                     .into_iter()
@@ -349,11 +303,11 @@ impl ClickDragHandler {
                     .collect(),
                 Some((delta_x, delta_y)),
             ),
-            (state @ HandlerState::DragGesture { .. }, Phase::Down) => {
-                fx_log_warn!("Phase::Down with drag in progress; remaining in DragGesture state");
+            (state @ HandlerState::DragGesture { .. }, mouse_binding::MousePhase::Down) => {
+                fx_log_warn!("mouse_binding::MousePhase::Down with drag in progress; remaining in DragGesture state");
                 (state, vec![event], None)
             }
-            (HandlerState::DragGesture { delta_x, delta_y }, Phase::Move) => (
+            (HandlerState::DragGesture { delta_x, delta_y }, mouse_binding::MousePhase::Move) => (
                 HandlerState::DragGesture {
                     delta_x: delta_x + event.displacement.x,
                     delta_y: delta_y + event.displacement.y,
@@ -361,7 +315,7 @@ impl ClickDragHandler {
                 vec![event],
                 None,
             ),
-            (HandlerState::DragGesture { delta_x, delta_y }, Phase::Up) => {
+            (HandlerState::DragGesture { delta_x, delta_y }, mouse_binding::MousePhase::Up) => {
                 (HandlerState::NoActiveGesture, vec![event], Some((delta_x, delta_y)))
             }
             (HandlerState::LogicError, _) => unreachable!(),
@@ -439,7 +393,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             assert_eq!(handler.handle_input_event(event.clone()).await.as_slice(), [event]);
@@ -453,7 +407,7 @@ mod tests {
                     x: SMALL_MOTION,
                     y: SMALL_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {},
             });
             assert_eq!(handler.handle_input_event(event.clone()).await.as_slice(), [event]);
@@ -464,7 +418,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -472,7 +426,7 @@ mod tests {
                     x: 0.0,
                     y: SMALL_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -488,7 +442,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -496,12 +450,12 @@ mod tests {
                     x: 0.0,
                     y: SMALL_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Up,
+                phase: mouse_binding::MousePhase::Up,
                 buttons: hashset! {},
             });
 
@@ -529,12 +483,12 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(position),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -552,7 +506,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -560,12 +514,12 @@ mod tests {
                     x: 0.0,
                     y: LARGE_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Up,
+                phase: mouse_binding::MousePhase::Up,
                 buttons: hashset! {},
             });
 
@@ -585,7 +539,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -593,7 +547,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -601,7 +555,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -625,7 +579,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -633,7 +587,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -641,7 +595,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -649,7 +603,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -677,17 +631,17 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(first_motion),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(second_motion),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -722,12 +676,12 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let move_event = make_handled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(position),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -746,7 +700,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let handled_move_event = make_handled_input_event(mouse_binding::MouseEvent {
@@ -754,7 +708,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let unhandled_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
@@ -762,7 +716,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
 
@@ -783,7 +737,7 @@ mod tests {
             let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
             let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(Position::zero()),
-                phase: FidlPhase::Down,
+                phase: mouse_binding::MousePhase::Down,
                 buttons: hashset! {0},
             });
             let first_unhandled_move_event =
@@ -792,7 +746,7 @@ mod tests {
                         x: 0.0,
                         y: HALF_MOTION,
                     }),
-                    phase: FidlPhase::Move,
+                    phase: mouse_binding::MousePhase::Move,
                     buttons: hashset! {0},
                 });
             let handled_move_event = make_handled_input_event(mouse_binding::MouseEvent {
@@ -800,7 +754,7 @@ mod tests {
                     x: 0.0,
                     y: HALF_MOTION,
                 }),
-                phase: FidlPhase::Move,
+                phase: mouse_binding::MousePhase::Move,
                 buttons: hashset! {0},
             });
             let second_unhandled_move_event =
@@ -809,7 +763,7 @@ mod tests {
                         x: 0.0,
                         y: HALF_MOTION,
                     }),
-                    phase: FidlPhase::Move,
+                    phase: mouse_binding::MousePhase::Move,
                     buttons: hashset! {0},
                 });
 

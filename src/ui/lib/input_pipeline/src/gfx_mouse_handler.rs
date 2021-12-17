@@ -17,6 +17,16 @@ use {
     std::rc::Rc,
 };
 
+impl From<mouse_binding::MousePhase> for fidl_ui_input::PointerEventPhase {
+    fn from(phase: mouse_binding::MousePhase) -> fidl_ui_input::PointerEventPhase {
+        match phase {
+            mouse_binding::MousePhase::Down => fidl_ui_input::PointerEventPhase::Down,
+            mouse_binding::MousePhase::Move => fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Up => fidl_ui_input::PointerEventPhase::Up,
+        }
+    }
+}
+
 /// A [`GfxMouseHandler`] tracks the mouse position and sends updates to clients.
 pub struct GfxMouseHandler {
     /// The current position.
@@ -58,7 +68,7 @@ impl InputHandler for GfxMouseHandler {
                 self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
                 self.update_cursor_visibility(!*self.immersive_mode.borrow()).await;
                 self.send_events_to_scenic(
-                    mouse_event.phase,
+                    fidl_ui_input::PointerEventPhase::from(mouse_event.phase),
                     &mouse_event.buttons,
                     &mouse_descriptor,
                     event_time,
@@ -423,7 +433,7 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
-            fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
@@ -483,7 +493,7 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
-            fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
@@ -541,7 +551,7 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
-            fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
@@ -618,7 +628,7 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
-            fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
@@ -676,7 +686,7 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event_with_handled(
             cursor_location,
-            fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
@@ -718,7 +728,7 @@ mod tests {
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             cursor_location,
-            fidl_ui_input::PointerEventPhase::Move,
+            mouse_binding::MousePhase::Move,
             HashSet::<mouse_binding::MouseButton>::new(),
             event_time,
             &descriptor,
