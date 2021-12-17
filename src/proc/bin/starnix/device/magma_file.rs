@@ -100,6 +100,19 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_CREATE_CONNECTION2 as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_RELEASE_CONNECTION => {
+                let (control, mut response): (
+                    virtio_magma_release_connection_ctrl_t,
+                    virtio_magma_release_connection_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                let connection = control.connection as magma_connection_t;
+                unsafe { magma_release_connection(connection) };
+
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_RELEASE_CONNECTION as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_DEVICE_RELEASE => {
                 let (control, mut response): (
                     virtio_magma_device_release_ctrl_t,
