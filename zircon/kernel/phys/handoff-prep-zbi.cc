@@ -5,6 +5,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/boot-options/boot-options.h>
+#include <lib/memalloc/range.h>
+#include <lib/zbitl/error-stdio.h>
+#include <lib/zbitl/image.h>
 #include <lib/zbitl/items/cpu-topology.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
@@ -14,6 +17,8 @@
 #include <ktl/algorithm.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
+#include <ktl/variant.h>
+#include <phys/allocation.h>
 #include <phys/handoff.h>
 #include <phys/symbolize.h>
 
@@ -26,6 +31,34 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
   // kernel no longer examines the ZBI itself.
   handoff_->zbi = reinterpret_cast<uintptr_t>(zbi.data());
 
+  // Allocate a page to fill up with the ZBI items to save for mexec.
+  // TODO(fxbug.dev/84107): Currently this is in scratch space and gets
+  // copied into the handoff allocator when its final size is known.
+  // Later, it will allocated with its own type and be handed off to
+  // the kernel as a whole page that can be turned into a VMO.
+  fbl::AllocChecker ac;
+  Allocation mexec_buffer =
+      Allocation::New(ac, memalloc::Type::kPhysScratch, ZX_PAGE_SIZE, ZX_PAGE_SIZE);
+  ZX_ASSERT_MSG(ac.check(), "cannot allocate mexec data page!");
+  mexec_data_ = mexec_buffer.release();
+  auto result = zbitl::Image(mexec_data_).clear();
+  if (result.is_error()) {
+    zbitl::PrintViewError(result.error_value());
+  }
+  ZX_ASSERT_MSG(result.is_ok(), "failed to initialize mexec data ZBI image");
+
+  // Appends the appropriate UART config, as encoded in the hand-off, which is
+  // given as variant of lib/uart driver types, each with methods to indicate
+  // the ZBI item type and payload.
+  auto append_uart_item = [this](const auto& uart) {
+    const uint32_t kdrv_type = uart.extra();
+    if (kdrv_type != 0) {  // Zero means the null driver.
+      SaveForMexec({.type = ZBI_TYPE_KERNEL_DRIVER, .extra = kdrv_type},
+                   zbitl::AsBytes(uart.config()));
+    }
+  };
+  ktl::visit(append_uart_item, gBootOptions->serial);
+
   zbitl::View view(zbi);
   for (auto [header, payload] : view) {
     switch (header->type) {
@@ -37,14 +70,19 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
       case ZBI_TYPE_NVRAM:
         ZX_ASSERT(payload.size() >= sizeof(zbi_nvram_t));
         handoff_->nvram = *reinterpret_cast<const zbi_nvram_t*>(payload.data());
+        SaveForMexec(*header, payload);
         break;
 
       case ZBI_TYPE_PLATFORM_ID:
         ZX_ASSERT(payload.size() >= sizeof(zbi_platform_id_t));
         handoff_->platform_id = *reinterpret_cast<const zbi_platform_id_t*>(payload.data());
+        SaveForMexec(*header, payload);
         break;
 
       case ZBI_TYPE_MEM_CONFIG: {
+        // Pass the original incoming data on for mexec verbatim.
+        SaveForMexec(*header, payload);
+
         // TODO(fxbug.dev/84107): Hand off the incoming ZBI item data directly
         // rather than using normalized data from memalloc::Pool so that the
         // kernel's ingestion of RAM vs RESERVED regions is unperturbed.
@@ -64,7 +102,6 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
           };
         }
 
-        fbl::AllocChecker ac;
         ktl::span handoff_mem_config =
             New(handoff()->mem_config, ac, mem_config.size() + (test_ram_reserve ? 1 : 0));
         ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for memory handoff",
@@ -85,7 +122,6 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
         // Normalize either item type into zbi_topology_node_t[] for handoff.
         if (auto table = zbitl::CpuTopologyTable::FromPayload(header->type, payload);
             table.is_ok()) {
-          fbl::AllocChecker ac;
           ktl::span handoff_table = New(handoff()->cpu_topology, ac, table->size());
           ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for CPU topology handoff",
                         table->size_bytes());
@@ -95,13 +131,14 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
           printf("%s: NOTE: ignored invalid CPU topology payload: %.*s\n", Symbolize::kProgramName_,
                  static_cast<int>(table.error_value().size()), table.error_value().data());
         }
+        SaveForMexec(*header, payload);
         break;
 
       case ZBI_TYPE_CRASHLOG: {
-        fbl::AllocChecker ac;
         ktl::span buffer = New(handoff_->crashlog, ac, payload.size());
         ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for crash log", payload.size());
         memcpy(buffer.data(), payload.data(), payload.size_bytes());
+        // The crashlog is propagated separately by the kernel.
         break;
       }
 
@@ -115,4 +152,22 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
   // At this point we should have full confidence that the ZBI is properly
   // formatted.
   ZX_ASSERT(view.take_error().is_ok());
+
+  // Copy mexec data into handoff temporary space.
+  // TODO(fxbug.dev/84107): Later this won't be required since we'll pass
+  // the whole page at mexec_data_ to the kernel in the handoff by address.
+  ktl::span handoff_mexec = New(handoff_->mexec_data, ac, zbitl::View(mexec_data_).size_bytes());
+  ZX_ASSERT(ac.check());
+  memcpy(handoff_mexec.data(), mexec_data_.data(), handoff_mexec.size_bytes());
+}
+
+void HandoffPrep::SaveForMexec(const zbi_header_t& header, ktl::span<const ktl::byte> payload) {
+  auto result = zbitl::Image(mexec_data_).Append(header, payload);
+  if (result.is_error()) {
+    printf("%s: ERROR: failed to append item of %zu bytes to mexec image: ",
+           Symbolize::kProgramName_, payload.size_bytes());
+    zbitl::PrintViewError(result.error_value());
+  }
+  // Don't make it fatal in production if there's too much to fit.
+  ZX_DEBUG_ASSERT(result.is_ok());
 }

@@ -29,16 +29,19 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
           ZX_ASSERT(payload.size() >= sizeof(dcfg_amlogic_hdcp_driver_t));
           arch_handoff.amlogic_hdcp_driver =
               *reinterpret_cast<const dcfg_amlogic_hdcp_driver_t*>(payload.data());
+          SaveForMexec(header, payload);
           break;
         case KDRV_AMLOGIC_RNG:
           ZX_ASSERT(payload.size() >= sizeof(dcfg_amlogic_rng_driver_t));
           arch_handoff.amlogic_rng_driver =
               *reinterpret_cast<const dcfg_amlogic_rng_driver_t*>(payload.data());
+          SaveForMexec(header, payload);
           break;
         case KDRV_ARM_GENERIC_TIMER:
           ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_generic_timer_driver_t));
           arch_handoff.generic_timer_driver =
               *reinterpret_cast<const dcfg_arm_generic_timer_driver_t*>(payload.data());
+          SaveForMexec(header, payload);
           break;
         case KDRV_ARM_GIC_V2:
           // Defer to the newer hardware: v3 configs win out over v2.
@@ -47,21 +50,25 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
             arch_handoff.gic_driver =
                 *reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(payload.data());
           }
+          SaveForMexec(header, payload);
           break;
         case KDRV_ARM_GIC_V3:
           ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_gicv3_driver_t));
           arch_handoff.gic_driver =
               *reinterpret_cast<const dcfg_arm_gicv3_driver_t*>(payload.data());
+          SaveForMexec(header, payload);
           break;
         case KDRV_ARM_PSCI:
           ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_psci_driver_t));
           arch_handoff.psci_driver =
               *reinterpret_cast<const dcfg_arm_psci_driver_t*>(payload.data());
+          SaveForMexec(header, payload);
           break;
         case KDRV_GENERIC_32BIT_WATCHDOG:
           ZX_ASSERT(payload.size() >= sizeof(dcfg_generic_32bit_watchdog_t));
           arch_handoff.generic_32bit_watchdog_driver =
               *reinterpret_cast<const dcfg_generic_32bit_watchdog_t*>(payload.data());
+          SaveForMexec(header, payload);
           break;
       }
       break;

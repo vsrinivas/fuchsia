@@ -133,7 +133,6 @@ zx_library("x86") {
     "ioport.cc",
     "lapic.cc",
     "mexec.S",
-    "mexec.cc",
     "mmu.cc",
     "mmu_mem_types.cc",
     "mp.cc",

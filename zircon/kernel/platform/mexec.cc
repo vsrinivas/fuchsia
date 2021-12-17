@@ -28,6 +28,9 @@
 
 namespace {
 
+// TODO(fxbug.dev/84107): Later this will arrive in a whole page from the
+// physboot handoff so it can be stuffed into a VMO and extended there.
+
 // Mexec data as gleaned from the physboot hand-off.
 zbitl::Image<fbl::Array<ktl::byte>> gImageAtHandoff;
 
@@ -48,74 +51,14 @@ void ConstructMexecDataZbi(uint level) {
     abort();
   }
 
-  // Forward relevant items from the physboot hand-off.
-  ZX_ASSERT(gPhysHandoff != nullptr);
-
-  if (auto result = ArchAppendMexecDataFromHandoff(gImageAtHandoff, *gPhysHandoff);
-      result.is_error()) {
+  // Transfer initial data from the physboot handoff.
+  zbitl::View handoff(gPhysHandoff->mexec_data.get());
+  if (auto result = gImageAtHandoff.Extend(handoff.begin(), handoff.end()); result.is_error()) {
+    zbitl::PrintViewCopyError(result.error_value());
     abort();
   }
 
-  // Appends the appropriate UART config, as encoded in the hand-off, which is
-  // given as variant of libuart driver types, each with methods to indicate
-  // the ZBI item type and payload.
-  constexpr auto append_uart_item = [](const auto& uart) {
-    if (uart.extra() == 0) {  // The null driver.
-      return;
-    }
-    const zbi_header_t header = {
-        .type = ZBI_TYPE_KERNEL_DRIVER,
-        .extra = uart.extra(),
-    };
-    auto result = gImageAtHandoff.Append(header, zbitl::AsBytes(uart.config()));
-    if (result.is_error()) {
-      printf("mexec: could not append UART driver config: ");
-      zbitl::PrintViewError(result.error_value());
-      abort();
-    }
-  };
-
-  ktl::visit(append_uart_item, gBootOptions->serial);
-
-  if (ktl::span mem_config = gPhysHandoff->mem_config.get(); !mem_config.empty()) {
-    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG},
-                                         zbitl::AsBytes(mem_config));
-    if (result.is_error()) {
-      printf("mexec: could not append memory ranges: ");
-      zbitl::PrintViewError(result.error_value());
-      abort();
-    }
-  }
-
-  if (ktl::span topology = gPhysHandoff->cpu_topology.get(); !topology.empty()) {
-    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_CPU_TOPOLOGY},
-                                         zbitl::AsBytes(topology));
-    if (result.is_error()) {
-      printf("mexec: could not append CPU topology: ");
-      zbitl::PrintViewError(result.error_value());
-      abort();
-    }
-  }
-
-  if (gPhysHandoff->nvram) {
-    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM},
-                                         zbitl::AsBytes(gPhysHandoff->nvram.value()));
-    if (result.is_error()) {
-      printf("mexec: could not append NVRAM region: ");
-      zbitl::PrintViewError(result.error_value());
-      abort();
-    }
-  }
-
-  if (gPhysHandoff->platform_id) {
-    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_PLATFORM_ID},
-                                         zbitl::AsBytes(gPhysHandoff->platform_id.value()));
-    if (result.is_error()) {
-      printf("mexec: could not append platform ID: ");
-      zbitl::PrintViewError(result.error_value());
-      abort();
-    }
-  }
+  ZX_ASSERT(handoff.take_error().is_ok());
 }
 
 }  // namespace

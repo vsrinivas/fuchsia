@@ -86,6 +86,11 @@ struct PhysHandoff {
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
 
+  // ZBI container of items to be propagated in mexec.
+  // TODO(fxbug.dev/84107): later this will be propagated
+  // as a whole page the kernel can stuff into a VMO.
+  PhysHandoffTemporarySpan<const ktl::byte> mexec_data;
+
   // Architecture-specific content.
   ArchPhysHandoff arch_handoff;
   static_assert(ktl::is_default_constructible_v<ArchPhysHandoff>);

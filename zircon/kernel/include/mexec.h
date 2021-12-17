@@ -79,11 +79,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi);
 // that ZBI if successful.
 zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer);
 
-// Appends arch-specific mexec data from the physboot hand-off.
-// Defined in //zircon/kernel/arch/$cpu/mexec.cc.
-fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
-                                                          PhysHandoff& handoff);
-
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.
  */

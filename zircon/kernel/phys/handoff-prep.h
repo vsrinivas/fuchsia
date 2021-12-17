@@ -88,6 +88,8 @@ class HandoffPrep {
   // gPhysNew<memalloc::Type::kPhysHandoff>.
   Allocator& allocator() { return allocator_; }
 
+  void SaveForMexec(const zbi_header_t& header, ktl::span<const ktl::byte> payload);
+
   // The arch-specific protocol for a given item.
   // Defined in //zircon/kernel/arch/$cpu/phys/arch-handoff-prep-zbi.cc.
   void ArchSummarizeMiscZbiItem(const zbi_header_t& header, ktl::span<const ktl::byte> payload);
@@ -96,6 +98,7 @@ class HandoffPrep {
 
   Allocator allocator_;
   PhysHandoff* handoff_ = nullptr;
+  ktl::span<ktl::byte> mexec_data_;
 };
 
 #endif  // ZIRCON_KERNEL_PHYS_HANDOFF_PREP_H_
