@@ -75,7 +75,7 @@ TEST(InlineDirTest, InlineDirCreation) {
   root_dir = nullptr;
 
   FileTester::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDirConvert) {
@@ -144,7 +144,7 @@ TEST(InlineDirTest, InlineDirConvert) {
   root_dir = nullptr;
 
   FileTester::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDentryOps) {
@@ -243,7 +243,7 @@ TEST(InlineDirTest, InlineDentryOps) {
   root_dir = nullptr;
 
   FileTester::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
 TEST(InlineDirTest, NestedInlineDirectories) {
@@ -282,7 +282,7 @@ TEST(InlineDirTest, NestedInlineDirectories) {
   child_file = nullptr;
 
   FileTester::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(Fsck(std::move(bc)), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
 TEST(InlineDirTest, InlineDirPino) {
@@ -367,7 +367,7 @@ TEST(InlineDirTest, InlineDirPino) {
   d1_file = nullptr;
 
   FileTester::Unmount(std::move(fs), &bc);
-  EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
 }  // namespace

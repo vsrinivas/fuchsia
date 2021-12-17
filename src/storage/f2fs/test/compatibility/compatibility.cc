@@ -172,7 +172,7 @@ void TargetOperator::Fsck() {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }
 
-  FsckWorker fsck(std::move(bcache_));
+  FsckWorker fsck(std::move(bcache_), FsckOptions{.repair = false});
   ASSERT_EQ(fsck.Run(), ZX_OK);
   bcache_ = fsck.Destroy();
 }

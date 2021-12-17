@@ -9,6 +9,10 @@
 
 namespace f2fs {
 
+struct FsckOptions {
+  bool repair = false;
+};
+
 struct OrphanInfo {
   uint32_t nr_inodes = 0;
   uint32_t *ino_list = nullptr;
@@ -75,7 +79,11 @@ class FsckWorker {
   FsckWorker &operator=(const FsckWorker &) = delete;
   FsckWorker(FsckWorker &&) = delete;
   FsckWorker &operator=(FsckWorker &&) = delete;
-  FsckWorker(std::unique_ptr<Bcache> bc) : tree_mark_(kDefaultDirTreeLen) { bc_ = std::move(bc); }
+  FsckWorker(std::unique_ptr<Bcache> bc, const FsckOptions &options)
+      : fsck_options_(options), tree_mark_(kDefaultDirTreeLen) {
+    bc_ = std::move(bc);
+  }
+  ~FsckWorker() { DoUmount(); }
 
   zx_status_t ReadBlock(FsBlock &fs_block, block_t bno);
   zx_status_t WriteBlock(FsBlock &fs_block, block_t bno);
@@ -146,6 +154,17 @@ class FsckWorker {
   //   c) The count information that DoFsck() retrieves must be the same as that in 1.
   //   d) no unreachable links
   zx_status_t Verify();
+
+  // If the repair option is set and Verify() fails,
+  // fsck will call Repair() to repair specific filesystem flaws and bring consistency.
+  zx_status_t Repair();
+  // RepairNat() nullifies unreachable NAT entries, including those in the journal.
+  zx_status_t RepairNat();
+  // RepairSit() nullifies unreachable bits in SIT entries, including those in the journal.
+  zx_status_t RepairSit();
+  // RepairCheckpoint() corrects members in the checkpoint, including
+  // |valid_block_count|, |valid_node_count|, |valid_inode_count|.
+  zx_status_t RepairCheckpoint();
   void DoUmount();
   zx_status_t Run();
 
@@ -230,11 +249,15 @@ class FsckWorker {
   int dump_inode_from_blkaddr(SuperblockInfo *sbi, uint32_t blk_addr);
 #endif
 
-  std::unique_ptr<Bcache> Destroy() { return std::move(bc_); }
+  std::unique_ptr<Bcache> Destroy() {
+    DoUmount();
+    return std::move(bc_);
+  }
 
  private:
   // Saves the traverse context. It should be re-initialized every traverse.
   FsckInfo fsck_;
+  const FsckOptions fsck_options_;
   SuperblockInfo superblock_info_;
   std::unique_ptr<NodeManager> node_manager_;
   std::unique_ptr<SegmentManager> segment_manager_;
@@ -247,7 +270,8 @@ class FsckWorker {
   uint32_t sit_area_bitmap_size_ = 0;
 };
 
-zx_status_t Fsck(std::unique_ptr<Bcache> bc, std::unique_ptr<Bcache> *out = nullptr);
+zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions &options,
+                 std::unique_ptr<Bcache> *out = nullptr);
 
 }  // namespace f2fs
 

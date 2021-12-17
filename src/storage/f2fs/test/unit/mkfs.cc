@@ -511,7 +511,7 @@ TEST(FormatFilesystemTest, BlockSize) {
       root_dir.reset();
 
       FileTester::Unmount(std::move(fs), &bc);
-      EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
+      EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
     }
   }
 }
@@ -545,7 +545,7 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
       ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
 
       FileTester::Unmount(std::move(fs), &bc);
-      EXPECT_EQ(Fsck(std::move(bc)), ZX_OK);
+      EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
     } else {
       ASSERT_TRUE(ret.is_error());
       ASSERT_EQ(ret.status_value(), ZX_ERR_NO_SPACE);

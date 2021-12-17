@@ -10,7 +10,7 @@ namespace {
 TEST(FsckTest, InvalidSuperblockMagic) {
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   ASSERT_EQ(fsck.GetValidSuperblock(), ZX_OK);
 
@@ -40,7 +40,7 @@ TEST(FsckTest, InvalidSuperblockMagic) {
 TEST(FsckTest, InvalidCheckpointCrc) {
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   ASSERT_EQ(fsck.GetValidSuperblock(), ZX_OK);
   ASSERT_EQ(fsck.GetValidCheckpoint(), ZX_OK);
@@ -102,7 +102,7 @@ TEST(FsckTest, UnreachableNatEntry) {
 
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   // Read the superblock to locate NAT.
   auto ret = fsck.GetSuperblock(0);
@@ -115,6 +115,9 @@ TEST(FsckTest, UnreachableNatEntry) {
 
   // Insert an unreachable entry.
   auto nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData().data());
+
+  ASSERT_EQ(LeToCpu(nat_block->entries[fake_nid].ino), 0u);
+  ASSERT_EQ(LeToCpu(nat_block->entries[fake_nid].block_addr), 0u);
   nat_block->entries[fake_nid] = {.ino = CpuToLe(fake_ino), .block_addr = CpuToLe(fake_block_addr)};
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->nat_blkaddr)), ZX_OK);
 
@@ -127,7 +130,25 @@ TEST(FsckTest, UnreachableNatEntry) {
   ASSERT_EQ(LeToCpu(node_info->blk_addr), fake_block_addr);
 
   // Fsck should fail at verifying stage.
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Try repairing the NAT.
+  ASSERT_EQ(fsck.RepairNat(), ZX_OK);
+
+  // Re-read the nat to check it is repaired.
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->nat_blkaddr)), ZX_OK);
+  nat_block = reinterpret_cast<NatBlock *>(fs_block->GetData().data());
+  ASSERT_EQ(LeToCpu(nat_block->entries[fake_nid].ino), 0u);
+  ASSERT_EQ(LeToCpu(nat_block->entries[fake_nid].block_addr), 0u);
+
+  // Re-insert the unreachable entry.
+  nat_block->entries[fake_nid] = {.ino = CpuToLe(fake_ino), .block_addr = CpuToLe(fake_block_addr)};
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->nat_blkaddr)), ZX_OK);
+
+  // Check that the repair option works.
+  bc = fsck.Destroy();
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = true}, &bc), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
 TEST(FsckTest, UnreachableNatEntryInJournal) {
@@ -137,7 +158,7 @@ TEST(FsckTest, UnreachableNatEntryInJournal) {
 
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   // Read the superblock to locate checkpoint.
   auto ret = fsck.GetSuperblock(0);
@@ -178,7 +199,31 @@ TEST(FsckTest, UnreachableNatEntryInJournal) {
   ASSERT_EQ(LeToCpu(node_info->blk_addr), fake_block_addr);
 
   // Fsck should fail at verifying stage.
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Try repairing the NAT.
+  ASSERT_EQ(fsck.RepairNat(), ZX_OK);
+
+  // Re-read the summary to check it is repaired.
+  ASSERT_EQ(
+      fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr) + summary_offset),
+      ZX_OK);
+  hot_data_summary_ptr = reinterpret_cast<SummaryBlock *>(fs_block.get());
+  ASSERT_EQ(hot_data_summary_ptr->n_nats, 0);
+
+  // Re-insert the unreachable entry.
+  hot_data_summary_ptr->nat_j.entries[hot_data_summary_ptr->n_nats++] = {
+      .nid = CpuToLe(fake_nid),
+      .ne = {.ino = CpuToLe(fake_ino), .block_addr = CpuToLe(fake_block_addr)},
+  };
+  ASSERT_EQ(
+      fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr) + summary_offset),
+      ZX_OK);
+
+  // Check that the repair option works.
+  bc = fsck.Destroy();
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = true}, &bc), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
 TEST(FsckTest, UnreachableSitEntry) {
@@ -187,7 +232,7 @@ TEST(FsckTest, UnreachableSitEntry) {
 
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   // Read the superblock to locate SIT.
   auto ret = fsck.GetSuperblock(0);
@@ -211,7 +256,27 @@ TEST(FsckTest, UnreachableSitEntry) {
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->sit_blkaddr)), ZX_OK);
 
   // Fsck should fail at verifying stage.
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Try repairing the SIT.
+  ASSERT_EQ(fsck.RepairSit(), ZX_OK);
+
+  // Re-read the SIT block to check it is repaired.
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->sit_blkaddr)), ZX_OK);
+  sit_block = reinterpret_cast<SitBlock *>(fs_block->GetData().data());
+  ASSERT_EQ(TestValidBitmap(target_offset, sit_block->entries[target_segment].valid_map), 0);
+
+  // Re-insert the unreachable entry.
+  SetValidBitmap(target_offset, sit_block->entries[target_segment].valid_map);
+  sit_block->entries[target_segment].vblocks =
+      CpuToLe(static_cast<uint16_t>(LeToCpu(sit_block->entries[target_segment].vblocks) + 1));
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->sit_blkaddr)), ZX_OK);
+
+  // Check that the repair option works.
+  bc = fsck.Destroy();
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = true}, &bc), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
 TEST(FsckTest, UnreachableSitEntryInJournal) {
@@ -220,7 +285,7 @@ TEST(FsckTest, UnreachableSitEntryInJournal) {
 
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   // Read the superblock to locate SIT.
   auto ret = fsck.GetSuperblock(0);
@@ -248,7 +313,29 @@ TEST(FsckTest, UnreachableSitEntryInJournal) {
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), offset), ZX_OK);
 
   // Fsck should fail at verifying stage.
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Try repairing the SIT.
+  ASSERT_EQ(fsck.RepairSit(), ZX_OK);
+
+  // Re-read the summary to check it is repaired.
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), offset), ZX_OK);
+  cold_data_summary_ptr = reinterpret_cast<SummaryBlock *>(fs_block.get());
+  ASSERT_EQ(TestValidBitmap(target_offset, target_sit_entry.valid_map), 0);
+
+  // Re-insert the unreachable entry.
+  SitEntry &reinsert_sit_entry = cold_data_summary_ptr->sit_j.entries[target_entry_index].se;
+  ASSERT_EQ(TestValidBitmap(target_offset, reinsert_sit_entry.valid_map), 0);
+  SetValidBitmap(target_offset, reinsert_sit_entry.valid_map);
+  reinsert_sit_entry.vblocks =
+      CpuToLe(static_cast<uint16_t>(LeToCpu(reinsert_sit_entry.vblocks) + 1));
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), offset), ZX_OK);
+
+  // Check that the repair option works.
+  bc = fsck.Destroy();
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = true}, &bc), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
 TEST(FsckTest, WrongInodeHardlinkCount) {
@@ -288,7 +375,7 @@ TEST(FsckTest, WrongInodeHardlinkCount) {
     FileTester::Unmount(std::move(fs), &bc);
   }
 
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
   ASSERT_EQ(fsck.DoMount(), ZX_OK);
 
   // Retrieve the node block with the saved ino.
@@ -296,7 +383,7 @@ TEST(FsckTest, WrongInodeHardlinkCount) {
   ASSERT_TRUE(ret.is_ok());
 
   auto [fs_block, node_info] = std::move(*ret);
-  auto *node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+  auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
 
   // This inode has link count 2.
   ASSERT_EQ(LeToCpu(node_block->i.i_links), links);
@@ -317,7 +404,7 @@ TEST(FsckTest, WrongInodeHardlinkCount) {
 TEST(FsckTest, InconsistentCheckpointNodeCount) {
   std::unique_ptr<Bcache> bc;
   FileTester::MkfsOnFakeDev(&bc);
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
 
   ASSERT_EQ(fsck.GetValidSuperblock(), ZX_OK);
   ASSERT_EQ(fsck.GetValidCheckpoint(), ZX_OK);
@@ -338,7 +425,6 @@ TEST(FsckTest, InconsistentCheckpointNodeCount) {
   checkpoint_ptr->valid_node_count = CpuToLe(2u);
   uint32_t crc =
       F2fsCalCrc32(kF2fsSuperMagic, checkpoint_ptr, LeToCpu(checkpoint_ptr->checksum_offset));
-  printf("%d", crc);
   *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint_ptr) +
                                  LeToCpu(checkpoint_ptr->checksum_offset))) = crc;
 
@@ -350,7 +436,35 @@ TEST(FsckTest, InconsistentCheckpointNodeCount) {
             ZX_OK);
 
   // Fsck should fail at verifying stage.
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Try repairing the checkpoint.
+  ASSERT_EQ(fsck.RepairCheckpoint(), ZX_OK);
+
+  // Re-read the checkpoint pack header to check it is repaired.
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+  checkpoint_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
+  ASSERT_EQ(checkpoint_ptr->valid_node_count, LeToCpu(1u));
+  ASSERT_EQ(
+      *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint_ptr) +
+                                     LeToCpu(checkpoint_ptr->checksum_offset))),
+      F2fsCalCrc32(kF2fsSuperMagic, checkpoint_ptr, LeToCpu(checkpoint_ptr->checksum_offset)));
+
+  // Re-insert the flaw.
+  checkpoint_ptr->valid_node_count = CpuToLe(2u);
+  crc = F2fsCalCrc32(kF2fsSuperMagic, checkpoint_ptr, LeToCpu(checkpoint_ptr->checksum_offset));
+  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint_ptr) +
+                                 LeToCpu(checkpoint_ptr->checksum_offset))) = crc;
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(),
+                            LeToCpu(superblock_pointer->cp_blkaddr) + cp_pack_block_count - 1),
+            ZX_OK);
+
+  // Check that the repair option works.
+  bc = fsck.Destroy();
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = true}, &bc), ZX_OK);
+  ASSERT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}), ZX_OK);
 }
 
 TEST(FsckTest, InconsistentInodeFooter) {
@@ -385,7 +499,7 @@ TEST(FsckTest, InconsistentInodeFooter) {
     FileTester::Unmount(std::move(fs), &bc);
   }
 
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
   ASSERT_EQ(fsck.DoMount(), ZX_OK);
 
   // Retrieve the node block with the saved ino.
@@ -393,7 +507,7 @@ TEST(FsckTest, InconsistentInodeFooter) {
   ASSERT_TRUE(ret.is_ok());
 
   auto [fs_block, node_info] = std::move(*ret);
-  auto *node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+  auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
   ASSERT_EQ(fsck.ValidateNodeBlock(*node_block, node_info, FileType::kFtDir, NodeType::kTypeInode),
             ZX_OK);
 
@@ -443,7 +557,7 @@ TEST(FsckTest, InodeLinkCountAndBlockCount) {
     FileTester::Unmount(std::move(fs), &bc);
   }
 
-  FsckWorker fsck(std::move(bc));
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
   ASSERT_EQ(fsck.DoMount(), ZX_OK);
 
   // Retrieve the node block with the saved ino.
@@ -451,7 +565,7 @@ TEST(FsckTest, InodeLinkCountAndBlockCount) {
   ASSERT_TRUE(ret.is_ok());
 
   auto [fs_block, node_info] = std::move(*ret);
-  auto *node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+  auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
   ASSERT_EQ(fsck.ValidateNodeBlock(*node_block, node_info, FileType::kFtDir, NodeType::kTypeInode),
             ZX_OK);
 
