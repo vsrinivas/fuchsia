@@ -29,6 +29,18 @@ use {
     virtio_device::chain::ReadableChain,
 };
 
+/// Deadline profile configuration.
+pub(crate) struct DeadlineProfileConfig {
+    capacity: zx::Duration,
+    deadline: zx::Duration,
+    period: zx::Duration,
+}
+
+// Currently requesting 0.5ms of CPU every 5ms.
+pub(crate) static DEADLINE_PROFILE: Lazy<DeadlineProfileConfig> = Lazy::new(|| {
+    DeadlineProfileConfig { capacity: 500.micros(), deadline: 5.millis(), period: 5.millis() }
+});
+
 // There are no defined features. See: 5.14.3 Feature Bits
 // https://www.kraxel.org/virtio/virtio-v1.1-cs01-sound-v8.html#x1-4980003
 const FEATURES: u32 = 0;
@@ -236,13 +248,12 @@ async fn apply_deadline_profile() -> Result<(), Error> {
     .context("Failed to connect to fuchsia.scheduler.ProfileProvider")?;
 
     // Obtain a deadline profile for our (only) thread.
-    // Currently requesting 0.5ms of CPU every 5ms.
     // TODO(fxbug.dev/90030): tune this profile
     let (status, profile) = profile_provider
         .get_deadline_profile(
-            500.micros().into_nanos() as u64, // capacity
-            5.millis().into_nanos() as u64,   // deadline
-            5.millis().into_nanos() as u64,   // period
+            DEADLINE_PROFILE.capacity.into_nanos() as u64,
+            DEADLINE_PROFILE.deadline.into_nanos() as u64,
+            DEADLINE_PROFILE.period.into_nanos() as u64,
             "virtio-sound",
         )
         .await

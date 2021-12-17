@@ -309,6 +309,8 @@ static const uint32_t kNumChmaps = 3;
 static const uint32_t kOutputStreamId = 0;
 static const uint32_t kInputStreamId = 1;
 
+static const auto kDeadlinePeriod = zx::msec(5);
+
 // Each response struct contains a status. We initialize that response status
 // to this value when we want to verify that the response is not written before
 // a certain point in time.
@@ -1252,9 +1254,9 @@ void VirtioSoundTest::SetUpOutputForXfer(uint32_t buffer_bytes, uint32_t period_
                                                            // Caller's params.
                                                            buffer_bytes, period_bytes));
 
+  auto lead_time = FakeAudioRenderer::kDefaultMinLeadTime + kDeadlinePeriod;
   *expected_latency_bytes =
-      static_cast<uint32_t>(FakeAudioRenderer::kDefaultMinLeadTime.to_nsecs() * fidl_fps *
-                            bytes_per_frame / 1'000'000'000);
+      static_cast<uint32_t>(lead_time.to_nsecs() * fidl_fps * bytes_per_frame / 1'000'000'000);
 }
 
 TEST_F(VirtioSoundTest, PcmOutputXferOne) {

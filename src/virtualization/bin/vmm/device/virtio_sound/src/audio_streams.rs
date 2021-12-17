@@ -185,9 +185,9 @@ struct AudioStreamConn<T> {
 impl<T> AudioStreamConn<T> {
     // Returns the current latency of this stream, in bytes.
     fn latency_bytes(&self) -> u32 {
+        let lead_time = *self.lead_time.borrow();
         // bytes_for_duration fails only if the lead_time is negative, which should
         // never happen unless audio_core is buggy.
-        let lead_time = *self.lead_time.borrow();
         match wire_convert::bytes_for_duration(lead_time, self.params.stream_type) {
             // The virtio-sound wire protocol encodes latency_bytes with u32. In practice that
             // gives a maximum lead time of 5592s (93 minutes) for a 96kHz mono stream with 4-byte
@@ -512,7 +512,11 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                                 use fidl_fuchsia_media::AudioRendererEvent::OnMinLeadTimeChanged;
                                 match event {
                                     Some(OnMinLeadTimeChanged { min_lead_time_nsec }) => {
-                                        job.lead_time.broadcast(zx::Duration::from_nanos(min_lead_time_nsec))?;
+                                        // Include our deadline in the lead time.
+                                        // This is an upper-bound: see discussion in fxbug.dev/90564.
+                                        let lead_time = zx::Duration::from_nanos(min_lead_time_nsec)
+                                            + super::DEADLINE_PROFILE.period;
+                                        job.lead_time.broadcast(lead_time)?;
                                     },
                                     None => {
                                         // FIDL connection closed by peer.
