@@ -6,7 +6,9 @@
 
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
+#include <stdlib.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -48,7 +50,6 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& alloca
 // true - a and b have at least one page in common, and the pages in common are returned via out.
 // false - a and b don't have any pages in common and out is unmodified.
 bool Intersect(const ralloc_region_t& a, const ralloc_region_t& b, ralloc_region_t* out) {
-  ZX_DEBUG_ASSERT(out);
   uint64_t a_base = a.base;
   uint64_t a_end = a.base + a.size;
   uint64_t b_base = b.base;
@@ -58,8 +59,10 @@ bool Intersect(const ralloc_region_t& a, const ralloc_region_t& b, ralloc_region
   if (intersected_end <= intersected_base) {
     return false;
   }
-  out->base = intersected_base;
-  out->size = intersected_end - intersected_base;
+  if (out) {
+    out->base = intersected_base;
+    out->size = intersected_end - intersected_base;
+  }
   return true;
 }
 
@@ -148,7 +151,9 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
       unused_pages_guarded_ = true;
       unused_checker_.PostDelayed(dispatcher,
                                   unused_page_check_cycle_period_ / kUnusedCheckPartialCount);
+      unused_recently_checker_.Post(dispatcher);
       min_guard_data_size = std::max(min_guard_data_size, unused_guard_data_size_);
+      deleted_regions_.resize(kNumDeletedRegions);
     }
   }
   ZX_DEBUG_ASSERT(guard_region_size % zx_system_get_page_size() == 0);
@@ -200,8 +205,7 @@ void ContiguousPooledMemoryAllocator::FillUnusedRangeWithGuard(uint64_t start_of
   ZX_DEBUG_ASSERT(unused_guard_pattern_period_bytes_ % zx_system_get_page_size() == 0);
   uint64_t end = start_offset + size;
   uint64_t to_copy_size;
-  for (uint64_t offset = fbl::round_up(start_offset, unused_guard_pattern_period_bytes_);
-       offset < end; offset += unused_guard_pattern_period_bytes_) {
+  for (uint64_t offset = start_offset; offset < end; offset += to_copy_size) {
     to_copy_size = std::min(unused_guard_data_size_, end - offset);
     memcpy(&unused_check_mapping_[offset], guard_region_data_.data(), to_copy_size);
     zx_cache_flush(&unused_check_mapping_[offset], to_copy_size, ZX_CACHE_FLUSH_DATA);
@@ -217,6 +221,7 @@ ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
   }
   guard_checker_.Cancel();
   unused_checker_.Cancel();
+  unused_recently_checker_.Cancel();
   if (unused_check_mapping_) {
     zx_status_t status =
         zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(unused_check_mapping_), size_);
@@ -463,6 +468,7 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   ZX_ASSERT(it != regions_.end());
   auto& region_data = it->second;
   CheckGuardRegionData(region_data);
+  StashDeletedRegion(region_data);
   OnRegionUnused(*it->second.ptr.get());
   regions_.erase(it);
   // region_data now invalid
@@ -512,11 +518,31 @@ void ContiguousPooledMemoryAllocator::CheckGuardRegion(const char* region_name, 
         "\"%s\" bad \"%s\"",
         region_name, region_size, pre ? "pre" : "post", error_start, error_end, good_str.c_str(),
         bad_str.c_str());
-    ZX_ASSERT_MSG(!crash_on_guard_failure_, "Crashing due to guard region failure");
-    failed_guard_region_checks_++;
-    failed_guard_region_checks_property_.Set(failed_guard_region_checks_);
-    last_failed_guard_region_check_timestamp_ns_property_.Set(zx::clock::get_monotonic().get());
+
+    // For now, if unused page checking is enabled, also print the guard region diffs using
+    // ReportPatternCheckFailedRange().  While this is mainly intended for printing diffs after
+    // pattern check failure on unused pages (in contrast to per-allocation or per-reserved-VMO
+    // guard pages), we _might_ find the DeletedRegion info useful, and the diffs may have more
+    // info.
+    //
+    // TODO(dustingreen): In a later CL, integrate anything that's needed from the code above into
+    // ReportPatternCheckFailedRange(), and make ReportPatternCheckFailedRange() work even if unused
+    // page checking is disabled.
+    uint64_t page_aligned_base = fbl::round_down(error_start, zx_system_get_page_size());
+    uint64_t page_aligned_end = fbl::round_up(error_end + 1, zx_system_get_page_size());
+    ralloc_region_t diff_range{.base = page_aligned_base,
+                               .size = page_aligned_end - page_aligned_base};
+    ReportPatternCheckFailedRange(diff_range, "guard");
+
+    IncrementGuardRegionFailureInspectData();
   }
+}
+
+void ContiguousPooledMemoryAllocator::IncrementGuardRegionFailureInspectData() {
+  ZX_ASSERT_MSG(!crash_on_guard_failure_, "Crashing due to guard region failure");
+  failed_guard_region_checks_++;
+  failed_guard_region_checks_property_.Set(failed_guard_region_checks_);
+  last_failed_guard_region_check_timestamp_ns_property_.Set(zx::clock::get_monotonic().get());
 }
 
 void ContiguousPooledMemoryAllocator::CheckGuardRegionData(const RegionData& region) {
@@ -604,6 +630,27 @@ void ContiguousPooledMemoryAllocator::CheckUnusedPagesCallback(async_dispatcher_
                               unused_page_check_cycle_period_ / kUnusedCheckPartialCount);
 }
 
+void ContiguousPooledMemoryAllocator::CheckUnusedRecentlyPagesCallback(
+    async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status) {
+  if (status != ZX_OK) {
+    return;
+  }
+  zx::time now_ish = zx::clock::get_monotonic();
+  int32_t deleted_region_index = deleted_regions_next_ - 1;
+  for (int32_t i = 0; i < deleted_regions_count_; ++i) {
+    if (deleted_region_index == -1) {
+      deleted_region_index = kNumDeletedRegions - 1;
+    }
+    const DeletedRegion& deleted_region = deleted_regions_[deleted_region_index];
+    if (now_ish - deleted_region.when_freed > kUnusedRecentlyAgeThreshold) {
+      break;
+    }
+    CheckAnyUnusedPages(deleted_region.region.base,
+                        deleted_region.region.base + deleted_region.region.size);
+  }
+  unused_recently_checker_.PostDelayed(dispatcher, kUnusedRecentlyPageCheckPeriod);
+}
+
 void ContiguousPooledMemoryAllocator::CheckAnyUnusedPages(uint64_t start_offset,
                                                           uint64_t end_offset) {
   // This is a list of non-zero-size portions of unused regions within [start_offset, end_offset).
@@ -638,6 +685,171 @@ void ContiguousPooledMemoryAllocator::CheckAnyUnusedPages(uint64_t start_offset,
   }
 }
 
+void ContiguousPooledMemoryAllocator::StashDeletedRegion(const RegionData& region_data) {
+  if (deleted_regions_.size() != kNumDeletedRegions) {
+    return;
+  }
+  // Remember basic info regarding up to kNumDeletedRegions regions, for potential reporting of
+  // pattern check failures later.
+  deleted_regions_[deleted_regions_next_] =
+      DeletedRegion{.region = {.base = region_data.ptr->base, .size = region_data.ptr->size},
+                    .when_freed = zx::clock::get_monotonic(),
+                    .name = region_data.name};
+  ++deleted_regions_next_;
+  ZX_DEBUG_ASSERT(deleted_regions_next_ <= kNumDeletedRegions);
+  if (deleted_regions_next_ == kNumDeletedRegions) {
+    deleted_regions_next_ = 0;
+  }
+  if (deleted_regions_count_ < kNumDeletedRegions) {
+    ++deleted_regions_count_;
+  }
+}
+
+// The data structure for old regions is optimized for limiting the overall size and limting the
+// cost of upkeep of the old region info.  It's not optimized for lookup; this lookup can be a bit
+// slow, but _should_ never need to happen...
+ContiguousPooledMemoryAllocator::DeletedRegion*
+ContiguousPooledMemoryAllocator::FindMostRecentDeletedRegion(uint64_t offset) {
+  uint64_t page_size = zx_system_get_page_size();
+  DeletedRegion* deleted_region = nullptr;
+  int32_t index = deleted_regions_next_ - 1;
+  int32_t count = 0;
+  ralloc_region_t offset_page{.base = static_cast<uint64_t>(offset),
+                              .size = static_cast<uint64_t>(page_size)};
+  while (count < deleted_regions_count_) {
+    if (index < 0) {
+      index = kNumDeletedRegions - 1;
+    }
+    if (Intersect(offset_page, deleted_regions_[index].region, nullptr)) {
+      deleted_region = &deleted_regions_[index];
+      break;
+    }
+    --index;
+  }
+  return deleted_region;
+}
+
+void ContiguousPooledMemoryAllocator::ReportPatternCheckFailedRange(
+    const ralloc_region_t& failed_range, const char* which_type) {
+  if (!unused_pages_guarded_) {
+    // for now
+    //
+    // TODO(dustingreen): Remove this restriction.
+    LOG(ERROR, "!unused_pages_guarded_ so ReportPatternCheckFailedRange() returning early");
+    return;
+  }
+  ZX_ASSERT(deleted_regions_.size() == kNumDeletedRegions);
+  ZX_ASSERT(failed_range.base % zx_system_get_page_size() == 0);
+  ZX_ASSERT(failed_range.size % zx_system_get_page_size() == 0);
+
+  LOG(ERROR,
+      "########################### SYSMEM DETECTS BAD DMA WRITE (%s) - paddr range start: "
+      "0x%" PRIx64 " size: 0x%" PRIx64 " (internal offset: 0x%" PRIx64 ")",
+      which_type, phys_start_ + failed_range.base, failed_range.size, failed_range.base);
+
+  std::optional<DeletedRegion*> prev_deleted_region;
+  bool skipped_since_last = false;
+  LOG(ERROR,
+      "DeletedRegion info for failed range expanded by 1 page on either side (... - omitted "
+      "entries are same DeletedRegion info):");
+  int32_t page_size = zx_system_get_page_size();
+  auto handle_skip_since_last = [&skipped_since_last] {
+    if (!skipped_since_last) {
+      return;
+    }
+    LOG(ERROR, "...");
+    skipped_since_last = false;
+  };
+  for (int64_t offset = static_cast<int64_t>(failed_range.base) - page_size;
+       offset < static_cast<int64_t>(failed_range.base + failed_range.size) + page_size;
+       offset += page_size) {
+    ZX_ASSERT(offset >= -page_size);
+    if (offset == -page_size) {
+      LOG(ERROR, "offset -page_size (out of bounds)");
+      continue;
+    }
+    ZX_ASSERT(offset <= static_cast<int64_t>(size_));
+    if (offset == static_cast<int64_t>(size_)) {
+      LOG(ERROR, "offset == size_ (out of bounds)");
+      continue;
+    }
+    DeletedRegion* deleted_region = FindMostRecentDeletedRegion(offset);
+    // This can sometimes be comparing nullptr and nullptr, or nullptr and not nullptr, and that's
+    // fine/expected.
+    if (prev_deleted_region && deleted_region == prev_deleted_region.value()) {
+      skipped_since_last = true;
+      continue;
+    }
+    prev_deleted_region.emplace(deleted_region);
+    handle_skip_since_last();
+    if (deleted_region) {
+      zx::time now = zx::clock::get_monotonic();
+      zx::duration deleted_ago = now - deleted_region->when_freed;
+      uint64_t deleted_micros_ago = deleted_ago.to_usecs();
+      LOG(ERROR,
+          "paddr: 0x%" PRIx64 " previous region: 0x%p - paddr base: 0x%" PRIx64
+          " reserved-relative offset: 0x%" PRIx64 " size: 0x%" PRIx64 " freed micros ago: %" PRIu64
+          " name: %s",
+          phys_start_ + offset, deleted_region, phys_start_ + deleted_region->region.base,
+          deleted_region->region.base, deleted_region->region.size, deleted_micros_ago,
+          deleted_region->name.c_str());
+    } else {
+      LOG(ERROR, "paddr: 0x%" PRIx64 " no previous region found within history window",
+          phys_start_ + offset);
+    }
+  }
+  // Indicate that the same deleted region was repeated more times at the end, as appropriate.
+  handle_skip_since_last();
+  LOG(ERROR, "END DeletedRangeInfo");
+
+  LOG(ERROR, "Data not matching pattern (... - no diffs, ...... - skipping middle even if diffs):");
+  constexpr uint32_t kBytesPerLine = 32;
+  ZX_ASSERT(zx_system_get_page_size() % kBytesPerLine == 0);
+  // 2 per byte for hex digits + '!' or '=', not counting terminating \000
+  constexpr uint32_t kCharsPerByte = 3;
+  constexpr uint32_t kMaxStrLen = kCharsPerByte * kBytesPerLine;
+  char str[kMaxStrLen + 1];
+  constexpr uint32_t kMaxDiffBytes = 1024;
+  static_assert((kMaxDiffBytes / 2) % kBytesPerLine == 0);
+  uint32_t diff_bytes = 0;
+  static_assert(kMaxDiffBytes % 2 == 0);
+  ZX_ASSERT(failed_range.size % kBytesPerLine == 0);
+  for (uint64_t offset = failed_range.base; offset < failed_range.base + failed_range.size;
+       offset += kBytesPerLine) {
+    if (failed_range.size > kMaxDiffBytes && diff_bytes >= kMaxDiffBytes / 2) {
+      // skip past the middle to keep total diff bytes <= kMaxDiffBytes
+      offset = failed_range.base + failed_range.size - kMaxDiffBytes / 2;
+      // indicate per-line skips as appropriate
+      handle_skip_since_last();
+      LOG(ERROR, "......");
+      // The part near the end of the failed_range won't satisfy the enclosing if's condition due to
+      // starting kMaxDiffBytes / 2 from the end, so the enclosing loop will stop first.
+      diff_bytes = 0;
+    }
+    bool match = !memcmp(&unused_check_mapping_[offset], &guard_region_data_[offset % page_size],
+                         kBytesPerLine);
+    if (!match) {
+      handle_skip_since_last();
+      LOG(ERROR, "paddr: 0x%" PRIx64 " offset 0x%" PRIx64, phys_start_ + offset, offset);
+      for (uint32_t i = 0; i < kBytesPerLine; ++i) {
+        bool byte_match =
+            unused_check_mapping_[offset + i] == guard_region_data_[(offset + i) % page_size];
+        // printing 2 hex characters + 1 indicator char + \000
+        int result = sprintf(&str[i * kCharsPerByte], "%02x%s", unused_check_mapping_[offset + i],
+                             byte_match ? "=" : "!");
+        ZX_DEBUG_ASSERT(result == kCharsPerByte);
+      }
+      diff_bytes += kBytesPerLine;
+      LOG(ERROR, "%s", str);
+    } else {
+      skipped_since_last = true;
+    }
+  }
+  // Indicate no diffs at end, as appropriate.
+  handle_skip_since_last();
+  LOG(ERROR, "END data not matching pattern");
+}
+
 void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t size,
                                                        bool and_also_zero) {
   ZX_DEBUG_ASSERT(unused_check_mapping_);
@@ -650,6 +862,7 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
     if (!and_also_zero) {
       return;
     }
+    // We don't have to cache flush here becuase the logical_buffer_collection.cc caller does that.
     memset(&unused_check_mapping_[range.base], 0x00, range.size);
   };
   const ralloc_region_t unused_range{.base = offset, .size = size};
@@ -658,6 +871,34 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
       /*pattern_func=*/
       [this, page_size, and_also_zero, &succeeded_count,
        &failed_count](const ralloc_region_t& range) {
+        std::optional<ralloc_region_t> zero_range;
+        auto handle_zero_range = [this, &zero_range, and_also_zero] {
+          if (!and_also_zero || !zero_range) {
+            return;
+          }
+          // We don't have to cache flush here becuase the logical_buffer_collection.cc caller does
+          // that.
+          memset(&unused_check_mapping_[zero_range->base], 0x00, zero_range->size);
+          zero_range.reset();
+        };
+        auto ensure_handle_zero_range = fit::defer([&handle_zero_range] { handle_zero_range(); });
+
+        std::optional<ralloc_region_t> failed_range;
+        auto handle_failed_range = [this, &failed_range, and_also_zero] {
+          if (!failed_range) {
+            return;
+          }
+          ReportPatternCheckFailedRange(failed_range.value(), "unused");
+          IncrementGuardRegionFailureInspectData();
+          failed_range.reset();
+          // So we don't keep finding the same corruption over and over.
+          if (!and_also_zero) {
+            FillUnusedRangeWithGuard(failed_range->base, failed_range->size);
+          }
+        };
+        auto ensure_handle_failed_range =
+            fit::defer([&handle_failed_range] { handle_failed_range(); });
+
         uint64_t end = range.base + range.size;
         uint64_t todo_size;
         for (uint64_t iter = range.base; iter < end; iter += todo_size) {
@@ -665,24 +906,35 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
           ZX_DEBUG_ASSERT(todo_size % page_size == 0);
           if (unlikely(
                   memcmp(guard_region_data_.data(), &unused_check_mapping_[iter], todo_size))) {
-            ++failed_count;
-            ++failed_guard_region_checks_;
-            // So we don't keep finding the same corruption over and over.
-            if (!and_also_zero) {
-              FillUnusedRangeWithGuard(iter, todo_size);
+            if (!failed_range) {
+              failed_range.emplace(ralloc_region_t{.base = iter, .size = 0});
             }
+            failed_range->size += todo_size;
+            ++failed_count;
           } else {
+            // if any failed range is active, it's ending here, so report it
+            handle_failed_range();
             ++succeeded_count;
           }
-          // We zero here because it's faster than zeroing later after we've checked the whole
-          // range.  We don't have to flush here becuase the logical_buffer_collection.cc caller
-          // does that.
+          // We memset() incrementally for better cache locality (vs. forwarding to
+          // maybe_zero_range to zero the whole incoming range).  However, if we have a failed
+          // pattern check range in progress, we don't immediately zero because in that case we
+          // need to print diffs first.  This is somewhat more complicated than just checking a big
+          // range then zeroing a big range, but this should also be quite a bit faster by staying
+          // in cache until we're done reading and writing the data.
           if (and_also_zero) {
-            // We memset() incrementally for better cache locality (vs. forwarding to
-            // maybe_zero_range to zero the whole incoming range).
-            memset(&unused_check_mapping_[iter], 0x00, todo_size);
+            if (!zero_range) {
+              zero_range.emplace(ralloc_region_t{.base = iter, .size = 0});
+            }
+            zero_range->size += todo_size;
+            if (!failed_range) {
+              // Zero immediately if we don't need to keep the data around for failed_range reasons.
+              handle_zero_range();
+            }
           }
         }
+        // ~ensure_handle_failed_range
+        // ~ensure_handle_zero_range
       },
       /*loan_func=*/maybe_zero_range,
       /*zero_func=*/maybe_zero_range);

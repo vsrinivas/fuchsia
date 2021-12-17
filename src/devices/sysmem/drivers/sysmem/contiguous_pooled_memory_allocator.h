@@ -73,7 +73,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // Gets the offset of a VMO from the beginning of a pool.
   uint64_t GetVmoRegionOffsetForTest(const zx::vmo& vmo);
 
-  uint32_t failed_guard_region_checks() const { return failed_guard_region_checks_; }
+  uint64_t failed_guard_region_checks() const { return failed_guard_region_checks_; }
 
   bool is_already_cleared_on_allocate() override;
 
@@ -89,6 +89,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
 
   static constexpr zx::duration kDefaultUnusedPageCheckCyclePeriod = zx::sec(600);
 
+  static constexpr zx::duration kUnusedRecentlyPageCheckPeriod = zx::sec(2);
+  static constexpr zx::duration kUnusedRecentlyAgeThreshold = zx::sec(5);
+
  private:
   struct RegionData {
     std::string name;
@@ -99,6 +102,12 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
     RegionAllocator::Region::UPtr ptr;
   };
 
+  struct DeletedRegion {
+    ralloc_region_t region;
+    zx::time when_freed;
+    std::string name;
+  };
+
   zx_status_t InitCommon(zx::vmo local_contiguous_vmo);
   void TraceObserverCallback(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal);
@@ -107,8 +116,11 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
                               zx_status_t status);
   void CheckUnusedPagesCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
                                 zx_status_t status);
+  void CheckUnusedRecentlyPagesCallback(async_dispatcher_t* dispatcher, async::TaskBase* task,
+                                        zx_status_t status);
   void CheckGuardRegion(const char* region_name, size_t region_size, bool pre,
                         uint64_t start_offset);
+  void IncrementGuardRegionFailureInspectData();
   void CheckGuardRegionData(const RegionData& region);
   void CheckExternalGuardRegions();
   void CheckAnyUnusedPages(uint64_t start_offset, uint64_t end_offset);
@@ -136,6 +148,15 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   template <typename F1, typename F2, typename F3>
   void ForUnusedGuardPatternRanges(const ralloc_region_t& region, F1 pattern_func, F2 loan_func,
                                    F3 zero_func);
+
+  void StashDeletedRegion(const RegionData& region_data);
+  DeletedRegion* FindMostRecentDeletedRegion(uint64_t offset);
+  // Log DeletedRegion info and fairly detailed diff info for a range that's detected to differ from
+  // the pattern that was previously written.
+  //
+  // TODO(dustingreen): With some refactoring we could have common code for diff reporting, for all
+  // of per-reserved-range guard pages, per-allocation guard pages, and unused page guard pages.
+  void ReportPatternCheckFailedRange(const ralloc_region_t& failed_range, const char* which_type);
 
   void OnRegionUnused(const ralloc_region_t& region);
   zx_status_t CommitRegion(const ralloc_region_t& region);
@@ -171,7 +192,7 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // True if the allocator can be deleted after it's marked ready.
   bool can_be_torn_down_{};
 
-  uint32_t failed_guard_region_checks_{};
+  uint64_t failed_guard_region_checks_{};
 
   uint64_t high_water_mark_used_size_{};
   uint64_t max_free_size_at_high_water_mark_{};
@@ -214,7 +235,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   // path we're checking this amount of buffer space with memcmp(), then also zeroing the same space
   // with memset().  If we did so in chunks larger than L1, we'd be spilling cache lines to L2
   // or RAM during memcmp(), then pulling them back in during memset().  Cache sizes and tiers can
-  // vary of course.
+  // vary of course.  This also determines the granularity at which we report pattern mismatch
+  // failures, so 1 page is best here for that also.
   const uint64_t unused_guard_data_size_ = zx_system_get_page_size();
   bool unused_pages_guarded_ = false;
   zx::duration unused_page_check_cycle_period_ = kDefaultUnusedPageCheckCyclePeriod;
@@ -223,20 +245,42 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   async::TaskMethod<ContiguousPooledMemoryAllocator,
                     &ContiguousPooledMemoryAllocator::CheckUnusedPagesCallback>
       unused_checker_{this};
+  async::TaskMethod<ContiguousPooledMemoryAllocator,
+                    &ContiguousPooledMemoryAllocator::CheckUnusedRecentlyPagesCallback>
+      unused_recently_checker_{this};
   SysmemMetrics& metrics_;
 
   // Keep < 1% of pages aside for being unused page guard pattern.  The rest get loaned back to
   // Zircon.
-  static constexpr uint64_t kUnusedGuardPatternPeriodPages = 128;
+  //
+  // TODO(dustingreen): Make the previous paragraph true.  For the moment though, we're patterning
+  // all unused pages to gather more information re. a detected problem.  Change this back to 128.
+  static constexpr uint64_t kUnusedGuardPatternPeriodPages = 512 * 1024 / 4096;
   // While we'll typically pattern only 1 page per pattern period and adjust the pattern period to
   // get the % we want, being able to vary this might potentially help catch a suspected problem
   // faster; in any case it's simple enough to allow this to be adjusted.
-  static constexpr uint64_t kUnusedToPatternPages = 1;
+  //
+  // TODO(dustingreen): Temporarily setting this to pattern all pages gather more info re. a
+  // detected problem and hopefully increase detection rate / lower detection duration.  Later we'll
+  // change this back to 1.
+  static constexpr uint64_t kUnusedToPatternPages = kUnusedGuardPatternPeriodPages;
   const uint64_t unused_guard_pattern_period_bytes_ =
       kUnusedGuardPatternPeriodPages * zx_system_get_page_size();
   const uint64_t unused_to_pattern_bytes_ = kUnusedToPatternPages * zx_system_get_page_size();
 
   bool is_bti_fake_ = false;
+
+  // We cap the number of DeletedRegion we're willing to track; otherwise the overhead could get a
+  // bit excessive in pathological cases if we were to allow tracking a DeletedRegion per page for
+  // example.  This is optimized for update, not (at all) for lookup, since we only do lookups if
+  // a page just failed a pattern check, which should never happen.  If it does happen, we want to
+  // know the paddr_t range and name of the most-recently-deleted region, and possibly the 2nd most
+  // recently deleted region also, if it comes to that.
+  static constexpr int32_t kNumDeletedRegions = 512;
+  int32_t deleted_regions_count_ = 0;
+  int32_t deleted_regions_next_ = 0;
+  // Only allocate if we'll be checking unused pages.
+  std::vector<DeletedRegion> deleted_regions_;
 };
 
 }  // namespace sysmem_driver
