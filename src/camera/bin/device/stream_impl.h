@@ -41,7 +41,8 @@ class StreamImpl {
              const fuchsia::camera2::hal::StreamConfig& legacy_config,
              fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
              StreamRequestedCallback on_stream_requested,
-             BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients);
+             BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients,
+             std::optional<std::string> description = std::nullopt);
   ~StreamImpl();
 
   // Close all client connections with given status as epitaph.
@@ -160,6 +161,7 @@ class StreamImpl {
   MuteState mute_state_;
   std::unique_ptr<fuchsia::math::RectF> current_crop_region_;
   fpromise::scope scope_;
+  std::string description_;
   friend class Client;
 };
 

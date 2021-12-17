@@ -15,7 +15,7 @@ namespace camera {
 DeviceImpl::Client::Client(DeviceImpl& device, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Device> request)
     : device_(device), id_(id), binding_(this, std::move(request)) {
-  FX_LOGS(DEBUG) << "Device client " << id << " connected.";
+  FX_LOGS(INFO) << "Device client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &DeviceImpl::Client::OnClientDisconnected));
 }
 
@@ -26,7 +26,7 @@ void DeviceImpl::Client::ConfigurationUpdated(uint32_t index) { configuration_.S
 void DeviceImpl::Client::MuteUpdated(MuteState mute_state) { mute_state_.Set(mute_state); }
 
 void DeviceImpl::Client::OnClientDisconnected(zx_status_t status) {
-  FX_PLOGS(DEBUG, status) << "Device client " << id_ << " disconnected.";
+  FX_PLOGS(INFO, status) << "Device client " << id_ << " disconnected.";
   device_.RemoveClient(id_);
 }
 

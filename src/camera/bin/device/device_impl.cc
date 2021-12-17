@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 
 #include <sstream>
+#include <string>
 
 #include "src/camera/bin/device/messages.h"
 #include "src/camera/bin/device/metrics_reporter.h"
@@ -209,7 +210,7 @@ void DeviceImpl::SetConfiguration(uint32_t index) {
 
   streams_.clear();
   streams_.resize(configurations_[index].streams().size());
-  FX_LOGS(DEBUG) << "Configuration set to " << index << ".";
+  FX_LOGS(INFO) << "Configuration set to " << index << ".";
   for (auto& client : clients_) {
     client.second->ConfigurationUpdated(current_configuration_index_);
   }
@@ -255,7 +256,7 @@ void DeviceImpl::ConnectToStream(uint32_t index,
 
   auto on_stream_requested = [this, index](fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
                                            uint32_t format_index) {
-    FX_LOGS(DEBUG) << "New request for legacy stream.";
+    FX_LOGS(INFO) << "New request for legacy stream.";
     OnStreamRequested(index, std::move(request), format_index);
   };
 
@@ -268,11 +269,14 @@ void DeviceImpl::ConnectToStream(uint32_t index,
   // When the last client disconnects destroy the stream.
   auto on_no_clients = [this, index]() { streams_[index] = nullptr; };
 
+  auto description =
+      "c" + std::to_string(current_configuration_index_) + "s" + std::to_string(index);
   streams_[index] = std::make_unique<StreamImpl>(
       dispatcher_, records_[current_configuration_index_]->GetStreamRecord(index),
       configurations_[current_configuration_index_].streams()[index],
       configs_[current_configuration_index_].stream_configs[index], std::move(request),
-      std::move(on_stream_requested), std::move(on_buffers_requested), std::move(on_no_clients));
+      std::move(on_stream_requested), std::move(on_buffers_requested), std::move(on_no_clients),
+      description);
 }
 
 void DeviceImpl::OnStreamRequested(uint32_t index,

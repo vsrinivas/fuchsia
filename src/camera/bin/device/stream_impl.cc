@@ -25,14 +25,16 @@ StreamImpl::StreamImpl(async_dispatcher_t* dispatcher, MetricsReporter::StreamRe
                        const fuchsia::camera2::hal::StreamConfig& legacy_config,
                        fidl::InterfaceRequest<fuchsia::camera3::Stream> request,
                        StreamRequestedCallback on_stream_requested,
-                       BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients)
+                       BuffersRequestedCallback on_buffers_requested, fit::closure on_no_clients,
+                       std::optional<std::string> description)
     : dispatcher_(dispatcher),
       record_(record),
       properties_(properties),
       legacy_config_(legacy_config),
       on_stream_requested_(std::move(on_stream_requested)),
       on_buffers_requested_(std::move(on_buffers_requested)),
-      on_no_clients_(std::move(on_no_clients)) {
+      on_no_clients_(std::move(on_no_clients)),
+      description_(description.value_or("<unknown>")) {
   legacy_stream_.set_error_handler(fit::bind_member(this, &StreamImpl::OnLegacyStreamDisconnected));
   legacy_stream_.events().OnFrameAvailable = fit::bind_member(this, &StreamImpl::OnFrameAvailable);
   current_resolution_ = ConvertToSize(properties.image_format());
@@ -74,7 +76,7 @@ void StreamImpl::OnNewRequest(fidl::InterfaceRequest<fuchsia::camera3::Stream> r
 }
 
 void StreamImpl::OnLegacyStreamDisconnected(zx_status_t status) {
-  FX_PLOGS(ERROR, status) << "Legacy Stream disconnected unexpectedly.";
+  FX_PLOGS(ERROR, status) << description_ << ":Legacy Stream disconnected unexpectedly.";
   clients_.clear();
   on_no_clients_();
 }
@@ -95,7 +97,8 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   record_.FrameReceived();
 
   if (info.frame_status != fuchsia::camera2::FrameStatus::OK) {
-    FX_LOGS(WARNING) << "Driver reported a bad frame. This will not be reported to clients.";
+    FX_LOGS(WARNING) << description_
+                     << ": Driver reported a bad frame. This will not be reported to clients.";
     auto reason = cobalt::FrameDropReason::kInvalidFrame;
     if (info.frame_status == fuchsia::camera2::FrameStatus::ERROR_BUFFER_FULL) {
       reason = cobalt::FrameDropReason::kNoMemory;
@@ -106,7 +109,8 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   }
 
   if (frame_waiters_.find(info.buffer_id) != frame_waiters_.end()) {
-    FX_LOGS(WARNING) << "Driver sent a frame that was already in use (ID = " << info.buffer_id
+    FX_LOGS(WARNING) << description_
+                     << ": Driver sent a frame that was already in use (ID = " << info.buffer_id
                      << "). This frame will not be sent to clients.";
     record_.FrameDropped(cobalt::FrameDropReason::kFrameIdInUse);
     legacy_stream_->ReleaseFrame(info.buffer_id);
@@ -115,7 +119,8 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
 
   if (!info.metadata.has_timestamp()) {
     FX_LOGS(WARNING)
-        << "Driver sent a frame without a timestamp. This frame will not be sent to clients.";
+        << description_
+        << ": Driver sent a frame without a timestamp. This frame will not be sent to clients.";
     record_.FrameDropped(cobalt::FrameDropReason::kInvalidTimestamp);
     legacy_stream_->ReleaseFrame(info.buffer_id);
     return;
@@ -125,7 +130,7 @@ void StreamImpl::OnFrameAvailable(fuchsia::camera2::FrameAvailableInfo info) {
   if (info.metadata.has_capture_timestamp()) {
     capture_timestamp = info.metadata.capture_timestamp();
   } else {
-    FX_LOGS(DEBUG) << "Driver sent a frame without a capture timestamp.";
+    FX_LOGS(INFO) << description_ << ": Driver sent a frame without a capture timestamp.";
   }
 
   // Discard any spurious frames received while muted.
@@ -187,7 +192,7 @@ void StreamImpl::SetBufferCollection(
   TRACE_DURATION("camera", "StreamImpl::SetBufferCollection");
   auto it = clients_.find(id);
   if (it == clients_.end()) {
-    FX_LOGS(ERROR) << "Client " << id << " not found.";
+    FX_LOGS(ERROR) << description_ << ": Client " << id << " not found.";
     if (token_handle) {
       token_handle.BindSync()->Close();
     }
@@ -231,6 +236,7 @@ void StreamImpl::SetBufferCollection(
             }
           }
           on_buffers_requested_(std::move(token), [this](uint32_t max_camping_buffers) {
+            FX_LOGS(INFO) << description_ << ": max camping buffers = " << max_camping_buffers;
             max_camping_buffers_ = max_camping_buffers;
           });
           RestoreLegacyStreamState();
@@ -245,7 +251,7 @@ void StreamImpl::SetResolution(uint64_t id, fuchsia::math::Size coded_size) {
   TRACE_DURATION("camera", "StreamImpl::SetResolution");
   auto it = clients_.find(id);
   if (it == clients_.end()) {
-    FX_LOGS(ERROR) << "Client " << id << " not found.";
+    FX_LOGS(ERROR) << description_ << ": Client " << id << " not found.";
     ZX_DEBUG_ASSERT(false);
     return;
   }
@@ -278,7 +284,7 @@ void StreamImpl::SetResolution(uint64_t id, fuchsia::math::Size coded_size) {
   if (legacy_stream_) {
     legacy_stream_->SetImageFormat(legacy_stream_format_index_, [this](zx_status_t status) {
       if (status != ZX_OK) {
-        FX_PLOGS(ERROR, status) << "Unexpected response from driver.";
+        FX_PLOGS(ERROR, status) << description_ << ": Unexpected response from driver.";
         while (!clients_.empty()) {
           auto it = clients_.begin();
           it->second->CloseConnection(ZX_ERR_INTERNAL);

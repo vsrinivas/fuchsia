@@ -19,7 +19,7 @@ namespace camera {
 StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request)
     : stream_(stream), id_(id), binding_(this, std::move(request)), resolution_(SizeEqual) {
-  FX_LOGS(DEBUG) << "Stream client " << id << " connected.";
+  FX_LOGS(INFO) << stream_.description_ << ": Stream client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
 }
 
@@ -74,7 +74,7 @@ void StreamImpl::Client::ClearFrames() {
 }
 
 void StreamImpl::Client::OnClientDisconnected(zx_status_t status) {
-  FX_PLOGS(DEBUG, status) << "Stream client " << id_ << " disconnected.";
+  FX_PLOGS(INFO, status) << stream_.description_ << ": Stream client " << id_ << " disconnected.";
   stream_.RemoveClient(id_);
 }
 
@@ -102,7 +102,8 @@ void StreamImpl::Client::SetCropRegion(std::unique_ptr<fuchsia::math::RectF> reg
 
   if (region && (region->x < 0.0f || region->y < 0.0f || region->x + region->width > 1.0f ||
                  region->y + region->height > 1.0f)) {
-    FX_LOGS(INFO) << "Client requested invalid crop region {" << region->x << ", " << region->y
+    FX_LOGS(INFO) << stream_.description_ << ": " << id_
+                  << ": Client requested invalid crop region {" << region->x << ", " << region->y
                   << ", " << region->width << ", " << region->height << "}";
     CloseConnection(ZX_ERR_INVALID_ARGS);
     return;
@@ -177,7 +178,8 @@ void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {
 void StreamImpl::Client::GetNextFrame2(GetNextFrame2Callback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::GetNextFrame2");
   if (frame_callback_) {
-    FX_LOGS(INFO) << "Client called GetNextFrame while a previous call was still pending.";
+    FX_LOGS(INFO) << stream_.description_ << ": " << id_
+                  << ": Client called GetNextFrame while a previous call was still pending.";
     CloseConnection(ZX_ERR_BAD_STATE);
     return;
   }
