@@ -368,12 +368,14 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     GenerateObjectMember("has_request", value.has_request);
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
-    if (value.has_request) {
-      GenerateRequest("maybe_request", TypeKind::kRequestPayload, value.maybe_request.get());
+    if (value.maybe_request) {
+      GenerateTypeAndFromTypeAlias(TypeKind::kRequestPayload, value.maybe_request.get(),
+                                   Position::kSubsequent);
     }
     GenerateObjectMember("has_response", value.has_response);
-    if (value.has_response) {
-      GenerateRequest("maybe_response", TypeKind::kResponsePayload, value.maybe_response.get());
+    if (value.maybe_response) {
+      GenerateTypeAndFromTypeAlias(TypeKind::kResponsePayload, value.maybe_response.get(),
+                                   Position::kSubsequent);
     }
     GenerateObjectMember("is_composed", method_with_info.is_composed);
     GenerateObjectMember("has_error", value.has_error);
@@ -513,52 +515,6 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
     }
     GenerateTypeShapes(*type);
   });
-}
-
-void JSONGenerator::GenerateRequest(const std::string& prefix, const TypeKind payload_kind,
-                                    const flat::TypeConstructor* value) {
-  // Temporarily hardcode the generation of request/response struct members to use the old
-  // wire format, in order to maintain compatibility during the transition for fxbug.dev/7704.
-  // This block of code is copied from JsonWriter::GenerateArray (with the difference
-  // noted below), and will be removed once backends are updated to use anonymous structs.
-  GenerateObjectPunctuation(Position::kSubsequent);
-  EmitObjectKey(prefix);
-  EmitArrayBegin();
-  if (!value) {
-    EmitArrayEnd();
-    GenerateTypeShapes(prefix, nullptr);
-    return;
-  }
-
-  auto id = static_cast<const flat::IdentifierType*>(value->type);
-
-  // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-  assert(id->type_decl->kind == flat::Decl::Kind::kStruct &&
-         "must be a struct until fxbug.dev/88343 lands");
-  auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-
-  // TODO(fxbug.dev/76316): remove this assert once this generator is able to
-  //  properly handle empty structs as payloads.
-  assert(!as_struct->members.empty() && "cannot process empty message payloads");
-
-  if (as_struct->members.begin() != as_struct->members.end()) {
-    Indent();
-    EmitNewlineWithIndent();
-  }
-  for (auto it = as_struct->members.begin(); it != as_struct->members.end(); ++it) {
-    if (it != as_struct->members.begin())
-      EmitArraySeparator();
-    // call Generate with is_request_response = true on each struct member
-    Generate(*it, true);
-  }
-  if (as_struct->members.begin() != as_struct->members.end()) {
-    Outdent();
-    EmitNewlineWithIndent();
-  }
-
-  EmitArrayEnd();
-  GenerateTypeAndFromTypeAlias(payload_kind, value, Position::kSubsequent);
-  GenerateTypeShapes(prefix, as_struct);
 }
 
 void JSONGenerator::Generate(const flat::Resource::Property& value) {

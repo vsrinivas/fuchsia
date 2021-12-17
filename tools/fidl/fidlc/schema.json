@@ -778,43 +778,13 @@
                     "$ref": "#/definitions/attributes-list",
                     "description": "Optional list of attributes of the method or event"
                 },
-                "maybe_request": {
-                    "description": "Optional list of protocol method request parameters",
-                    "items": {
-                        "$ref": "#/definitions/interface-method-parameter"
-                    },
-                    "type": "array"
-                },
                 "maybe_request_payload": {
                     "$ref": "#/definitions/identifier-type",
                     "description": "Optional request type"
                 },
-                "maybe_request_type_shape_v1": {
-                    "$ref": "#/definitions/typeshape",
-                    "description": "Type shape of this declaration"
-                },
-                "maybe_request_type_shape_v2": {
-                    "$ref": "#/definitions/typeshape",
-                    "description": "Type shape of this declaration"
-                },
-                "maybe_response": {
-                    "description": "Optional list of protocol method response parameters",
-                    "items": {
-                        "$ref": "#/definitions/interface-method-parameter"
-                    },
-                    "type": "array"
-                },
                 "maybe_response_payload": {
                     "$ref": "#/definitions/identifier-type",
                     "description": "Optional response type"
-                },
-                "maybe_response_type_shape_v1": {
-                    "$ref": "#/definitions/typeshape",
-                    "description": "Type shape of this declaration"
-                },
-                "maybe_response_type_shape_v2": {
-                    "$ref": "#/definitions/typeshape",
-                    "description": "Type shape of this declaration"
                 },
                 "maybe_response_result_type": {
                     "$ref": "#/definitions/type",

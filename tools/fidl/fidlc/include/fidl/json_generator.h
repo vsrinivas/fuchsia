@@ -138,8 +138,6 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
                                  const flat::TypeConstructor* type_ctor,
                                  Position position = Position::kSubsequent);
   void GenerateExperimentalMaybeFromTypeAlias(const flat::LayoutInvocation& invocation);
-  void GenerateRequest(const std::string& prefix, TypeKind payload_kind,
-                       const flat::TypeConstructor* value);
   void GenerateDeclarationsEntry(int count, const flat::Name& name, std::string_view decl_kind);
   void GenerateDeclarationsMember(const flat::Library* library,
                                   Position position = Position::kSubsequent);

@@ -60,48 +60,6 @@
             "length": 4
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "identifier",
-                "identifier": "fidl.test.driveroneway/Payload",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 0,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 0,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "payload",
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
-                "line": 14,
-                "column": 9,
-                "length": 7
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 4
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 4
-              }
-            }
-          ],
           "maybe_request_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.driveroneway/OneWaySendRequest",
@@ -124,24 +82,6 @@
               "has_padding": true,
               "has_flexible_envelope": false
             }
-          },
-          "maybe_request_type_shape_v1": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
           },
           "has_response": false,
           "is_composed": false,

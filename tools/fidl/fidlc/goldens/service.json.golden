@@ -27,25 +27,6 @@
             "length": 13
           },
           "has_request": true,
-          "maybe_request": [],
-          "maybe_request_type_shape_v1": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false
-          },
           "has_response": false,
           "is_composed": false,
           "has_error": false
@@ -72,25 +53,6 @@
             "length": 14
           },
           "has_request": true,
-          "maybe_request": [],
-          "maybe_request_type_shape_v1": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 16,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 0,
-            "max_out_of_line": 0,
-            "has_padding": false,
-            "has_flexible_envelope": false
-          },
           "has_response": false,
           "is_composed": false,
           "has_error": false

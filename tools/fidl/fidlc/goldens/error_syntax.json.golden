@@ -62,47 +62,6 @@
             "length": 24
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "string",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 16,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 4294967295,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 16,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 4294967295,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "s",
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
-                "line": 9,
-                "column": 9,
-                "length": 1
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 0
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 0
-              }
-            }
-          ],
           "maybe_request_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
@@ -126,67 +85,7 @@
               "has_flexible_envelope": false
             }
           },
-          "maybe_request_type_shape_v1": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
           "has_response": true,
-          "maybe_response": [
-            {
-              "type": {
-                "kind": "identifier",
-                "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 24,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 8,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 16,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 8,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "result",
-              "location": {
-                "filename": "generated",
-                "line": 1,
-                "column": 1,
-                "length": 6
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 0
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 0
-              }
-            }
-          ],
           "maybe_response_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
@@ -209,24 +108,6 @@
               "has_padding": true,
               "has_flexible_envelope": false
             }
-          },
-          "maybe_response_type_shape_v1": {
-            "inline_size": 40,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 8,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_response_type_shape_v2": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 8,
-            "has_padding": true,
-            "has_flexible_envelope": false
           },
           "is_composed": true,
           "has_error": true,
@@ -309,47 +190,6 @@
             "length": 16
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "string",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 16,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 4294967295,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 16,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 4294967295,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "s",
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
-                "line": 12,
-                "column": 9,
-                "length": 1
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 0
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 0
-              }
-            }
-          ],
           "maybe_request_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
@@ -373,67 +213,7 @@
               "has_flexible_envelope": false
             }
           },
-          "maybe_request_type_shape_v1": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 4294967295,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
           "has_response": true,
-          "maybe_response": [
-            {
-              "type": {
-                "kind": "identifier",
-                "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 24,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 8,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 16,
-                  "alignment": 8,
-                  "depth": 1,
-                  "max_handles": 0,
-                  "max_out_of_line": 8,
-                  "has_padding": true,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "result",
-              "location": {
-                "filename": "generated",
-                "line": 1,
-                "column": 1,
-                "length": 6
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 0
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 0
-              }
-            }
-          ],
           "maybe_response_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
@@ -456,24 +236,6 @@
               "has_padding": true,
               "has_flexible_envelope": false
             }
-          },
-          "maybe_response_type_shape_v1": {
-            "inline_size": 40,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 8,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_response_type_shape_v2": {
-            "inline_size": 32,
-            "alignment": 8,
-            "depth": 1,
-            "max_handles": 0,
-            "max_out_of_line": 8,
-            "has_padding": true,
-            "has_flexible_envelope": false
           },
           "is_composed": false,
           "has_error": true,

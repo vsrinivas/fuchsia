@@ -27,48 +27,6 @@
             "length": 5
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "request",
-                "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 1,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 1,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "request",
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-                "line": 5,
-                "column": 9,
-                "length": 7
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 4
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 4
-              }
-            }
-          ],
           "maybe_request_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
@@ -91,24 +49,6 @@
               "has_padding": true,
               "has_flexible_envelope": false
             }
-          },
-          "maybe_request_type_shape_v1": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 1,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 1,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
           },
           "has_response": false,
           "is_composed": false,
@@ -146,48 +86,6 @@
             "length": 5
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "request",
-                "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 1,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 1,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "request",
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-                "line": 5,
-                "column": 9,
-                "length": 7
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 4
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 4
-              }
-            }
-          ],
           "maybe_request_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
@@ -211,24 +109,6 @@
               "has_flexible_envelope": false
             }
           },
-          "maybe_request_type_shape_v1": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 1,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 1,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
           "has_response": false,
           "is_composed": true,
           "has_error": false
@@ -243,48 +123,6 @@
             "length": 6
           },
           "has_request": true,
-          "maybe_request": [
-            {
-              "type": {
-                "kind": "request",
-                "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-                "nullable": false,
-                "type_shape_v1": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 1,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                },
-                "type_shape_v2": {
-                  "inline_size": 4,
-                  "alignment": 4,
-                  "depth": 0,
-                  "max_handles": 1,
-                  "max_out_of_line": 0,
-                  "has_padding": false,
-                  "has_flexible_envelope": false
-                }
-              },
-              "name": "request",
-              "location": {
-                "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-                "line": 12,
-                "column": 9,
-                "length": 7
-              },
-              "field_shape_v1": {
-                "offset": 16,
-                "padding": 4
-              },
-              "field_shape_v2": {
-                "offset": 16,
-                "padding": 4
-              }
-            }
-          ],
           "maybe_request_payload": {
             "kind": "identifier",
             "identifier": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
@@ -307,24 +145,6 @@
               "has_padding": true,
               "has_flexible_envelope": false
             }
-          },
-          "maybe_request_type_shape_v1": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 1,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
-          },
-          "maybe_request_type_shape_v2": {
-            "inline_size": 24,
-            "alignment": 8,
-            "depth": 0,
-            "max_handles": 1,
-            "max_out_of_line": 0,
-            "has_padding": true,
-            "has_flexible_envelope": false
           },
           "has_response": false,
           "is_composed": false,
