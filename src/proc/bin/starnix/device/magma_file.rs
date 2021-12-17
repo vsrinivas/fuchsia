@@ -5,14 +5,11 @@
 #![allow(non_upper_case_globals)]
 
 use fuchsia_zircon as zx;
-use fuchsia_zircon::AsHandleRef;
+use fuchsia_zircon::{AsHandleRef, HandleBased};
 use magma::*;
 use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 
 use super::magma::*;
 use crate::device::wayland::image_file::*;
@@ -21,6 +18,7 @@ use crate::error;
 use crate::fd_impl_nonblocking;
 use crate::fd_impl_nonseekable;
 use crate::fs::*;
+use crate::logging::impossible_error;
 use crate::syscalls::*;
 use crate::task::{CurrentTask, EventHandler, Waiter};
 use crate::types::*;
@@ -61,7 +59,6 @@ impl FileOps for MagmaFile {
     ) -> Result<SyscallResult, Errno> {
         let (command, command_type) = read_magma_command_and_type(task, in_addr)?;
         let response_address = UserAddress::from(command.response_address);
-        static HANDLE_NUMBER: AtomicUsize = AtomicUsize::new(0);
 
         match command_type {
             virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_DEVICE_IMPORT => {
@@ -131,12 +128,20 @@ impl FileOps for MagmaFile {
                 let (vmo, token, info) =
                     create_drm_image(0, &create_info).map_err(|_| errno!(EINVAL))?;
                 let vmo = Arc::new(vmo);
+                let vmo_dup =
+                    vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
 
-                let number = HANDLE_NUMBER.fetch_add(1, Ordering::SeqCst);
+                let mut buffer_out = magma_buffer_t::default();
+                response.result_return = unsafe {
+                    magma_import(
+                        control.connection as magma_connection_t,
+                        vmo_dup.into_raw(),
+                        &mut buffer_out,
+                    ) as u64
+                };
+                self.infos.lock().insert(buffer_out, ImageInfo { info, token, vmo });
 
-                self.infos.lock().insert(number, ImageInfo { info, token, vmo });
-
-                response.image_out = number;
+                response.image_out = buffer_out;
                 response.hdr.type_ =
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
@@ -210,6 +215,37 @@ impl FileOps for MagmaFile {
                 response.buffer_handle_out = fd.raw() as usize;
                 response.result_return = MAGMA_STATUS_OK as u64;
                 response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXPORT as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_IMPORT => {
+                let (control, mut response): (
+                    virtio_magma_import_ctrl_t,
+                    virtio_magma_import_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                let file = task.files.get(FdNumber::from_raw(control.buffer_handle as i32))?;
+                let file = file.downcast_file::<ImageFile>().ok_or(errno!(EINVAL))?;
+                let vmo = file
+                    .info
+                    .vmo
+                    .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                    .map_err(impossible_error)?;
+
+                let mut buffer_out = magma_buffer_t::default();
+                response.result_return = unsafe {
+                    magma_import(
+                        control.connection as magma_connection_t,
+                        vmo.into_raw(),
+                        &mut buffer_out,
+                    ) as u64
+                };
+
+                let _ = task.files.close(FdNumber::from_raw(control.buffer_handle as i32));
+                self.infos.lock().insert(buffer_out, file.info.clone());
+
+                response.buffer_out = buffer_out;
+                response.result_return = MAGMA_STATUS_OK as u64;
+                response.hdr.type_ = virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_IMPORT as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
             t => {
