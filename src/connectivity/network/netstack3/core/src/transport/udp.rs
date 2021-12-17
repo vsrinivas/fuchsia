@@ -14,6 +14,7 @@ use net_types::ip::{Ip, IpAddress, IpVersionMarker};
 use net_types::{SpecifiedAddr, Witness};
 use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
+use packet_formats::error::ParseError;
 use packet_formats::ip::IpProto;
 use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpPacketRaw, UdpParseArgs};
 use specialize_ip_macro::specialize_ip;
@@ -569,10 +570,15 @@ impl<I: IcmpIpExt, C: UdpStateContext<I>> IpTransportContext<I, C> for UdpIpTran
         ctx.increment_counter("UdpIpTransportContext::receive_icmp_error");
         trace!("UdpIpTransportContext::receive_icmp_error({:?})", err);
 
-        // TODO(joshlf): Do something with this `try_unit!` calls other than
-        // just silently returning?
         let udp_packet =
-            try_unit!(udp_packet.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<I>::default()));
+            match udp_packet.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<I>::default()) {
+                Ok(packet) => packet,
+                Err(e) => {
+                    let _: ParseError = e;
+                    // TODO(joshlf): Do something with this error.
+                    return;
+                }
+            };
         if let (Some(src_ip), Some(src_port), Some(dst_port)) =
             (src_ip, udp_packet.src_port(), udp_packet.dst_port())
         {

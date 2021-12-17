@@ -1011,8 +1011,20 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
         }) if must_send_icmp && action.should_send_icmp(&dst_ip) => {
             // `should_send_icmp_to_multicast` should never return `true` for IPv4.
             assert!(!action.should_send_icmp_to_multicast());
-            let dst_ip = try_unit!(SpecifiedAddr::new(dst_ip), debug!("receive_ipv4_packet: Received packet with unspecified destination IP address; dropping"));
-            let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
+            let dst_ip = match SpecifiedAddr::new(dst_ip) {
+                Some(ip) => ip,
+                None => {
+                    debug!("receive_ipv4_packet: Received packet with unspecified destination IP address; dropping");
+                    return;
+                }
+            };
+            let src_ip = match SpecifiedAddr::new(src_ip) {
+                Some(ip) => ip,
+                None => {
+                    trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address");
+                    return;
+                }
+            };
             send_icmpv4_parameter_problem(
                 ctx,
                 device,
@@ -1032,7 +1044,13 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
         _ => return, // TODO(joshlf): Do something with ICMP here?
     };
 
-    let dst_ip = try_unit!(SpecifiedAddr::new(packet.dst_ip()), debug!("receive_ipv4_packet: Received packet with unspecified destination IP address; dropping"));
+    let dst_ip = match SpecifiedAddr::new(packet.dst_ip()) {
+        Some(ip) => ip,
+        None => {
+            debug!("receive_ipv4_packet: Received packet with unspecified destination IP address; dropping");
+            return;
+        }
+    };
 
     // TODO(ghanan): Act upon options.
 
@@ -1091,7 +1109,13 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 let fragment_type = packet.fragment_type();
                 let (src_ip, _, proto, meta): (_, Ipv4Addr, _, _) =
                     drop_packet_and_undo_parse!(packet, buffer);
-                let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
+                let src_ip = match SpecifiedAddr::new(src_ip) {
+                    Some(ip) => ip,
+                    None => {
+                        trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address");
+                        return;
+                    }
+                };
                 icmp::send_icmpv4_ttl_expired(
                     ctx,
                     device,
@@ -1111,7 +1135,13 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
             let fragment_type = packet.fragment_type();
             let (src_ip, _, proto, meta): (_, Ipv4Addr, _, _) =
                 drop_packet_and_undo_parse!(packet, buffer);
-            let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
+            let src_ip = match SpecifiedAddr::new(src_ip) {
+                Some(ip) => ip,
+                None => {
+                    trace!("receive_ipv4_packet: Cannot send ICMP error in response to packet with unspecified source IP address");
+                    return;
+                }
+            };
             icmp::send_icmpv4_net_unreachable(
                 ctx,
                 device,
@@ -1165,8 +1195,20 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
             header_len: _,
             action,
         }) if must_send_icmp && action.should_send_icmp(&dst_ip) => {
-            let dst_ip = try_unit!(SpecifiedAddr::new(dst_ip), debug!("receive_ipv6_packet: Received packet with unspecified destination IP address; dropping"));
-            let src_ip = try_unit!(SpecifiedAddr::new(src_ip), trace!("receive_ipv6_packet: Cannot send ICMP error in response to packet with unspecified source IP address"));
+            let dst_ip = match SpecifiedAddr::new(dst_ip) {
+                Some(ip) => ip,
+                None => {
+                    debug!("receive_ipv6_packet: Received packet with unspecified destination IP address; dropping");
+                    return;
+                }
+            };
+            let src_ip = match SpecifiedAddr::new(src_ip) {
+                Some(ip) => ip,
+                None => {
+                    trace!("receive_ipv6_packet: Cannot send ICMP error in response to packet with unspecified source IP address");
+                    return;
+                }
+            };
             send_icmpv6_parameter_problem(
                 ctx,
                 device,
@@ -1187,14 +1229,24 @@ pub(crate) fn receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
 
     // TODO(ghanan): Act upon extension headers.
 
-    let src_ip = try_unit!(packet.src_ipv6(), {
-        debug!(
-            "receive_ipv6_packet: received packet from non-unicast source {}; dropping",
-            packet.src_ip()
-        );
-        increment_counter!(ctx, "receive_ipv6_packet: non-unicast source");
-    });
-    let dst_ip = try_unit!(SpecifiedAddr::new(packet.dst_ip()), debug!("receive_ipv6_packet: Received packet with unspecified destination IP address; dropping"));
+    let src_ip = match packet.src_ipv6() {
+        Some(ip) => ip,
+        None => {
+            debug!(
+                "receive_ipv6_packet: received packet from non-unicast source {}; dropping",
+                packet.src_ip()
+            );
+            increment_counter!(ctx, "receive_ipv6_packet: non-unicast source");
+            return;
+        }
+    };
+    let dst_ip = match SpecifiedAddr::new(packet.dst_ip()) {
+        Some(ip) => ip,
+        None => {
+            debug!("receive_ipv6_packet: Received packet with unspecified destination IP address; dropping");
+            return;
+        }
+    };
 
     match receive_ipv6_packet_action(ctx, device, dst_ip) {
         ReceivePacketAction::Deliver => {

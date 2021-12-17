@@ -1766,18 +1766,6 @@ pub enum Ipv6SourceAddr {
     Unspecified,
 }
 
-impl Ipv6SourceAddr {
-    /// Converts this `Ipv6SourceAddr` into an `Option<UnicastAddr<Ipv6Addr>>`,
-    /// mapping [`Ipv6SourceAddr::Unspecified`] to `None`.
-    #[inline]
-    pub fn to_option(&self) -> Option<UnicastAddr<Ipv6Addr>> {
-        match *self {
-            Ipv6SourceAddr::Unicast(addr) => Some(addr),
-            Ipv6SourceAddr::Unspecified => None,
-        }
-    }
-}
-
 impl crate::sealed::Sealed for Ipv6SourceAddr {}
 
 impl Ipv6SourceAddr {
@@ -1860,12 +1848,6 @@ impl TryFrom<Ipv6Addr> for Ipv6SourceAddr {
     type Error = ();
     fn try_from(addr: Ipv6Addr) -> Result<Ipv6SourceAddr, ()> {
         Ipv6SourceAddr::new(addr).ok_or(())
-    }
-}
-
-impl From<Ipv6SourceAddr> for Option<UnicastAddr<Ipv6Addr>> {
-    fn from(addr: Ipv6SourceAddr) -> Option<UnicastAddr<Ipv6Addr>> {
-        addr.to_option()
     }
 }
 

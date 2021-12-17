@@ -687,9 +687,13 @@ where
             return;
         };
 
-        let original_src_ip = try_unit!(original_src_ip.ok_or_else(|| {
-            trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for IP packet with an unspecified destination IP address");
-        }));
+        let original_src_ip = match original_src_ip {
+            Some(ip) => ip,
+            None => {
+                trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for IP packet with an unspecified destination IP address");
+                return;
+            }
+        };
         let id = echo_request.message().id();
         if let Some(conn) = ctx.get_state().conns.get_id_by_addr(&IcmpAddr {
             local_addr: original_src_ip,
@@ -1088,9 +1092,13 @@ fn receive_icmpv4_error<
 ) {
     packet.with_original_packet(|res| match res {
         Ok(original_packet) => {
-            let dst_ip = try_unit!(SpecifiedAddr::new(original_packet.dst_ip()).ok_or_else(|| {
-                trace!("receive_icmpv4_error: Got ICMP error message whose original IPv4 packet contains an unspecified destination address; discarding");
-            }));
+            let dst_ip = match SpecifiedAddr::new(original_packet.dst_ip()) {
+                Some(ip) => ip,
+                None => {
+                    trace!("receive_icmpv4_error: Got ICMP error message whose original IPv4 packet contains an unspecified destination address; discarding");
+                    return;
+                },
+            };
             InnerIcmpContext::receive_icmp_error(
                 ctx,
                 SpecifiedAddr::new(original_packet.src_ip()),
@@ -1122,9 +1130,13 @@ fn receive_icmpv6_error<
 ) {
     packet.with_original_packet(|res| match res {
         Ok(original_packet) => {
-            let dst_ip = try_unit!(SpecifiedAddr::new(original_packet.dst_ip()).ok_or_else(|| {
-                trace!("receive_icmpv6_error: Got ICMP error message whose original IPv6 packet contains an unspecified destination address; discarding");
-            }));
+            let dst_ip = match SpecifiedAddr::new(original_packet.dst_ip()) {
+                Some(ip)=>ip,
+                None => {
+                    trace!("receive_icmpv6_error: Got ICMP error message whose original IPv6 packet contains an unspecified destination address; discarding");
+                    return;
+                },
+            };
             match original_packet.body_proto() {
                 Ok((body, proto)) => {
                     InnerIcmpContext::receive_icmp_error(

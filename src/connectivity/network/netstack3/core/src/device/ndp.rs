@@ -1682,20 +1682,26 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             }
         }
         NdpPacket::RouterAdvertisement(p) => {
-            trace!("receive_ndp_packet: Received NDP RA from router: {:?}", src_ip);
-
-            let src_ip = if let Some(src_ip) =
-                src_ip.to_option().and_then(LinkLocalUnicastAddr::new)
-            {
-                src_ip
-            } else {
-                // Nodes MUST silently discard any received Router Advertisement
-                // message where the IP source address is not a link-local
-                // address as routers must use their link-local address as the
-                // source for Router Advertisements so hosts can uniquely
-                // identify routers, as per RFC 4861 section 6.1.2.
-                trace!("receive_ndp_packet: source is not a link-local address, discarding NDP RA");
-                return;
+            // Nodes MUST silently discard any received Router Advertisement
+            // message where the IP source address is not a link-local
+            // address as routers must use their link-local address as the
+            // source for Router Advertisements so hosts can uniquely
+            // identify routers, as per RFC 4861 section 6.1.2.
+            let src_ip = match match src_ip {
+                Ipv6SourceAddr::Unicast(ip) => LinkLocalUnicastAddr::new(ip),
+                Ipv6SourceAddr::Unspecified => None,
+            } {
+                Some(ip) => {
+                    trace!("receive_ndp_packet: NDP RA source={:?}", ip);
+                    ip
+                }
+                None => {
+                    trace!(
+                        "receive_ndp_packet: NDP RA source={:?} is not link-local; discarding",
+                        src_ip
+                    );
+                    return;
+                }
             };
 
             // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC
@@ -2207,9 +2213,20 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             }
         }
         NdpPacket::NeighborSolicitation(p) => {
-            trace!("receive_ndp_packet: Received NDP NS");
-
-            let target_address = try_unit!(UnicastAddr::new(*p.message().target_address()), debug!("receive_ndp_packet: Received NDP neighbor solicitation with non-unicast target address; dropping"));
+            let target_address = p.message().target_address();
+            let target_address = match UnicastAddr::new(*target_address) {
+                Some(addr) => {
+                    trace!("receive_ndp_packet: NDP NS target={:?}", addr);
+                    addr
+                }
+                None => {
+                    trace!(
+                        "receive_ndp_packet: NDP NS target={:?} is not unicast; discarding",
+                        target_address
+                    );
+                    return;
+                }
+            };
 
             // Is `target_address` associated with our device? If not, drop the
             // packet.
@@ -2294,11 +2311,31 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
             }
         }
         NdpPacket::NeighborAdvertisement(p) => {
-            trace!("receive_ndp_packet: Received NDP NA");
-            let src_ip = try_unit!(src_ip, debug!("receive_ndp_packet: Received NDP packet from the unspecified address; dropping"));
-
             let message = p.message();
-            let target_address = try_unit!(UnicastAddr::new(*p.message().target_address()), debug!("receive_ndp_packet: Received NDP neighbor advertisement with non-unicast target address; dropping"));
+            let target_address = p.message().target_address();
+
+            let (src_ip, target_address) = match (src_ip, UnicastAddr::new(*target_address)) {
+                (Ipv6SourceAddr::Unicast(src_ip), Some(target_address)) => {
+                    trace!(
+                        "receive_ndp_packet: NDP NA source={:?} target={:?}",
+                        src_ip,
+                        target_address
+                    );
+                    (src_ip, target_address)
+                }
+                (Ipv6SourceAddr::Unspecified, Some(target_address)) => {
+                    trace!("receive_ndp_packet: NDP NA source={:?} target={:?}; source is not specified; discarding", src_ip, target_address);
+                    return;
+                }
+                (Ipv6SourceAddr::Unicast(src_ip), None) => {
+                    trace!("receive_ndp_packet: NDP NA source={:?} target={:?}; target is not unicast; discarding", src_ip, target_address);
+                    return;
+                }
+                (Ipv6SourceAddr::Unspecified, None) => {
+                    trace!("receive_ndp_packet: NDP NA source={:?} target={:?}; source is not specified and target is not unicast; discarding", src_ip, target_address);
+                    return;
+                }
+            };
 
             match ctx
                 .get_ip_device_state(device_id)

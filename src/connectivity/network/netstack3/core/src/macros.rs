@@ -4,9 +4,6 @@
 
 //! Macros used in Netstack3.
 
-use net_types::ip::{Ipv6Addr, Ipv6SourceAddr};
-use net_types::UnicastAddr;
-
 macro_rules! log_unimplemented {
     ($nocrash:expr, $fmt:expr $(,$arg:expr)*) => {{
 
@@ -122,54 +119,6 @@ macro_rules! bench {
         #[test]
         fn $name() {
             $fn(&mut crate::testutil::benchmarks::TestBencher);
-        }
-    };
-}
-
-#[doc(hidden)]
-pub(crate) trait TryUnitHelper<T> {
-    fn into_option(self) -> Option<T>;
-}
-
-impl<T> TryUnitHelper<T> for Option<T> {
-    fn into_option(self) -> Option<T> {
-        self
-    }
-}
-
-impl<T, E> TryUnitHelper<T> for Result<T, E> {
-    fn into_option(self) -> Option<T> {
-        self.ok()
-    }
-}
-
-impl TryUnitHelper<UnicastAddr<Ipv6Addr>> for Ipv6SourceAddr {
-    fn into_option(self) -> Option<UnicastAddr<Ipv6Addr>> {
-        self.into()
-    }
-}
-
-/// Like the `try!` macro, but for functions which return `()`.
-///
-/// `try_unit!($e)` tries to unwrap `$e` (either as `Result::Ok` or
-/// `Option::Some`). If `$e` is instead `Result::Err` or `Option::None`, it
-/// returns `()`. If `try_unit!` is invoked as `try_unit!($e, $stmt)` and `$e`
-/// is `Result::Err` or `Option::None`, it will also invoke `$stmt` before
-/// returning.
-macro_rules! try_unit {
-    ($e:expr) => {
-        match crate::macros::TryUnitHelper::<_>::into_option($e) {
-            Some(x) => x,
-            None => return,
-        }
-    };
-    ($e:expr, $stmt:stmt) => {
-        match crate::macros::TryUnitHelper::<_>::into_option($e) {
-            Some(x) => x,
-            None => {
-                $stmt
-                return;
-            }
         }
     };
 }
