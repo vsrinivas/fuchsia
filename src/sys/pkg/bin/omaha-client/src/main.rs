@@ -88,10 +88,8 @@ async fn main_inner() -> Result<(), Error> {
     // HTTP
     let http = FuchsiaHyperHttpRequest::new();
 
-    let app_set = Rc::new(Mutex::new(app_set));
-
     // Installer
-    let installer = installer::FuchsiaInstaller::new(Rc::clone(&app_set));
+    let installer = installer::FuchsiaInstaller::new();
 
     // Storage
     let stash = storage::Stash::new("omaha-client").await;
@@ -114,6 +112,8 @@ async fn main_inner() -> Result<(), Error> {
     let policy_config = policy_engine.get_config();
     let _policy_config_node =
         inspect::PolicyConfigNode::new(root.create_child("policy_config"), policy_config);
+
+    let app_set = Rc::new(Mutex::new(app_set));
 
     // StateMachine
     let (state_machine_control, state_machine) = StateMachineBuilder::new(

@@ -10,7 +10,7 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_url::pkg_url::PkgUrl,
-    futures::future::LocalBoxFuture,
+    futures::future::BoxFuture,
     futures::prelude::*,
     log::warn,
     omaha_client::{
@@ -76,7 +76,7 @@ impl Installer for IsolatedInstaller {
         &'a mut self,
         install_plan: &FuchsiaInstallPlan,
         observer: Option<&'a dyn ProgressObserver>,
-    ) -> LocalBoxFuture<'_, Vec<Result<Self::InstallResult, IsolatedInstallError>>> {
+    ) -> BoxFuture<'_, Vec<Result<Self::InstallResult, IsolatedInstallError>>> {
         if let Some(o) = observer.as_ref() {
             o.receive_progress(None, 0., None, None);
         }
@@ -105,23 +105,23 @@ impl Installer for IsolatedInstaller {
             Ok(())
         }
         .map(|result| vec![result])
-        .boxed_local()
+        .boxed()
     }
 
-    fn perform_reboot(&mut self) -> LocalBoxFuture<'_, Result<(), anyhow::Error>> {
+    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
         // We don't actually reboot here. The caller of isolated-swd is responsible for performing
         // a reboot after the update is installed.
         // Tell Omaha that the reboot was successful so that it finishes the update check
         // and omaha::install_update() can return.
-        async move { Ok(()) }.boxed_local()
+        async move { Ok(()) }.boxed()
     }
 
-    fn try_create_install_plan<'a>(
-        &'a self,
-        request_params: &'a RequestParams,
-        response: &'a Response,
-    ) -> LocalBoxFuture<'a, Result<Self::InstallPlan, Self::Error>> {
-        async move { try_create_install_plan(request_params, response) }.boxed_local()
+    fn try_create_install_plan(
+        &self,
+        request_params: &RequestParams,
+        response: &Response,
+    ) -> Result<Self::InstallPlan, Self::Error> {
+        try_create_install_plan(request_params, response)
     }
 }
 

@@ -6,28 +6,16 @@ use fuchsia_url::pkg_url::PkgUrl;
 use omaha_client::{installer::Plan, protocol::request::InstallSource};
 
 #[derive(Debug, PartialEq)]
-pub enum UpdatePackageUrls {
-    /// The pinned fuchsia update package URL, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
-    System(PkgUrl),
-    /// List of pinned package URLs for eagerly updated packages.
-    Packages(Vec<PkgUrl>),
-}
-
-#[derive(Debug, PartialEq)]
 pub struct FuchsiaInstallPlan {
-    pub update_package_urls: UpdatePackageUrls,
+    /// The fuchsia TUF repo URL, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
+    pub url: PkgUrl,
     pub install_source: InstallSource,
     pub urgent_update: bool,
 }
 
 impl Plan for FuchsiaInstallPlan {
     fn id(&self) -> String {
-        match &self.update_package_urls {
-            UpdatePackageUrls::System(url) => url.to_string(),
-            UpdatePackageUrls::Packages(urls) => {
-                urls.iter().map(|url| url.to_string()).collect::<Vec<_>>().join(", ")
-            }
-        }
+        self.url.to_string()
     }
 }
 
@@ -39,28 +27,14 @@ mod tests {
     const TEST_PACKAGE_NAME: &str = "update/0";
 
     #[test]
-    fn test_install_plan_id_system_update() {
+    fn test_install_plan_id() {
         let url = TEST_URL_BASE.to_string() + TEST_PACKAGE_NAME;
         let install_plan = FuchsiaInstallPlan {
-            update_package_urls: UpdatePackageUrls::System(url.parse().unwrap()),
+            url: PkgUrl::parse(&url).unwrap(),
             install_source: InstallSource::ScheduledTask,
             urgent_update: false,
         };
 
         assert_eq!(install_plan.id(), url);
-    }
-
-    #[test]
-    fn test_install_plan_id_package_groups() {
-        let url1 = "fuchsia-pkg://foo.com/foo";
-        let url2 = "fuchsia-pkg://bar.com/bar";
-        let urls = [url1, url2].map(|url| PkgUrl::parse(&url).unwrap()).to_vec();
-        let install_plan = FuchsiaInstallPlan {
-            update_package_urls: UpdatePackageUrls::Packages(urls),
-            install_source: InstallSource::ScheduledTask,
-            urgent_update: false,
-        };
-
-        assert_eq!(install_plan.id(), format!("{url1}, {url2}"));
     }
 }
