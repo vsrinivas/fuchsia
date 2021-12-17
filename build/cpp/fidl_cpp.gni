@@ -54,7 +54,11 @@ template("_fidl_cpp_codegen_impl") {
 
     tool = invoker.fidlgen_tool
 
-    inputs = [ json_representation ]
+    inputs = [
+      json_representation,
+      "${clang_prefix}/clang-format",
+    ]
+
     outputs = []
     if (defined(invoker.generated_sources)) {
       foreach(output, invoker.generated_sources) {
