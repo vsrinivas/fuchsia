@@ -154,6 +154,14 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         &self.abs_moniker
     }
 
+    fn partial_abs_moniker(&self) -> &PartialAbsoluteMoniker {
+        &self.partial_abs_moniker
+    }
+
+    fn child_moniker(&self) -> Option<&ChildMoniker> {
+        self.abs_moniker.leaf()
+    }
+
     fn url(&self) -> &str {
         &self.url
     }

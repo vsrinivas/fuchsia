@@ -13,7 +13,6 @@ use {
         CapabilityName, RegistrationDeclCommon, RegistrationSource, RunnerRegistration, SourceName,
     },
     fidl_fuchsia_component_decl as fdecl,
-    moniker::AbsoluteMonikerBase,
     std::{collections::HashMap, sync::Arc},
     url::Url,
 };
@@ -210,7 +209,7 @@ pub fn find_first_absolute_ancestor_url<C: ComponentInstanceInterface>(
                     let parent_url = Url::parse(parent_component.url()).map_err(|_| {
                         ComponentInstanceError::MalformedUrl {
                             url: parent_component.url().to_string(),
-                            moniker: parent_component.abs_moniker().to_partial(),
+                            moniker: parent_component.partial_abs_moniker().clone(),
                         }
                     })?;
                     return Ok(parent_url);
@@ -220,7 +219,7 @@ pub fn find_first_absolute_ancestor_url<C: ComponentInstanceInterface>(
             ExtendedInstanceInterface::AboveRoot(_) => {
                 return Err(ComponentInstanceError::NoAbsoluteUrl {
                     url: component.url().to_string(),
-                    moniker: component.abs_moniker().to_partial(),
+                    moniker: component.partial_abs_moniker().clone(),
                 });
             }
         }

@@ -176,8 +176,7 @@ mod tests {
             testing::mocks::MockResolver,
         },
         ::routing::{
-            component_instance::ComponentInstanceInterface, config::RuntimeConfig,
-            environment::DebugRegistration, error::ComponentInstanceError,
+            config::RuntimeConfig, environment::DebugRegistration, error::ComponentInstanceError,
         },
         cm_rust::{CapabilityName, RegistrationSource, RunnerRegistration},
         cm_rust_testing::{
@@ -186,7 +185,7 @@ mod tests {
         fidl_fuchsia_component as fcomponent,
         maplit::hashmap,
         matches::assert_matches,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         std::{collections::HashMap, sync::Weak},
     };
 
@@ -404,13 +403,13 @@ mod tests {
         let registered_runner =
             component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner, Some((ExtendedInstance::Component(c), r))
-            if r == runner_reg && *c.abs_moniker() == AbsoluteMoniker::root());
+            if r == runner_reg && c.partial_abs_moniker == PartialAbsoluteMoniker::root());
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
         assert_matches!(debug_capability, Some((ExtendedInstance::Component(c), Some(_), d))
-            if d == debug_reg && *c.abs_moniker() == AbsoluteMoniker::root());
+            if d == debug_reg && c.partial_abs_moniker == PartialAbsoluteMoniker::root());
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
@@ -506,13 +505,13 @@ mod tests {
         let registered_runner =
             component.environment.get_registered_runner(&"test".into()).unwrap();
         assert_matches!(registered_runner, Some((ExtendedInstance::Component(c), r))
-            if r == runner_reg && *c.abs_moniker() == AbsoluteMoniker::root());
+            if r == runner_reg && c.partial_abs_moniker == PartialAbsoluteMoniker::root());
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
         assert_matches!(debug_capability, Some((ExtendedInstance::Component(c), Some(n), d))
-            if d == debug_reg && n == "env_a" && *c.abs_moniker() == AbsoluteMoniker::root());
+            if d == debug_reg && n == "env_a" && c.partial_abs_moniker == PartialAbsoluteMoniker::root());
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())

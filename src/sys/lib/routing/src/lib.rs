@@ -47,10 +47,7 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     from_enum::FromEnum,
-    moniker::{
-        AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker, RelativeMoniker,
-        RelativeMonikerBase,
-    },
+    moniker::{PartialAbsoluteMoniker, PartialChildMoniker, RelativeMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
         sync::Arc,
@@ -227,6 +224,7 @@ where
         } => (storage_decl, component.upgrade()?),
         _ => unreachable!("unexpected storage source"),
     };
+
     let relative_moniker = RelativeMoniker::from_absolute(
         storage_component_instance.abs_moniker(),
         target.abs_moniker(),
@@ -280,7 +278,7 @@ where
                     Some((ExtendedInstanceInterface::AboveRoot(_), _, _)) => {
                         // Root environment.
                         return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
-                            moniker: target.abs_moniker().to_partial(),
+                            moniker: target.partial_abs_moniker().clone(),
                             capability_name: use_decl.source_name.clone(),
                             capability_type: DebugRegistration::TYPE.to_string(),
                         }
@@ -288,7 +286,7 @@ where
                     }
                     None => {
                         return Err(RoutingError::UseFromEnvironmentNotFound {
-                            moniker: target.abs_moniker().to_partial(),
+                            moniker: target.partial_abs_moniker().clone(),
                             capability_name: use_decl.source_name.clone(),
                             capability_type: DebugRegistration::TYPE.to_string(),
                         }
@@ -297,11 +295,11 @@ where
                 };
             let env_name = env_name.expect(&format!(
                 "Environment name in component `{}` not found when routing `{}`.",
-                target.abs_moniker().clone(),
+                target.partial_abs_moniker(),
                 use_decl.source_name
             ));
 
-            let env_moniker = env_component_instance.abs_moniker().to_partial();
+            let env_moniker = env_component_instance.partial_abs_moniker();
 
             let source = RoutingStrategy::new()
                 .registration::<DebugRegistration>()
@@ -320,7 +318,7 @@ where
                 &source,
                 &env_moniker,
                 &env_name,
-                &target.abs_moniker().to_partial(),
+                target.partial_abs_moniker(),
             )?;
             return Ok(RouteSource::Protocol(source));
         }
@@ -342,7 +340,7 @@ where
 
             target
                 .try_get_policy_checker()?
-                .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+                .can_route_capability(&source, target.partial_abs_moniker())?;
             Ok(RouteSource::Protocol(source))
         }
     }
@@ -376,9 +374,7 @@ where
         )
         .await?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Protocol(source))
 }
 
@@ -416,7 +412,7 @@ where
 
             target
                 .try_get_policy_checker()?
-                .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+                .can_route_capability(&source, target.partial_abs_moniker())?;
             Ok(RouteSource::Service(source))
         }
     }
@@ -444,9 +440,7 @@ where
         )
         .await?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Service(source))
 }
 
@@ -562,7 +556,7 @@ where
 
             target
                 .try_get_policy_checker()?
-                .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+                .can_route_capability(&source, target.partial_abs_moniker())?;
             Ok(RouteSource::Directory(source, state))
         }
     }
@@ -591,9 +585,7 @@ where
         .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Directory(source, state))
 }
 
@@ -621,13 +613,11 @@ where
     };
 
     if storage_decl.storage_id == fdecl::StorageId::StaticInstanceId
-        && instance
-            .try_get_component_id_index()?
-            .look_up_moniker(&instance.abs_moniker().to_partial())
+        && instance.try_get_component_id_index()?.look_up_moniker(instance.partial_abs_moniker())
             == None
     {
         return Err(RoutingError::ComponentNotInIdIndex {
-            moniker: instance.abs_moniker().to_partial(),
+            moniker: instance.partial_abs_moniker().clone(),
         });
     }
     Ok(())
@@ -664,9 +654,7 @@ where
 {
     let source = route_to_storage_decl(use_decl, &target, mapper).await?;
     verify_instance_in_component_id_index(&source, target)?;
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Storage(source))
 }
 
@@ -690,9 +678,7 @@ where
         .route(storage_decl.clone().into(), target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
 
     let (dir_source_path, dir_source_instance) = match source {
         CapabilitySourceInterface::Component { capability, component } => (
@@ -764,15 +750,13 @@ where
             })
         }
         None => Err(RoutingError::UseFromEnvironmentNotFound {
-            moniker: target.abs_moniker().to_partial(),
+            moniker: target.partial_abs_moniker().clone(),
             capability_name: runner.clone(),
             capability_type: "runner".to_string(),
         }),
     }?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Runner(source))
 }
 
@@ -799,9 +783,7 @@ where
         .route(registration, target.clone(), allowed_sources, &mut ResolverVisitor, mapper)
         .await?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Resolver(source))
 }
 
@@ -858,9 +840,7 @@ where
         .route(use_decl, target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target
-        .try_get_policy_checker()?
-        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
+    target.try_get_policy_checker()?.can_route_capability(&source, target.partial_abs_moniker())?;
     Ok(RouteSource::Event(source))
 }
 

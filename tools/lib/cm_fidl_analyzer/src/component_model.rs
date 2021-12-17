@@ -756,7 +756,7 @@ impl ComponentModelForAnalyzer {
         match component.decl.program {
             Some(_) => Ok(()),
             None => Err(AnalyzerModelError::SourceInstanceNotExecutable(
-                component.abs_moniker().to_string(),
+                component.partial_abs_moniker().to_string(),
             )),
         }
     }
@@ -828,6 +828,7 @@ mod tests {
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
+        moniker::PartialAbsoluteMoniker,
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
         },
@@ -891,7 +892,16 @@ mod tests {
             .to_string()
         );
 
+        // Include tests for `.abs_moniker()` alongside `.partial_abs_moniker()`
+        // until`.abs_moniker()` is removed from the public API.
+        assert_eq!(root_instance.partial_abs_moniker(), &PartialAbsoluteMoniker::root());
         assert_eq!(root_instance.abs_moniker(), &AbsoluteMoniker::root());
+
+        assert_eq!(
+            child_instance.partial_abs_moniker(),
+            &PartialAbsoluteMoniker::parse_string_without_instances("/child")
+                .expect("failed to parse moniker from id")
+        );
         assert_eq!(
             child_instance.abs_moniker(),
             &AbsoluteMoniker::parse_string_without_instances("/child")
@@ -904,6 +914,7 @@ mod tests {
         }
         match child_instance.try_get_parent()? {
             ExtendedInstanceInterface::Component(component) => {
+                assert_eq!(component.partial_abs_moniker(), root_instance.partial_abs_moniker());
                 assert_eq!(component.abs_moniker(), root_instance.abs_moniker())
             }
             _ => panic!("child instance's parent should be root component"),
@@ -913,6 +924,10 @@ mod tests {
             locked.get_live_child(&PartialChildMoniker::new("child".to_string(), None))
         })?;
         assert!(get_child.is_some());
+        assert_eq!(
+            get_child.as_ref().unwrap().partial_abs_moniker(),
+            child_instance.partial_abs_moniker()
+        );
         assert_eq!(get_child.unwrap().abs_moniker(), child_instance.abs_moniker());
 
         let root_environment = root_instance.environment();
@@ -927,6 +942,10 @@ mod tests {
         assert_eq!(child_environment.name(), None);
         match child_environment.parent() {
             WeakExtendedInstanceInterface::Component(component) => {
+                assert_eq!(
+                    component.upgrade()?.partial_abs_moniker(),
+                    root_instance.partial_abs_moniker()
+                );
                 assert_eq!(component.upgrade()?.abs_moniker(), root_instance.abs_moniker())
             }
             _ => panic!("child environment's parent should be root component"),
@@ -1131,7 +1150,7 @@ mod tests {
         let (child_runner_registrar, child_runner) = get_child_runner_result.unwrap();
         match child_runner_registrar {
             ExtendedInstanceInterface::Component(instance) => {
-                assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
+                assert_eq!(instance.partial_abs_moniker(), &PartialAbsoluteMoniker::from(vec![]));
             }
             ExtendedInstanceInterface::AboveRoot(_) => {
                 panic!("expected child_env_runner to be registered by the root instance")
@@ -1146,7 +1165,7 @@ mod tests {
         let (child_resolver_registrar, child_resolver) = get_child_resolver_result.unwrap();
         match child_resolver_registrar {
             ExtendedInstanceInterface::Component(instance) => {
-                assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
+                assert_eq!(instance.partial_abs_moniker(), &PartialAbsoluteMoniker::from(vec![]));
             }
             ExtendedInstanceInterface::AboveRoot(_) => {
                 panic!("expected child_env_resolver to be registered by the root instance")

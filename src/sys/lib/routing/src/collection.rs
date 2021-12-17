@@ -19,7 +19,7 @@ use {
     cm_rust::{CapabilityName, ExposeDecl, ExposeDeclCommon, SourceName},
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
+    moniker::{ChildMonikerBase, PartialChildMoniker},
     std::sync::Arc,
 };
 
@@ -108,7 +108,7 @@ where
                         instance.to_string(),
                         Some(self.collection_name.clone()),
                     ),
-                    moniker: collection_component.abs_moniker().to_partial(),
+                    moniker: collection_component.partial_abs_moniker().clone(),
                     capability_id: self.target_decl.source_name().clone().into(),
                 })?
         };
@@ -119,7 +119,7 @@ where
                 .cloned()
                 .ok_or_else(|| {
                     E::error_not_found_in_child(
-                        collection_component.abs_moniker().to_partial(),
+                        collection_component.partial_abs_moniker().clone(),
                         child_moniker,
                         self.target_decl.source_name().clone(),
                     )

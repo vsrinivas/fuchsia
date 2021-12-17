@@ -4787,7 +4787,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     capability_name,
                 }
             )
-                if moniker == b_component.abs_moniker().to_partial() &&
+                if moniker == *b_component.partial_abs_moniker() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
         );
@@ -4956,7 +4956,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     capability_name,
                 }
             )
-                if moniker == a_component.abs_moniker().to_partial()
+                if moniker == *a_component.partial_abs_moniker()
                 && capability_type == "runner".to_string()
                 && capability_name == CapabilityName("hobbit".into())
         );

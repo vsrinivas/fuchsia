@@ -775,7 +775,7 @@ mod tests {
                     capability_type,
                     capability_name,
             })))
-                if moniker == b_component.abs_moniker().to_partial() &&
+                if moniker == *b_component.partial_abs_moniker() &&
                 capability_type == "runner" &&
                 capability_name == CapabilityName("hobbit".to_string())
         );
@@ -2038,7 +2038,7 @@ mod tests {
                         RoutingError::ExposeFromChildInstanceNotFound {
                             capability_id: "bad_protocol".to_string(),
                             child_moniker: "c".into(),
-                            moniker: b_component.abs_moniker().to_partial()
+                            moniker: b_component.partial_abs_moniker().clone(),
                         },
                     )
                 )),

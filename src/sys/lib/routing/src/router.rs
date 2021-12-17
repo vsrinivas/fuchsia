@@ -22,10 +22,7 @@ use {
     },
     derivative::Derivative,
     from_enum::FromEnum,
-    moniker::{
-        AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialAbsoluteMoniker,
-        PartialChildMoniker,
-    },
+    moniker::{ChildMoniker, ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
     std::{marker::PhantomData, sync::Arc},
 };
 
@@ -99,12 +96,12 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
-        mapper.add_use(target.abs_moniker().to_partial(), use_decl.clone().into());
+        mapper.add_use(target.partial_abs_moniker().clone(), use_decl.clone().into());
         let target_capabilities = target.lock_resolved_state().await?.capabilities();
         Ok(CapabilitySourceInterface::<C>::Component {
             capability: sources.find_component_source(
                 use_decl.source_name(),
-                &target.abs_moniker().to_partial(),
+                target.partial_abs_moniker(),
                 &target_capabilities,
                 visitor,
                 mapper,
@@ -267,7 +264,7 @@ where
                             .expect("ChildMoniker should exist")
                             .to_partial();
                         <U as ErrorNotFoundInChild>::error_not_found_in_child(
-                            use_target.abs_moniker().to_partial(),
+                            use_target.partial_abs_moniker().clone(),
                             child_moniker,
                             use_decl.source_name().clone(),
                         )
@@ -787,7 +784,7 @@ where
         O: OfferDeclCommon + FromEnum<OfferDecl> + ErrorNotFoundFromParent + Clone,
         M: DebugRouteMapper,
     {
-        mapper.add_use(target.abs_moniker().to_partial(), use_.clone().into());
+        mapper.add_use(target.partial_abs_moniker().clone(), use_.clone().into());
         match use_.source() {
             UseSource::Framework => {
                 Ok(UseResult::Source(CapabilitySourceInterface::<C>::Framework {
@@ -843,7 +840,7 @@ where
                             .cloned()
                             .ok_or_else(|| {
                                 <U as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                    target.abs_moniker().to_partial(),
+                                    target.partial_abs_moniker().clone(),
                                     use_.source_name().clone(),
                                 )
                             })?
@@ -852,14 +849,14 @@ where
                 }
             },
             UseSource::Child(name) => {
-                let moniker = target.abs_moniker().to_partial();
+                let moniker = target.partial_abs_moniker();
                 let child_component = {
                     let partial = PartialChildMoniker::new(name.clone(), None);
                     target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
                         || {
                             RoutingError::use_from_child_instance_not_found(
                                 &partial,
-                                &moniker,
+                                moniker,
                                 name.clone(),
                             )
                         },
@@ -919,14 +916,14 @@ where
         E: ExposeDeclCommon + FromEnum<ExposeDecl> + Clone,
         M: DebugRouteMapper,
     {
-        mapper.add_registration(target.abs_moniker().to_partial(), registration.clone().into());
+        mapper.add_registration(target.partial_abs_moniker().clone(), registration.clone().into());
         match registration.source() {
             RegistrationSource::Self_ => {
                 let target_capabilities = target.lock_resolved_state().await?.capabilities();
                 Ok(RegistrationResult::Source(CapabilitySourceInterface::<C>::Component {
                     capability: sources.find_component_source(
                         registration.source_name(),
-                        &target.abs_moniker().to_partial(),
+                        target.partial_abs_moniker(),
                         &target_capabilities,
                         visitor,
                         mapper,
@@ -981,7 +978,7 @@ where
                         .cloned()
                         .ok_or_else(|| {
                             <R as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                target.abs_moniker().to_partial(),
+                                target.partial_abs_moniker().clone(),
                                 registration.source_name().clone(),
                             )
                         })?
@@ -995,7 +992,7 @@ where
                     target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
                         || RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker: partial,
-                            moniker: target.abs_moniker().to_partial(),
+                            moniker: target.partial_abs_moniker().clone(),
                             capability_name: registration.source_name().clone(),
                             capability_type: R::TYPE.to_string(),
                         },
@@ -1012,7 +1009,7 @@ where
                                 .expect("ChildMoniker should exist")
                                 .to_partial();
                             <R as ErrorNotFoundInChild>::error_not_found_in_child(
-                                target.abs_moniker().to_partial(),
+                                target.partial_abs_moniker().clone(),
                                 child_moniker,
                                 registration.source_name().clone(),
                             )
@@ -1059,7 +1056,7 @@ where
         M: DebugRouteMapper,
     {
         loop {
-            mapper.add_offer(target.abs_moniker().to_partial(), offer.clone().into());
+            mapper.add_offer(target.partial_abs_moniker().clone(), offer.clone().into());
             OfferVisitor::visit(visitor, &offer)?;
 
             match offer.source() {
@@ -1068,7 +1065,7 @@ where
                     return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             offer.source_name(),
-                            &target.abs_moniker().to_partial(),
+                            target.partial_abs_moniker(),
                             &target_capabilities,
                             visitor,
                             mapper,
@@ -1135,7 +1132,7 @@ where
                             .cloned()
                             .ok_or_else(|| {
                                 <O as ErrorNotFoundFromParent>::error_not_found_from_parent(
-                                    target.abs_moniker().to_partial(),
+                                    target.partial_abs_moniker().clone(),
                                     offer.source_name().clone(),
                                 )
                             })?
@@ -1153,7 +1150,7 @@ where
                         target_collections.iter().find(|c| &c.name == name).ok_or_else(|| {
                             RoutingError::OfferFromCollectionNotFound {
                                 collection: name.clone(),
-                                moniker: target.abs_moniker().to_partial(),
+                                moniker: target.partial_abs_moniker().clone(),
                                 capability: offer.source_name().clone(),
                             }
                         })?;
@@ -1185,7 +1182,7 @@ where
                 component.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
                     || RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker: partial,
-                        moniker: component.abs_moniker().to_partial(),
+                        moniker: component.partial_abs_moniker().clone(),
                         capability_id: offer.source_name().clone().into(),
                     },
                 )?
@@ -1199,7 +1196,7 @@ where
                             .expect("ChildMoniker should exist")
                             .to_partial();
                         <O as ErrorNotFoundInChild>::error_not_found_in_child(
-                            component.abs_moniker().to_partial(),
+                            component.partial_abs_moniker().clone(),
                             child_moniker,
                             offer.source_name().clone(),
                         )
@@ -1244,7 +1241,7 @@ where
         M: DebugRouteMapper,
     {
         loop {
-            mapper.add_expose(target.abs_moniker().to_partial(), expose.clone().into());
+            mapper.add_expose(target.partial_abs_moniker().clone(), expose.clone().into());
             ExposeVisitor::visit(visitor, &expose)?;
 
             match expose.source() {
@@ -1253,7 +1250,7 @@ where
                     return Ok(ExposeResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             expose.source_name(),
-                            &target.abs_moniker().to_partial(),
+                            target.partial_abs_moniker(),
                             &target_capabilities,
                             visitor,
                             mapper,
@@ -1284,7 +1281,7 @@ where
                             .get_live_child(&child_moniker)
                             .ok_or_else(|| RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
-                                moniker: target.abs_moniker().to_partial(),
+                                moniker: target.partial_abs_moniker().clone(),
                                 capability_id: expose.source_name().clone().into(),
                             })?
                     };
@@ -1298,7 +1295,7 @@ where
                                     .expect("ChildMoniker should exist")
                                     .to_partial();
                                 <E as ErrorNotFoundInChild>::error_not_found_in_child(
-                                    target.abs_moniker().to_partial(),
+                                    target.partial_abs_moniker().clone(),
                                     child_moniker,
                                     expose.source_name().clone(),
                                 )
@@ -1314,7 +1311,7 @@ where
                         target_collections.iter().find(|c| &c.name == name).ok_or_else(|| {
                             RoutingError::ExposeFromCollectionNotFound {
                                 collection: name.clone(),
-                                moniker: target.abs_moniker().to_partial(),
+                                moniker: target.partial_abs_moniker().clone(),
                                 capability: expose.source_name().clone(),
                             }
                         })?;
