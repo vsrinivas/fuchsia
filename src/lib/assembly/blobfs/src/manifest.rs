@@ -59,11 +59,13 @@ impl BlobManifest {
         let manifest_parent = path
             .as_ref()
             .parent()
-            .ok_or(anyhow!("Failed to get parent path of the output blobfs"))?;
+            .ok_or(anyhow!("Failed to get parent path of the output blob manifest"))?;
         let mut out = File::create(&path)?;
         for (merkle, blob_path) in self.packages.iter() {
-            let blob_path = diff_paths(blob_path, &manifest_parent)
-                .ok_or(anyhow!("Failed to get relative path for blob: {}", blob_path.display()))?;
+            let blob_path = path_relative_to_dir(&blob_path, &manifest_parent).context(format!(
+                "Failed to get relative path for blob: {}",
+                blob_path.display()
+            ))?;
             let blob_path = blob_path
                 .to_str()
                 .context(format!("File path is not valid UTF-8: {}", blob_path.display()))?;
@@ -73,11 +75,29 @@ impl BlobManifest {
     }
 }
 
+/// Rebase |path| onto |dir| even if |dir| is not in the current working directory.
+fn path_relative_to_dir(path: impl AsRef<Path>, dir: impl AsRef<Path>) -> Result<PathBuf> {
+    // Get the canonical paths for the inputs, so that they can be rebased even if they are in
+    // different directories.
+    let path = path
+        .as_ref()
+        .canonicalize()
+        .context(format!("Failed to get canonical path for {}", path.as_ref().display()))?;
+    let dir = dir
+        .as_ref()
+        .canonicalize()
+        .context(format!("Failed to get canonical path for {}", dir.as_ref().display()))?;
+
+    // Rebase the paths.
+    diff_paths(&path, &dir)
+        .ok_or(anyhow!("Failed to get relative path for file: {}", path.display()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn blob_manifest_with_file() {
@@ -157,6 +177,38 @@ mod tests {
         );
         let output_str = std::fs::read_to_string(output).unwrap();
         assert_eq!(output_str, expected_str);
+    }
+
+    #[test]
+    fn test_relative_blob_path() {
+        // Save the current working directory so that we can reset it later.
+        let cwd = std::env::current_dir().unwrap();
+
+        // Set a test working directory.
+        let temp_dir = std::env::temp_dir();
+        let test_cwd = TempDir::new().unwrap();
+        let test_cwd_relative = diff_paths(&test_cwd, &temp_dir).unwrap();
+        std::env::set_current_dir(&test_cwd).unwrap();
+
+        // Create a test blob in the test working directory.
+        let blob_path = test_cwd.path().join("blob");
+        let mut blob = File::create(&blob_path).unwrap();
+        write!(blob, "Council of Ricks").unwrap();
+
+        // Create a second test directory to rebase the blob path onto, and calculate its path
+        // relative to the test working directory.
+        let test_out = TempDir::new().unwrap();
+        let test_out_relative = diff_paths(&test_out, &test_cwd_relative).unwrap();
+
+        // Calculate the expected path to the blob relative to the test output directory.
+        let blob_path_relative = test_cwd_relative.join("blob");
+        let expected = PathBuf::from("..").join(&blob_path_relative);
+
+        // Ensure the output is correct.
+        assert_eq!(expected, path_relative_to_dir("blob", test_out_relative).unwrap());
+
+        // Reset the working directory.
+        std::env::set_current_dir(cwd).unwrap();
     }
 
     // Generates a package manifest to be used for testing. The `name` is used in the blob file
