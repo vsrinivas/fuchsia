@@ -77,8 +77,8 @@ TEST_F(OutputProducerTest, ConstructionFloat32) {
 
 // Are all valid data values rounded correctly to 8-bit outputs?
 TEST_F(OutputProducerTest, PassThruUint8) {
-  // Destination buffer to be overwritten, except the last value
-  auto dest = std::array<uint8_t, 9>{12, 23, 34, 45, 56, 67, 78, 89, 42};
+  // Destination buffer to be overwritten.
+  auto dest = std::array<uint8_t, 8>{12, 23, 34, 45, 56, 67, 78, 89};
 
   auto accum = std::vector<float>{
       // clang-format off
@@ -93,11 +93,11 @@ TEST_F(OutputProducerTest, PassThruUint8) {
       // clang-format on
   };
   ShiftRightBy(accum, 23);
-  ASSERT_EQ(dest.size(), accum.size() + 1) << "Test depends on expect being 1 longer than accum";
+  ASSERT_EQ(dest.size(), accum.size());
 
-  // The "becomes" values mentioned above, plus a final value not-to-be-overwritten.
-  auto expect = std::array<uint8_t, 9>{0x00, 0x00, 0x3F, 0x80, 0x80, 0xC1, 0xFF, 0xFF, 42};
-  static_assert(std::size(dest) == std::size(expect), "Test error, vector lengths should match");
+  // The "becomes" values mentioned above.
+  auto expect = std::array<uint8_t, 8>{0x00, 0x00, 0x3F, 0x80, 0x80, 0xC1, 0xFF, 0xFF};
+  static_assert(std::size(dest) == std::size(expect));
 
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
   ASSERT_NE(nullptr, output_producer);
@@ -108,8 +108,8 @@ TEST_F(OutputProducerTest, PassThruUint8) {
 
 // Are all valid data values passed correctly to 16-bit outputs?
 TEST_F(OutputProducerTest, PassThruInt16) {
-  // Destination buffer to be overwritten, except the last value
-  auto dest = std::array<int16_t, 9>{0123, 1234, 2345, 3456, 4567, 5678, 6789, 7890, -42};
+  // Destination buffer to be overwritten.
+  auto dest = std::array<int16_t, 8>{0123, 1234, 2345, 3456, 4567, 5678, 6789, 7890};
 
   auto accum = std::vector<float>{
       // clang-format off
@@ -124,17 +124,16 @@ TEST_F(OutputProducerTest, PassThruInt16) {
       // clang-format on
   };
   ShiftRightBy(accum, 23);  // shift by six hex digits (minus the sign bit, as always)
-  ASSERT_EQ(dest.size(), accum.size() + 1) << "Test error, vector lengths should match";
+  ASSERT_EQ(dest.size(), accum.size());
 
-  // The "becomes" values mentioned below, plus a final value not-to-be-overwritten.
-  auto expect =
-      std::array<int16_t, 9>{-0x8000, -0x8000, -0x4081, -1, 0, 0x4081, 0x7FFF, 0x7FFF, -42};
-  static_assert(std::size(dest) == std::size(expect), "Test error, vector lengths should match");
+  // The "becomes" values mentioned below.
+  auto expect = std::array<int16_t, 8>{-0x8000, -0x8000, -0x4081, -1, 0, 0x4081, 0x7FFF, 0x7FFF};
+  static_assert(std::size(dest) == std::size(expect));
 
-  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 2);
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
   ASSERT_NE(nullptr, output_producer);
 
-  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() / 2);
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size());
   EXPECT_THAT(dest, testing::Pointwise(testing::Eq(), expect));
 }
 
@@ -142,9 +141,9 @@ TEST_F(OutputProducerTest, PassThruInt16) {
 // int24-in-32 has 1 fewer bit than float32 so we add a least-significant hex digit to specify
 // values to be rounded. The additional bit (the final 0x08 below) is the equivalent of .5 or 0
 TEST_F(OutputProducerTest, PassThruInt24) {
-  // Destination buffer to be overwritten, except the last value
-  auto dest = std::array<int32_t, 13>{0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-                                      0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xFF};
+  // Destination buffer to be overwritten.
+  auto dest = std::array<int32_t, 12>{0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+                                      0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC};
 
   auto accum = std::vector<float>{
       // clang-format off
@@ -163,10 +162,10 @@ TEST_F(OutputProducerTest, PassThruInt24) {
       // clang-format on
   };
   ShiftRightBy(accum, 27);  // shift by seven hex digits (minus the sign bit, as always)
-  ASSERT_EQ(dest.size(), accum.size() + 1) << "Test error, vector lengths should match";
+  ASSERT_EQ(dest.size(), accum.size());
 
-  // The "becomes" values mentioned above, plus a final value not-to-be-overwritten.
-  auto expect = std::array<int32_t, 13>{
+  // The "becomes" values mentioned above.
+  auto expect = std::array<int32_t, 12>{
       // clang-format off
       kMinInt24In32,
       kMinInt24In32,
@@ -180,23 +179,53 @@ TEST_F(OutputProducerTest, PassThruInt24) {
          0x65432100,
       kMaxInt24In32,
       kMaxInt24In32,
-               0xFF,
       // clang-format on
   };
-  static_assert(std::size(dest) == std::size(expect), "Test error, vector lengths should match");
+  static_assert(std::size(dest) == std::size(expect));
 
   auto output_producer =
-      SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 3);
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
   ASSERT_NE(nullptr, output_producer);
 
-  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() / 3);
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size());
   EXPECT_THAT(dest, testing::Pointwise(testing::Eq(), expect));
 }
 
 // Are all valid data values passed correctly to float outputs
 TEST_F(OutputProducerTest, PassThruFloat32) {
-  auto accum = std::array<float, 10>{
-      -1.1f, 1.1f, -1.0f, 1.0f, -0.503921568f, 0.503921568f, -0.000000119f, 0.000000119f, 0, NAN,
+  auto accum = std::array<float, 9>{
+      -1.1f, 1.1f, -1.0f, 1.0f, -0.503921568f, 0.503921568f, -0.000000119f, 0.000000119f, 0,
+  };
+
+  constexpr float kFillValue = 4.2f;
+  auto dest = std::vector<float>(accum.size());
+  std::fill(dest.begin(), dest.end(), kFillValue);
+  ASSERT_EQ(dest.size(), accum.size());
+
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
+  ASSERT_NE(nullptr, output_producer);
+
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size());
+  // Update the places where accum should differ from dest, so we can compare entire arrays.
+  accum[0] = -1.0f;  // value was clamped
+  accum[1] = 1.0f;   // value was clamped
+  EXPECT_THAT(accum, testing::Pointwise(testing::FloatEq(), dest));
+}
+
+// As above, but use 4 channels.
+TEST_F(OutputProducerTest, PassThruFloat32With2Chan) {
+  constexpr auto num_channels = 2;
+  // For each frame, use different values per channel to verify channel independence.
+  auto accum = std::array<float, 7 * num_channels>{
+      // clang-format off
+      -1.1f,          1.1f,
+       1.1f,         -1.1f,
+       1.0f,          1.0f,
+       0.000000119f,  0,
+          0,         -0.000000119f,
+      -0.503921568f,  0.503921568f,
+       0.0f,          0.0f,
+      // clang-format on
   };
 
   constexpr float kFillValue = 4.2f;
@@ -204,80 +233,153 @@ TEST_F(OutputProducerTest, PassThruFloat32) {
   std::fill(dest.begin(), dest.end(), kFillValue);
   ASSERT_EQ(dest.size(), accum.size()) << "Test error, vector lengths should match";
 
+  auto output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, num_channels);
+  ASSERT_NE(nullptr, output_producer);
+
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() / num_channels);
+  // Update the places where accum should differ from dest, so we can compare entire arrays.
+  accum[0] = -1.0f;  // value was clamped
+  accum[1] = 1.0f;   // value was clamped
+  accum[2] = 1.0f;   // value was clamped
+  accum[3] = -1.0f;  // value was clamped
+  EXPECT_THAT(accum, testing::Pointwise(testing::FloatEq(), dest));
+}
+
+// As above, but use 4 channels.
+TEST_F(OutputProducerTest, PassThruFloat32With4Chan) {
+  constexpr auto num_channels = 4;
+  // For each frame, use different values per channel to verify channel independence.
+  auto accum = std::array<float, 9 * num_channels>{
+      // clang-format off
+      -1.1f,   -1.0f,    1.0f,    1.1f,
+      -0.75f,  -0.25f,   0.25f,   0.75f
+      // clang-format on
+  };
+
+  constexpr float kFillValue = 4.2f;
+  auto dest = std::vector<float>(accum.size());
+  std::fill(dest.begin(), dest.end(), kFillValue);
+  ASSERT_EQ(dest.size(), accum.size()) << "Test error, vector lengths should match";
+
+  auto output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, num_channels);
+  ASSERT_NE(nullptr, output_producer);
+
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() / num_channels);
+  // Update the places where accum should differ from dest, so we can compare entire arrays.
+  accum[0] = -1.0f;  // value was clamped
+  accum[3] = 1.0f;   // value was clamped
+  EXPECT_THAT(accum, testing::Pointwise(testing::FloatEq(), dest));
+}
+
+// As above, but ensure that extra dest frames are not overwritten.
+TEST_F(OutputProducerTest, PassThruFloat32DontOverwriteExtraDestFrames) {
+  auto accum = std::array<float, 6>{
+      -1.1f, 1.1f, -1.0f, 1.0f, NAN, NAN,
+  };
+
+  constexpr float kFillValue = 4.2f;
+  auto dest = std::vector<float>(accum.size());
+  std::fill(dest.begin(), dest.end(), kFillValue);
+  ASSERT_EQ(dest.size(), accum.size());
+
   auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
   ASSERT_NE(nullptr, output_producer);
 
-  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() - 1);
-  // Update the 3 places where accum should differ from dest, so we can compare entire arrays.
+  output_producer->ProduceOutput(accum.data(), dest.data(), accum.size() - 2);
+  // Update the places where accum should differ from dest, so we can compare entire arrays.
   accum[0] = -1.0f;                      // value was clamped
   accum[1] = 1.0f;                       // value was clamped
+  accum[accum.size() - 2] = kFillValue;  // previous not-overwritten dest value
   accum[accum.size() - 1] = kFillValue;  // previous not-overwritten dest value
   EXPECT_THAT(accum, testing::Pointwise(testing::FloatEq(), dest));
 }
 
 // Are 8-bit output buffers correctly silenced? Do we stop when we should?
 TEST_F(OutputProducerTest, SilenceUint8) {
-  constexpr auto num_silent_samples = 6;
-  std::array<uint8_t, num_silent_samples + 1> dest;
+  constexpr auto num_frames = 6;
+  std::array<uint8_t, num_frames> dest;
   std::fill(dest.begin(), dest.end(), 0xFF);
 
-  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 2);
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::UNSIGNED_8, 1);
   ASSERT_NE(nullptr, output_producer);
 
-  output_producer->FillWithSilence(dest.data(), num_silent_samples / 2);
-  // Check the not-overwritten dest value, then clear it so we can compare entire arrays
-  EXPECT_EQ(dest[num_silent_samples], 255);
-  dest[num_silent_samples] = 0x80;
+  output_producer->FillWithSilence(dest.data(), num_frames);
   EXPECT_THAT(dest, testing::Each(testing::Eq(0x80)));
 }
 
 // Are 16-bit output buffers correctly silenced? Do we stop when we should?
 TEST_F(OutputProducerTest, SilenceInt16) {
-  constexpr auto num_silent_samples = 6;
-  std::array<int16_t, num_silent_samples + 1> dest;
+  constexpr auto num_frames = 6;
+  std::array<int16_t, num_frames> dest;
   std::fill(dest.begin(), dest.end(), 9876);
 
-  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 3);
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(dest.data(), num_silent_samples / 3);
-  // Check the not-overwritten dest value, then clear it so we can compare entire arrays
-  EXPECT_EQ(dest[num_silent_samples], 9876);
-  dest[num_silent_samples] = 0;
+  output_producer->FillWithSilence(dest.data(), num_frames);
   EXPECT_THAT(dest, testing::Each(testing::Eq(0)));
 }
 
 // Are 24-bit output buffers correctly silenced? Do we stop when we should?
 TEST_F(OutputProducerTest, SilenceInt24) {
-  constexpr auto num_silent_samples = 6;
-
-  std::array<int32_t, num_silent_samples + 1> dest;
+  constexpr auto num_frames = 6;
+  std::array<int32_t, num_frames> dest;
   std::fill(dest.begin(), dest.end(), 0x12345678);
 
   auto output_producer =
       SelectOutputProducer(fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 1);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(dest.data(), num_silent_samples);
-  // Check the not-overwritten dest value, then clear it so we can compare entire arrays
-  EXPECT_EQ(dest[num_silent_samples], 0x12345678);
-  dest[num_silent_samples] = 0;
+  output_producer->FillWithSilence(dest.data(), num_frames);
   EXPECT_THAT(dest, testing::Each(testing::Eq(0)));
 }
 
 // Are float output buffers correctly silenced? Do we stop when we should?
 TEST_F(OutputProducerTest, SilenceFloat32) {
-  constexpr auto num_silent_samples = 6;
-  std::array<float, num_silent_samples + 1> dest;
+  constexpr auto num_frames = 6;
+  std::array<float, num_frames> dest;
   std::fill(dest.begin(), dest.end(), -4.2f);
 
-  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 2);
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
   ASSERT_NE(output_producer, nullptr);
 
-  output_producer->FillWithSilence(dest.data(), num_silent_samples / 2);
-  // Check the not-overwritten dest value, then clear it so we can compare entire arrays
-  EXPECT_EQ(dest[num_silent_samples], -4.2f);
-  dest[num_silent_samples] = 0.0f;
+  output_producer->FillWithSilence(dest.data(), num_frames);
+  EXPECT_THAT(dest, testing::Each(testing::Eq(0.0f)));
+}
+
+// As above, but use multiple channels
+TEST_F(OutputProducerTest, SilenceFloat32MultipleChannels) {
+  constexpr auto num_channels = 3;
+  constexpr auto num_frames = 4;
+  std::array<float, num_channels * num_frames> dest;
+  std::fill(dest.begin(), dest.end(), -4.2f);
+
+  auto output_producer =
+      SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, num_channels);
+  ASSERT_NE(output_producer, nullptr);
+
+  output_producer->FillWithSilence(dest.data(), num_frames);
+  EXPECT_THAT(dest, testing::Each(testing::Eq(0.0f)));
+}
+
+// As above, but ensure that extra dest frames are not overwritten.
+TEST_F(OutputProducerTest, SilenceFloat32DontOverwriteExtraDestFrames) {
+  constexpr auto num_frames = 6;
+  std::array<float, num_frames> dest;
+  std::fill(dest.begin(), dest.end(), -4.2f);
+
+  auto output_producer = SelectOutputProducer(fuchsia::media::AudioSampleFormat::FLOAT, 1);
+  ASSERT_NE(output_producer, nullptr);
+
+  output_producer->FillWithSilence(dest.data(), num_frames - 2);
+  // Expect not overwritten.
+  EXPECT_EQ(dest[num_frames - 2], -4.2f);
+  EXPECT_EQ(dest[num_frames - 1], -4.2f);
+  // Overwrite so we can test the full array.
+  dest[num_frames - 2] = 0.0f;
+  dest[num_frames - 1] = 0.0f;
   EXPECT_THAT(dest, testing::Each(testing::Eq(0.0f)));
 }
 
