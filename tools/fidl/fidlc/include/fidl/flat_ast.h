@@ -1233,73 +1233,6 @@ class Library : private Attributable, private ReporterMixin {
   // underscores as delimiters.
   SourceSpan GeneratedSimpleName(std::string_view name);
 
-  // Attempts to compile a compound identifier, and resolve it to a name
-  // within the context of a library. On success, the name is returned.
-  // On failure, no name is returned, and a failure is emitted, i.e. the
-  // caller is not responsible for reporting the resolution error.
-  std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
-  bool RegisterDecl(std::unique_ptr<Decl> decl);
-
-  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
-                       std::unique_ptr<Constant>* out_constant);
-  void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
-                              std::unique_ptr<LiteralConstant>* out_constant);
-
-  void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
-  bool ConsumeAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
-  void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
-  void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
-  bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
-  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
-                            std::unique_ptr<raw::ParameterList> parameter_layout,
-                            bool is_request_or_response,
-                            std::unique_ptr<TypeConstructor>* out_payload);
-  bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
-                          SourceSpan response_span, raw::ProtocolMethod* method,
-                          std::unique_ptr<TypeConstructor> success_variant,
-                          std::unique_ptr<TypeConstructor>* out_payload);
-  void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
-
-  void ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                            std::unique_ptr<AttributeList>* out_attribute_list);
-  void ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
-                        std::unique_ptr<Attribute>* out_attribute);
-  void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
-  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                              const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                              bool is_request_or_response,
-                              std::unique_ptr<TypeConstructor>* out_type);
-  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                              const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<TypeConstructor>* out_type);
-
-  // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
-  // Union), while M is its "Member" sub-class.
-  template <typename T, typename M>
-  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
-                              const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<raw::AttributeList> raw_attribute_list);
-  bool ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
-                           const std::shared_ptr<NamingContext>& context,
-                           std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                           bool is_request_or_response);
-
-  // Here, T is expected to be an value-carrying flat AST class (ie, Bits or
-  // Enum), while M is its "Member" sub-class.
-  template <typename T, typename M>
-  bool ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
-                          const std::shared_ptr<NamingContext>& context,
-                          std::unique_ptr<raw::AttributeList> raw_attribute_list);
-  bool ConsumeLayout(std::unique_ptr<raw::Layout> layout,
-                     const std::shared_ptr<NamingContext>& context,
-                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                     bool is_request_or_response);
-
-  // Sets the naming context's generated name override to the @generated_name attribute's value if
-  // it is present in the input attribute list, or does nothing otherwise.
-  void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
-
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
   // Return true if this constant refers to the built in `optional` constraint,
@@ -1398,10 +1331,6 @@ class Library : private Attributable, private ReporterMixin {
   // objects in dependencies_.
   std::map<Name::Key, Decl*> declarations_;
 
-  // This map contains a subset of declarations_ (no imported declarations)
-  // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
-  std::map<std::string, Decl*> declarations_by_canonical_name_;
-
   Typespace* typespace_;
   const MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
@@ -1459,7 +1388,73 @@ class ConsumeStep : public StepBase {
  private:
   void RunImpl() override;
 
+  bool RegisterDecl(std::unique_ptr<Decl> decl);
+
+  // Top level declarations
+  void ConsumeAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
+  void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
+  void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
+  void ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
+  void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
+  void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
+  void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
+
+  // Layouts
+  template <typename T>  // T should be Table or Union
+  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
+                              const std::shared_ptr<NamingContext>& context,
+                              std::unique_ptr<raw::AttributeList> raw_attribute_list);
+  bool ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
+                           const std::shared_ptr<NamingContext>& context,
+                           std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                           bool is_request_or_response);
+  template <typename T>  // T should be Bits or Enum
+  bool ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
+                          const std::shared_ptr<NamingContext>& context,
+                          std::unique_ptr<raw::AttributeList> raw_attribute_list);
+  bool ConsumeLayout(std::unique_ptr<raw::Layout> layout,
+                     const std::shared_ptr<NamingContext>& context,
+                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                     bool is_request_or_response);
+
+  // Other elements
+  void ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
+                        std::unique_ptr<Attribute>* out_attribute);
+  void ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                            std::unique_ptr<AttributeList>* out_attribute_list);
+  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
+                       std::unique_ptr<Constant>* out_constant);
+  void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
+                              std::unique_ptr<LiteralConstant>* out_constant);
+  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
+                            std::unique_ptr<raw::ParameterList> parameter_layout,
+                            bool is_request_or_response,
+                            std::unique_ptr<TypeConstructor>* out_payload);
+  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
+                              const std::shared_ptr<NamingContext>& context,
+                              std::unique_ptr<raw::AttributeList> raw_attribute_list,
+                              bool is_request_or_response,
+                              std::unique_ptr<TypeConstructor>* out_type);
+  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
+                              const std::shared_ptr<NamingContext>& context,
+                              std::unique_ptr<TypeConstructor>* out_type);
+
+  // Sets the naming context's generated name override to the @generated_name
+  // attribute's value if present, otherwise does nothing.
+  void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
+  // Attempts to resolve the compound identifier to a name within the context of
+  // a library. On failure, reports an errro and returns null.
+  std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
+  bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
+                          SourceSpan response_span, raw::ProtocolMethod* method,
+                          std::unique_ptr<TypeConstructor> success_variant,
+                          std::unique_ptr<TypeConstructor>* out_payload);
+
   std::unique_ptr<raw::File> file_;
+
+  // This map contains a subset of library_->declarations_ (no imported decls)
+  // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
+  std::map<std::string, Decl*> declarations_by_canonical_name_;
 };
 
 class SortStep : public StepBase {
