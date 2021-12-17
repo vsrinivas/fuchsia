@@ -33,7 +33,4 @@ struct Options {
 // Parses the provided CMDLINE payload for userboot options.
 void ParseCmdline(const zx::debuglog& log, std::string_view cmdline, Options& opts);
 
-// Counts the number of options encoded in the given string.
-uint32_t CountOptions(std::string_view cmdline);
-
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_

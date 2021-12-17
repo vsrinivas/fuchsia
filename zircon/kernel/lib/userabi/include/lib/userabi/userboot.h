@@ -21,11 +21,6 @@ namespace userboot {
 // is correct.
 enum class VdsoVariant { STABLE, NEXT, TEST1, TEST2, COUNT };
 
-// The data of the bootstrap message is the kernel command line,
-// as a sequence of '\0'-terminated words followed by a final '\0'.
-// This is its maximum size.
-constexpr uint32_t kCmdlineMax = 4096;
-
 // The handles in the bootstrap message are as follows:
 enum HandleIndex : uint32_t {
   // These describe userboot itself.

@@ -69,8 +69,3 @@ void ParseCmdline(const zx::debuglog& log, std::string_view cmdline, Options& op
            value.empty() ? "" : "=", static_cast<int>(value.size()), value.data());
   }
 }
-
-uint32_t CountOptions(std::string_view cmdline) {
-  WordView opts(cmdline);
-  return std::distance(opts.begin(), opts.end());
-}

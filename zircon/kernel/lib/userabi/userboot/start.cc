@@ -110,14 +110,10 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   constexpr uint32_t kBootfsVmo = kHandleCount + 1;
   constexpr uint32_t kChildHandleCount = kHandleCount + 2;
 
-  // This is the processargs message the child will receive.  The command
-  // line block the kernel sends us is formatted exactly to become the
-  // environ strings for the child message, so we read it directly into
-  // the same buffer.
+  // This is the processargs message the child will receive.
   struct child_message_layout {
     zx_proc_args_t pargs{};
     uint32_t info[kChildHandleCount];
-    char cmdline[kCmdlineMax];  // aka environ
   } child_message;
 
   // We pass all the same handles the kernel gives us along to the child,
@@ -126,10 +122,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   std::array<zx_handle_t, kChildHandleCount> handles;
 
   // Read the command line and the essential handles from the kernel.
-  uint32_t cmdline_len, nhandles;
+  uint32_t nhandles;
   zx_status_t status =
-      channel.read(0, child_message.cmdline, handles.data(), sizeof(child_message.cmdline),
-                   handles.size(), &cmdline_len, &nhandles);
+      channel.read(0, nullptr, handles.data(), 0, handles.size(), nullptr, &nhandles);
   check(log, status, "cannot read bootstrap message");
   if (nhandles != kHandleCount) {
     fail(log, "read %u handles instead of %u", nhandles, kHandleCount);
@@ -150,15 +145,6 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_POWER_BASE, 1,
                                 nullptr, 0, &power_resource);
   check(log, status, "zx_resource_create");
-
-  // Process the kernel command line, which gives us options and also
-  // becomes the environment strings for our child.
-  //
-  // TODO(fxbug.dev/89834): Migrate child processes away from consuming this
-  // information from the environment.
-  child_message.pargs.environ_num =
-      CountOptions(std::string_view{child_message.cmdline, cmdline_len});
-  child_message.pargs.environ_off = offsetof(child_message_layout, cmdline);
 
   // Fill in the child message header.
   child_message.pargs.protocol = ZX_PROCARGS_PROTOCOL;

@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
@@ -92,8 +91,6 @@ class VmoBuffer {
   size_t size_;
   fbl::RefPtr<VmObjectPaged> vmo_;
 };
-
-static_assert(userboot::kCmdlineMax == Cmdline::kCmdlineMax);
 
 using namespace userboot;
 
@@ -292,12 +289,10 @@ void bootstrap_vmos(Handle** handles) {
 }
 
 void userboot_init(uint) {
-  // Prepare the bootstrap message packet.  This puts its data (the
-  // kernel command line) in place, and allocates space for its handles.
-  // We'll fill in the handles as we create things.
+  // Prepare the bootstrap message packet.  This allocates space for its
+  // handles, which we'll fill in as we create things.
   MessagePacketPtr msg;
-  zx_status_t status = MessagePacket::Create(
-      gCmdline.data(), static_cast<uint32_t>(gCmdline.size()), userboot::kHandleCount, &msg);
+  zx_status_t status = MessagePacket::Create(nullptr, 0, userboot::kHandleCount, &msg);
   ASSERT(status == ZX_OK);
   Handle** const handles = msg->mutable_handles();
   DEBUG_ASSERT(msg->num_handles() == userboot::kHandleCount);
