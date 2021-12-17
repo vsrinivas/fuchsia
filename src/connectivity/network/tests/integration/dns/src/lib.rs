@@ -47,7 +47,6 @@ use packet_formats::{
     udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs},
 };
 use packet_formats_dhcp::v6;
-use test_case::test_case;
 
 /// Keep polling the lookup admin's DNS servers until it returns `expect`.
 async fn poll_lookup_admin<
@@ -473,131 +472,154 @@ const EXAMPLE_HOSTNAME: &str = "www.example.com.";
 const EXAMPLE_IPV4_ADDR: fnet::IpAddress = fidl_ip!("93.184.216.34");
 const EXAMPLE_IPV6_ADDR: fnet::IpAddress = fidl_ip!("2606:2800:220:1:248:1893:25c8:1946");
 
-#[test_case(true, false, EXAMPLE_HOSTNAME, EXAMPLE_IPV4_ADDR; "ipv4 only")]
-#[test_case(false, true, EXAMPLE_HOSTNAME, EXAMPLE_IPV6_ADDR; "ipv6 only")]
-#[test_case(true, true, EXAMPLE_HOSTNAME, EXAMPLE_IPV4_ADDR; "ipv4 and ipv6")]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn fallback_on_query_refused(
-    ipv4_lookup: bool,
-    ipv6_lookup: bool,
-    hostname: &str,
-    resolved_addr: fnet::IpAddress,
-) {
+async fn fallback_on_error_response_code() {
+    use itertools::Itertools as _;
     use trust_dns_proto::{
         op::{Message, ResponseCode},
         rr::RecordType,
     };
 
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = sandbox
-        .create_netstack_realm_with::<Netstack2, _, _>(
-            "realm",
-            &[KnownServiceProvider::DnsResolver],
-        )
-        .expect("failed to create realm");
+    #[derive(Debug)]
+    struct FallbackTestCase {
+        ipv4_lookup: bool,
+        ipv6_lookup: bool,
+        error_response_code: trust_dns_proto::op::ResponseCode,
+        resolved_addr: fnet::IpAddress,
+    }
 
-    // Mock name servers in priority order.
-    let refusing_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:1234");
-    let fallback_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.2:5678");
-    let mut expect = [
-        fidl_fuchsia_net_ext::SocketAddress(refusing_dns_server).into(),
-        fidl_fuchsia_net_ext::SocketAddress(fallback_dns_server).into(),
-    ];
-    let lookup_admin = realm
-        .connect_to_protocol::<net_name::LookupAdminMarker>()
-        .expect("failed to connect to LookupAdmin");
-    let () = lookup_admin
-        .set_dns_servers(&mut expect.iter_mut())
-        .await
-        .expect("FIDL error")
-        .expect("failed to set DNS servers");
-    let servers = lookup_admin.get_dns_servers().await.expect("failed to get DNS servers");
-    assert_eq!(servers, expect);
+    for test_case in IntoIterator::into_iter([
+        (true, true, EXAMPLE_IPV4_ADDR),
+        (true, false, EXAMPLE_IPV4_ADDR),
+        (false, true, EXAMPLE_IPV6_ADDR),
+    ])
+    .cartesian_product([
+        ResponseCode::Refused,
+        ResponseCode::NXDomain,
+        ResponseCode::FormErr,
+        ResponseCode::ServFail,
+        ResponseCode::NotAuth,
+        ResponseCode::BADMODE,
+    ])
+    .map(|((ipv4_lookup, ipv6_lookup, resolved_addr), error_response_code)| {
+        FallbackTestCase { ipv4_lookup, ipv6_lookup, error_response_code, resolved_addr }
+    }) {
+        eprintln!("Entering test case: {:?}", test_case);
+        let FallbackTestCase { ipv4_lookup, ipv6_lookup, error_response_code, resolved_addr } =
+            test_case;
 
-    let refusing_sock = fuchsia_async::net::UdpSocket::bind_in_realm(&realm, refusing_dns_server)
-        .await
-        .expect("failed to create socket");
-    let fallback_sock = fuchsia_async::net::UdpSocket::bind_in_realm(&realm, fallback_dns_server)
-        .await
-        .expect("failed to create socket");
-
-    let name_lookup =
-        realm.connect_to_protocol::<net_name::LookupMarker>().expect("failed to connect to Lookup");
-    let lookup_fut = async {
-        let ips = name_lookup
-            .lookup_ip(
-                hostname,
-                net_name::LookupIpOptions {
-                    ipv4_lookup: Some(ipv4_lookup),
-                    ipv6_lookup: Some(ipv6_lookup),
-                    sort_addresses: Some(true),
-                    ..net_name::LookupIpOptions::EMPTY
-                },
+        let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+        let realm = sandbox
+            .create_netstack_realm_with::<Netstack2, _, _>(
+                "realm",
+                &[KnownServiceProvider::DnsResolver],
             )
+            .expect("failed to create realm");
+
+        // Mock name servers in priority order.
+        let erroring_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.1:1234");
+        let fallback_dns_server: std::net::SocketAddr = std_socket_addr!("127.0.0.2:5678");
+        let mut dns_servers = [
+            fidl_fuchsia_net_ext::SocketAddress(erroring_dns_server).into(),
+            fidl_fuchsia_net_ext::SocketAddress(fallback_dns_server).into(),
+        ];
+        let lookup_admin = realm
+            .connect_to_protocol::<net_name::LookupAdminMarker>()
+            .expect("failed to connect to LookupAdmin");
+        let () = lookup_admin
+            .set_dns_servers(&mut dns_servers.iter_mut())
             .await
             .expect("FIDL error")
-            .expect("lookup_ip error");
-        assert_eq!(
-            ips,
-            net_name::LookupResult {
+            .expect("failed to set DNS servers");
+        let servers = lookup_admin.get_dns_servers().await.expect("failed to get DNS servers");
+        assert_eq!(servers, dns_servers);
+
+        let erroring_sock =
+            fuchsia_async::net::UdpSocket::bind_in_realm(&realm, erroring_dns_server)
+                .await
+                .expect("failed to create socket");
+        let fallback_sock =
+            fuchsia_async::net::UdpSocket::bind_in_realm(&realm, fallback_dns_server)
+                .await
+                .expect("failed to create socket");
+
+        let name_lookup = realm
+            .connect_to_protocol::<net_name::LookupMarker>()
+            .expect("failed to connect to Lookup");
+        let lookup_fut = async {
+            let ips = name_lookup
+                .lookup_ip(
+                    EXAMPLE_HOSTNAME,
+                    net_name::LookupIpOptions {
+                        ipv4_lookup: Some(ipv4_lookup),
+                        ipv6_lookup: Some(ipv6_lookup),
+                        sort_addresses: Some(true),
+                        ..net_name::LookupIpOptions::EMPTY
+                    },
+                )
+                .await
+                .expect("FIDL error")
+                .expect("lookup_ip error");
+            let want = net_name::LookupResult {
                 addresses: Some(vec![resolved_addr]),
                 ..net_name::LookupResult::EMPTY
-            }
-        );
-    }
-    .fuse();
+            };
+            assert_eq!(ips, want, "test case: {:?}", test_case);
+        }
+        .fuse();
 
-    // The refusing name server expects initial queries from dns-resolver, and always replies with a
-    // `REFUSED` response.
-    let refuse_fut = mock_udp_name_server(&refusing_sock, |_: &Message| {
-        let mut response = Message::new();
-        let _: &mut Message = response.set_response_code(ResponseCode::Refused);
-        response
-    })
-    .fuse();
-    // The fallback name server expects fallback queries from dns-resolver, and replies with a
-    // non-error response, unless it gets a query for a different record type than it expects.
-    let fallback_fut = {
-        let expected_record_type = if ipv4_lookup { RecordType::A } else { RecordType::AAAA };
-        mock_udp_name_server(&fallback_sock, move |query| {
-            if query.queries().iter().any(|q| q.query_type() != expected_record_type) {
-                // Reply with a `SERVFAIL` response since we want to ignore this query.
-                let mut response = Message::new();
-                let _: &mut Message = response.set_response_code(ResponseCode::ServFail);
-                response
-            } else {
-                let answer = answer_for_hostname(hostname, resolved_addr);
-                let mut response = Message::new();
-                let _: &mut Message =
-                    response.set_response_code(ResponseCode::NoError).add_answer(answer);
-                response
-            }
+        // The erroring name server expects initial queries from dns-resolver, and always replies
+        // with an error response code.
+        let error_server_fut = mock_udp_name_server(&erroring_sock, |_: &Message| {
+            let mut response = Message::new();
+            let _: &mut Message = response.set_response_code(error_response_code);
+            response
         })
-    }
-    .fuse();
+        .fuse();
+        // The fallback name server expects fallback queries from dns-resolver, and replies with a
+        // non-error response, unless it gets a query for a different record type than it expects.
+        let fallback_fut = {
+            let expected_record_type = if ipv4_lookup { RecordType::A } else { RecordType::AAAA };
+            mock_udp_name_server(&fallback_sock, move |query| {
+                if query.queries().iter().any(|q| q.query_type() != expected_record_type) {
+                    // Reply with a `SERVFAIL` response since we want to ignore this query.
+                    let mut response = Message::new();
+                    let _: &mut Message = response.set_response_code(ResponseCode::ServFail);
+                    response
+                } else {
+                    let answer = answer_for_hostname(EXAMPLE_HOSTNAME, resolved_addr);
+                    let mut response = Message::new();
+                    let _: &mut Message =
+                        response.set_response_code(ResponseCode::NoError).add_answer(answer);
+                    response
+                }
+            })
+        }
+        .fuse();
 
-    pin_utils::pin_mut!(lookup_fut, refuse_fut, fallback_fut);
-    futures::select! {
-        () = lookup_fut => {},
-        () = refuse_fut => panic!("refuse_fut should never complete"),
-        () = fallback_fut => panic!("fallback_fut should never complete"),
-    };
+        pin_utils::pin_mut!(lookup_fut, error_server_fut, fallback_fut);
+        futures::select! {
+            () = lookup_fut => {},
+            () = error_server_fut => panic!("error_server_fut should never complete"),
+            () = fallback_fut => panic!("fallback_fut should never complete"),
+        };
+    }
 }
 
 async fn setup_dns_server(
     realm: &netemul::TestRealm<'_>,
     addr: std::net::SocketAddr,
 ) -> (fuchsia_async::net::UdpSocket, fuchsia_async::net::TcpListener) {
-    let mut expect = [fidl_fuchsia_net_ext::SocketAddress(addr).into()];
+    let mut dns_servers = [fidl_fuchsia_net_ext::SocketAddress(addr).into()];
     let lookup_admin =
         realm.connect_to_protocol::<net_name::LookupAdminMarker>().expect("connect to protocol");
     let () = lookup_admin
-        .set_dns_servers(&mut expect.iter_mut())
+        .set_dns_servers(&mut dns_servers.iter_mut())
         .await
         .expect("call set DNS servers")
         .expect("set DNS servers");
     let servers = lookup_admin.get_dns_servers().await.expect("get DNS servers");
-    assert_eq!(servers, expect);
+    assert_eq!(servers, dns_servers);
 
     let udp_socket = fuchsia_async::net::UdpSocket::bind_in_realm(&realm, addr)
         .await
