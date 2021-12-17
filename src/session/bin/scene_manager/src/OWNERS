@@ -1,0 +1,2 @@
+# The input team often makes changes here
+per-file input_pipeline.rs = file:/src/ui/input/OWNERS
