@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1652
+From //build/config/BUILDCONFIG.gn:1656
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1287,7 +1287,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1399
+From //build/config/BUILDCONFIG.gn:1403
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2233,7 +2233,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1230
+From //build/config/BUILDCONFIG.gn:1234
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2249,21 +2249,21 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:12
+From //src/virtualization/bin/linux_runner/BUILD.gn:13
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image in QCOW2 format
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:23
+From //src/virtualization/bin/linux_runner/BUILD.gn:24
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:20
+From //src/virtualization/bin/linux_runner/BUILD.gn:21
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -2272,7 +2272,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:17
+From //src/virtualization/bin/linux_runner/BUILD.gn:18
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -3561,7 +3561,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1642
+From //build/config/BUILDCONFIG.gn:1646
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3570,7 +3570,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1647
+From //build/config/BUILDCONFIG.gn:1651
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3620,7 +3620,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1445
+From //build/config/BUILDCONFIG.gn:1449
 
 ### size_checker_input
 The input to the size checker.
@@ -3919,7 +3919,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1429
+From //build/config/BUILDCONFIG.gn:1433
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
