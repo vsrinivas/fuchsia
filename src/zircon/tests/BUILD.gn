@@ -10,7 +10,6 @@ group("tests") {
     "events:tests",
     "handle-alias:tests",
     "kernel-clocks:tests",
-    "kernel-cmdline:tests",
     "next-vdso:tests",
     "processor:tests",
     "profile:tests",

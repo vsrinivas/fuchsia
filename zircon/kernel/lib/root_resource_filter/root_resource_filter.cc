@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <lib/root_resource_filter.h>
 #include <lib/root_resource_filter_internal.h>

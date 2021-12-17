@@ -9,7 +9,6 @@
 #include <ctype.h>
 #include <debug.h>
 #include <endian.h>
-#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/unittest/user_memory.h>
@@ -45,7 +44,6 @@ static int cmd_sleep(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_stackstomp(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_recurse(int argc, const cmd_args* argv, uint32_t flags);
-static int cmd_cmdline(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_user_execute(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t flags);
@@ -79,7 +77,6 @@ STATIC_COMMAND("crash_thread_lock", "intentionally crash while holding the threa
                &cmd_crash_thread_lock)
 STATIC_COMMAND("crash_stack_guard", "attempt to crash by overwriting the stack guard",
                &cmd_crash_stack_guard)
-STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
 STATIC_COMMAND(
@@ -567,36 +564,6 @@ static int cmd_crash_stack_guard(int argc, const cmd_args* argv, uint32_t flags)
   char* p = static_cast<char*>(__builtin_alloca(kSize));
   memset(p, 0x45, 2 * kSize);
   return -1;
-}
-
-#define DEBUG_CMDLINE_MAX 1024
-static int cmd_cmdline(int argc, const cmd_args* argv, uint32_t flags) {
-  if (argc == 1) {
-    char cmdline_buf[DEBUG_CMDLINE_MAX];
-    memset(cmdline_buf, 0, DEBUG_CMDLINE_MAX);
-    const char* cmdline = gCmdline.GetString(NULL);
-    for (size_t i = 0; i < DEBUG_CMDLINE_MAX; i++) {
-      if (cmdline[i] == '\0') {
-        if (cmdline[i + 1] == '\0') {
-          break;
-        }
-        cmdline_buf[i] = ' ';
-      } else {
-        cmdline_buf[i] = cmdline[i];
-      }
-    }
-    printf("cmdline: %s\n", cmdline_buf);
-  } else {
-    const char* key = argv[1].str;
-    const char* val = gCmdline.GetString(key);
-    if (!val) {
-      printf("cmdline: %s not found\n", key);
-    } else {
-      printf("cmdline: %s=%s\n", key, val);
-    }
-  }
-
-  return 0;
 }
 
 static int cmd_build_instrumentation(int argc, const cmd_args* argv, uint32_t flags) {

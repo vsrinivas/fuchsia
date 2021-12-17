@@ -33,7 +33,6 @@ source_set("kernel") {
     "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/abi_type_validator",
     "//zircon/kernel/lib/arch",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/fbl",

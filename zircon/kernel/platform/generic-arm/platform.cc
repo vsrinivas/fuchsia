@@ -9,7 +9,6 @@
 #include <debug.h>
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
@@ -393,31 +392,6 @@ void ProcessPhysHandoff() {
   }
 }
 
-// Called during platform_init_early, the heap is not yet present.
-void ProcessZbiEarly() {
-  auto mexec_data_image = GetMexecDataImage();
-  // Writable bytes, as we will need to edit CMDLINE items (see below).
-  ktl::span span = ZbiInPhysmap();
-  zbitl::View view(span);
-
-  for (auto it = view.begin(); it != view.end(); ++it) {
-    auto [header, payload] = *it;
-    switch (header->type) {
-      case ZBI_TYPE_CMDLINE:
-        if (!payload.empty()) {
-          payload.back() = ktl::byte{'\0'};
-          gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
-        }
-        break;
-    }
-  }
-
-  if (auto result = view.take_error(); result.is_error()) {
-    printf("ProcessZbiEarly: encountered error iterating through data ZBI: ");
-    zbitl::PrintViewError(result.error_value());
-  }
-}
-
 void platform_early_init(void) {
   // initialize the boot memory reservation system
   boot_reserve_init();
@@ -431,9 +405,6 @@ void platform_early_init(void) {
     zbitl::PrintViewError(result.error_value());
     panic("failed to create mexec Data ZBI\n");
   }
-
-  // walk the zbi structure and process all the items
-  ProcessZbiEarly();
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();

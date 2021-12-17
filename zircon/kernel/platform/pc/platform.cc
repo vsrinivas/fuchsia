@@ -33,7 +33,6 @@
 #include <dev/pcie_bus_driver.h>
 #endif
 #include <lib/cksum.h>
-#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/system-topology.h>
@@ -112,22 +111,6 @@ static void platform_save_bootloader_data(void) {
   // Handle individual ZBI items.
   ktl::span<ktl::byte> zbi = ZbiInPhysmap();
   zbitl::View view(zbi);
-  for (auto it = view.begin(); it != view.end(); ++it) {
-    auto [header, payload] = *it;
-    switch (header->type) {
-      case ZBI_TYPE_CMDLINE:
-        if (!payload.empty()) {
-          payload.back() = ktl::byte{'\0'};
-          gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
-        }
-        break;
-    };
-  }
-  if (auto result = view.take_error(); result.is_error()) {
-    printf("process_zbi: error occurred during iteration: ");
-    zbitl::PrintViewError(result.error_value());
-    return;
-  }
 
   // Prevent the early boot allocator from handing out the memory the ZBI data
   // is located in.
