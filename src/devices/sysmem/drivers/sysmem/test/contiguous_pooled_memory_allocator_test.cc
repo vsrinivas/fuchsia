@@ -10,6 +10,7 @@
 #include <lib/inspect/cpp/reader.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/vmar.h>
+#include <zircon/syscalls.h>
 
 #include <vector>
 
@@ -250,8 +251,8 @@ TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
   const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
   allocator_.SetBtiFakeForUnitTests();
-  const zx::duration kUnusedPageCheckCyclePeriod = zx::sec(600);
-  allocator_.InitGuardRegion(kGuardRegionSize, /*unused_pages_guarded=*/false,
+  const zx::duration kUnusedPageCheckCyclePeriod = zx::sec(2);
+  allocator_.InitGuardRegion(kGuardRegionSize, /*unused_pages_guarded=*/true,
                              kUnusedPageCheckCyclePeriod, /*internal_guard_regions=*/false,
                              /*crash_on_guard_failure=*/false, loop.dispatcher());
   allocator_.SetupUnusedPages();
@@ -309,10 +310,14 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   EXPECT_OK(allocator_.Allocate(kBigVmoSize, {}, &vmo));
   EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
 
+  printf("check for spurious pattern check failure...\n");
+
   // The guard check happens every 5 seconds, so run for 6 seconds to ensure one
   // happens. We're using a test loop, so it's guaranteed that it runs exactly this length of time.
   loop.RunFor(zx::sec(loop_time_seconds));
   EXPECT_EQ(0u, allocator_.failed_guard_region_checks());
+
+  printf("one write that's inside a vmo, one that's outside of any vmo ever...\n");
 
   uint8_t data_to_write = 12;
   uint64_t vmo_offset = allocator_.GetVmoRegionOffsetForTest(vmo);
@@ -336,11 +341,38 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   EXPECT_EQ(1u, allocator_.failed_guard_region_checks());
   allocator_.Delete(std::move(vmo));
 
+  printf("one write to first byte of first page of former vmo...\n");
+
   // Create another mismatch that's a write-after-free.
   EXPECT_OK(
       allocator_.GetPoolVmoForTest().write(&data_to_write, vmo_offset, sizeof(data_to_write)));
   loop.RunFor(zx::sec(loop_time_seconds));
   EXPECT_EQ(2u, allocator_.failed_guard_region_checks());
+
+  printf("write to 1st byte of 32 pages of former vmo's location...\n");
+
+  for (uint64_t offset = 0; offset < 32ull * zx_system_get_page_size();
+       offset += zx_system_get_page_size()) {
+    EXPECT_OK(allocator_.GetPoolVmoForTest().write(&data_to_write, vmo_offset + offset,
+                                                   sizeof(data_to_write)));
+  }
+  loop.RunFor(zx::sec(loop_time_seconds));
+  // Not strictly required to find the multi-page problem in a single pass - may involve > 1 pass.
+  // If the multi-page problem is found in >= 1 passes, we'll have at least one more failure than
+  // previous count which was 2, so we're looking for >= 3 here.
+  EXPECT_GE(allocator_.failed_guard_region_checks(), 3u);
+
+  printf("write over first 32 pages of former vmo's location...\n");
+
+  uint64_t count_before = allocator_.failed_guard_region_checks();
+  for (uint64_t offset = 0; offset < 32 * zx_system_get_page_size(); ++offset) {
+    EXPECT_OK(allocator_.GetPoolVmoForTest().write(&data_to_write, vmo_offset + offset,
+                                                   sizeof(data_to_write)));
+  }
+  loop.RunFor(zx::sec(loop_time_seconds));
+  EXPECT_LT(count_before, allocator_.failed_guard_region_checks());
+
+  printf("done\n");
 }
 
 TEST_F(ContiguousPooledSystem, FreeRegionReporting) {
