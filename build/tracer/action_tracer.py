@@ -833,9 +833,7 @@ def main():
 
     # Paths that are ignored
     ignored_prefixes = {
-        # Allow actions to access prebuilts that are not declared as inputs
-        # (until we fix all instances of this)
-        os.path.join(src_root, "prebuilt/"),
+        ### Git
         # Allow actions to run `git` commands.
         # Actions can set certain refs under .git as inputs to trigger on
         # relevant changes to git. However fully predicting what files will be
@@ -846,19 +844,39 @@ def main():
         os.path.join(src_root, "third_party", "mesa", ".git/"),
         os.path.join(src_root, "third_party", "glslang", ".git/"),
         os.path.join(src_root, "third_party", "spirv-tools", ".git/"),
+
+        ### C/C++
+        # Clang standard libraries, compiler runtime, etc are not strict inputs.
+        os.path.join(src_root, "prebuilt", "third_party", "clang", "linux-x64", "lib", "clang/"),
+
+        ### Python
+        # Python scripts access Python prebuilts for the interpreter,
+        # standard library, and other things that are not strict inputs
+        # to Python scripts.
+        os.path.join(src_root, "prebuilt", "third_party", "python3/"),
+
+        ### Dart
         # TODO(jayzhuang): flutter's dart_libraries currently don't have sources
         # listed, fix that and remove this exception.
         os.path.join(src_root, "third_party", "dart-pkg", "git", "flutter/"),
-
+        # Dart provides prebuilt libs and their snapshots for its standard libraries
+        # that are not strict inputs to Dart programs.
+        os.path.join(src_root, "prebuilt", "third_party", "dart/"),
         # The Dart format and analyzer want to write to $HOME/.dart/...
         # but there is no HOME defined when running `fx build`, so they end
         # up writing to the output directory instead. Ignore these since this
         # is harmless. This is favored to setting a fake HOME value in
         # the `hermetic-env` script (used by `fx build`), because it allows
         # catching other tools trying to write to $HOME in the future.
-        #
         # This only affects local builds.
         os.path.join(os.getcwd(), ".dart/"),
+
+        ### Flutter
+        # Implicit engine deps
+        os.path.join(src_root, "prebuilt", "third_party", "sky_engine", "lib/"),
+
+        ### Misc
+        os.path.join(src_root, "prebuilt", "third_party", "breakpad/"),
     }
     ignored_suffixes = {
         # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`
