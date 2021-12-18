@@ -48,6 +48,7 @@ template("fidl_rust") {
     inputs = [
       json_representation,
       "//rustfmt.toml",
+      "$fidl_rust_dir/bin/rustfmt",
       "$fidl_rust_dir/.versions/rust.cipd_version",
     ]
 
