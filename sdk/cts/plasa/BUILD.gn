@@ -70,6 +70,7 @@ action("filter_compdb") {
     "${root_build_dir}/compile_commands.json",
     script,
   ]
+  inputs = [ _jq ]
   outputs = [
     _stamp_file,
     _output,

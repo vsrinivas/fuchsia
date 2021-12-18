@@ -81,6 +81,7 @@ template("input_test") {
     ]
 
     sources = get_target_outputs(deps[0]) + get_target_outputs(deps[1])
+    inputs = [ jq_path ]
     outputs = [ "$target_out_dir/$test_name.ok" ]
     script = "json-diff.sh"
     args = rebase_path([ jq_path ] + outputs + sources, root_build_dir)

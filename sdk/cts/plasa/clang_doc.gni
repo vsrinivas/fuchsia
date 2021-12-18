@@ -34,6 +34,7 @@ template("clang_doc") {
     inputs = [
       #"${clang_prefix}/clang-doc",
       _input_compdb,
+      _jq,
       invoker.stub_file,
     ]
     outputs = [
