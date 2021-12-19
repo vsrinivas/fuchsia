@@ -30,7 +30,7 @@ type PinWeaverError = strict enum : uint32 {
 };
 
 /// Maximum number of delay schedule entries.
-const DELAY_SCHEDULE_MAX_COUNT uint32 = 32;
+const DELAY_SCHEDULE_MAX_COUNT uint32 = 16;
 /// Maximum size of the credential metadata.
 const CREDENTIAL_METADATA_MAX_SIZE uint32 = 2048;
 /// Maximum size of a low entropy secret
