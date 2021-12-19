@@ -847,7 +847,9 @@ def main():
 
         ### C/C++
         # Clang standard libraries, compiler runtime, etc are not strict inputs.
-        os.path.join(src_root, "prebuilt", "third_party", "clang", "linux-x64", "lib", "clang/"),
+        os.path.join(
+            src_root, "prebuilt", "third_party", "clang", "linux-x64", "lib",
+            "clang/"),
 
         ### Python
         # Python scripts access Python prebuilts for the interpreter,
@@ -874,9 +876,6 @@ def main():
         ### Flutter
         # Implicit engine deps
         os.path.join(src_root, "prebuilt", "third_party", "sky_engine", "lib/"),
-
-        ### Misc
-        os.path.join(src_root, "prebuilt", "third_party", "breakpad/"),
     }
     ignored_suffixes = {
         # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`

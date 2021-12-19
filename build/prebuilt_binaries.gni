@@ -22,6 +22,12 @@ template("prebuilt_binaries") {
     tool = "//tools/debug/generate_breakpad"
     outputs = [ binary_manifest ]
 
+    if (is_linux) {
+      # The breakpad dumpsyms prebuilt is only available for
+      # and exercised on Linux at this time.
+      inputs = [ breakpad_dump_syms_prebuilt ]
+    }
+
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [

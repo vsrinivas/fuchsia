@@ -2,8 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Path to the breakpad `dump_syms` prebuilt binary for inputs.
+# pass the below as inputs.
+breakpad_dump_syms_prebuilt =
+    "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms"
+
 # Path to the breakpad 'dump_syms' prebuilt binary.
-breakpad_dump_syms =
-    rebase_path(
-        "//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms",
-        root_build_dir)
+# If passing this as action args, add `breakpad_dump_syms_prebuilt` as action inputs.
+breakpad_dump_syms = rebase_path(breakpad_dump_syms_prebuilt, root_build_dir)

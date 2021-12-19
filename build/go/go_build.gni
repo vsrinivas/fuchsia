@@ -378,12 +378,14 @@ template("go_build") {
       variant_selector_target_type = "fuzzed_executable"
     }
 
+    inputs = []
     if (is_fuchsia) {
       if (!carchive && output_breakpad_syms && host_os != "mac") {
         args += [
           "--dump-syms",
           breakpad_dump_syms,
         ]
+        inputs += [ breakpad_dump_syms_prebuilt ]
       }
     }
 
@@ -411,7 +413,7 @@ template("go_build") {
       deps += invoker.deps
       args += [ "--go-dep-files" ]
       args += go_deps_paths
-      inputs = go_deps_inputs
+      inputs += go_deps_inputs
     }
 
     foreach(gopackage, invoker.gopackages) {
