@@ -53,7 +53,6 @@ group("non_hermetic_deps") {
   # //build/images/assemble_system.gni no longer needs `hermetic_deps = false`.
   visibility += [
     "//build/images/*",
-    "//build/images/assembly/*",
     "//build/images/fuchsia/*",
     "//build/images/guest/*",
     "//build/images/recovery/*",
