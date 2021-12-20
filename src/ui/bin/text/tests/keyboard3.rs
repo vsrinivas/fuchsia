@@ -444,6 +444,42 @@ fn inject_key_and_receive_keyboard_protocol_message(
             => (Some(input::Key::Backspace),
                 Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Backspace)));
             "only_key_meaning_backspace")]
+#[test_case(input::Key::Down, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Down)
+            => (Some(input::Key::Down),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Down)));
+            "arrow_down")]
+#[test_case(None, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Down)
+            => (None,
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Down)));
+            "only_key_meaning_arrow_down")]
+#[test_case(input::Key::Up, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Up)
+            => (Some(input::Key::Up),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Up)));
+            "arrow_up")]
+#[test_case(input::Key::Left, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Left)
+            => (Some(input::Key::Left),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Left)));
+            "arrow_left")]
+#[test_case(input::Key::Right, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Right)
+            => (Some(input::Key::Right),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Right)));
+            "arrow_right")]
+#[test_case(input::Key::End, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::End)
+            => (Some(input::Key::End),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::End)));
+            "end")]
+#[test_case(input::Key::Home, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Home)
+            => (Some(input::Key::Home),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::Home)));
+            "home")]
+#[test_case(input::Key::PageDown, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::PageDown)
+            => (Some(input::Key::PageDown),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::PageDown)));
+            "page_down")]
+#[test_case(input::Key::PageUp, ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::PageUp)
+            => (Some(input::Key::PageUp),
+                Some(ui_input3::KeyMeaning::NonPrintableKey(ui_input3::NonPrintableKey::PageUp)));
+            "page_up")]
 fn test_inject_key_yields_expected_key_and_key_meaning(
     key: impl Into<Option<input::Key>>,
     key_meaning: impl Into<test_helpers::KeyMeaningWrapper>,

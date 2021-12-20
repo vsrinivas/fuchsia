@@ -29,23 +29,57 @@ type KeyEventType = strict enum {
 ///
 /// The definition of each key is derived from W3C named values of a key attribute:
 /// https://www.w3.org/TR/uievents-key/#named-key-attribute-values
+///
+/// The space of the arrow keys is subdivided roughly to correspond to the
+/// subsections of section 3 of that document.  The choice for the section
+/// values is arbitrary, so long as blocks of values are allocated at once, and
+/// the keys with similar purpose are kept together.
 type NonPrintableKey = flexible enum : uint32 {
     // Whitespace keys
     // Reserved range: 0x00000031 - 0x00000040
 
     /// The Enter or ↵ key, to activate current selection or accept current input.
     /// This key value is also used for the Return (Macintosh numpad) key.
-    ENTER = 0x00000031;
+    ENTER = 0x31;
 
     /// The Horizontal Tabulation Tab key.
-    TAB = 0x00000032;
+    TAB = 0x32;
 
     // Editing keys
     // Reserved range: 0x00000041 - 0x00000060
 
     /// Delete the character immediately preceding the cursor (i.e. the
     /// character to the left for LTR languages).
-    BACKSPACE = 0x00000041;
+    BACKSPACE = 0x41;
+
+    // Navigation keys
+    // Range reserved for navigation keys: 0x61-0x81.
+    // Arrow keys are named for consistency with keys in `fuchsia.ui.input`,
+    // althought W3C name them ArrowUp for example, and not Up.
+
+    /// The down arrow navigation key.
+    DOWN = 0x61;
+
+    /// The left arrow navigation key.
+    LEFT = 0x62;
+
+    /// The right arrow navigation key.
+    RIGHT = 0x63;
+
+    /// The up arrow navigation key.
+    UP = 0x64;
+
+    /// The "End" key.
+    END = 0x65;
+
+    /// The "Home" key.
+    HOME = 0x66;
+
+    /// The "Page Down" key.
+    PAGE_DOWN = 0x67;
+
+    /// The "Page Up" key.
+    PAGE_UP = 0x68;
 };
 
 /// The meaning of the key press. This is typically the Unicode codepoint inserted

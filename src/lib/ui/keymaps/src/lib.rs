@@ -71,6 +71,14 @@ impl<'a> Keymap<'a> {
             Key::Enter => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Enter)),
             Key::Tab => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)),
             Key::Backspace => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Backspace)),
+            Key::Up => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Up)),
+            Key::Down => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Down)),
+            Key::Left => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Left)),
+            Key::Right => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Right)),
+            Key::End => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::End)),
+            Key::Home => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Home)),
+            Key::PageUp => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::PageUp)),
+            Key::PageDown => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::PageDown)),
             // Printable keys get code points as key meanings.
             _ => self
                 .hid_usage_to_code_point(hid_usage, modifier_state, lock_state)
