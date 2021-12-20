@@ -119,10 +119,22 @@ impl Into<zx::Status> for CreateRealmError {
                     zx::Status::INTERNAL
                 }
                 fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. })
+                | fcomponent::error::Error::ConnectToServer(anyhow::Error { .. })
+                | fcomponent::error::Error::FailedToCreateChild(anyhow::Error { .. })
+                | fcomponent::error::Error::FailedToDestroyChild(anyhow::Error { .. })
                 | fcomponent::error::Error::FailedToBind(anyhow::Error { .. }) => {
                     zx::Status::INTERNAL
                 }
+                fcomponent::error::Error::ServerError(e) => {
+                    let _: ftest::RealmBuilderError2 = e;
+                    zx::Status::INTERNAL
+                }
+                fcomponent::error::Error::RefUsedInWrongRealm(
+                    fcomponent::new::Ref { .. },
+                    String { .. },
+                ) => zx::Status::INTERNAL,
                 fcomponent::error::Error::DestroyWaiterTaken
+                | fcomponent::error::Error::MissingSource
                 | fcomponent::error::Error::EventRoutesOnlySupportedOnBuilder => {
                     zx::Status::INTERNAL
                 }

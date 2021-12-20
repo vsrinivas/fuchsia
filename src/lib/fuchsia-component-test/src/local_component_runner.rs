@@ -7,9 +7,9 @@ use {
     fidl::endpoints::{
         create_request_stream, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd,
     },
-    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
-    fuchsia_async as fasync,
-    futures::{future::BoxFuture, select, FutureExt, TryStreamExt},
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    futures::{future::BoxFuture, lock::Mutex, select, FutureExt, TryStreamExt},
     io_util,
     runner::get_value as get_dictionary_value,
     std::{collections::HashMap, path::Path, sync::Arc},
@@ -22,12 +22,13 @@ use {
 
 const LOCAL_COMPONENT_NAME_KEY: &'static str = "LOCAL_COMPONENT_NAME";
 
-/// The handles from the framework over which the mock should interact with other components.
+/// The handles from the framework over which the local component should interact with other
+/// components.
 pub struct LocalComponentHandles {
     namespace: HashMap<String, fio::DirectoryProxy>,
 
-    /// The outgoing directory handle for a mock component. This can be used to run a ServiceFs for
-    /// the mock.
+    /// The outgoing directory handle for a local component. This can be used to run a ServiceFs
+    /// for the component.
     pub outgoing_dir: ServerEnd<fio::DirectoryMarker>,
 }
 
@@ -63,7 +64,7 @@ impl LocalComponentHandles {
         let svc_dir_proxy = self
             .namespace
             .get(&"/svc".to_string())
-            .ok_or(format_err!("the mock's namespace doesn't have a /svc directory"))?;
+            .ok_or(format_err!("the component's namespace doesn't have a /svc directory"))?;
         let node_proxy = io_util::open_node(
             svc_dir_proxy,
             Path::new(name),
@@ -77,7 +78,7 @@ impl LocalComponentHandles {
         ))
     }
 
-    /// Clones a directory from the mock's namespace.
+    /// Clones a directory from the local component's namespace.
     ///
     /// Note that this function only works on exact matches from the namespace. For example if the
     /// namespace had a `data` entry in it, and the caller wished to open the subdirectory at
@@ -86,65 +87,85 @@ impl LocalComponentHandles {
     /// scenario, passing `data/assets` in its entirety to this function would fail.
     ///
     /// ```
-    /// let data_dir = mock_handles.clone_from_namespace("data")?;
+    /// let data_dir = handles.clone_from_namespace("data")?;
     /// let assets_dir = io_util::open_directory(&data_dir, Path::new("assets"), ...)?;
     /// ```
     pub fn clone_from_namespace(&self, directory_name: &str) -> Result<fio::DirectoryProxy, Error> {
         let dir_proxy = self.namespace.get(&format!("/{}", directory_name)).ok_or(format_err!(
-            "the mock's namespace doesn't have a /{} directory",
+            "the local component's namespace doesn't have a /{} directory",
             directory_name
         ))?;
         io_util::clone_directory(dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
     }
 }
 
-#[derive(Clone)]
-struct LocalComponentRunnerBuilder {
-    local_component_implementations: HashMap<
-        String,
-        Arc<
-            dyn Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>>
-                + Sync
-                + Send
-                + 'static,
-        >,
+type LocalComponentImplementations = HashMap<
+    String,
+    Arc<
+        dyn Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>>
+            + Sync
+            + Send
+            + 'static,
     >,
+>;
+
+#[derive(Clone, Debug)]
+pub struct LocalComponentRunnerBuilder {
+    local_component_implementations: Arc<Mutex<Option<LocalComponentImplementations>>>,
 }
 
 impl LocalComponentRunnerBuilder {
-    #[allow(unused)]
-    fn new() -> Self {
-        Self { local_component_implementations: HashMap::new() }
+    pub fn new() -> Self {
+        Self { local_component_implementations: Arc::new(Mutex::new(Some(HashMap::new()))) }
     }
 
-    #[allow(unused)]
-    fn register_local_component<I>(&mut self, moniker: String, implementation: I)
+    pub(crate) async fn register_local_component<I>(
+        &self,
+        name: String,
+        implementation: I,
+    ) -> Result<(), ftest::RealmBuilderError2>
     where
         I: Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>>
             + Sync
             + Send
             + 'static,
     {
-        self.local_component_implementations.insert(moniker, Arc::new(implementation));
+        self.local_component_implementations
+            .lock()
+            .await
+            .as_mut()
+            .ok_or(ftest::RealmBuilderError2::BuildAlreadyCalled)?
+            .insert(name, Arc::new(implementation));
+        Ok(())
     }
 
-    #[allow(unused)]
-    fn build(self) -> (ClientEnd<fcrunner::ComponentRunnerMarker>, fasync::Task<()>) {
+    pub(crate) async fn build(
+        self,
+    ) -> Result<
+        (ClientEnd<fcrunner::ComponentRunnerMarker>, fasync::Task<()>),
+        ftest::RealmBuilderError2,
+    > {
+        let local_component_implementations = self
+            .local_component_implementations
+            .lock()
+            .await
+            .take()
+            .ok_or(ftest::RealmBuilderError2::BuildAlreadyCalled)?;
         let (runner_client_end, runner_request_stream) =
             create_request_stream::<fcrunner::ComponentRunnerMarker>()
                 .expect("failed to create channel pair");
-        let runner = LocalComponentRunner::new(self.local_component_implementations);
+        let runner = LocalComponentRunner::new(local_component_implementations);
         let runner_task = fasync::Task::local(async move {
             if let Err(e) = runner.handle_stream(runner_request_stream).await {
                 error!("failed to run local component runner: {:?}", e);
             }
         });
 
-        (runner_client_end, runner_task)
+        Ok((runner_client_end, runner_task))
     }
 }
 
-struct LocalComponentRunner {
+pub struct LocalComponentRunner {
     execution_scope: ExecutionScope,
     local_component_implementations: HashMap<
         String,
@@ -164,7 +185,6 @@ impl Drop for LocalComponentRunner {
 }
 
 impl LocalComponentRunner {
-    #[allow(unused)]
     fn new(
         local_component_implementations: HashMap<
             String,
@@ -186,11 +206,12 @@ impl LocalComponentRunner {
         while let Some(req) = runner_request_stream.try_next().await? {
             match req {
                 fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
-                    if !start_info.numbered_handles.as_ref().map(|v| v.is_empty()).unwrap_or(false)
-                    {
-                        return Err(format_err!(
-                            "realm builder runner does not support numbered handles"
-                        ));
+                    if let Some(numbered_handles) = start_info.numbered_handles.as_ref() {
+                        if !numbered_handles.is_empty() {
+                            return Err(format_err!(
+                                "realm builder runner does not support numbered handles"
+                            ));
+                        }
                     }
                     let program = start_info
                         .program
@@ -285,28 +306,36 @@ mod tests {
 
     #[fuchsia::test]
     async fn runner_builder_correctly_stores_a_function() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
         let (sender, receiver) = oneshot::channel();
         let sender = Arc::new(Mutex::new(Some(sender)));
 
         let component_name = "test".to_string();
 
-        runner_builder.register_local_component(component_name.clone(), move |_handles| {
-            let sender = sender.clone();
-            async move {
-                let sender = sender.lock().await.take().expect("local component invoked twice");
-                sender.send(()).expect("failed to send");
-                Ok(())
-            }
-            .boxed()
-        });
+        runner_builder
+            .register_local_component(component_name.clone(), move |_handles| {
+                let sender = sender.clone();
+                async move {
+                    let sender = sender.lock().await.take().expect("local component invoked twice");
+                    sender.send(()).expect("failed to send");
+                    Ok(())
+                }
+                .boxed()
+            })
+            .await
+            .unwrap();
 
         let (_, outgoing_dir) = create_proxy().unwrap();
         let handles = LocalComponentHandles { namespace: HashMap::new(), outgoing_dir };
         let local_component_implementation = runner_builder
             .local_component_implementations
+            .lock()
+            .await
+            .as_ref()
+            .unwrap()
             .get(&component_name)
-            .expect("local component missing from runner builder");
+            .expect("local component missing from runner builder")
+            .clone();
 
         (*local_component_implementation)(handles)
             .await
@@ -322,11 +351,11 @@ mod tests {
         controller_proxy: fcrunner::ComponentControllerProxy,
     }
 
-    fn build_and_start(
+    async fn build_and_start(
         runner_builder: LocalComponentRunnerBuilder,
         component_to_start: String,
     ) -> RunnerAndHandles {
-        let (component_runner_client_end, runner_task) = runner_builder.build();
+        let (component_runner_client_end, runner_task) = runner_builder.build().await.unwrap();
         let component_runner_proxy = component_runner_client_end.into_proxy().unwrap();
 
         let (runtime_dir_proxy, runtime_dir_server_end) = create_proxy().unwrap();
@@ -364,37 +393,42 @@ mod tests {
 
     #[fuchsia::test]
     async fn the_runner_runs_a_component() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
         let (sender, receiver) = oneshot::channel();
         let sender = Arc::new(Mutex::new(Some(sender)));
 
         let component_name = "test".to_string();
 
-        runner_builder.register_local_component(component_name.clone(), move |_handles| {
-            let sender = sender.clone();
-            async move {
-                let sender = sender.lock().await.take().expect("local component invoked twice");
-                sender.send(()).expect("failed to send");
-                Ok(())
-            }
-            .boxed()
-        });
+        runner_builder
+            .register_local_component(component_name.clone(), move |_handles| {
+                let sender = sender.clone();
+                async move {
+                    let sender = sender.lock().await.take().expect("local component invoked twice");
+                    sender.send(()).expect("failed to send");
+                    Ok(())
+                }
+                .boxed()
+            })
+            .await
+            .unwrap();
 
-        let _runner_and_handles = build_and_start(runner_builder, component_name);
+        let _runner_and_handles = build_and_start(runner_builder, component_name).await;
 
         let () = receiver.await.expect("failed to receive");
     }
 
     #[fuchsia::test]
     async fn the_runner_services_the_runtime_dir() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
 
         let component_name = "test".to_string();
 
         runner_builder
-            .register_local_component(component_name.clone(), move |_handles| pending().boxed());
+            .register_local_component(component_name.clone(), move |_handles| pending().boxed())
+            .await
+            .unwrap();
 
-        let runner_and_handles = build_and_start(runner_builder, component_name.clone());
+        let runner_and_handles = build_and_start(runner_builder, component_name.clone()).await;
 
         let dir_entries =
             readdir(&runner_and_handles.runtime_dir_proxy).await.expect("failed to readdir");
@@ -418,28 +452,31 @@ mod tests {
 
     #[fuchsia::test]
     async fn the_runner_gives_the_component_its_outgoing_dir() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
         let (sender, receiver) = oneshot::channel::<ServerEnd<fio::DirectoryMarker>>();
         let sender = Arc::new(Mutex::new(Some(sender)));
 
         let component_name = "test".to_string();
 
-        runner_builder.register_local_component(component_name.clone(), move |handles| {
-            let sender = sender.clone();
-            async move {
-                sender
-                    .lock()
-                    .await
-                    .take()
-                    .expect("local component invoked twice")
-                    .send(handles.outgoing_dir)
-                    .expect("failed to send");
-                Ok(())
-            }
-            .boxed()
-        });
+        runner_builder
+            .register_local_component(component_name.clone(), move |handles| {
+                let sender = sender.clone();
+                async move {
+                    sender
+                        .lock()
+                        .await
+                        .take()
+                        .expect("local component invoked twice")
+                        .send(handles.outgoing_dir)
+                        .expect("failed to send");
+                    Ok(())
+                }
+                .boxed()
+            })
+            .await
+            .unwrap();
 
-        let runner_and_handles = build_and_start(runner_builder, component_name.clone());
+        let runner_and_handles = build_and_start(runner_builder, component_name.clone()).await;
 
         let outgoing_dir_server_end = receiver.await.expect("failed to receive");
 
@@ -461,24 +498,28 @@ mod tests {
 
     #[fuchsia::test]
     async fn controller_stop_will_stop_a_component() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
         let (sender, receiver) = oneshot::channel::<()>();
         let sender = Arc::new(Mutex::new(Some(sender)));
 
         let component_name = "test".to_string();
 
-        runner_builder.register_local_component(component_name.clone(), move |_handles| {
-            let sender = sender.clone();
-            async move {
-                let _sender = sender.lock().await.take().expect("local component invoked twice");
-                // Don't use sender, we want to detect when it gets dropped, which causes an error
-                // to appear on receiver.
-                pending().await
-            }
-            .boxed()
-        });
+        runner_builder
+            .register_local_component(component_name.clone(), move |_handles| {
+                let sender = sender.clone();
+                async move {
+                    let _sender =
+                        sender.lock().await.take().expect("local component invoked twice");
+                    // Don't use sender, we want to detect when it gets dropped, which causes an error
+                    // to appear on receiver.
+                    pending().await
+                }
+                .boxed()
+            })
+            .await
+            .unwrap();
 
-        let runner_and_handles = build_and_start(runner_builder, component_name);
+        let runner_and_handles = build_and_start(runner_builder, component_name).await;
         runner_and_handles.controller_proxy.stop().expect("failed to send stop");
         // TODO: once we support notifying a component implementation that it's about to be
         // stopped, test for that here
@@ -488,24 +529,28 @@ mod tests {
 
     #[fuchsia::test]
     async fn controller_kill_will_kill_a_component() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
         let (sender, receiver) = oneshot::channel::<()>();
         let sender = Arc::new(Mutex::new(Some(sender)));
 
         let component_name = "test".to_string();
 
-        runner_builder.register_local_component(component_name.clone(), move |_handles| {
-            let sender = sender.clone();
-            async move {
-                let _sender = sender.lock().await.take().expect("local component invoked twice");
-                // Don't use sender, we want to detect when it gets dropped, which causes an error
-                // to appear on receiver.
-                pending().await
-            }
-            .boxed()
-        });
+        runner_builder
+            .register_local_component(component_name.clone(), move |_handles| {
+                let sender = sender.clone();
+                async move {
+                    let _sender =
+                        sender.lock().await.take().expect("local component invoked twice");
+                    // Don't use sender, we want to detect when it gets dropped, which causes an error
+                    // to appear on receiver.
+                    pending().await
+                }
+                .boxed()
+            })
+            .await
+            .unwrap();
 
-        let runner_and_handles = build_and_start(runner_builder, component_name);
+        let runner_and_handles = build_and_start(runner_builder, component_name).await;
         runner_and_handles.controller_proxy.kill().expect("failed to send stop");
 
         assert_eq!(Err(oneshot::Canceled), receiver.await);
@@ -513,24 +558,28 @@ mod tests {
 
     #[fuchsia::test]
     async fn dropping_the_runner_will_kill_a_component() {
-        let mut runner_builder = LocalComponentRunnerBuilder::new();
+        let runner_builder = LocalComponentRunnerBuilder::new();
         let (sender, receiver) = oneshot::channel::<()>();
         let sender = Arc::new(Mutex::new(Some(sender)));
 
         let component_name = "test".to_string();
 
-        runner_builder.register_local_component(component_name.clone(), move |_handles| {
-            let sender = sender.clone();
-            async move {
-                let _sender = sender.lock().await.take().expect("local component invoked twice");
-                // Don't use sender, we want to detect when it gets dropped, which causes an error
-                // to appear on receiver.
-                pending().await
-            }
-            .boxed()
-        });
+        runner_builder
+            .register_local_component(component_name.clone(), move |_handles| {
+                let sender = sender.clone();
+                async move {
+                    let _sender =
+                        sender.lock().await.take().expect("local component invoked twice");
+                    // Don't use sender, we want to detect when it gets dropped, which causes an error
+                    // to appear on receiver.
+                    pending().await
+                }
+                .boxed()
+            })
+            .await
+            .unwrap();
 
-        let runner_and_handles = build_and_start(runner_builder, component_name);
+        let runner_and_handles = build_and_start(runner_builder, component_name).await;
         drop(runner_and_handles);
 
         assert_eq!(Err(oneshot::Canceled), receiver.await);

@@ -3,25 +3,48 @@
 // found in the LICENSE file.
 
 use {
-    crate::{event, Moniker},
-    anyhow, cm_rust, fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_test as ftest,
+    crate::{event, new::Ref, Moniker},
+    anyhow, fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_test as ftest,
     thiserror::{self, Error},
 };
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("error encountered while loading realm")]
-    Builder(#[from] BuilderError),
+    #[error("route is missing source")]
+    MissingSource,
 
-    #[error("error encountered while assembling realm")]
-    Realm(#[from] RealmError),
-
-    #[error("error encountered while assembling realm")]
-    Event(#[from] EventError),
+    #[error("the realm builder server returned an error: {0:?}")]
+    ServerError(ftest::RealmBuilderError2),
 
     #[error("an internal error was encountered while working with the realm builder server")]
     FidlError(#[from] fidl::Error),
 
+    #[error("error encountered while assembling realm")]
+    Event(#[from] EventError),
+
+    #[error("failed to open \"/pkg\": {0:?}")]
+    FailedToOpenPkgDir(anyhow::Error),
+
+    #[error("failed to connect to realm builder server: {0:?}")]
+    ConnectToServer(anyhow::Error),
+
+    #[error("unable to destroy realm, the destroy waiter for root has already been taken")]
+    DestroyWaiterTaken,
+
+    #[error("failed to bind to realm: {0:?}")]
+    FailedToBind(anyhow::Error),
+
+    #[error("failed to create child: {0:?}")]
+    FailedToCreateChild(anyhow::Error),
+
+    #[error("failed to destroy child: {0:?}")]
+    FailedToDestroyChild(anyhow::Error),
+
+    #[error("unable to use reference {0} in realm {1:?}")]
+    RefUsedInWrongRealm(Ref, String),
+
+    // NOTE: everything below this line in Error will be deleted once the soft migration to the new
+    // protocol is complete
     #[error("failed to set component decl for {0}: {1:?}")]
     FailedToSetDecl(Moniker, ftest::RealmBuilderError),
 
@@ -31,26 +54,23 @@ pub enum Error {
     #[error("failed to mark component {0} as eager: {1:?}")]
     FailedToMarkAsEager(Moniker, ftest::RealmBuilderError),
 
+    #[error("error encountered while loading realm")]
+    Builder(#[from] BuilderError),
+
+    #[error("error encountered while assembling realm")]
+    Realm(#[from] RealmError),
+
     #[error("failed to commit realm: {0:?}")]
     FailedToCommit(ftest::RealmBuilderError),
 
     #[error("failed to route capability: {0:?}")]
     FailedToRoute(ftest::RealmBuilderError),
 
-    #[error("failed to open \"/pkg\": {0:?}")]
-    FailedToOpenPkgDir(anyhow::Error),
-
     #[error("failed to set package directory: {0:?}")]
     FailedToSetPkgDir(ftest::RealmBuilderError),
 
-    #[error("unable to destroy realm, the destroy waiter for root has already been taken")]
-    DestroyWaiterTaken,
-
     #[error("routes for event capabilities must be provided to a RealmBuilder, not a Realm")]
     EventRoutesOnlySupportedOnBuilder,
-
-    #[error("failed to bind to realm: {0:?}")]
-    FailedToBind(anyhow::Error),
 }
 
 #[derive(Debug, Error)]
@@ -100,8 +120,11 @@ pub enum EventError {
     #[error("route targets cannot be empty")]
     EmptyRouteTargets,
 
-    #[error("can't route a capability to the same place it comes from: {:?}", _0)]
+    #[error("can't route a capability to the same place it comes from: {0:?}")]
     RouteSourceAndTargetMatch(event::CapabilityRoute),
+
+    #[error("failed to add route because event capabilities cannot be exposed")]
+    EventsCannotBeExposed,
 
     #[error("route target {} doesn't exist", _0)]
     MissingRouteTarget(Moniker),
@@ -113,9 +136,12 @@ pub enum EventError {
 
     #[error("failed to add route because {:?} is already being offered by {:?} to {:?} from {:?}", _0.capability, _1, _2, _3)]
     ConflictingOffers(event::CapabilityRoute, Moniker, cm_rust::OfferTarget, String),
+}
 
-    #[error("failed to add route because event capabilities cannot be exposed")]
-    EventsCannotBeExposed,
+impl From<ftest::RealmBuilderError2> for Error {
+    fn from(err: ftest::RealmBuilderError2) -> Self {
+        Self::ServerError(err)
+    }
 }
 
 // TODO: Define an error type for ScopedInstance

@@ -34,6 +34,7 @@ pub mod error;
 mod event;
 mod local_component_runner;
 pub mod mock;
+pub mod new;
 
 pub use local_component_runner::LocalComponentHandles;
 
@@ -485,16 +486,43 @@ impl RealmInstance {
 #[derive(Debug, Clone)]
 pub struct ChildOptions {
     startup: fdecl::StartupMode,
+    environment: Option<String>,
+    on_terminate: fdecl::OnTerminate,
 }
 
 impl ChildOptions {
     pub fn new() -> Self {
-        Self { startup: fdecl::StartupMode::Lazy }
+        Self {
+            startup: fdecl::StartupMode::Lazy,
+            environment: None,
+            on_terminate: fdecl::OnTerminate::None,
+        }
     }
 
     pub fn eager(mut self) -> Self {
         self.startup = fdecl::StartupMode::Eager;
         self
+    }
+
+    pub fn environment(mut self, environment: impl Into<String>) -> Self {
+        self.environment = Some(environment.into());
+        self
+    }
+
+    pub fn reboot_on_terminate(mut self) -> Self {
+        self.on_terminate = fdecl::OnTerminate::Reboot;
+        self
+    }
+}
+
+impl Into<ftest::ChildOptions> for ChildOptions {
+    fn into(self) -> ftest::ChildOptions {
+        ftest::ChildOptions {
+            startup: Some(self.startup),
+            environment: self.environment,
+            on_terminate: Some(self.on_terminate),
+            ..ftest::ChildOptions::EMPTY
+        }
     }
 }
 
