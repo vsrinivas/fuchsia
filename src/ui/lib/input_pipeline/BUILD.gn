@@ -90,6 +90,7 @@ rustc_library("input_pipeline") {
     "src/media_buttons_handler.rs",
     "src/modifier_handler.rs",
     "src/mouse_binding.rs",
+    "src/mouse_injector_handler.rs",
     "src/shortcut_handler.rs",
     "src/testing_utilities.rs",
     "src/text_settings_handler.rs",

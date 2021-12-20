@@ -410,6 +410,37 @@ pub fn create_mouse_event(
     )
 }
 
+/// Creates a [`pointerinjector::Event`] representing a mouse event.
+///
+/// # Parameters
+/// - `phase`: The phase of the touch contact.
+/// - `contact`: The touch contact to create the event for.
+/// - `position`: The position of the contact in the viewport space.
+/// - `event_time`: The time in nanoseconds when the event was first recorded.
+pub fn create_mouse_pointer_sample_event(
+    phase: pointerinjector::EventPhase,
+    buttons: Vec<mouse_binding::MouseButton>,
+    position: crate::utils::Position,
+    event_time: input_device::EventTime,
+) -> pointerinjector::Event {
+    let pointer_sample = pointerinjector::PointerSample {
+        pointer_id: Some(0),
+        phase: Some(phase),
+        position_in_viewport: Some([position.x, position.y]),
+        scroll_v: None,
+        scroll_h: None,
+        pressed_buttons: Some(buttons),
+        ..pointerinjector::PointerSample::EMPTY
+    };
+    let data = pointerinjector::Data::PointerSample(pointer_sample);
+
+    pointerinjector::Event {
+        timestamp: Some(event_time.try_into().unwrap()),
+        data: Some(data),
+        ..pointerinjector::Event::EMPTY
+    }
+}
+
 /// Creates a [`fidl_input_report::InputReport`] with a touch report.
 ///
 /// # Parameters
