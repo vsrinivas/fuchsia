@@ -19,14 +19,10 @@ zx_status_t v1_bind(void* ctx, zx_device_t* dev) {
     return status;
   }
 
-  zx_device_prop_t prop{
-      .id = BIND_PROTOCOL,
-      .value = bind::fuchsia::test::BIND_PROTOCOL_DEVICE,
-  };
   device_add_args_t args{
       .name = "leaf",
-      .props = &prop,
-      .prop_count = 1,
+      .prop_count = 0,
+      .proto_id = bind::fuchsia::test::BIND_PROTOCOL_DEVICE,
   };
   zx_device_t* out = nullptr;
   return device_add(dev, &args, &out);

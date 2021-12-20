@@ -94,6 +94,9 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
         .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(id))
         .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value));
   }
+  props.emplace_back(arena)
+      .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
+      .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(zx_args->proto_id));
   fdf::wire::NodeAddArgs args(arena);
   auto valid_name = MakeValidName(zx_args->name);
   args.set_name(arena, fidl::StringView::FromExternal(valid_name))
