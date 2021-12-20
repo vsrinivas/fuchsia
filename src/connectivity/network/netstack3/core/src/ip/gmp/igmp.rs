@@ -7,14 +7,13 @@
 //! IGMPv2 is a communications protocol used by hosts and adjacent routers on
 //! IPv4 networks to establish multicast group memberships.
 
-use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
 use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::{debug, error, trace};
 use net_types::ip::{AddrSubnet, Ipv4, Ipv4Addr};
-use net_types::{MulticastAddr, SpecifiedAddr, SpecifiedAddress, Witness};
+use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use packet::{BufferMut, EmptyBuf, InnerPacketBuilder, Serializer};
 use packet_formats::igmp::{
     messages::{IgmpLeaveGroup, IgmpMembershipReportV1, IgmpMembershipReportV2, IgmpPacket},
@@ -32,8 +31,8 @@ use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext
 use crate::device::link::LinkDevice;
 use crate::device::DeviceIdContext;
 use crate::ip::gmp::{
-    Action, Actions, GmpAction, GmpHandler, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
-    MulticastGroupSet, ProtocolSpecific,
+    handle_gmp_message, Action, Actions, GmpAction, GmpContext, GmpHandler, GmpMessage,
+    GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet, ProtocolSpecific,
 };
 use crate::Instant;
 
@@ -86,7 +85,7 @@ impl<D: LinkDevice, C: IgmpContext<D>> GmpHandler<D, Ipv4> for C {
         let (state, rng) = self.get_state_rng_with(device);
         state
             .join_group_gmp(group_addr, rng, now)
-            .map(|actions| run_actions(self, device, actions, group_addr))
+            .map(|actions| self.run_actions(device, actions, group_addr))
     }
 
     fn gmp_leave_group(
@@ -96,7 +95,7 @@ impl<D: LinkDevice, C: IgmpContext<D>> GmpHandler<D, Ipv4> for C {
     ) -> GroupLeaveResult {
         self.get_state_mut_with(device)
             .leave_group_gmp(group_addr)
-            .map(|actions| run_actions(self, device, actions, group_addr))
+            .map(|actions| self.run_actions(device, actions, group_addr))
     }
 }
 
@@ -141,17 +140,17 @@ impl<D: LinkDevice, C: IgmpContext<D>, B: BufferMut> IgmpPacketHandler<D, C::Dev
         if let Err(e) = match packet {
             IgmpPacket::MembershipQueryV2(msg) => {
                 let now = self.now();
-                handle_igmp_message(self, device, msg, |rng, IgmpGroupState(state), msg| {
+                handle_gmp_message(self, device, &msg, |rng, IgmpGroupState(state)| {
                     state.query_received(rng, msg.max_response_time().into(), now)
                 })
             }
             IgmpPacket::MembershipReportV1(msg) => {
-                handle_igmp_message(self, device, msg, |_, IgmpGroupState(state), _| {
+                handle_gmp_message(self, device, &msg, |_, IgmpGroupState(state)| {
                     state.report_received()
                 })
             }
             IgmpPacket::MembershipReportV2(msg) => {
-                handle_igmp_message(self, device, msg, |_, IgmpGroupState(state), _| {
+                handle_gmp_message(self, device, &msg, |_, IgmpGroupState(state)| {
                     state.report_received()
                 })
             }
@@ -169,40 +168,41 @@ impl<D: LinkDevice, C: IgmpContext<D>, B: BufferMut> IgmpPacketHandler<D, C::Dev
     }
 }
 
-fn handle_igmp_message<D: LinkDevice, C: IgmpContext<D>, B: ByteSlice, M, F>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    msg: IgmpMessage<B, M>,
-    handler: F,
-) -> IgmpResult<(), C::DeviceId>
-where
-    M: MessageType<B, FixedHeader = Ipv4Addr>,
-    F: Fn(
-        &mut C::Rng,
-        &mut IgmpGroupState<C::Instant>,
-        &IgmpMessage<B, M>,
-    ) -> Actions<Igmpv2ProtocolSpecific>,
+impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
+    for IgmpMessage<B, M>
 {
-    let group_addr = msg.group_addr();
-    let (state, rng) = ctx.get_state_rng_with(device);
-    if !group_addr.is_specified() {
-        let addr_and_actions = state
-            .iter_mut()
-            .map(|(addr, state)| (addr.clone(), handler(rng, state, &msg)))
-            .collect::<Vec<_>>();
-        for (addr, actions) in addr_and_actions {
-            run_actions(ctx, device, actions, addr);
+    fn group_addr(&self) -> Ipv4Addr {
+        self.group_addr()
+    }
+}
+
+impl<D: LinkDevice, C> GmpContext<D, Ipv4, Igmpv2ProtocolSpecific> for C
+where
+    C: IgmpContext<D>,
+{
+    type Err = IgmpError<C::DeviceId>;
+    fn run_actions(
+        &mut self,
+        device: <Self as DeviceIdContext<D>>::DeviceId,
+        actions: Actions<Igmpv2ProtocolSpecific>,
+        group_addr: MulticastAddr<Ipv4Addr>,
+    ) {
+        if self.igmp_enabled(device) {
+            for action in actions {
+                if let Err(err) = run_action(self, device, action, group_addr) {
+                    error!(
+                        "Error performing action on {} on device {}: {}",
+                        group_addr, device, err
+                    );
+                }
+            }
+        } else {
+            trace!("skipping executing IGMP actions on device {}: IGMP disabled on device", device);
         }
-        Ok(())
-    } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match state.get_mut(&group_addr) {
-            Some(state) => handler(rng, state, &msg),
-            None => return Err(IgmpError::NotAMember { addr: *group_addr }),
-        };
-        run_actions(ctx, device, actions, group_addr);
-        Ok(())
-    } else {
-        Err(IgmpError::NotAMember { addr: group_addr })
+    }
+
+    fn not_a_member_err(addr: Ipv4Addr) -> Self::Err {
+        Self::Err::NotAMember { addr }
     }
 }
 
@@ -255,7 +255,7 @@ impl<D: LinkDevice, C: IgmpContext<D>> TimerHandler<IgmpTimerId<D, C::DeviceId>>
                         return;
                     }
                 };
-                run_actions(self, device, actions, group_addr);
+                self.run_actions(device, actions, group_addr);
             }
             IgmpTimerId::V1RouterPresent { device, _marker } => {
                 for (_, IgmpGroupState(state)) in self.get_state_mut_with(device).iter_mut() {
@@ -414,23 +414,6 @@ impl<I: Instant> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
     }
 }
 
-fn run_actions<D: LinkDevice, C: IgmpContext<D>>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    actions: Actions<Igmpv2ProtocolSpecific>,
-    group_addr: MulticastAddr<Ipv4Addr>,
-) {
-    if ctx.igmp_enabled(device) {
-        for action in actions {
-            if let Err(err) = run_action(ctx, device, action, group_addr) {
-                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
-            }
-        }
-    } else {
-        trace!("skipping executing IGMP actions on device {}: IGMP disabled on device", device);
-    }
-}
-
 /// Interprets the `action`.
 fn run_action<D: LinkDevice, C: IgmpContext<D>>(
     ctx: &mut C,
@@ -488,6 +471,7 @@ mod tests {
     use super::*;
     use core::convert::TryInto;
 
+    use alloc::vec::Vec;
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
     use packet_formats::igmp::messages::IgmpMembershipQueryV2;

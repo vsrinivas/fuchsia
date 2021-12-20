@@ -8,15 +8,12 @@
 //! IGMPv2. One important difference to note is that MLD uses ICMPv6 (IP
 //! Protocol 58) message types, rather than IGMP (IP Protocol 2) message types.
 
-use alloc::vec::Vec;
 use core::marker::PhantomData;
 use core::time::Duration;
 
 use log::{debug, error, trace};
 use net_types::ip::{Ip, Ipv6, Ipv6Addr, Ipv6ReservedScope, Ipv6Scope, Ipv6SourceAddr};
-use net_types::{
-    LinkLocalUnicastAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, SpecifiedAddress, Witness,
-};
+use net_types::{LinkLocalUnicastAddr, MulticastAddr, ScopeableAddress, SpecifiedAddr, Witness};
 use packet::serialize::Serializer;
 use packet::{EmptyBuf, InnerPacketBuilder};
 use packet_formats::icmp::mld::{
@@ -36,8 +33,8 @@ use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext
 use crate::device::link::LinkDevice;
 use crate::device::DeviceIdContext;
 use crate::ip::gmp::{
-    Action, Actions, GmpAction, GmpHandler, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
-    MulticastGroupSet, ProtocolSpecific,
+    handle_gmp_message, Action, Actions, GmpAction, GmpContext, GmpHandler, GmpMessage,
+    GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet, ProtocolSpecific,
 };
 use crate::Instant;
 
@@ -94,7 +91,7 @@ impl<D: LinkDevice, C: MldContext<D>> GmpHandler<D, Ipv6> for C {
         let (state, rng) = self.get_state_rng_with(device);
         state
             .join_group_gmp(group_addr, rng, now)
-            .map(|actions| run_actions(self, device, actions, group_addr))
+            .map(|actions| self.run_actions(device, actions, group_addr))
     }
 
     fn gmp_leave_group(
@@ -104,7 +101,7 @@ impl<D: LinkDevice, C: MldContext<D>> GmpHandler<D, Ipv6> for C {
     ) -> GroupLeaveResult {
         self.get_state_mut_with(device)
             .leave_group_gmp(group_addr)
-            .map(|actions| run_actions(self, device, actions, group_addr))
+            .map(|actions| self.run_actions(device, actions, group_addr))
     }
 }
 
@@ -142,12 +139,12 @@ impl<D: LinkDevice, C: MldContext<D>> MldPacketHandler<D, C::DeviceId> for C {
             MldPacket::MulticastListenerQuery(msg) => {
                 let now = self.now();
                 let max_response_delay: Duration = msg.body().max_response_delay();
-                handle_mld_message(self, device, msg.body(), |rng, MldGroupState(state)| {
+                handle_gmp_message(self, device, msg.body(), |rng, MldGroupState(state)| {
                     state.query_received(rng, max_response_delay, now)
                 })
             }
             MldPacket::MulticastListenerReport(msg) => {
-                handle_mld_message(self, device, msg.body(), |_, MldGroupState(state)| {
+                handle_gmp_message(self, device, msg.body(), |_, MldGroupState(state)| {
                     state.report_received()
                 })
             }
@@ -161,35 +158,57 @@ impl<D: LinkDevice, C: MldContext<D>> MldPacketHandler<D, C::DeviceId> for C {
     }
 }
 
-fn handle_mld_message<D: LinkDevice, C: MldContext<D>, B: ByteSlice, F>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    body: &Mldv1Body<B>,
-    handler: F,
-) -> MldResult<()>
+impl<B: ByteSlice> GmpMessage<Ipv6> for Mldv1Body<B> {
+    fn group_addr(&self) -> Ipv6Addr {
+        self.group_addr
+    }
+}
+
+impl<D: LinkDevice, C> GmpContext<D, Ipv6, MldProtocolSpecific> for C
 where
-    F: Fn(&mut C::Rng, &mut MldGroupState<C::Instant>) -> Actions<MldProtocolSpecific>,
+    C: MldContext<D>,
 {
-    let (state, rng) = ctx.get_state_rng_with(device);
-    let group_addr = body.group_addr;
-    if !group_addr.is_specified() {
-        let addr_and_actions = state
-            .iter_mut()
-            .map(|(addr, state)| (addr.clone(), handler(rng, state)))
-            .collect::<Vec<_>>();
-        for (addr, actions) in addr_and_actions {
-            run_actions(ctx, device, actions, addr);
+    type Err = MldError;
+    fn run_actions(
+        &mut self,
+        device: <Self as DeviceIdContext<D>>::DeviceId,
+        actions: Actions<MldProtocolSpecific>,
+        group_addr: MulticastAddr<Ipv6Addr>,
+    ) {
+        // Per [RFC 3810 Section 6]:
+        //
+        // > No MLD messages are ever sent regarding neither the link-scope
+        // > all-nodes multicast address, nor any multicast address of scope 0
+        // > (reserved) or 1 (node-local).
+        //
+        // We abide by this requirement by not executing [`Actions`] on these
+        // addresses. Executing [`Actions`] only produces externally-visible side
+        // effects, and is not required to maintain the correctness of the MLD state
+        // machines.
+        //
+        // [RFC 3810 Section 6]: https://tools.ietf.org/html/rfc3810#section-6
+        let skip_mld = group_addr == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
+            || group_addr.scope() == Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0)
+            || group_addr.scope() == Ipv6Scope::InterfaceLocal;
+
+        if skip_mld {
+            trace!("skipping executing MLD actions for group {}: MLD prohibited on this group by RFC 3810 Section 6", group_addr);
+        } else if !self.mld_enabled(device) {
+            trace!("skipping executing MLD actions on device {}: MLD disabled on device", device);
+        } else {
+            for action in actions {
+                if let Err(err) = run_action(self, device, action, group_addr) {
+                    error!(
+                        "Error performing action on {} on device {}: {}",
+                        group_addr, device, err
+                    );
+                }
+            }
         }
-        Ok(())
-    } else if let Some(group_addr) = MulticastAddr::new(group_addr) {
-        let actions = match state.get_mut(&group_addr) {
-            Some(state) => handler(rng, state),
-            None => return Err(MldError::NotAMember { addr: group_addr.get() }),
-        };
-        run_actions(ctx, device, actions, group_addr);
-        Ok(())
-    } else {
-        Err(MldError::NotAMember { addr: group_addr })
+    }
+
+    fn not_a_member_err(addr: Ipv6Addr) -> Self::Err {
+        Self::Err::NotAMember { addr }
     }
 }
 
@@ -306,43 +325,8 @@ impl<D: LinkDevice, C: MldContext<D>> TimerHandler<MldReportDelay<D, C::DeviceId
     fn handle_timer(&mut self, timer: MldReportDelay<D, C::DeviceId>) {
         let MldReportDelay { device, group_addr, _marker } = timer;
         match self.get_state_mut_with(device).report_timer_expired(group_addr) {
-            Ok(actions) => run_actions(self, device, actions, group_addr),
+            Ok(actions) => self.run_actions(device, actions, group_addr),
             Err(e) => error!("MLD timer fired, but an error has occurred: {}", e),
-        }
-    }
-}
-
-fn run_actions<D: LinkDevice, C: MldContext<D>>(
-    ctx: &mut C,
-    device: C::DeviceId,
-    actions: Actions<MldProtocolSpecific>,
-    group_addr: MulticastAddr<Ipv6Addr>,
-) {
-    // Per [RFC 3810 Section 6]:
-    //
-    // > No MLD messages are ever sent regarding neither the link-scope
-    // > all-nodes multicast address, nor any multicast address of scope 0
-    // > (reserved) or 1 (node-local).
-    //
-    // We abide by this requirement by not executing [`Actions`] on these
-    // addresses. Executing [`Actions`] only produces externally-visible side
-    // effects, and is not required to maintain the correctness of the MLD state
-    // machines.
-    //
-    // [RFC 3810 Section 6]: https://tools.ietf.org/html/rfc3810#section-6
-    let skip_mld = group_addr == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
-        || group_addr.scope() == Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0)
-        || group_addr.scope() == Ipv6Scope::InterfaceLocal;
-
-    if skip_mld {
-        trace!("skipping executing MLD actions for group {}: MLD prohibited on this group by RFC 3810 Section 6", group_addr);
-    } else if !ctx.mld_enabled(device) {
-        trace!("skipping executing MLD actions on device {}: MLD disabled on device", device);
-    } else {
-        for action in actions {
-            if let Err(err) = run_action(ctx, device, action, group_addr) {
-                error!("Error performing action on {} on device {}: {}", group_addr, device, err);
-            }
         }
     }
 }
@@ -383,7 +367,7 @@ fn run_action<D: LinkDevice, C: MldContext<D>>(
         Action::Specific(ImmediateIdleState) => {
             let _: Option<C::Instant> = ctx.cancel_timer(MldReportDelay::new(device, group_addr));
             let actions = ctx.get_state_mut_with(device).report_timer_expired(group_addr)?;
-            Ok(run_actions(ctx, device, actions, group_addr))
+            Ok(ctx.run_actions(device, actions, group_addr))
         }
     }
 }
@@ -430,6 +414,7 @@ fn send_mld_packet<D: LinkDevice, C: MldContext<D>, B: ByteSlice, M: IcmpMldv1Me
 mod tests {
     use core::convert::TryInto;
 
+    use alloc::vec::Vec;
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
     use packet_formats::icmp::mld::MulticastListenerQuery;

@@ -42,9 +42,10 @@ use core::convert::TryFrom;
 use core::time::Duration;
 
 use net_types::ip::{Ip, IpAddress};
-use net_types::MulticastAddr;
+use net_types::{MulticastAddr, SpecifiedAddress as _};
 use rand::Rng;
 
+use crate::context::RngStateContext;
 use crate::data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashMap, RemoveResult};
 use crate::device::link::LinkDevice;
 use crate::device::DeviceIdContext;
@@ -767,6 +768,65 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
     fn get_inner(&self) -> &MemberState<I, P> {
         self.inner.as_ref().unwrap()
     }
+}
+
+/// Provides common functionality for GMP context implementations.
+///
+/// This trait implements portions of a group management protocol.
+trait GmpContext<D: LinkDevice, I: Ip, PS: ProtocolSpecific>: DeviceIdContext<D> {
+    type Err;
+
+    fn run_actions(
+        &mut self,
+        device: <Self as DeviceIdContext<D>>::DeviceId,
+        actions: Actions<PS>,
+        addr: MulticastAddr<I::Addr>,
+    );
+
+    fn not_a_member_err(addr: I::Addr) -> Self::Err;
+}
+
+trait GmpMessage<I: Ip> {
+    fn group_addr(&self) -> I::Addr;
+}
+
+fn handle_gmp_message<D, I, PS, GS, Msg, C, F>(
+    ctx: &mut C,
+    device: C::DeviceId,
+    body: &Msg,
+    handler: F,
+) -> Result<(), C::Err>
+where
+    C: GmpContext<D, I, PS>
+        + DeviceIdContext<D>
+        + RngStateContext<MulticastGroupSet<I::Addr, GS>, <C as DeviceIdContext<D>>::DeviceId>,
+    D: LinkDevice,
+    I: Ip,
+    PS: ProtocolSpecific,
+    Msg: GmpMessage<I>,
+    F: Fn(&mut C::Rng, &mut GS) -> Actions<PS>,
+{
+    let (state, rng) = ctx.get_state_rng_with(device);
+    let group_addr = body.group_addr();
+    if !group_addr.is_specified() {
+        let addr_and_actions = state
+            .iter_mut()
+            .map(|(addr, state)| (addr.clone(), handler(rng, state)))
+            .collect::<Vec<_>>();
+        for (addr, actions) in addr_and_actions {
+            ctx.run_actions(device, actions, addr);
+        }
+        return Ok(());
+    }
+    if let Some(group_addr) = MulticastAddr::new(group_addr) {
+        let actions = match state.get_mut(&group_addr) {
+            Some(state) => handler(rng, state),
+            None => return Err(C::not_a_member_err(*group_addr)),
+        };
+        ctx.run_actions(device, actions, group_addr);
+        return Ok(());
+    }
+    Err(C::not_a_member_err(group_addr))
 }
 
 #[cfg(test)]
