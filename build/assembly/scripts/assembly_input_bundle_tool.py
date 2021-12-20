@@ -23,7 +23,7 @@ def generate_package_creation_manifest(args: argparse.Namespace) -> None:
       AIB/path/to/file_2=outdir/path/to/AIB/path/to/file_2
 
     This format locates all the files in the AIB, relative to the
-    root_build_dir, and then gives thier destination path within the AIB package
+    root_build_dir, and then gives their destination path within the AIB package
     and archive.
 
     To generate the package the AIB, a creation manifest is required (also in
@@ -53,7 +53,7 @@ def generate_archive(args: argparse.Namespace) -> None:
       AIB/path/to/file_2=outdir/path/to/AIB/path/to/file_2
 
     This format locates all the files in the AIB, relative to the
-    root_build_dir, and then gives thier destination path within the AIB package
+    root_build_dir, and then gives their destination path within the AIB package
     and archive.
 
     To generate the archive of the AIB, a creation manifest is required (also in
