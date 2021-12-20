@@ -65,7 +65,7 @@ class KTraceRecord {
 
 class Tracing {
  public:
-  Tracing() = default;
+  Tracing() { Stop(); }
 
   Tracing(const Tracing&) = delete;
   Tracing& operator=(const Tracing&) = delete;
