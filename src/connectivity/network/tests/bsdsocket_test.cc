@@ -38,6 +38,15 @@
 #include "src/lib/testing/predicates/status.h"
 #endif
 
+// TODO(C++20): Remove this; std::chrono::duration defines operator<< in c++20. See
+// https://en.cppreference.com/w/cpp/chrono/duration/operator_ltlt.
+namespace std::chrono {
+template <class Rep, class Period>
+void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* os) {
+  *os << std::chrono::duration_cast<std::chrono::nanoseconds>(duration).count() << "ns";
+}
+}  // namespace std::chrono
+
 namespace {
 
 #if defined(__Fuchsia__)
