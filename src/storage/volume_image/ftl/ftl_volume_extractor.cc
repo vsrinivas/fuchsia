@@ -94,7 +94,7 @@ bool LoadData(InMemoryRawNand* nand, FILE* data) {
         // Zero out bad block contents, this will cause them to be read as bad blocks rather than
         // unmapped data.
         nand->page_data[page_count] = std::vector<uint8_t>(nand->options.page_size, 0);
-        nand->page_data[page_count] = std::vector<uint8_t>(nand->options.oob_bytes_size, 0);
+        nand->page_oob[page_count] = std::vector<uint8_t>(nand->options.oob_bytes_size, 0);
         break;
       }
       case BlockStatus::kReadFailure: {
