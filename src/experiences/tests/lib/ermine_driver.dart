@@ -21,6 +21,7 @@ import 'package:test/test.dart';
 const simpleBrowserUrl =
     'fuchsia-pkg://fuchsia.com/simple-browser#meta/simple-browser.cmx';
 const terminalUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
+const stashCtlUrl = 'fuchsia-pkg://fuchsia.com/stash_ctl#meta/stash_ctl.cmx';
 
 // USB HID code for ENTER key.
 // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
@@ -94,6 +95,26 @@ class ErmineDriver {
     }
     await _driver?.close();
     await _connector.tearDown();
+  }
+
+  /// Switches Scenic to gfx or flatland protocol. Session Control still needs
+  /// to be restarted to take effect, which may be done via tearDown().
+  ///
+  /// TODO(fxbug.dev/64205): Remove this and all parameterizated tests when
+  /// flatland is enabled by default.
+  Future<void> switchToGraphicsProtocol(String protocol) async {
+    assert(protocol == 'flatland' || protocol == 'gfx');
+    final useFlatland = protocol == 'flatland' ? 'true' : 'false';
+
+    var result = await sl4f.ssh
+        .run('run $stashCtlUrl set i_can_haz_flatland bool $useFlatland');
+    if (result.exitCode != 0) {
+      fail('failed to set stash_ctl var for Flatland.');
+    }
+    result = await sl4f.ssh.run('killall scenic.cmx');
+    if (result.exitCode != 0) {
+      fail('failed to kill Scenic.');
+    }
   }
 
   /// Launch a component given its [componentUrl].
