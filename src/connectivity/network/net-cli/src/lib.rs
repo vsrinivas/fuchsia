@@ -2082,7 +2082,6 @@ status      ENABLED | LINK_UP"#,
     #[test_case(false, false, "Interface 1 | IP 192.168.0.1 | MAC 01:02:03:04:05:06 | REACHABLE" ; "in tabular format, not including entry state")]
     #[test_case(true, true, &wanted_neigh_watch_json() ; "in json format, including entry state")]
     #[test_case(false, true, "EXISTING | Interface 1 | IP 192.168.0.1 | MAC 01:02:03:04:05:06 | REACHABLE" ; "in tabular format, including entry state")]
-    #[test]
     fn neigh_write_entry(json: bool, include_entry_state: bool, wanted_output: &str) {
         let entry = fneighbor::EntryIteratorItem::Existing(fneighbor::Entry {
             interface: Some(1),

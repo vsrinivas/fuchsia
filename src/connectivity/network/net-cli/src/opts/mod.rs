@@ -699,7 +699,6 @@ mod tests {
     #[test_case("24", 24 ; "from prefix length")]
     #[test_case("255.255.254.0", 23 ; "from ipv4 netmask")]
     #[test_case("ffff:fff0::", 28 ; "from ipv6 netmask")]
-    #[test]
     fn parse_prefix_len(to_parse: &str, want: u8) {
         let got = parse_netmask_or_prefix_length(to_parse).unwrap();
         assert_eq!(got, want)
