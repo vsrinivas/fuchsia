@@ -28,6 +28,18 @@ constexpr elfldltl::DiagnosticsFlags kFlags = {
 
 constexpr std::string_view kNullWarning = "PT_NULL header encountered";
 
+template <class Phdr>
+constexpr auto kRWX = Phdr::kRead | Phdr::kWrite | Phdr::kExecute;
+
+template <class Phdr>
+constexpr Phdr OnePageStack(uint32_t flags) {
+  Phdr phdr{.type = ElfPhdrType::kStack, .memsz = 0x1000};
+  // Not inlined, as the relative ordering between `flags` and `memsz` is not
+  // fixed.
+  phdr.flags = flags;
+  return phdr;
+}
+
 constexpr auto EmptyTest = [](auto&& elf) {
   using Elf = std::decay_t<decltype(elf)>;
   using Phdr = typename Elf::Phdr;
@@ -179,5 +191,381 @@ constexpr auto SingletonObserverMultipleHeadersPerTypeTest = [](auto&& elf) {
 TEST(ElfldltlPhdrTests, SingletonObserverMultipleHeadersPerType) {
   TestAllFormats(SingletonObserverMultipleHeadersPerTypeTest);
 }
+
+constexpr auto UnknownFlagsTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .flags = kRWX<Phdr>},
+      {.type = ElfPhdrType::kDynamic, .flags = ~Phdr::kRead},
+      {.type = ElfPhdrType::kInterp, .flags = ~Phdr::kWrite},
+      {.type = ElfPhdrType::kStack, .flags = ~Phdr::kExecute},
+      {.type = ElfPhdrType::kRelro, .flags = ~kRWX<Phdr>},
+  };
+
+  std::vector<std::string> warnings;
+  auto diag = elfldltl::CollectStringsDiagnostics(warnings, kFlags);
+  std::optional<Phdr> load, dynamic, interp, stack, relro;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),  //
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kLoad>(load),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kDynamic>(dynamic),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kInterp>(interp),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kStack>(stack),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kRelro>(relro)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(4, diag.warnings());
+
+  ASSERT_EQ(warnings.size(), 4);
+  EXPECT_STR_EQ(warnings[0],
+                "PT_DYNAMIC header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STR_EQ(warnings[1],
+                "PT_INTERP header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STR_EQ(warnings[2],
+                "PT_GNU_STACK header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+  EXPECT_STR_EQ(warnings[3],
+                "PT_GNU_RELRO header has unrecognized flags (other than PF_R, PF_W, PF_X)");
+};
+
+TEST(ElfldltlPhdrTests, UnknownFlags) { TestAllFormats(UnknownFlagsTest); }
+
+// Executable stack permitted; non-zero memsz.
+constexpr auto StackObserverExecOkPhdrNonzeroSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(Phdr::kRead | Phdr::kWrite)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  bool executable = false;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs),
+      elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/true>(size, executable)));
+
+  ASSERT_TRUE(size);
+  EXPECT_EQ(0x1000, *size);
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecOkPhdrNonzeroSize) {
+  TestAllFormats(StackObserverExecOkPhdrNonzeroSizeTest);
+}
+
+// Executable stack permitted; zero memsz.
+constexpr auto StackObserverExecOkPhdrZeroSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {{.type = ElfPhdrType::kStack, .flags = Phdr::kRead | Phdr::kWrite}};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  bool executable = false;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs),
+      elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/true>(size, executable)));
+
+  ASSERT_FALSE(size);
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecOkPhdrZeroSize) {
+  TestAllFormats(StackObserverExecOkPhdrZeroSizeTest);
+}
+
+// Executable stack permitted; no header to report size.
+constexpr auto StackObserverExecOkNoPhdrSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  bool executable = false;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span<const Phdr>{},
+      elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/true>(size, executable)));
+
+  ASSERT_FALSE(size);
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecOkNoPhdrSize) {
+  TestAllFormats(StackObserverExecOkNoPhdrSizeTest);
+}
+
+// Executable stack permitted; header present and reports PF_X.
+constexpr auto StackObserverExecOkPhdrWithXTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(kRWX<Phdr>)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  bool executable = false;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs),
+      elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/true>(size, executable)));
+
+  ASSERT_TRUE(size);
+  EXPECT_EQ(0x1000, *size);
+  EXPECT_TRUE(executable);
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecOkPhdrWithX) {
+  TestAllFormats(StackObserverExecOkPhdrWithXTest);
+}
+
+// Executable stack permitted; header present and does not report PF_X.
+constexpr auto StackObserverExecOkPhdrWithoutXTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(Phdr::kRead | Phdr::kWrite)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  bool executable = false;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs),
+      elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/true>(size, executable)));
+
+  EXPECT_FALSE(executable);
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecOkPhdrWithoutX) {
+  TestAllFormats(StackObserverExecOkPhdrWithoutXTest);
+}
+
+// Executable stack permitted; header not present.
+constexpr auto StackObserverExecOkNoPhdrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  bool executable = false;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span<const Phdr>{},
+      elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/true>(size, executable)));
+
+  EXPECT_TRUE(executable);
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecOkNoPhdr) {
+  TestAllFormats(StackObserverExecOkNoPhdrTest);
+}
+
+// Executable stack not permitted; non-zero memsz.
+constexpr auto StackObserverExecNotOkPhdrNonzeroSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(Phdr::kRead | Phdr::kWrite)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                            elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/false>(size)));
+
+  ASSERT_TRUE(size);
+  EXPECT_EQ(0x1000, *size);
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecNotOkPhdrNonzeroSize) {
+  TestAllFormats(StackObserverExecNotOkPhdrNonzeroSizeTest);
+}
+
+// Executable stack not permitted; zero memsz.
+constexpr auto StackObserverExecNotOkPhdrZeroSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {{.type = ElfPhdrType::kStack, .flags = Phdr::kRead | Phdr::kWrite}};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                            elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/false>(size)));
+
+  ASSERT_FALSE(size);
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecNotOkPhdrZeroSize) {
+  TestAllFormats(StackObserverExecNotOkPhdrZeroSizeTest);
+}
+
+// Executable stack not permitted; no header to report size.
+constexpr auto StackObserverExecNotOkNoPhdrSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span<const Phdr>{},
+                            elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/false>(size)));
+
+  ASSERT_FALSE(size);
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecNotOkNoPhdrSize) {
+  TestAllFormats(StackObserverExecNotOkNoPhdrSizeTest);
+}
+
+// Executable stack not permitted; header present and reports PF_X.
+constexpr auto StackObserverExecNotOkPhdrWithXTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(kRWX<Phdr>)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                            elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/false>(size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(errors.size(), 1);
+  EXPECT_STR_EQ(errors.front(), "executable stack not supported: PF_X is set");
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecNotOkPhdrWithX) {
+  TestAllFormats(StackObserverExecNotOkPhdrWithXTest);
+}
+
+// Executable stack not permitted; header present and does not report PF_X.
+constexpr auto StackObserverExecNotOkPhdrWithoutXTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(Phdr::kRead | Phdr::kWrite)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                            elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/false>(size)));
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecNotOkPhdrWithoutX) {
+  TestAllFormats(StackObserverExecNotOkPhdrWithoutXTest);
+}
+
+// Executable stack not permitted; header not present.
+constexpr auto StackObserverExecNotOkNoPhdrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span<const Phdr>{},
+                            elfldltl::PhdrStackObserver<Elf, /*CanBeExecutable=*/false>(size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(errors.size(), 1);
+  EXPECT_STR_EQ(errors.front(), "executable stack not supported: PT_GNU_STACK header required");
+};
+
+TEST(ElfldltlPhdrTests, StackObserverExecNotOkNoPhdr) {
+  TestAllFormats(StackObserverExecNotOkNoPhdrTest);
+}
+
+// Non-readable stacks are disallowed.
+constexpr auto StackObserverNonReadableTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(Phdr::kWrite)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs), elfldltl::PhdrStackObserver<Elf>(size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(errors.size(), 1);
+  EXPECT_STR_EQ(errors.front(), "stack is not readable: PF_R is not set");
+};
+
+TEST(ElfldltlPhdrTests, StackObserverNonReadable) { TestAllFormats(StackObserverNonReadableTest); }
+
+// Non-writable stacks are disallowed.
+constexpr auto StackObserverNonWritableTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {OnePageStack<Phdr>(Phdr::kRead)};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<size_type> size;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs), elfldltl::PhdrStackObserver<Elf>(size)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(errors.size(), 1);
+  EXPECT_STR_EQ(errors.front(), "stack is not writable: PF_W is not set");
+};
+
+TEST(ElfldltlPhdrTests, StackObserverNonWritable) { TestAllFormats(StackObserverNonWritableTest); }
 
 }  // namespace

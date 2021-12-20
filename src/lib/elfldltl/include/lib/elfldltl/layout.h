@@ -75,6 +75,38 @@ struct LayoutBase {
   static_assert(sizeof(Nhdr) == 12);
 };
 
+// A base class for the different phdr layouts, ensuring that all of the
+// Elf<...>::Phdr definitions below use the same Flags type.
+struct PhdrBase {
+  // These are individual bits OR'd together.
+  enum Flags : uint32_t {
+    kExecute = 1 << 0,
+    kWrite = 1 << 1,
+    kRead = 1 << 2,
+  };
+};
+
+// A base class for the shdr layout, ensuring that all of the Elf<...>::Shdr
+// definitions below use the same Flags type.
+struct ShdrBase {
+  // These are individual bits OR'd together.
+  enum Flags : uint32_t {
+    kWrite = 1u << 0,
+    kAlloc = 1u << 1,
+    kExecinstr = 1u << 2,
+    kMerge = 1u << 4,
+    kStrings = 1u << 5,
+    kInfoLink = 1u << 6,
+    kLinkOrder = 1u << 7,
+    kOsNonconforming = 1u << 8,
+    kGroup = 1u << 9,
+    kTls = 1u << 10,
+    kCompressed = 1u << 11,
+    kOrdered = 1u << 30,
+    kExclude = 1u << 31,
+  };
+};
+
 // Some header layouts vary by ElfClass, i.e. address size used in ELF
 // metadata.  This is partially specialized by class below.
 template <ElfClass Class, ElfData Data>
@@ -90,7 +122,7 @@ struct Layout<ElfClass::k32, Data> : public LayoutBase<Data> {
 
   using Addr = typename LayoutBase<Data>::template Unsigned<uint32_t>;
 
-  struct Phdr {
+  struct Phdr : public PhdrBase {
     EnumField<ElfPhdrType, kSwap> type;
     Addr offset;
     Addr vaddr;
@@ -123,7 +155,7 @@ struct Layout<ElfClass::k64, Data> : public LayoutBase<Data> {
 
   using Addr = typename LayoutBase<Data>::template Unsigned<uint64_t>;
 
-  struct Phdr {
+  struct Phdr : public PhdrBase {
     EnumField<ElfPhdrType, kSwap> type;
     Word flags;
     Addr offset;
@@ -226,56 +258,9 @@ struct Elf : private Layout<Class, Data> {
 
   // This is not really used at runtime except for the kPnXnum protocol.
   // But it's useful to have all the values handy for diagnostic tools.
-  struct Shdr {
-    enum class Type : uint32_t {
-      kNull = 0,
-      kProgbits = 1,
-      kSymtab = 2,
-      kStrtab = 3,
-      kRela = 4,
-      kHash = 5,
-      kDynamic = 6,
-      kNote = 7,
-      kNobits = 8,
-      kRel = 9,
-      kShlib = 10,
-      kDynsym = 11,
-      kInitArray = 14,
-      kFiniArray = 15,
-      kPreinitArray = 16,
-      kGroup = 17,
-      kSymtabShndx = 18,
-      kGnuAttributes = 0x6ffffff5,
-      kGnuHash = 0x6ffffff6,
-      kGnuLiblist = 0x6ffffff7,
-      kChecksum = 0x6ffffff8,
-      kSunwMove = 0x6ffffffa,
-      kSunwComdat = 0x6ffffffb,
-      kSunwSyminfo = 0x6ffffffc,
-      kGnuVerdef = 0x6ffffffd,
-      kGnuVerneed = 0x6ffffffe,
-      kGnuVersym = 0x6fffffff,
-    };
-
-    // These are individual bits OR'd together.
-    enum Flags : uint32_t {
-      kWrite = 1u << 0,
-      kAlloc = 1u << 1,
-      kExecinstr = 1u << 2,
-      kMerge = 1u << 4,
-      kStrings = 1u << 5,
-      kInfoLink = 1u << 6,
-      kLinkOrder = 1u << 7,
-      kOsNonconforming = 1u << 8,
-      kGroup = 1u << 9,
-      kTls = 1u << 10,
-      kCompressed = 1u << 11,
-      kOrdered = 1u << 30,
-      kExclude = 1u << 31,
-    };
-
+  struct Shdr : public ShdrBase {
     Word name;
-    EnumField<Type, kSwap> type;
+    EnumField<ElfShdrType, kSwap> type;
     Addr flags;
     Addr addr;
     Addr offset;

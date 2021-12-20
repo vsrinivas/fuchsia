@@ -72,6 +72,37 @@ enum class ElfPhdrType : uint32_t {
   kRelro = 0x6474e552,       // PT_GNU_RELRO
 };
 
+// These are the types of section headers, found in Elf::Shdr::type().
+enum class ElfShdrType : uint32_t {
+  kNull = 0,
+  kProgbits = 1,
+  kSymtab = 2,
+  kStrtab = 3,
+  kRela = 4,
+  kHash = 5,
+  kDynamic = 6,
+  kNote = 7,
+  kNobits = 8,
+  kRel = 9,
+  kShlib = 10,
+  kDynsym = 11,
+  kInitArray = 14,
+  kFiniArray = 15,
+  kPreinitArray = 16,
+  kGroup = 17,
+  kSymtabShndx = 18,
+  kGnuAttributes = 0x6ffffff5,
+  kGnuHash = 0x6ffffff6,
+  kGnuLiblist = 0x6ffffff7,
+  kChecksum = 0x6ffffff8,
+  kSunwMove = 0x6ffffffa,
+  kSunwComdat = 0x6ffffffb,
+  kSunwSyminfo = 0x6ffffffc,
+  kGnuVerdef = 0x6ffffffd,
+  kGnuVerneed = 0x6ffffffe,
+  kGnuVersym = 0x6fffffff,
+};
+
 // These are the PT_DYNAMIC entry tags, found in Elf::Dyn::tag().
 enum class ElfDynTag : uint32_t {
   kNull = 0,
