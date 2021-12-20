@@ -18,7 +18,7 @@ use {
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
             fsck::{
-                errors::{FsckError, FsckFatal, FsckWarning},
+                errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
                 fsck_with_options, FsckOptions,
             },
             object_record::ObjectDescriptor,
@@ -45,7 +45,7 @@ const TEST_DEVICE_BLOCK_COUNT: u64 = 8192;
 
 struct FsckTest {
     filesystem: Option<OpenFxFilesystem>,
-    errors: Mutex<Vec<FsckError>>,
+    errors: Mutex<Vec<FsckIssue>>,
 }
 
 impl FsckTest {
@@ -75,9 +75,9 @@ impl FsckTest {
         );
         Ok(())
     }
-    async fn run(&self, halt_on_warning: bool) -> Result<(), Error> {
+    async fn run(&self, halt_on_error: bool) -> Result<(), Error> {
         let options = FsckOptions {
-            halt_on_warning,
+            halt_on_error,
             do_slow_passes: true,
             on_error: |err| {
                 self.errors.lock().unwrap().push(err.clone());
@@ -88,7 +88,7 @@ impl FsckTest {
     fn filesystem(&self) -> Arc<FxFilesystem> {
         self.filesystem.as_ref().unwrap().deref().clone()
     }
-    fn errors(&self) -> Vec<FsckError> {
+    fn errors(&self) -> Vec<FsckIssue> {
         self.errors.lock().unwrap().clone()
     }
 }
@@ -144,7 +144,13 @@ async fn test_extra_allocation() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::ExtraAllocations(_))]);
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::ExtraAllocations(_)),
+            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..))
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -171,8 +177,8 @@ async fn test_misaligned_allocation() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisalignedAllocation(..))]);
+    test.run(true).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedAllocation(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -238,8 +244,8 @@ async fn test_malformed_allocation() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedAllocation(..))]);
+    test.run(true).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedAllocation(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -263,8 +269,8 @@ async fn test_misaligned_extent_in_root_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisalignedExtent(..))]);
+    test.run(true).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedExtent(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -288,8 +294,8 @@ async fn test_malformed_extent_in_root_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedExtent(..))]);
+    test.run(true).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedExtent(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -314,8 +320,8 @@ async fn test_misaligned_extent_in_child_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisalignedExtent(..))]);
+    test.run(true).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedExtent(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -340,8 +346,8 @@ async fn test_malformed_extent_in_child_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedExtent(..))]);
+    test.run(true).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedExtent(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -371,7 +377,13 @@ async fn test_allocation_mismatch() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::AllocationMismatch(..))]);
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::AllocationMismatch(..)),
+            FsckIssue::Error(FsckError::ExtraAllocations(..))
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -404,7 +416,13 @@ async fn test_missing_allocation() {
     // since flushing or committing transactions might itself perform allocations, and it isn't that
     // important.
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingAllocation(..))]);
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::MissingAllocation(..)),
+            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..))
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -443,7 +461,13 @@ async fn test_too_many_object_refs() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::RefCountMismatch(..))]);
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::RefCountMismatch(..)),
+            FsckIssue::Error(FsckError::ObjectCountMismatch(..))
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -474,7 +498,7 @@ async fn test_too_few_object_refs() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect("Fsck should succeed");
-    assert_matches!(test.errors()[..], [FsckError::Warning(FsckWarning::OrphanedObject(..))]);
+    assert_matches!(test.errors()[..], [FsckIssue::Warning(FsckWarning::OrphanedObject(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -508,7 +532,7 @@ async fn test_missing_extent_tree_layer_file() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingLayerFile(..))]);
+    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MissingLayerFile(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -542,7 +566,7 @@ async fn test_missing_object_tree_layer_file() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingLayerFile(..))]);
+    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MissingLayerFile(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -564,7 +588,7 @@ async fn test_missing_object_store_handle() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingStoreInfo(..))]);
+    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MissingStoreInfo(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -626,7 +650,7 @@ async fn test_misordered_layer_file() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisOrderedLayerFile(..))]);
+    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MisOrderedLayerFile(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -690,7 +714,7 @@ async fn test_overlapping_keys_in_layer_file() {
     test.run(false).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
-        [FsckError::Fatal(FsckFatal::OverlappingKeysInLayerFile(..))]
+        [FsckIssue::Fatal(FsckFatal::OverlappingKeysInLayerFile(..))]
     );
 }
 
@@ -752,5 +776,5 @@ async fn test_unexpected_record_in_layer_file() {
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedLayerFile(..))]);
+    assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MalformedLayerFile(..))]);
 }

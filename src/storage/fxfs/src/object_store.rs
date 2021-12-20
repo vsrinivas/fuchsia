@@ -286,6 +286,15 @@ impl ObjectStore {
         Self::new(parent_store, store_object_id, filesystem, Some(StoreInfo::default()))
     }
 
+    pub fn is_root(&self) -> bool {
+        if let Some(parent) = &self.parent_store {
+            parent.parent_store.is_none()
+        } else {
+            // The root parent store isn't the root store.
+            false
+        }
+    }
+
     pub fn device(&self) -> &Arc<dyn Device> {
         &self.device
     }

@@ -20,9 +20,9 @@ use {
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem},
-            fsck::errors::{FsckError, FsckFatal, FsckWarning},
+            fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
             graveyard::Graveyard,
-            object_record::{ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
+            object_record::{ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
             HandleOptions, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
@@ -34,7 +34,10 @@ use {
     std::{
         collections::hash_map::{Entry, HashMap},
         ops::Bound,
-        sync::Arc,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
     },
 };
 
@@ -43,18 +46,17 @@ pub mod errors;
 #[cfg(test)]
 mod tests;
 
-pub struct FsckOptions<F: Fn(&FsckError)> {
-    /// Whether to halt fsck on the first warning.
-    halt_on_warning: bool,
+pub struct FsckOptions<F: Fn(&FsckIssue)> {
+    /// Whether to halt fsck on the first error (fatal or not).
+    halt_on_error: bool,
     /// Whether to perform slower, more complete checks.
     do_slow_passes: bool,
-    /// A callback to be invoked for each detected error (fatal or not).
+    /// A callback to be invoked for each detected error, e.g. to log the error.
     on_error: F,
 }
 
 // TODO(csuter): for now, this just checks allocations. We should think about adding checks for:
 //
-//  + No child volumes in anything other than the root store.
 //  + The root parent object store ID and root object store ID must not conflict with any other
 //    stores or the allocator.
 //  + Checking the sub_dirs property on directories.
@@ -63,10 +65,10 @@ pub struct FsckOptions<F: Fn(&FsckError)> {
 // take a snapshot.
 pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     let options = FsckOptions {
-        halt_on_warning: false,
+        halt_on_error: false,
         do_slow_passes: true,
-        on_error: |err: &FsckError| {
-            if err.is_fatal() {
+        on_error: |err: &FsckIssue| {
+            if err.is_error() {
                 log::error!("{:?}", err.to_string())
             } else {
                 log::warn!("{:?}", err.to_string())
@@ -76,7 +78,7 @@ pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     fsck_with_options(filesystem, options).await
 }
 
-pub async fn fsck_with_options<F: Fn(&FsckError)>(
+pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     filesystem: &Arc<FxFilesystem>,
     options: FsckOptions<F>,
 ) -> Result<(), Error> {
@@ -152,9 +154,9 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
     while let Some(actual_item) = actual.get() {
         if actual_item.key.device_range.start % bs > 0 || actual_item.key.device_range.end % bs > 0
         {
-            fsck.error(FsckFatal::MisalignedAllocation(actual_item.into()))?;
+            fsck.error(FsckError::MisalignedAllocation(actual_item.into()))?;
         } else if actual_item.key.device_range.start >= actual_item.key.device_range.end {
-            fsck.error(FsckFatal::MalformedAllocation(actual_item.into()))?;
+            fsck.error(FsckError::MalformedAllocation(actual_item.into()))?;
         }
         match expected.get() {
             None => extra_allocations.push(actual_item.into()),
@@ -162,7 +164,7 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
                 let r = &expected_item.key.device_range;
                 allocated_bytes += (r.end - r.start) as i64;
                 if actual_item != expected_item {
-                    fsck.error(FsckFatal::AllocationMismatch(
+                    fsck.error(FsckError::AllocationMismatch(
                         expected_item.into(),
                         actual_item.into(),
                     ))?;
@@ -172,18 +174,23 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
         try_join!(actual.advance(), expected.advance())?;
     }
     if !extra_allocations.is_empty() {
-        fsck.error(FsckFatal::ExtraAllocations(extra_allocations))?;
+        fsck.error(FsckError::ExtraAllocations(extra_allocations))?;
     }
     if let Some(item) = expected.get() {
-        fsck.error(FsckFatal::MissingAllocation(item.into()))?;
+        fsck.error(FsckError::MissingAllocation(item.into()))?;
     }
     if allocated_bytes as u64 != allocator.get_allocated_bytes() {
-        fsck.error(FsckFatal::AllocatedBytesMismatch(
+        fsck.error(FsckError::AllocatedBytesMismatch(
             allocated_bytes as u64,
             allocator.get_allocated_bytes(),
         ))?;
     }
-    Ok(())
+    let errors = fsck.errors();
+    if errors > 0 {
+        Err(anyhow!("Fsck encountered {} errors", errors))
+    } else {
+        Ok(())
+    }
 }
 
 trait KeyExt: PartialEq {
@@ -202,35 +209,47 @@ impl<K: RangeKey + PartialEq> KeyExt for K {
     }
 }
 
-struct Fsck<F: Fn(&FsckError)> {
+struct Fsck<F: Fn(&FsckIssue)> {
     options: FsckOptions<F>,
     allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
+    errors: AtomicU64,
 }
 
-impl<F: Fn(&FsckError)> Fsck<F> {
+impl<F: Fn(&FsckIssue)> Fsck<F> {
     fn new(options: FsckOptions<F>) -> Self {
-        Fsck { options, allocations: SkipListLayer::new(2048) } // TODO(csuter): fix magic number
+        // TODO(csuter): fix magic number
+        Fsck { options, allocations: SkipListLayer::new(2048), errors: AtomicU64::new(0) }
+    }
+
+    fn errors(&self) -> u64 {
+        self.errors.load(Ordering::Relaxed)
     }
 
     fn assert<V>(&self, res: Result<V, Error>, error: FsckFatal) -> Result<V, Error> {
         if res.is_err() {
-            (self.options.on_error)(&FsckError::Fatal(error.clone()));
+            (self.options.on_error)(&FsckIssue::Fatal(error.clone()));
             return Err(anyhow!(format!("{:?}", error)).context(res.err().unwrap()));
         }
         res
     }
 
     fn warning(&self, error: FsckWarning) -> Result<(), Error> {
-        (self.options.on_error)(&FsckError::Warning(error.clone()));
-        if self.options.halt_on_warning {
+        (self.options.on_error)(&FsckIssue::Warning(error.clone()));
+        Ok(())
+    }
+
+    fn error(&self, error: FsckError) -> Result<(), Error> {
+        (self.options.on_error)(&FsckIssue::Error(error.clone()));
+        self.errors.fetch_add(1, Ordering::Relaxed);
+        if self.options.halt_on_error {
             Err(anyhow!(format!("{:?}", error)))
         } else {
             Ok(())
         }
     }
 
-    fn error(&self, error: FsckFatal) -> Result<(), Error> {
-        (self.options.on_error)(&FsckError::Fatal(error.clone()));
+    fn fatal(&self, error: FsckFatal) -> Result<(), Error> {
+        (self.options.on_error)(&FsckIssue::Fatal(error.clone()));
         Err(anyhow!(format!("{:?}", error)))
     }
 
@@ -337,13 +356,13 @@ impl<F: Fn(&FsckError)> Fsck<F> {
         while let Some(item) = iter.get() {
             if let Some(last) = last_item {
                 if !last.key.cmp_upper_bound(&item.key).is_le() {
-                    self.error(FsckFatal::MisOrderedLayerFile(
+                    self.fatal(FsckFatal::MisOrderedLayerFile(
                         store_object_id,
                         layer_file_object_id,
                     ))?;
                 }
                 if last.key.overlaps(&item.key) {
-                    self.error(FsckFatal::OverlappingKeysInLayerFile(
+                    self.fatal(FsckFatal::OverlappingKeysInLayerFile(
                         store_object_id,
                         layer_file_object_id,
                         item.into(),
@@ -393,39 +412,8 @@ impl<F: Fn(&FsckError)> Fsck<F> {
             object_refs.insert(*root_object, (0, 1));
         }
         let mut object_count = 0;
-        while let Some(ItemRef { key, value, .. }) = iter.get() {
-            match (key, value) {
-                (
-                    ObjectKey { object_id, data: ObjectKeyData::Object },
-                    ObjectValue::Object { kind, .. },
-                ) => {
-                    let refs = match kind {
-                        ObjectKind::File { refs, .. } => *refs,
-                        ObjectKind::Directory { .. } | ObjectKind::Graveyard => 1,
-                    };
-                    match object_refs.entry(*object_id) {
-                        Entry::Occupied(mut occupied) => {
-                            occupied.get_mut().0 += refs;
-                        }
-                        Entry::Vacant(vacant) => {
-                            vacant.insert((refs, 0));
-                        }
-                    }
-                    object_count += 1;
-                }
-                (
-                    ObjectKey { data: ObjectKeyData::Child { .. }, .. },
-                    ObjectValue::Child { object_id, .. },
-                ) => match object_refs.entry(*object_id) {
-                    Entry::Occupied(mut occupied) => {
-                        occupied.get_mut().1 += 1;
-                    }
-                    Entry::Vacant(vacant) => {
-                        vacant.insert((0, 1));
-                    }
-                },
-                _ => {}
-            }
+        while let Some(item) = iter.get() {
+            self.process_object_item(store, item, &mut object_refs, &mut object_count)?;
             self.assert(iter.advance().await, FsckFatal::MalformedStore(store_id))?;
         }
 
@@ -436,13 +424,13 @@ impl<F: Fn(&FsckError)> Fsck<F> {
         while let Some(ItemRef { key: ExtentKey { object_id, range, .. }, value, .. }) = iter.get()
         {
             if range.start % bs > 0 || range.end % bs > 0 {
-                self.error(FsckFatal::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
+                self.error(FsckError::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
             } else if range.start >= range.end {
-                self.error(FsckFatal::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
+                self.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
             }
             if let ExtentValue::Some { device_offset, .. } = value {
                 if device_offset % bs > 0 {
-                    self.error(FsckFatal::MisalignedExtent(
+                    self.error(FsckError::MisalignedExtent(
                         store_id,
                         *object_id,
                         range.clone(),
@@ -468,19 +456,75 @@ impl<F: Fn(&FsckError)> Fsck<F> {
                 if references == 0 {
                     self.warning(FsckWarning::OrphanedObject(store_id, object_id))?;
                 } else {
-                    self.error(FsckFatal::RefCountMismatch(object_id, references, count))?;
+                    self.error(FsckError::RefCountMismatch(object_id, references, count))?;
                 }
             }
         }
 
         if object_count != store.object_count() {
-            self.error(FsckFatal::ObjectCountMismatch(
+            self.error(FsckError::ObjectCountMismatch(
                 store_id,
                 store.object_count(),
                 object_count,
             ))?;
         }
 
+        Ok(())
+    }
+
+    fn process_object_item<'a>(
+        &self,
+        store: &ObjectStore,
+        item: ItemRef<'a, ObjectKey, ObjectValue>,
+        object_refs: &mut HashMap<u64, (u64, u64)>,
+        object_count: &mut u64,
+    ) -> Result<(), Error> {
+        let (key, value) = (item.key, item.value);
+        match (key, value) {
+            (
+                ObjectKey { object_id, data: ObjectKeyData::Object },
+                ObjectValue::Object { kind, .. },
+            ) => {
+                let refs = match kind {
+                    ObjectKind::File { refs, .. } => *refs,
+                    ObjectKind::Directory { .. } | ObjectKind::Graveyard => 1,
+                };
+                match object_refs.entry(*object_id) {
+                    Entry::Occupied(mut occupied) => {
+                        occupied.get_mut().0 += refs;
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert((refs, 0));
+                    }
+                }
+                *object_count += 1;
+            }
+            (
+                ObjectKey { data: ObjectKeyData::Child { .. }, .. },
+                ObjectValue::Child { object_id, object_descriptor },
+            ) => {
+                match object_refs.entry(*object_id) {
+                    Entry::Occupied(mut occupied) => {
+                        occupied.get_mut().1 += 1;
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert((0, 1));
+                    }
+                }
+                match object_descriptor {
+                    ObjectDescriptor::File | ObjectDescriptor::Directory => {}
+                    ObjectDescriptor::Volume => {
+                        if !store.is_root() {
+                            self.error(FsckError::VolumeInChildStore(
+                                store.store_object_id(),
+                                *object_id,
+                            ))?;
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
         Ok(())
     }
 }
