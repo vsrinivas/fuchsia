@@ -15,13 +15,15 @@ namespace fidl::flat {
 
 namespace {
 
+// TODO(fxbug.dev/90281): Reconsider this approach.
 bool TypespaceCreate(Library* library, Typespace* typespace, Reporter* reporter, const Name& name,
                      const Type** out_type) {
   LayoutInvocation invocation;
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
+  CompileStep compile_step(library, reporter);
   return typespace->Create(
-      LibraryMediator(library, reporter), name,
+      LibraryMediator(library, &compile_step, reporter), name,
       std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
       std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt), out_type,
       &invocation);

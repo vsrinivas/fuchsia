@@ -825,11 +825,8 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
 
 class TypeDeclTypeTemplate final : public TypeTemplate {
  public:
-  TypeDeclTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, Library* library,
-                       TypeDecl* type_decl)
-      : TypeTemplate(std::move(name), typespace, reporter),
-        library_(library),
-        type_decl_(type_decl) {}
+  TypeDeclTypeTemplate(Name name, Typespace* typespace, Reporter* reporter, TypeDecl* type_decl)
+      : TypeTemplate(std::move(name), typespace, reporter), type_decl_(type_decl) {}
 
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
@@ -837,7 +834,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       if (type_decl_->compiling) {
         type_decl_->recursive = true;
       } else {
-        library_->CompileDecl(type_decl_);
+        lib.CompileDecl(type_decl_);
       }
     }
 
@@ -852,7 +849,6 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
   }
 
  private:
-  Library* library_;
   TypeDecl* type_decl_;
 };
 
@@ -1254,7 +1250,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
   }
 }
 
-void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const {
+void AttributeSchema::ResolveArgs(CompileStep* step, Attribute* attribute) const {
   switch (kind_) {
     case Kind::kValidateOnly:
     case Kind::kUseEarly:
@@ -1266,35 +1262,35 @@ void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
       // to report the error.
       return;
     case Kind::kUserDefined:
-      ResolveArgsWithoutSchema(library, attribute);
+      ResolveArgsWithoutSchema(step, attribute);
       return;
   }
 
   // Name the anonymous argument (if present).
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
     if (arg_schemas_.empty()) {
-      library->Fail(ErrAttributeDisallowsArgs, attribute->span, attribute);
+      step->Fail(ErrAttributeDisallowsArgs, attribute->span, attribute);
       return;
     }
     if (arg_schemas_.size() > 1) {
-      library->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
+      step->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
       return;
     }
-    anon_arg->name = library->GeneratedSimpleName(arg_schemas_.begin()->first);
+    anon_arg->name = step->library_->GeneratedSimpleName(arg_schemas_.begin()->first);
   } else if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
-    library->Fail(ErrAttributeArgMustNotBeNamed, attribute->span);
+    step->Fail(ErrAttributeArgMustNotBeNamed, attribute->span);
   }
 
   // Resolve each argument by name.
   for (auto& arg : attribute->args) {
     const auto it = arg_schemas_.find(arg->name.value().data());
     if (it == arg_schemas_.end()) {
-      library->Fail(ErrUnknownAttributeArg, attribute->span, attribute, arg->name.value().data());
+      step->Fail(ErrUnknownAttributeArg, attribute->span, attribute, arg->name.value().data());
       continue;
     }
     const auto& [name, schema] = *it;
     const bool literal_only = kind_ == Kind::kCompileEarly;
-    schema.ResolveArg(library, attribute, arg.get(), literal_only);
+    schema.ResolveArg(step, attribute, arg.get(), literal_only);
   }
 
   // Check for missing arguments.
@@ -1303,20 +1299,19 @@ void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
       continue;
     }
     if (arg_schemas_.size() == 1) {
-      library->Fail(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
+      step->Fail(ErrMissingRequiredAnonymousAttributeArg, attribute->span, attribute);
     } else {
-      library->Fail(ErrMissingRequiredAttributeArg, attribute->span, attribute, name);
+      step->Fail(ErrMissingRequiredAttributeArg, attribute->span, attribute, name);
     }
   }
 }
 
-void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg,
+void AttributeArgSchema::ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,
                                     bool literal_only) const {
   Constant* constant = arg->value.get();
 
   if (literal_only && constant->kind != Constant::Kind::kLiteral) {
-    library->Fail(ErrAttributeArgRequiresLiteral, constant->span, arg->name.value().data(),
-                  attribute);
+    step->Fail(ErrAttributeArgRequiresLiteral, constant->span, arg->name.value().data(), attribute);
     return;
   }
 
@@ -1362,17 +1357,17 @@ void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute, Attr
       target_type = &Typespace::kFloat64Type;
       break;
   }
-  if (!library->ResolveConstant(constant, target_type)) {
-    library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
+  if (!step->ResolveConstant(constant, target_type)) {
+    step->Fail(ErrCouldNotResolveAttributeArg, arg->span);
   }
 }
 
 // static
-void AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attribute) {
+void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* attribute) {
   // For attributes with a single, anonymous argument like `@foo("bar")`, assign
   // a default name so that arguments are always named after compilation.
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
-    anon_arg->name = library->GeneratedSimpleName(AttributeArg::kDefaultAnonymousName);
+    anon_arg->name = step->library_->GeneratedSimpleName(AttributeArg::kDefaultAnonymousName);
   }
 
   // Try resolving each argument as string or bool. We don't allow numerics
@@ -1381,9 +1376,9 @@ void AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
     assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
            "attribute arg with a binary operator is a parse error");
 
-    auto inferred_type = library->InferType(arg->value.get());
+    auto inferred_type = step->InferType(arg->value.get());
     if (!inferred_type) {
-      library->Fail(ErrCouldNotResolveAttributeArg, attribute->span);
+      step->Fail(ErrCouldNotResolveAttributeArg, attribute->span);
       continue;
     }
     // Only string or bool supported.
@@ -1403,11 +1398,11 @@ void AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
       case Type::Kind::kHandle:
       case Type::Kind::kTransportSide:
       case Type::Kind::kUntypedNumeric:
-        library->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
+        step->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
         continue;
     }
-    if (!library->ResolveConstant(arg->value.get(), inferred_type)) {
-      // Since we've inferred the type, it must resolve correclty.
+    if (!step->ResolveConstant(arg->value.get(), inferred_type)) {
+      // Since we've inferred the type, it must resolve correctly.
       __builtin_unreachable();
     }
   }
@@ -2098,7 +2093,7 @@ bool ConsumeStep::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kProtocol: {
       auto type_decl = static_cast<TypeDecl*>(decl_ptr);
       auto type_template =
-          std::make_unique<TypeDeclTypeTemplate>(name, typespace, reporter(), library_, type_decl);
+          std::make_unique<TypeDeclTypeTemplate>(name, typespace, reporter(), type_decl);
       typespace->AddTemplate(std::move(type_template));
       break;
     }
@@ -2602,9 +2597,7 @@ void ConsumeStep::MaybeOverrideName(AttributeList& attributes, NamingContext* co
   if (attr == nullptr)
     return;
 
-  // Although we are still in the consume step, this early compilation is safe
-  // because @generated_name uses AttributeSchema::Kind::kCompileEarly.
-  library_->CompileAttribute(attr);
+  CompileStep::CompileAttributeEarly(library_, attr);
   const auto* arg = attr->GetArg(AttributeArg::kDefaultAnonymousName);
   if (arg == nullptr || !arg->value->IsResolved()) {
     return;
@@ -2947,9 +2940,9 @@ void ConsumeStep::RunImpl() {
   }
 }
 
-bool Library::ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
-                                        const ConstantValue& left_operand,
-                                        const ConstantValue& right_operand) {
+bool CompileStep::ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
+                                            const ConstantValue& left_operand,
+                                            const ConstantValue& right_operand) {
   assert(left_operand.kind == right_operand.kind &&
          "left and right operands of or operator must be of the same kind");
   assert(opt_type && "compiler bug: type inference not implemented for or operator");
@@ -2976,7 +2969,7 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, std::optional<const 
   return true;
 }
 
-bool Library::ResolveConstant(Constant* constant, std::optional<const Type*> opt_type) {
+bool CompileStep::ResolveConstant(Constant* constant, std::optional<const Type*> opt_type) {
   assert(constant != nullptr);
 
   // Prevent re-entry.
@@ -3011,7 +3004,7 @@ bool Library::ResolveConstant(Constant* constant, std::optional<const Type*> opt
   __builtin_unreachable();
 }
 
-ConstantValue::Kind Library::ConstantValuePrimitiveKind(
+ConstantValue::Kind CompileStep::ConstantValuePrimitiveKind(
     const types::PrimitiveSubtype primitive_subtype) {
   switch (primitive_subtype) {
     case types::PrimitiveSubtype::kBool:
@@ -3040,14 +3033,14 @@ ConstantValue::Kind Library::ConstantValuePrimitiveKind(
   assert(false && "Compiler bug: unhandled primitive subtype");
 }
 
-bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
-                                        std::optional<const Type*> opt_type) {
+bool CompileStep::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
+                                            std::optional<const Type*> opt_type) {
   if (opt_type) {
     assert(TypeCanBeConst(opt_type.value()) &&
            "Compiler bug: resolving identifier constant to non-const-able type!");
   }
 
-  auto decl = LookupDeclByName(identifier_constant->name.memberless_key());
+  auto decl = library_->LookupDeclByName(identifier_constant->name.memberless_key());
   if (!decl)
     return false;
   CompileDecl(decl);
@@ -3196,8 +3189,8 @@ fail_cannot_convert:
               identifier_constant, const_type, type);
 }
 
-bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant,
-                                     std::optional<const Type*> opt_type) {
+bool CompileStep::ResolveLiteralConstant(LiteralConstant* literal_constant,
+                                         std::optional<const Type*> opt_type) {
   auto inferred_type = InferType(static_cast<flat::Constant*>(literal_constant));
   const Type* type = opt_type ? opt_type.value() : inferred_type;
   if (!TypeIsConvertibleTo(inferred_type, type)) {
@@ -3259,8 +3252,8 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant,
 }
 
 template <typename NumericType>
-bool Library::ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
-                                                       const Type* type) {
+bool CompileStep::ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
+                                                           const Type* type) {
   NumericType value;
   const auto span = literal_constant->literal->span();
   std::string string_data(span.data().data(), span.data().data() + span.data().size());
@@ -3279,7 +3272,7 @@ bool Library::ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_
   }
 }
 
-const Type* Library::InferType(Constant* constant) {
+const Type* CompileStep::InferType(Constant* constant) {
   switch (constant->kind) {
     case Constant::Kind::kLiteral: {
       auto literal = static_cast<const raw::Literal*>(
@@ -3288,10 +3281,10 @@ const Type* Library::InferType(Constant* constant) {
         case raw::Literal::Kind::kString: {
           auto string_literal = static_cast<const raw::StringLiteral*>(literal);
           auto inferred_size = utils::string_literal_length(string_literal->span().data());
-          auto inferred_type = std::make_unique<StringType>(Typespace::kUnboundedStringType.name,
-                                                            typespace_->InternSize(inferred_size),
-                                                            types::Nullability::kNonnullable);
-          return typespace_->Intern(std::move(inferred_type));
+          auto inferred_type = std::make_unique<StringType>(
+              Typespace::kUnboundedStringType.name, library_->typespace_->InternSize(inferred_size),
+              types::Nullability::kNonnullable);
+          return library_->typespace_->Intern(std::move(inferred_type));
         }
         case raw::Literal::Kind::kNumeric:
           return &Typespace::kUntypedNumericType;
@@ -3313,7 +3306,7 @@ const Type* Library::InferType(Constant* constant) {
   }
 }
 
-bool Library::ResolveAsOptional(Constant* constant) const {
+bool CompileStep::ResolveAsOptional(Constant* constant) const {
   assert(constant);
 
   if (constant->kind != Constant::Kind::kIdentifier)
@@ -3324,14 +3317,14 @@ bool Library::ResolveAsOptional(Constant* constant) const {
   // Note that as we improve scoping rules, we would need to allow `fidl.optional`
   // to be the FQN for the `optional` constant.
   auto identifier_constant = static_cast<IdentifierConstant*>(constant);
-  auto decl = LookupDeclByName(identifier_constant->name.memberless_key());
+  auto decl = library_->LookupDeclByName(identifier_constant->name.memberless_key());
   if (decl)
     return false;
 
   return identifier_constant->name.decl_name() == "optional";
 }
 
-void Library::CompileAttributeList(AttributeList* attributes) {
+void CompileStep::CompileAttributeList(AttributeList* attributes) {
   Scope<std::string> scope;
   for (auto& attribute : attributes->attributes) {
     const auto original_name = attribute->name.data();
@@ -3350,7 +3343,7 @@ void Library::CompileAttributeList(AttributeList* attributes) {
   }
 }
 
-void Library::CompileAttribute(Attribute* attribute) {
+void CompileStep::CompileAttribute(Attribute* attribute, bool early) {
   if (attribute->compiled) {
     return;
   }
@@ -3375,18 +3368,26 @@ void Library::CompileAttribute(Attribute* attribute) {
   }
 
   const AttributeSchema& schema =
-      all_libraries_->RetrieveAttributeSchema(reporter(), attribute,
-                                              /* warn_on_typo = */ true);
+      library_->all_libraries_->RetrieveAttributeSchema(reporter(), attribute,
+                                                        /* warn_on_typo = */ true);
+  if (early) {
+    assert(schema.CanCompileEarly() && "attribute is not allowed to be compiled early");
+  }
   schema.ResolveArgs(this, attribute);
   attribute->compiled = true;
 }
 
-const Type* Library::TypeResolve(const Type* type) {
+// static
+void CompileStep::CompileAttributeEarly(Library* library, Attribute* attribute) {
+  CompileStep(library).CompileAttribute(attribute, /* early = */ true);
+}
+
+const Type* CompileStep::TypeResolve(const Type* type) {
   if (type->kind != Type::Kind::kIdentifier) {
     return type;
   }
   auto identifier_type = static_cast<const IdentifierType*>(type);
-  Decl* decl = LookupDeclByName(identifier_type->name);
+  Decl* decl = library_->LookupDeclByName(identifier_type->name);
   if (!decl) {
     FailNoSpan(ErrCouldNotResolveIdentifierToType);
     return nullptr;
@@ -3402,7 +3403,7 @@ const Type* Library::TypeResolve(const Type* type) {
   }
 }
 
-bool Library::TypeCanBeConst(const Type* type) {
+bool CompileStep::TypeCanBeConst(const Type* type) {
   switch (type->kind) {
     case flat::Type::Kind::kString:
       return type->nullability != types::Nullability::kNullable;
@@ -3423,7 +3424,7 @@ bool Library::TypeCanBeConst(const Type* type) {
   }  // switch
 }
 
-bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
+bool CompileStep::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
   switch (to_type->kind) {
     case flat::Type::Kind::kString: {
       if (from_type->kind != flat::Type::Kind::kString)
@@ -3752,7 +3753,7 @@ void SortStep::RunImpl() {
   }
 }
 
-void Library::CompileDecl(Decl* decl) {
+void CompileStep::CompileDecl(Decl* decl) {
   if (decl->compiled) {
     return;
   }
@@ -4055,7 +4056,7 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
   return types::Resourceness::kValue;
 }
 
-void Library::CompileBits(Bits* bits_declaration) {
+void CompileStep::CompileBits(Bits* bits_declaration) {
   CompileAttributeList(bits_declaration->attributes.get());
   for (auto& member : bits_declaration->members) {
     CompileAttributeList(member.attributes.get());
@@ -4116,7 +4117,7 @@ void Library::CompileBits(Bits* bits_declaration) {
   }
 }
 
-void Library::CompileConst(Const* const_declaration) {
+void CompileStep::CompileConst(Const* const_declaration) {
   CompileAttributeList(const_declaration->attributes.get());
   CompileTypeConstructor(const_declaration->type_ctor.get());
   const auto* const_type = const_declaration->type_ctor->type;
@@ -4130,7 +4131,7 @@ void Library::CompileConst(Const* const_declaration) {
   }
 }
 
-void Library::CompileEnum(Enum* enum_declaration) {
+void CompileStep::CompileEnum(Enum* enum_declaration) {
   CompileAttributeList(enum_declaration->attributes.get());
   for (auto& member : enum_declaration->members) {
     CompileAttributeList(member.attributes.get());
@@ -4220,7 +4221,7 @@ bool HasSimpleLayout(const Decl* decl) {
   return decl->attributes->Get("for_deprecated_c_bindings") != nullptr;
 }
 
-void Library::CompileResource(Resource* resource_declaration) {
+void CompileStep::CompileResource(Resource* resource_declaration) {
   Scope<std::string_view> scope;
 
   CompileAttributeList(resource_declaration->attributes.get());
@@ -4246,7 +4247,7 @@ void Library::CompileResource(Resource* resource_declaration) {
   }
 }
 
-void Library::CompileProtocol(Protocol* protocol_declaration) {
+void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
   CompileAttributeList(protocol_declaration->attributes.get());
 
   MethodScope method_scope;
@@ -4254,7 +4255,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
                                                                   auto Visitor) -> void {
     for (const auto& composed_protocol : protocol->composed_protocols) {
       auto name = composed_protocol.name;
-      auto decl = LookupDeclByName(name);
+      auto decl = library_->LookupDeclByName(name);
       // TODO(fxbug.dev/7926): Special handling here should not be required, we
       // should first rely on creating the types representing composed
       // protocols.
@@ -4319,7 +4320,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
   // will fail the scope check.
   for (const auto& composed_protocol : protocol_declaration->composed_protocols) {
     CompileAttributeList(composed_protocol.attributes.get());
-    auto decl = LookupDeclByName(composed_protocol.name);
+    auto decl = library_->LookupDeclByName(composed_protocol.name);
     if (!decl) {
       Fail(ErrUnknownType, composed_protocol.name.span().value(), composed_protocol.name);
       continue;
@@ -4340,13 +4341,14 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
       continue;
     }
     // TODO(fxbug.dev/77623): Remove.
-    if (library_name_.size() == 2 && library_name_[0] == "fuchsia" && library_name_[1] == "io" &&
+    auto library_name = library_->library_name_;
+    if (library_name.size() == 2 && library_name[0] == "fuchsia" && library_name[1] == "io" &&
         selector.find("/") == selector.npos) {
       Fail(ErrFuchsiaIoExplicitOrdinals, method.name);
       continue;
     }
-    method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(method_hasher_(
-        library_name_, protocol_declaration->name.decl_name(), selector, *method.identifier));
+    method.generated_ordinal64 = std::make_unique<raw::Ordinal64>(library_->method_hasher_(
+        library_name, protocol_declaration->name.decl_name(), selector, *method.identifier));
   }
 
   CheckScopes(protocol_declaration, CheckScopes);
@@ -4355,7 +4357,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
     if (method.maybe_request != nullptr) {
       const Name name = method.maybe_request->name;
       CompileTypeConstructor(method.maybe_request.get());
-      Decl* decl = LookupDeclByName(name);
+      Decl* decl = library_->LookupDeclByName(name);
       if (!method.maybe_request->type || !decl) {
         Fail(ErrUnknownType, name.span().value(), name);
         continue;
@@ -4365,7 +4367,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
     if (method.maybe_response != nullptr) {
       const Name name = method.maybe_response->name;
       CompileTypeConstructor(method.maybe_response.get());
-      Decl* decl = LookupDeclByName(name);
+      Decl* decl = library_->LookupDeclByName(name);
       if (!method.maybe_response->type || !decl) {
         Fail(ErrUnknownType, name.span().value(), name);
         continue;
@@ -4375,7 +4377,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
   }
 }
 
-void Library::CompileService(Service* service_decl) {
+void CompileStep::CompileService(Service* service_decl) {
   Scope<std::string> scope;
 
   CompileAttributeList(service_decl->attributes.get());
@@ -4411,7 +4413,7 @@ void Library::CompileService(Service* service_decl) {
   }
 }
 
-void Library::CompileStruct(Struct* struct_declaration) {
+void CompileStep::CompileStruct(Struct* struct_declaration) {
   Scope<std::string> scope;
   DeriveResourceness derive_resourceness(&struct_declaration->resourceness);
 
@@ -4453,7 +4455,7 @@ void Library::CompileStruct(Struct* struct_declaration) {
   }
 }
 
-void Library::CompileTable(Table* table_declaration) {
+void CompileStep::CompileTable(Table* table_declaration) {
   Scope<std::string> name_scope;
   Ordinal64Scope ordinal_scope;
 
@@ -4511,7 +4513,7 @@ void Library::CompileTable(Table* table_declaration) {
   }
 }
 
-void Library::CompileUnion(Union* union_declaration) {
+void CompileStep::CompileUnion(Union* union_declaration) {
   Scope<std::string> scope;
   Ordinal64Scope ordinal_scope;
   DeriveResourceness derive_resourceness(&union_declaration->resourceness);
@@ -4557,7 +4559,7 @@ void Library::CompileUnion(Union* union_declaration) {
   }
 }
 
-void Library::CompileTypeAlias(TypeAlias* type_alias) {
+void CompileStep::CompileTypeAlias(TypeAlias* type_alias) {
   CompileAttributeList(type_alias->attributes.get());
 
   if (type_alias->partial_type_ctor->name == type_alias->name) {
@@ -4594,11 +4596,9 @@ bool Library::Compile() {
 }
 
 void CompileStep::RunImpl() {
-  // TODO(fxbug.dev/89947): Move all the Compile methods into CompileStep so
-  // that they can be called unqualified here.
-  library_->CompileAttributeList(library_->attributes.get());
+  CompileAttributeList(library_->attributes.get());
   for (auto& [name, decl] : library_->declarations_) {
-    library_->CompileDecl(decl);
+    CompileDecl(decl);
   }
 }
 
@@ -4619,12 +4619,13 @@ void VerifyDependenciesStep::RunImpl() {
   library_->dependencies_.VerifyAllDependenciesWereUsed(*library_, reporter());
 }
 
-void Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
+void CompileStep::CompileTypeConstructor(TypeConstructor* type_ctor) {
   if (type_ctor->type != nullptr) {
     return;
   }
-  if (!typespace_->Create(LibraryMediator(this, reporter()), type_ctor->name, type_ctor->parameters,
-                          type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params)) {
+  if (!library_->typespace_->Create(LibraryMediator(library_, this, reporter()), type_ctor->name,
+                                    type_ctor->parameters, type_ctor->constraints, &type_ctor->type,
+                                    &type_ctor->resolved_params)) {
     return;
   }
 
@@ -4633,8 +4634,8 @@ void Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   VerifyTypeCategory(type_ctor->type, type_ctor->name.span(), AllowedCategories::kTypeOnly);
 }
 
-bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
-                                 AllowedCategories category) {
+bool CompileStep::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
+                                     AllowedCategories category) {
   assert(type && "CompileTypeConstructor did not set Type");
   if (type->kind != Type::Kind::kIdentifier) {
     // we assume that all non-identifier types (i.e. builtins) are actually
@@ -4661,8 +4662,8 @@ bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> spa
   return true;
 }
 
-bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
-                                          const HandleRights** out_rights) {
+bool CompileStep::ResolveHandleRightsConstant(Resource* resource, Constant* constant,
+                                              const HandleRights** out_rights) {
   if (resource->subtype_ctor == nullptr || resource->subtype_ctor->name.full_name() != "uint32") {
     return FailNoSpan(ErrResourceMustBeUint32Derived, resource->name);
   }
@@ -4672,7 +4673,7 @@ bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant
     return false;
   }
 
-  Decl* rights_decl = LookupDeclByName(rights_property->type_ctor->name);
+  Decl* rights_decl = library_->LookupDeclByName(rights_property->type_ctor->name);
   if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
     return false;
   }
@@ -4691,9 +4692,9 @@ bool Library::ResolveHandleRightsConstant(Resource* resource, Constant* constant
   return true;
 }
 
-bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
-                                             const std::unique_ptr<Constant>& constant,
-                                             uint32_t* out_obj_type) {
+bool CompileStep::ResolveHandleSubtypeIdentifier(Resource* resource,
+                                                 const std::unique_ptr<Constant>& constant,
+                                                 uint32_t* out_obj_type) {
   // We only support an extremely limited form of resource suitable for
   // handles here, where it must be:
   // - derived from uint32
@@ -4714,7 +4715,7 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
     return false;
   }
 
-  Decl* subtype_decl = LookupDeclByName(subtype_property->type_ctor->name);
+  Decl* subtype_decl = library_->LookupDeclByName(subtype_property->type_ctor->name);
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
     return false;
   }
@@ -4742,11 +4743,11 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
   return false;
 }
 
-bool Library::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
+bool CompileStep::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
   if (!ResolveConstant(size_constant, &Typespace::kUint32Type)) {
     if (size_constant->kind == Constant::Kind::kIdentifier) {
       auto name = static_cast<IdentifierConstant*>(size_constant)->name;
-      if (name.library() == this && name.decl_name() == "MAX" && !name.member_name()) {
+      if (name.library() == library_ && name.decl_name() == "MAX" && !name.member_name()) {
         size_constant->ResolveTo(std::make_unique<Size>(Size::Max()), &Typespace::kUint32Type);
       }
     }
@@ -4761,7 +4762,7 @@ bool Library::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
 }
 
 template <typename DeclType, typename MemberType>
-bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator) {
+bool CompileStep::ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator) {
   assert(decl != nullptr);
   auto checkpoint = reporter()->Checkpoint();
 
@@ -4824,7 +4825,7 @@ static bool IsPowerOfTwo(T t) {
 }
 
 template <typename MemberType>
-bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask) {
+bool CompileStep::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask) {
   static_assert(std::is_unsigned<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Bits members must be an unsigned integral type!");
   // Each bits member must be a power of two.
@@ -4844,8 +4845,8 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
 }
 
 template <typename MemberType>
-bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
-                                                     MemberType* out_unknown_value) {
+bool CompileStep::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
+                                                         MemberType* out_unknown_value) {
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
 
@@ -5056,27 +5057,27 @@ bool LibraryMediator::ResolveConstraintAs(const std::unique_ptr<Constant>& const
 }
 
 bool LibraryMediator::ResolveType(TypeConstructor* type) const {
-  library_->CompileTypeConstructor(type);
+  compile_step_->CompileTypeConstructor(type);
   return type->type != nullptr;
 }
 
 bool LibraryMediator::ResolveSizeBound(Constant* size_constant, const Size** out_size) const {
-  return library_->ResolveSizeBound(size_constant, out_size);
+  return compile_step_->ResolveSizeBound(size_constant, out_size);
 }
 
 bool LibraryMediator::ResolveAsOptional(Constant* constant) const {
-  return library_->ResolveAsOptional(constant);
+  return compile_step_->ResolveAsOptional(constant);
 }
 
 bool LibraryMediator::ResolveAsHandleSubtype(Resource* resource,
                                              const std::unique_ptr<Constant>& constant,
                                              uint32_t* out_obj_type) const {
-  return library_->ResolveHandleSubtypeIdentifier(resource, constant, out_obj_type);
+  return compile_step_->ResolveHandleSubtypeIdentifier(resource, constant, out_obj_type);
 }
 
 bool LibraryMediator::ResolveAsHandleRights(Resource* resource, Constant* constant,
                                             const HandleRights** out_rights) const {
-  return library_->ResolveHandleRightsConstant(resource, constant, out_rights);
+  return compile_step_->ResolveHandleRightsConstant(resource, constant, out_rights);
 }
 
 bool LibraryMediator::ResolveAsProtocol(const Constant* constant, const Protocol** out_decl) const {
@@ -5120,6 +5121,6 @@ Constant* IdentifierLayoutParameter::AsConstant() const {
   return as_constant.get();
 }
 
-void LibraryMediator::CompileDecl(Decl* decl) const { library_->CompileDecl(decl); }
+void LibraryMediator::CompileDecl(Decl* decl) const { compile_step_->CompileDecl(decl); }
 
 }  // namespace fidl::flat

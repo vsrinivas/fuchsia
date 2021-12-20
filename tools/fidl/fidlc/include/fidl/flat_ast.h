@@ -60,6 +60,7 @@ struct PtrCompare {
 class Typespace;
 struct Decl;
 class Library;
+class CompileStep;
 
 bool HasSimpleLayout(const Decl* decl);
 
@@ -831,8 +832,8 @@ struct TypeAlias final : public Decl {
 // 2. only exposes the methods that are needed from the Library to the TypeTemplate.
 class LibraryMediator : private ReporterMixin {
  public:
-  explicit LibraryMediator(Library* library, Reporter* reporter)
-      : ReporterMixin(reporter), library_(library) {}
+  explicit LibraryMediator(Library* library, CompileStep* compile_step, Reporter* reporter)
+      : ReporterMixin(reporter), library_(library), compile_step_(compile_step) {}
 
   using ReporterMixin::Fail;
 
@@ -891,6 +892,7 @@ class LibraryMediator : private ReporterMixin {
 
  private:
   Library* library_;
+  CompileStep* compile_step_;
 };
 
 class TypeTemplate : protected ReporterMixin {
@@ -1005,7 +1007,7 @@ class AttributeArgSchema {
 
   bool IsOptional() const { return optionality_ == Optionality::kOptional; }
 
-  void ResolveArg(Library* library, Attribute* attribute, AttributeArg* arg,
+  void ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,
                   bool literal_only) const;
 
  private:
@@ -1043,9 +1045,12 @@ class AttributeSchema {
   // Special schema for arbitrary user-defined attributes.
   static const AttributeSchema kUserDefined;
 
+  // Returns true if this schema allows early compilations.
+  bool CanCompileEarly() const { return kind_ == Kind::kCompileEarly; }
+
   // Resolves constants in the attribute's arguments. In the case of an
   // anonymous argument like @foo("abc"), infers the argument's name too.
-  void ResolveArgs(Library* target_library, Attribute* attribute) const;
+  void ResolveArgs(CompileStep* step, Attribute* attribute) const;
 
   // Validates the attribute's placement and constraints. Must call
   // `ResolveArgs` first.
@@ -1086,7 +1091,7 @@ class AttributeSchema {
 
   explicit AttributeSchema(Kind kind) : kind_(kind) {}
 
-  static void ResolveArgsWithoutSchema(Library* library, Attribute* attribute);
+  static void ResolveArgsWithoutSchema(CompileStep* compile_step, Attribute* attribute);
 
   Kind kind_ = Kind::kValidateOnly;
   Placement placement_ = Placement::kAnywhere;
@@ -1198,7 +1203,6 @@ struct LibraryComparator;
 
 class Library : private Attributable, private ReporterMixin {
   friend AttributeSchema;
-  friend AttributeArgSchema;
   friend StepBase;
   friend ConsumeStep;
   friend SortStep;
@@ -1225,80 +1229,6 @@ class Library : private Attributable, private ReporterMixin {
   const std::vector<std::string_view>& name() const { return library_name_; }
   const AttributeList* GetAttributes() const { return attributes.get(); }
 
- private:
-  // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
-  // one that is not scoped, it is just text. An anonymous name is one that
-  // is guaranteed to be unique within the library, and a derived name is one
-  // that is library scoped but derived from the concatenated components using
-  // underscores as delimiters.
-  SourceSpan GeneratedSimpleName(std::string_view name);
-
-  bool TypeCanBeConst(const Type* type);
-  const Type* TypeResolve(const Type* type);
-  // Return true if this constant refers to the built in `optional` constraint,
-  // false otherwise.
-  bool ResolveAsOptional(Constant* constant) const;
-  bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-
-  void CompileAttributeList(AttributeList* attributes);
-  void CompileAttribute(Attribute* attribute);
-  void CompileBits(Bits* bits_declaration);
-  void CompileConst(Const* const_declaration);
-  void CompileEnum(Enum* enum_declaration);
-  void CompileProtocol(Protocol* protocol_declaration);
-  void CompileResource(Resource* resource_declaration);
-  void CompileService(Service* service_decl);
-  void CompileStruct(Struct* struct_declaration);
-  void CompileTable(Table* table_declaration);
-  void CompileUnion(Union* union_declaration);
-  void CompileTypeAlias(TypeAlias* type_alias);
-  void CompileTypeConstructor(TypeConstructor* type_ctor);
-
-  enum class AllowedCategories {
-    kTypeOrProtocol,
-    kTypeOnly,
-    kProtocolOnly,
-    // Note: there's currently no scenario where we expect a service.
-  };
-  // Returns true if the provided type falls into one of the specified categories,
-  // and false otherwise. A span can be provided for error reporting.
-  bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
-                          AllowedCategories category);
-
-  ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
-  bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
-                                   const HandleRights** out_rights);
-  bool ResolveHandleSubtypeIdentifier(Resource* resource, const std::unique_ptr<Constant>& constant,
-                                      uint32_t* out_obj_type);
-  bool ResolveSizeBound(Constant* size_constant, const Size** out_size);
-  bool ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
-                                 const ConstantValue& left_operand,
-                                 const ConstantValue& right_operand);
-  bool ResolveConstant(Constant* constant, std::optional<const Type*> opt_type);
-  bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
-                                 std::optional<const Type*> opt_type);
-  bool ResolveLiteralConstant(LiteralConstant* literal_constant,
-                              std::optional<const Type*> opt_type);
-  template <typename NumericType>
-  bool ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
-                                                const Type* type);
-  const Type* InferType(Constant* constant);
-
-  // Validates a single member of a bits or enum. On success, returns nullptr,
-  // and on failure returns an error.
-  template <typename MemberType>
-  using MemberValidator = fit::function<std::unique_ptr<Diagnostic>(
-      const MemberType& member, const AttributeList* attributes)>;
-  template <typename DeclType, typename MemberType>
-  bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
-  template <typename MemberType>
-  bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
-  template <typename MemberType>
-  bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
-
- public:
-  void CompileDecl(Decl* decl);
-
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
@@ -1323,6 +1253,13 @@ class Library : private Attributable, private ReporterMixin {
   std::vector<const Decl*> declaration_order_;
 
  private:
+  // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
+  // one that is not scoped, it is just text. An anonymous name is one that
+  // is guaranteed to be unique within the library, and a derived name is one
+  // that is library scoped but derived from the concatenated components using
+  // underscores as delimiters.
+  SourceSpan GeneratedSimpleName(std::string_view name);
+
   Dependencies dependencies_;
   const Libraries* all_libraries_;
 
@@ -1357,14 +1294,15 @@ struct LibraryComparator {
 class StepBase : protected ReporterMixin {
  public:
   explicit StepBase(Library* library) : ReporterMixin(library->reporter()), library_(library) {}
+  // TODO(fxbug.dev/90281): Remove this constructor. It is currently needed
+  // because in types_tests.cc sometimes the library is null.
+  explicit StepBase(Library* library, Reporter* reporter)
+      : ReporterMixin(reporter), library_(library) {}
   StepBase(const StepBase&) = delete;
-  ~StepBase() { assert(done_ && "must call Run() before destroying"); }
 
   bool Run() {
-    assert(!done_ && "should only be called once");
     auto checkpoint = reporter()->Checkpoint();
     RunImpl();
-    done_ = true;
     return checkpoint.NoNewErrors();
   }
 
@@ -1374,9 +1312,6 @@ class StepBase : protected ReporterMixin {
   virtual void RunImpl() = 0;
 
   Library* library_;  // link to library for which this step was created
-
- private:
-  bool done_ = false;
 };
 
 // We run a separate ConsumeStep for each file in the library.
@@ -1467,12 +1402,88 @@ class SortStep : public StepBase {
   bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
 };
 
+// We run one main CompileStep for the whole library. Some attributes are
+// compiled before that via the CompileAttributeEarly method. To avoid kicking
+// off other compilations, these attributes only allow literal arguments.
 class CompileStep : public StepBase {
  public:
   using StepBase::StepBase;
 
+  friend LibraryMediator;
+  friend AttributeSchema;
+  friend AttributeArgSchema;
+
+  // Compiles an attribute early, before the main CompileStep has started. The
+  // attribute must support this (see AttributeSchema::CanCompileEarly).
+  static void CompileAttributeEarly(Library* library, Attribute* attribute);
+
  private:
   void RunImpl() override;
+
+  // Compile methods
+  void CompileDecl(Decl* decl);
+  void CompileAttributeList(AttributeList* attributes);
+  void CompileAttribute(Attribute* attribute, bool early = false);
+  void CompileBits(Bits* bits_declaration);
+  void CompileConst(Const* const_declaration);
+  void CompileEnum(Enum* enum_declaration);
+  void CompileProtocol(Protocol* protocol_declaration);
+  void CompileResource(Resource* resource_declaration);
+  void CompileService(Service* service_decl);
+  void CompileStruct(Struct* struct_declaration);
+  void CompileTable(Table* table_declaration);
+  void CompileUnion(Union* union_declaration);
+  void CompileTypeAlias(TypeAlias* type_alias);
+  void CompileTypeConstructor(TypeConstructor* type_ctor);
+
+  // Resolve methods
+  bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
+                                   const HandleRights** out_rights);
+  bool ResolveHandleSubtypeIdentifier(Resource* resource, const std::unique_ptr<Constant>& constant,
+                                      uint32_t* out_obj_type);
+  bool ResolveSizeBound(Constant* size_constant, const Size** out_size);
+  bool ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
+                                 const ConstantValue& left_operand,
+                                 const ConstantValue& right_operand);
+  bool ResolveConstant(Constant* constant, std::optional<const Type*> opt_type);
+  bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
+                                 std::optional<const Type*> opt_type);
+  bool ResolveLiteralConstant(LiteralConstant* literal_constant,
+                              std::optional<const Type*> opt_type);
+  bool ResolveAsOptional(Constant* constant) const;
+  template <typename NumericType>
+  bool ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
+                                                const Type* type);
+
+  enum class AllowedCategories {
+    kTypeOrProtocol,
+    kTypeOnly,
+    kProtocolOnly,
+    // Note: there's currently no scenario where we expect a service.
+  };
+
+  // Type methods
+  bool TypeCanBeConst(const Type* type);
+  bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
+  const Type* TypeResolve(const Type* type);
+  const Type* InferType(Constant* constant);
+  ConstantValue::Kind ConstantValuePrimitiveKind(types::PrimitiveSubtype primitive_subtype);
+  bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
+                          AllowedCategories category);
+
+  // Validates a single member of a bits or enum. On success, returns nullptr,
+  // and on failure returns an error. The caller will set the diagnostic span.
+  template <typename MemberType>
+  using MemberValidator = fit::function<std::unique_ptr<Diagnostic>(
+      const MemberType& member, const AttributeList* attributes)>;
+
+  // Validation methods
+  template <typename DeclType, typename MemberType>
+  bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
+  template <typename MemberType>
+  bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
+  template <typename MemberType>
+  bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
 };
 
 class VerifyResourcenessStep : public StepBase {
