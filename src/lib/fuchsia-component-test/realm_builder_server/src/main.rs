@@ -917,6 +917,14 @@ fn create_capability_decl(
                 rights: directory.rights.unwrap_or(fio2::RW_STAR_DIR),
             })
         }
+        ftest::Capability2::Event(event) => {
+            let name = event.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", event.clone()),
+            ))?;
+            cm_rust::CapabilityDecl::Event(cm_rust::EventDecl {
+                name: cm_rust::CapabilityName(name.clone()),
+            })
+        }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "encountered unsupported capability variant: {:?}",
@@ -964,6 +972,24 @@ fn create_offer_decl(
                 dependency_type: cm_rust::DependencyType::Strong,
             })
         }
+        ftest::Capability2::Event(event) => {
+            let name = event.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", event.clone()),
+            ))?;
+            let as_ = event.as_.as_ref().unwrap_or(name);
+            let mode = event.mode.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `mode` received was empty: {:?}", event.clone()),
+            ))?;
+            let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
+            cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
+                source,
+                source_name: name.as_str().into(),
+                target,
+                target_name: as_.as_str().into(),
+                filter,
+                mode: mode.clone().fidl_into_native(),
+            })
+        }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "encountered unsupported capability variant: {:?}",
@@ -1007,6 +1033,12 @@ fn create_expose_decl(
                 subdir: directory.subdir.map(PathBuf::from),
             })
         }
+        ftest::Capability2::Event(_) => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "event capabilities cannot be exposed: {:?}",
+                capability.clone()
+            )));
+        }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
                 "encountered unsupported capability variant: {:?}",
@@ -1042,6 +1074,24 @@ fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, R
                 target_path: to_capability_path(directory.as_, "/", name.clone())?,
                 rights: directory.rights.unwrap_or(fio2::RW_STAR_DIR),
                 subdir: directory.subdir.map(PathBuf::from),
+                dependency_type: cm_rust::DependencyType::Strong,
+            })
+        }
+        ftest::Capability2::Event(event) => {
+            let name = event.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", event.clone()),
+            ))?;
+            let as_ = event.as_.as_ref().unwrap_or(name);
+            let mode = event.mode.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `mode` received was empty: {:?}", event.clone()),
+            ))?;
+            let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
+            cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: as_.as_str().into(),
+                target_name: as_.as_str().into(),
+                filter,
+                mode: mode.clone().fidl_into_native(),
                 dependency_type: cm_rust::DependencyType::Strong,
             })
         }
@@ -2524,6 +2574,7 @@ mod tests {
             ClientEnd,
         },
         fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
+        maplit::hashmap,
         matches::assert_matches,
         std::convert::TryInto,
         test_case::test_case,
@@ -4154,6 +4205,75 @@ mod tests {
                 ftest::ChildOptions::EMPTY,
                 ComponentTree { decl: a_decl, children: vec![] },
             )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn route_event_to_child_component() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "test://a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        realm_and_builder_task
+            .realm_proxy
+            .add_route(
+                &mut vec![ftest::Capability2::Event(ftest::Event {
+                    name: Some("directory_ready".to_string()),
+                    as_: None,
+                    mode: Some(fcdecl::EventMode::Sync),
+                    filter: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "name".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "hippos".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..ftest::Event::EMPTY
+                })]
+                .iter_mut(),
+                &mut fcdecl::Ref::Parent(fcdecl::ParentRef {}),
+                &mut vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_string(),
+                    collection: None,
+                })]
+                .iter_mut(),
+            )
+            .await
+            .expect("failed to call add_child")
+            .expect("add_route returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test://a".to_string(),
+                    startup: fcdecl::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                offers: vec![cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
+                    source: cm_rust::OfferSource::Parent,
+                    source_name: "directory_ready".into(),
+                    target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                        name: "a".to_string(),
+                        collection: None,
+                    }),
+                    target_name: "directory_ready".into(),
+                    filter: Some(hashmap!(
+                        "name".to_string() => cm_rust::DictionaryValue::Str("hippos".to_string()),
+                    )),
+                    mode: cm_rust::EventMode::Sync,
+                })],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![],
         };
         expected_tree.add_binder_expose();
         assert_eq!(expected_tree, tree_from_resolver);

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::*, local_component_runner::LocalComponentRunnerBuilder, ScopedInstance},
+    crate::{error::*, local_component_runner::LocalComponentRunnerBuilder, Event, ScopedInstance},
     anyhow::format_err,
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{self, create_proxy, ClientEnd, DiscoverableProtocolMarker, Proxy},
@@ -234,6 +234,11 @@ impl Capability {
             path: None,
         }
     }
+
+    /// Creates a new event capability.
+    pub fn event(event: Event, mode: cm_rust::EventMode) -> EventCapability {
+        EventCapability { event, mode }
+    }
 }
 
 /// A protocol capability, which may be routed between components. Created by
@@ -336,6 +341,24 @@ impl Into<ftest::Capability2> for DirectoryCapability {
             rights: self.rights,
             subdir: self.subdir,
             ..ftest::Directory::EMPTY
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct EventCapability {
+    event: Event,
+    mode: cm_rust::EventMode,
+}
+
+impl Into<ftest::Capability2> for EventCapability {
+    fn into(self) -> ftest::Capability2 {
+        ftest::Capability2::Event(ftest::Event {
+            name: Some(self.event.name().to_string()),
+            as_: None,
+            mode: Some(self.mode.native_into_fidl()),
+            filter: self.event.filter().map(NativeIntoFidl::native_into_fidl),
+            ..ftest::Event::EMPTY
         })
     }
 }
@@ -1135,6 +1158,21 @@ mod tests {
                 rights: None,
                 subdir: None,
                 path: Some("/test2".to_string()),
+            },
+        );
+    }
+
+    #[fuchsia::test]
+    async fn event_capability_construction() {
+        assert_eq!(
+            Capability::event(Event::Started, cm_rust::EventMode::Sync),
+            EventCapability { event: Event::Started, mode: cm_rust::EventMode::Sync },
+        );
+        assert_eq!(
+            Capability::event(Event::directory_ready("hippos"), cm_rust::EventMode::Async),
+            EventCapability {
+                event: Event::DirectoryReady("hippos".to_string()),
+                mode: cm_rust::EventMode::Async,
             },
         );
     }
