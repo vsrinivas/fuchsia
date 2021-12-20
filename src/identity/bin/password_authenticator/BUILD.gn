@@ -20,7 +20,9 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//src/identity/lib/identity_common",
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
@@ -33,6 +35,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
   ]
 
@@ -40,11 +44,13 @@ rustc_binary("bin") {
     ":test.identity-rustc",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:tempfile",
   ]
 
   sources = [
     "src/account.rs",
     "src/account_manager.rs",
+    "src/account_metadata.rs",
     "src/constants.rs",
     "src/disk_management.rs",
     "src/keys.rs",
@@ -69,7 +75,10 @@ fuchsia_package("password_authenticator") {
 
 fuchsia_unittest_package("password-authenticator-tests") {
   manifest = "meta/password-authenticator-test.cml"
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "//src/sys/test_runners:tmp_storage",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

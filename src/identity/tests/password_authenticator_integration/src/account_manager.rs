@@ -72,6 +72,13 @@ impl TestEnv {
                 ])
             ).await.unwrap()
 
+            .add_route(RouteBuilder::storage("data", "/data")
+                .source(RouteEndpoint::AboveRoot)
+                .targets(vec![
+                    RouteEndpoint::component("password_authenticator"),
+                ])
+            ).await.unwrap()
+
             // Expose AccountManager so we can test it
             .add_route(RouteBuilder::protocol("fuchsia.identity.account.AccountManager")
                 .source(RouteEndpoint::component("password_authenticator"))

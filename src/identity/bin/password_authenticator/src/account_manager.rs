@@ -4,6 +4,7 @@
 
 use crate::{
     account::{Account, CheckNewClientResult},
+    account_metadata::AccountMetadataStore,
     constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
     disk_management::{DiskError, DiskManager, EncryptedBlockDevice, Partition},
     keys::{Key, KeyDerivation},
@@ -20,13 +21,16 @@ use std::{collections::HashMap, sync::Arc};
 
 pub type AccountId = u64;
 
-pub struct AccountManager<DM, KD>
+#[allow(dead_code)]
+pub struct AccountManager<DM, KD, AMS>
 where
     DM: DiskManager,
     KD: KeyDerivation,
+    AMS: AccountMetadataStore,
 {
     disk_manager: DM,
     key_derivation: KD,
+    account_metadata_store: AMS,
 
     accounts: Mutex<HashMap<AccountId, AccountState<DM::EncryptedBlockDevice, DM::Minfs>>>,
 }
@@ -37,13 +41,19 @@ enum AccountState<EB, M> {
     Provisioned(Arc<Account<EB, M>>),
 }
 
-impl<DM, KD> AccountManager<DM, KD>
+impl<DM, KD, AMS> AccountManager<DM, KD, AMS>
 where
     DM: DiskManager,
     KD: KeyDerivation,
+    AMS: AccountMetadataStore,
 {
-    pub fn new(disk_manager: DM, key_derivation: KD) -> Self {
-        Self { disk_manager, key_derivation, accounts: Mutex::new(HashMap::new()) }
+    pub fn new(disk_manager: DM, key_derivation: KD, account_metadata_store: AMS) -> Self {
+        Self {
+            disk_manager,
+            key_derivation,
+            account_metadata_store,
+            accounts: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Serially process a stream of incoming AccountManager FIDL requests.
@@ -360,6 +370,7 @@ mod test {
     use {
         super::*,
         crate::{
+            account_metadata::{AccountMetadata, AccountMetadataStoreError},
             disk_management::{DiskError, MockMinfs},
             keys::Key,
             prototype::NullKeyDerivation,
@@ -548,6 +559,44 @@ mod test {
         }
     }
 
+    #[derive(Debug, Clone)]
+    struct MemoryAccountMetadataStore {
+        accounts: std::collections::HashMap<AccountId, AccountMetadata>,
+    }
+
+    impl MemoryAccountMetadataStore {
+        fn new() -> MemoryAccountMetadataStore {
+            MemoryAccountMetadataStore { accounts: std::collections::HashMap::new() }
+        }
+    }
+
+    #[async_trait]
+    impl AccountMetadataStore for MemoryAccountMetadataStore {
+        async fn save(
+            &mut self,
+            account_id: &AccountId,
+            metadata: &AccountMetadata,
+        ) -> Result<(), AccountMetadataStoreError> {
+            self.accounts.insert(account_id.clone(), metadata.clone());
+            Ok(())
+        }
+
+        async fn load(
+            &self,
+            account_id: &AccountId,
+        ) -> Result<Option<AccountMetadata>, AccountMetadataStoreError> {
+            Ok(self.accounts.get(account_id).map(|meta| meta.clone()))
+        }
+
+        async fn remove(
+            &mut self,
+            account_id: &AccountId,
+        ) -> Result<(), AccountMetadataStoreError> {
+            self.accounts.remove(account_id);
+            Ok(())
+        }
+    }
+
     // Create a partition whose GUID and label match the account partition,
     // and whose block device has a zxcrypt header.
     fn make_formatted_account_partition() -> MockPartition {
@@ -600,7 +649,8 @@ mod test {
                 bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
@@ -615,7 +665,8 @@ mod test {
                 bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
@@ -630,7 +681,8 @@ mod test {
                 bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, Vec::<u64>::new());
     }
@@ -639,7 +691,8 @@ mod test {
     async fn test_get_account_ids_found() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
     }
@@ -649,7 +702,8 @@ mod test {
         let disk_manager = MockDiskManager::new()
             .with_partition(make_formatted_account_partition())
             .with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         // Even if two partitions would match our criteria, we only return one account for now.
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
@@ -670,14 +724,19 @@ mod test {
                 },
             })
             .with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let account_ids = account_manager.get_account_ids().await.expect("get account ids");
         assert_eq!(account_ids, vec![GLOBAL_ACCOUNT_ID]);
     }
 
     #[fuchsia::test]
     async fn test_get_account_no_accounts() {
-        let account_manager = AccountManager::new(MockDiskManager::new(), NullKeyDerivation);
+        let account_manager = AccountManager::new(
+            MockDiskManager::new(),
+            NullKeyDerivation,
+            MemoryAccountMetadataStore::new(),
+        );
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager
@@ -692,7 +751,8 @@ mod test {
         const NON_EXISTENT_ACCOUNT_ID: u64 = 42;
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager
@@ -707,7 +767,8 @@ mod test {
         const BAD_PASSWORD: &str = "passwd";
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
             account_manager.get_account(GLOBAL_ACCOUNT_ID, BAD_PASSWORD.to_string(), server).await,
@@ -719,7 +780,8 @@ mod test {
     async fn test_get_account_found() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server)
@@ -736,7 +798,8 @@ mod test {
     async fn test_multiple_get_account_channels_concurrent() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let (client1, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server)
@@ -763,7 +826,8 @@ mod test {
     async fn test_multiple_get_account_channels_serial() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server)
@@ -792,7 +856,8 @@ mod test {
     async fn test_account_shutdown() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         let (client, server) = fidl::endpoints::create_proxy::<AccountMarker>().unwrap();
         account_manager
             .get_account(GLOBAL_ACCOUNT_ID, GLOBAL_ACCOUNT_PASSWORD.to_string(), server)
@@ -814,7 +879,8 @@ mod test {
     async fn test_deprecated_provision_new_account_on_formatted_block() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
             Err(faccount::Error::FailedPrecondition)
@@ -825,7 +891,8 @@ mod test {
     async fn test_deprecated_provision_new_account_on_unformatted_block() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string())
@@ -839,7 +906,8 @@ mod test {
     async fn test_deprecated_provision_new_account_password_not_empty() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager.provision_new_account("passwd".to_string()).await,
             Err(faccount::Error::InvalidRequest)
@@ -856,7 +924,8 @@ mod test {
                 bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::UNAVAILABLE)),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
             Err(faccount::Error::Resource)
@@ -876,7 +945,8 @@ mod test {
                 }),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
             Err(faccount::Error::Resource)
@@ -896,7 +966,8 @@ mod test {
                 }),
             },
         });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager.provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string()).await,
             Err(faccount::Error::Resource)
@@ -907,7 +978,8 @@ mod test {
     async fn test_deprecated_provision_new_account_get_data_directory() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_unformatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
         assert_eq!(
             account_manager
                 .provision_new_account(GLOBAL_ACCOUNT_PASSWORD.to_string())
@@ -949,7 +1021,8 @@ mod test {
     async fn test_already_provisioned_get_data_directory() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager
@@ -994,7 +1067,8 @@ mod test {
                     Ok(MockMinfs::simple(scope.clone()))
                 }
             });
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
 
         // Expect a Resource failure.
         assert_eq!(
@@ -1013,7 +1087,8 @@ mod test {
     async fn test_unlock_after_account_locked() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
-        let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
+        let account_manager =
+            AccountManager::new(disk_manager, NullKeyDerivation, MemoryAccountMetadataStore::new());
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager
