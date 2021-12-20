@@ -107,10 +107,10 @@ class FuchsiaViewConnection extends FuchsiaViewController {
   /// view by viewId instead
   @override
   Future<void> requestFocus([int _ = 0]) async {
-    assert(viewRef?.reference != null && _ == 0);
     if (useFlatland) {
       return super.requestFocusById(viewId);
     } else {
+      assert(viewRef?.reference != null && _ == 0);
       return super.requestFocus(viewRef!.reference.handle!.handle);
     }
   }
