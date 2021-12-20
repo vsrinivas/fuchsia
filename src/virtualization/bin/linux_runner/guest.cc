@@ -612,7 +612,7 @@ void Guest::SetupGPUDriversInContainer() {
       *maitred_,
       {"/usr/bin/lxc", "exec", kContainerName, "--", "sh", "-c",
        "mkdir -p /usr/share/vulkan/icd.d; /usr/bin/update-alternatives --install "
-       "/usr/share/vulkan/icd.d/intel_icd.x86_64.json vulkan-icd "
+       "/usr/share/vulkan/icd.d/10_magma_intel_icd.x86_64.json vulkan-icd "
        "/opt/google/cros-containers/share/vulkan/icd.d/intel_icd.x86_64.json 20; echo "
        "/opt/google/cros-containers/lib/drivers > /etc/ld.so.conf.d/cros.conf; /sbin/ldconfig"},
       {
