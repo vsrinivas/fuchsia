@@ -23,6 +23,123 @@ use {
     wayland::{wl_pointer, wl_touch},
 };
 
+pub fn usb_to_linux_keycode(usb_keycode: u32) -> u16 {
+    match usb_keycode {
+        458756 => 30,  // A
+        458757 => 48,  // B
+        458758 => 46,  // C
+        458759 => 32,  // D
+        458760 => 18,  // E
+        458761 => 33,  // F
+        458762 => 34,  // G
+        458763 => 35,  // H
+        458764 => 23,  // I
+        458765 => 36,  // J
+        458766 => 37,  // K
+        458767 => 38,  // L
+        458768 => 50,  // M
+        458769 => 49,  // N
+        458770 => 24,  // O
+        458771 => 25,  // P
+        458772 => 16,  // Q
+        458773 => 19,  // R
+        458774 => 31,  // S
+        458775 => 20,  // T
+        458776 => 22,  // U
+        458777 => 47,  // V
+        458778 => 17,  // W
+        458779 => 45,  // X
+        458780 => 21,  // Y
+        458781 => 44,  // Z
+        458782 => 2,   // 1
+        458783 => 3,   // 2
+        458784 => 4,   // 3
+        458785 => 5,   // 4
+        458786 => 6,   // 5
+        458787 => 7,   // 6
+        458788 => 8,   // 7
+        458789 => 9,   // 8
+        458790 => 10,  // 9
+        458791 => 11,  // 0
+        458792 => 28,  // ENTER
+        458793 => 1,   // ESCAPE
+        458794 => 14,  // BACKSPACE
+        458795 => 15,  // TAB
+        458796 => 57,  // SPACE
+        458797 => 12,  // MINUS
+        458798 => 13,  // EQUAL
+        458799 => 26,  // LEFTBRACE
+        458800 => 27,  // RIGHTBRACE
+        458801 => 43,  // BACKSLASH
+        458802 => 0,   // NON_US_HASH?
+        458803 => 39,  // SEMICOLON
+        458804 => 40,  // APOSTROPHE
+        458805 => 41,  // GRAVE
+        458806 => 51,  // COMMA
+        458807 => 52,  // DOT
+        458808 => 53,  // SLASH
+        458809 => 58,  // CAPS_LOCK
+        458810 => 59,  // F1
+        458811 => 60,  // F2
+        458812 => 61,  // F3
+        458813 => 62,  // F4
+        458814 => 63,  // F5
+        458815 => 64,  // F6
+        458816 => 65,  // F7
+        458817 => 66,  // F8
+        458818 => 67,  // F9
+        458819 => 68,  // F10
+        458820 => 87,  // F11
+        458821 => 88,  // F12
+        458822 => 210, // PRINT_SCREEN
+        458823 => 70,  // SCROLL_LOCK
+        458824 => 119, // PAUSE
+        458825 => 110, // INSERT
+        458826 => 102, // HOME
+        458827 => 104, // PAGE_UP
+        458828 => 111, // DELETE
+        458829 => 107, // END
+        458830 => 109, // PAGE_DOWN
+        458831 => 106, // RIGHT
+        458832 => 105, // LEFT
+        458833 => 108, // DOWN
+        458834 => 103, // UP
+        458835 => 69,  // NUM_LOCK
+        458836 => 98,  // KEYPAD_SLASH
+        458837 => 55,  // KEYPAD_ASTERISK
+        458838 => 74,  // KEYPAD_MINUS
+        458839 => 78,  // KEYPAD_PLUS
+        458840 => 96,  // KEYPAD_ENTER
+        458841 => 79,  // KEYPAD_1
+        458842 => 80,  // KEYPAD_2
+        458843 => 81,  // KEYPAD_3
+        458844 => 75,  // KEYPAD_4
+        458845 => 76,  // KEYPAD_5
+        458846 => 77,  // KEYPAD_6
+        458847 => 71,  // KEYPAD_7
+        458848 => 72,  // KEYPAD_8
+        458849 => 73,  // KEYPAD_9
+        458850 => 82,  // KEYPAD_0
+        458851 => 83,  // KEYPAD_DOT
+        458852 => 0,   // NON_US_BACKSLASH?
+        458855 => 117, // KEYPAD_EQUALS
+        458870 => 139, // MENU
+        458976 => 29,  // LEFT_CTRL
+        458977 => 42,  // LEFT_SHIFT
+        458978 => 56,  // LEFT_ALT
+        458979 => 125, // LEFT_META
+        458980 => 97,  // RIGHT_CTRL
+        458981 => 54,  // RIGHT_SHIFT
+        458982 => 100, // RIGHT_ALT
+        458983 => 126, // RIGHT_META
+        786658 => 113, // MEDIA_MUTE
+        786665 => 115, // MEDIA_VOLUME_INCREMENT
+        786666 => 114, // MEDIA_VOLUME_DECREMENT
+
+        _ => 0,
+    }
+}
+
 /// An implementation of the wl_seat global.
 pub struct Seat {
     client_version: u32,
@@ -205,12 +322,15 @@ impl InputDispatcher {
         time: u32,
         state: wl_keyboard::KeyState,
     ) -> Result<(), Error> {
-        let hid_usage = (key as u32) & 0xffff;
-        ftrace::duration!("wayland", "InputDispatcher::send_key_event", "hid_usage" => hid_usage);
+        // Map usb keycodes to Linux because some apps don't use the provided keymap/assume Linux keycodes
+        let linux_keycode = usb_to_linux_keycode(key as u32);
+        ftrace::duration!("wayland", "InputDispatcher::send_key_event", "linux_keycode" => linux_keycode as u32);
         let serial = self.event_queue.next_serial();
         self.keyboards.iter().try_for_each(|k| {
-            self.event_queue
-                .post(k.id(), wl_keyboard::Event::Key { serial, time, key: hid_usage, state })
+            self.event_queue.post(
+                k.id(),
+                wl_keyboard::Event::Key { serial, time, key: linux_keycode as u32, state },
+            )
         })
     }
 
