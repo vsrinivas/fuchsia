@@ -5,6 +5,7 @@
 use {
     crate::{
         common::{
+            cmd::{BootParams, Command, ManifestParams},
             file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
             gcs::GcsResolver,
             prepare, Boot, Flash, Unlock,
@@ -14,14 +15,10 @@ use {
             v2::FlashManifest as FlashManifestV2, v3::FlashManifest as FlashManifestV3,
         },
     },
-    anyhow::{anyhow, bail, Context, Result},
+    anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
-    ffx_flash_args::{
-        BootCommand, FlashCommand,
-        Subcommand::{Boot as BootSub, Unlock as UnlockSub},
-    },
     fidl_fuchsia_developer_bridge::FastbootProxy,
     fms::Entries,
     sdk_metadata::{Metadata, ProductBundleV1},
@@ -33,10 +30,10 @@ use {
     termion::{color, style},
 };
 
-pub(crate) mod sdk;
-pub(crate) mod v1;
-pub(crate) mod v2;
-pub(crate) mod v3;
+pub mod sdk;
+pub mod v1;
+pub mod v2;
+pub mod v3;
 
 pub const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
 
@@ -51,12 +48,12 @@ pub struct Image {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub(crate) struct ManifestFile {
+pub struct ManifestFile {
     version: u64,
     manifest: Value,
 }
 
-pub(crate) enum FlashManifestVersion {
+pub enum FlashManifestVersion {
     V1(FlashManifestV1),
     V2(FlashManifestV2),
     V3(FlashManifestV3),
@@ -64,7 +61,7 @@ pub(crate) enum FlashManifestVersion {
 }
 
 impl FlashManifestVersion {
-    pub(crate) fn load<R: Read>(reader: R) -> Result<Self> {
+    pub fn load<R: Read>(reader: R) -> Result<Self> {
         let value: Value = serde_json::from_reader::<R, Value>(reader)
             .context("reading flash manifest from disk")?;
         // GN generated JSON always comes from a list
@@ -81,7 +78,7 @@ impl FlashManifestVersion {
         }
     }
 
-    pub(crate) fn from_in_tree(path: PathBuf) -> Result<Self> {
+    pub fn from_in_tree(path: PathBuf) -> Result<Self> {
         let mut entries = Entries::new();
         let mut path = match path.parent() {
             Some(p) => p.to_path_buf(),
@@ -105,7 +102,7 @@ impl FlashManifestVersion {
         Ok(Self::Sdk(SdkEntries::new(entries)))
     }
 
-    pub(crate) fn from_product_bundle(product_bundle: ProductBundleV1) -> Result<Self> {
+    pub fn from_product_bundle(product_bundle: ProductBundleV1) -> Result<Self> {
         let mut entries = Entries::new();
         entries.add_metadata(Metadata::ProductBundleV1(product_bundle))?;
         Ok(Self::Sdk(SdkEntries::new(entries)))
@@ -119,7 +116,7 @@ impl Flash for FlashManifestVersion {
         writer: &mut W,
         file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -189,7 +186,7 @@ impl Boot for FlashManifestVersion {
         file_resolver: &mut F,
         slot: String,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -217,11 +214,11 @@ impl Boot for FlashManifestVersion {
     }
 }
 
-pub(crate) async fn from_sdk<W: Write>(
+pub async fn from_sdk<W: Write>(
     writer: &mut W,
     version: String,
     fastboot_proxy: FastbootProxy,
-    cmd: FlashCommand,
+    cmd: ManifestParams,
 ) -> Result<()> {
     match cmd.product_bundle.as_ref() {
         Some(b) => {
@@ -240,11 +237,11 @@ pub(crate) async fn from_sdk<W: Write>(
     }
 }
 
-pub(crate) async fn from_in_tree<W: Write>(
+pub async fn from_in_tree<W: Write>(
     writer: &mut W,
     path: PathBuf,
     fastboot_proxy: FastbootProxy,
-    cmd: FlashCommand,
+    cmd: ManifestParams,
 ) -> Result<()> {
     FlashManifest {
         resolver: Resolver::new(path.clone())?,
@@ -254,11 +251,11 @@ pub(crate) async fn from_in_tree<W: Write>(
     .await
 }
 
-pub(crate) async fn from_path<W: Write>(
+pub async fn from_path<W: Write>(
     writer: &mut W,
     path: PathBuf,
     fastboot_proxy: FastbootProxy,
-    cmd: FlashCommand,
+    cmd: ManifestParams,
 ) -> Result<()> {
     match path.extension() {
         Some(ext) => {
@@ -283,31 +280,32 @@ fn load_flash_manifest<F: FileResolver + Sync>(
     Ok(FlashManifest { resolver: file_resolver, version: FlashManifestVersion::load(reader)? })
 }
 
-pub(crate) struct FlashManifest<F: FileResolver + Sync> {
+pub struct FlashManifest<F: FileResolver + Sync> {
     resolver: F,
     version: FlashManifestVersion,
 }
 
 impl<F: FileResolver + Sync> FlashManifest<F> {
-    pub(crate) async fn flash<W: Write>(
+    pub async fn flash<W: Write>(
         &mut self,
         writer: &mut W,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()> {
-        match &cmd.subcommand {
-            None => self.version.flash(writer, &mut self.resolver, fastboot_proxy, cmd).await,
-            Some(UnlockSub(_)) => {
+        match &cmd.op {
+            Command::Flash => {
+                self.version.flash(writer, &mut self.resolver, fastboot_proxy, cmd).await
+            }
+            Command::Unlock(_) => {
                 // Using the manifest, don't need the unlock credential from the UnlockCommand
                 // here.
                 self.version.unlock(writer, &mut self.resolver, fastboot_proxy).await
             }
-            Some(BootSub(BootCommand { slot, .. })) => {
+            Command::Boot(BootParams { slot, .. }) => {
                 self.version
                     .boot(writer, &mut self.resolver, slot.to_owned(), fastboot_proxy, cmd)
                     .await
             }
-            _ => bail!("Unexpected operation"), // Should not get here as lock is handled before manifest code.
         }
     }
 }

@@ -30,10 +30,7 @@ async fn handle_variables_for_fastboot<W: Write>(
     }
 }
 
-pub(crate) async fn flash_info<W: Write>(
-    writer: &mut W,
-    fastboot_proxy: &FastbootProxy,
-) -> Result<()> {
+pub async fn info<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
     prepare(writer, &fastboot_proxy).await?;
     let (var_client, var_server) = create_endpoints::<VariableListenerMarker>()?;
     let _ = try_join!(
@@ -61,7 +58,7 @@ mod test {
     async fn test_showing_variables() -> Result<()> {
         let (_, proxy) = setup();
         let mut writer = Vec::<u8>::new();
-        flash_info(&mut writer, &proxy).await?;
+        info(&mut writer, &proxy).await?;
         let output = String::from_utf8(writer).expect("utf-8 string");
         assert!(output.contains("test: test"));
         Ok(())

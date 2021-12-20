@@ -4,30 +4,30 @@
 
 use {
     crate::{
-        boot::flash_boot,
+        boot::boot,
         common::{
-            file::FileResolver, flash_and_reboot, is_locked, Boot, Flash,
-            Partition as PartitionTrait, Product as ProductTrait, Unlock, MISSING_PRODUCT,
-            UNLOCK_ERR,
+            cmd::{ManifestParams, OemFile},
+            file::FileResolver,
+            flash_and_reboot, is_locked, Boot, Flash, Partition as PartitionTrait,
+            Product as ProductTrait, Unlock, MISSING_PRODUCT, UNLOCK_ERR,
         },
     },
     anyhow::Result,
     async_trait::async_trait,
     errors::ffx_bail,
-    ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
     std::io::Write,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Product {
-    pub(crate) name: String,
-    pub(crate) bootloader_partitions: Vec<Partition>,
-    pub(crate) partitions: Vec<Partition>,
-    pub(crate) oem_files: Vec<OemFile>,
+pub struct Product {
+    pub name: String,
+    pub bootloader_partitions: Vec<Partition>,
+    pub partitions: Vec<Partition>,
+    pub oem_files: Vec<OemFile>,
     #[serde(default)]
-    pub(crate) requires_unlock: bool,
+    pub requires_unlock: bool,
 }
 
 impl ProductTrait<Partition> for Product {
@@ -45,7 +45,7 @@ impl ProductTrait<Partition> for Product {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Partition(
+pub struct Partition(
     String,
     String,
     #[serde(default)] Option<String>,
@@ -53,7 +53,7 @@ pub(crate) struct Partition(
 );
 
 impl Partition {
-    pub(crate) fn new(
+    pub fn new(
         name: String,
         file: String,
         variable: Option<String>,
@@ -82,7 +82,7 @@ impl PartitionTrait for Partition {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct FlashManifest(pub(crate) Vec<Product>);
+pub struct FlashManifest(pub Vec<Product>);
 
 #[async_trait(?Send)]
 impl Flash for FlashManifest {
@@ -91,7 +91,7 @@ impl Flash for FlashManifest {
         writer: &mut W,
         file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -119,7 +119,7 @@ impl Boot for FlashManifest {
         file_resolver: &mut F,
         slot: String,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -139,7 +139,7 @@ impl Boot for FlashManifest {
         let vbmeta =
             partitions.iter().find(|p| p.name().contains("vbmeta")).map(|p| p.file().to_string());
         match zbi {
-            Some(z) => flash_boot(writer, file_resolver, z, vbmeta, &fastboot_proxy).await,
+            Some(z) => boot(writer, file_resolver, z, vbmeta, &fastboot_proxy).await,
             None => ffx_bail!("Could not find matching partitions for slot {}", slot),
         }
     }
@@ -282,7 +282,7 @@ mod test {
                 &mut writer,
                 &mut TestResolver::new(),
                 proxy,
-                FlashCommand {
+                ManifestParams {
                     manifest: Some(PathBuf::from(tmp_file_name)),
                     product: "Unknown".to_string(),
                     ..Default::default()
@@ -304,7 +304,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "fuchsia".to_string(),
                 ..Default::default()
@@ -336,7 +336,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(manifest_file_name)),
                 product: "fuchsia".to_string(),
                 oem_stage: vec![test_staged_file],
@@ -368,7 +368,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "zedboot".to_string(),
                 ..Default::default()
@@ -397,7 +397,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "fuchsia".to_string(),
                 no_bootloader_reboot: true,
@@ -427,7 +427,7 @@ mod test {
                 &mut writer,
                 &mut TestResolver::new(),
                 proxy,
-                FlashCommand {
+                ManifestParams {
                     manifest: Some(PathBuf::from(tmp_file_name)),
                     product: "zedboot".to_string(),
                     ..Default::default()

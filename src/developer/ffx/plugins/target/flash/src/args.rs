@@ -3,15 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{bail, Error, Result},
     argh::FromArgs,
     ffx_core::ffx_command,
-    serde::{Deserialize, Serialize},
-    std::path::{Path, PathBuf},
+    ffx_fastboot::common::cmd::{Command, ManifestParams, OemFile},
+    std::default::Default,
+    std::path::PathBuf,
 };
-
-pub(crate) const OEM_FILE_ERROR_MSG: &str =
-    "Unrecognized OEM staged file. Expected comma-separated pair: \"<OEM_COMMAND>,<PATH_TO_FILE>\"";
 
 #[ffx_command()]
 #[derive(FromArgs, Default, Debug, PartialEq)]
@@ -85,108 +82,27 @@ pub struct FlashCommand {
         description = "skip hardware verification.  This is dangerous, please be sure the images you are flashing match the device"
     )]
     pub skip_verify: bool,
-
-    #[argh(subcommand)]
-    pub subcommand: Option<Subcommand>,
 }
 
-#[derive(FromArgs, Clone, PartialEq, Debug)]
-#[argh(subcommand)]
-pub enum Subcommand {
-    Lock(LockCommand),
-    Unlock(UnlockCommand),
-    Boot(BootCommand),
-    Info(InfoCommand),
-}
-
-#[derive(FromArgs, Clone, PartialEq, Debug)]
-/// Locks a fastboot target.
-#[argh(subcommand, name = "lock")]
-pub struct LockCommand {}
-
-#[derive(FromArgs, Clone, PartialEq, Debug)]
-/// Prints fastboot variables for target.
-#[argh(subcommand, name = "info")]
-pub struct InfoCommand {}
-
-#[derive(FromArgs, Clone, PartialEq, Debug)]
-/// Unlocks a fastboot target.
-#[argh(subcommand, name = "unlock")]
-pub struct UnlockCommand {
-    #[argh(
-        option,
-        short = 'c',
-        description = "optional path to credential file to use to unlock the device"
-    )]
-    pub cred: Option<String>,
-
-    #[argh(switch, description = "skips the warning message that this command is dangerous")]
-    pub force: bool,
-}
-
-#[derive(FromArgs, Clone, PartialEq, Debug)]
-/// RAM boots a fastboot target.
-#[argh(subcommand, name = "boot")]
-pub struct BootCommand {
-    #[argh(option, short = 'z', description = "optional zbi image file path to use")]
-    pub zbi: Option<String>,
-
-    #[argh(option, short = 'v', description = "optional vbmeta image file path to use")]
-    pub vbmeta: Option<String>,
-
-    #[argh(
-        option,
-        short = 's',
-        description = "slot corresponding to partitions in the flash manifest - \n\
-        only used if zbi and vbmeta files are not present",
-        default = "String::from(\"a\")"
-    )]
-    pub slot: String,
-}
-
-#[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct OemFile(String, String);
-
-impl OemFile {
-    pub fn new(command: String, path: String) -> Self {
-        Self(command, path)
-    }
-
-    pub fn command(&self) -> &str {
-        self.0.as_str()
-    }
-
-    pub fn file(&self) -> &str {
-        self.1.as_str()
-    }
-}
-
-impl std::str::FromStr for OemFile {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self> {
-        if s.len() == 0 {
-            bail!(OEM_FILE_ERROR_MSG);
+impl Into<ManifestParams> for FlashCommand {
+    fn into(self) -> ManifestParams {
+        ManifestParams {
+            manifest: self.manifest,
+            product: self.product,
+            product_bundle: self.product_bundle,
+            skip_verify: self.skip_verify,
+            ssh_key: self.ssh_key,
+            no_bootloader_reboot: self.no_bootloader_reboot,
+            op: Command::Flash,
+            ..Default::default()
         }
-
-        let splits: Vec<&str> = s.split(",").collect();
-
-        if splits.len() != 2 {
-            bail!(OEM_FILE_ERROR_MSG);
-        }
-
-        let file = Path::new(splits[1]);
-        if !file.exists() {
-            bail!("File does not exist: {}", splits[1]);
-        }
-
-        Ok(Self(splits[0].to_string(), file.to_string_lossy().to_string()))
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::Result;
     use tempfile::NamedTempFile;
 
     #[test]

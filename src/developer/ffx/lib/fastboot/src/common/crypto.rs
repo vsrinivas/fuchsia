@@ -97,7 +97,7 @@ struct UnlockCredentials {
 }
 
 impl UnlockCredentials {
-    pub(crate) async fn new<T: AsRef<Path>>(path: T) -> Result<Self> {
+    pub async fn new<T: AsRef<Path>>(path: T) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file =
             File::open(path).map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
@@ -162,7 +162,7 @@ impl UnlockCredentials {
     }
 }
 
-pub(crate) async fn unlock_device<W: Write, F: FileResolver + Sync>(
+pub async fn unlock_device<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     creds: &Vec<String>,

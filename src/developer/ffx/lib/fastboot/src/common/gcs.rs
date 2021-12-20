@@ -23,14 +23,14 @@ use {
 };
 
 // Path resolver for GCS files.
-pub(crate) struct GcsResolver {
+pub struct GcsResolver {
     client: Client,
     product_bundle: ProductBundleV1,
     temp_dir: TempDir,
 }
 
 impl GcsResolver {
-    pub(crate) async fn new(version: String, bundle: String) -> Result<Self> {
+    pub async fn new(version: String, bundle: String) -> Result<Self> {
         let temp_dir = tempdir()?;
         // TODO(fxb/89584): Change to using ffx client Id and consent screen.
         let boto: Option<PathBuf> = ffx_config::file("flash.gcs.token").await?;
@@ -58,7 +58,7 @@ impl GcsResolver {
         Ok(Self { client, product_bundle, temp_dir })
     }
 
-    pub(crate) fn product_bundle(&self) -> &ProductBundleV1 {
+    pub fn product_bundle(&self) -> &ProductBundleV1 {
         &self.product_bundle
     }
 }

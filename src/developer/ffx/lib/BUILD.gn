@@ -11,6 +11,7 @@ if (is_host) {
     "doctor_utils",
     "errors",
     "fidl-fuchsia-developer-bridge-ext",
+    "fastboot",
     "fms",
     "netext",
     "pkg",

@@ -13,7 +13,7 @@ use {
 const UNLOCKED: &str = "Target is now unlocked.";
 const UNLOCKED_ERR: &str = "Target is already unlocked.";
 
-pub(crate) async fn flash_unlock<W: Write, F: FileResolver + Sync>(
+pub async fn unlock<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     credentials: &Vec<String>,
@@ -50,13 +50,9 @@ mod test {
             state.variables.push("no".to_string());
         }
         let mut writer = Vec::<u8>::new();
-        let result = flash_unlock(
-            &mut writer,
-            &mut EmptyResolver::new()?,
-            &vec!["test".to_string()],
-            &proxy,
-        )
-        .await;
+        let result =
+            unlock(&mut writer, &mut EmptyResolver::new()?, &vec!["test".to_string()], &proxy)
+                .await;
         assert!(result.is_err());
         Ok(())
     }
@@ -70,7 +66,7 @@ mod test {
             state.variables.push("yes".to_string());
         }
         let mut writer = Vec::<u8>::new();
-        let result = flash_unlock(&mut writer, &mut EmptyResolver::new()?, &vec![], &proxy).await;
+        let result = unlock(&mut writer, &mut EmptyResolver::new()?, &vec![], &proxy).await;
         assert!(result.is_err());
         Ok(())
     }

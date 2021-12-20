@@ -3,12 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    crate::common::file::*,
+    crate::{
+        common::{
+            cmd::{ManifestParams, OemFile},
+            file::*,
+        },
+        manifest::{from_in_tree, from_path, from_sdk},
+    },
     anyhow::{anyhow, bail, Context, Error, Result},
     async_trait::async_trait,
     chrono::{DateTime, Duration, Utc},
     errors::{ffx_bail, ffx_error},
-    ffx_flash_args::{FlashCommand, OemFile},
+    ffx_config::sdk::SdkVersion,
     fidl::{
         endpoints::{create_endpoints, ServerEnd},
         Error as FidlError,
@@ -19,39 +25,41 @@ use {
     },
     futures::prelude::*,
     futures::try_join,
+    std::convert::Into,
     std::io::Write,
     termion::{color, style},
 };
 
-pub(crate) const MISSING_CREDENTIALS: &str =
+pub const MISSING_CREDENTIALS: &str =
     "The flash manifest is missing the credential files to unlock this device.\n\
      Please unlock the target and try again.";
 
-pub(crate) mod crypto;
-pub(crate) mod file;
-pub(crate) mod gcs;
+pub mod cmd;
+pub mod crypto;
+pub mod file;
+pub mod gcs;
 
-pub(crate) trait Partition {
+pub trait Partition {
     fn name(&self) -> &str;
     fn file(&self) -> &str;
     fn variable(&self) -> Option<&str>;
     fn variable_value(&self) -> Option<&str>;
 }
 
-pub(crate) trait Product<P> {
+pub trait Product<P> {
     fn bootloader_partitions(&self) -> &Vec<P>;
     fn partitions(&self) -> &Vec<P>;
     fn oem_files(&self) -> &Vec<OemFile>;
 }
 
 #[async_trait(?Send)]
-pub(crate) trait Flash {
+pub trait Flash {
     async fn flash<W, F>(
         &self,
         writer: &mut W,
         file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -59,7 +67,7 @@ pub(crate) trait Flash {
 }
 
 #[async_trait(?Send)]
-pub(crate) trait Unlock {
+pub trait Unlock {
     async fn unlock<W, F>(
         &self,
         _writer: &mut W,
@@ -78,21 +86,21 @@ pub(crate) trait Unlock {
 }
 
 #[async_trait(?Send)]
-pub(crate) trait Boot {
+pub trait Boot {
     async fn boot<W, F>(
         &self,
         _writer: &mut W,
         _file_resolver: &mut F,
         _slot: String,
         _fastboot_proxy: FastbootProxy,
-        _cmd: FlashCommand,
+        _cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
         F: FileResolver + Sync;
 }
 
-pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
+pub const MISSING_PRODUCT: &str = "Manifest does not contain product";
 
 const REBOOT_ERR: &str = "Failed to reboot your device. \
                           Power cycle the device manually and try again.";
@@ -103,10 +111,10 @@ const REVISION_VAR: &str = "hw-revision";
 const LOCKED_VAR: &str = "vx-locked";
 const LOCK_COMMAND: &str = "vx-lock";
 
-pub(crate) const UNLOCK_ERR: &str = "The product requires the target to be unlocked. \
+pub const UNLOCK_ERR: &str = "The product requires the target to be unlocked. \
                                      Please unlock target and try again.";
 
-pub(crate) fn map_fidl_error(e: FidlError) -> Error {
+pub fn map_fidl_error(e: FidlError) -> Error {
     log::error!("FIDL Communication error: {}", e);
     anyhow!(
         "There was an error communcation with the daemon:\n{}\n\
@@ -115,7 +123,7 @@ pub(crate) fn map_fidl_error(e: FidlError) -> Error {
     )
 }
 
-pub(crate) fn done_time<W: Write>(writer: &mut W, duration: Duration) -> std::io::Result<()> {
+pub fn done_time<W: Write>(writer: &mut W, duration: Duration) -> std::io::Result<()> {
     writeln!(
         writer,
         "{}Done{} [{}{:.2}s{}]",
@@ -207,7 +215,7 @@ async fn handle_upload_progress_for_flashing<W: Write>(
     .await
 }
 
-pub(crate) async fn stage_file<W: Write, F: FileResolver + Sync>(
+pub async fn stage_file<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     resolve: bool,
@@ -230,7 +238,7 @@ pub(crate) async fn stage_file<W: Write, F: FileResolver + Sync>(
     })
 }
 
-pub(crate) async fn flash_partition<W: Write, F: FileResolver + Sync>(
+pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     name: &str,
@@ -261,10 +269,7 @@ pub(crate) async fn flash_partition<W: Write, F: FileResolver + Sync>(
     })
 }
 
-pub(crate) async fn verify_hardware(
-    revision: &String,
-    fastboot_proxy: &FastbootProxy,
-) -> Result<()> {
+pub async fn verify_hardware(revision: &String, fastboot_proxy: &FastbootProxy) -> Result<()> {
     let rev = fastboot_proxy
         .get_var(REVISION_VAR)
         .await
@@ -284,7 +289,7 @@ pub(crate) async fn verify_hardware(
     Ok(())
 }
 
-pub(crate) async fn verify_variable_value(
+pub async fn verify_variable_value(
     var: &str,
     value: &str,
     fastboot_proxy: &FastbootProxy,
@@ -297,7 +302,7 @@ pub(crate) async fn verify_variable_value(
         .map(|res| res == value)
 }
 
-pub(crate) async fn reboot_bootloader<W: Write>(
+pub async fn reboot_bootloader<W: Write>(
     writer: &mut W,
     fastboot_proxy: &FastbootProxy,
 ) -> Result<()> {
@@ -323,10 +328,7 @@ pub(crate) async fn reboot_bootloader<W: Write>(
     })
 }
 
-pub(crate) async fn prepare<W: Write>(
-    writer: &mut W,
-    fastboot_proxy: &FastbootProxy,
-) -> Result<()> {
+pub async fn prepare<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
     let (reboot_client, reboot_server) = create_endpoints::<RebootListenerMarker>()?;
     let mut stream = reboot_server.into_stream()?;
     let mut start_time = None;
@@ -351,7 +353,7 @@ pub(crate) async fn prepare<W: Write>(
     })
 }
 
-pub(crate) async fn stage_oem_files<W: Write, F: FileResolver + Sync>(
+pub async fn stage_oem_files<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     resolve: bool,
@@ -368,7 +370,7 @@ pub(crate) async fn stage_oem_files<W: Write, F: FileResolver + Sync>(
     Ok(())
 }
 
-pub(crate) async fn flash_partitions<W: Write, F: FileResolver + Sync, P: Partition>(
+pub async fn flash_partitions<W: Write, F: FileResolver + Sync, P: Partition>(
     writer: &mut W,
     file_resolver: &mut F,
     partitions: &Vec<P>,
@@ -403,12 +405,12 @@ pub(crate) async fn flash_partitions<W: Write, F: FileResolver + Sync, P: Partit
     Ok(())
 }
 
-pub(crate) async fn flash<W, F, Part, P>(
+pub async fn flash<W, F, Part, P>(
     writer: &mut W,
     file_resolver: &mut F,
     product: &P,
     fastboot_proxy: &FastbootProxy,
-    cmd: FlashCommand,
+    cmd: ManifestParams,
 ) -> Result<()>
 where
     W: Write,
@@ -420,12 +422,12 @@ where
     flash_product(writer, file_resolver, product, fastboot_proxy, &cmd).await
 }
 
-pub(crate) async fn flash_bootloader<W, F, Part, P>(
+pub async fn flash_bootloader<W, F, Part, P>(
     writer: &mut W,
     file_resolver: &mut F,
     product: &P,
     fastboot_proxy: &FastbootProxy,
-    cmd: &FlashCommand,
+    cmd: &ManifestParams,
 ) -> Result<()>
 where
     W: Write,
@@ -443,12 +445,12 @@ where
     Ok(())
 }
 
-pub(crate) async fn flash_product<W, F, Part, P>(
+pub async fn flash_product<W, F, Part, P>(
     writer: &mut W,
     file_resolver: &mut F,
     product: &P,
     fastboot_proxy: &FastbootProxy,
-    cmd: &FlashCommand,
+    cmd: &ManifestParams,
 ) -> Result<()>
 where
     W: Write,
@@ -461,12 +463,12 @@ where
     stage_oem_files(writer, file_resolver, true, product.oem_files(), fastboot_proxy).await
 }
 
-pub(crate) async fn flash_and_reboot<W, F, Part, P>(
+pub async fn flash_and_reboot<W, F, Part, P>(
     writer: &mut W,
     file_resolver: &mut F,
     product: &P,
     fastboot_proxy: &FastbootProxy,
-    cmd: FlashCommand,
+    cmd: ManifestParams,
 ) -> Result<()>
 where
     W: Write,
@@ -478,7 +480,7 @@ where
     finish(writer, fastboot_proxy).await
 }
 
-pub(crate) async fn finish<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
+pub async fn finish<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
     if fastboot_proxy.erase("misc").await?.is_err() {
         log::debug!("Could not erase misc partition");
     }
@@ -488,10 +490,43 @@ pub(crate) async fn finish<W: Write>(writer: &mut W, fastboot_proxy: &FastbootPr
     Ok(())
 }
 
-pub(crate) async fn is_locked(fastboot_proxy: &FastbootProxy) -> Result<bool> {
+pub async fn is_locked(fastboot_proxy: &FastbootProxy) -> Result<bool> {
     verify_variable_value(LOCKED_VAR, "no", &fastboot_proxy).await.map(|l| !l)
 }
 
-pub(crate) async fn lock_device(fastboot_proxy: &FastbootProxy) -> Result<()> {
+pub async fn lock_device(fastboot_proxy: &FastbootProxy) -> Result<()> {
     fastboot_proxy.oem(LOCK_COMMAND).await?.map_err(|_| anyhow!("Could not lock device"))
+}
+
+pub async fn from_manifest<W, C>(
+    writer: &mut W,
+    input: C,
+    fastboot_proxy: FastbootProxy,
+) -> Result<()>
+where
+    W: Write,
+    C: Into<ManifestParams>,
+{
+    let cmd: ManifestParams = input.into();
+    match &cmd.manifest {
+        Some(manifest) => {
+            if !manifest.is_file() {
+                ffx_bail!("Manifest \"{}\" is not a file.", manifest.display());
+            }
+            from_path(writer, manifest.to_path_buf(), fastboot_proxy, cmd).await
+        }
+        None => {
+            let sdk = ffx_config::get_sdk().await?;
+            let mut path = sdk.get_path_prefix().to_path_buf();
+            writeln!(writer, "No manifest path was given, using SDK from {}.", path.display())?;
+            path.push("flash.json"); // Not actually used, placeholder value needed.
+            match sdk.get_version() {
+                SdkVersion::InTree => from_in_tree(writer, path, fastboot_proxy, cmd).await,
+                SdkVersion::Version(version) => {
+                    from_sdk(writer, version.to_string(), fastboot_proxy, cmd).await
+                }
+                _ => ffx_bail!("Unknown SDK type"),
+            }
+        }
+    }
 }

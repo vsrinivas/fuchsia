@@ -5,29 +5,28 @@
 use {
     crate::{
         common::{
-            crypto::unlock_device, file::FileResolver, finish, flash_bootloader, flash_product,
-            is_locked, lock_device, verify_hardware, Boot, Flash, Unlock, MISSING_CREDENTIALS,
-            MISSING_PRODUCT,
+            cmd::ManifestParams, crypto::unlock_device, file::FileResolver, finish,
+            flash_bootloader, flash_product, is_locked, lock_device, verify_hardware, Boot, Flash,
+            Unlock, MISSING_CREDENTIALS, MISSING_PRODUCT,
         },
         manifest::v1::FlashManifest as FlashManifestV1,
-        unlock::flash_unlock,
+        unlock::unlock,
     },
     anyhow::Result,
     async_trait::async_trait,
     errors::ffx_bail,
-    ffx_flash_args::FlashCommand,
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
     std::io::Write,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct FlashManifest {
-    pub(crate) hw_revision: String,
+pub struct FlashManifest {
+    pub hw_revision: String,
     #[serde(default)]
-    pub(crate) credentials: Vec<String>,
+    pub credentials: Vec<String>,
     #[serde(rename = "products")]
-    pub(crate) v1: FlashManifestV1,
+    pub v1: FlashManifestV1,
 }
 
 #[async_trait(?Send)]
@@ -37,7 +36,7 @@ impl Flash for FlashManifest {
         writer: &mut W,
         file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -78,7 +77,7 @@ impl Unlock for FlashManifest {
         W: Write,
         F: FileResolver + Sync,
     {
-        flash_unlock(writer, file_resolver, &self.credentials, &fastboot_proxy).await
+        unlock(writer, file_resolver, &self.credentials, &fastboot_proxy).await
     }
 }
 
@@ -90,7 +89,7 @@ impl Boot for FlashManifest {
         file_resolver: &mut F,
         slot: String,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -106,8 +105,8 @@ impl Boot for FlashManifest {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::common::cmd::{BootParams, Command};
     use crate::test::{setup, TestResolver};
-    use ffx_flash_args::{BootCommand, Subcommand::Boot};
     use serde_json::from_str;
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
@@ -197,7 +196,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "zedboot".to_string(),
                 ..Default::default()
@@ -218,7 +217,7 @@ mod test {
                 &mut writer,
                 &mut TestResolver::new(),
                 proxy,
-                FlashCommand {
+                ManifestParams {
                     manifest: Some(PathBuf::from(tmp_file_name)),
                     product: "zedboot".to_string(),
                     ..Default::default()
@@ -241,7 +240,7 @@ mod test {
                 &mut writer,
                 &mut TestResolver::new(),
                 proxy,
-                FlashCommand {
+                ManifestParams {
                     manifest: Some(PathBuf::from(tmp_file_name)),
                     product: "zedboot".to_string(),
                     ..Default::default()
@@ -264,14 +263,10 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "zedboot".to_string(),
-                subcommand: Some(Boot(BootCommand {
-                    zbi: None,
-                    vbmeta: None,
-                    slot: "a".to_string(),
-                })),
+                op: Command::Boot(BootParams { zbi: None, vbmeta: None, slot: "a".to_string() }),
                 ..Default::default()
             },
         )

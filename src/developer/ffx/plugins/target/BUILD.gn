@@ -9,6 +9,7 @@ ffx_plugin("ffx_target") {
   edition = "2018"
   plugin_deps = [
     "add:ffx_target_add",
+    "bootloader:ffx_bootloader",
     "default:ffx_target_default",
     "echo:ffx_target_echo",
     "flash:ffx_flash",

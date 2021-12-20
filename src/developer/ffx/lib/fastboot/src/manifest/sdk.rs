@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        common::file::FileResolver,
+        common::{cmd::ManifestParams, file::FileResolver},
         manifest::{
             v3::{
                 Condition as ConditionV3, ExplicitOemFile as OemFileV3,
@@ -15,7 +15,6 @@ use {
     },
     anyhow::{bail, Result},
     async_trait::async_trait,
-    ffx_flash_args::FlashCommand,
     fidl_fuchsia_developer_bridge::FastbootProxy,
     fms::Entries,
     sdk_metadata::{Metadata, OemFile, Partition, Product},
@@ -30,7 +29,7 @@ pub struct SdkEntries {
 }
 
 impl SdkEntries {
-    pub(crate) fn new(entries: Entries) -> Self {
+    pub fn new(entries: Entries) -> Self {
         Self { entries }
     }
 }
@@ -96,7 +95,7 @@ impl Flash for SdkEntries {
         writer: &mut W,
         file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -132,7 +131,7 @@ impl Boot for SdkEntries {
         file_resolver: &mut F,
         slot: String,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,

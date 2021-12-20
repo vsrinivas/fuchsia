@@ -63,7 +63,7 @@ async fn get_boot_image<W: Write, F: FileResolver + Sync>(
     }
 }
 
-pub(crate) async fn flash_boot<W: Write, F: FileResolver + Sync>(
+pub async fn boot<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     zbi: String,

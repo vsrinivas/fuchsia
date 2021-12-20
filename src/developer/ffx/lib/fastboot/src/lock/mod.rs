@@ -16,10 +16,7 @@ const EPHEMERAL_ERR: &str = "Cannot lock ephemeral devices. Reboot the device to
 const LOCKED_ERR: &str = "Target is already locked.";
 const LOCKED: &str = "Target is now locked.";
 
-pub(crate) async fn flash_lock<W: Write>(
-    writer: &mut W,
-    fastboot_proxy: &FastbootProxy,
-) -> Result<()> {
+pub async fn lock<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
     prepare(writer, &fastboot_proxy).await?;
     if is_locked(&fastboot_proxy).await? {
         ffx_bail!("{}", LOCKED_ERR);
@@ -49,7 +46,7 @@ mod test {
             state.variables.push("yes".to_string());
         }
         let mut writer = Vec::<u8>::new();
-        let result = flash_lock(&mut writer, &proxy).await;
+        let result = lock(&mut writer, &proxy).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -64,7 +61,7 @@ mod test {
             state.variables.push("no".to_string());
         }
         let mut writer = Vec::<u8>::new();
-        let result = flash_lock(&mut writer, &proxy).await;
+        let result = lock(&mut writer, &proxy).await;
         assert!(result.is_err());
         Ok(())
     }
@@ -80,7 +77,7 @@ mod test {
             state.variables.push("no".to_string());
         }
         let mut writer = Vec::<u8>::new();
-        flash_lock(&mut writer, &proxy).await?;
+        lock(&mut writer, &proxy).await?;
         let state = state.lock().unwrap();
         assert_eq!(1, state.oem_commands.len());
         assert_eq!("vx-lock", state.oem_commands[0]);

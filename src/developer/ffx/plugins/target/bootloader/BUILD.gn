@@ -1,10 +1,10 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_flash") {
+ffx_plugin("ffx_bootloader") {
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
@@ -14,19 +14,16 @@ ffx_plugin("ffx_flash") {
     "//third_party/rust_crates:serde",
   ]
 
-  config_data = [ "data/config.json" ]
-
   deps = [
     "//build/sdk/meta:rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fastboot:lib",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:termion",
   ]
 
-  # Used in args test
   test_deps = [ "//third_party/rust_crates:tempfile" ]
 
   args_sources = [ "src/args.rs" ]

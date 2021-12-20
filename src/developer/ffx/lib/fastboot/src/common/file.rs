@@ -19,17 +19,17 @@ use {
 };
 
 #[async_trait(?Send)]
-pub(crate) trait FileResolver {
+pub trait FileResolver {
     fn manifest(&self) -> &Path;
     async fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String>;
 }
 
-pub(crate) struct EmptyResolver {
+pub struct EmptyResolver {
     fake: PathBuf,
 }
 
 impl EmptyResolver {
-    pub(crate) fn new() -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let mut fake = std::env::current_dir()?;
         fake.push("fake");
         Ok(Self { fake })
@@ -57,12 +57,12 @@ impl FileResolver for EmptyResolver {
     }
 }
 
-pub(crate) struct Resolver {
+pub struct Resolver {
     manifest_path: PathBuf,
 }
 
 impl Resolver {
-    pub(crate) fn new(path: PathBuf) -> Result<Self> {
+    pub fn new(path: PathBuf) -> Result<Self> {
         Ok(Self {
             manifest_path: path
                 .canonicalize()
@@ -94,7 +94,7 @@ impl FileResolver for Resolver {
     }
 }
 
-pub(crate) struct ArchiveResolver {
+pub struct ArchiveResolver {
     temp_dir: TempDir,
     manifest_path: PathBuf,
     internal_manifest_path: PathBuf,
@@ -102,7 +102,7 @@ pub(crate) struct ArchiveResolver {
 }
 
 impl ArchiveResolver {
-    pub(crate) fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
+    pub fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;
@@ -202,13 +202,13 @@ impl FileResolver for ArchiveResolver {
     }
 }
 
-pub(crate) struct TarResolver {
+pub struct TarResolver {
     _temp_dir: TempDir,
     manifest_path: PathBuf,
 }
 
 impl TarResolver {
-    pub(crate) fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
+    pub fn new<W: Write>(writer: &mut W, path: PathBuf) -> Result<Self> {
         let temp_dir = tempdir()?;
         let file = File::open(path.clone())
             .map_err(|e| ffx_error!("Could not open archive file: {}", e))?;

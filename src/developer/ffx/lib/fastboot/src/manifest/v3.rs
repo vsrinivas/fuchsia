@@ -4,7 +4,10 @@
 
 use {
     crate::{
-        common::file::FileResolver,
+        common::{
+            cmd::{ManifestParams, OemFile},
+            file::FileResolver,
+        },
         manifest::{
             v1::{
                 FlashManifest as FlashManifestV1, Partition as PartitionV1, Product as ProductV1,
@@ -15,7 +18,6 @@ use {
     },
     anyhow::Result,
     async_trait::async_trait,
-    ffx_flash_args::{FlashCommand, OemFile},
     fidl_fuchsia_developer_bridge::FastbootProxy,
     serde::{Deserialize, Serialize},
     std::convert::From,
@@ -23,43 +25,43 @@ use {
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct FlashManifest {
-    pub(crate) hw_revision: String,
+pub struct FlashManifest {
+    pub hw_revision: String,
     #[serde(default)]
-    pub(crate) credentials: Vec<String>,
-    pub(crate) products: Vec<Product>,
+    pub credentials: Vec<String>,
+    pub products: Vec<Product>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Product {
-    pub(crate) name: String,
+pub struct Product {
+    pub name: String,
     #[serde(default)]
-    pub(crate) bootloader_partitions: Vec<Partition>,
-    pub(crate) partitions: Vec<Partition>,
+    pub bootloader_partitions: Vec<Partition>,
+    pub partitions: Vec<Partition>,
     #[serde(default)]
-    pub(crate) oem_files: Vec<ExplicitOemFile>,
+    pub oem_files: Vec<ExplicitOemFile>,
     #[serde(default)]
-    pub(crate) requires_unlock: bool,
+    pub requires_unlock: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Partition {
-    pub(crate) name: String,
-    pub(crate) path: String,
+pub struct Partition {
+    pub name: String,
+    pub path: String,
     #[serde(default)]
-    pub(crate) condition: Option<Condition>,
+    pub condition: Option<Condition>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct Condition {
-    pub(crate) variable: String,
-    pub(crate) value: String,
+pub struct Condition {
+    pub variable: String,
+    pub value: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub(crate) struct ExplicitOemFile {
-    pub(crate) command: String,
-    pub(crate) path: String,
+pub struct ExplicitOemFile {
+    pub command: String,
+    pub path: String,
 }
 
 impl From<&ExplicitOemFile> for OemFile {
@@ -108,7 +110,7 @@ impl Flash for FlashManifest {
         writer: &mut W,
         file_resolver: &mut F,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -144,7 +146,7 @@ impl Boot for FlashManifest {
         file_resolver: &mut F,
         slot: String,
         fastboot_proxy: FastbootProxy,
-        cmd: FlashCommand,
+        cmd: ManifestParams,
     ) -> Result<()>
     where
         W: Write,
@@ -233,7 +235,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "zedboot".to_string(),
                 ..Default::default()
@@ -254,7 +256,7 @@ mod test {
             &mut writer,
             &mut TestResolver::new(),
             proxy,
-            FlashCommand {
+            ManifestParams {
                 manifest: Some(PathBuf::from(tmp_file_name)),
                 product: "zedboot".to_string(),
                 ..Default::default()
