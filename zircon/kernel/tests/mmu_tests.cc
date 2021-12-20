@@ -14,6 +14,7 @@
 #include <ktl/iterator.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
+#include <vm/vm_aspace.h>
 
 #ifdef __x86_64__
 #include <arch/x86/mmu.h>
@@ -470,6 +471,82 @@ static bool test_skip_existing_mapping() {
   END_TEST;
 }
 
+// Attempts to validate that unmapping part of a large page will not cause parallel threads
+// accessing other parts of the page to fault. This test is only probabilistic and is heavily timing
+// and micro architectural dependent, but could serve as a canary.
+static bool test_large_region_atomic() {
+  BEGIN_TEST;
+
+  // Force a large page.
+  static constexpr size_t alloc_size = 1UL << PGTABLE_L2_SHIFT;
+
+  static constexpr size_t target_offsets[] = {
+      0,
+      PAGE_SIZE,
+      2 * PAGE_SIZE,
+      alloc_size - 3 * PAGE_SIZE,
+      alloc_size - 2 * PAGE_SIZE,
+      alloc_size - PAGE_SIZE,
+  };
+
+  for (unsigned i = 0; i < ktl::size(target_offsets); i++) {
+    // Allocate a large page in the current kernel aspace. Need to allocate in the current aspace
+    // and not a test aspace so that we can directly access the mappings.
+    auto kaspace = VmAspace::kernel_aspace();
+    void* ptr;
+    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+    auto err =
+        kaspace->Alloc("test", alloc_size, &ptr, 0, VmAspace::VMM_FLAG_COMMIT, arch_rw_flags);
+    const vaddr_t va = reinterpret_cast<vaddr_t>(ptr);
+    ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
+
+    auto cleanup_mapping = fit::defer([&] { kaspace->FreeRegion(va); });
+
+    // Spin up a thread to start touching pages in the mapping.
+    struct State {
+      vaddr_t va;
+      uint current_offset;
+      ktl::atomic<bool> running;
+    } state = {va, i, true};
+    auto thread_body = [](void* arg) -> int {
+      State* state = static_cast<State*>(arg);
+
+      while (state->running) {
+        for (unsigned i = 0; i < ktl::size(target_offsets); i++) {
+          if (state->current_offset == i) {
+            continue;
+          }
+          volatile uint64_t* addr = reinterpret_cast<uint64_t*>(state->va + target_offsets[i]);
+          // Force read from the address
+          asm volatile("" ::"r"(*addr));
+        }
+      }
+      return 0;
+    };
+
+    Thread* thread = Thread::Create("test-thread", thread_body, &state, DEFAULT_PRIORITY);
+    ASSERT_NONNULL(thread);
+    thread->Resume();
+
+    auto cleanup_thread = fit::defer([&]() {
+      state.running = false;
+      thread->Join(nullptr, ZX_TIME_INFINITE);
+    });
+
+    // Wait a moment to let the other thread start touching.
+    Thread::Current::SleepRelative(ZX_MSEC(50));
+
+    // Unmap a single page.
+    err = kaspace->arch_aspace().Unmap(va + target_offsets[i], 1,
+                                       ArchVmAspace::EnlargeOperation::No, nullptr);
+    EXPECT_EQ(err, ZX_OK, "unmap single page");
+
+    // If the other thread didn't cause a kernel panic by having a page fault, then success.
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(mmu_tests)
 UNITTEST("create large unaligned region and ensure it can be unmapped", test_large_unaligned_region)
 UNITTEST("create large unaligned region without mapping and ensure it can be unmapped",
@@ -478,4 +555,5 @@ UNITTEST("creating large vm region, and change permissions", test_large_region_p
 UNITTEST("trigger oom failures when creating a mapping", test_mapping_oom)
 UNITTEST("skip existing entry when mapping multiple pages", test_skip_existing_mapping)
 UNITTEST("create large vm region and unmap single pages", test_large_region_unmap)
+UNITTEST("splitting a large page is atomic", test_large_region_atomic)
 UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests")
