@@ -9,10 +9,6 @@ repository, and many directories have their own `OWNERS` files too.
 Each `OWNERS` file lists a number of individuals (by their email address) who are
 familiar with and can provide code reviews for the contents of that directory.
 
-It's important to have at least two individuals in an `OWNERS` file. Having areas
-of Fuchsia with a single owner leads to single points of failure and having multiple
-owners ensures that knowledge and ownership is shared over areas of Fuchsia.
-
 ## Responsibilities
 
 Fuchsia requires changes to have an `Code-Review +2` review, which anyone in the
@@ -47,6 +43,14 @@ per-file main.c = validuser3@example.com
 # The line below helps automate bug triage
 # COMPONENT: TopComponent>SubComponent
 ```
+
+## Best practices
+
+*   It's important to have at least two individuals in an `OWNERS` file. Having areas
+    of Fuchsia with a single owner leads to single points of failure. Having multiple
+    owners ensures that knowledge and ownership is shared over areas of Fuchsia.
+*   When applicable, `include` owners from another file rather than listing individuals.
+    This creates fewer "soruces of truth" and makes OWNERS maintenance easier.
 
 [find-owners]: https://gerrit.googlesource.com/plugins/find-owners/+/HEAD/src/main/resources/Documentation/about.md
 [owners-syntax]: https://gerrit.googlesource.com/plugins/find-owners/+/HEAD/src/main/resources/Documentation/syntax.md
