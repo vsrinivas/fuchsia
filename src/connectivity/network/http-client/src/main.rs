@@ -303,6 +303,9 @@ impl Loader {
         mut self,
     ) -> Result<(hyper::Response<hyper::Body>, hyper::Uri, hyper::Method), net_http::Error> {
         let deadline = self.deadline;
+        if deadline < fasync::Time::now() {
+            return Err(net_http::Error::DeadlineExceeded);
+        }
         let client = fhyper::new_https_client_from_tcp_options(tcp_options());
 
         async move {
