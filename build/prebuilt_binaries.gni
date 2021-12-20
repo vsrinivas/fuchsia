@@ -17,6 +17,8 @@ template("prebuilt_binaries") {
 
   compiled_action(target_name) {
     testonly = true
+
+    # TODO(fxbug.dev/90619): maybe remove the line below.
     hermetic_deps = false
 
     tool = "//tools/debug/generate_breakpad"

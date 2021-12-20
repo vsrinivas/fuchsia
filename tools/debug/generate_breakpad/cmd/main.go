@@ -255,23 +255,28 @@ func main() {
 		return
 	}
 
-	// This action should rerun if the input .build-id directory changes.
-	dep := buildIDDirIn
-	relDep, err := filepath.Rel(buildDir, dep)
-	if err != nil {
-		log.Fatalf("failed to relativize %s: %v", dep, err)
-	}
-	depfileContents := fmt.Sprintf("%s: %s", outputManifest, relDep)
-	if err := ioutil.WriteFile(depfile, []byte(depfileContents), os.ModePerm); err != nil {
-		log.Fatalf("failed to write depfile: %v", err)
-	}
-
 	br := newBatchRunner(ctx, &subprocess.Runner{}, tasks)
 
 	bfrs := []binaryRef{}
 
 	log.Tracef("producing symbols!")
 	bfrs, err = produceSymbols(ctx, buildIDDirIn, br)
+
+	// This action should rerun if the input .build-id directory contents change.
+	var deps []string
+	for _, bfr := range bfrs {
+		dep := bfr.ref.Filepath
+		relDep, err := filepath.Rel(buildDir, dep)
+		if err != nil {
+			log.Fatalf("failed to relativize %s: %v", dep, err)
+		}
+		deps = append(deps, relDep)
+	}
+	deps = append(deps, dumpSyms)
+	depfileContents := fmt.Sprintf("%s: %s", outputManifest, strings.Join(deps, " "))
+	if err := os.WriteFile(depfile, []byte(depfileContents), os.ModePerm); err != nil {
+		log.Fatalf("failed to write depfile: %v", err)
+	}
 
 	// TODO: write the manifest to a tmp file and rename it into place.
 	log.Tracef("writing manifest now")
