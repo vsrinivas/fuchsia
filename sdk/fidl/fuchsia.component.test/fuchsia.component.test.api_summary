@@ -12,7 +12,10 @@ union/member fuchsia.component.test/Capability.service fuchsia.component.test/Se
 union/member fuchsia.component.test/Capability.storage fuchsia.component.test/StorageCapability
 flexible union fuchsia.component.test/Capability
 union/member fuchsia.component.test/Capability2.directory fuchsia.component.test/Directory
+union/member fuchsia.component.test/Capability2.event fuchsia.component.test/Event
 union/member fuchsia.component.test/Capability2.protocol fuchsia.component.test/Protocol
+union/member fuchsia.component.test/Capability2.service fuchsia.component.test/Service
+union/member fuchsia.component.test/Capability2.storage fuchsia.component.test/Storage
 flexible union fuchsia.component.test/Capability2
 table/member fuchsia.component.test/CapabilityRoute.capability fuchsia.component.test/Capability
 table/member fuchsia.component.test/CapabilityRoute.force_route bool
@@ -39,6 +42,11 @@ table/member fuchsia.component.test/DirectoryCapability.name string:100
 table/member fuchsia.component.test/DirectoryCapability.path string:1024
 table/member fuchsia.component.test/DirectoryCapability.rights fuchsia.io2/Operations
 table fuchsia.component.test/DirectoryCapability
+table/member fuchsia.component.test/Event.as string:100
+table/member fuchsia.component.test/Event.filter fuchsia.data/Dictionary
+table/member fuchsia.component.test/Event.mode fuchsia.component.decl/EventMode
+table/member fuchsia.component.test/Event.name string:100
+table fuchsia.component.test/Event
 const fuchsia.component.test/MAX_LEN_ROUTE_ENDPOINTS uint32 100
 const fuchsia.component.test/MAX_MOCK_ID_LENGTH uint32 1000
 table/member fuchsia.component.test/MockComponentStartInfo.ns vector<fuchsia.component.runner/ComponentNamespaceEntry>:32
@@ -189,8 +197,16 @@ union/member fuchsia.component.test/RouteEndpoint.above_root fuchsia.component.t
 union/member fuchsia.component.test/RouteEndpoint.component string:1024
 union/member fuchsia.component.test/RouteEndpoint.debug fuchsia.component.test/Debug
 flexible union fuchsia.component.test/RouteEndpoint
+table/member fuchsia.component.test/Service.as string:100
+table/member fuchsia.component.test/Service.name string:100
+table/member fuchsia.component.test/Service.path string:1024
+table fuchsia.component.test/Service
 table/member fuchsia.component.test/ServiceCapability.name string:100
 table fuchsia.component.test/ServiceCapability
+table/member fuchsia.component.test/Storage.as string:100
+table/member fuchsia.component.test/Storage.name string:100
+table/member fuchsia.component.test/Storage.path string:100
+table fuchsia.component.test/Storage
 table/member fuchsia.component.test/StorageCapability.name string:100
 table/member fuchsia.component.test/StorageCapability.path string:1024
 table fuchsia.component.test/StorageCapability

@@ -8,6 +8,7 @@ using fuchsia.component;
 using fuchsia.component.decl;
 using fuchsia.component.runner;
 using fuchsia.component.types;
+using fuchsia.data;
 using fuchsia.io;
 using fuchsia.io2;
 using fuchsia.url;
@@ -372,6 +373,9 @@ protocol Builder {
 type Capability2 = flexible union {
     1: protocol Protocol;
     2: directory Directory;
+    3: storage Storage;
+    4: service Service;
+    5: event Event;
 };
 
 /// A protocol capability
@@ -379,7 +383,7 @@ type Protocol = table {
     1: name fuchsia.component.name;
     2: as fuchsia.component.name; // optional
     3: type fuchsia.component.decl.DependencyType; // optional
-    4: path string:fuchsia.component.MAX_PATH_LENGTH; //optional
+    4: path string:fuchsia.component.MAX_PATH_LENGTH; // optional
 };
 
 /// A directory capability
@@ -387,9 +391,37 @@ type Directory = table {
     1: name fuchsia.component.name;
     2: as fuchsia.component.name; // optional
     3: type fuchsia.component.decl.DependencyType; // optional
-    4: rights fuchsia.io2.Rights; // optional
-    5: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
-    6: path string:fuchsia.component.MAX_PATH_LENGTH; //optional
+    4: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
+
+    // the following fields are required if `to` contains a local component
+    5: rights fuchsia.io2.Rights;
+    6: path string:fuchsia.component.MAX_PATH_LENGTH;
+};
+
+/// A storage capability
+type Storage = table {
+    1: name fuchsia.component.name;
+    2: as fuchsia.component.name; // optional
+
+    // required if `to` contains a local component
+    3: path fuchsia.component.name;
+};
+
+/// A service capability
+type Service = table {
+    1: name fuchsia.component.name;
+    2: as fuchsia.component.name; // optional
+
+    // required if `to` contains a local component
+    3: path string:fuchsia.component.MAX_PATH_LENGTH;
+};
+
+/// An event capability
+type Event = table {
+    1: name fuchsia.component.name;
+    2: as fuchsia.component.name; // optional
+    3: mode fuchsia.component.decl.EventMode;
+    4: filter fuchsia.data.Dictionary;
 };
 
 /// Properties that may be set on a child when it is added to a realm
