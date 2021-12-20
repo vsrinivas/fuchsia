@@ -7,7 +7,7 @@ using zx;
 
 /// Arbitrarily large value which should be enough to handle any vendor
 /// commands.
-const MAX_VENDOR_COMMAND_LEN uint32 = 512;
+const MAX_VENDOR_COMMAND_LEN uint32 = 65535;
 
 /// TPM response codes are fairly complex.
 /// See Section 6.6, "TPM_RC (Response Codes)" of the "Trusted Platform Module Library
