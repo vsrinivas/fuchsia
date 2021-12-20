@@ -196,13 +196,14 @@ int main(int argc, char** argv) {
   // Create a new VirtioBlock device for each device requested.
   std::vector<std::unique_ptr<VirtioBlock>> block_devices;
   for (auto& block_device : *cfg.mutable_block_devices()) {
-    auto block = std::make_unique<VirtioBlock>(guest.phys_mem(), block_device.mode);
+    auto block =
+        std::make_unique<VirtioBlock>(guest.phys_mem(), block_device.mode, block_device.format);
     status = bus.Connect(block->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect block device";
       return status;
     }
-    status = block->Start(guest.object(), std::move(block_device.id), block_device.format,
+    status = block->Start(guest.object(), std::move(block_device.id),
                           std::move(block_device.client), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start block device";
