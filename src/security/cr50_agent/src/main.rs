@@ -11,7 +11,7 @@ use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_tpm::TpmDeviceProxy;
-use fidl_fuchsia_tpm_cr50::Cr50RequestStream;
+use fidl_fuchsia_tpm_cr50::{Cr50RequestStream, PinWeaverRequestStream};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::{component, health::Reporter};
 use fuchsia_syslog::{fx_log_info, fx_log_warn};
@@ -25,6 +25,7 @@ use tracing;
 /// and dispatched.
 enum IncomingRequest {
     Cr50(Cr50RequestStream),
+    Pinweaver(PinWeaverRequestStream),
 }
 
 const CR50_VENDOR_ID: u16 = 0x1ae0;
@@ -95,7 +96,10 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     };
     let cr50 = Cr50::new(proxy, power_button);
-    service_fs.dir("svc").add_fidl_service(IncomingRequest::Cr50);
+    service_fs
+        .dir("svc")
+        .add_fidl_service(IncomingRequest::Cr50)
+        .add_fidl_service(IncomingRequest::Pinweaver);
 
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
@@ -107,8 +111,13 @@ async fn main() -> Result<(), anyhow::Error> {
         .for_each_concurrent(None, |request: IncomingRequest| async move {
             match request {
                 IncomingRequest::Cr50(stream) => {
-                    Arc::clone(cr50_ref).handle_stream(stream).await.unwrap_or_else(|e| {
+                    Arc::clone(cr50_ref).handle_cr50_stream(stream).await.unwrap_or_else(|e| {
                         fx_log_warn!("Failed while handling cr50 requests: {:?}", e);
+                    })
+                }
+                IncomingRequest::Pinweaver(stream) => {
+                    Arc::clone(cr50_ref).handle_pinweaver_stream(stream).await.unwrap_or_else(|e| {
+                        fx_log_warn!("Failed while handling pinweaver requests: {:?}", e);
                     })
                 }
             }

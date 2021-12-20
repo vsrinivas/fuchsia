@@ -12,6 +12,7 @@
     },
     capabilities: [
         { protocol: "fuchsia.tpm.cr50.Cr50" },
+        { protocol: "fuchsia.tpm.cr50.PinWeaver" },
     ],
     use: [
         {
@@ -24,6 +25,10 @@
     expose: [
         {
             protocol: "fuchsia.tpm.cr50.Cr50",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.tpm.cr50.PinWeaver",
             from: "self",
         },
     ],

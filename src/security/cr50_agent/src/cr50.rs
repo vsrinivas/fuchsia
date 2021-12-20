@@ -12,6 +12,7 @@ use crate::{
                 CcdCommand, CcdGetInfoResponse, CcdOpenResponse, CcdPhysicalPresenceResponse,
                 CcdRequest,
             },
+            pinweaver::PinweaverResetTree,
             wp::WpInfoRequest,
             TpmCommand,
         },
@@ -25,7 +26,7 @@ use fidl_fuchsia_tpm::TpmDeviceProxy;
 use fidl_fuchsia_tpm_cr50::{
     CcdCapability, CcdFlags, CcdIndicator, CcdInfo, CcdState, Cr50Rc, Cr50Request,
     Cr50RequestStream, Cr50Status, PhysicalPresenceEvent, PhysicalPresenceNotifierMarker,
-    PhysicalPresenceState, WpState,
+    PhysicalPresenceState, PinWeaverRequest, PinWeaverRequestStream, WpState,
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_warn;
@@ -58,7 +59,7 @@ impl Cr50 {
         }
     }
 
-    pub async fn handle_stream(&self, mut stream: Cr50RequestStream) -> Result<(), Error> {
+    pub async fn handle_cr50_stream(&self, mut stream: Cr50RequestStream) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("Reading from stream")? {
             match request {
                 Cr50Request::CcdGetInfo { responder } => responder
@@ -102,6 +103,31 @@ impl Cr50 {
             };
         }
 
+        Ok(())
+    }
+
+    pub async fn handle_pinweaver_stream(
+        &self,
+        mut stream: PinWeaverRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(request) = stream.try_next().await? {
+            match request {
+                PinWeaverRequest::GetVersion { .. } => todo!(), // What should this call?
+                PinWeaverRequest::ResetTree { bits_per_level, height, responder } => {
+                    let request = PinweaverResetTree::new(bits_per_level, height);
+                    // TODO(fxbug.dev/90618): what is the correct way to handle errors in the
+                    // underlying TPM transport?
+                    let result =
+                        request.execute(&self.proxy).await.context("Executing TPM command")?;
+                    responder
+                        .send(&mut result.ok().map(|_| result.root))
+                        .context("Replying to request")?;
+                }
+                PinWeaverRequest::InsertLeaf { .. } => todo!(),
+                PinWeaverRequest::RemoveLeaf { .. } => todo!(),
+                PinWeaverRequest::TryAuth { .. } => todo!(),
+            }
+        }
         Ok(())
     }
 

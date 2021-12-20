@@ -7,6 +7,7 @@
 //! Values are converted to/from big-endian when they're transmitted/received.
 
 pub mod ccd;
+pub mod pinweaver;
 pub mod wp;
 
 use super::status::{ExecuteError, TpmStatus};
@@ -61,6 +62,12 @@ pub trait Serializable {
 /// Trait used for deserialising TPM commands from byte arrays.
 pub trait Deserializable: Sized {
     fn deserialize(deserializer: &mut Deserializer) -> Result<Self, DeserializeError>;
+}
+
+impl Deserializable for () {
+    fn deserialize(_deserializer: &mut Deserializer) -> Result<Self, DeserializeError> {
+        Ok(())
+    }
 }
 
 #[repr(u16)]
