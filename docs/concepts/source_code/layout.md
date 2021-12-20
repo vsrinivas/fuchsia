@@ -122,6 +122,8 @@ pattern:
           (b) does not appear in any other third_party directory anywhere in the
           Fuchsia Source Tree
         * The code is open source
+    * See more details about `third_party` source layout in [Third-party Source
+      Management](third-party-management.md)
  * `tools/` (optional)
    * This directory contains command-line tools provided by the area.  These
      are usually things that can (or must) be built for the development host

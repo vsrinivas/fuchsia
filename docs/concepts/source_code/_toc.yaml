@@ -14,3 +14,5 @@ toc:
   path: /docs/concepts/source_code/third-party-metadata.md
 - title: "Fuchsia archive format (FAR)"
   path: /docs/concepts/source_code/archive_format.md
+- title: "Third-party Source Management"
+  path: /docs/concepts/source_code/third-party-management.md
