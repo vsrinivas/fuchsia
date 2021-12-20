@@ -11,7 +11,7 @@ TEST_F(NamespaceTest, NoAmbientExecutable) {
   zx::vmo vmo, vmo2, vmo3;
 
   // allocate an object
-  ASSERT_EQ(ZX_OK, zx_vmo_create(PAGE_SIZE, 0, vmo.reset_and_get_address()));
+  ASSERT_EQ(ZX_OK, zx_vmo_create(zx_system_get_page_size(), 0, vmo.reset_and_get_address()));
 
   // set-exec with an invalid VMEX resource handle
   ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_READ, &vmo2));
