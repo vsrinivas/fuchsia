@@ -28,10 +28,12 @@ use {
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    xdg_shell::{
-        xdg_positioner::{Anchor, Gravity},
-        xdg_toplevel, XdgPopupEvent, XdgPopupRequest, XdgPositionerRequest, XdgSurfaceEvent,
-        XdgSurfaceRequest, XdgToplevelEvent, XdgToplevelRequest, XdgWmBase, XdgWmBaseRequest,
+    zxdg_shell_v6::{
+        zxdg_positioner_v6::{Anchor, Gravity},
+        zxdg_toplevel_v6, ZxdgPopupV6, ZxdgPopupV6Event, ZxdgPopupV6Request, ZxdgPositionerV6,
+        ZxdgPositionerV6Request, ZxdgShellV6, ZxdgShellV6Request, ZxdgSurfaceV6,
+        ZxdgSurfaceV6Event, ZxdgSurfaceV6Request, ZxdgToplevelV6, ZxdgToplevelV6Event,
+        ZxdgToplevelV6Request,
     },
 };
 
@@ -99,7 +101,7 @@ static TITLE_ANNOTATION_VALUE: &'static str = "name";
 ///   by pressing Escape key three times quickly.
 ///
 
-/// `XdgShell` is an implementation of the xdg_wm_base global.
+/// `XdgShell` is an implementation of the zxdg_shell_v6 global.
 ///
 /// `XdgShell` is used to create traditional desktop-style applications. The
 /// `XdgShell` can be used to create `XdgSurface` objects. Similar to `Surface`,
@@ -114,26 +116,28 @@ impl XdgShell {
     }
 }
 
-impl RequestReceiver<XdgWmBase> for XdgShell {
+impl RequestReceiver<ZxdgShellV6> for XdgShell {
     fn receive(
         this: ObjectRef<Self>,
-        request: XdgWmBaseRequest,
+        request: ZxdgShellV6Request,
         client: &mut Client,
     ) -> Result<(), Error> {
         match request {
-            XdgWmBaseRequest::Destroy => {
+            ZxdgShellV6Request::Destroy => {
                 client.delete_id(this.id())?;
             }
-            XdgWmBaseRequest::GetXdgSurface { id, surface } => {
+            ZxdgShellV6Request::GetXdgSurface { id, surface } => {
                 let xdg_surface = XdgSurface::new(surface);
                 let surface_ref = xdg_surface.surface_ref;
                 let xdg_surface_ref = id.implement(client, xdg_surface)?;
-                surface_ref.get_mut(client)?.set_role(SurfaceRole::XdgSurface(xdg_surface_ref))?;
+                surface_ref
+                    .get_mut(client)?
+                    .set_role(SurfaceRole::XdgSurfaceUnstable(xdg_surface_ref))?;
             }
-            XdgWmBaseRequest::CreatePositioner { id } => {
+            ZxdgShellV6Request::CreatePositioner { id } => {
                 id.implement(client, XdgPositioner::new())?;
             }
-            XdgWmBaseRequest::Pong { .. } => {}
+            ZxdgShellV6Request::Pong { .. } => {}
         }
         Ok(())
     }
@@ -166,34 +170,38 @@ impl XdgPositioner {
             height: self.size.height,
         };
 
-        let anchor = self.anchor.as_enum()?;
-        geometry.x += match anchor {
-            Anchor::Left | Anchor::BottomLeft | Anchor::TopLeft => self.anchor_rect.x,
-            Anchor::Right | Anchor::BottomRight | Anchor::TopRight => {
-                self.anchor_rect.x + self.anchor_rect.width
-            }
-            _ => self.anchor_rect.x + self.anchor_rect.width / 2,
+        let anchor = self.anchor.as_enum()?.bits();
+        geometry.x += if (anchor & Anchor::Left.bits()) != 0 {
+            self.anchor_rect.x
+        } else if (anchor & Anchor::Right.bits()) != 0 {
+            self.anchor_rect.x + self.anchor_rect.width
+        } else {
+            self.anchor_rect.x + self.anchor_rect.width / 2
         };
 
-        geometry.y += match anchor {
-            Anchor::Top | Anchor::TopLeft | Anchor::TopRight => self.anchor_rect.y,
-            Anchor::Bottom | Anchor::BottomLeft | Anchor::BottomRight => {
-                self.anchor_rect.y + self.anchor_rect.height
-            }
-            _ => self.anchor_rect.y + self.anchor_rect.height / 2,
+        geometry.y += if (anchor & Anchor::Top.bits()) != 0 {
+            self.anchor_rect.y
+        } else if (anchor & Anchor::Bottom.bits()) != 0 {
+            self.anchor_rect.y + self.anchor_rect.height
+        } else {
+            self.anchor_rect.y + self.anchor_rect.height / 2
         };
 
-        let gravity = self.gravity.as_enum()?;
-        geometry.x -= match gravity {
-            Gravity::Left | Gravity::BottomLeft | Gravity::TopLeft => geometry.width,
-            Gravity::Right | Gravity::BottomRight | Gravity::TopRight => 0,
-            _ => geometry.width / 2,
+        let gravity = self.gravity.as_enum()?.bits();
+        geometry.x -= if (gravity & Gravity::Left.bits()) != 0 {
+            geometry.width
+        } else if (gravity & Gravity::Right.bits()) != 0 {
+            0
+        } else {
+            geometry.width / 2
         };
 
-        geometry.y -= match gravity {
-            Gravity::Top | Gravity::TopLeft | Gravity::TopRight => geometry.height,
-            Gravity::Bottom | Gravity::BottomLeft | Gravity::BottomRight => 0,
-            _ => geometry.height / 2,
+        geometry.y -= if (gravity & Gravity::Top.bits()) != 0 {
+            geometry.height
+        } else if (gravity & Gravity::Bottom.bits()) != 0 {
+            0
+        } else {
+            geometry.height / 2
         };
 
         Ok(geometry)
@@ -220,17 +228,17 @@ impl XdgPositioner {
     }
 }
 
-impl RequestReceiver<xdg_shell::XdgPositioner> for XdgPositioner {
+impl RequestReceiver<ZxdgPositionerV6> for XdgPositioner {
     fn receive(
         this: ObjectRef<Self>,
-        request: XdgPositionerRequest,
+        request: ZxdgPositionerV6Request,
         client: &mut Client,
     ) -> Result<(), Error> {
         match request {
-            XdgPositionerRequest::Destroy => {
+            ZxdgPositionerV6Request::Destroy => {
                 client.delete_id(this.id())?;
             }
-            XdgPositionerRequest::SetSize { width, height } => {
+            ZxdgPositionerV6Request::SetSize { width, height } => {
                 if width <= 0 || height <= 0 {
                     return Err(format_err!(
                         "invalid_input error width={:?} height={:?}",
@@ -240,7 +248,7 @@ impl RequestReceiver<xdg_shell::XdgPositioner> for XdgPositioner {
                 }
                 this.get_mut(client)?.set_size(width, height);
             }
-            XdgPositionerRequest::SetAnchorRect { x, y, width, height } => {
+            ZxdgPositionerV6Request::SetAnchorRect { x, y, width, height } => {
                 if width <= 0 || height <= 0 {
                     return Err(format_err!(
                         "invalid_input error width={:?} height={:?}",
@@ -250,19 +258,16 @@ impl RequestReceiver<xdg_shell::XdgPositioner> for XdgPositioner {
                 }
                 this.get_mut(client)?.set_anchor_rect(x, y, width, height);
             }
-            XdgPositionerRequest::SetAnchor { anchor } => {
+            ZxdgPositionerV6Request::SetAnchor { anchor } => {
                 this.get_mut(client)?.set_anchor(anchor);
             }
-            XdgPositionerRequest::SetGravity { gravity } => {
+            ZxdgPositionerV6Request::SetGravity { gravity } => {
                 this.get_mut(client)?.set_gravity(gravity);
             }
-            XdgPositionerRequest::SetConstraintAdjustment { .. } => {}
-            XdgPositionerRequest::SetOffset { x, y } => {
+            ZxdgPositionerV6Request::SetConstraintAdjustment { .. } => {}
+            ZxdgPositionerV6Request::SetOffset { x, y } => {
                 this.get_mut(client)?.set_offset(x, y);
             }
-            XdgPositionerRequest::SetReactive { .. } => {}
-            XdgPositionerRequest::SetParentSize { .. } => {}
-            XdgPositionerRequest::SetParentConfigure { .. } => {}
         }
         Ok(())
     }
@@ -369,7 +374,7 @@ impl XdgSurface {
             _ => {}
         }
         let serial = client.event_queue().next_serial();
-        client.event_queue().post(this.id(), XdgSurfaceEvent::Configure { serial })?;
+        client.event_queue().post(this.id(), ZxdgSurfaceV6Event::Configure { serial })?;
         Ok(())
     }
 
@@ -462,7 +467,7 @@ impl XdgSurface {
                         task_queue.post(move |client| {
                             if close {
                                 // Close focused XDG surface.
-                                for xdg_surface_ref in &client.xdg_surfaces {
+                                for xdg_surface_ref in &client.unstable_xdg_surfaces {
                                     let xdg_surface = xdg_surface_ref.get(client)?;
                                     let surface_ref = xdg_surface.surface_ref;
                                     if client.input_dispatcher.has_focus(surface_ref) {
@@ -487,7 +492,7 @@ impl XdgSurface {
         root_surface_ref: ObjectRef<Surface>,
         client: &Client,
     ) -> Option<ObjectRef<Self>> {
-        for xdg_surface_ref in client.xdg_surfaces.iter().rev() {
+        for xdg_surface_ref in client.unstable_xdg_surfaces.iter().rev() {
             if let Ok(xdg_surface) = xdg_surface_ref.get(client) {
                 if xdg_surface.root_surface_ref == root_surface_ref {
                     return Some(*xdg_surface_ref);
@@ -762,17 +767,17 @@ impl XdgSurface {
 }
 
 #[cfg(feature = "flatland")]
-impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
+impl RequestReceiver<ZxdgSurfaceV6> for XdgSurface {
     fn receive(
         this: ObjectRef<Self>,
-        request: XdgSurfaceRequest,
+        request: ZxdgSurfaceV6Request,
         client: &mut Client,
     ) -> Result<(), Error> {
         match request {
-            XdgSurfaceRequest::Destroy => {
+            ZxdgSurfaceV6Request::Destroy => {
                 client.delete_id(this.id())?;
             }
-            XdgSurfaceRequest::GetToplevel { id } => {
+            ZxdgSurfaceV6Request::GetToplevel { id } => {
                 let proxy =
                     connect_to_protocol::<FlatlandMarker>().expect("error connecting to Flatland");
                 let flatland = Flatland::new(proxy);
@@ -785,7 +790,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                     flatland.proxy().take_event_stream(),
                 )?;
             }
-            XdgSurfaceRequest::GetPopup { id, parent, positioner } => {
+            ZxdgSurfaceV6Request::GetPopup { id, parent, positioner } => {
                 let proxy =
                     connect_to_protocol::<FlatlandMarker>().expect("error connecting to Flatland");
                 let flatland = Flatland::new(proxy);
@@ -808,7 +813,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                     flatland.proxy().take_event_stream(),
                 )?;
             }
-            XdgSurfaceRequest::SetWindowGeometry { x, y, width, height } => {
+            ZxdgSurfaceV6Request::SetWindowGeometry { x, y, width, height } => {
                 let surface_ref = this.get(client)?.surface_ref;
                 surface_ref.get_mut(client)?.enqueue(SurfaceCommand::SetWindowGeometry(Rect {
                     x,
@@ -817,7 +822,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                     height,
                 }));
             }
-            XdgSurfaceRequest::AckConfigure { .. } => {}
+            ZxdgSurfaceV6Request::AckConfigure { .. } => {}
         }
         Ok(())
     }
@@ -1070,17 +1075,17 @@ impl XdgSurface {
 }
 
 #[cfg(not(feature = "flatland"))]
-impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
+impl RequestReceiver<ZxdgSurfaceV6> for XdgSurface {
     fn receive(
         this: ObjectRef<Self>,
-        request: XdgSurfaceRequest,
+        request: ZxdgSurfaceV6Request,
         client: &mut Client,
     ) -> Result<(), Error> {
         match request {
-            XdgSurfaceRequest::Destroy => {
+            ZxdgSurfaceV6Request::Destroy => {
                 client.delete_id(this.id())?;
             }
-            XdgSurfaceRequest::GetToplevel { id } => {
+            ZxdgSurfaceV6Request::GetToplevel { id } => {
                 let (client_end, server_end) = create_endpoints::<SessionListenerMarker>().unwrap();
                 let session = client.display().create_session(Some(client_end))?;
                 let toplevel = XdgToplevel::new(this, client, session.clone())?;
@@ -1091,7 +1096,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                 let toplevel = toplevel_ref.get_mut(client)?;
                 toplevel.session_listener_controller = Some(session_listener_control_handle);
             }
-            XdgSurfaceRequest::GetPopup { id, parent, positioner } => {
+            ZxdgSurfaceV6Request::GetPopup { id, parent, positioner } => {
                 let (client_end, server_end) = create_endpoints::<SessionListenerMarker>().unwrap();
                 let session = client.display().create_session(Some(client_end))?;
                 let popup = XdgPopup::new(this, client, session.clone(), positioner.into())?;
@@ -1112,7 +1117,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                 let popup = popup_ref.get_mut(client)?;
                 popup.session_listener_controller = Some(session_listener_control_handle);
             }
-            XdgSurfaceRequest::SetWindowGeometry { x, y, width, height } => {
+            ZxdgSurfaceV6Request::SetWindowGeometry { x, y, width, height } => {
                 let surface_ref = this.get(client)?.surface_ref;
                 surface_ref.get_mut(client)?.enqueue(SurfaceCommand::SetWindowGeometry(Rect {
                     x,
@@ -1121,7 +1126,7 @@ impl RequestReceiver<xdg_shell::XdgSurface> for XdgSurface {
                     height,
                 }));
             }
-            XdgSurfaceRequest::AckConfigure { .. } => {}
+            ZxdgSurfaceV6Request::AckConfigure { .. } => {}
         }
         Ok(())
     }
@@ -1158,7 +1163,7 @@ impl XdgPopup {
         let geometry = this.get(client)?.geometry;
         client.event_queue().post(
             this.id(),
-            XdgPopupEvent::Configure {
+            ZxdgPopupV6Event::Configure {
                 x: geometry.x,
                 y: geometry.y,
                 width: geometry.width,
@@ -1174,7 +1179,7 @@ impl XdgPopup {
 
     fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgPopup::close");
-        client.event_queue().post(this.id(), XdgPopupEvent::PopupDone)
+        client.event_queue().post(this.id(), ZxdgPopupV6Event::PopupDone)
     }
 }
 
@@ -1222,14 +1227,14 @@ impl XdgPopup {
     }
 }
 
-impl RequestReceiver<xdg_shell::XdgPopup> for XdgPopup {
+impl RequestReceiver<ZxdgPopupV6> for XdgPopup {
     fn receive(
         this: ObjectRef<Self>,
-        request: XdgPopupRequest,
+        request: ZxdgPopupV6Request,
         client: &mut Client,
     ) -> Result<(), Error> {
         match request {
-            XdgPopupRequest::Destroy => {
+            ZxdgPopupV6Request::Destroy => {
                 let (surface_ref, xdg_surface_ref) = {
                     let popup = this.get(client)?;
                     (popup.surface_ref, popup.xdg_surface_ref)
@@ -1246,8 +1251,7 @@ impl RequestReceiver<xdg_shell::XdgPopup> for XdgPopup {
                 surface_ref.get_mut(client)?.clear_session();
                 client.delete_id(this.id())?;
             }
-            XdgPopupRequest::Grab { .. } => {}
-            XdgPopupRequest::Reposition { .. } => {}
+            ZxdgPopupV6Request::Grab { .. } => {}
         }
         Ok(())
     }
@@ -1328,17 +1332,17 @@ impl XdgToplevel {
         //    The surface is maximized. The window geometry specified in the
         //    configure event must be obeyed by the client.
         if maximized {
-            states.push(xdg_toplevel::State::Maximized)?;
+            states.push(zxdg_toplevel_v6::State::Maximized)?;
         }
         if client.input_dispatcher.has_focus(surface_ref) {
             // If the window has focus, we set the activated state. This is
             // just a hint to pass along to the client so it can draw itself
             // differently with and without focus.
-            states.push(xdg_toplevel::State::Activated)?;
+            states.push(zxdg_toplevel_v6::State::Activated)?;
         }
         client
             .event_queue()
-            .post(this.id(), XdgToplevelEvent::Configure { width, height, states })?;
+            .post(this.id(), ZxdgToplevelV6Event::Configure { width, height, states })?;
 
         Ok(())
     }
@@ -1355,7 +1359,7 @@ impl XdgToplevel {
 
     fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgToplevel::close");
-        client.event_queue().post(this.id(), XdgToplevelEvent::Close)
+        client.event_queue().post(this.id(), ZxdgToplevelV6Event::Close)
     }
 }
 
@@ -1636,7 +1640,7 @@ impl XdgToplevel {
                     .maybe_update_keyboard_focus(root_surface_ref, surface_ref)?;
             }
             XdgSurface::configure(xdg_surface_ref, client)?;
-            client.xdg_surfaces.push(xdg_surface_ref);
+            client.unstable_xdg_surfaces.push(xdg_surface_ref);
         } else {
             let xdg_surface_ref = top_level.xdg_surface_ref;
             let xdg_surface = xdg_surface_ref.get(client)?;
@@ -1895,7 +1899,7 @@ impl XdgToplevel {
                     .maybe_update_keyboard_focus(root_surface_ref, surface_ref)?;
             }
             XdgSurface::configure(xdg_surface_ref, client)?;
-            client.xdg_surfaces.push(xdg_surface_ref);
+            client.unstable_xdg_surfaces.push(xdg_surface_ref);
         } else {
             let xdg_surface_ref = top_level.xdg_surface_ref;
             let xdg_surface = xdg_surface_ref.get(client)?;
@@ -1921,19 +1925,19 @@ impl XdgToplevel {
     }
 }
 
-impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
+impl RequestReceiver<ZxdgToplevelV6> for XdgToplevel {
     fn receive(
         this: ObjectRef<Self>,
-        request: XdgToplevelRequest,
+        request: ZxdgToplevelV6Request,
         client: &mut Client,
     ) -> Result<(), Error> {
         match request {
-            XdgToplevelRequest::Destroy => {
+            ZxdgToplevelV6Request::Destroy => {
                 let (surface_ref, xdg_surface_ref) = {
                     let toplevel = this.get(client)?;
                     (toplevel.surface_ref, toplevel.xdg_surface_ref)
                 };
-                client.xdg_surfaces.retain(|&x| x != xdg_surface_ref);
+                client.unstable_xdg_surfaces.retain(|&x| x != xdg_surface_ref);
                 let xdg_surface = xdg_surface_ref.get(client)?;
                 xdg_surface.shutdown(client);
                 if client.input_dispatcher.has_focus(surface_ref) {
@@ -1958,26 +1962,26 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
                 surface_ref.get_mut(client)?.clear_session();
                 client.delete_id(this.id())?;
             }
-            XdgToplevelRequest::SetParent { parent } => {
+            ZxdgToplevelV6Request::SetParent { parent } => {
                 let toplevel = this.get_mut(client)?;
                 let maybe_parent = if parent != 0 { Some(parent.into()) } else { None };
                 toplevel.set_parent(maybe_parent);
             }
-            XdgToplevelRequest::SetTitle { title } => {
+            ZxdgToplevelV6Request::SetTitle { title } => {
                 let toplevel = this.get_mut(client)?;
                 toplevel.set_title(Some(title));
             }
-            XdgToplevelRequest::SetAppId { .. } => {}
-            XdgToplevelRequest::ShowWindowMenu { .. } => {}
-            XdgToplevelRequest::Move { .. } => {}
-            XdgToplevelRequest::Resize { .. } => {}
-            XdgToplevelRequest::SetMaxSize { .. } => {}
-            XdgToplevelRequest::SetMinSize { .. } => {}
-            XdgToplevelRequest::SetMaximized => {}
-            XdgToplevelRequest::UnsetMaximized => {}
-            XdgToplevelRequest::SetFullscreen { .. } => {}
-            XdgToplevelRequest::UnsetFullscreen => {}
-            XdgToplevelRequest::SetMinimized => {}
+            ZxdgToplevelV6Request::SetAppId { .. } => {}
+            ZxdgToplevelV6Request::ShowWindowMenu { .. } => {}
+            ZxdgToplevelV6Request::Move { .. } => {}
+            ZxdgToplevelV6Request::Resize { .. } => {}
+            ZxdgToplevelV6Request::SetMaxSize { .. } => {}
+            ZxdgToplevelV6Request::SetMinSize { .. } => {}
+            ZxdgToplevelV6Request::SetMaximized => {}
+            ZxdgToplevelV6Request::UnsetMaximized => {}
+            ZxdgToplevelV6Request::SetFullscreen { .. } => {}
+            ZxdgToplevelV6Request::UnsetFullscreen => {}
+            ZxdgToplevelV6Request::SetMinimized => {}
         }
         Ok(())
     }
@@ -2532,8 +2536,8 @@ mod tests {
         positioner.set_offset(0, 0);
         positioner.set_size(168, 286);
         positioner.set_anchor_rect(486, 0, 44, 28);
-        positioner.set_anchor(Enum::Recognized(Anchor::BottomLeft));
-        positioner.set_gravity(Enum::Recognized(Gravity::BottomRight));
+        positioner.set_anchor(Enum::Recognized(Anchor::Bottom | Anchor::Left));
+        positioner.set_gravity(Enum::Recognized(Gravity::Bottom | Gravity::Right));
         assert_eq!(Rect { x: 486, y: 28, width: 168, height: 286 }, positioner.get_geometry()?);
         Ok(())
     }

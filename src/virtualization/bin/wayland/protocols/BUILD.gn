@@ -8,6 +8,7 @@ group("protocols") {
   deps = [
     ":wayland",
     ":wp_viewporter",
+    ":xdg_shell",
     ":zaura_shell",
     ":zcr_alpha_compositing_v1",
     ":zcr_secure_output_v1",
@@ -22,6 +23,10 @@ wayland_protocol("wayland") {
 
 wayland_protocol("wp_viewporter") {
   protocol = "third_party/freedesktop.org/stable/viewporter/viewporter.xml"
+}
+
+wayland_protocol("xdg_shell") {
+  protocol = "third_party/freedesktop.org/stable/xdg-shell/xdg-shell.xml"
 }
 
 wayland_protocol("zxdg_shell_v6") {

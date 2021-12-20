@@ -7,6 +7,7 @@ use {
     crate::object::{MessageReceiver, ObjectLookupError, ObjectMap, ObjectRef, RequestReceiver},
     crate::seat::InputDispatcher,
     crate::xdg_shell::XdgSurface,
+    crate::xdg_shell_unstable::XdgSurface as XdgSurfaceUnstable,
     anyhow::{anyhow, Error},
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon as zx,
@@ -80,6 +81,9 @@ pub struct Client {
 
     /// XDG surfaces. Last surface created at the back.
     pub xdg_surfaces: Vec<ObjectRef<XdgSurface>>,
+
+    /// Unstable XDG surfaces. Last surface created at the back.
+    pub unstable_xdg_surfaces: Vec<ObjectRef<XdgSurfaceUnstable>>,
 }
 
 impl Client {
@@ -103,6 +107,7 @@ impl Client {
             input_dispatcher: InputDispatcher::new(event_queue.clone()),
             event_queue,
             xdg_surfaces: vec![],
+            unstable_xdg_surfaces: vec![],
         }
     }
 
@@ -128,6 +133,7 @@ impl Client {
             input_dispatcher: InputDispatcher::new(event_queue.clone()),
             event_queue,
             xdg_surfaces: vec![],
+            unstable_xdg_surfaces: vec![],
         }
     }
 
@@ -195,6 +201,11 @@ impl Client {
             // We need to shutdown the client. This includes tearing down
             // all views associated with this client.
             self.xdg_surfaces.iter().for_each(|surface| {
+                if let Ok(t) = surface.get(&self) {
+                    t.shutdown(&self);
+                }
+            });
+            self.unstable_xdg_surfaces.iter().for_each(|surface| {
                 if let Ok(t) = surface.get(&self) {
                     t.shutdown(&self);
                 }

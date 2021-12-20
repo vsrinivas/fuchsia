@@ -7,6 +7,7 @@ use {
         alpha_compositing::*, aura_shell::*, compositor::*, data_device_manager::*, display::*,
         linux_dmabuf::*, object::*, output::*, registry::*, seat::*, secure_output::*, shm::*,
         subcompositor::*, viewporter::*, xdg_shell::*,
+        xdg_shell_unstable::XdgShell as XdgShellUnstable,
     },
     anyhow::Error,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -15,6 +16,7 @@ use {
     std::sync::Arc,
     wayland::{WlCompositor, WlDataDeviceManager, WlOutput, WlSeat, WlShm, WlSubcompositor},
     wp_viewporter::WpViewporter,
+    xdg_shell::XdgWmBase,
     zaura_shell::ZauraShell,
     zcr_alpha_compositing_v1::ZcrAlphaCompositingV1,
     zcr_secure_output_v1::ZcrSecureOutputV1,
@@ -88,6 +90,10 @@ impl WaylandDispatcher {
             Ok(Box::new(RequestDispatcher::new(DataDeviceManager::new())))
         });
         registry.add_global(ZxdgShellV6, move |_, _, _| {
+            let xdg_shell = XdgShellUnstable::new();
+            Ok(Box::new(RequestDispatcher::new(xdg_shell)))
+        });
+        registry.add_global(XdgWmBase, move |_, _, _| {
             let xdg_shell = XdgShell::new();
             Ok(Box::new(RequestDispatcher::new(xdg_shell)))
         });

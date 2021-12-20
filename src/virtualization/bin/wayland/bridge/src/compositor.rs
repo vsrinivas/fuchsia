@@ -9,6 +9,7 @@ use {
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     crate::subcompositor::Subsurface,
     crate::xdg_shell::XdgSurface,
+    crate::xdg_shell_unstable::XdgSurface as XdgSurfaceUnstable,
     anyhow::{format_err, Error},
     fidl_fuchsia_math::{Rect, Size},
     fuchsia_async as fasync, fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
@@ -1141,6 +1142,7 @@ pub enum SurfaceRole {
     /// itself, but instead maps to sub-roles (ex: xdg_toplevel). We'll let
     /// the `XdgSurface` handle the xdg sub-roles, however.
     XdgSurface(ObjectRef<XdgSurface>),
+    XdgSurfaceUnstable(ObjectRef<XdgSurfaceUnstable>),
     Subsurface(ObjectRef<Subsurface>),
 }
 
@@ -1155,6 +1157,9 @@ impl SurfaceRole {
         match self {
             SurfaceRole::XdgSurface(xdg_surface_ref) => {
                 XdgSurface::finalize_commit(*xdg_surface_ref, client)
+            }
+            SurfaceRole::XdgSurfaceUnstable(xdg_surface_ref) => {
+                XdgSurfaceUnstable::finalize_commit(*xdg_surface_ref, client)
             }
             SurfaceRole::Subsurface(subsurface_ref) => {
                 Ok(subsurface_ref.get_mut(client)?.finalize_commit(callbacks))

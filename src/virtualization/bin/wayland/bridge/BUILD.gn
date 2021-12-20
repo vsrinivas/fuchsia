@@ -34,6 +34,7 @@ base_deps = [
   "//src/virtualization/bin/wayland/core",
   "//src/virtualization/bin/wayland/protocols:wayland",
   "//src/virtualization/bin/wayland/protocols:wp_viewporter",
+  "//src/virtualization/bin/wayland/protocols:xdg_shell",
   "//src/virtualization/bin/wayland/protocols:zaura_shell",
   "//src/virtualization/bin/wayland/protocols:zcr_alpha_compositing_v1",
   "//src/virtualization/bin/wayland/protocols:zcr_secure_output_v1",
@@ -66,6 +67,7 @@ base_sources = [
   "src/test_protocol.rs",
   "src/viewporter.rs",
   "src/xdg_shell.rs",
+  "src/xdg_shell_unstable.rs",
 ]
 
 bin_sources = base_sources + [ "src/main.rs" ]
@@ -157,6 +159,7 @@ integration_test_deps = [
   "//src/virtualization/bin/wayland/core",
   "//src/virtualization/bin/wayland/protocols:wayland",
   "//src/virtualization/bin/wayland/protocols:wp_viewporter",
+  "//src/virtualization/bin/wayland/protocols:xdg_shell",
   "//src/virtualization/bin/wayland/protocols:zaura_shell",
   "//src/virtualization/bin/wayland/protocols:zcr_alpha_compositing_v1",
   "//src/virtualization/bin/wayland/protocols:zcr_secure_output_v1",
