@@ -57,7 +57,7 @@ zx_status_t GetStatsForProcess(const zx::process& process, ProcessStats* out) {
     status = process.get_info(ZX_INFO_TASK_RUNTIME, &task_runtime, sizeof(task_runtime), nullptr,
                               nullptr);
   }
-  if (status == ZX_ERR_BAD_HANDLE) {
+  if (status == ZX_ERR_BAD_STATE) {
     // Process terminated. This isn't unusual, and no warning is needed.
     return status;
   }
