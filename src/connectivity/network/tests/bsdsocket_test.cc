@@ -3061,9 +3061,6 @@ class IOMethod {
   ssize_t ExecuteIO(const int fd, char* const buf, const size_t len) const {
     // Vectorize the provided buffer into multiple differently-sized iovecs.
     std::vector<struct iovec> iov;
-
-// TODO(https://fxbug.dev/90418): Enable tests with > 1 iovecs on Fuchsia.
-#if !defined(__Fuchsia__)
     {
       char* iov_start = buf;
       size_t len_remaining = len;
@@ -3087,9 +3084,6 @@ class IOMethod {
                                               .iov_len = 0,
                                           });
     }
-#else
-    { iov.push_back({.iov_base = buf, .iov_len = len}); }
-#endif
 
     msghdr msg = {
         .msg_iov = iov.data(),
@@ -3867,14 +3861,32 @@ TEST_P(ConnectingIOTest, BlockedIO) {
 
     // Accept the test client connection.
     fbl::unique_fd test_accept;
-    ASSERT_TRUE(test_accept = fbl::unique_fd(accept(listener.get(), nullptr, nullptr)))
+    ASSERT_TRUE(test_accept =
+                    fbl::unique_fd(accept4(listener.get(), nullptr, nullptr, SOCK_NONBLOCK)))
         << strerror(errno);
 
     if (is_write) {
       // Ensure that we read the data whose send request was enqueued until
       // the connection was established.
-      ASSERT_EQ(read(test_accept.get(), recvbuf, sizeof(recvbuf)), ssize_t(sizeof(sample_data)))
-          << strerror(errno);
+
+      // TODO(https://fxbug.dev/67928): Replace these multiple non-blocking
+      // reads with a single blocking read after Fuchsia supports atomic
+      // vectorized writes.
+      size_t total = 0;
+      while (total < sizeof(sample_data)) {
+        pollfd pfd = {
+            .fd = test_accept.get(),
+            .events = POLLIN,
+        };
+        int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+        ASSERT_GE(n, 0) << strerror(errno);
+        ASSERT_EQ(n, 1);
+        ASSERT_EQ(pfd.revents, POLLIN);
+        ssize_t res = read(test_accept.get(), recvbuf + total, sizeof(recvbuf) - total);
+        ASSERT_GE(res, 0) << strerror(errno);
+        total += res;
+      }
+      ASSERT_EQ(total, sizeof(sample_data));
       ASSERT_STREQ(recvbuf, sample_data);
     } else {
       // Write data to unblock the socket read on the test client connection.
