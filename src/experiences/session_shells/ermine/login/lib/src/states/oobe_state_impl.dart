@@ -107,7 +107,9 @@ class OobeStateImpl with Disposable implements OobeState {
       final result = authService.hasAccount
           ? authService.loginWithPassword('')
           : authService.createAccountWithPassword('');
-      result.then((_) => _loginDone.value = true).catchError((e) {
+      result
+          .then((_) => runInAction(() => _loginDone.value = true))
+          .catchError((e) {
         log.shout('Account found: ${authService.hasAccount}.'
             ' Caught exception during authentication: $e');
       });
