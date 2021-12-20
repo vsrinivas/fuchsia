@@ -274,7 +274,7 @@ zx_status_t Ge2dTask::Init(const buffer_collection_info_2_t* input_buffer_collec
 
   zx_status_t status;
   if (output_buffer_collection) {
-    status = InitBuffers(input_buffer_collection, output_buffer_collection,
+    status = InitBuffers(input_buffer_collection, output_buffer_collection, "GE2D",
                          input_image_format_table_list, input_image_format_table_count,
                          input_image_format_index, output_image_format_table_list,
                          output_image_format_table_count, output_image_format_index, bti,

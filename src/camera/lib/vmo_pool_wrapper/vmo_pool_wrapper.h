@@ -20,8 +20,8 @@ class VmoPoolWrapper {
   virtual ~VmoPoolWrapper() = default;
 
   // Initializes the VmoPool with a set of vmos.
-  // TODO(b/210170011): pass a descriptive pool name into this method for logging.
-  zx_status_t Init(const zx::vmo* vmos, size_t num_vmos);
+  zx_status_t Init(const zx::vmo* vmos, size_t num_vmos,
+                   std::optional<std::string> name = std::nullopt);
 
   // Pin all the vmos to physical memory.  This must be called prior to
   // requesting a physical address from any Buffer instance.
@@ -62,6 +62,7 @@ class VmoPoolWrapper {
 
   // Tracks the minimum number of free buffers as they are locked for write.
   uint32_t min_free_buffers_ = 0;
+  std::string name_;
 };
 
 }  // namespace camera

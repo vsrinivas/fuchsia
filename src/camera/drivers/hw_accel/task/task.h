@@ -117,6 +117,7 @@ class GenericTask {
   // Pins the input buffer collection.
   zx_status_t InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
                           const buffer_collection_info_2_t* output_buffer_collection,
+                          std::string output_buffers_name,
                           const image_format_2_t* input_image_format_table_list,
                           size_t input_image_format_table_count, uint32_t input_image_format_index,
                           const image_format_2_t* output_image_format_table_list,

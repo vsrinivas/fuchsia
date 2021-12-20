@@ -42,17 +42,15 @@ zx_status_t GenericTask::GetInputBufferPhysSize(uint32_t input_buffer_index, uin
   return ZX_OK;
 }
 
-zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
-                                     const buffer_collection_info_2_t* output_buffer_collection,
-                                     const image_format_2_t* input_image_format_table_list,
-                                     size_t input_image_format_table_count,
-                                     uint32_t input_image_format_index,
-                                     const image_format_2_t* output_image_format_table_list,
-                                     size_t output_image_format_table_count,
-                                     uint32_t output_image_format_index, const zx::bti& bti,
-                                     const hw_accel_frame_callback_t* frame_callback,
-                                     const hw_accel_res_change_callback_t* res_callback,
-                                     const hw_accel_remove_task_callback_t* remove_task_callback) {
+zx_status_t GenericTask::InitBuffers(
+    const buffer_collection_info_2_t* input_buffer_collection,
+    const buffer_collection_info_2_t* output_buffer_collection, std::string output_buffers_name,
+    const image_format_2_t* input_image_format_table_list, size_t input_image_format_table_count,
+    uint32_t input_image_format_index, const image_format_2_t* output_image_format_table_list,
+    size_t output_image_format_table_count, uint32_t output_image_format_index, const zx::bti& bti,
+    const hw_accel_frame_callback_t* frame_callback,
+    const hw_accel_res_change_callback_t* res_callback,
+    const hw_accel_remove_task_callback_t* remove_task_callback) {
   if (!IsBufferCollectionValid(output_buffer_collection,
                                &output_image_format_table_list[output_image_format_index])) {
     return ZX_ERR_INVALID_ARGS;
@@ -72,7 +70,8 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
     output_vmos[i] = zx::vmo(output_buffer_collection->buffers[i].vmo);
   }
 
-  zx_status_t status = output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count);
+  zx_status_t status = output_buffers_.Init(output_vmos, output_buffer_collection->buffer_count,
+                                            std::move(output_buffers_name));
   if (status != ZX_OK) {
     FX_LOG(ERROR, kTag, "Unable to Init VmoPool");
     return status;

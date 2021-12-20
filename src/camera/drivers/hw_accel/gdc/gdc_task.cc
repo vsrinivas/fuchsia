@@ -168,8 +168,8 @@ zx_status_t GdcTask::Init(const buffer_collection_info_2_t* input_buffer_collect
     return status;
   }
 
-  status = InitBuffers(input_buffer_collection, output_buffer_collection, input_image_format, 1, 0,
-                       output_image_format_table_list, output_image_format_table_count,
+  status = InitBuffers(input_buffer_collection, output_buffer_collection, "GDC", input_image_format,
+                       1, 0, output_image_format_table_list, output_image_format_table_count,
                        output_image_format_index, bti, frame_callback, res_callback,
                        remove_task_callback);
   if (status != ZX_OK) {

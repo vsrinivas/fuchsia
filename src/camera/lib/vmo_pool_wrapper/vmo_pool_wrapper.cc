@@ -12,13 +12,15 @@ namespace camera {
 
 constexpr auto kTag = "VmoPoolWrapper";
 
-zx_status_t VmoPoolWrapper::Init(const zx::vmo* vmos, size_t num_vmos) {
+zx_status_t VmoPoolWrapper::Init(const zx::vmo* vmos, size_t num_vmos,
+                                 std::optional<std::string> name) {
   auto status = pool_.Init(vmos, num_vmos);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to initialize VmoPool";
     return status;
   }
   min_free_buffers_ = static_cast<uint32_t>(pool_.free_buffers());
+  name_ = name.value_or("");
   return ZX_OK;
 }
 
@@ -44,8 +46,12 @@ std::optional<fzl::VmoPool::Buffer> VmoPoolWrapper::LockBufferForWrite() {
 
 std::string VmoPoolWrapper::CreateLogString(const std::string& message) {
   std::ostringstream oss;
-  oss << "(this=" << this << ", buffer size=" << pool_.buffer_size()
-      << ", total buffers=" << pool_.total_buffers() << "): " << message;
+  oss << "(";
+  if (!name_.empty()) {
+    oss << name_ << ", ";
+  }
+  oss << this << ", buffer size=" << pool_.buffer_size() << ", buffers=" << pool_.total_buffers()
+      << "): " << message;
   return oss.str();
 }
 }  // namespace camera
