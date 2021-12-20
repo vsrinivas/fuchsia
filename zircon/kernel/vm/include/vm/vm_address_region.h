@@ -822,13 +822,11 @@ class VmMapping final : public VmAddressRegionOrMapping,
 
   // Unmap any pages that map the passed in vmo range from the arch aspace.
   // May not intersect with this range.
-  zx_status_t AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const
-      TA_REQ(object_->lock());
+  void AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
 
   // Removes any writeable mappings for the passed in vmo range from the arch aspace.
   // May fall back to unmapping pages from the arch aspace if necessary.
-  zx_status_t AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const
-      TA_REQ(object_->lock());
+  void AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
 
   // Marks this mapping as being a candidate for merging, and will immediately attempt to merge with
   // any neighboring mappings. Making a mapping mergeable essentially indicates that you will no

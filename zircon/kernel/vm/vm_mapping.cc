@@ -230,9 +230,11 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   // needed range and could potentially be minimized.
   // TODO(fxbug.dev/63989) Ensure dirty tracked regions do not get write permissions added to their
   // hardware mappings.
-  // TODO(teisenbe): deal with error mapping on arch_mmu_protect fail
   status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
-  LTRACEF("arch_mmu_protect returns %d\n", status);
+  // If the protect failed then we do not have sufficient information left to rollback in order to
+  // return an error, nor can we claim success, so require the protect to have succeeded to
+  // continue.
+  ASSERT(status == ZX_OK);
 
   return ZX_OK;
 }
@@ -391,7 +393,7 @@ bool VmMapping::ObjectRangeToVaddrRange(uint64_t offset, uint64_t len, vaddr_t* 
   return true;
 }
 
-zx_status_t VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
+void VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
   canary_.Assert();
 
   // NOTE: must be acquired with the vmo lock held, but doesn't need to take
@@ -415,20 +417,21 @@ zx_status_t VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) 
   // circuiting the unmap operation so that we don't do extra work.
   if (unlikely(currently_faulting_)) {
     LTRACEF("recursing to ourself, abort\n");
-    return ZX_OK;
+    return;
   }
 
   // See if there's an intersect.
   vaddr_t base;
   uint64_t new_len;
   if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
-    return ZX_OK;
+    return;
   }
 
-  return aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, nullptr);
+  zx_status_t status = aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, nullptr);
+  ASSERT(status == ZX_OK);
 }
 
-zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
+void VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const {
   LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
           this, object_offset_, size_, offset, len);
 
@@ -447,17 +450,17 @@ zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t
 
   // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
   if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE)) {
-    return ZX_OK;
+    return;
   }
 
   // See if there's an intersect.
   vaddr_t base;
   uint64_t new_len;
   if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
-    return ZX_OK;
+    return;
   }
 
-  return ProtectRangesLockedObject().EnumerateProtectionRanges(
+  zx_status_t status = ProtectRangesLockedObject().EnumerateProtectionRanges(
       base_, size_, base, new_len, [this](vaddr_t region_base, size_t region_len, uint mmu_flags) {
         // If this range doesn't currently support being writable then we can skip.
         if (!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
@@ -473,6 +476,7 @@ zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t
         }
         return result;
       });
+  ASSERT(status == ZX_OK);
 }
 
 namespace {
