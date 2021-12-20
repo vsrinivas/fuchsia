@@ -28,13 +28,13 @@ use {
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
             tree, CachingObjectHandle, HandleOptions, ObjectStore,
         },
+        range::RangeExt,
         round::round_down,
         trace_duration,
     },
     anyhow::{anyhow, bail, ensure, Error},
     async_trait::async_trait,
     either::Either::{Left, Right},
-    interval_tree::utils::RangeOps,
     merge::merge,
     serde::{Deserialize, Serialize},
     std::{
@@ -55,6 +55,11 @@ use {
 pub trait Allocator: ReservationOwner {
     /// Returns the object ID for the allocator.
     fn object_id(&self) -> u64;
+
+    /// Returns information about the allocator.
+    // Aside: This breaks encapsulation, but we probably won't have more than one allocator, so it
+    // seems OK.
+    fn info(&self) -> AllocatorInfo;
 
     /// Tries to allocate enough space for |object_range| in the specified object and returns the
     /// device ranges allocated.
@@ -328,10 +333,10 @@ pub struct AllocatorValue {
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
 
-#[derive(Debug, Default, Deserialize, Serialize)]
-struct AllocatorInfo {
-    layers: Vec<u64>,
-    allocated_bytes: u64,
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+pub struct AllocatorInfo {
+    pub layers: Vec<u64>,
+    pub allocated_bytes: u64,
 }
 
 const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131072;
@@ -527,6 +532,10 @@ impl Allocator for SimpleAllocator {
         self.object_id
     }
 
+    fn info(&self) -> AllocatorInfo {
+        self.inner.lock().unwrap().info.clone()
+    }
+
     async fn allocate(
         &self,
         transaction: &mut Transaction<'_>,
@@ -625,7 +634,7 @@ impl Allocator for SimpleAllocator {
 
         log::debug!("allocate {:?}", result);
 
-        let len = result.length();
+        let len = result.length().unwrap();
         reservation.either(|l| l.forget_some(len), |r| r.forget_some(len));
 
         {
@@ -650,17 +659,19 @@ impl Allocator for SimpleAllocator {
         device_range: Range<u64>,
     ) -> Result<(), Error> {
         {
+            let len = device_range.length().map_err(|_| FxfsError::InvalidArgs)?;
+
             let mut inner = self.inner.lock().unwrap();
             ensure!(
                 device_range.end <= self.device_size
-                    && self.device_size - inner.taken_bytes() >= device_range.length(),
+                    && self.device_size - inner.taken_bytes() >= len,
                 FxfsError::NoSpace
             );
             if let Some(reservation) = &mut transaction.allocator_reservation {
                 // The transaction takes ownership of this hold.
-                reservation.reserve(device_range.length()).ok_or(FxfsError::NoSpace)?.forget();
+                reservation.reserve(len).ok_or(FxfsError::NoSpace)?.forget();
             }
-            inner.uncommitted_allocated_bytes += device_range.length();
+            inner.uncommitted_allocated_bytes += len;
         }
         let item = AllocatorItem::new(AllocatorKey { device_range }, AllocatorValue { delta: 1 });
         self.reserved_allocations.insert(item.clone()).await;
@@ -685,6 +696,8 @@ impl Allocator for SimpleAllocator {
     ) -> Result<u64, Error> {
         log::debug!("deallocate {:?}", dealloc_range);
         trace_duration!("SimpleAllocator::deallocate");
+
+        ensure!(dealloc_range.valid(), FxfsError::InvalidArgs);
 
         // We need to determine whether this deallocation actually frees the range or is just a
         // reference count adjustment.  We separate the two kinds into two different mutation types
@@ -794,7 +807,7 @@ impl Allocator for SimpleAllocator {
         // lock on inner).
         let mut total = 0;
         for (_, device_range) in deallocs {
-            total += device_range.length();
+            total += device_range.length().unwrap();
             self.reserved_allocations
                 .erase(
                     Item::new(AllocatorKey { device_range }, AllocatorValue { delta: 0 })
@@ -848,8 +861,13 @@ impl Allocator for SimpleAllocator {
                 key: AllocatorKey { device_range },
                 value: AllocatorValue { delta },
                 ..
-            })) if *delta < 0 => {
-                checksum_list.mark_deallocated(journal_offset, device_range.clone());
+            })) => {
+                if !device_range.valid() {
+                    return Ok(false);
+                }
+                if *delta < 0 {
+                    checksum_list.mark_deallocated(journal_offset, device_range.clone());
+                }
             }
             _ => {}
         }
@@ -879,7 +897,7 @@ impl Mutations for SimpleAllocator {
                 // We currently rely on barriers here between inserting/removing from reserved
                 // allocations and merging into the tree.  These barriers are present whilst we use
                 // skip_list_layer's commit_and_wait method, rather than just commit.
-                let len = item.key.device_range.length();
+                let len = item.key.device_range.length().unwrap();
                 if item.value.delta < 0 {
                     if mode.is_live() {
                         let mut item = item.clone();
@@ -894,7 +912,8 @@ impl Mutations for SimpleAllocator {
                         inner
                             .committed_deallocated
                             .push_back((log_offset, item.key.device_range.clone()));
-                        inner.committed_deallocated_bytes += item.key.device_range.length();
+                        inner.committed_deallocated_bytes +=
+                            item.key.device_range.length().unwrap();
                     }
 
                     if let ApplyMode::Live(Transaction {
@@ -961,7 +980,7 @@ impl Mutations for SimpleAllocator {
             Mutation::Allocator(AllocatorMutation(item)) => {
                 if item.value.delta > 0 {
                     let mut inner = self.inner.lock().unwrap();
-                    let len = item.key.device_range.length();
+                    let len = item.key.device_range.length().unwrap();
                     inner.uncommitted_allocated_bytes -= len;
                     if let Some(reservation) = transaction.allocator_reservation {
                         reservation.release_reservation(len);
@@ -1160,9 +1179,9 @@ mod tests {
                 transaction::{Options, TransactionHandler},
                 ObjectStore,
             },
+            range::RangeExt,
         },
         fuchsia_async as fasync,
-        interval_tree::utils::RangeOps,
         std::{
             cmp::{max, min},
             ops::{Bound, Range},
@@ -1241,7 +1260,7 @@ mod tests {
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         let mut found = 0;
         while let Some(ItemRef { key: AllocatorKey { device_range }, .. }) = iter.get() {
-            let mut l = device_range.length();
+            let mut l = device_range.length().expect("Invalid range");
             found += l;
             // Make sure that the entire range we have found completely overlaps with all the
             // allocations we expect to find.
@@ -1255,7 +1274,7 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         // Make sure the total we found adds up to what we expect.
-        assert_eq!(found, expected_allocations.iter().map(|r| r.length()).sum());
+        assert_eq!(found, expected_allocations.iter().map(|r| r.length().unwrap()).sum());
     }
 
     async fn test_fs() -> (Arc<FakeFilesystem>, Arc<SimpleAllocator>, Arc<ObjectStore>) {
@@ -1278,11 +1297,11 @@ mod tests {
         device_ranges.push(
             allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size());
+        assert_eq!(device_ranges.last().unwrap().length().expect("Invalid range"), fs.block_size());
         device_ranges.push(
             allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size());
+        assert_eq!(device_ranges.last().unwrap().length().expect("Invalid range"), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
         let mut transaction =
@@ -1290,7 +1309,7 @@ mod tests {
         device_ranges.push(
             allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges[2].length(), fs.block_size());
+        assert_eq!(device_ranges[2].length().unwrap(), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[2]), 0);
         assert_eq!(overlap(&device_ranges[1], &device_ranges[2]), 0);
         transaction.commit().await.expect("commit failed");
@@ -1305,7 +1324,7 @@ mod tests {
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let device_range1 =
             allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed");
-        assert_eq!(device_range1.length(), fs.block_size());
+        assert_eq!(device_range1.length().expect("Invalid range"), fs.block_size());
         transaction.commit().await.expect("commit failed");
 
         let mut transaction =
@@ -1330,7 +1349,7 @@ mod tests {
         device_ranges.push(
             allocator.allocate(&mut transaction, fs.block_size()).await.expect("allocate failed"),
         );
-        assert_eq!(device_ranges.last().unwrap().length(), fs.block_size());
+        assert_eq!(device_ranges.last().unwrap().length().expect("Invalid range"), fs.block_size());
         assert_eq!(overlap(&device_ranges[0], &device_ranges[1]), 0);
         transaction.commit().await.expect("commit failed");
 

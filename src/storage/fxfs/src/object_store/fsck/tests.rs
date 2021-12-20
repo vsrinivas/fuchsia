@@ -25,8 +25,9 @@ use {
             object_record::{ObjectKey, ObjectValue},
             transaction::{self, Options, TransactionHandler},
             volume::create_root_volume,
-            HandleOptions, ObjectStore,
+            HandleOptions, Mutation, ObjectStore,
         },
+        round::round_down,
     },
     anyhow::{Context, Error},
     bincode::serialize_into,
@@ -40,6 +41,7 @@ use {
 };
 
 const TEST_DEVICE_BLOCK_SIZE: u32 = 512;
+const TEST_DEVICE_BLOCK_COUNT: u64 = 8192;
 
 struct FsckTest {
     filesystem: Option<OpenFxFilesystem>,
@@ -49,7 +51,7 @@ struct FsckTest {
 impl FsckTest {
     async fn new() -> Self {
         let filesystem = FxFilesystem::new_empty(
-            DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE)),
+            DeviceHolder::new(FakeDevice::new(TEST_DEVICE_BLOCK_COUNT, TEST_DEVICE_BLOCK_SIZE)),
             Arc::new(InsecureCrypt::new()),
         )
         .await
@@ -128,9 +130,13 @@ async fn test_extra_allocation() {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        let offset = 4095 * TEST_DEVICE_BLOCK_SIZE as u64;
+        // We need a discontiguous allocation, and some blocks will have been used up by other
+        // things, so allocate the very last block.  Note that changing our allocation strategy
+        // might break this test.
+        let end =
+            round_down(TEST_DEVICE_BLOCK_SIZE as u64 * TEST_DEVICE_BLOCK_COUNT, fs.block_size());
         fs.allocator()
-            .mark_allocated(&mut transaction, offset..offset + TEST_DEVICE_BLOCK_SIZE as u64)
+            .mark_allocated(&mut transaction, end - fs.block_size()..end)
             .await
             .expect("mark_allocated failed");
         transaction.commit().await.expect("commit failed");
@@ -139,6 +145,203 @@ async fn test_extra_allocation() {
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::ExtraAllocations(_))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_misaligned_allocation() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        // We need a discontiguous allocation, and some blocks will have been used up by other
+        // things, so allocate the very last block.  Note that changing our allocation strategy
+        // might break this test.
+        let end =
+            round_down(TEST_DEVICE_BLOCK_SIZE as u64 * TEST_DEVICE_BLOCK_COUNT, fs.block_size());
+        fs.allocator()
+            .mark_allocated(&mut transaction, end - fs.block_size() + 1..end)
+            .await
+            .expect("mark_allocated failed");
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisalignedAllocation(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_malformed_allocation() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_store = fs.root_store();
+        let device = fs.device();
+        // We need to manually insert the record into the allocator's LSM tree directly, since the
+        // allocator code checks range validity.
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let layer_handle = ObjectStore::create_object(
+            &root_store,
+            &mut transaction,
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await
+        .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+
+        {
+            let mut writer =
+                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
+            // We also need a discontiguous allocation, and some blocks will have been used up by
+            // other things, so allocate the very last block.  Note that changing our allocation
+            // strategy might break this test.
+            let end = round_down(
+                TEST_DEVICE_BLOCK_SIZE as u64 * TEST_DEVICE_BLOCK_COUNT,
+                fs.block_size(),
+            );
+            let item = Item::new(
+                AllocatorKey { device_range: end..end - fs.block_size() },
+                AllocatorValue { delta: 1 },
+            );
+            writer.write(item.as_item_ref()).await.expect("write failed");
+            writer.flush().await.expect("flush failed");
+        }
+        let mut allocator_info = fs.allocator().info();
+        allocator_info.layers.push(layer_handle.object_id());
+        let mut allocator_info_vec = vec![];
+        serialize_into(&mut allocator_info_vec, &allocator_info).expect("serialize failed");
+        let mut buf = device.allocate_buffer(allocator_info_vec.len());
+        buf.as_mut_slice().copy_from_slice(&allocator_info_vec[..]);
+
+        let handle = ObjectStore::open_object(
+            &root_store,
+            fs.allocator().object_id(),
+            HandleOptions::default(),
+        )
+        .await
+        .expect("open allocator handle failed");
+        let mut transaction = handle.new_transaction().await.expect("new_transaction failed");
+        handle.txn_write(&mut transaction, 0, buf.as_ref()).await.expect("txn_write failed");
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedAllocation(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_misaligned_extent_in_root_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_store = fs.root_store();
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        transaction.add(
+            root_store.store_object_id(),
+            Mutation::extent(ExtentKey::new(555, 0, 1..fs.block_size()), ExtentValue::new(1)),
+        );
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisalignedExtent(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_malformed_extent_in_root_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_store = fs.root_store();
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        transaction.add(
+            root_store.store_object_id(),
+            Mutation::extent(ExtentKey::new(555, 0, fs.block_size()..0), ExtentValue::new(1)),
+        );
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedExtent(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_misaligned_extent_in_child_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        transaction.add(
+            volume.store_object_id(),
+            Mutation::extent(ExtentKey::new(555, 0, 1..fs.block_size()), ExtentValue::new(1)),
+        );
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisalignedExtent(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_malformed_extent_in_child_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        transaction.add(
+            volume.store_object_id(),
+            Mutation::extent(ExtentKey::new(555, 0, fs.block_size()..0), ExtentValue::new(1)),
+        );
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedExtent(..))]);
 }
 
 #[fasync::run_singlethreaded(test)]

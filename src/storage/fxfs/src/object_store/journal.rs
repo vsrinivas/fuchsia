@@ -456,7 +456,7 @@ impl Journal {
                     )
                     .await?
                 {
-                    log::debug!("Stopping replay at bad mutation: {:?}", mutation);
+                    log::info!("Stopping replay at bad mutation: {:?}", mutation);
                     valid_to = checkpoint.file_offset;
                     break;
                 }

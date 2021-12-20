@@ -32,7 +32,6 @@ use {
         stream::{FuturesOrdered, FuturesUnordered},
         try_join, TryStreamExt,
     },
-    interval_tree::utils::RangeOps,
     std::{
         cmp::min,
         ops::{Bound, Range},
@@ -590,7 +589,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         transaction: &mut Transaction<'a>,
         mut file_range: Range<u64>,
     ) -> Result<Vec<Range<u64>>, Error> {
-        assert_eq!(file_range.length() % self.block_size(), 0);
+        assert_eq!(file_range.start % self.block_size(), 0);
+        assert_eq!(file_range.end % self.block_size(), 0);
         assert!(self.keys.is_none());
         let mut ranges = Vec::new();
         let tree = &self.store().extent_tree;

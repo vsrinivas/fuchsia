@@ -88,6 +88,10 @@ pub enum FsckFatal {
     AllocatedBytesMismatch(u64, u64),
     MissingAllocation(Allocation),
     ExtraAllocations(Vec<Allocation>),
+    MisalignedAllocation(Allocation),
+    MalformedAllocation(Allocation),
+    MisalignedExtent(u64, u64, Range<u64>, u64),
+    MalformedExtent(u64, u64, Range<u64>, u64),
     RefCountMismatch(u64, u64, u64),
     ObjectCountMismatch(u64, u64, u64),
 }
@@ -136,6 +140,24 @@ impl FsckFatal {
             }
             FsckFatal::ExtraAllocations(allocations) => {
                 format!("Unexpected allocations {:?}", allocations)
+            }
+            FsckFatal::MisalignedAllocation(allocations) => {
+                format!("Misaligned allocation {:?}", allocations)
+            }
+            FsckFatal::MalformedAllocation(allocations) => {
+                format!("Malformed allocation {:?}", allocations)
+            }
+            FsckFatal::MisalignedExtent(store_id, oid, extent, device_offset) => {
+                format!(
+                    "Extent {:?} (offset {}) for object {} in store {} is misaligned",
+                    extent, device_offset, oid, store_id
+                )
+            }
+            FsckFatal::MalformedExtent(store_id, oid, extent, device_offset) => {
+                format!(
+                    "Extent {:?} (offset {}) for object {} in store {} is malformed",
+                    extent, device_offset, oid, store_id
+                )
             }
             FsckFatal::RefCountMismatch(oid, expected, actual) => {
                 format!("Object {} had {} references, expected {}", oid, actual, expected)

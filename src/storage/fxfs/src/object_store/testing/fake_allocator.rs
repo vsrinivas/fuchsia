@@ -4,7 +4,7 @@
 
 use {
     crate::object_store::{
-        allocator::{Allocator, Reservation, ReservationOwner},
+        allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
         filesystem::{ApplyMode, Mutations},
         journal::checksum_list::ChecksumList,
         transaction::{AssocObj, Mutation, Transaction},
@@ -39,6 +39,10 @@ impl FakeAllocator {
 impl Allocator for FakeAllocator {
     fn object_id(&self) -> u64 {
         ALLOCATOR_OBJECT_ID
+    }
+
+    fn info(&self) -> AllocatorInfo {
+        Default::default()
     }
 
     async fn allocate(

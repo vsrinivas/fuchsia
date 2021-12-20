@@ -8,10 +8,10 @@ use {
         lsm_tree::types::ItemRef,
         object_handle::{ObjectHandle, ReadObjectHandle},
         object_store::extent_record::{ExtentKey, ExtentValue, DEFAULT_DATA_ATTRIBUTE_ID},
+        range::RangeExt,
     },
     anyhow::{anyhow, bail, Error},
     async_trait::async_trait,
-    interval_tree::utils::RangeOps,
     std::{cmp::min, ops::Range, sync::Arc},
     storage_device::{
         buffer::{Buffer, MutableBufferRef},
@@ -35,7 +35,7 @@ impl Handle {
     }
 
     pub fn push_extent(&mut self, r: Range<u64>) {
-        self.size += r.length();
+        self.size += r.length().unwrap();
         self.extents.push((r, 0));
     }
 
@@ -59,7 +59,7 @@ impl Handle {
                     )));
                 }
                 self.extents
-                    .push((*device_offset..*device_offset + range.length(), journal_offset));
+                    .push((*device_offset..*device_offset + range.length()?, journal_offset));
                 self.size = range.end;
                 Ok(true)
             }
@@ -73,7 +73,7 @@ impl Handle {
             if *offset < discard_offset {
                 break;
             }
-            self.size -= range.length();
+            self.size -= range.length().unwrap();
             self.extents.pop();
         }
     }

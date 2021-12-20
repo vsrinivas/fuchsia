@@ -602,7 +602,7 @@ mod tests {
         super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
             object_store::{
-                allocator::{Allocator, Reservation, ReservationOwner},
+                allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
                 data_buffer::MemDataBuffer,
                 filesystem::Mutations,
                 journal::checksum_list::ChecksumList,
@@ -691,6 +691,10 @@ mod tests {
     #[async_trait]
     impl Allocator for FakeReserverInner {
         fn object_id(&self) -> u64 {
+            unreachable!();
+        }
+
+        fn info(&self) -> AllocatorInfo {
             unreachable!();
         }
 

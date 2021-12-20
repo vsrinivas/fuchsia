@@ -55,13 +55,13 @@ use {
                 ObjectStoreMutation, Operation, Options, StoreInfoMutation, Transaction,
             },
         },
+        range::RangeExt,
         trace_duration,
     },
     allocator::Allocator,
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
-    interval_tree::utils::RangeOps,
     once_cell::sync::OnceCell,
     serde::{Deserialize, Serialize},
     std::{
@@ -780,7 +780,7 @@ impl ObjectStore {
             if checksums.len() == 0 {
                 return Ok(false);
             }
-            let len = if let Ok(l) = usize::try_from(range.length()) {
+            let len = if let Some(l) = range.length().ok().and_then(|l| usize::try_from(l).ok()) {
                 l
             } else {
                 return Ok(false);
@@ -793,7 +793,7 @@ impl ObjectStore {
             }
             checksum_list.push(
                 journal_offset,
-                *device_offset..*device_offset + range.length(),
+                *device_offset..*device_offset + range.length().unwrap(),
                 checksums,
             );
         }

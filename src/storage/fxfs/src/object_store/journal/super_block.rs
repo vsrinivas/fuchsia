@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        errors::FxfsError,
         lsm_tree::types::{Item, LayerIterator},
         object_store::{
             allocator::Reservation,
@@ -20,8 +21,9 @@ use {
             transaction::Options,
             ObjectStore, StoreObjectHandle,
         },
+        range::RangeExt,
     },
-    anyhow::{bail, Error},
+    anyhow::{bail, ensure, Error},
     futures::AsyncReadExt,
     serde::{Deserialize, Serialize},
     std::{
@@ -322,6 +324,7 @@ impl ItemReader {
                 ReadResult::Reset => bail!("Unexpected reset"),
                 ReadResult::ChecksumMismatch => bail!("Checksum mismatch"),
                 ReadResult::Some(SuperBlockRecord::Extent(extent)) => {
+                    ensure!(extent.valid(), FxfsError::Inconsistent);
                     self.0.handle().push_extent(extent)
                 }
                 ReadResult::Some(SuperBlockRecord::ObjectItem(item)) => {

@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::object_store::journal::fletcher64,
+    crate::{object_store::journal::fletcher64, range::RangeExt},
     anyhow::Error,
-    interval_tree::utils::RangeOps,
     std::{
         collections::{btree_map::Entry, BTreeMap},
         ops::Range,
@@ -56,7 +55,7 @@ impl ChecksumList {
         if let Entry::Vacant(v) = self.device_offset_to_checksum_entry.entry(device_range.end) {
             v.insert(self.checksum_entries.len());
         }
-        let chunk_size = (device_range.length() / checksums.len() as u64) as usize;
+        let chunk_size = (device_range.length().unwrap() / checksums.len() as u64) as usize;
         if chunk_size > self.max_chunk_size {
             self.max_chunk_size = chunk_size;
         }
@@ -84,7 +83,8 @@ impl ChecksumList {
             if entry.device_range.start >= device_range.end {
                 break;
             }
-            let chunk_size = (entry.device_range.length() / entry.checksums.len() as u64) as usize;
+            let chunk_size =
+                (entry.device_range.length().unwrap() / entry.checksums.len() as u64) as usize;
             let checksum_index_start = if device_range.start < entry.device_range.start {
                 0
             } else {
@@ -118,7 +118,8 @@ impl ChecksumList {
                 if e.journal_offset >= journal_offset {
                     break;
                 }
-                let chunk_size = (e.device_range.length() / e.checksums.len() as u64) as usize;
+                let chunk_size =
+                    (e.device_range.length().unwrap() / e.checksums.len() as u64) as usize;
                 let mut offset = e.device_range.start;
                 for (checksum, dependency) in e.checksums.iter() {
                     // We only need to verify the checksum if we know the dependency isn't going to

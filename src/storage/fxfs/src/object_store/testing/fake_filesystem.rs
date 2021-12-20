@@ -6,7 +6,7 @@ use {
     crate::object_store::{
         allocator::Allocator,
         crypt::{Crypt, InsecureCrypt},
-        filesystem::{Filesystem, Info, SyncOptions},
+        filesystem::{self, Filesystem, Info, SyncOptions},
         journal::JournalCheckpoint,
         object_manager::ObjectManager,
         transaction::{
@@ -69,7 +69,7 @@ impl Filesystem for FakeFilesystem {
     }
 
     fn block_size(&self) -> u64 {
-        4096
+        filesystem::MIN_BLOCK_SIZE
     }
 
     fn get_info(&self) -> Info {

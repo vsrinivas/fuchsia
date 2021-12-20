@@ -54,7 +54,6 @@ pub struct FsckOptions<F: Fn(&FsckError)> {
 
 // TODO(csuter): for now, this just checks allocations. We should think about adding checks for:
 //
-//  + Extents should be aligned and end > start.
 //  + No child volumes in anything other than the root store.
 //  + The root parent object store ID and root object store ID must not conflict with any other
 //    stores or the allocator.
@@ -149,7 +148,14 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
         CoalescingIterator::new(fsck.allocations.seek(Bound::Unbounded).await?).await?;
     let mut allocated_bytes = 0;
     let mut extra_allocations: Vec<errors::Allocation> = vec![];
+    let bs = filesystem.block_size();
     while let Some(actual_item) = actual.get() {
+        if actual_item.key.device_range.start % bs > 0 || actual_item.key.device_range.end % bs > 0
+        {
+            fsck.error(FsckFatal::MisalignedAllocation(actual_item.into()))?;
+        } else if actual_item.key.device_range.start >= actual_item.key.device_range.end {
+            fsck.error(FsckFatal::MalformedAllocation(actual_item.into()))?;
+        }
         match expected.get() {
             None => extra_allocations.push(actual_item.into()),
             Some(expected_item) => {
@@ -423,11 +429,26 @@ impl<F: Fn(&FsckError)> Fsck<F> {
             self.assert(iter.advance().await, FsckFatal::MalformedStore(store_id))?;
         }
 
+        let bs = store.block_size();
         let layer_set = store.extent_tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await?;
-        while let Some(ItemRef { key: ExtentKey { range, .. }, value, .. }) = iter.get() {
+        while let Some(ItemRef { key: ExtentKey { object_id, range, .. }, value, .. }) = iter.get()
+        {
+            if range.start % bs > 0 || range.end % bs > 0 {
+                self.error(FsckFatal::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
+            } else if range.start >= range.end {
+                self.error(FsckFatal::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
+            }
             if let ExtentValue::Some { device_offset, .. } = value {
+                if device_offset % bs > 0 {
+                    self.error(FsckFatal::MisalignedExtent(
+                        store_id,
+                        *object_id,
+                        range.clone(),
+                        *device_offset,
+                    ))?;
+                }
                 let item = Item::new(
                     AllocatorKey {
                         device_range: *device_offset..*device_offset + range.end - range.start,
