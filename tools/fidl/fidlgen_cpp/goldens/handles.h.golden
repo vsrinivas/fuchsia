@@ -172,12 +172,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::handle& plain_handle() const { return storage_.plain_handle; }
 
+  ::zx::handle& plain_handle() { return storage_.plain_handle; }
+
   Handles& set_plain_handle(::zx::handle _value) {
     storage_.plain_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::bti& bti_handle() const { return storage_.bti_handle; }
+
+  ::zx::bti& bti_handle() { return storage_.bti_handle; }
 
   Handles& set_bti_handle(::zx::bti _value) {
     storage_.bti_handle = std::move(_value);
@@ -188,12 +192,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.channel_handle;
   }
 
+  ::zx::channel& channel_handle() { return storage_.channel_handle; }
+
   Handles& set_channel_handle(::zx::channel _value) {
     storage_.channel_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::clock& clock_handle() const { return storage_.clock_handle; }
+
+  ::zx::clock& clock_handle() { return storage_.clock_handle; }
 
   Handles& set_clock_handle(::zx::clock _value) {
     storage_.clock_handle = std::move(_value);
@@ -204,12 +212,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.debuglog_handle;
   }
 
+  ::zx::debuglog& debuglog_handle() { return storage_.debuglog_handle; }
+
   Handles& set_debuglog_handle(::zx::debuglog _value) {
     storage_.debuglog_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::event& event_handle() const { return storage_.event_handle; }
+
+  ::zx::event& event_handle() { return storage_.event_handle; }
 
   Handles& set_event_handle(::zx::event _value) {
     storage_.event_handle = std::move(_value);
@@ -220,6 +232,8 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.eventpair_handle;
   }
 
+  ::zx::eventpair& eventpair_handle() { return storage_.eventpair_handle; }
+
   Handles& set_eventpair_handle(::zx::eventpair _value) {
     storage_.eventpair_handle = std::move(_value);
     return *this;
@@ -229,6 +243,8 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.exception_handle;
   }
 
+  ::zx::exception& exception_handle() { return storage_.exception_handle; }
+
   Handles& set_exception_handle(::zx::exception _value) {
     storage_.exception_handle = std::move(_value);
     return *this;
@@ -236,12 +252,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::fifo& fifo_handle() const { return storage_.fifo_handle; }
 
+  ::zx::fifo& fifo_handle() { return storage_.fifo_handle; }
+
   Handles& set_fifo_handle(::zx::fifo _value) {
     storage_.fifo_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::guest& guest_handle() const { return storage_.guest_handle; }
+
+  ::zx::guest& guest_handle() { return storage_.guest_handle; }
 
   Handles& set_guest_handle(::zx::guest _value) {
     storage_.guest_handle = std::move(_value);
@@ -252,12 +272,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.interrupt_handle;
   }
 
+  ::zx::interrupt& interrupt_handle() { return storage_.interrupt_handle; }
+
   Handles& set_interrupt_handle(::zx::interrupt _value) {
     storage_.interrupt_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::iommu& iommu_handle() const { return storage_.iommu_handle; }
+
+  ::zx::iommu& iommu_handle() { return storage_.iommu_handle; }
 
   Handles& set_iommu_handle(::zx::iommu _value) {
     storage_.iommu_handle = std::move(_value);
@@ -266,12 +290,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::job& job_handle() const { return storage_.job_handle; }
 
+  ::zx::job& job_handle() { return storage_.job_handle; }
+
   Handles& set_job_handle(::zx::job _value) {
     storage_.job_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::pager& pager_handle() const { return storage_.pager_handle; }
+
+  ::zx::pager& pager_handle() { return storage_.pager_handle; }
 
   Handles& set_pager_handle(::zx::pager _value) {
     storage_.pager_handle = std::move(_value);
@@ -282,6 +310,8 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.pcidevice_handle;
   }
 
+  ::zx::pcidevice& pcidevice_handle() { return storage_.pcidevice_handle; }
+
   Handles& set_pcidevice_handle(::zx::pcidevice _value) {
     storage_.pcidevice_handle = std::move(_value);
     return *this;
@@ -289,12 +319,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::pmt& pmt_handle() const { return storage_.pmt_handle; }
 
+  ::zx::pmt& pmt_handle() { return storage_.pmt_handle; }
+
   Handles& set_pmt_handle(::zx::pmt _value) {
     storage_.pmt_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::port& port_handle() const { return storage_.port_handle; }
+
+  ::zx::port& port_handle() { return storage_.port_handle; }
 
   Handles& set_port_handle(::zx::port _value) {
     storage_.port_handle = std::move(_value);
@@ -305,6 +339,8 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.process_handle;
   }
 
+  ::zx::process& process_handle() { return storage_.process_handle; }
+
   Handles& set_process_handle(::zx::process _value) {
     storage_.process_handle = std::move(_value);
     return *this;
@@ -313,6 +349,8 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
   const ::zx::profile& profile_handle() const {
     return storage_.profile_handle;
   }
+
+  ::zx::profile& profile_handle() { return storage_.profile_handle; }
 
   Handles& set_profile_handle(::zx::profile _value) {
     storage_.profile_handle = std::move(_value);
@@ -323,12 +361,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.resource_handle;
   }
 
+  ::zx::resource& resource_handle() { return storage_.resource_handle; }
+
   Handles& set_resource_handle(::zx::resource _value) {
     storage_.resource_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::socket& socket_handle() const { return storage_.socket_handle; }
+
+  ::zx::socket& socket_handle() { return storage_.socket_handle; }
 
   Handles& set_socket_handle(::zx::socket _value) {
     storage_.socket_handle = std::move(_value);
@@ -339,12 +381,18 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.suspendtoken_handle;
   }
 
+  ::zx::suspendtoken& suspendtoken_handle() {
+    return storage_.suspendtoken_handle;
+  }
+
   Handles& set_suspendtoken_handle(::zx::suspendtoken _value) {
     storage_.suspendtoken_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::thread& thread_handle() const { return storage_.thread_handle; }
+
+  ::zx::thread& thread_handle() { return storage_.thread_handle; }
 
   Handles& set_thread_handle(::zx::thread _value) {
     storage_.thread_handle = std::move(_value);
@@ -353,12 +401,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::timer& timer_handle() const { return storage_.timer_handle; }
 
+  ::zx::timer& timer_handle() { return storage_.timer_handle; }
+
   Handles& set_timer_handle(::zx::timer _value) {
     storage_.timer_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::vcpu& vcpu_handle() const { return storage_.vcpu_handle; }
+
+  ::zx::vcpu& vcpu_handle() { return storage_.vcpu_handle; }
 
   Handles& set_vcpu_handle(::zx::vcpu _value) {
     storage_.vcpu_handle = std::move(_value);
@@ -367,12 +419,16 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::vmar& vmar_handle() const { return storage_.vmar_handle; }
 
+  ::zx::vmar& vmar_handle() { return storage_.vmar_handle; }
+
   Handles& set_vmar_handle(::zx::vmar _value) {
     storage_.vmar_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::vmo& vmo_handle() const { return storage_.vmo_handle; }
+
+  ::zx::vmo& vmo_handle() { return storage_.vmo_handle; }
 
   Handles& set_vmo_handle(::zx::vmo _value) {
     storage_.vmo_handle = std::move(_value);
@@ -381,12 +437,18 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::zx::vmo& rights_handle() const { return storage_.rights_handle; }
 
+  ::zx::vmo& rights_handle() { return storage_.rights_handle; }
+
   Handles& set_rights_handle(::zx::vmo _value) {
     storage_.rights_handle = std::move(_value);
     return *this;
   }
 
   const ::zx::handle& aliased_plain_handle_field() const {
+    return storage_.aliased_plain_handle_field;
+  }
+
+  ::zx::handle& aliased_plain_handle_field() {
     return storage_.aliased_plain_handle_field;
   }
 
@@ -399,12 +461,20 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.aliased_subtype_handle_field;
   }
 
+  ::zx::vmo& aliased_subtype_handle_field() {
+    return storage_.aliased_subtype_handle_field;
+  }
+
   Handles& set_aliased_subtype_handle_field(::zx::vmo _value) {
     storage_.aliased_subtype_handle_field = std::move(_value);
     return *this;
   }
 
   const ::zx::vmo& aliased_rights_handle_field() const {
+    return storage_.aliased_rights_handle_field;
+  }
+
+  ::zx::vmo& aliased_rights_handle_field() {
     return storage_.aliased_rights_handle_field;
   }
 
@@ -418,6 +488,11 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return storage_.some_protocol;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol>&
+  some_protocol() {
+    return storage_.some_protocol;
+  }
+
   Handles& set_some_protocol(
       ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol> _value) {
     storage_.some_protocol = std::move(_value);
@@ -426,6 +501,11 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
   const ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&
   request_some_protocol() const {
+    return storage_.request_some_protocol;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&
+  request_some_protocol() {
     return storage_.request_some_protocol;
   }
 

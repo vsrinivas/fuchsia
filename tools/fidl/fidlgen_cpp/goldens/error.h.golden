@@ -54,6 +54,8 @@ class Example_foo_Response final
 
   const int64_t& y() const { return storage_.y; }
 
+  int64_t& y() { return storage_.y; }
+
   Example_foo_Response& set_y(int64_t _value) {
     storage_.y = std::move(_value);
     return *this;
@@ -104,6 +106,8 @@ class ExampleFooTopResponse final
     return storage_.result;
   }
 
+  ::fidl_test_error::Example_foo_Result& result() { return storage_.result; }
+
   ExampleFooTopResponse& set_result(
       ::fidl_test_error::Example_foo_Result _value) {
     storage_.result = std::move(_value);
@@ -151,6 +155,8 @@ class ExampleFooRequest final
   ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
 
   const ::std::string& s() const { return storage_.s; }
+
+  ::std::string& s() { return storage_.s; }
 
   ExampleFooRequest& set_s(::std::string _value) {
     storage_.s = std::move(_value);

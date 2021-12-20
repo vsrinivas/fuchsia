@@ -50,6 +50,8 @@ class TwoWayAddTopResponse final
 
   const uint16_t& sum() const { return storage_.sum; }
 
+  uint16_t& sum() { return storage_.sum; }
+
   TwoWayAddTopResponse& set_sum(uint16_t _value) {
     storage_.sum = std::move(_value);
     return *this;
@@ -101,12 +103,16 @@ class TwoWayAddRequest final
 
   const uint16_t& addend1() const { return storage_.addend1; }
 
+  uint16_t& addend1() { return storage_.addend1; }
+
   TwoWayAddRequest& set_addend1(uint16_t _value) {
     storage_.addend1 = std::move(_value);
     return *this;
   }
 
   const uint16_t& addend2() const { return storage_.addend2; }
+
+  uint16_t& addend2() { return storage_.addend2; }
 
   TwoWayAddRequest& set_addend2(uint16_t _value) {
     storage_.addend2 = std::move(_value);

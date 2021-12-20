@@ -66,6 +66,10 @@ class ParentTakeChildRequestRequest final
     return storage_.r;
   }
 
+  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r() {
+    return storage_.r;
+  }
+
   ParentTakeChildRequestRequest& set_r(
       ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> _value) {
     storage_.r = std::move(_value);
@@ -121,6 +125,10 @@ class ParentTakeChildRequest final
 
   const ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c()
       const {
+    return storage_.c;
+  }
+
+  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c() {
     return storage_.c;
   }
 
@@ -183,6 +191,10 @@ class ParentGetChildTopResponse final
     return storage_.c;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c() {
+    return storage_.c;
+  }
+
   ParentGetChildTopResponse& set_c(
       ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> _value) {
     storage_.c = std::move(_value);
@@ -241,6 +253,10 @@ class ParentGetChildRequestTopResponse final
 
   const ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r()
       const {
+    return storage_.r;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r() {
     return storage_.r;
   }
 

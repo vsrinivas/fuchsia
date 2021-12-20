@@ -48,6 +48,8 @@ class Foo final : public ::fidl::internal::CodableBase<Foo> {
 
   const ::dependent::MyEnum& field() const { return storage_.field; }
 
+  ::dependent::MyEnum& field() { return storage_.field; }
+
   Foo& set_field(::dependent::MyEnum _value) {
     storage_.field = std::move(_value);
     return *this;

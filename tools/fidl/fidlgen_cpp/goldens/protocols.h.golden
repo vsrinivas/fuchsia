@@ -154,6 +154,8 @@ class WithErrorSyntax_HandleInResult_Response final
 
   const ::zx::handle& h() const { return storage_.h; }
 
+  ::zx::handle& h() { return storage_.h; }
+
   WithErrorSyntax_HandleInResult_Response& set_h(::zx::handle _value) {
     storage_.h = std::move(_value);
     return *this;
@@ -216,6 +218,10 @@ class WithErrorSyntaxHandleInResultTopResponse final
     return storage_.result;
   }
 
+  ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Result& result() {
+    return storage_.result;
+  }
+
   WithErrorSyntaxHandleInResultTopResponse& set_result(
       ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Result _value) {
     storage_.result = std::move(_value);
@@ -275,6 +281,8 @@ class HandleRightsProtocolResponseMethodTopResponse final
 
   const ::zx::socket& h() const { return storage_.h; }
 
+  ::zx::socket& h() { return storage_.h; }
+
   HandleRightsProtocolResponseMethodTopResponse& set_h(::zx::socket _value) {
     storage_.h = std::move(_value);
     return *this;
@@ -332,6 +340,8 @@ class HandleRightsProtocolResponseMethodRequest final
       const HandleRightsProtocolResponseMethodRequest&) noexcept = delete;
 
   const ::zx::socket& h() const { return storage_.h; }
+
+  ::zx::socket& h() { return storage_.h; }
 
   HandleRightsProtocolResponseMethodRequest& set_h(::zx::socket _value) {
     storage_.h = std::move(_value);
@@ -391,6 +401,8 @@ class HandleRightsProtocolNoResponseMethodRequest final
 
   const ::zx::socket& h() const { return storage_.h; }
 
+  ::zx::socket& h() { return storage_.h; }
+
   HandleRightsProtocolNoResponseMethodRequest& set_h(::zx::socket _value) {
     storage_.h = std::move(_value);
     return *this;
@@ -447,6 +459,8 @@ class HandleRightsProtocolAnEventRequest final
 
   const ::zx::socket& h() const { return storage_.h; }
 
+  ::zx::socket& h() { return storage_.h; }
+
   HandleRightsProtocolAnEventRequest& set_h(::zx::socket _value) {
     storage_.h = std::move(_value);
     return *this;
@@ -502,6 +516,8 @@ class ChannelProtocolTakeHandleRequest final
       const ChannelProtocolTakeHandleRequest&) noexcept = delete;
 
   const ::zx::handle& h() const { return storage_.h; }
+
+  ::zx::handle& h() { return storage_.h; }
 
   ChannelProtocolTakeHandleRequest& set_h(::zx::handle _value) {
     storage_.h = std::move(_value);
@@ -560,6 +576,8 @@ class ChannelProtocolMutateSocketTopResponse final
 
   const ::zx::socket& b() const { return storage_.b; }
 
+  ::zx::socket& b() { return storage_.b; }
+
   ChannelProtocolMutateSocketTopResponse& set_b(::zx::socket _value) {
     storage_.b = std::move(_value);
     return *this;
@@ -615,6 +633,8 @@ class ChannelProtocolMutateSocketRequest final
       const ChannelProtocolMutateSocketRequest&) noexcept = delete;
 
   const ::zx::socket& a() const { return storage_.a; }
+
+  ::zx::socket& a() { return storage_.a; }
 
   ChannelProtocolMutateSocketRequest& set_a(::zx::socket _value) {
     storage_.a = std::move(_value);
@@ -679,6 +699,11 @@ class WithProtocolEndsServerEndsTopResponse final
     return storage_.out;
   }
 
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  out() {
+    return storage_.out;
+  }
+
   WithProtocolEndsServerEndsTopResponse& set_out(
       ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
           _value) {
@@ -740,6 +765,11 @@ class WithProtocolEndsServerEndsRequest final
 
   const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
   in() const {
+    return storage_.in;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  in() {
     return storage_.in;
   }
 
@@ -808,6 +838,11 @@ class WithProtocolEndsClientEndsTopResponse final
     return storage_.out;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  out() {
+    return storage_.out;
+  }
+
   WithProtocolEndsClientEndsTopResponse& set_out(
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
           _value) {
@@ -872,6 +907,10 @@ class WithProtocolEndsClientEndsRequest final
     return storage_.in;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>& in() {
+    return storage_.in;
+  }
+
   WithProtocolEndsClientEndsRequest& set_in(
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
           _value) {
@@ -932,6 +971,8 @@ class WithErrorSyntax_ResponseAsStruct_Response final
 
   const int64_t& a() const { return storage_.a; }
 
+  int64_t& a() { return storage_.a; }
+
   WithErrorSyntax_ResponseAsStruct_Response& set_a(int64_t _value) {
     storage_.a = std::move(_value);
     return *this;
@@ -939,12 +980,16 @@ class WithErrorSyntax_ResponseAsStruct_Response final
 
   const int64_t& b() const { return storage_.b; }
 
+  int64_t& b() { return storage_.b; }
+
   WithErrorSyntax_ResponseAsStruct_Response& set_b(int64_t _value) {
     storage_.b = std::move(_value);
     return *this;
   }
 
   const int64_t& c() const { return storage_.c; }
+
+  int64_t& c() { return storage_.c; }
 
   WithErrorSyntax_ResponseAsStruct_Response& set_c(int64_t _value) {
     storage_.c = std::move(_value);
@@ -1004,6 +1049,10 @@ class WithErrorSyntaxResponseAsStructTopResponse final
     return storage_.result;
   }
 
+  ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Result& result() {
+    return storage_.result;
+  }
+
   WithErrorSyntaxResponseAsStructTopResponse& set_result(
       ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Result _value) {
     storage_.result = std::move(_value);
@@ -1058,6 +1107,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final
       WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
 
   const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
 
   WithErrorSyntax_ErrorAsPrimitive_Response& set___reserved(uint8_t _value) {
     storage_.__reserved = std::move(_value);
@@ -1117,6 +1168,10 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
     return storage_.result;
   }
 
+  ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result& result() {
+    return storage_.result;
+  }
+
   WithErrorSyntaxErrorAsPrimitiveTopResponse& set_result(
       ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result _value) {
     storage_.result = std::move(_value);
@@ -1170,6 +1225,8 @@ class WithErrorSyntax_ErrorAsEnum_Response final
       WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
 
   const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
 
   WithErrorSyntax_ErrorAsEnum_Response& set___reserved(uint8_t _value) {
     storage_.__reserved = std::move(_value);
@@ -1230,6 +1287,8 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
       default;
 
   const ::std::string& ret() const { return storage_.ret; }
+
+  ::std::string& ret() { return storage_.ret; }
 
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& set_ret(
       ::std::string _value) {
@@ -1293,6 +1352,8 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
 
   const ::std::string& arg() const { return storage_.arg; }
 
+  ::std::string& arg() { return storage_.arg; }
+
   WithAndWithoutRequestResponseWithRequestWithResponseRequest& set_arg(
       ::std::string _value) {
     storage_.arg = std::move(_value);
@@ -1354,6 +1415,8 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
       default;
 
   const ::std::string& arg() const { return storage_.arg; }
+
+  ::std::string& arg() { return storage_.arg; }
 
   WithAndWithoutRequestResponseWithRequestNoResponseRequest& set_arg(
       ::std::string _value) {
@@ -1418,6 +1481,8 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
 
   const ::std::string& arg() const { return storage_.arg; }
 
+  ::std::string& arg() { return storage_.arg; }
+
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& set_arg(
       ::std::string _value) {
     storage_.arg = std::move(_value);
@@ -1475,6 +1540,8 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final
       WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
 
   const ::std::string& ret() const { return storage_.ret; }
+
+  ::std::string& ret() { return storage_.ret; }
 
   WithAndWithoutRequestResponseOnWithResponseRequest& set_ret(
       ::std::string _value) {
@@ -1538,6 +1605,8 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
 
   const ::std::string& ret() const { return storage_.ret; }
 
+  ::std::string& ret() { return storage_.ret; }
+
   WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& set_ret(
       ::std::string _value) {
     storage_.ret = std::move(_value);
@@ -1592,6 +1661,8 @@ class TransitionalRequestTopResponse final
 
   const int64_t& y() const { return storage_.y; }
 
+  int64_t& y() { return storage_.y; }
+
   TransitionalRequestTopResponse& set_y(int64_t _value) {
     storage_.y = std::move(_value);
     return *this;
@@ -1640,6 +1711,8 @@ class TransitionalRequestRequest final
       default;
 
   const int64_t& x() const { return storage_.x; }
+
+  int64_t& x() { return storage_.x; }
 
   TransitionalRequestRequest& set_x(int64_t _value) {
     storage_.x = std::move(_value);
@@ -1690,6 +1763,8 @@ class TransitionalOneWayRequest final
 
   const int64_t& x() const { return storage_.x; }
 
+  int64_t& x() { return storage_.x; }
+
   TransitionalOneWayRequest& set_x(int64_t _value) {
     storage_.x = std::move(_value);
     return *this;
@@ -1738,6 +1813,8 @@ class TransitionalEventRequest final
       default;
 
   const int64_t& x() const { return storage_.x; }
+
+  int64_t& x() { return storage_.x; }
 
   TransitionalEventRequest& set_x(int64_t _value) {
     storage_.x = std::move(_value);
@@ -1790,6 +1867,8 @@ class MethodWithUnionUnionMethodRequest final
       MethodWithUnionUnionMethodRequest&&) noexcept = default;
 
   const ::fidl_test_protocols::TheUnion& u() const { return storage_.u; }
+
+  ::fidl_test_protocols::TheUnion& u() { return storage_.u; }
 
   MethodWithUnionUnionMethodRequest& set_u(
       ::fidl_test_protocols::TheUnion _value) {
@@ -1845,12 +1924,16 @@ class SyscallProtocolMethodCRequest final
 
   const int64_t& a() const { return storage_.a; }
 
+  int64_t& a() { return storage_.a; }
+
   SyscallProtocolMethodCRequest& set_a(int64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int64_t& b() const { return storage_.b; }
+
+  int64_t& b() { return storage_.b; }
 
   SyscallProtocolMethodCRequest& set_b(int64_t _value) {
     storage_.b = std::move(_value);
@@ -1924,6 +2007,11 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
     return storage_.client;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  client() {
+    return storage_.client;
+  }
+
   ProtocolEnds& set_client(
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
           _value) {
@@ -1933,6 +2021,11 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
 
   const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
   server() const {
+    return storage_.server;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  server() {
     return storage_.server;
   }
 
@@ -1948,6 +2041,11 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
     return storage_.client_opt;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  client_opt() {
+    return storage_.client_opt;
+  }
+
   ProtocolEnds& set_client_opt(
       ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
           _value) {
@@ -1957,6 +2055,11 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
 
   const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
   server_opt() const {
+    return storage_.server_opt;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  server_opt() {
     return storage_.server_opt;
   }
 
@@ -2023,6 +2126,8 @@ class WithProtocolEndsStructContainingEndsTopResponse final
     return storage_.out;
   }
 
+  ::fidl_test_protocols::ProtocolEnds& out() { return storage_.out; }
+
   WithProtocolEndsStructContainingEndsTopResponse& set_out(
       ::fidl_test_protocols::ProtocolEnds _value) {
     storage_.out = std::move(_value);
@@ -2082,6 +2187,8 @@ class WithProtocolEndsStructContainingEndsRequest final
       const WithProtocolEndsStructContainingEndsRequest&) noexcept = delete;
 
   const ::fidl_test_protocols::ProtocolEnds& in() const { return storage_.in; }
+
+  ::fidl_test_protocols::ProtocolEnds& in() { return storage_.in; }
 
   WithProtocolEndsStructContainingEndsRequest& set_in(
       ::fidl_test_protocols::ProtocolEnds _value) {
@@ -2167,12 +2274,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p1() const { return storage_.p1; }
 
+  bool& p1() { return storage_.p1; }
+
   ManyParametersFifteenRequest& set_p1(bool _value) {
     storage_.p1 = std::move(_value);
     return *this;
   }
 
   const bool& p2() const { return storage_.p2; }
+
+  bool& p2() { return storage_.p2; }
 
   ManyParametersFifteenRequest& set_p2(bool _value) {
     storage_.p2 = std::move(_value);
@@ -2181,12 +2292,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p3() const { return storage_.p3; }
 
+  bool& p3() { return storage_.p3; }
+
   ManyParametersFifteenRequest& set_p3(bool _value) {
     storage_.p3 = std::move(_value);
     return *this;
   }
 
   const bool& p4() const { return storage_.p4; }
+
+  bool& p4() { return storage_.p4; }
 
   ManyParametersFifteenRequest& set_p4(bool _value) {
     storage_.p4 = std::move(_value);
@@ -2195,12 +2310,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p5() const { return storage_.p5; }
 
+  bool& p5() { return storage_.p5; }
+
   ManyParametersFifteenRequest& set_p5(bool _value) {
     storage_.p5 = std::move(_value);
     return *this;
   }
 
   const bool& p6() const { return storage_.p6; }
+
+  bool& p6() { return storage_.p6; }
 
   ManyParametersFifteenRequest& set_p6(bool _value) {
     storage_.p6 = std::move(_value);
@@ -2209,12 +2328,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p7() const { return storage_.p7; }
 
+  bool& p7() { return storage_.p7; }
+
   ManyParametersFifteenRequest& set_p7(bool _value) {
     storage_.p7 = std::move(_value);
     return *this;
   }
 
   const bool& p8() const { return storage_.p8; }
+
+  bool& p8() { return storage_.p8; }
 
   ManyParametersFifteenRequest& set_p8(bool _value) {
     storage_.p8 = std::move(_value);
@@ -2223,12 +2346,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p9() const { return storage_.p9; }
 
+  bool& p9() { return storage_.p9; }
+
   ManyParametersFifteenRequest& set_p9(bool _value) {
     storage_.p9 = std::move(_value);
     return *this;
   }
 
   const bool& p10() const { return storage_.p10; }
+
+  bool& p10() { return storage_.p10; }
 
   ManyParametersFifteenRequest& set_p10(bool _value) {
     storage_.p10 = std::move(_value);
@@ -2237,12 +2364,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p11() const { return storage_.p11; }
 
+  bool& p11() { return storage_.p11; }
+
   ManyParametersFifteenRequest& set_p11(bool _value) {
     storage_.p11 = std::move(_value);
     return *this;
   }
 
   const bool& p12() const { return storage_.p12; }
+
+  bool& p12() { return storage_.p12; }
 
   ManyParametersFifteenRequest& set_p12(bool _value) {
     storage_.p12 = std::move(_value);
@@ -2251,6 +2382,8 @@ class ManyParametersFifteenRequest final
 
   const bool& p13() const { return storage_.p13; }
 
+  bool& p13() { return storage_.p13; }
+
   ManyParametersFifteenRequest& set_p13(bool _value) {
     storage_.p13 = std::move(_value);
     return *this;
@@ -2258,12 +2391,16 @@ class ManyParametersFifteenRequest final
 
   const bool& p14() const { return storage_.p14; }
 
+  bool& p14() { return storage_.p14; }
+
   ManyParametersFifteenRequest& set_p14(bool _value) {
     storage_.p14 = std::move(_value);
     return *this;
   }
 
   const bool& p15() const { return storage_.p15; }
+
+  bool& p15() { return storage_.p15; }
 
   ManyParametersFifteenRequest& set_p15(bool _value) {
     storage_.p15 = std::move(_value);
@@ -2322,6 +2459,10 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
     return storage_.result;
   }
 
+  ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Result& result() {
+    return storage_.result;
+  }
+
   WithErrorSyntaxErrorAsEnumTopResponse& set_result(
       ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Result _value) {
     storage_.result = std::move(_value);
@@ -2373,6 +2514,8 @@ class ChannelProtocolMethodBTopResponse final
       ChannelProtocolMethodBTopResponse&&) noexcept = default;
 
   const int64_t& result() const { return storage_.result; }
+
+  int64_t& result() { return storage_.result; }
 
   ChannelProtocolMethodBTopResponse& set_result(int64_t _value) {
     storage_.result = std::move(_value);
@@ -2427,12 +2570,16 @@ class ChannelProtocolMethodBRequest final
 
   const int64_t& a() const { return storage_.a; }
 
+  int64_t& a() { return storage_.a; }
+
   ChannelProtocolMethodBRequest& set_a(int64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int64_t& b() const { return storage_.b; }
+
+  int64_t& b() { return storage_.b; }
 
   ChannelProtocolMethodBRequest& set_b(int64_t _value) {
     storage_.b = std::move(_value);
@@ -2487,12 +2634,16 @@ class ChannelProtocolMethodARequest final
 
   const int64_t& a() const { return storage_.a; }
 
+  int64_t& a() { return storage_.a; }
+
   ChannelProtocolMethodARequest& set_a(int64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int64_t& b() const { return storage_.b; }
+
+  int64_t& b() { return storage_.b; }
 
   ChannelProtocolMethodARequest& set_b(int64_t _value) {
     storage_.b = std::move(_value);
@@ -2547,12 +2698,16 @@ class ChannelProtocolEventARequest final
 
   const int64_t& a() const { return storage_.a; }
 
+  int64_t& a() { return storage_.a; }
+
   ChannelProtocolEventARequest& set_a(int64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int64_t& b() const { return storage_.b; }
+
+  int64_t& b() { return storage_.b; }
 
   ChannelProtocolEventARequest& set_b(int64_t _value) {
     storage_.b = std::move(_value);

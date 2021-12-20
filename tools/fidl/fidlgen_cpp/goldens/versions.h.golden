@@ -55,6 +55,8 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
 
   const uint32_t& x() const { return storage_.x; }
 
+  uint32_t& x() { return storage_.x; }
+
   Struct& set_x(uint32_t _value) {
     storage_.x = std::move(_value);
     return *this;

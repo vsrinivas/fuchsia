@@ -63,6 +63,8 @@ class ExampleStruct final
 
   const uint32_t& member() const { return storage_.member; }
 
+  uint32_t& member() { return storage_.member; }
+
   ExampleStruct& set_member(uint32_t _value) {
     storage_.member = std::move(_value);
     return *this;
@@ -117,6 +119,8 @@ class ExampleProtocolMethodRequest final
       ExampleProtocolMethodRequest&&) noexcept = default;
 
   const ::exampleusing::Empty& arg() const { return storage_.arg; }
+
+  ::exampleusing::Empty& arg() { return storage_.arg; }
 
   ExampleProtocolMethodRequest& set_arg(::exampleusing::Empty _value) {
     storage_.arg = std::move(_value);

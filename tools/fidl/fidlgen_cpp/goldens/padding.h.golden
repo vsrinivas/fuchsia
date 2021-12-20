@@ -80,12 +80,16 @@ class Padding7ByteMiddle final
 
   const uint8_t& a() const { return storage_.a; }
 
+  uint8_t& a() { return storage_.a; }
+
   Padding7ByteMiddle& set_a(uint8_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint64_t& b() const { return storage_.b; }
+
+  uint64_t& b() { return storage_.b; }
 
   Padding7ByteMiddle& set_b(uint64_t _value) {
     storage_.b = std::move(_value);
@@ -136,12 +140,16 @@ class Padding7ByteEnd final
 
   const uint64_t& a() const { return storage_.a; }
 
+  uint64_t& a() { return storage_.a; }
+
   Padding7ByteEnd& set_a(uint64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint8_t& b() const { return storage_.b; }
+
+  uint8_t& b() { return storage_.b; }
 
   Padding7ByteEnd& set_b(uint8_t _value) {
     storage_.b = std::move(_value);
@@ -192,12 +200,16 @@ class Padding6ByteMiddle final
 
   const uint16_t& a() const { return storage_.a; }
 
+  uint16_t& a() { return storage_.a; }
+
   Padding6ByteMiddle& set_a(uint16_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint64_t& b() const { return storage_.b; }
+
+  uint64_t& b() { return storage_.b; }
 
   Padding6ByteMiddle& set_b(uint64_t _value) {
     storage_.b = std::move(_value);
@@ -248,12 +260,16 @@ class Padding6ByteEnd final
 
   const uint64_t& a() const { return storage_.a; }
 
+  uint64_t& a() { return storage_.a; }
+
   Padding6ByteEnd& set_a(uint64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint16_t& b() const { return storage_.b; }
+
+  uint16_t& b() { return storage_.b; }
 
   Padding6ByteEnd& set_b(uint16_t _value) {
     storage_.b = std::move(_value);
@@ -306,6 +322,8 @@ class Padding5ByteMiddle final
 
   const uint16_t& a() const { return storage_.a; }
 
+  uint16_t& a() { return storage_.a; }
+
   Padding5ByteMiddle& set_a(uint16_t _value) {
     storage_.a = std::move(_value);
     return *this;
@@ -313,12 +331,16 @@ class Padding5ByteMiddle final
 
   const uint8_t& b() const { return storage_.b; }
 
+  uint8_t& b() { return storage_.b; }
+
   Padding5ByteMiddle& set_b(uint8_t _value) {
     storage_.b = std::move(_value);
     return *this;
   }
 
   const uint64_t& c() const { return storage_.c; }
+
+  uint64_t& c() { return storage_.c; }
 
   Padding5ByteMiddle& set_c(uint64_t _value) {
     storage_.c = std::move(_value);
@@ -371,6 +393,8 @@ class Padding5ByteEnd final
 
   const uint64_t& a() const { return storage_.a; }
 
+  uint64_t& a() { return storage_.a; }
+
   Padding5ByteEnd& set_a(uint64_t _value) {
     storage_.a = std::move(_value);
     return *this;
@@ -378,12 +402,16 @@ class Padding5ByteEnd final
 
   const uint16_t& b() const { return storage_.b; }
 
+  uint16_t& b() { return storage_.b; }
+
   Padding5ByteEnd& set_b(uint16_t _value) {
     storage_.b = std::move(_value);
     return *this;
   }
 
   const uint8_t& c() const { return storage_.c; }
+
+  uint8_t& c() { return storage_.c; }
 
   Padding5ByteEnd& set_c(uint8_t _value) {
     storage_.c = std::move(_value);
@@ -434,12 +462,16 @@ class Padding4ByteMiddle final
 
   const uint32_t& a() const { return storage_.a; }
 
+  uint32_t& a() { return storage_.a; }
+
   Padding4ByteMiddle& set_a(uint32_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint64_t& b() const { return storage_.b; }
+
+  uint64_t& b() { return storage_.b; }
 
   Padding4ByteMiddle& set_b(uint64_t _value) {
     storage_.b = std::move(_value);
@@ -490,12 +522,16 @@ class Padding4ByteEnd final
 
   const uint64_t& a() const { return storage_.a; }
 
+  uint64_t& a() { return storage_.a; }
+
   Padding4ByteEnd& set_a(uint64_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint32_t& b() const { return storage_.b; }
+
+  uint32_t& b() { return storage_.b; }
 
   Padding4ByteEnd& set_b(uint32_t _value) {
     storage_.b = std::move(_value);
@@ -554,12 +590,16 @@ class Padding4ByteAlignmentLength12 final
 
   const uint32_t& a() const { return storage_.a; }
 
+  uint32_t& a() { return storage_.a; }
+
   Padding4ByteAlignmentLength12& set_a(uint32_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint8_t& b() const { return storage_.b; }
+
+  uint8_t& b() { return storage_.b; }
 
   Padding4ByteAlignmentLength12& set_b(uint8_t _value) {
     storage_.b = std::move(_value);
@@ -568,12 +608,16 @@ class Padding4ByteAlignmentLength12 final
 
   const uint16_t& c() const { return storage_.c; }
 
+  uint16_t& c() { return storage_.c; }
+
   Padding4ByteAlignmentLength12& set_c(uint16_t _value) {
     storage_.c = std::move(_value);
     return *this;
   }
 
   const uint16_t& d() const { return storage_.d; }
+
+  uint16_t& d() { return storage_.d; }
 
   Padding4ByteAlignmentLength12& set_d(uint16_t _value) {
     storage_.d = std::move(_value);
@@ -625,12 +669,16 @@ class Padding3ByteMiddle final
 
   const uint8_t& a() const { return storage_.a; }
 
+  uint8_t& a() { return storage_.a; }
+
   Padding3ByteMiddle& set_a(uint8_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint32_t& b() const { return storage_.b; }
+
+  uint32_t& b() { return storage_.b; }
 
   Padding3ByteMiddle& set_b(uint32_t _value) {
     storage_.b = std::move(_value);
@@ -681,12 +729,16 @@ class Padding3ByteEnd final
 
   const uint32_t& a() const { return storage_.a; }
 
+  uint32_t& a() { return storage_.a; }
+
   Padding3ByteEnd& set_a(uint32_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint8_t& b() const { return storage_.b; }
+
+  uint8_t& b() { return storage_.b; }
 
   Padding3ByteEnd& set_b(uint8_t _value) {
     storage_.b = std::move(_value);
@@ -737,12 +789,16 @@ class Padding2ByteMiddle final
 
   const uint16_t& a() const { return storage_.a; }
 
+  uint16_t& a() { return storage_.a; }
+
   Padding2ByteMiddle& set_a(uint16_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint32_t& b() const { return storage_.b; }
+
+  uint32_t& b() { return storage_.b; }
 
   Padding2ByteMiddle& set_b(uint32_t _value) {
     storage_.b = std::move(_value);
@@ -793,12 +849,16 @@ class Padding2ByteEnd final
 
   const uint32_t& a() const { return storage_.a; }
 
+  uint32_t& a() { return storage_.a; }
+
   Padding2ByteEnd& set_a(uint32_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint16_t& b() const { return storage_.b; }
+
+  uint16_t& b() { return storage_.b; }
 
   Padding2ByteEnd& set_b(uint16_t _value) {
     storage_.b = std::move(_value);
@@ -855,6 +915,8 @@ class Padding2ByteAlignmentLength6 final
 
   const uint8_t& a() const { return storage_.a; }
 
+  uint8_t& a() { return storage_.a; }
+
   Padding2ByteAlignmentLength6& set_a(uint8_t _value) {
     storage_.a = std::move(_value);
     return *this;
@@ -862,12 +924,16 @@ class Padding2ByteAlignmentLength6 final
 
   const uint16_t& b() const { return storage_.b; }
 
+  uint16_t& b() { return storage_.b; }
+
   Padding2ByteAlignmentLength6& set_b(uint16_t _value) {
     storage_.b = std::move(_value);
     return *this;
   }
 
   const uint8_t& c() const { return storage_.c; }
+
+  uint8_t& c() { return storage_.c; }
 
   Padding2ByteAlignmentLength6& set_c(uint8_t _value) {
     storage_.c = std::move(_value);
@@ -919,12 +985,16 @@ class Padding1ByteMiddle final
 
   const uint8_t& a() const { return storage_.a; }
 
+  uint8_t& a() { return storage_.a; }
+
   Padding1ByteMiddle& set_a(uint8_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint16_t& b() const { return storage_.b; }
+
+  uint16_t& b() { return storage_.b; }
 
   Padding1ByteMiddle& set_b(uint16_t _value) {
     storage_.b = std::move(_value);
@@ -975,12 +1045,16 @@ class Padding1ByteEnd final
 
   const uint16_t& a() const { return storage_.a; }
 
+  uint16_t& a() { return storage_.a; }
+
   Padding1ByteEnd& set_a(uint16_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const uint8_t& b() const { return storage_.b; }
+
+  uint8_t& b() { return storage_.b; }
 
   Padding1ByteEnd& set_b(uint8_t _value) {
     storage_.b = std::move(_value);

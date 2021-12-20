@@ -69,6 +69,8 @@ class ProtocolRequestStrictResponseFlexibleRequest final
     return storage_.s;
   }
 
+  ::fidl_test_requestflexibleenvelope::StrictFoo& s() { return storage_.s; }
+
   ProtocolRequestStrictResponseFlexibleRequest& set_s(
       ::fidl_test_requestflexibleenvelope::StrictFoo _value) {
     storage_.s = std::move(_value);
@@ -130,6 +132,8 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
   const ::fidl_test_requestflexibleenvelope::StrictFoo& f() const {
     return storage_.f;
   }
+
+  ::fidl_test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
 
   ProtocolRequestFlexibleResponseStrictTopResponse& set_f(
       ::fidl_test_requestflexibleenvelope::StrictFoo _value) {
@@ -193,6 +197,8 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
     return storage_.f;
   }
 
+  ::fidl_test_requestflexibleenvelope::FlexibleFoo& f() { return storage_.f; }
+
   ProtocolRequestStrictResponseFlexibleTopResponse& set_f(
       ::fidl_test_requestflexibleenvelope::FlexibleFoo _value) {
     storage_.f = std::move(_value);
@@ -254,6 +260,8 @@ class ProtocolRequestFlexibleResponseStrictRequest final
   const ::fidl_test_requestflexibleenvelope::FlexibleFoo& s() const {
     return storage_.s;
   }
+
+  ::fidl_test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
 
   ProtocolRequestFlexibleResponseStrictRequest& set_s(
       ::fidl_test_requestflexibleenvelope::FlexibleFoo _value) {

@@ -63,6 +63,8 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
 
   const int64_t& value() const { return storage_.value; }
 
+  int64_t& value() { return storage_.value; }
+
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response& set_value(int64_t _value) {
     storage_.value = std::move(_value);
     return *this;
@@ -127,6 +129,11 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
     return storage_.result;
   }
 
+  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
+  result() {
+    return storage_.result;
+  }
+
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& set_result(
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
           _value) {
@@ -185,6 +192,8 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
       ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
 
   const ::std::string& s() const { return storage_.s; }
+
+  ::std::string& s() { return storage_.s; }
 
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest& set_s(::std::string _value) {
     storage_.s = std::move(_value);

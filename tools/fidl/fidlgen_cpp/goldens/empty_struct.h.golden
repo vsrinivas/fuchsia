@@ -55,6 +55,8 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
 
   const uint8_t& __reserved() const { return storage_.__reserved; }
 
+  uint8_t& __reserved() { return storage_.__reserved; }
+
   Empty& set___reserved(uint8_t _value) {
     storage_.__reserved = std::move(_value);
     return *this;
@@ -103,6 +105,8 @@ class EmptyProtocolSendRequest final
       default;
 
   const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
+
+  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
 
   EmptyProtocolSendRequest& set_e(::fidl_test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
@@ -157,6 +161,8 @@ class EmptyProtocolSendAndReceiveTopResponse final
 
   const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
 
+  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
+
   EmptyProtocolSendAndReceiveTopResponse& set_e(
       ::fidl_test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
@@ -210,6 +216,8 @@ class EmptyProtocolSendAndReceiveRequest final
 
   const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
 
+  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
+
   EmptyProtocolSendAndReceiveRequest& set_e(
       ::fidl_test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
@@ -261,6 +269,8 @@ class EmptyProtocolReceiveRequest final
       EmptyProtocolReceiveRequest&&) noexcept = default;
 
   const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
+
+  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
 
   EmptyProtocolReceiveRequest& set_e(::fidl_test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);

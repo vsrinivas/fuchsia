@@ -83,12 +83,18 @@ class ExampleOfUseOfAliases final
 
   const uint32_t& field_of_u32() const { return storage_.field_of_u32; }
 
+  uint32_t& field_of_u32() { return storage_.field_of_u32; }
+
   ExampleOfUseOfAliases& set_field_of_u32(uint32_t _value) {
     storage_.field_of_u32 = std::move(_value);
     return *this;
   }
 
   const ::std::vector<::std::string>& field_of_vec_of_strings() const {
+    return storage_.field_of_vec_of_strings;
+  }
+
+  ::std::vector<::std::string>& field_of_vec_of_strings() {
     return storage_.field_of_vec_of_strings;
   }
 
@@ -103,6 +109,10 @@ class ExampleOfUseOfAliases final
     return storage_.field_of_vec_of_strings_at_most_nine;
   }
 
+  ::std::vector<::std::string>& field_of_vec_of_strings_at_most_nine() {
+    return storage_.field_of_vec_of_strings_at_most_nine;
+  }
+
   ExampleOfUseOfAliases& set_field_of_vec_of_strings_at_most_nine(
       ::std::vector<::std::string> _value) {
     storage_.field_of_vec_of_strings_at_most_nine = std::move(_value);
@@ -111,6 +121,10 @@ class ExampleOfUseOfAliases final
 
   const ::std::vector<::std::string>& field_of_vec_of_strings_at_most_5()
       const {
+    return storage_.field_of_vec_of_strings_at_most_5;
+  }
+
+  ::std::vector<::std::string>& field_of_vec_of_strings_at_most_5() {
     return storage_.field_of_vec_of_strings_at_most_5;
   }
 
@@ -125,6 +139,11 @@ class ExampleOfUseOfAliases final
     return storage_.field_of_vec_of_ref_me_at_most_5;
   }
 
+  ::std::vector<::someotherlibrary::ReferenceMe>&
+  field_of_vec_of_ref_me_at_most_5() {
+    return storage_.field_of_vec_of_ref_me_at_most_5;
+  }
+
   ExampleOfUseOfAliases& set_field_of_vec_of_ref_me_at_most_5(
       ::std::vector<::someotherlibrary::ReferenceMe> _value) {
     storage_.field_of_vec_of_ref_me_at_most_5 = std::move(_value);
@@ -135,6 +154,8 @@ class ExampleOfUseOfAliases final
     return storage_.field_of_channel;
   }
 
+  ::zx::channel& field_of_channel() { return storage_.field_of_channel; }
+
   ExampleOfUseOfAliases& set_field_of_channel(::zx::channel _value) {
     storage_.field_of_channel = std::move(_value);
     return *this;
@@ -144,12 +165,18 @@ class ExampleOfUseOfAliases final
     return storage_.field_of_client_end;
   }
 
+  ::zx::channel& field_of_client_end() { return storage_.field_of_client_end; }
+
   ExampleOfUseOfAliases& set_field_of_client_end(::zx::channel _value) {
     storage_.field_of_client_end = std::move(_value);
     return *this;
   }
 
   const ::zx::channel& field_of_nullable_client_end() const {
+    return storage_.field_of_nullable_client_end;
+  }
+
+  ::zx::channel& field_of_nullable_client_end() {
     return storage_.field_of_nullable_client_end;
   }
 

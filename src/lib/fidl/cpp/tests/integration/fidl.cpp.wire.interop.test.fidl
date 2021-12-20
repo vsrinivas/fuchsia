@@ -1,0 +1,47 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fidl.cpp.wire.interop.test;
+
+using zx;
+
+/// [`Node`] exercises the major kinds of layout in FIDL: it's a table with a
+/// union with structs.
+type Node = table {
+    1: name string:32;
+    2: kind union {
+        1: file File;
+        2: directory Directory;
+    };
+};
+
+type File = struct {
+    content bytes;
+};
+
+type Directory = struct {
+    children box< struct {
+        elements vector<Node>:100;
+    }>;
+};
+
+protocol Interop {
+    /// [`RoundTrip`] exercises sending a complex data structure back and forth.
+    RoundTrip(struct {
+        node Node;
+    }) -> (struct {
+        node Node;
+    });
+
+    /// [`TryRoundTrip`] tests API and handling of the error syntax.
+    TryRoundTrip(struct {
+        node Node;
+    }) -> (struct {
+        node Node;
+    }) error zx.status;
+
+    /// [`OneWay`] tests one way calls.
+    OneWay(struct {
+        node Node;
+    });
+};

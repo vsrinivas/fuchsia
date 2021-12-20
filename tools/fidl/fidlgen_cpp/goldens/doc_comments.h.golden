@@ -96,6 +96,11 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   /// struct member comment #1
   ///
   /// struct member comment #3
+  int32_t& Field() { return storage_.Field; }
+
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
   Struct& set_Field(int32_t _value) {
     storage_.Field = std::move(_value);
     return *this;

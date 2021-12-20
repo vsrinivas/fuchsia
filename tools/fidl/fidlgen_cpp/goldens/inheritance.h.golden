@@ -50,6 +50,8 @@ class SuperFooTopResponse final
 
   const int64_t& y() const { return storage_.y; }
 
+  int64_t& y() { return storage_.y; }
+
   SuperFooTopResponse& set_y(int64_t _value) {
     storage_.y = std::move(_value);
     return *this;
@@ -97,6 +99,8 @@ class SuperFooRequest final
   SuperFooRequest& operator=(SuperFooRequest&&) noexcept = default;
 
   const ::std::string& s() const { return storage_.s; }
+
+  ::std::string& s() { return storage_.s; }
 
   SuperFooRequest& set_s(::std::string _value) {
     storage_.s = std::move(_value);

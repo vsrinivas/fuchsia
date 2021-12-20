@@ -56,12 +56,18 @@ class ExampleUseOfVectors final
     return storage_.vector_of_uint8;
   }
 
+  ::std::vector<uint8_t>& vector_of_uint8() { return storage_.vector_of_uint8; }
+
   ExampleUseOfVectors& set_vector_of_uint8(::std::vector<uint8_t> _value) {
     storage_.vector_of_uint8 = std::move(_value);
     return *this;
   }
 
   const ::std::vector<::std::vector<bool>>& vector_of_vector_of_bool() const {
+    return storage_.vector_of_vector_of_bool;
+  }
+
+  ::std::vector<::std::vector<bool>>& vector_of_vector_of_bool() {
     return storage_.vector_of_vector_of_bool;
   }
 

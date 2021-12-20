@@ -58,6 +58,8 @@ class StructSmallArray final
 
   const ::std::array<uint32_t, 2>& a() const { return storage_.a; }
 
+  ::std::array<uint32_t, 2>& a() { return storage_.a; }
+
   StructSmallArray& set_a(::std::array<uint32_t, 2> _value) {
     storage_.a = std::move(_value);
     return *this;
@@ -104,6 +106,8 @@ class StructLargeArray final
   StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
 
   const ::std::array<uint32_t, 100>& a() const { return storage_.a; }
+
+  ::std::array<uint32_t, 100>& a() { return storage_.a; }
 
   StructLargeArray& set_a(::std::array<uint32_t, 100> _value) {
     storage_.a = std::move(_value);

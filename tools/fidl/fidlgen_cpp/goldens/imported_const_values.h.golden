@@ -48,6 +48,8 @@ class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
 
   const uint8_t& __reserved() const { return storage_.__reserved; }
 
+  uint8_t& __reserved() { return storage_.__reserved; }
+
   MyStruct& set___reserved(uint8_t _value) {
     storage_.__reserved = std::move(_value);
     return *this;

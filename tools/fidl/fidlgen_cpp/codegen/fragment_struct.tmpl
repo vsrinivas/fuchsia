@@ -57,6 +57,11 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}> {
   }
 
   {{ .Docs }}
+  {{ .Type }}& {{ .Name }}() {
+    return storage_.{{ .Name }};
+  }
+
+  {{ .Docs }}
   {{ $.Name }}& set_{{ .Name }}({{ .Type }} _value) {
     storage_.{{ .Name }} = std::move(_value);
     return *this;

@@ -110,6 +110,10 @@ class StructWithNullableXUnion final
     return storage_.x1;
   }
 
+  ::std::unique_ptr<::fidl_test_union::OlderSimpleUnion>& x1() {
+    return storage_.x1;
+  }
+
   StructWithNullableXUnion& set_x1(
       ::std::unique_ptr<::fidl_test_union::OlderSimpleUnion> _value) {
     storage_.x1 = std::move(_value);
@@ -176,6 +180,8 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
     return storage_.xu;
   }
 
+  ::fidl_test_union::StrictBoundedXUnion& xu() { return storage_.xu; }
+
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& set_xu(
       ::fidl_test_union::StrictBoundedXUnion _value) {
     storage_.xu = std::move(_value);
@@ -228,6 +234,8 @@ class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
     return storage_.toppings;
   }
 
+  ::std::vector<::std::string>& toppings() { return storage_.toppings; }
+
   Pizza& set_toppings(::std::vector<::std::string> _value) {
     storage_.toppings = std::move(_value);
     return *this;
@@ -271,6 +279,8 @@ class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
   Pasta& operator=(Pasta&&) noexcept = default;
 
   const ::std::string& sauce() const { return storage_.sauce; }
+
+  ::std::string& sauce() { return storage_.sauce; }
 
   Pasta& set_sauce(::std::string _value) {
     storage_.sauce = std::move(_value);
@@ -334,6 +344,8 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
 
   const ::fidl_test_union::OlderSimpleUnion& xu() const { return storage_.xu; }
 
+  ::fidl_test_union::OlderSimpleUnion& xu() { return storage_.xu; }
+
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& set_xu(
       ::fidl_test_union::OlderSimpleUnion _value) {
     storage_.xu = std::move(_value);
@@ -385,6 +397,10 @@ class NullableUnionStruct final
   NullableUnionStruct& operator=(NullableUnionStruct&&) noexcept = default;
 
   const ::std::unique_ptr<::fidl_test_union::Union>& the_union() const {
+    return storage_.the_union;
+  }
+
+  ::std::unique_ptr<::fidl_test_union::Union>& the_union() {
     return storage_.the_union;
   }
 
@@ -441,6 +457,8 @@ class UnionSandwich final
 
   const uint32_t& a() const { return storage_.a; }
 
+  uint32_t& a() { return storage_.a; }
+
   UnionSandwich& set_a(uint32_t _value) {
     storage_.a = std::move(_value);
     return *this;
@@ -448,12 +466,16 @@ class UnionSandwich final
 
   const ::fidl_test_union::ExplicitXUnion& u() const { return storage_.u; }
 
+  ::fidl_test_union::ExplicitXUnion& u() { return storage_.u; }
+
   UnionSandwich& set_u(::fidl_test_union::ExplicitXUnion _value) {
     storage_.u = std::move(_value);
     return *this;
   }
 
   const uint32_t& b() const { return storage_.b; }
+
+  uint32_t& b() { return storage_.b; }
 
   UnionSandwich& set_b(uint32_t _value) {
     storage_.b = std::move(_value);
@@ -499,6 +521,8 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
   Empty& operator=(Empty&&) noexcept = default;
 
   const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  uint8_t& __reserved() { return storage_.__reserved; }
 
   Empty& set___reserved(uint8_t _value) {
     storage_.__reserved = std::move(_value);

@@ -49,6 +49,8 @@ class Payload final : public ::fidl::internal::CodableBase<Payload> {
 
   const uint32_t& value() const { return storage_.value; }
 
+  uint32_t& value() { return storage_.value; }
+
   Payload& set_value(uint32_t _value) {
     storage_.value = std::move(_value);
     return *this;
@@ -98,6 +100,8 @@ class OneWaySendRequest final
   const ::fidl_test_driveroneway::Payload& payload() const {
     return storage_.payload;
   }
+
+  ::fidl_test_driveroneway::Payload& payload() { return storage_.payload; }
 
   OneWaySendRequest& set_payload(::fidl_test_driveroneway::Payload _value) {
     storage_.payload = std::move(_value);

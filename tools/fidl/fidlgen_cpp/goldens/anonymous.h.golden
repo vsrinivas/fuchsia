@@ -75,6 +75,8 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
 
   const uint8_t& data() const { return storage_.data; }
 
+  uint8_t& data() { return storage_.data; }
+
   TableData& set_data(uint8_t _value) {
     storage_.data = std::move(_value);
     return *this;
@@ -131,6 +133,10 @@ class SomeProtocolSomeMethodRequest final
     return storage_.union_member;
   }
 
+  ::fidl_test_anonymous::UnionMember& union_member() {
+    return storage_.union_member;
+  }
+
   SomeProtocolSomeMethodRequest& set_union_member(
       ::fidl_test_anonymous::UnionMember _value) {
     storage_.union_member = std::move(_value);
@@ -138,6 +144,10 @@ class SomeProtocolSomeMethodRequest final
   }
 
   const ::fidl_test_anonymous::TableMember& table_member() const {
+    return storage_.table_member;
+  }
+
+  ::fidl_test_anonymous::TableMember& table_member() {
     return storage_.table_member;
   }
 
@@ -196,12 +206,18 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
 
   const ::fidl_test_anonymous::Op& op() const { return storage_.op; }
 
+  ::fidl_test_anonymous::Op& op() { return storage_.op; }
+
   OverrideTest& set_op(::fidl_test_anonymous::Op _value) {
     storage_.op = std::move(_value);
     return *this;
   }
 
   const ::std::unique_ptr<::fidl_test_anonymous::Expression>& left() const {
+    return storage_.left;
+  }
+
+  ::std::unique_ptr<::fidl_test_anonymous::Expression>& left() {
     return storage_.left;
   }
 
@@ -212,6 +228,10 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
   }
 
   const ::std::unique_ptr<::fidl_test_anonymous::Expression>& right() const {
+    return storage_.right;
+  }
+
+  ::std::unique_ptr<::fidl_test_anonymous::Expression>& right() {
     return storage_.right;
   }
 
@@ -270,6 +290,10 @@ class SomeProtocol_SomeMethod_Response final
     return storage_.bits_member;
   }
 
+  ::fidl_test_anonymous::BitsMember& bits_member() {
+    return storage_.bits_member;
+  }
+
   SomeProtocol_SomeMethod_Response& set_bits_member(
       ::fidl_test_anonymous::BitsMember _value) {
     storage_.bits_member = std::move(_value);
@@ -323,6 +347,10 @@ class SomeProtocolSomeMethodTopResponse final
       SomeProtocolSomeMethodTopResponse&&) noexcept = default;
 
   const ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result& result() const {
+    return storage_.result;
+  }
+
+  ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result& result() {
     return storage_.result;
   }
 

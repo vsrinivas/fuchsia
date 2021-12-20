@@ -71,6 +71,8 @@ class StructWithNullableVector final
 
   const ::fidl::VectorPtr<int32_t>& val() const { return storage_.val; }
 
+  ::fidl::VectorPtr<int32_t>& val() { return storage_.val; }
+
   StructWithNullableVector& set_val(::fidl::VectorPtr<int32_t> _value) {
     storage_.val = std::move(_value);
     return *this;
@@ -121,6 +123,10 @@ class StructWithNullableUnion final
       default;
 
   const ::std::unique_ptr<::fidl_test_nullable::SimpleUnion>& val() const {
+    return storage_.val;
+  }
+
+  ::std::unique_ptr<::fidl_test_nullable::SimpleUnion>& val() {
     return storage_.val;
   }
 
@@ -178,6 +184,10 @@ class StructWithNullableStruct final
     return storage_.val;
   }
 
+  ::std::unique_ptr<::fidl_test_nullable::Int32Wrapper>& val() {
+    return storage_.val;
+  }
+
   StructWithNullableStruct& set_val(
       ::std::unique_ptr<::fidl_test_nullable::Int32Wrapper> _value) {
     storage_.val = std::move(_value);
@@ -228,6 +238,8 @@ class StructWithNullableString final
       default;
 
   const ::fidl::StringPtr& val() const { return storage_.val; }
+
+  ::fidl::StringPtr& val() { return storage_.val; }
 
   StructWithNullableString& set_val(::fidl::StringPtr _value) {
     storage_.val = std::move(_value);
@@ -283,6 +295,10 @@ class StructWithNullableRequest final
 
   const ::fidl::InterfaceRequest<::fidl::test::nullable::SimpleProtocol>& val()
       const {
+    return storage_.val;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::nullable::SimpleProtocol>& val() {
     return storage_.val;
   }
 
@@ -345,6 +361,10 @@ class StructWithNullableProtocol final
     return storage_.val;
   }
 
+  ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol>& val() {
+    return storage_.val;
+  }
+
   StructWithNullableProtocol& set_val(
       ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol> _value) {
     storage_.val = std::move(_value);
@@ -398,6 +418,8 @@ class StructWithNullableHandle final
 
   const ::zx::vmo& val() const { return storage_.val; }
 
+  ::zx::vmo& val() { return storage_.val; }
+
   StructWithNullableHandle& set_val(::zx::vmo _value) {
     storage_.val = std::move(_value);
     return *this;
@@ -448,6 +470,8 @@ class SimpleProtocolAddTopResponse final
       SimpleProtocolAddTopResponse&&) noexcept = default;
 
   const int32_t& sum() const { return storage_.sum; }
+
+  int32_t& sum() { return storage_.sum; }
 
   SimpleProtocolAddTopResponse& set_sum(int32_t _value) {
     storage_.sum = std::move(_value);
@@ -500,12 +524,16 @@ class SimpleProtocolAddRequest final
 
   const int32_t& a() const { return storage_.a; }
 
+  int32_t& a() { return storage_.a; }
+
   SimpleProtocolAddRequest& set_a(int32_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int32_t& b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
 
   SimpleProtocolAddRequest& set_b(int32_t _value) {
     storage_.b = std::move(_value);
@@ -553,6 +581,8 @@ class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
   Int32Wrapper& operator=(Int32Wrapper&&) noexcept = default;
 
   const int32_t& val() const { return storage_.val; }
+
+  int32_t& val() { return storage_.val; }
 
   Int32Wrapper& set_val(int32_t _value) {
     storage_.val = std::move(_value);

@@ -51,12 +51,16 @@ class Simple final : public ::fidl::internal::CodableBase<Simple> {
 
   const uint8_t& f1() const { return storage_.f1; }
 
+  uint8_t& f1() { return storage_.f1; }
+
   Simple& set_f1(uint8_t _value) {
     storage_.f1 = std::move(_value);
     return *this;
   }
 
   const bool& f2() const { return storage_.f2; }
+
+  bool& f2() { return storage_.f2; }
 
   Simple& set_f2(bool _value) {
     storage_.f2 = std::move(_value);
@@ -105,12 +109,16 @@ class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
 
   const uint32_t& x() const { return storage_.x; }
 
+  uint32_t& x() { return storage_.x; }
+
   BasicStruct& set_x(uint32_t _value) {
     storage_.x = std::move(_value);
     return *this;
   }
 
   const ::std::string& y() const { return storage_.y; }
+
+  ::std::string& y() { return storage_.y; }
 
   BasicStruct& set_y(::std::string _value) {
     storage_.y = std::move(_value);

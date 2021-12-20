@@ -61,6 +61,11 @@ class ParentFirstRequest final
     return storage_.request;
   }
 
+  ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>&
+  request() {
+    return storage_.request;
+  }
+
   ParentFirstRequest& set_request(
       ::fidl::InterfaceRequest<
           ::fidl::test::inheritancewithrecursivedecl::Parent>
@@ -120,6 +125,11 @@ class ChildSecondRequest final
   const ::fidl::InterfaceRequest<
       ::fidl::test::inheritancewithrecursivedecl::Parent>&
   request() const {
+    return storage_.request;
+  }
+
+  ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>&
+  request() {
     return storage_.request;
   }
 

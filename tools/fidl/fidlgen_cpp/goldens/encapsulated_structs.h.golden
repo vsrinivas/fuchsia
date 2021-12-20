@@ -72,6 +72,10 @@ class NonInlineStructTestStruct final
     return storage_.element;
   }
 
+  ::std::unique_ptr<::fidl_test_encapsulatedstructs::Int16Int8>& element() {
+    return storage_.element;
+  }
+
   NonInlineStructTestStruct& set_element(
       ::std::unique_ptr<::fidl_test_encapsulatedstructs::Int16Int8> _value) {
     storage_.element = std::move(_value);
@@ -79,6 +83,8 @@ class NonInlineStructTestStruct final
   }
 
   const ::zx::handle& h() const { return storage_.h; }
+
+  ::zx::handle& h() { return storage_.h; }
 
   NonInlineStructTestStruct& set_h(::zx::handle _value) {
     storage_.h = std::move(_value);
@@ -129,12 +135,16 @@ class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
 
   const int8_t& a() const { return storage_.a; }
 
+  int8_t& a() { return storage_.a; }
+
   Int8Int32& set_a(int8_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int32_t& b() const { return storage_.b; }
+
+  int32_t& b() { return storage_.b; }
 
   Int8Int32& set_b(int32_t _value) {
     storage_.b = std::move(_value);
@@ -185,12 +195,16 @@ class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
 
   const int16_t& a() const { return storage_.a; }
 
+  int16_t& a() { return storage_.a; }
+
   Int16Int8& set_a(int16_t _value) {
     storage_.a = std::move(_value);
     return *this;
   }
 
   const int8_t& b() const { return storage_.b; }
+
+  int8_t& b() { return storage_.b; }
 
   Int16Int8& set_b(int8_t _value) {
     storage_.b = std::move(_value);
@@ -242,6 +256,10 @@ class ArrayInt16Int8 final
 
   const ::std::array<::fidl_test_encapsulatedstructs::Int16Int8, 3>& arr()
       const {
+    return storage_.arr;
+  }
+
+  ::std::array<::fidl_test_encapsulatedstructs::Int16Int8, 3>& arr() {
     return storage_.arr;
   }
 
@@ -305,6 +323,10 @@ class StructPaddingTestStruct final
     return storage_.trailing;
   }
 
+  ::fidl_test_encapsulatedstructs::Int16Int8& trailing() {
+    return storage_.trailing;
+  }
+
   StructPaddingTestStruct& set_trailing(
       ::fidl_test_encapsulatedstructs::Int16Int8 _value) {
     storage_.trailing = std::move(_value);
@@ -315,6 +337,8 @@ class StructPaddingTestStruct final
     return storage_.inner;
   }
 
+  ::fidl_test_encapsulatedstructs::Int8Int32& inner() { return storage_.inner; }
+
   StructPaddingTestStruct& set_inner(
       ::fidl_test_encapsulatedstructs::Int8Int32 _value) {
     storage_.inner = std::move(_value);
@@ -322,6 +346,10 @@ class StructPaddingTestStruct final
   }
 
   const ::fidl_test_encapsulatedstructs::ArrayInt16Int8& array() const {
+    return storage_.array;
+  }
+
+  ::fidl_test_encapsulatedstructs::ArrayInt16Int8& array() {
     return storage_.array;
   }
 
@@ -382,6 +410,10 @@ class TopLevelStruct final
     return storage_.a;
   }
 
+  ::fidl_test_encapsulatedstructs::StructPaddingTestStruct& a() {
+    return storage_.a;
+  }
+
   TopLevelStruct& set_a(
       ::fidl_test_encapsulatedstructs::StructPaddingTestStruct _value) {
     storage_.a = std::move(_value);
@@ -389,6 +421,10 @@ class TopLevelStruct final
   }
 
   const ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct& b() const {
+    return storage_.b;
+  }
+
+  ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct& b() {
     return storage_.b;
   }
 
