@@ -910,6 +910,10 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // Implementation for Protect().
   zx_status_t ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) TA_REQ(lock());
 
+  // Helper for protect and unmap.
+  static zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
+                                    uint new_arch_mmu_flags);
+
   size_t AllocatedPagesLocked() const TA_REQ(lock()) override;
 
   void Activate() TA_REQ(lock()) override;

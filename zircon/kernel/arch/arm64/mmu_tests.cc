@@ -46,7 +46,8 @@ bool arm64_test_perms() {
     // FUTURE ENHANCEMENT: use a private api to read the terminal page table entry
     // and validate the bits that were set.
 
-    EXPECT_EQ(ZX_OK, aspace.Unmap(kTestVirtualAddress, 1, &count));
+    EXPECT_EQ(ZX_OK,
+              aspace.Unmap(kTestVirtualAddress, 1, ArchVmAspace::EnlargeOperation::No, &count));
     EXPECT_EQ(1u, count);
 
     return all_ok;

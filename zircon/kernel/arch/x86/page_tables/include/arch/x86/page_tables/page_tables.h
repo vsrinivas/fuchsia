@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_PAGE_TABLES_H_
 #define ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_PAGE_TABLES_H_
 
+#include <lib/zx/status.h>
+
 #include <fbl/canary.h>
 #include <hwreg/bitfields.h>
 #include <kernel/mutex.h>
@@ -86,12 +88,14 @@ class X86PageTableBase {
   void* ctx() const { return ctx_; }
 
   using ExistingEntryAction = ArchVmAspaceInterface::ExistingEntryAction;
+  using EnlargeOperation = ArchVmAspaceInterface::EnlargeOperation;
 
   zx_status_t MapPages(vaddr_t vaddr, paddr_t* phys, size_t count, uint flags,
                        ExistingEntryAction existing_action, size_t* mapped);
   zx_status_t MapPagesContiguous(vaddr_t vaddr, paddr_t paddr, const size_t count, uint flags,
                                  size_t* mapped);
-  zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
+  zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, EnlargeOperation enlarge,
+                         size_t* unmapped);
   zx_status_t ProtectPages(vaddr_t vaddr, size_t count, uint flags);
 
   zx_status_t QueryVaddr(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags);
@@ -163,9 +167,9 @@ class X86PageTableBase {
                            ExistingEntryAction existing_action, const MappingCursor& start_cursor,
                            MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
 
-  bool RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
-                     const MappingCursor& start_cursor, MappingCursor* new_cursor,
-                     ConsistencyManager* cm) TA_REQ(lock_);
+  zx::status<bool> RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
+                                 EnlargeOperation enlarge, const MappingCursor& start_cursor,
+                                 MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
   bool RemoveMappingL0(volatile pt_entry_t* table, const MappingCursor& start_cursor,
                        MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
 

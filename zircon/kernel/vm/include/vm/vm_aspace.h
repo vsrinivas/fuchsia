@@ -229,6 +229,11 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // Sets this aspace as being latency sensitive. This cannot be undone.
   void MarkAsLatencySensitive();
 
+  // Encodes the idea that we can always unmap from user aspaces.
+  ArchVmAspace::EnlargeOperation EnlargeArchUnmap() const {
+    return is_user() ? ArchVmAspace::EnlargeOperation::Yes : ArchVmAspace::EnlargeOperation::No;
+  }
+
   // internal page fault routine, friended to be only called by vmm_page_fault_handler
   zx_status_t PageFault(vaddr_t va, uint flags);
   friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);

@@ -721,8 +721,9 @@ void ArmArchVmAspace::FlushAsid() const {
 }
 
 ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size,
-                                        uint index_shift, uint page_size_shift,
-                                        volatile pte_t* page_table, ConsistencyManager& cm) {
+                                        EnlargeOperation enlarge, uint index_shift,
+                                        uint page_size_shift, volatile pte_t* page_table,
+                                        ConsistencyManager& cm) {
   const vaddr_t block_size = 1UL << index_shift;
   const vaddr_t block_mask = block_size - 1;
 
@@ -744,9 +745,12 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
         (pte & MMU_PTE_DESCRIPTOR_MASK) == MMU_PTE_L012_DESCRIPTOR_BLOCK &&
         chunk_size != block_size) {
       zx_status_t s = SplitLargePage(vaddr, index_shift, page_size_shift, index, page_table, cm);
-      // If the split failed then we just fall through and unmap the entire large page.
+      // If the split failed then check if we are allowed to unmap extra, and if so just fall
+      // through and unmap the entire large page.
       if (likely(s == ZX_OK)) {
         pte = page_table[index];
+      } else if (enlarge == EnlargeOperation::No) {
+        return s;
       }
     }
     if (index_shift > page_size_shift &&
@@ -756,8 +760,12 @@ ssize_t ArmArchVmAspace::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Recurse a level.
-      UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                     page_size_shift, next_page_table, cm);
+      ssize_t result =
+          UnmapPageTable(vaddr, vaddr_rem, chunk_size, enlarge, index_shift - (page_size_shift - 3),
+                         page_size_shift, next_page_table, cm);
+      if (result < 0) {
+        return result;
+      }
 
       // if we unmapped an entire page table leaf and/or the unmap made the level below us empty,
       // free the page table
@@ -810,8 +818,11 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 
   auto cleanup = fit::defer([&]() {
     AssertHeld(lock_);
-    UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, index_shift, page_size_shift, page_table,
-                   cm);
+    // Unmapping what we have just mapped in should never fail, and we should not have to enlarge
+    // the unmap for it to succeed.
+    ssize_t result = UnmapPageTable(vaddr_in, vaddr_rel_in, size_in - size, EnlargeOperation::No,
+                                    index_shift, page_size_shift, page_table, cm);
+    ASSERT(result >= 0);
   });
 
   size_t mapped_size = 0;
@@ -1053,8 +1064,12 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
         }
       }
       if (do_unmap) {
-        UnmapPageTable(vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
-                       page_size_shift, next_page_table, cm);
+        // Unmapping an exact block, which should not need enlarging and hence should never be able
+        // to fail.
+        ssize_t result = UnmapPageTable(vaddr, vaddr_rem, chunk_size, EnlargeOperation::No,
+                                        index_shift - (page_size_shift - 3), page_size_shift,
+                                        next_page_table, cm);
+        ASSERT(result >= 0);
         DEBUG_ASSERT(page_table_is_clear(next_page_table, page_size_shift));
         update_pte(&page_table[index], MMU_PTE_DESCRIPTOR_INVALID);
 
@@ -1173,9 +1188,9 @@ ssize_t ArmArchVmAspace::MapPages(vaddr_t vaddr, paddr_t paddr, size_t size, pte
   return ret;
 }
 
-ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base,
-                                    uint top_size_shift, uint top_index_shift, uint page_size_shift,
-                                    ConsistencyManager& cm) {
+ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge,
+                                    vaddr_t vaddr_base, uint top_size_shift, uint top_index_shift,
+                                    uint page_size_shift, ConsistencyManager& cm) {
   vaddr_t vaddr_rel = vaddr - vaddr_base;
   vaddr_t vaddr_rel_max = 1UL << top_size_shift;
 
@@ -1189,8 +1204,8 @@ ssize_t ArmArchVmAspace::UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_ba
 
   LOCAL_KTRACE("mmu unmap", (vaddr & ~PAGE_MASK) | ((size >> PAGE_SIZE_SHIFT) & PAGE_MASK));
 
-  ssize_t ret =
-      UnmapPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
+  ssize_t ret = UnmapPageTable(vaddr, vaddr_rel, size, enlarge, top_index_shift, page_size_shift,
+                               tt_virt_, cm);
   return ret;
 }
 
@@ -1382,8 +1397,8 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
     ConsistencyManager cm(*this);
     auto undo = fit::defer([&]() TA_NO_THREAD_SAFETY_ANALYSIS {
       if (idx > 0) {
-        UnmapPages(vaddr, idx * PAGE_SIZE, vaddr_base, top_size_shift, top_index_shift,
-                   page_size_shift, cm);
+        UnmapPages(vaddr, idx * PAGE_SIZE, EnlargeOperation::No, vaddr_base, top_size_shift,
+                   top_index_shift, page_size_shift, cm);
       }
     });
 
@@ -1421,7 +1436,8 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
   return ZX_OK;
 }
 
-zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, EnlargeOperation enlarge,
+                                   size_t* unmapped) {
   canary_.Assert();
   LTRACEF("vaddr %#" PRIxPTR " count %zu\n", vaddr, count);
 
@@ -1448,7 +1464,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
                        &page_size_shift);
 
     ConsistencyManager cm(*this);
-    ret = UnmapPages(vaddr, count * PAGE_SIZE, vaddr_base, top_size_shift, top_index_shift,
+    ret = UnmapPages(vaddr, count * PAGE_SIZE, enlarge, vaddr_base, top_size_shift, top_index_shift,
                      page_size_shift, cm);
     MarkAspaceModified();
   }

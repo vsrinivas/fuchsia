@@ -70,8 +70,16 @@ class ArchVmAspaceInterface {
   virtual zx_status_t Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
                           ExistingEntryAction existing_action, size_t* mapped) = 0;
 
-  // Unmap the given virtual address range
-  virtual zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) = 0;
+  // Unmap the given virtual address range.
+  // EnlargeOperation controls whether the unmap region can be extended to be larger, or if only the
+  // exact region may be unmapped. The unmap region might be extended in out of memory scenarios if
+  // large pages need to be split.
+  enum EnlargeOperation : bool {
+    Yes = true,
+    No = false,
+  };
+  virtual zx_status_t Unmap(vaddr_t vaddr, size_t count, EnlargeOperation enlarge,
+                            size_t* unmapped) = 0;
 
   // Change the page protections on the given virtual address range
   //

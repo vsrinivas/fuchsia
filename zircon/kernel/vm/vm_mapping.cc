@@ -156,11 +156,9 @@ zx_status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flag
   return ProtectLocked(base, size, new_arch_mmu_flags);
 }
 
-namespace {
-
-// Implementation helper for ProtectLocked
-zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
-                           uint new_arch_mmu_flags) {
+// static
+zx_status_t VmMapping::ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base,
+                                      size_t size, uint new_arch_mmu_flags) {
   // If the desired arch mmu flags contain the WRITE permissions then we cannot go and change any
   // existing mappings to be writeable. This is because the backing VMO might be wanting to do
   // copy-on-write, and changing the permissions will prevent that and potentially allow writing to
@@ -177,22 +175,19 @@ zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, si
     vm_mappings_protect_no_write.Add(1);
     new_arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
   }
-  // If we are removing all permissions, simply unmap the region.
-  if ((new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) == 0) {
-    return aspace->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+  // If not removing all permissions do the protect, otherwise skip straight to unmapping the entire
+  // region.
+  if ((new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) != 0) {
+    zx_status_t status = aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
+    // If the unmap failed and we are allowed to unmap extra portions of the aspace then fall
+    // through and unmap, otherwise return with whatever the status is.
+    if (likely(status == ZX_OK) || !aspace->EnlargeArchUnmap()) {
+      return status;
+    }
   }
 
-  // Protect the range.
-  zx_status_t result = aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
-  if (result == ZX_ERR_NO_MEMORY) {
-    // If we couldn't protect the pages due to memory, simply unmap the entire range
-    // and let it fault back in later.
-    return aspace->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
-  }
-  return result;
+  return aspace->arch_aspace().Unmap(base, size / PAGE_SIZE, aspace->EnlargeArchUnmap(), nullptr);
 }
-
-}  // namespace
 
 zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mmu_flags) {
   DEBUG_ASSERT(size != 0 && IS_PAGE_ALIGNED(base) && IS_PAGE_ALIGNED(size));
@@ -294,7 +289,8 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   // Check if unmapping from one of the ends
   if (base_ == base || base + size == base_ + size_) {
     LTRACEF("unmapping base %#lx size %#zx\n", base, size);
-    zx_status_t status = aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+    zx_status_t status =
+        aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, aspace_->EnlargeArchUnmap(), nullptr);
     if (status != ZX_OK) {
       return status;
     }
@@ -341,7 +337,8 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
   // Unmap the middle segment
   LTRACEF("unmapping base %#lx size %#zx\n", base, size);
-  zx_status_t status = aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+  zx_status_t status =
+      aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, aspace_->EnlargeArchUnmap(), nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -427,7 +424,8 @@ void VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     return;
   }
 
-  zx_status_t status = aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, nullptr);
+  zx_status_t status =
+      aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, aspace_->EnlargeArchUnmap(), nullptr);
   ASSERT(status == ZX_OK);
 }
 
@@ -713,7 +711,8 @@ zx_status_t VmMapping::DestroyLocked() {
     Guard<Mutex> guard{object_->lock()};
     // The unmap needs to be performed whilst the object lock is being held so that set_size_locked
     // can be called without there being an opportunity for mappings to be modified in between.
-    zx_status_t status = aspace_->arch_aspace().Unmap(base_, size_ / PAGE_SIZE, nullptr);
+    zx_status_t status = aspace_->arch_aspace().Unmap(base_, size_ / PAGE_SIZE,
+                                                      aspace_->EnlargeArchUnmap(), nullptr);
     if (status != ZX_OK) {
       return status;
     }
@@ -919,7 +918,7 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
                                [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
       // unmap the old one and put the new one in place
-      status = aspace_->arch_aspace().Unmap(va, 1, nullptr);
+      status = aspace_->arch_aspace().Unmap(va, 1, aspace_->EnlargeArchUnmap(), nullptr);
       if (status != ZX_OK) {
         TRACEF("failed to remove old mapping before replacing\n");
         return ZX_ERR_NO_MEMORY;

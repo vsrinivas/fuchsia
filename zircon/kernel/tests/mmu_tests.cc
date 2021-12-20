@@ -64,7 +64,7 @@ static bool test_large_unaligned_region() {
   // Attempt to unmap the target region (analogous to unmapping a demand
   // paged region that has only had its last page touched)
   size_t unmapped;
-  err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
+  err = aspace.Unmap(va, alloc_size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, &unmapped);
   EXPECT_EQ(err, ZX_OK, "unmap unallocated region");
   EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
@@ -72,7 +72,7 @@ static bool test_large_unaligned_region() {
   EXPECT_EQ(err, ZX_ERR_NOT_FOUND, "last entry is not mapped anymore");
 
   // Unmap the single page from earlier
-  err = aspace.Unmap(va - 3 * PAGE_SIZE, 1, &unmapped);
+  err = aspace.Unmap(va - 3 * PAGE_SIZE, 1, ArchVmAspace::EnlargeOperation::Yes, &unmapped);
   EXPECT_EQ(err, ZX_OK, "unmap single page");
   EXPECT_EQ(unmapped, 1u, "unmap unallocated region");
 
@@ -109,12 +109,12 @@ static bool test_large_unaligned_region_without_map() {
     // Attempt to unmap the target region (analogous to unmapping a demand
     // paged region that has not been touched)
     size_t unmapped;
-    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &unmapped);
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, &unmapped);
     EXPECT_EQ(err, ZX_OK, "unmap unallocated region");
     EXPECT_EQ(unmapped, alloc_size / PAGE_SIZE, "unmap unallocated region");
 
     // Unmap the single page from earlier
-    err = aspace.Unmap(va - 2 * PAGE_SIZE, 1, &unmapped);
+    err = aspace.Unmap(va - 2 * PAGE_SIZE, 1, ArchVmAspace::EnlargeOperation::Yes, &unmapped);
     EXPECT_EQ(err, ZX_OK, "unmap single page");
     EXPECT_EQ(unmapped, 1u, "unmap single page");
 
@@ -166,7 +166,7 @@ static bool test_large_region_protect() {
       EXPECT_EQ(i == j ? ARCH_MMU_FLAG_PERM_READ : arch_rw_flags, retrieved_flags);
     }
 
-    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, &mapped);
     EXPECT_EQ(err, ZX_OK, "unmap large page");
     EXPECT_EQ(mapped, 512u, "unmap large page");
     err = aspace.Destroy();
@@ -176,8 +176,21 @@ static bool test_large_region_protect() {
   END_TEST;
 }
 
+// Since toggle_page_alloc_fn needs global state to operate, define a lock to ensure we are only
+// running a single instance of these tests at a time.
+DECLARE_SINGLETON_MUTEX(TogglePageAllocLock);
+static bool fail_page_allocs = false;
+static zx_status_t toggle_page_alloc_fn(uint mmu_flags, vm_page** p, paddr_t* pa) {
+  if (fail_page_allocs) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  return pmm_alloc_page(mmu_flags, p, pa);
+}
+
 static bool test_large_region_unmap() {
   BEGIN_TEST;
+
+  Guard<Mutex> guard{TogglePageAllocLock::Get()};
 
   static const vaddr_t va = 1UL << PGTABLE_L1_SHIFT;
   // Force a large page.
@@ -194,7 +207,8 @@ static bool test_large_region_unmap() {
   };
 
   for (unsigned i = 0; i < ktl::size(target_vaddrs); i++) {
-    ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
+    fail_page_allocs = false;
+    ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0, toggle_page_alloc_fn);
     zx_status_t err = aspace.Init();
     EXPECT_EQ(err, ZX_OK, "init aspace");
 
@@ -207,7 +221,7 @@ static bool test_large_region_unmap() {
     EXPECT_EQ(mapped, 512u, "map large page");
 
     // Unmap a single small page out of the larger page.
-    err = aspace.Unmap(target_vaddrs[i], 1, &mapped);
+    err = aspace.Unmap(target_vaddrs[i], 1, ArchVmAspace::EnlargeOperation::Yes, &mapped);
     EXPECT_EQ(err, ZX_OK, "unmap single page");
     EXPECT_EQ(mapped, 1u, "unmap single page");
 
@@ -219,7 +233,56 @@ static bool test_large_region_unmap() {
       EXPECT_EQ(i == j ? ZX_ERR_NOT_FOUND : ZX_OK, result, "query page");
     }
 
-    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, &mapped);
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, &mapped);
+    EXPECT_EQ(err, ZX_OK, "unmap remaining pages");
+    EXPECT_EQ(mapped, 512u, "unmap remaining pages");
+
+    // Map in the large page again.
+    err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
+    EXPECT_EQ(err, ZX_OK, "map large page");
+    EXPECT_EQ(mapped, 512u, "map large page");
+
+    // Simulate OOM by failing allocations.
+    fail_page_allocs = true;
+    // Attempt to unmap a single small page, but allow over unmapping.
+    err = aspace.Unmap(target_vaddrs[i], 1, ArchVmAspace::EnlargeOperation::Yes, &mapped);
+    EXPECT_EQ(err, ZX_OK, "unmap single page");
+    EXPECT_EQ(mapped, 1u, "unmap single page");
+
+    // The entire large page should have ended up unmapped.
+    for (unsigned j = 0; j < ktl::size(target_vaddrs); j++) {
+      uint retrieved_flags = 0;
+      paddr_t pa;
+      zx_status_t result = aspace.Query(target_vaddrs[j], &pa, &retrieved_flags);
+      EXPECT_EQ(ZX_ERR_NOT_FOUND, result, "query page");
+    }
+
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, &mapped);
+    EXPECT_EQ(err, ZX_OK, "unmap remaining pages");
+    EXPECT_EQ(mapped, 512u, "unmap remaining pages");
+
+    // Map in the large page again.
+    fail_page_allocs = false;
+    err = aspace.MapContiguous(va, 0, alloc_size / PAGE_SIZE, arch_rw_flags, &mapped);
+    EXPECT_EQ(err, ZX_OK, "map large page");
+    EXPECT_EQ(mapped, 512u, "map large page");
+
+    // Simulate OOM by failing allocations.
+    fail_page_allocs = true;
+    // Attempt to unmap a single small page, but disallow over unmapping.
+    err = aspace.Unmap(target_vaddrs[i], 1, ArchVmAspace::EnlargeOperation::No, &mapped);
+    EXPECT_EQ(err, ZX_ERR_NO_MEMORY, "unmap single page");
+
+    // All mappings should still be present.
+    // The entire large page should have ended up unmapped.
+    for (unsigned j = 0; j < ktl::size(target_vaddrs); j++) {
+      uint retrieved_flags = 0;
+      paddr_t pa;
+      zx_status_t result = aspace.Query(target_vaddrs[j], &pa, &retrieved_flags);
+      EXPECT_EQ(ZX_OK, result, "query page");
+    }
+
+    err = aspace.Unmap(va, alloc_size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, &mapped);
     EXPECT_EQ(err, ZX_OK, "unmap remaining pages");
     EXPECT_EQ(mapped, 512u, "unmap remaining pages");
     err = aspace.Destroy();
@@ -291,7 +354,9 @@ static bool test_mapping_oom() {
     if (err == ZX_OK) {
       map_success = true;
       size_t unmapped;
-      EXPECT_EQ(aspace.Unmap(kMappingStart, kMappingPageCount, &unmapped), ZX_OK);
+      EXPECT_EQ(aspace.Unmap(kMappingStart, kMappingPageCount, ArchVmAspace::EnlargeOperation::Yes,
+                             &unmapped),
+                ZX_OK);
       EXPECT_EQ(unmapped, kMappingPageCount);
     } else {
       EXPECT_EQ(err, ZX_ERR_NO_MEMORY);
@@ -350,7 +415,7 @@ static bool test_skip_existing_mapping() {
     EXPECT_EQ(paddr, page_addresses[i]);
     EXPECT_EQ(flags, arch_rw_flags);
   }
-  err = aspace.Unmap(kMapBase, kNumPages, &mapped);
+  err = aspace.Unmap(kMapBase, kNumPages, ArchVmAspace::EnlargeOperation::Yes, &mapped);
   EXPECT_EQ(err, ZX_OK);
 
   // Now try mapping in the midle page with different permissions.
@@ -372,7 +437,7 @@ static bool test_skip_existing_mapping() {
       EXPECT_EQ(flags, arch_rw_flags);
     }
   }
-  err = aspace.Unmap(kMapBase, kNumPages, &mapped);
+  err = aspace.Unmap(kMapBase, kNumPages, ArchVmAspace::EnlargeOperation::Yes, &mapped);
   EXPECT_EQ(err, ZX_OK);
 
   // Now map the middle page using a completely different physical address.
@@ -396,7 +461,7 @@ static bool test_skip_existing_mapping() {
       EXPECT_EQ(paddr, page_addresses[i]);
     }
   }
-  err = aspace.Unmap(kMapBase, kNumPages, &mapped);
+  err = aspace.Unmap(kMapBase, kNumPages, ArchVmAspace::EnlargeOperation::Yes, &mapped);
   EXPECT_EQ(err, ZX_OK);
 
   err = aspace.Destroy();

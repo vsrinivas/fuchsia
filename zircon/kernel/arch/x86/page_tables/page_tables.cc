@@ -534,16 +534,18 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
  * @return true if the caller (i.e. the next level up page table) might need to
  * free this page table.
  */
-bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
-                                     const MappingCursor& start_cursor, MappingCursor* new_cursor,
-                                     ConsistencyManager* cm) {
+zx::status<bool> X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
+                                                 EnlargeOperation enlarge,
+                                                 const MappingCursor& start_cursor,
+                                                 MappingCursor* new_cursor,
+                                                 ConsistencyManager* cm) {
   DEBUG_ASSERT(table);
   LTRACEF("L: %d, %016" PRIxPTR " %016zx\n", static_cast<int>(level), start_cursor.vaddr(),
           start_cursor.size());
   DEBUG_ASSERT(check_vaddr(start_cursor.vaddr()));
 
   if (level == PageTableLevel::PT_L) {
-    return RemoveMappingL0(table, start_cursor, new_cursor, cm);
+    return zx::ok(RemoveMappingL0(table, start_cursor, new_cursor, cm));
   }
 
   *new_cursor = start_cursor;
@@ -584,19 +586,27 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
       if (status != ZX_OK) {
         // If split fails, just unmap the whole thing, and let a
         // subsequent page fault clean it up.
-        UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/true);
-        unmapped = true;
+        if (enlarge == EnlargeOperation::Yes) {
+          UnmapEntry(cm, level, new_cursor->vaddr(), e, /*was_terminal=*/true);
+          unmapped = true;
 
-        new_cursor->SkipEntry(level);
-        DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
-        continue;
+          new_cursor->SkipEntry(level);
+          DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
+          continue;
+        } else {
+          return zx::error(status);
+        }
       }
       pt_val = *e;
     }
 
     MappingCursor cursor;
     volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
-    bool lower_unmapped = RemoveMapping(next_table, lower_level(level), *new_cursor, &cursor, cm);
+    auto status = RemoveMapping(next_table, lower_level(level), enlarge, *new_cursor, &cursor, cm);
+    if (status.is_error()) {
+      return status;
+    }
+    bool lower_unmapped = status.value();
 
     // If we were requesting to unmap everything in the lower page table,
     // we know we can unmap the lower level page table.  Otherwise, if
@@ -630,7 +640,7 @@ bool X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel 
     DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(level, new_cursor->vaddr()));
   }
 
-  return unmapped || !any_pages;
+  return zx::ok(unmapped || !any_pages);
 }
 
 // Base case of RemoveMapping for smallest page size.
@@ -697,7 +707,9 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
                            /*size=*/start_cursor.size() - new_cursor->size());
       MappingCursor result;
       if (cursor.size() > 0) {
-        RemoveMapping(table, level, cursor, &result, cm);
+        auto status = RemoveMapping(table, level, EnlargeOperation::No, cursor, &result, cm);
+        // Removing the exact mappings we just added should never be able to fail.
+        ASSERT(status.is_ok());
         DEBUG_ASSERT(result.size() == 0);
       }
     }
@@ -980,7 +992,12 @@ bool X86PageTableBase::HarvestMapping(volatile pt_entry_t* table,
       lower_unmapped = HarvestMapping(next_table, non_terminal_action, terminal_action,
                                       lower_level(level), *new_cursor, &cursor, cm);
     } else if (non_terminal_action == NonTerminalAction::FreeUnaccessed) {
-      lower_unmapped = RemoveMapping(next_table, lower_level(level), *new_cursor, &cursor, cm);
+      auto status = RemoveMapping(next_table, lower_level(level), EnlargeOperation::No, *new_cursor,
+                                  &cursor, cm);
+      // Although we pass in EnlargeOperation::No, the unmap should never fail since we are
+      // unmapping an entire block and never a sub part of a page.
+      ASSERT(status.is_ok());
+      lower_unmapped = status.value();
       // If we processed the entire next level then we can ignore lower_unmapped and just directly
       // assume that the whole page table is empty/unaccessed and that we can unmap it.
       unmap_page_table = page_aligned(level, new_cursor->vaddr()) && new_cursor->size() >= ps;
@@ -1069,7 +1086,8 @@ void X86PageTableBase::HarvestMappingL0(volatile pt_entry_t* table, TerminalActi
   DEBUG_ASSERT(new_cursor->size() == 0 || page_aligned(PageTableLevel::PT_L, new_cursor->vaddr()));
 }
 
-zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped) {
+zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
+                                         EnlargeOperation enlarge, size_t* unmapped) {
   LTRACEF("aspace %p, vaddr %#" PRIxPTR ", count %#zx\n", this, vaddr, count);
 
   canary_.Assert();
@@ -1083,18 +1101,21 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count, size
   MappingCursor result;
 
   __UNINITIALIZED ConsistencyManager cm(this);
+  // This needs to be initialized to some value as gcc cannot work out that it can elide the default
+  // constructor.
+  zx::status<bool> status = zx::ok(true);
   {
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);
-    RemoveMapping(virt_, top_level(), start, &result, &cm);
+    status = RemoveMapping(virt_, top_level(), enlarge, start, &result, &cm);
     cm.Finish();
   }
-  DEBUG_ASSERT(result.size() == 0);
+  DEBUG_ASSERT(result.size() == 0 || status.is_error());
 
   if (unmapped)
     *unmapped = count;
 
-  return ZX_OK;
+  return status.status_value();
 }
 
 zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,

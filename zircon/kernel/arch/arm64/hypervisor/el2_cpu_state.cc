@@ -31,7 +31,8 @@ constexpr size_t kEl2PhysAddressSize = (1ul << MMU_IDENT_SIZE_SHIFT);
 // Unmap all mappings everything in the given address space, releasing all resources.
 void UnmapAll(ArchVmAspace& aspace) {
   size_t page_count = kEl2PhysAddressSize / PAGE_SIZE;
-  zx_status_t result = aspace.Unmap(/*vaddr=*/0, page_count, nullptr);
+  zx_status_t result =
+      aspace.Unmap(/*vaddr=*/0, page_count, ArchVmAspace::EnlargeOperation::Yes, nullptr);
   DEBUG_ASSERT(result == ZX_OK);
 }
 

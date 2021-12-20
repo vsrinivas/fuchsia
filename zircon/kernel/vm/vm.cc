@@ -11,8 +11,8 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/console.h>
 #include <lib/cmpctmalloc.h>
+#include <lib/console.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/lazy_init/lazy_init.h>
@@ -384,7 +384,10 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t) {
     }
 
     size_t unmapped;
-    auto err = aspace->arch_aspace().Unmap(argv[2].u, (uint)argv[3].u, &unmapped);
+    // Strictly only attempt to unmap exactly what the user requested, they can deal with any
+    // failure that might result.
+    auto err = aspace->arch_aspace().Unmap(argv[2].u, (uint)argv[3].u,
+                                           ArchVmAspace::EnlargeOperation::No, &unmapped);
     printf("arch_mmu_unmap returns %d, unmapped %zu\n", err, unmapped);
   } else {
     printf("unknown command\n");

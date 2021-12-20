@@ -260,7 +260,8 @@ void VirtualAlloc::UnmapFreePages(vaddr_t vaddr, size_t pages) {
     list_add_tail(&free_list, &page->queue_node);
   }
   size_t unmapped = 0;
-  zx_status_t status = VmAspace::kernel_aspace()->arch_aspace().Unmap(vaddr, pages, &unmapped);
+  zx_status_t status = VmAspace::kernel_aspace()->arch_aspace().Unmap(
+      vaddr, pages, ArchVmAspace::EnlargeOperation::No, &unmapped);
   ZX_ASSERT_MSG(status == ZX_OK, "Failed to unmap %zu pages at %" PRIxPTR "", pages, vaddr);
   ZX_ASSERT(unmapped == pages);
   pmm_free(&free_list);
@@ -284,8 +285,8 @@ zx_status_t VirtualAlloc::AllocMapPages(vaddr_t vaddr, size_t num_pages) {
   auto cleanup = fit::defer([&mapped_count, &alloc_pages, vaddr]() {
     if (mapped_count > 0) {
       size_t unmapped = 0;
-      zx_status_t status =
-          VmAspace::kernel_aspace()->arch_aspace().Unmap(vaddr, mapped_count, &unmapped);
+      zx_status_t status = VmAspace::kernel_aspace()->arch_aspace().Unmap(
+          vaddr, mapped_count, ArchVmAspace::EnlargeOperation::No, &unmapped);
       ZX_ASSERT(status == ZX_OK);
       ZX_ASSERT(unmapped == mapped_count);
     }

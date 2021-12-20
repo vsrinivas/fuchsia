@@ -29,8 +29,6 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   ArmArchVmAspace(vaddr_t base, size_t size, uint mmu_flags, page_alloc_fn_t paf = nullptr);
   virtual ~ArmArchVmAspace();
 
-  using ArchVmAspaceInterface::page_alloc_fn_t;
-
   zx_status_t Init() override;
 
   zx_status_t Destroy() override;
@@ -41,7 +39,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   zx_status_t MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count, uint mmu_flags,
                             size_t* mapped) override;
 
-  zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
+  zx_status_t Unmap(vaddr_t vaddr, size_t count, EnlargeOperation enlarge,
+                    size_t* unmapped) override;
 
   zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
 
@@ -90,9 +89,9 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
                        pte_t attrs, uint index_shift, uint page_size_shift,
                        volatile pte_t* page_table, ConsistencyManager& cm) TA_REQ(lock_);
 
-  ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size, uint index_shift,
-                         uint page_size_shift, volatile pte_t* page_table, ConsistencyManager& cm)
-      TA_REQ(lock_);
+  ssize_t UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, size_t size, EnlargeOperation enlarge,
+                         uint index_shift, uint page_size_shift, volatile pte_t* page_table,
+                         ConsistencyManager& cm) TA_REQ(lock_);
 
   zx_status_t ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in, pte_t attrs,
                                uint index_shift, uint page_size_shift, volatile pte_t* page_table,
@@ -125,9 +124,9 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
                    uint top_size_shift, uint top_index_shift, uint page_size_shift,
                    ConsistencyManager& cm) TA_REQ(lock_);
 
-  ssize_t UnmapPages(vaddr_t vaddr, size_t size, vaddr_t vaddr_base, uint top_size_shift,
-                     uint top_index_shift, uint page_size_shift, ConsistencyManager& cm)
-      TA_REQ(lock_);
+  ssize_t UnmapPages(vaddr_t vaddr, size_t size, EnlargeOperation enlarge, vaddr_t vaddr_base,
+                     uint top_size_shift, uint top_index_shift, uint page_size_shift,
+                     ConsistencyManager& cm) TA_REQ(lock_);
 
   zx_status_t ProtectPages(vaddr_t vaddr, size_t size, pte_t attrs, vaddr_t vaddr_base,
                            uint top_size_shift, uint top_index_shift, uint page_size_shift)

@@ -352,7 +352,8 @@ bool virtual_alloc_arch_alloc_failure_test() {
   EXPECT_TRUE(RangeEmpty(vaddr, 240));
 
   // Once we unmap our page we should successfully allocate the original mapping.
-  EXPECT_OK(VmAspace::kernel_aspace()->arch_aspace().Unmap(vaddr + 240ul * PAGE_SIZE, 1, nullptr));
+  EXPECT_OK(VmAspace::kernel_aspace()->arch_aspace().Unmap(
+      vaddr + 240ul * PAGE_SIZE, 1, ArchVmAspace::EnlargeOperation::No, nullptr));
 
   result = alloc.AllocPages(250);
   ASSERT_TRUE(result.is_ok());

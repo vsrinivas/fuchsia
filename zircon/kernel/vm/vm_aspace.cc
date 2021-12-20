@@ -723,7 +723,7 @@ void VmAspace::DropUserPageTables() {
   if (!is_user())
     return;
   Guard<Mutex> guard{&lock_};
-  arch_aspace().Unmap(base(), size() / PAGE_SIZE, nullptr);
+  arch_aspace().Unmap(base(), size() / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, nullptr);
 }
 
 bool VmAspace::IntersectsVdsoCode(vaddr_t base, size_t size) const {

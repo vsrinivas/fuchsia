@@ -1218,7 +1218,8 @@ zx_status_t VmAddressRegion::ReserveSpace(const char* name, vaddr_t base, size_t
   // mappings. If the desired protection flags is "no permissions" then we need to use unmap instead
   // of protect since a mapping with no permissions is not valid on most architectures.
   if ((arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) == 0) {
-    return aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+    return aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, ArchVmAspace::EnlargeOperation::No,
+                                        nullptr);
   } else {
     return aspace_->arch_aspace().Protect(base, size / PAGE_SIZE, arch_mmu_flags);
   }

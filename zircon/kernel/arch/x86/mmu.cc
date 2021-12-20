@@ -651,11 +651,12 @@ zx_status_t X86ArchVmAspace::Destroy() {
   return ZX_OK;
 }
 
-zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) {
+zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, EnlargeOperation enlarge,
+                                   size_t* unmapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
-  zx_status_t result = pt_->UnmapPages(vaddr, count, unmapped);
+  zx_status_t result = pt_->UnmapPages(vaddr, count, enlarge, unmapped);
   MarkAspaceModified();
   return result;
 }

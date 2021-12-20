@@ -93,7 +93,8 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
                             size_t* mapped) override;
   zx_status_t Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
                   ExistingEntryAction existing_action, size_t* mapped) override;
-  zx_status_t Unmap(vaddr_t vaddr, size_t count, size_t* unmapped) override;
+  zx_status_t Unmap(vaddr_t vaddr, size_t count, EnlargeOperation enlarge,
+                    size_t* unmapped) override;
   zx_status_t Protect(vaddr_t vaddr, size_t count, uint mmu_flags) override;
   zx_status_t Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flags) override;
 

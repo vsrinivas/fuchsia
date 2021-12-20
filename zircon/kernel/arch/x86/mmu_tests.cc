@@ -72,7 +72,8 @@ static bool x86_arch_vmaspace_usermmu_tests() {
     EXPECT_EQ(retrieved_pa, pa);
 
     size_t unmapped;
-    EXPECT_EQ(ZX_OK, aspace.Unmap(kTestVirtualAddress, 1, &unmapped));
+    EXPECT_EQ(ZX_OK,
+              aspace.Unmap(kTestVirtualAddress, 1, ArchVmAspace::EnlargeOperation::Yes, &unmapped));
     EXPECT_EQ(unmapped, mapped);
     EXPECT_EQ(check_virtual_address_mapped(pml4, kTestVirtualAddress), false);
     // Expect no user mode mappings after the user mapping was removed.

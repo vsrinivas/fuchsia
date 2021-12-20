@@ -912,7 +912,7 @@ static bool arch_noncontiguous_map() {
     status = aspace.Query(base + 4 * PAGE_SIZE, nullptr, nullptr);
     EXPECT_EQ(ZX_ERR_NOT_FOUND, status, "bad first map\n");
 
-    status = aspace.Unmap(base, ktl::size(phys), &mapped);
+    status = aspace.Unmap(base, ktl::size(phys), ArchVmAspace::EnlargeOperation::Yes, &mapped);
     ASSERT_EQ(ZX_OK, status, "failed unmap\n");
     EXPECT_EQ(ktl::size(phys), mapped, "weird unmap\n");
     status = aspace.Destroy();
@@ -951,7 +951,7 @@ static bool arch_vm_aspace_protect_split_pages() {
   ArchVmAspace aspace(0, USER_ASPACE_SIZE, 0);
   ASSERT_OK(aspace.Init());
   auto cleanup = fit::defer([&]() {
-    aspace.Unmap(0, USER_ASPACE_SIZE / PAGE_SIZE, nullptr);
+    aspace.Unmap(0, USER_ASPACE_SIZE / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, nullptr);
     aspace.Destroy();
   });
 
@@ -1001,7 +1001,7 @@ static bool arch_vm_aspace_protect_split_pages_out_of_memory() {
   ArchVmAspace aspace(0, USER_ASPACE_SIZE, 0, allocator);
   ASSERT_OK(aspace.Init());
   auto cleanup = fit::defer([&]() {
-    aspace.Unmap(0, USER_ASPACE_SIZE / PAGE_SIZE, nullptr);
+    aspace.Unmap(0, USER_ASPACE_SIZE / PAGE_SIZE, ArchVmAspace::EnlargeOperation::Yes, nullptr);
     aspace.Destroy();
   });
 
