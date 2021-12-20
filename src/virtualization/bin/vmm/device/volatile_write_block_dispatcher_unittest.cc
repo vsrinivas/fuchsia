@@ -41,8 +41,10 @@ class StaticDispatcher : public BlockDispatcher {
 std::unique_ptr<BlockDispatcher> CreateDispatcher() {
   std::unique_ptr<BlockDispatcher> disp;
   CreateVolatileWriteBlockDispatcher(
-      kDispatcherSize, std::make_unique<StaticDispatcher>(),
-      [&disp](size_t size, std::unique_ptr<BlockDispatcher> in) { disp = std::move(in); });
+      kDispatcherSize, kBlockSectorSize, std::make_unique<StaticDispatcher>(),
+      [&disp](uint64_t capacity, uint32_t block_size, std::unique_ptr<BlockDispatcher> in) {
+        disp = std::move(in);
+      });
   return disp;
 }
 

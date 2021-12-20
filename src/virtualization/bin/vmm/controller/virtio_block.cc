@@ -41,19 +41,21 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
   if (status != ZX_OK) {
     return status;
   }
-  uint64_t size;
-  status = block_->Start(std::move(start_info), id, mode_, format, std::move(client), &size);
+  uint64_t capacity;
+  uint32_t block_size;
+  status = block_->Start(std::move(start_info), id, mode_, format, std::move(client), &capacity,
+                         &block_size);
   if (status != ZX_OK) {
     return status;
-  } else if (size % kBlockSectorSize != 0) {
-    FX_LOGS(ERROR) << "Virtio block device must be aligned to block sector size: " << id
-                   << " has size " << size << ".";
+  } else if (capacity % block_size != 0) {
+    FX_LOGS(ERROR) << "Virtio block device capacity must be aligned to block size: " << id
+                   << " has capacity " << capacity << " and block size " << block_size;
     return ZX_ERR_INVALID_ARGS;
   }
 
   std::lock_guard<std::mutex> lock(device_config_.mutex);
-  config_.capacity = size / kBlockSectorSize;
-  config_.blk_size = kBlockSectorSize;
+  config_.capacity = capacity / block_size;
+  config_.blk_size = block_size;
   return ZX_OK;
 }
 

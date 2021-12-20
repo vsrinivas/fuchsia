@@ -102,7 +102,8 @@ protocol VirtioBlock {
         format fuchsia.virtualization.BlockFormat;
         client zx.handle:CHANNEL;
     }) -> (struct {
-        size uint64;
+        capacity uint64;
+        block_size uint32;
     });
 };
 

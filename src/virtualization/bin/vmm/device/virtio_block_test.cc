@@ -53,12 +53,13 @@ class VirtioBlockTest : public TestWithDevice {
     services_->Connect(block_.NewRequest());
     RunLoopUntilIdle();
 
-    uint64_t size;
-    status = block_->Start(std::move(start_info), kVirtioBlockId,
-                           fuchsia::virtualization::BlockMode::READ_WRITE,
-                           fuchsia::virtualization::BlockFormat::FILE, std::move(client), &size);
+    uint64_t capacity;
+    uint32_t block_size;
+    status = block_->Start(
+        std::move(start_info), kVirtioBlockId, fuchsia::virtualization::BlockMode::READ_WRITE,
+        fuchsia::virtualization::BlockFormat::FILE, std::move(client), &capacity, &block_size);
     ASSERT_EQ(ZX_OK, status);
-    ASSERT_EQ(kBlockSectorSize * kNumSectors, size);
+    ASSERT_EQ(kBlockSectorSize * kNumSectors, capacity);
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&request_queue_};

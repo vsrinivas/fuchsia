@@ -101,7 +101,7 @@ void CreateFileBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::File
                     zx_status_t status, fuchsia::io::NodeAttributes attrs) mutable {
     FX_CHECK(status == ZX_OK) << "Failed to get attributes";
     auto disp = std::make_unique<FileBlockDispatcher>(dispatcher, std::move(file));
-    callback(attrs.content_size, std::move(disp));
+    callback(attrs.content_size, kBlockSectorSize, std::move(disp));
   });
 }
 
@@ -159,7 +159,7 @@ void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FileP
         FX_CHECK(status == ZX_OK) << "Failed to map VMO";
         auto disp = std::make_unique<VmoBlockDispatcher>(std::move(file), std::move(buffer->vmo),
                                                          buffer->size, addr);
-        callback(buffer->size, std::move(disp));
+        callback(buffer->size, kBlockSectorSize, std::move(disp));
       });
 }
 
@@ -258,10 +258,11 @@ class VolatileWriteBlockDispatcher : public BlockDispatcher {
   }
 };
 
-void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDispatcher> base,
+void CreateVolatileWriteBlockDispatcher(uint64_t capacity, uint32_t block_size,
+                                        std::unique_ptr<BlockDispatcher> base,
                                         NestedBlockDispatcherCallback callback) {
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
+  zx_status_t status = zx::vmo::create(capacity, 0, &vmo);
   FX_CHECK(status == ZX_OK) << "Failed to create VMO";
 
   const char name[] = "volatile-block";
@@ -270,12 +271,12 @@ void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDi
 
   uintptr_t addr;
   status = zx::vmar::root_self()->map(
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, vmo_size, &addr);
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, 0, vmo, 0, capacity, &addr);
   FX_CHECK(status == ZX_OK) << "Failed to map VMO";
 
   auto disp = std::make_unique<VolatileWriteBlockDispatcher>(std::move(base), std::move(vmo),
-                                                             vmo_size, addr);
-  callback(vmo_size, std::move(disp));
+                                                             capacity, addr);
+  callback(capacity, block_size, std::move(disp));
 }
 
 // Dispatcher that reads from a QCOW image.
@@ -312,9 +313,9 @@ void CreateQcowBlockDispatcher(std::unique_ptr<BlockDispatcher> base,
   auto file_ptr = file.get();
   auto load = [base = std::move(base), file = std::move(file),
                callback = std::move(callback)](zx_status_t status) mutable {
-    size_t size = file->size();
+    uint64_t capacity = file->size();
     auto disp = std::make_unique<QcowBlockDispatcher>(std::move(base), std::move(file));
-    callback(size, std::move(disp));
+    callback(capacity, kBlockSectorSize, std::move(disp));
   };
   file_ptr->Load(base_ptr, std::move(load));
 }
@@ -401,8 +402,8 @@ void CreateRemoteBlockDispatcher(zx::channel client, const PhysMem& phys_mem,
   status = device->BlockGetInfo(&block_info);
   FX_CHECK(status == ZX_OK) << "Failed to get FIFO for block device";
 
-  size_t size = block_info.block_count * block_info.block_size;
+  uint64_t capacity = block_info.block_count * block_info.block_size;
   auto disp = std::make_unique<RemoteBlockDispatcher>(std::move(device), std::move(id),
                                                       block_info.block_size, phys_mem);
-  callback(size, std::move(disp));
+  callback(capacity, block_info.block_size, std::move(disp));
 }

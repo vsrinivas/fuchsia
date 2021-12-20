@@ -289,14 +289,16 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     read_only_ = mode == fuchsia::virtualization::BlockMode::READ_ONLY;
     PrepStart(std::move(start_info));
 
-    NestedBlockDispatcherCallback nested = [this, id = std::move(id),
-                                            callback = std::move(callback)](
-                                               size_t size, std::unique_ptr<BlockDispatcher> disp) {
-      request_stream_.Init(
-          std::move(disp), id, phys_mem_,
-          fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBlockImpl::Interrupt));
-      callback(size);
-    };
+    NestedBlockDispatcherCallback nested =
+        [this, id = std::move(id), callback = std::move(callback)](
+            uint64_t capacity, uint32_t block_size, std::unique_ptr<BlockDispatcher> disp) {
+          request_stream_.Init(
+              std::move(disp), id, phys_mem_,
+              fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioBlockImpl::Interrupt));
+          callback(capacity, block_size);
+          FX_LOGS(INFO) << "Started block device '" << id << "' with capacity " << capacity
+                        << " and block size " << block_size;
+        };
 
     if (format == fuchsia::virtualization::BlockFormat::BLOCK) {
       CreateRemoteBlockDispatcher(std::move(client), phys_mem_, std::move(nested));
@@ -304,14 +306,15 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     }
 
     if (mode == fuchsia::virtualization::BlockMode::VOLATILE_WRITE) {
-      nested = [nested = std::move(nested)](size_t size,
+      nested = [nested = std::move(nested)](uint64_t capacity, uint32_t block_size,
                                             std::unique_ptr<BlockDispatcher> disp) mutable {
-        CreateVolatileWriteBlockDispatcher(size, std::move(disp), std::move(nested));
+        CreateVolatileWriteBlockDispatcher(capacity, block_size, std::move(disp),
+                                           std::move(nested));
       };
     }
 
     if (format == fuchsia::virtualization::BlockFormat::QCOW) {
-      nested = [nested = std::move(nested)](size_t size,
+      nested = [nested = std::move(nested)](uint64_t capacity, uint32_t block_size,
                                             std::unique_ptr<BlockDispatcher> disp) mutable {
         CreateQcowBlockDispatcher(std::move(disp), std::move(nested));
       };

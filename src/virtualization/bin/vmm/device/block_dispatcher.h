@@ -43,13 +43,14 @@ class IoGuard : public fbl::RefCounted<IoGuard> {
 // enable writes by storing them in-memory, you could do the following:
 //
 // auto nested = [callback = std::move(callback)](
-//     size_t size, std::unique_ptr<BlockDispatcher> disp) mutable {
+//     uint64_t capacity, uint32_t block_size,
+//     std::unique_ptr<BlockDispatcher> disp) mutable {
 //   CreateVolatileWriteBlockDispatcher(size, std::move(disp),
 //                                      std::move(callback));
 // };
 // CreateFileBlockDispatcher(std::move(file), std::move(nested));
 using NestedBlockDispatcherCallback =
-    fit::function<void(size_t size, std::unique_ptr<BlockDispatcher>)>;
+    fit::function<void(uint64_t capacity, uint32_t block_size, std::unique_ptr<BlockDispatcher>)>;
 
 // Creates a BlockDispatcher based on a file.
 void CreateFileBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
@@ -62,7 +63,8 @@ void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FileP
 
 // Creates a BlockDispatcher based on another BlockDispatcher, but stores writes
 // in memory.
-void CreateVolatileWriteBlockDispatcher(size_t vmo_size, std::unique_ptr<BlockDispatcher> base,
+void CreateVolatileWriteBlockDispatcher(uint64_t capacity, uint32_t block_size,
+                                        std::unique_ptr<BlockDispatcher> base,
                                         NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on another BlockDispatcher that is a QCOW
