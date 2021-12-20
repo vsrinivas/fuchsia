@@ -5,8 +5,6 @@
 package sdkcommon
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,9 +66,12 @@ const (
 	PackageRepoKey string = "package-repo"
 	PackagePortKey string = "package-port"
 	DefaultKey     string = "default"
-	// Top level key for storing data.
-	deviceConfigurationKey string = "DeviceConfiguration"
-	defaultDeviceKey       string = "_DEFAULT_DEVICE_"
+	// Top level key used to store device configurations in user level.
+	deviceConfigurationKey string = "device_config"
+	// Deprecated - top level key for storing device configurations in global level.
+	globalDeviceConfigurationKey string = "DeviceConfiguration"
+	// Deprecated - key used to identify the default device in global level.
+	defaultDeviceKey string = "_DEFAULT_DEVICE_"
 
 	FFXIsolatedEnvKey = "FFX_ISOLATED_CONFIG"
 
@@ -83,7 +84,8 @@ const (
 	defaultBucketName  string = "fuchsia"
 	DefaultSSHPort     string = "22"
 	defaultPackagePort string = "8083"
-	helpfulTipMsg      string = `Try running 'ffx target list' and then 'fconfig set-device <device_name> --image <image_name> --default'.`
+	helpfulTipMsg      string = `Try running 'ffx target list' and then 'ffx config set device_config.<device-name>.image <image_name>'.
+	If you have more than one device listed, use 'ffx target default set <device-name>' to set a default device.`
 )
 
 var validPropertyNames = [...]string{
@@ -115,9 +117,8 @@ type DeviceConfig struct {
 // These values should be set or initialized by calling
 // New().
 type SDKProperties struct {
-	dataPath                 string
-	version                  string
-	globalPropertiesFilename string
+	dataPath string
+	version  string
 }
 
 func (sdk SDKProperties) setDeviceDefaults(deviceConfig *DeviceConfig) DeviceConfig {
@@ -140,8 +141,11 @@ func (sdk SDKProperties) setDeviceDefaults(deviceConfig *DeviceConfig) DeviceCon
 }
 
 // Builds the data key for the given segments.
-func getDeviceDataKey(segments []string) string {
-	var fullKey = []string{deviceConfigurationKey}
+func getDeviceDataKey(segments []string, isGlobal bool) string {
+	fullKey := []string{deviceConfigurationKey}
+	if isGlobal {
+		fullKey = []string{globalDeviceConfigurationKey}
+	}
 	return strings.Join(append(fullKey, segments...), ".")
 }
 
@@ -171,14 +175,16 @@ func DefaultGetHostname() (string, error) {
 	return os.Hostname()
 }
 
-// GetUserHomeDir to allow mocking.
-var GetUserHomeDir = DefaultGetUserHomeDir
+var (
+	// GetUserHomeDir to allow mocking.
+	GetUserHomeDir = DefaultGetUserHomeDir
 
-// GetUsername to allow mocking.
-var GetUsername = DefaultGetUsername
+	// GetUsername to allow mocking.
+	GetUsername = DefaultGetUsername
 
-// GetHostname to allow mocking.
-var GetHostname = DefaultGetHostname
+	// GetHostname to allow mocking.
+	GetHostname = DefaultGetHostname
+)
 
 func NewWithDataPath(dataPath string) (SDKProperties, error) {
 	sdk := SDKProperties{}
@@ -213,16 +219,6 @@ func NewWithDataPath(dataPath string) (SDKProperties, error) {
 		}
 	}
 
-	sdk.globalPropertiesFilename = filepath.Join(sdk.dataPath, "global_ffx_props.json")
-	if !FileExists(sdk.globalPropertiesFilename) {
-		f, err := os.Create(sdk.globalPropertiesFilename)
-		if err != nil {
-			return sdk, err
-		}
-
-		defer f.Close()
-	}
-	err = initFFXGlobalConfig(sdk)
 	return sdk, err
 }
 
@@ -268,7 +264,7 @@ func readSDKVersion(manifestFilePath string) (string, error) {
 }
 
 // GetDefaultPackageRepoDir returns the path to the package repository.
-// If the value has been set with `fconfig`, use that value.
+// If the value has been set with `ffx`, use that value.
 // Otherwise if there is a default target defined, return the target
 // specific path.
 // Lastly, if there is nothing, return the default repo path.
@@ -906,10 +902,9 @@ func (sdk SDKProperties) mergeDeviceConfigsWithDiscoverableDevices(configs []Dev
 	return finalConfigs
 }
 
-// GetDeviceConfigurations returns a list of all device configurations.
-func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
+// getConfiguredDevices gets a list of devices that are configured in ffx config.
+func (sdk SDKProperties) getConfiguredDevices(isMigration bool) ([]DeviceConfig, error) {
 	var configs []DeviceConfig
-
 	// Get all config data.
 	configData, err := getDeviceConfigurationData(sdk, deviceConfigurationKey)
 	if err != nil {
@@ -927,7 +922,7 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 	if deviceConfigMap, ok := configData[deviceConfigurationKey].(map[string]interface{}); ok {
 		for k, v := range deviceConfigMap {
 			if !isReservedProperty(k) {
-				if device, ok := sdk.mapToDeviceConfig(v); ok {
+				if device, ok := sdk.mapToDeviceConfig(k, v); ok {
 					if defaultDeviceName == device.DeviceName {
 						device.IsDefault = true
 						visitedDefaultDevice = true
@@ -938,6 +933,11 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 			}
 		}
 	}
+	// If we are migrating device configurations from global to user,
+	// we don't want to append the default device if it wasn't seen already.
+	if isMigration {
+		return configs, nil
+	}
 	if !visitedDefaultDevice {
 		newConfig := DeviceConfig{
 			DeviceName: defaultDeviceName,
@@ -946,6 +946,15 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 		sdk.setDeviceDefaults(&newConfig)
 		configs = append(configs, newConfig)
 	}
+	return configs, nil
+}
+
+// GetDeviceConfigurations returns a list of all device configurations.
+func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
+	configs, err := sdk.getConfiguredDevices(false)
+	if err != nil {
+		return nil, err
+	}
 	return sdk.mergeDeviceConfigsWithDiscoverableDevices(configs), nil
 }
 
@@ -953,7 +962,7 @@ func (sdk SDKProperties) GetDeviceConfigurations() ([]DeviceConfig, error) {
 func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, error) {
 	var deviceConfig DeviceConfig
 
-	dataKey := getDeviceDataKey([]string{name})
+	dataKey := getDeviceDataKey([]string{name}, false)
 	configData, err := getDeviceConfigurationData(sdk, dataKey)
 	if err != nil {
 		return deviceConfig, fmt.Errorf("Could not read configuration data : %v", err)
@@ -967,7 +976,7 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 	}
 
 	if deviceData, ok := configData[dataKey]; ok {
-		if deviceConfig, ok := sdk.mapToDeviceConfig(deviceData); ok {
+		if deviceConfig, ok := sdk.mapToDeviceConfig(name, deviceData); ok {
 			defaultDeviceName, err := sdk.getDefaultFFXDevice()
 			if err != nil {
 				return deviceConfig, err
@@ -999,7 +1008,6 @@ func (sdk SDKProperties) SetDeviceIP(deviceIP, sshPort string) error {
 
 // SaveDeviceConfiguration persists the given device configuration properties.
 func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
-
 	// Create a map of key to value to store. Only write out values that are explicitly set to something
 	// that is not the default.
 	origConfig, err := sdk.GetDeviceConfiguration(newConfig.DeviceName)
@@ -1010,28 +1018,19 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 	sdk.setDeviceDefaults(&defaultConfig)
 
 	dataMap := make(map[string]string)
-	dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceNameKey})] = newConfig.DeviceName
-	// if the value changed from the original, write it out.
+	// If the value changed from the original, write it out. We only write configurations
+	// to ffx if they are not the default unless a value was previously written.
 	if origConfig.Bucket != newConfig.Bucket {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = newConfig.Bucket
-	} else if defaultConfig.Bucket == newConfig.Bucket {
-		// if the new value is the default value, then write the empty string.
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = ""
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey}, false)] = newConfig.Bucket
 	}
 	if origConfig.Image != newConfig.Image {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = newConfig.Image
-	} else if defaultConfig.Image == newConfig.Image {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = ""
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey}, false)] = newConfig.Image
 	}
 	if origConfig.PackagePort != newConfig.PackagePort {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = newConfig.PackagePort
-	} else if defaultConfig.PackagePort == newConfig.PackagePort {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey})] = ""
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackagePortKey}, false)] = newConfig.PackagePort
 	}
 	if origConfig.PackageRepo != newConfig.PackageRepo {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
-	} else if defaultConfig.PackageRepo == newConfig.PackageRepo {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = defaultConfig.PackageRepo
+		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey}, false)] = newConfig.PackageRepo
 	}
 	if newConfig.IsDefault {
 		if err := sdk.setFFXDefaultDevice(newConfig.DeviceName); err != nil {
@@ -1064,20 +1063,27 @@ func (sdk SDKProperties) unsetFFXDefaultDevice() error {
 }
 
 // RemoveDeviceConfiguration removes the device settings for the given name.
-func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
-	dataKey := getDeviceDataKey([]string{deviceName})
+func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string, isGlobal bool) error {
+	dataKey := getDeviceDataKey([]string{deviceName}, isGlobal)
 
-	args := []string{"config", "remove", "--level", "global", dataKey}
+	args := []string{"config", "remove", dataKey}
+
+	if isGlobal {
+		args = append(args, []string{"--level", "global"}...)
+	}
 
 	if _, err := sdk.RunFFX(args, false); err != nil {
-		return fmt.Errorf("Error removing %s configuration: %v", deviceName, err)
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("Error removing %s configuration with data key %s: %s", deviceName, dataKey, string(exiterr.Stderr))
+		}
+		return fmt.Errorf("Error removing %s configuration with data key %s: %w", deviceName, dataKey, err)
 	}
 
 	defaultDeviceName, err := sdk.getDefaultFFXDevice()
 	if err != nil {
 		return err
 	}
-	if defaultDeviceName == deviceName {
+	if defaultDeviceName == deviceName && !isGlobal {
 		if err := sdk.unsetFFXDefaultDevice(); err != nil {
 			return fmt.Errorf("unable to unset default device via ffx: %v", err)
 		}
@@ -1087,7 +1093,7 @@ func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string) error {
 
 // ResolveTargetAddress evaluates the deviceIP and deviceName passed in
 // to determine the target IP address. This include consulting the configuration
-// information set via `fconfig`.
+// information set via `ffx`.
 func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string) (DeviceConfig, error) {
 	var (
 		targetAddress string
@@ -1119,7 +1125,7 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 
 	if targetAddress == "" {
 		return DeviceConfig{}, fmt.Errorf(`Cannot get target address for %v.
-		Try running 'ffx target list' and verify the name matches in 'fconfig list'.`, deviceName)
+		Try running 'ffx target list'.`, deviceName)
 	}
 
 	return config, nil
@@ -1127,6 +1133,10 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 
 // GetDefaultDevice gets the default device to use by default.
 func (sdk SDKProperties) GetDefaultDevice(deviceName string) (DeviceConfig, error) {
+	if err := sdk.MigrateGlobalData(); err != nil {
+		return DeviceConfig{}, err
+	}
+
 	configs, err := sdk.GetDeviceConfigurations()
 	if err != nil {
 		return DeviceConfig{}, err
@@ -1166,74 +1176,63 @@ func (sdk SDKProperties) GetDefaultDevice(deviceName string) (DeviceConfig, erro
 	return discoverableDevicesConfigs[0], nil
 }
 
-func initFFXGlobalConfig(sdk SDKProperties) error {
-	args := []string{"config", "env"}
-	var (
-		err    error
-		output string
-		line   string
-	)
-	if output, err = sdk.RunFFX(args, false); err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return fmt.Errorf("Error getting config environment: %v %v: %v",
-				args, string(exitError.Stderr), exitError)
-		}
-		return fmt.Errorf("Error getting config environment: %v %v", args, err)
-	}
-	reader := bufio.NewReader(bytes.NewReader([]byte(output)))
-	hasGlobal := false
-	for !hasGlobal {
-		line, err = reader.ReadString('\n')
-		if err != nil {
-			if err.Error() == "EOF" {
-				break
-			} else {
-				return err
-			}
-		}
-		if strings.HasPrefix(strings.TrimSpace(line), "Global") {
-			break
-		}
-	}
-	doSetEnv := len(line) == 0
-	if len(line) > 0 {
-		const (
-			prefix    = "Global:"
-			prefixLen = len(prefix)
-		)
-		index := strings.Index(line, "Global:")
-		if index > len(line) {
-			return fmt.Errorf("Cannot parse `Global:` prefix from %v", line)
-		}
-		filename := strings.TrimSpace(line[index+prefixLen:])
-		_, err := os.Stat(filename)
-		doSetEnv = os.IsNotExist(err)
-
-	}
-	if doSetEnv {
-		// Create the global config level
-		if len(sdk.globalPropertiesFilename) == 0 {
-			return fmt.Errorf("Cannot initialize property config, global file name is empty: %v", sdk)
-		}
-		args := []string{"config", "env", "set", sdk.globalPropertiesFilename, "--level", "global"}
-
-		if _, err := sdk.RunFFX(args, false); err != nil {
-			var exitError *exec.ExitError
-			if errors.As(err, &exitError) {
-				return fmt.Errorf("Error initializing global properties environment: %v %v: %v", args, string(exitError.Stderr), exitError)
-			}
-			return fmt.Errorf("Error initializing global properties environment: %v %v", args, err)
-		}
+// writeConfigurationData calls `ffx` to store the value at the specified key.
+func writeConfigurationData(sdk SDKProperties, key string, value string) error {
+	args := []string{"config", "set", key, value}
+	if _, err := sdk.RunFFX(args, false); err != nil {
+		return fmt.Errorf("Error writing %s = %s: %w", key, value, err)
 	}
 	return nil
 }
 
-// writeConfigurationData calls `ffx` to store the value at the specified key.
-func writeConfigurationData(sdk SDKProperties, key string, value string) error {
-	args := []string{"config", "set", "--level", "global", key, value}
-	if output, err := sdk.RunFFX(args, false); err != nil {
-		return fmt.Errorf("Error writing %v = %v: %v %v", key, value, err, output)
+// isDeviceInList checks if device name is in the list.
+func isDeviceInList(devices []DeviceConfig, deviceName string) bool {
+	for _, device := range devices {
+		if device.DeviceName == deviceName {
+			return true
+		}
+	}
+	return false
+}
+
+// MigrateGlobalData migrates global DeviceConfiguration to user level using
+// device_config key.
+func (sdk SDKProperties) MigrateGlobalData() error {
+	// Get all global config data in DeviceConfiguration. This doesn't look
+	// at devices that are discoverable by ffx target list.
+	configData, err := getDeviceConfigurationData(sdk, globalDeviceConfigurationKey)
+	if err != nil {
+		return fmt.Errorf("could not read global configuration data: %w", err)
+	}
+	// If there is no global configuration data, simply return.
+	if configData == nil {
+		return nil
+	}
+
+	// Get the list of already configured device in user level. We don't want to
+	// migrate devices that are already configured in user level.
+	// This doesn't look at devices that are discoverable by ffx target list.
+	alreadyConfiguredDevices, err := sdk.getConfiguredDevices(true)
+	if err != nil {
+		return err
+	}
+
+	if deviceConfigMap, ok := configData[globalDeviceConfigurationKey].(map[string]interface{}); ok {
+		for k, v := range deviceConfigMap {
+			if !isReservedProperty(k) {
+				if device, ok := sdk.mapToDeviceConfig(k, v); ok {
+					if isDeviceInList(alreadyConfiguredDevices, device.DeviceName) {
+						continue
+					}
+					// Save the device to user configuration. We purposely don't remove the device
+					// in order to ensure that different versions of the tools still work and don't
+					// require reconfiguration.
+					if err := sdk.SaveDeviceConfiguration(device); err != nil {
+						return fmt.Errorf("failed to migrate ffx device configurations from global to user: %w", err)
+					}
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -1307,14 +1306,15 @@ func isReservedProperty(property string) bool {
 }
 
 // mapToDeviceConfig converts the map returned by json into a DeviceConfig struct.
-func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool) {
+func (sdk SDKProperties) mapToDeviceConfig(deviceName string, data interface{}) (DeviceConfig, bool) {
 	var (
-		device      DeviceConfig
-		deviceData  map[string]interface{}
-		invalidKeys []string
-		ok          bool
-		value       string
+		device     DeviceConfig
+		deviceData map[string]interface{}
+		ok         bool
+		value      string
 	)
+
+	device.DeviceName = deviceName
 
 	if deviceData, ok = data.(map[string]interface{}); ok {
 		for _, key := range validPropertyNames {
@@ -1329,14 +1329,13 @@ func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool
 			if val, ok := deviceData[key]; ok {
 				value = fmt.Sprintf("%v", val)
 			} else {
-				invalidKeys = append(invalidKeys, key)
-				continue
+				// Setting the value to empty string makes it that the device default
+				// value is used instead.
+				value = ""
 			}
 			switch key {
 			case BucketKey:
 				device.Bucket = value
-			case DeviceNameKey:
-				device.DeviceName = value
 			case ImageKey:
 				device.Image = value
 			case PackagePortKey:
@@ -1346,8 +1345,5 @@ func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool
 			}
 		}
 	}
-	if len(invalidKeys) > 0 {
-		fmt.Fprintf(os.Stderr, "Cannot read the data for the following keys: %v. Verify that %v is a valid config file.\n", strings.Join(invalidKeys, ", "), sdk.globalPropertiesFilename)
-	}
-	return device, ok
+	return sdk.setDeviceDefaults(&device), ok
 }

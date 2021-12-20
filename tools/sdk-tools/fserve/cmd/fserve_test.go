@@ -1219,22 +1219,11 @@ func fakeSSH(args []string) {
 }
 
 func fakeFFX(args []string) {
-	if args[0] == "config" && args[1] == "env" {
-		if len(args) == 3 && args[2] == "get" {
-			fmt.Printf("Environment:\n")
-			fmt.Printf("User: none\n")
-			fmt.Printf("Build: none\n")
-			fmt.Printf("Global: none\n")
-			os.Exit(0)
-		} else if args[2] == "set" {
-			os.Exit(0)
-		}
-	}
 	if args[0] == "config" && args[1] == "get" {
-		if args[2] == "DeviceConfiguration" {
+		if args[2] == "DeviceConfiguration" || args[2] == "device_config" {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
 			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration.remote-target-name" {
+		} else if args[2] == "DeviceConfiguration.remote-target-name" || args[2] == "device_config.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
 		} else if args[2] == ffxConfigServerModeKey {
@@ -1247,6 +1236,10 @@ func fakeFFX(args []string) {
 		}
 
 	}
+	if args[0] == "config" && (args[1] == "set" || args[1] == "remove") {
+		os.Exit(0)
+	}
+
 	if args[0] == "target" && args[1] == "default" && args[2] == "get" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
 		os.Exit(0)

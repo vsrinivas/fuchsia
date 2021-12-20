@@ -99,9 +99,9 @@ func main() {
 	// target related options
 	privateKeyFlag := flag.String("private-key", "", "Uses additional private key when using ssh to access the device.")
 	deviceNameFlag := flag.String("device-name", "", `Serves packages to a device with the given device hostname. Cannot be used with --device-ip."
-	  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
+	  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
-	  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
+	  If neither --device-name nor --device-ip are specified, the device-name configured using ffx is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
 	serverMode := flag.String("server-mode", "", "Specify the server mode 'pm' or 'ffx'.")
 

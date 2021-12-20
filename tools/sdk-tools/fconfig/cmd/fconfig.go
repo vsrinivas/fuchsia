@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/sdk-tools/sdkcommon"
+
+	"go.uber.org/multierr"
 )
 
 //SDKProvider interface for mocking in tests.
@@ -26,7 +28,10 @@ type SDKProvider interface {
 	GetDeviceConfigurations() ([]sdkcommon.DeviceConfig, error)
 	GetDefaultDevice(deviceName string) (sdkcommon.DeviceConfig, error)
 	SetDeviceIP(deviceIP, sshPort string) error
+	MigrateGlobalData() error
 }
+
+const keyNotFoundMessage = "config key not found"
 
 // Allow capturing output in testing.
 var stdoutPrintln = fmt.Println
@@ -53,6 +58,10 @@ func main() {
 	if *helpFlag || len(flag.Args()) == 0 {
 		usage(sdk)
 		os.Exit(0)
+	}
+
+	if err := sdk.MigrateGlobalData(); err != nil {
+		log.Fatal(err)
 	}
 
 	cmd := flag.Args()[0]
@@ -115,15 +124,30 @@ func main() {
 			usage(sdk)
 			log.Fatal("Missing device-name for 'remove-device'")
 		}
-		err := sdk.RemoveDeviceConfiguration(device)
-		if err != nil {
-			log.Fatal(err)
+		var errs error
+		// Try to remove device from global and non-global.
+		if err := sdk.RemoveDeviceConfiguration(device, false); err != nil && !isKeyNotFoundError(err) {
+			errs = multierr.Append(errs, err)
+		}
+		if err := sdk.RemoveDeviceConfiguration(device, true); err != nil && !isKeyNotFoundError(err) {
+			errs = multierr.Append(errs, err)
+		}
+		if errs != nil {
+			log.Fatal(errs)
 		}
 	default:
 		usage(sdk)
 		log.Fatalf("Unknown command: %s", cmd)
 	}
 	os.Exit(0)
+}
+
+func isKeyNotFoundError(err error) bool {
+	errMessage := strings.ToLower(fmt.Sprint(err))
+	if strings.Contains(errMessage, keyNotFoundMessage) {
+		return true
+	}
+	return false
 }
 
 func handleGetAll(sdk SDKProvider, deviceName string) {

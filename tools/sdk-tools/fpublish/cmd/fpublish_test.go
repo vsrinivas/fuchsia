@@ -123,26 +123,18 @@ func TestFakeFPublish(t *testing.T) {
 }
 
 func handleFakeFFX(args []string) {
-	if args[0] == "config" && args[1] == "env" {
-		if len(args) == 3 && args[2] == "get" {
-			fmt.Printf("Environment:\n")
-			fmt.Printf("User: none\n")
-			fmt.Printf("Build: none\n")
-			fmt.Printf("Global: none\n")
-			os.Exit(0)
-		} else if args[2] == "set" {
-			os.Exit(0)
-		}
-	}
 	if args[0] == "config" && args[1] == "get" {
-		if args[2] == "DeviceConfiguration" {
+		if args[2] == "DeviceConfiguration" || args[2] == "device_config" {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
 			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration.remote-target-name" {
+		} else if args[2] == "DeviceConfiguration.remote-target-name" || args[2] == "device_config.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
 		}
 
+	}
+	if args[0] == "config" && (args[1] == "set" || args[1] == "remove") {
+		os.Exit(0)
 	}
 	if args[0] == "target" && args[1] == "default" && args[2] == "get" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
@@ -197,7 +189,7 @@ func TestMain(t *testing.T) {
 		expectedArgs           []string
 	}{
 		{
-			name:                   "No configured devices in fconfig but 1 discoverable device",
+			name:                   "No configured devices in ffx but 1 discoverable device",
 			args:                   []string{os.Args[0], "-data-path", dataDir, "package.far"},
 			expectedArgs:           []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "some-device", "packages/amber-files"), "-f", "package.far"},
 			ffxTargetList:          `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -231,7 +223,7 @@ func TestMain(t *testing.T) {
 			ffxTargetDefault:       "remote-target-name",
 		},
 		{
-			name:          "Using a device that is discoverable but isn't saved in fconfig by passing the --device-name to fpublish",
+			name:          "Using a device that is discoverable but isn't saved in ffx by passing the --device-name to fpublish",
 			args:          []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -257,7 +249,7 @@ func TestMain(t *testing.T) {
 			ffxTargetDefault:       "remote-target-name",
 		},
 		{
-			name:          "Using the default device from fconfig",
+			name:          "Using the default device from ffx",
 			args:          []string{os.Args[0], "-data-path", dataDir, "package.far"},
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", "/some/custom/repo/path", "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -297,7 +289,7 @@ func TestMain(t *testing.T) {
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 			osExit = func(code int) {
 				if code != 0 {
-					t.Fatalf("Non-zero error code %d", code)
+					t.Errorf("Non-zero error code %d", code)
 				}
 			}
 			main()

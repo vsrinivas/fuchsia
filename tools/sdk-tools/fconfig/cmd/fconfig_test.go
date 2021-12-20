@@ -22,6 +22,10 @@ func (sdk testSDKProperties) SetDeviceIP(deviceIP, sshPort string) error {
 	return nil
 }
 
+func (sdk testSDKProperties) MigrateGlobalData() error {
+	return nil
+}
+
 func (sdk testSDKProperties) GetDeviceConfiguration(name string) (sdkcommon.DeviceConfig, error) {
 	for _, config := range sdk.currentConfigs {
 		if config.DeviceName == name {

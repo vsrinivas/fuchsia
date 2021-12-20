@@ -603,6 +603,45 @@ func TestGetDeviceConfigurations(t *testing.T) {
 	}
 }
 
+func TestMigrateGlobalData(t *testing.T) {
+	sdk := SDKProperties{}
+	defer clearTestEnv()
+
+	tests := []struct {
+		name                   string
+		expectedValues         map[string]string
+		newDeviceAlreadyExists string
+	}{
+		{
+			name: "Migrating a device from global to user",
+			expectedValues: map[string]string{
+				"device_config.new-device-name.image":        "release",
+				"device_config.new-device-name.bucket":       "fuchsia-bucket",
+				"device_config.new-device-name.package-port": "7033",
+			},
+		},
+		{
+			name:                   "Device isn't migrated if it already exists in user config",
+			newDeviceAlreadyExists: "1",
+		},
+	}
+	for _, test := range tests {
+		clearTestEnv()
+		ExecCommand = helperCommandForSetTesting
+		t.Run(test.name, func(t *testing.T) {
+			expectedData, err := json.Marshal(test.expectedValues)
+			if err != nil {
+				t.Fatalf("json.Marshal(): unexpected err %v", err)
+			}
+			os.Setenv("TEST_EXPECTED_SET_DATA", string(expectedData))
+			os.Setenv("FFX_HAS_NEW_DEVICE", test.newDeviceAlreadyExists)
+			if err = sdk.MigrateGlobalData(); err != nil {
+				t.Errorf("MigrateGlobalData(): unexpected err %s", err)
+			}
+		})
+	}
+}
+
 func TestGetDeviceConfiguration(t *testing.T) {
 	sdk := SDKProperties{}
 	ExecCommand = helperCommandForGetFuchsiaProperty
@@ -651,11 +690,13 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 	defer clearTestEnv()
 
 	tests := []struct {
+		name           string
 		currentDevice  DeviceConfig
 		newDevice      DeviceConfig
 		expectedValues map[string]string
 	}{
 		{
+			name: "Saving a new device with non-default values",
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
 				Image:       "image-name",
@@ -664,14 +705,14 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 				PackageRepo: "new/device/repo",
 			},
 			expectedValues: map[string]string{
-				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
-				"DeviceConfiguration.new-device-name.package-port": "8000",
-				"DeviceConfiguration.new-device-name.image":        "image-name",
-				"DeviceConfiguration.new-device-name.bucket":       "buck-name",
-				"DeviceConfiguration.new-device-name.package-repo": "new/device/repo",
+				"device_config.new-device-name.image":        "image-name",
+				"device_config.new-device-name.bucket":       "buck-name",
+				"device_config.new-device-name.package-port": "8000",
+				"device_config.new-device-name.package-repo": "new/device/repo",
 			},
 		},
 		{
+			name: "Saving an existing device with non-default values all being the same",
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
 				Image:       "image-name",
@@ -686,96 +727,28 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
 			},
-			expectedValues: map[string]string{
-				// Device name is always written
-				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-			},
 		},
 		{
+			name: "Overriding an existing device that has default values with non-default values",
 			currentDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-			},
-			newDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-				IsDefault:   true,
-			},
-			expectedValues: map[string]string{
-				// Device name is always written
-				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-			},
-		},
-		{
-			currentDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-			},
-			newDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-			},
-			expectedValues: map[string]string{
-				// Device name is always written
-				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-			},
-		},
-		{
-			currentDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-			},
-			newDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-			},
-			expectedValues: map[string]string{
-				// Device name is always written
-				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-			},
-		},
-		{
-			currentDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
+				DeviceName: "new-device-name",
 			},
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
 				Image:       "custom-image",
-				Bucket:      "",
+				Bucket:      "buck",
 				PackagePort: "8000",
-				PackageRepo: "",
+				PackageRepo: "/some/new/device",
 			},
 			expectedValues: map[string]string{
-				// Device name is always written
-				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
-				"DeviceConfiguration.new-device-name.bucket":       "",
-				"DeviceConfiguration.new-device-name.image":        "custom-image",
-				"DeviceConfiguration.new-device-name.package-repo": "",
+				"device_config.new-device-name.bucket":       "buck",
+				"device_config.new-device-name.image":        "custom-image",
+				"device_config.new-device-name.package-port": "8000",
+				"device_config.new-device-name.package-repo": "/some/new/device",
 			},
 		},
 		{
+			name: "Overriding an existing device with new configurations",
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
 				Image:       "image-name",
@@ -791,17 +764,16 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 				PackageRepo: "/usr/some/new/device",
 			},
 			expectedValues: map[string]string{
-				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
-				"DeviceConfiguration.new-device-name.bucket":       "",
-				"DeviceConfiguration.new-device-name.image":        "custom-image",
-				"DeviceConfiguration.new-device-name.package-repo": "/usr/some/new/device",
+				"device_config.new-device-name.bucket":       "",
+				"device_config.new-device-name.image":        "custom-image",
+				"device_config.new-device-name.package-repo": "/usr/some/new/device",
 			},
 		},
 	}
-	for i, test := range tests {
+	for _, test := range tests {
 		clearTestEnv()
 		ExecCommand = helperCommandForSetTesting
-		t.Run(fmt.Sprintf("TestSaveDeviceConfiguration %v", i), func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			expectedData, err := json.Marshal(test.expectedValues)
 			if err != nil {
 				t.Fatalf("unexpected err %v", err)
@@ -838,14 +810,15 @@ func TestRemoveDeviceConfiguration(t *testing.T) {
 			deviceName:                "old-device-name",
 		},
 		{
-			deviceName:         "unknown-device",
-			expectedErrMessage: "Error removing unknown-device configuration: exit status 1",
+			deviceName: "unknown-device",
+			expectedErrMessage: `Error removing unknown-device configuration with data key device_config.unknown-device: BUG: An internal command error occurred.
+			Config key not found`,
 		},
 	}
 
 	for _, test := range tests {
 		os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", test.ffxTargetDefaultGetOutput)
-		err := sdk.RemoveDeviceConfiguration(test.deviceName)
+		err := sdk.RemoveDeviceConfiguration(test.deviceName, false)
 		if err != nil {
 			message := fmt.Sprintf("%v", err)
 			if message != test.expectedErrMessage {
@@ -854,36 +827,6 @@ func TestRemoveDeviceConfiguration(t *testing.T) {
 		} else if test.expectedErrMessage != "" {
 			t.Errorf("Got no error, want: '%s'", test.expectedErrMessage)
 		}
-	}
-}
-
-var tempGlobalSettingsFile = ""
-
-func TestInitProperties(t *testing.T) {
-	sdk := SDKProperties{
-		globalPropertiesFilename: "/some/file.json",
-	}
-
-	ExecCommand = helperCommandForInitEnv
-	defer clearTestEnv()
-
-	tempGlobalSettingsFile = filepath.Join(t.TempDir(), "global-config.json")
-	defer func() { tempGlobalSettingsFile = "" }()
-	emptyFile, err := os.Create(tempGlobalSettingsFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	emptyFile.Close()
-
-	err = initFFXGlobalConfig(sdk)
-	if err != nil {
-		t.Fatalf("unexpected err %v", err)
-	}
-
-	ExecCommand = helperCommandForInitEnvNoExistingFile
-	err = initFFXGlobalConfig(sdk)
-	if err != nil {
-		t.Fatalf("unexpected err %v", err)
 	}
 }
 
@@ -932,10 +875,10 @@ func TestResolveTargetAddress(t *testing.T) {
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
-			name:       "Device name passed in but is not discoverable and is not set in fconfig",
+			name:       "Device name passed in but is not discoverable and is not set in ffx",
 			deviceName: "some-unknown-device",
 			expectedError: `Cannot get target address for some-unknown-device.
-		Try running 'ffx target list' and verify the name matches in 'fconfig list'.`,
+		Try running 'ffx target list'.`,
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
@@ -978,7 +921,7 @@ func TestResolveTargetAddress(t *testing.T) {
 			"target_state":"Product",
 			"addresses":["ac80::9ded:df4f:5ee8:605f"]}]`,
 			expectedError: `Cannot get target address for fake-target-device-name.
-		Try running 'ffx target list' and verify the name matches in 'fconfig list'.`,
+		Try running 'ffx target list'.`,
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
@@ -1002,7 +945,7 @@ func TestResolveTargetAddress(t *testing.T) {
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
-			name: "Gets the discoverable device if there is only 1, even if fconfig has multiple non-default devices",
+			name: "Gets the discoverable device if there is only 1, even if ffx has multiple non-default devices",
 			ffxTargetListOutput: `[{"nodename":"some-unknown-device",
 			"rcs_state":"N",
 			"serial":"<unknown>",
@@ -1037,7 +980,7 @@ func TestResolveTargetAddress(t *testing.T) {
 			ffxTargetListOutput:       "[]",
 			ffxTargetDefaultGetOutput: "fake-target-device-name",
 			expectedError: `Cannot get target address for fake-target-device-name.
-		Try running 'ffx target list' and verify the name matches in 'fconfig list'.`,
+		Try running 'ffx target list'.`,
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
@@ -1059,7 +1002,7 @@ func TestResolveTargetAddress(t *testing.T) {
 			name:                      "Multiple discoverable devices found but ffx has a default device that isn't discoverable",
 			ffxTargetDefaultGetOutput: "some-unknown-default-device",
 			expectedError: `Cannot get target address for some-unknown-default-device.
-		Try running 'ffx target list' and verify the name matches in 'fconfig list'.`,
+		Try running 'ffx target list'.`,
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
@@ -1166,26 +1109,32 @@ func TestMapToDeviceConfig(t *testing.T) {
 				`,
 			deviceName: "test-device1",
 			deviceConfig: DeviceConfig{
-				DeviceName: "test-device1",
-				IsDefault:  false,
+				DeviceName:  "test-device1",
+				Bucket:      "fuchsia",
+				PackageRepo: filepath.Join(testSDK.dataPath, "test-device1", "packages", "amber-files"),
+				SSHPort:     "22",
+				IsDefault:   false,
+				PackagePort: "8083",
 			},
 		},
 		{
 			jsonString: `{
 				  "test-device1": {
 					"bucket": "",
-					"device-ip": "localhost",
 					"device-name": "test-device1",
-					"image": "",
+					"image": "some-fuchsia-image",
 					"package-port": 8888,
-					"package-repo": "",
-					"ssh-port": 1022
+					"package-repo": ""
 				  }
 				}
 				`,
 			deviceName: "test-device1",
 			deviceConfig: DeviceConfig{
 				DeviceName:  "test-device1",
+				Image:       "some-fuchsia-image",
+				Bucket:      "fuchsia",
+				PackageRepo: filepath.Join(testSDK.dataPath, "test-device1", "packages", "amber-files"),
+				SSHPort:     "22",
 				PackagePort: "8888",
 			},
 		},
@@ -1195,7 +1144,6 @@ func TestMapToDeviceConfig(t *testing.T) {
 			jsonString: `{
 				  "test-device1": {
 					"bucket": "",
-					"device-ip": "localhost",
 					"device-name": "test-device1",
 					"image": "",
 					"package-port": "8888",
@@ -1207,6 +1155,9 @@ func TestMapToDeviceConfig(t *testing.T) {
 			deviceName: "test-device1",
 			deviceConfig: DeviceConfig{
 				DeviceName:  "test-device1",
+				Bucket:      "fuchsia",
+				PackageRepo: filepath.Join(testSDK.dataPath, "test-device1", "packages", "amber-files"),
+				SSHPort:     "22",
 				PackagePort: "8888",
 			},
 		},
@@ -1219,7 +1170,7 @@ func TestMapToDeviceConfig(t *testing.T) {
 			t.Errorf("Error parsing json for %v: %v", i, err)
 		}
 
-		actualDevice, ok := testSDK.mapToDeviceConfig(data[test.deviceName])
+		actualDevice, ok := testSDK.mapToDeviceConfig(test.deviceName, data[test.deviceName])
 		if !ok {
 			t.Errorf("Error mapping to DeviceConfig %v: %v", i, data)
 		}
@@ -1228,40 +1179,6 @@ func TestMapToDeviceConfig(t *testing.T) {
 			t.Errorf("Test %v: unexpected deviceConfig: %v. Expected %v", i, actualDevice, expected)
 		}
 	}
-}
-
-func helperCommandForInitEnv(command string, s ...string) (cmd *exec.Cmd) {
-	cs := []string{"-test.run=TestFakeFfx", "--"}
-	cs = append(cs, command)
-	cs = append(cs, s...)
-
-	cmd = exec.Command(os.Args[0], cs...)
-
-	// Set this in the environment, so we can control the result.
-	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
-	cmd.Env = append(cmd.Env, "ALLOW_ENV=1")
-	// Pass file so when it is checked, it exists.
-	if tempGlobalSettingsFile != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("GLOBAL_SETTINGS_FILE=%v", tempGlobalSettingsFile))
-	}
-
-	return cmd
-}
-
-func helperCommandForInitEnvNoExistingFile(command string, s ...string) (cmd *exec.Cmd) {
-	cs := []string{"-test.run=TestFakeFfx", "--"}
-	cs = append(cs, command)
-	cs = append(cs, s...)
-
-	cmd = exec.Command(os.Args[0], cs...)
-
-	// Set this in the environment, so we can control the result.
-	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
-	cmd.Env = append(cmd.Env, "ALLOW_ENV=1")
-	cmd.Env = append(cmd.Env, "ALLOW_SET=1")
-	cmd.Env = append(cmd.Env, fmt.Sprintf("GLOBAL_SETTINGS_FILE=%v", "/file/does/not/exist.json"))
-
-	return cmd
 }
 
 func helperCommandForGetFuchsiaProperty(command string, s ...string) (cmd *exec.Cmd) {
@@ -1509,12 +1426,6 @@ func TestFakeFfx(*testing.T) {
 		os.Exit(2)
 	}
 	switch args[2] {
-	case "env":
-		if os.Getenv("ALLOW_ENV") != "1" {
-			fmt.Fprintf(os.Stderr, "Verb `env` not allowed")
-			os.Exit(2)
-		}
-		handleEnvFake(args[3:])
 	case "get":
 		if !handleGetFake(args[3:]) {
 			fmt.Fprintf(os.Stderr, "Whatever error message")
@@ -1530,28 +1441,6 @@ func TestFakeFfx(*testing.T) {
 		handleRemoveFake(args[3:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unexpected verb %v", args[2])
-		os.Exit(2)
-	}
-}
-
-func handleEnvFake(args []string) {
-	if len(args) == 0 {
-		fmt.Printf("\nEnvironment:\n\tUser: /home/someuser/some/path/.ffx_user_config.json\n\tBuild:  none\n\tGlobal: %v\n", os.Getenv("GLOBAL_SETTINGS_FILE"))
-	} else if args[0] == "set" {
-		if len(args) != 4 {
-			fmt.Fprintf(os.Stderr, "env set expects 3 args, got %v", args[1:])
-			os.Exit(2)
-		}
-		if len(args[1]) <= 0 {
-			fmt.Fprintf(os.Stderr, "env set requires a filename: %v", args[1:])
-			os.Exit(2)
-		}
-		if args[2] != "--level" || args[3] != "global" {
-			fmt.Fprintf(os.Stderr, "env set should only set global level %v", args[1:])
-			os.Exit(2)
-		}
-	} else {
-		fmt.Fprintf(os.Stderr, "Unexpected env %v", args)
 		os.Exit(2)
 	}
 }
@@ -1578,6 +1467,14 @@ func handleGetFake(args []string) bool {
 
 	switch args[0] {
 	case "DeviceConfiguration":
+		if os.Getenv("ALLOW_SET") == "1" {
+			fmt.Println(`{
+				"new-device-name":{
+					"bucket":"fuchsia-bucket","device-ip":"::1","device-name":"new-device-name","image":"release","package-port":"7033","package-repo":"","ssh-port":"22"
+				}
+			}`)
+		}
+	case "device_config":
 		if os.Getenv("FFX_TEST_REMOTE_TARGET_FCONFIG") == "1" {
 			fmt.Println(`{
 				"remote-target-name":{
@@ -1589,6 +1486,12 @@ func handleGetFake(args []string) bool {
 				}`)
 		} else if os.Getenv("FFX_NO_CONFIGURED_DEVICES") == "1" {
 			fmt.Println("{}")
+		} else if os.Getenv("FFX_HAS_NEW_DEVICE") == "1" {
+			fmt.Println(`{
+				"new-device-name":{
+					"bucket":"fuchsia-bucket","device-ip":"::1","device-name":"new-device-name","image":"release","package-port":"7033","package-repo":"","ssh-port":"22"
+				}
+			}`)
 		} else {
 			fmt.Println(`{
 				"fake-target-device-name":{
@@ -1602,20 +1505,20 @@ func handleGetFake(args []string) bool {
 				}
 				}`)
 		}
-	case "DeviceConfiguration.another-target-device-name":
+	case "device_config.another-target-device-name":
 		fmt.Println(`{
 				"bucket":"fuchsia-bucket","device-ip":"","device-name":"another-target-device-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"
 			}`)
-	case "DeviceConfiguration.fake-target-device-name":
+	case "device_config.fake-target-device-name":
 		fmt.Println(`{
 				"bucket":"","device-ip":"","device-name":"fake-target-device-name","image":"","package-port":"","package-repo":"","ssh-port":""
 			}`)
-	case "DeviceConfiguration.remote-target-name":
+	case "device_config.remote-target-name":
 		fmt.Println(`{
 					"bucket":"","device-ip":"::1","device-name":"remote-target-name","image":"","package-port":"","package-repo":"","ssh-port":""
 				}`)
 	default:
-		if args[0] == fmt.Sprintf("DeviceConfiguration.%s", dataName) {
+		if args[0] == fmt.Sprintf("device_config.%s", dataName) {
 			fmt.Println(currentDeviceData)
 
 		} else {
@@ -1632,78 +1535,68 @@ func handleSetFake(args []string) {
 	if len(expectedData) > 0 {
 		err := json.Unmarshal([]byte(expectedData), &data)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing configuration data %v: %s", err, expectedData)
+			fmt.Fprintf(os.Stderr, "Error parsing configuration data %s: %s", err, expectedData)
 			os.Exit(1)
 		}
 	} else {
 		data = make(map[string]interface{})
 	}
 
-	// All sets should be at the global level
-	if args[0] != "--level" || args[1] != "global" {
-		fmt.Fprintf(os.Stderr, "set command should only be used at global level: %v", args)
-		os.Exit(1)
-	}
-	if len(args) > 4 {
-		fmt.Fprintf(os.Stderr, "Invalid number of arguments expected 4 got: %v", args)
+	if len(args) > 2 {
+		fmt.Fprintf(os.Stderr, "Invalid number of arguments got: %d, expected 2", len(args))
 		os.Exit(1)
 	}
 	// Check the property name
-	parts := strings.Split(args[2], ".")
+	parts := strings.Split(args[0], ".")
 	switch len(parts) {
 	case 3:
 		// This is a device setting
-		if parts[0] != "DeviceConfiguration" || parts[1] != "new-device-name" {
-			fmt.Fprintf(os.Stderr, "Expected device property name format. Got: %v", parts)
+		if parts[0] != "device_config" || parts[1] != "new-device-name" {
+			fmt.Fprintf(os.Stderr, "Expected device property name format. Got: %s", parts)
 			os.Exit(1)
 		}
 		if !sdk.IsValidProperty(parts[2]) {
-			fmt.Fprintf(os.Stderr, "Invalid property name for a device: %v", parts)
+			fmt.Fprintf(os.Stderr, "Invalid property name for a device: %s", parts)
 			os.Exit(1)
 		}
-
 	case 2:
 		// Setting a reserved property
-		if parts[0] != "DeviceConfiguration" || !isReservedProperty(parts[1]) {
-			fmt.Fprintf(os.Stderr, "Unexpected property being set: %v", parts)
+		if parts[0] != "device_config" || !isReservedProperty(parts[1]) {
+			fmt.Fprintf(os.Stderr, "Unexpected property being set: %s", parts)
 			os.Exit(1)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "Unexpected property being set: %v", parts)
+		fmt.Fprintf(os.Stderr, "Unexpected property being set: %s", parts)
 		os.Exit(1)
 	}
-	if expectedValue, ok := data[args[2]].(string); ok {
-		if expectedValue != args[3] {
-			fmt.Fprintf(os.Stderr, "Unexpected property %v value being set: %v, expected %v", args[2], args[3], expectedValue)
+	if expectedValue, ok := data[args[0]].(string); ok {
+		if expectedValue != args[1] {
+			fmt.Fprintf(os.Stderr, "Unexpected property %s value being set: %s, expected %s", args[0], args[1], expectedValue)
 			os.Exit(1)
 		}
 	} else {
-		fmt.Fprintf(os.Stderr, "Unexpected property %v value attempted to be set", args[2])
+		fmt.Fprintf(os.Stderr, "Unexpected property %s value attempted to be set", args[0])
 		os.Exit(1)
 	}
+
 }
 
 func handleRemoveFake(args []string) {
-	// All removes should be at the global level
-	if args[0] != "--level" || args[1] != "global" {
-		fmt.Fprintf(os.Stderr, "remove command should only be used at global level: %v", args)
-		os.Exit(1)
-	}
-	if len(args) > 4 {
-		fmt.Fprintf(os.Stderr, "Invalid number of arguments expected 4 got: %v", args)
+	if len(args) > 1 {
+		fmt.Fprintf(os.Stderr, "Invalid number of arguments got: %d, want 1", len(args))
 		os.Exit(1)
 	}
 	// Check the property name
-	parts := strings.Split(args[2], ".")
+	parts := strings.Split(args[0], ".")
 	switch len(parts) {
 	case 2:
-		if parts[0] != "DeviceConfiguration" || parts[1] != "old-device-name" {
+		if parts[0] != "device_config" || parts[1] != "old-device-name" {
 			fmt.Fprintf(os.Stderr, `BUG: An internal command error occurred.
 			Config key not found`)
 			os.Exit(1)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "Unexpected property being removed: %v", parts)
+		fmt.Fprintf(os.Stderr, "Unexpected property being removed: %s", parts)
 		os.Exit(1)
 	}
 }
@@ -1870,6 +1763,7 @@ func clearTestEnv() {
 	os.Unsetenv("TEST_FFX_TARGET_LIST_OUTPUT")
 	os.Unsetenv("TEST_FFX_TARGET_DEFAULT_GET")
 	os.Unsetenv("TEST_GET_SSH_ADDRESS_OUTPUT")
+	os.Unsetenv("FFX_HAS_NEW_DEVICE")
 
 	GetUserHomeDir = DefaultGetUserHomeDir
 	GetUsername = DefaultGetUsername

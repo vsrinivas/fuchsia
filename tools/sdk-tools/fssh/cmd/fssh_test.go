@@ -95,7 +95,7 @@ func TestMain(t *testing.T) {
 			ffxTargetGetSSHAddress: `[::1f]:22`,
 		},
 		{
-			name: "fconfig has a default device",
+			name: "ffx has a default device",
 			args: []string{os.Args[0], "-data-path", dataDir},
 			deviceConfiguration: `{
 			"remote-target-name":{
@@ -118,7 +118,7 @@ func TestMain(t *testing.T) {
 			expectedPrivateKey: "",
 		},
 		{
-			name: "fconfig non-default device with --device-name",
+			name: "ffx non-default device with --device-name",
 			args: []string{os.Args[0], "-data-path", dataDir, "--device-name", "random-device"},
 			deviceConfiguration: `{
 			"remote-target-name":{
@@ -333,23 +333,14 @@ func TestFakeFFX(t *testing.T) {
 		fmt.Fprintf(os.Stderr, "No command\n")
 		os.Exit(2)
 	}
-	if strings.HasSuffix(args[0], "ffx") && args[1] == "config" && args[2] == "env" {
-		if len(args) == 3 {
-			fmt.Printf("Welcome to ffx doctor.")
-			fmt.Printf("Environment:\n")
-			fmt.Printf("User: none\n")
-			fmt.Printf("Build: none\n")
-			fmt.Printf("Global: none\n")
-			os.Exit(0)
-		} else if args[3] == "set" {
-			os.Exit(0)
-		}
-	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "config" && args[2] == "get" {
-		if len(args) > 3 && args[3] == "DeviceConfiguration" {
+	if strings.HasSuffix(args[0], "ffx") && args[1] == "config" && args[2] == "get" {
+		if len(args) > 3 && (args[3] == "DeviceConfiguration" || args[3] == "device_config") {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
 			os.Exit(0)
 
 		}
+	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "config" && (args[2] == "remove" || args[2] == "set") {
+		os.Exit(0)
 	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "target" && args[2] == "default" && args[3] == "get" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_DEFAULT"))
 		os.Exit(0)

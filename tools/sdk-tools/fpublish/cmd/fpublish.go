@@ -31,8 +31,8 @@ func main() {
 	dataPathFlag := flag.String("data-path", "", "Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia.")
 	helpFlag := flag.Bool("help", false, "Show the usage message")
 	verboseFlag := flag.Bool("verbose", false, "Print informational messages.")
-	deviceNameFlag := flag.String("device-name", "", `Specifies the device name to use to look up configuration information regarding the package repo location. If not specified, the default device configured using fconfig is used.`)
-	repoFlag := flag.String("repo-dir", "", "Specify the path to the package repository. If not specified, the default device configured using fconfig is used.")
+	deviceNameFlag := flag.String("device-name", "", `Specifies the device name to use to look up configuration information regarding the package repo location. If not specified, the default device configured using ffx is used.`)
+	repoFlag := flag.String("repo-dir", "", "Specify the path to the package repository. If not specified, the default device configured using ffx is used.")
 	flag.Parse()
 
 	sdk, err := sdkcommon.NewWithDataPath(*dataPathFlag)
