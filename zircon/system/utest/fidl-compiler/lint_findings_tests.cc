@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <sstream>
-#include <utility>
-
 #include <fidl/findings.h>
 #include <fidl/template_string.h>
 #include <fidl/utils.h>
+
+#include <sstream>
+#include <utility>
 
 #include "test_library.h"
 #include "unittest_helpers.h"

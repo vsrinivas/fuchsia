@@ -5,15 +5,15 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_NAME_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_NAME_H_
 
-#include <algorithm>
+#include <cassert>
 #include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 #include "fidl/source_span.h"
-#include "fidl/utils.h"
 
 namespace fidl::flat {
 
@@ -80,52 +80,8 @@ class NamingContext : public std::enable_shared_from_this<NamingContext> {
 
   void set_name_override(std::string value) { name_override_ = std::move(value); }
 
-  std::string FlattenedName() const {
-    if (name_override_.has_value())
-      return name_override_.value();
-
-    switch (kind_) {
-      case ElementKind::kDecl:
-        return std::string(name_.data());
-      case ElementKind::kLayoutMember:
-        return utils::to_upper_camel_case(std::string(name_.data()));
-      case ElementKind::kMethodRequest: {
-        std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
-        result.append(utils::to_upper_camel_case(std::string(name_.data())));
-        result.append("Request");
-        return result;
-      }
-      case ElementKind::kMethodResponse: {
-        std::string result = utils::to_upper_camel_case(std::string(parent()->name_.data()));
-        result.append(utils::to_upper_camel_case(std::string(name_.data())));
-        // We can't use [protocol][method]Response, because that may be occupied by
-        // the success variant of the result type, if this method has an error.
-        result.append("TopResponse");
-        return result;
-      }
-    }
-  }
-
-  std::vector<std::string> Context() const {
-    std::vector<std::string> names;
-    const auto* current = this;
-    while (current) {
-      // Internally, we don't store a separate Element to represent whether a layout is
-      // the request or response, since this bit of information is embedded in
-      // the ElementKind. When collapsing the stack of Elements into a list of
-      // strings, we need to flatten this case out to avoid losing this data.
-      if (current->kind_ == ElementKind::kMethodRequest) {
-        names.push_back("Request");
-      } else if (current->kind_ == ElementKind::kMethodResponse) {
-        names.push_back("Response");
-      }
-
-      names.emplace_back(current->name_.data());
-      current = current->parent_.get();
-    }
-    std::reverse(names.begin(), names.end());
-    return names;
-  }
+  std::string FlattenedName() const;
+  std::vector<std::string> Context() const;
 
   // ToName() exists to handle the case where the caller does not necessarily know what
   // kind of name (sourced or anonymous) this NamingContext corresponds to.
@@ -289,55 +245,9 @@ class Name final {
 
   const Library* library() const { return library_; }
 
-  std::optional<SourceSpan> span() const {
-    return std::visit(
-        [](auto&& name_context) -> std::optional<SourceSpan> {
-          using T = std::decay_t<decltype(name_context)>;
-          if constexpr (std::is_same_v<T, SourcedNameContext>) {
-            return std::optional(name_context.span);
-          } else if constexpr (std::is_same_v<T, AnonymousNameContext>) {
-            return std::optional(name_context.span);
-          } else if constexpr (std::is_same_v<T, IntrinsicNameContext>) {
-            return std::nullopt;
-          } else {
-            abort();
-          }
-        },
-        name_context_);
-  }
-
-  std::string_view decl_name() const {
-    return std::visit(
-        [](auto&& name_context) -> std::string_view {
-          using T = std::decay_t<decltype(name_context)>;
-          if constexpr (std::is_same_v<T, SourcedNameContext>) {
-            return name_context.span.data();
-          } else if constexpr (std::is_same_v<T, AnonymousNameContext>) {
-            // since decl_name() is used in Name::Key, using the flattened name
-            // here ensures that the flattened name will cause conflicts if not
-            // unique
-            return std::string_view(name_context.flattened_name);
-          } else if constexpr (std::is_same_v<T, IntrinsicNameContext>) {
-            return std::string_view(name_context.name);
-          } else {
-            abort();
-          }
-        },
-        name_context_);
-  }
-
-  std::string full_name() const {
-    auto name = std::string(decl_name());
-    if (member_name_.has_value()) {
-      constexpr std::string_view kSeparator = ".";
-      name.reserve(name.size() + kSeparator.size() + member_name_.value().size());
-
-      name.append(kSeparator);
-      name.append(member_name_.value());
-    }
-    return name;
-  }
-
+  std::optional<SourceSpan> span() const;
+  std::string_view decl_name() const;
+  std::string full_name() const;
   const std::optional<std::string>& member_name() const { return member_name_; }
 
   Key memberless_key() const { return Key(library_, decl_name()); }
@@ -345,9 +255,7 @@ class Name final {
   Key key() const { return Key(*this); }
 
   friend bool operator==(const Name& lhs, const Name& rhs) { return lhs.key() == rhs.key(); }
-
   friend bool operator!=(const Name& lhs, const Name& rhs) { return lhs.key() != rhs.key(); }
-
   friend bool operator<(const Name& lhs, const Name& rhs) { return lhs.key() < rhs.key(); }
 
  private:

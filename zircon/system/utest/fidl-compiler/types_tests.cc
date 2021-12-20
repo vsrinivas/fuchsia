@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/flat/compile_step.h>
 #include <fidl/flat_ast.h>
 #include <fidl/types.h>
 #include <fidl/virtual_source_file.h>

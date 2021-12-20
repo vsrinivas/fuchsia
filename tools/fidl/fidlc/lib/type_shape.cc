@@ -8,6 +8,7 @@
 
 #include <safemath/clamped_math.h>
 
+#include "fidl/flat/visitor.h"
 #include "fidl/flat_ast.h"
 #include "fidl/recursion_detector.h"
 

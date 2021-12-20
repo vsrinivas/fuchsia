@@ -10,44 +10,39 @@
 
 #include <lib/fit/function.h>
 
-#include <any>
 #include <cassert>
 #include <cstdint>
 #include <functional>
-#include <iostream>
-#include <limits>
 #include <map>
-#include <memory>
 #include <optional>
 #include <set>
 #include <string>
 #include <string_view>
-#include <type_traits>
-#include <variant>
 #include <vector>
 
-#include <safemath/checked_math.h>
-
 #include "experimental_flags.h"
+#include "flat/attributes.h"
 #include "flat/name.h"
 #include "flat/object.h"
 #include "flat/types.h"
+#include "flat/typespace.h"
 #include "flat/values.h"
-#include "raw_ast.h"
 #include "reporter.h"
 #include "type_shape.h"
 #include "types.h"
 #include "virtual_source_file.h"
 
+namespace fidl::raw {
+
+class File;
+class Identifier;
+class Ordinal64;
+class SourceElement;
+
+}  // namespace fidl::raw
+
 namespace fidl::flat {
 
-constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
-
-// See RFC-0132 for the origin of this table limit.
-constexpr size_t kMaxTableOrdinals = 64;
-
-using diagnostics::Diagnostic;
-using diagnostics::ErrorDef;
 using reporter::Reporter;
 using reporter::ReporterMixin;
 using utils::identity_t;
@@ -66,99 +61,6 @@ bool HasSimpleLayout(const Decl* decl);
 
 // This is needed (for now) to work around declaration order issues.
 std::string LibraryName(const Library* library, std::string_view separator);
-
-struct AttributeArg final {
-  AttributeArg(std::optional<SourceSpan> name, std::unique_ptr<Constant> value, SourceSpan span)
-      : name(std::move(name)), value(std::move(value)), span(span) {}
-
-  // Span of just the argument name, e.g. "bar". This is initially null for
-  // arguments like `@foo("abc")`, but will be set during compilation.
-  std::optional<SourceSpan> name;
-  std::unique_ptr<Constant> value;
-  // Span of the entire argument, e.g. `bar="abc"`, or `"abc"` if unnamed.
-  const SourceSpan span;
-
-  // Default name to use for arguments like `@foo("abc")` when there is no
-  // schema for `@foo` we can use to infer the name.
-  static constexpr std::string_view kDefaultAnonymousName = "value";
-};
-
-struct Attribute final {
-  // A constructor for synthetic attributes like @result.
-  explicit Attribute(SourceSpan name) : name(name) {}
-
-  Attribute(SourceSpan name, std::vector<std::unique_ptr<AttributeArg>> args, SourceSpan span)
-      : name(name), args(std::move(args)), span(span) {}
-
-  const AttributeArg* GetArg(std::string_view arg_name) const;
-
-  // Returns the lone argument if there is exactly 1 and it is not named. For
-  // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
-  AttributeArg* GetStandaloneAnonymousArg();
-
-  // Span of just the attribute name not including the "@", e.g. "foo".
-  const SourceSpan name;
-  const std::vector<std::unique_ptr<AttributeArg>> args;
-  // Span of the entire attribute, e.g. `@foo(bar="abc")`.
-  const SourceSpan span;
-  // Set to true by Library::CompileAttribute.
-  bool compiled = false;
-
-  // We parse `///` doc comments as nameless raw::Attribute with `provenance`
-  // set to raw::Attribute::Provenance::kDocComment. When consuming into a
-  // flat::Attribute, we set the name to kDocCommentName.
-  static constexpr std::string_view kDocCommentName = "doc";
-};
-
-// In the flat AST, "no attributes" is represented by an AttributeList
-// containing an empty vector. (In the raw AST, null is used instead.)
-struct AttributeList final {
-  explicit AttributeList(std::vector<std::unique_ptr<Attribute>> attributes)
-      : attributes(std::move(attributes)) {}
-
-  bool Empty() const { return attributes.empty(); }
-  const Attribute* Get(std::string_view attribute_name) const;
-  Attribute* Get(std::string_view attribute_name);
-
-  std::vector<std::unique_ptr<Attribute>> attributes;
-};
-
-// AttributePlacement indicates the placement of an attribute, e.g. whether an
-// attribute is placed on an enum declaration, method, or union member.
-enum class AttributePlacement {
-  kBitsDecl,
-  kBitsMember,
-  kConstDecl,
-  kEnumDecl,
-  kEnumMember,
-  kProtocolDecl,
-  kProtocolCompose,
-  kLibrary,
-  kMethod,
-  kResourceDecl,
-  kResourceProperty,
-  kServiceDecl,
-  kServiceMember,
-  kStructDecl,
-  kStructMember,
-  kTableDecl,
-  kTableMember,
-  kTypeAliasDecl,
-  kUnionDecl,
-  kUnionMember,
-};
-
-struct Attributable {
-  Attributable(Attributable&&) = default;
-  Attributable& operator=(Attributable&&) = default;
-  virtual ~Attributable() = default;
-
-  Attributable(AttributePlacement placement, std::unique_ptr<AttributeList> attributes)
-      : placement(placement), attributes(std::move(attributes)) {}
-
-  AttributePlacement placement;
-  std::unique_ptr<AttributeList> attributes;
-};
 
 struct Decl : public Attributable {
   virtual ~Decl() {}
@@ -826,6 +728,66 @@ struct TypeAlias final : public Decl {
   std::unique_ptr<TypeConstructor> partial_type_ctor;
 };
 
+template <template <typename> typename Constness, typename MemberFn>
+static void ForEachDeclMemberHelper(Constness<Decl>* decl, MemberFn f) {
+  switch (decl->kind) {
+    case Decl::Kind::kBits:
+      for (auto& member : static_cast<Constness<Bits>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kConst:
+      break;
+    case Decl::Kind::kEnum:
+      for (auto& member : static_cast<Constness<Enum>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kProtocol:
+      for (auto& method_with_info : static_cast<Constness<Protocol>*>(decl)->all_methods) {
+        f(method_with_info.method);
+      }
+      break;
+    case Decl::Kind::kResource:
+      for (auto& member : static_cast<Constness<Resource>*>(decl)->properties) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kService:
+      for (auto& member : static_cast<Constness<Service>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kStruct:
+      for (auto& member : static_cast<Constness<Struct>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kTable:
+      for (auto& member : static_cast<Constness<Table>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kUnion:
+      for (auto& member : static_cast<Constness<Union>*>(decl)->members) {
+        f(&member);
+      }
+      break;
+    case Decl::Kind::kTypeAlias:
+      break;
+  }  // switch
+}
+
+template <typename MemberFn>
+static void ForEachDeclMember(const Decl* decl, MemberFn f) {
+  ForEachDeclMemberHelper<std::add_const_t>(decl, f);
+}
+
+template <typename MemberFn>
+static void ForEachDeclMember(Decl* decl, MemberFn f) {
+  ForEachDeclMemberHelper<std::remove_const_t>(decl, f);
+}
+
 // Wrapper class around a Library to provide specific methods to TypeTemplates.
 // Unlike making a direct friend relationship, this approach:
 // 1. avoids having to declare every TypeTemplate subclass as a friend
@@ -854,6 +816,7 @@ class LibraryMediator : private ReporterMixin {
     kNullability,
     kProtocol,
   };
+
   struct ResolvedConstraint {
     ConstraintKind kind;
 
@@ -867,6 +830,7 @@ class LibraryMediator : private ReporterMixin {
       const Protocol* protocol_decl;
     } value;
   };
+
   // Convenience method to iterate through the possible interpretations, returning the first one
   // that succeeds. This is valid because the interpretations are mutually exclusive, since a Name
   // can only ever refer to one kind of thing.
@@ -893,240 +857,6 @@ class LibraryMediator : private ReporterMixin {
  private:
   Library* library_;
   CompileStep* compile_step_;
-};
-
-class TypeTemplate : protected ReporterMixin {
- public:
-  TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
-      : ReporterMixin(reporter), typespace_(typespace), name_(std::move(name)) {}
-
-  TypeTemplate(TypeTemplate&& type_template) = default;
-
-  virtual ~TypeTemplate() = default;
-
-  const Name& name() const { return name_; }
-
-  struct ParamsAndConstraints {
-    const std::unique_ptr<LayoutParameterList>& parameters;
-    const std::unique_ptr<TypeConstraints>& constraints;
-  };
-
-  virtual bool Create(const LibraryMediator& lib, const ParamsAndConstraints& args,
-                      std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const = 0;
-
-  bool HasGeneratedName() const;
-
- protected:
-  Typespace* typespace_;
-
-  Name name_;
-};
-
-// Typespace provides builders for all types (e.g. array, vector, string), and
-// ensures canonicalization, i.e. the same type is represented by one object,
-// shared amongst all uses of said type. For instance, while the text
-// `vector<uint8>:7` may appear multiple times in source, these all indicate
-// the same type.
-class Typespace : private ReporterMixin {
- public:
-  explicit Typespace(Reporter* reporter) : ReporterMixin(reporter) {}
-
-  bool Create(const LibraryMediator& lib, const flat::Name& name,
-              const std::unique_ptr<LayoutParameterList>& parameters,
-              const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
-              LayoutInvocation* out_params);
-
-  const Size* InternSize(uint32_t size);
-  const Type* Intern(std::unique_ptr<Type> type);
-
-  void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
-
-  // RootTypes creates a instance with all primitive types. It is meant to be
-  // used as the top-level types lookup mechanism, providing definitional
-  // meaning to names such as `int64`, or `bool`.
-  static Typespace RootTypes(Reporter* reporter);
-
-  static const PrimitiveType kBoolType;
-  static const PrimitiveType kInt8Type;
-  static const PrimitiveType kInt16Type;
-  static const PrimitiveType kInt32Type;
-  static const PrimitiveType kInt64Type;
-  static const PrimitiveType kUint8Type;
-  static const PrimitiveType kUint16Type;
-  static const PrimitiveType kUint32Type;
-  static const PrimitiveType kUint64Type;
-  static const PrimitiveType kFloat32Type;
-  static const PrimitiveType kFloat64Type;
-  static const UntypedNumericType kUntypedNumericType;
-  static const StringType kUnboundedStringType;
-
- private:
-  friend class TypeAliasTypeTemplate;
-
-  const TypeTemplate* LookupTemplate(const flat::Name& name) const;
-
-  bool CreateNotOwned(const LibraryMediator& lib, const flat::Name& name,
-                      const std::unique_ptr<LayoutParameterList>& parameters,
-                      const std::unique_ptr<TypeConstraints>& constraints,
-                      std::unique_ptr<Type>* out_type, LayoutInvocation* out_params);
-
-  std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
-  std::vector<std::unique_ptr<Size>> sizes_;
-  std::vector<std::unique_ptr<Type>> types_;
-
-  static const Name kBoolTypeName;
-  static const Name kInt8TypeName;
-  static const Name kInt16TypeName;
-  static const Name kInt32TypeName;
-  static const Name kInt64TypeName;
-  static const Name kUint8TypeName;
-  static const Name kUint16TypeName;
-  static const Name kUint32TypeName;
-  static const Name kUint64TypeName;
-  static const Name kFloat32TypeName;
-  static const Name kFloat64TypeName;
-  static const Name kUntypedNumericTypeName;
-  static const Name kStringTypeName;
-};
-
-// AttributeArgSchema defines a schema for a single argument in an attribute.
-// This includes its type (string, uint64, etc.), whether it is optional or
-// required, and (if applicable) a special-case rule for resolving its value.
-class AttributeArgSchema {
- public:
-  enum class Optionality {
-    kOptional,
-    kRequired,
-  };
-
-  explicit AttributeArgSchema(ConstantValue::Kind type,
-                              Optionality optionality = Optionality::kRequired)
-      : type_(type), optionality_(optionality) {
-    assert(type != ConstantValue::Kind::kDocComment);
-  }
-
-  bool IsOptional() const { return optionality_ == Optionality::kOptional; }
-
-  void ResolveArg(CompileStep* step, Attribute* attribute, AttributeArg* arg,
-                  bool literal_only) const;
-
- private:
-  const ConstantValue::Kind type_;
-  const Optionality optionality_;
-};
-
-// AttributeSchema defines a schema for attributes. This includes the allowed
-// placement (e.g. on a method, on a struct), names and schemas for arguments,
-// and an optional constraint validator.
-class AttributeSchema {
- public:
-  // Note: Constraints get access to the fully compiled parent Attributable.
-  // This is one reason why VerifyAttributesStep is a separate step.
-  using Constraint = fit::function<bool(Reporter* reporter, const Attribute* attribute,
-                                        const Attributable* attributable)>;
-
-  // Constructs a new schema that allows any placement, takes no arguments, and
-  // has no constraint. Use the methods below to customize it.
-  AttributeSchema() = default;
-
-  // Chainable mutators for customizing the schema.
-  AttributeSchema& RestrictTo(std::set<AttributePlacement> placements);
-  AttributeSchema& RestrictToAnonymousLayouts();
-  AttributeSchema& AddArg(AttributeArgSchema arg_schema);
-  AttributeSchema& AddArg(std::string name, AttributeArgSchema arg_schema);
-  AttributeSchema& Constrain(AttributeSchema::Constraint constraint);
-  // Marks as use-early. See Kind::kUseEarly below.
-  AttributeSchema& UseEarly();
-  // Marks as compile-early. See Kind::kCompileEarly below.
-  AttributeSchema& CompileEarly();
-  // Marks as deprecated. See Kind::kDeprecated below.
-  AttributeSchema& Deprecate();
-
-  // Special schema for arbitrary user-defined attributes.
-  static const AttributeSchema kUserDefined;
-
-  // Returns true if this schema allows early compilations.
-  bool CanCompileEarly() const { return kind_ == Kind::kCompileEarly; }
-
-  // Resolves constants in the attribute's arguments. In the case of an
-  // anonymous argument like @foo("abc"), infers the argument's name too.
-  void ResolveArgs(CompileStep* step, Attribute* attribute) const;
-
-  // Validates the attribute's placement and constraints. Must call
-  // `ResolveArgs` first.
-  void Validate(Reporter* reporter, const Attribute* attribute,
-                const Attributable* attributable) const;
-
- private:
-  enum class Kind {
-    // Most attributes are validate-only. They do not participate in compilation
-    // apart from validation at the end (possibly with a custom constraint).
-    kValidateOnly,
-    // Some attributes influence compilation and are used early, before
-    // VerifyAttributesStep. These schemas do not allow a constraint, since
-    // constraint validation happens too late to be relied on.
-    kUseEarly,
-    // Some attributes get compiled and used early, before the main CompileStep.
-    // These schemas ensure all arguments are literals to avoid kicking off
-    // other compilations. Like kUseEarly, they do not allow a constraint.
-    kCompileEarly,
-    // Deprecated attributes produce an error if used.
-    kDeprecated,
-    // All unrecognized attributes are considered user-defined. They receive
-    // minimal validation since we don't know what to expect. They allow any
-    // placement, only support string and bool arguments (lacking a way to
-    // decide between int8, uint32, etc.), and have no constraint.
-    kUserDefined,
-  };
-
-  enum class Placement {
-    // Allowed anywhere.
-    kAnywhere,
-    // Only allowed in certain places specified by std::set<AttributePlacement>.
-    kSpecific,
-    // Only allowed on anonymous layouts (not directly bound to a type
-    // declaration like `type foo = struct { ... };`).
-    kAnonymousLayout,
-  };
-
-  explicit AttributeSchema(Kind kind) : kind_(kind) {}
-
-  static void ResolveArgsWithoutSchema(CompileStep* compile_step, Attribute* attribute);
-
-  Kind kind_ = Kind::kValidateOnly;
-  Placement placement_ = Placement::kAnywhere;
-  std::set<AttributePlacement> specific_placements_;
-  // Use transparent comparator std::less<> to allow std::string_view lookups.
-  std::map<std::string, AttributeArgSchema, std::less<>> arg_schemas_;
-  Constraint constraint_ = nullptr;
-};
-
-class Libraries {
- public:
-  Libraries();
-
-  // Insert |library|.
-  bool Insert(std::unique_ptr<Library> library);
-
-  // Lookup a library by its |library_name|.
-  bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;
-
-  // Registers a new attribute schema under the given name, and returns it.
-  AttributeSchema& AddAttributeSchema(std::string name) {
-    auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
-    assert(inserted && "do not add schemas twice");
-    return it->second;
-  }
-
-  const AttributeSchema& RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
-                                                 bool warn_on_typo = false) const;
-
-  std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
-
- private:
-  std::map<std::vector<std::string_view>, std::unique_ptr<Library>> all_libraries_;
-  // Use transparent comparator std::less<> to allow std::string_view lookups.
-  std::map<std::string, AttributeSchema, std::less<>> attribute_schemas_;
 };
 
 class Dependencies {
@@ -1186,14 +916,33 @@ class Dependencies {
   std::set<Library*> dependencies_aggregate_;
 };
 
-class StepBase;
-class ConsumeStep;
-class SortStep;
-class CompileStep;
-class VerifyResourcenessStep;
-class VerifyAttributesStep;
-class VerifyInlineSizeStep;
-class VerifyDependenciesStep;
+class Libraries {
+ public:
+  Libraries();
+
+  // Insert |library|.
+  bool Insert(std::unique_ptr<Library> library);
+
+  // Lookup a library by its |library_name|.
+  bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;
+
+  // Registers a new attribute schema under the given name, and returns it.
+  AttributeSchema& AddAttributeSchema(std::string name) {
+    auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
+    assert(inserted && "do not add schemas twice");
+    return it->second;
+  }
+
+  const AttributeSchema& RetrieveAttributeSchema(Reporter* reporter, const Attribute* attribute,
+                                                 bool warn_on_typo = false) const;
+
+  std::set<std::vector<std::string_view>> Unused(const Library* target_library) const;
+
+ private:
+  std::map<std::vector<std::string_view>, std::unique_ptr<Library>> all_libraries_;
+  // Use transparent comparator std::less<> to allow std::string_view lookups.
+  std::map<std::string, AttributeSchema, std::less<>> attribute_schemas_;
+};
 
 using MethodHasher = fit::function<raw::Ordinal64(
     const std::vector<std::string_view>& library_name, const std::string_view& protocol_name,
@@ -1202,15 +951,15 @@ using MethodHasher = fit::function<raw::Ordinal64(
 struct LibraryComparator;
 
 class Library : private Attributable, private ReporterMixin {
-  friend AttributeSchema;
-  friend StepBase;
-  friend ConsumeStep;
-  friend SortStep;
-  friend CompileStep;
-  friend VerifyResourcenessStep;
-  friend VerifyAttributesStep;
-  friend VerifyInlineSizeStep;
-  friend VerifyDependenciesStep;
+  friend class AttributeSchema;
+  friend class StepBase;
+  friend class ConsumeStep;
+  friend class SortStep;
+  friend class CompileStep;
+  friend class VerifyResourcenessStep;
+  friend class VerifyAttributesStep;
+  friend class VerifyInlineSizeStep;
+  friend class VerifyDependenciesStep;
 
  public:
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
@@ -1283,350 +1032,6 @@ struct LibraryComparator {
     return lhs->name() < rhs->name();
   }
 };
-
-// StepBase is the base class for compilation steps. Compiling a library
-// consists of performing all steps in sequence. Each step succeeds (no
-// additional errors) or fails (additional errors reported) as a unit, and
-// typically tries to process the entire library rather than stopping after the
-// first error. For certain major steps, we abort compilation if the step fails,
-// meaning later steps can rely on invariants from that step succeeding. See
-// Library::Compile for the logic.
-class StepBase : protected ReporterMixin {
- public:
-  explicit StepBase(Library* library) : ReporterMixin(library->reporter()), library_(library) {}
-  // TODO(fxbug.dev/90281): Remove this constructor. It is currently needed
-  // because in types_tests.cc sometimes the library is null.
-  explicit StepBase(Library* library, Reporter* reporter)
-      : ReporterMixin(reporter), library_(library) {}
-  StepBase(const StepBase&) = delete;
-
-  bool Run() {
-    auto checkpoint = reporter()->Checkpoint();
-    RunImpl();
-    return checkpoint.NoNewErrors();
-  }
-
- protected:
-  // Implementations must report errors via ReporterMixin. If no errors are
-  // reported, the step is considered successful.
-  virtual void RunImpl() = 0;
-
-  Library* library_;  // link to library for which this step was created
-};
-
-// We run a separate ConsumeStep for each file in the library.
-class ConsumeStep : public StepBase {
- public:
-  explicit ConsumeStep(Library* library, std::unique_ptr<raw::File> file)
-      : StepBase(library), file_(std::move(file)) {}
-
- private:
-  void RunImpl() override;
-
-  bool RegisterDecl(std::unique_ptr<Decl> decl);
-
-  // Top level declarations
-  void ConsumeAliasDeclaration(std::unique_ptr<raw::AliasDeclaration> alias_declaration);
-  void ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> const_declaration);
-  void ConsumeProtocolDeclaration(std::unique_ptr<raw::ProtocolDeclaration> protocol_declaration);
-  void ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
-  void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
-  void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
-  void ConsumeUsing(std::unique_ptr<raw::Using> using_directive);
-
-  // Layouts
-  template <typename T>  // T should be Table or Union
-  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
-                              const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<raw::AttributeList> raw_attribute_list);
-  bool ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
-                           const std::shared_ptr<NamingContext>& context,
-                           std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                           bool is_request_or_response);
-  template <typename T>  // T should be Bits or Enum
-  bool ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
-                          const std::shared_ptr<NamingContext>& context,
-                          std::unique_ptr<raw::AttributeList> raw_attribute_list);
-  bool ConsumeLayout(std::unique_ptr<raw::Layout> layout,
-                     const std::shared_ptr<NamingContext>& context,
-                     std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                     bool is_request_or_response);
-
-  // Other elements
-  void ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
-                        std::unique_ptr<Attribute>* out_attribute);
-  void ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                            std::unique_ptr<AttributeList>* out_attribute_list);
-  bool ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
-                       std::unique_ptr<Constant>* out_constant);
-  void ConsumeLiteralConstant(raw::LiteralConstant* raw_constant,
-                              std::unique_ptr<LiteralConstant>* out_constant);
-  bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
-                            std::unique_ptr<raw::ParameterList> parameter_layout,
-                            bool is_request_or_response,
-                            std::unique_ptr<TypeConstructor>* out_payload);
-  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                              const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<raw::AttributeList> raw_attribute_list,
-                              bool is_request_or_response,
-                              std::unique_ptr<TypeConstructor>* out_type);
-  bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
-                              const std::shared_ptr<NamingContext>& context,
-                              std::unique_ptr<TypeConstructor>* out_type);
-
-  // Sets the naming context's generated name override to the @generated_name
-  // attribute's value if present, otherwise does nothing.
-  void MaybeOverrideName(AttributeList& attributes, NamingContext* context);
-  // Attempts to resolve the compound identifier to a name within the context of
-  // a library. On failure, reports an errro and returns null.
-  std::optional<Name> CompileCompoundIdentifier(const raw::CompoundIdentifier* compound_identifier);
-  bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
-                          SourceSpan response_span, raw::ProtocolMethod* method,
-                          std::unique_ptr<TypeConstructor> success_variant,
-                          std::unique_ptr<TypeConstructor>* out_payload);
-
-  std::unique_ptr<raw::File> file_;
-
-  // This map contains a subset of library_->declarations_ (no imported decls)
-  // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
-  std::map<std::string, Decl*> declarations_by_canonical_name_;
-};
-
-class SortStep : public StepBase {
- public:
-  using StepBase::StepBase;
-
- private:
-  void RunImpl() override;
-  bool AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges);
-  bool DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edges);
-};
-
-// We run one main CompileStep for the whole library. Some attributes are
-// compiled before that via the CompileAttributeEarly method. To avoid kicking
-// off other compilations, these attributes only allow literal arguments.
-class CompileStep : public StepBase {
- public:
-  using StepBase::StepBase;
-
-  friend LibraryMediator;
-  friend AttributeSchema;
-  friend AttributeArgSchema;
-
-  // Compiles an attribute early, before the main CompileStep has started. The
-  // attribute must support this (see AttributeSchema::CanCompileEarly).
-  static void CompileAttributeEarly(Library* library, Attribute* attribute);
-
- private:
-  void RunImpl() override;
-
-  // Compile methods
-  void CompileDecl(Decl* decl);
-  void CompileAttributeList(AttributeList* attributes);
-  void CompileAttribute(Attribute* attribute, bool early = false);
-  void CompileBits(Bits* bits_declaration);
-  void CompileConst(Const* const_declaration);
-  void CompileEnum(Enum* enum_declaration);
-  void CompileProtocol(Protocol* protocol_declaration);
-  void CompileResource(Resource* resource_declaration);
-  void CompileService(Service* service_decl);
-  void CompileStruct(Struct* struct_declaration);
-  void CompileTable(Table* table_declaration);
-  void CompileUnion(Union* union_declaration);
-  void CompileTypeAlias(TypeAlias* type_alias);
-  void CompileTypeConstructor(TypeConstructor* type_ctor);
-
-  // Resolve methods
-  bool ResolveHandleRightsConstant(Resource* resource, Constant* constant,
-                                   const HandleRights** out_rights);
-  bool ResolveHandleSubtypeIdentifier(Resource* resource, const std::unique_ptr<Constant>& constant,
-                                      uint32_t* out_obj_type);
-  bool ResolveSizeBound(Constant* size_constant, const Size** out_size);
-  bool ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
-                                 const ConstantValue& left_operand,
-                                 const ConstantValue& right_operand);
-  bool ResolveConstant(Constant* constant, std::optional<const Type*> opt_type);
-  bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
-                                 std::optional<const Type*> opt_type);
-  bool ResolveLiteralConstant(LiteralConstant* literal_constant,
-                              std::optional<const Type*> opt_type);
-  bool ResolveAsOptional(Constant* constant) const;
-  template <typename NumericType>
-  bool ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
-                                                const Type* type);
-
-  enum class AllowedCategories {
-    kTypeOrProtocol,
-    kTypeOnly,
-    kProtocolOnly,
-    // Note: there's currently no scenario where we expect a service.
-  };
-
-  // Type methods
-  bool TypeCanBeConst(const Type* type);
-  bool TypeIsConvertibleTo(const Type* from_type, const Type* to_type);
-  const Type* TypeResolve(const Type* type);
-  const Type* InferType(Constant* constant);
-  ConstantValue::Kind ConstantValuePrimitiveKind(types::PrimitiveSubtype primitive_subtype);
-  bool VerifyTypeCategory(const Type* type, std::optional<SourceSpan> span,
-                          AllowedCategories category);
-
-  // Validates a single member of a bits or enum. On success, returns nullptr,
-  // and on failure returns an error. The caller will set the diagnostic span.
-  template <typename MemberType>
-  using MemberValidator = fit::function<std::unique_ptr<Diagnostic>(
-      const MemberType& member, const AttributeList* attributes)>;
-
-  // Validation methods
-  template <typename DeclType, typename MemberType>
-  bool ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator);
-  template <typename MemberType>
-  bool ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_mask);
-  template <typename MemberType>
-  bool ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl, MemberType* out_unknown_value);
-};
-
-class VerifyResourcenessStep : public StepBase {
- public:
-  using StepBase::StepBase;
-
- private:
-  void RunImpl() override;
-  void VerifyDecl(const Decl* decl);
-
-  // Returns the effective resourceness of |type|. The set of effective resource
-  // types includes (1) nominal resource types per the FTP-057 definition, and
-  // (2) declarations that have an effective resource member (or equivalently,
-  // transitively contain a nominal resource).
-  types::Resourceness EffectiveResourceness(const Type* type);
-
-  // Map from struct/table/union declarations to their effective resourceness. A
-  // value of std::nullopt indicates that the declaration has been visited, used
-  // to prevent infinite recursion.
-  std::map<const Decl*, std::optional<types::Resourceness>> effective_resourceness_;
-};
-
-class VerifyAttributesStep : public StepBase {
- public:
-  using StepBase::StepBase;
-
- private:
-  void RunImpl() override;
-  void VerifyDecl(const Decl* decl);
-  void VerifyAttributes(const Attributable* attributable);
-};
-
-class VerifyInlineSizeStep : public StepBase {
- public:
-  using StepBase::StepBase;
-
- private:
-  void RunImpl() override;
-};
-
-class VerifyDependenciesStep : public StepBase {
- public:
-  using StepBase::StepBase;
-
- private:
-  void RunImpl() override;
-};
-
-// See the comment on Object::Visitor<T> for more details.
-struct Object::VisitorAny {
-  virtual std::any Visit(const ArrayType&) = 0;
-  virtual std::any Visit(const VectorType&) = 0;
-  virtual std::any Visit(const StringType&) = 0;
-  virtual std::any Visit(const HandleType&) = 0;
-  virtual std::any Visit(const PrimitiveType&) = 0;
-  virtual std::any Visit(const IdentifierType&) = 0;
-  virtual std::any Visit(const TransportSideType&) = 0;
-  virtual std::any Visit(const BoxType&) = 0;
-  virtual std::any Visit(const Enum&) = 0;
-  virtual std::any Visit(const Bits&) = 0;
-  virtual std::any Visit(const Service&) = 0;
-  virtual std::any Visit(const Struct&) = 0;
-  virtual std::any Visit(const Struct::Member&) = 0;
-  virtual std::any Visit(const Table&) = 0;
-  virtual std::any Visit(const Table::Member&) = 0;
-  virtual std::any Visit(const Table::Member::Used&) = 0;
-  virtual std::any Visit(const Union&) = 0;
-  virtual std::any Visit(const Union::Member&) = 0;
-  virtual std::any Visit(const Union::Member::Used&) = 0;
-  virtual std::any Visit(const Protocol&) = 0;
-};
-
-// This Visitor<T> class is useful so that Object.Accept() can enforce that its return type
-// matches the template type of Visitor. See the comment on Object::Visitor<T> for more
-// details.
-template <typename T>
-struct Object::Visitor : public VisitorAny {};
-
-template <typename T>
-T Object::Accept(Visitor<T>* visitor) const {
-  return std::any_cast<T>(AcceptAny(visitor));
-}
-
-inline std::any ArrayType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any VectorType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any StringType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any HandleType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any PrimitiveType::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any IdentifierType::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any TransportSideType::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any BoxType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any UntypedNumericType::AcceptAny(VisitorAny* visitor) const {
-  assert(false && "compiler bug: should not have untyped numeric here");
-  return nullptr;
-}
-
-inline std::any Enum::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any Bits::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any Service::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any Struct::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any Struct::Member::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any Table::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any Table::Member::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any Table::Member::Used::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any Union::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
-
-inline std::any Union::Member::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any Union::Member::Used::AcceptAny(VisitorAny* visitor) const {
-  return visitor->Visit(*this);
-}
-
-inline std::any Protocol::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 
 }  // namespace fidl::flat
 

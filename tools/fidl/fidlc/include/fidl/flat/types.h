@@ -5,20 +5,24 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_TYPES_H_
 
+#include <any>
+
+#include "../types.h"
 #include "name.h"
 #include "object.h"
 #include "values.h"
 
 namespace fidl::flat {
 
-struct Decl;
-struct TypeDecl;
-struct Struct;
 class LibraryMediator;
-struct LayoutInvocation;
-struct TypeConstraints;
-struct Resource;
 class TypeTemplate;
+
+struct Decl;
+struct LayoutInvocation;
+struct Resource;
+struct Struct;
+struct TypeConstraints;
+struct TypeDecl;
 
 struct Type : public Object {
   virtual ~Type() {}

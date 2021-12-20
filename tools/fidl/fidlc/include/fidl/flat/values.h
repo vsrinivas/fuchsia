@@ -5,9 +5,14 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 
-#include "../raw_ast.h"
-#include "../types.h"
-#include "../utils.h"
+#include <iostream>
+#include <limits>
+#include <type_traits>
+
+#include "fidl/flat/name.h"
+#include "fidl/raw_ast.h"
+#include "fidl/source_span.h"
+#include "fidl/types.h"
 
 namespace fidl::flat {
 
@@ -90,106 +95,13 @@ struct NumericConstantValue final : ConstantValue {
 
   friend std::ostream& operator<<(std::ostream& os, const NumericConstantValue<ValueType>& v) {
     if constexpr (GetKind() == Kind::kInt8)
-      os << static_cast<int>(v.value);
-    else if constexpr (GetKind() == Kind::kUint8)
-      os << static_cast<unsigned>(v.value);
-    else
-      os << v.value;
-    return os;
+      return os << static_cast<int>(v.value);
+    if constexpr (GetKind() == Kind::kUint8)
+      return os << static_cast<unsigned>(v.value);
+    return os << v.value;
   }
 
-  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-    assert(out_value != nullptr);
-
-    auto checked_value = safemath::CheckedNumeric<ValueType>(value);
-
-    switch (kind) {
-      case Kind::kInt8: {
-        int8_t casted_value;
-        if (!checked_value.template Cast<int8_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<int8_t>>(casted_value);
-        return true;
-      }
-      case Kind::kInt16: {
-        int16_t casted_value;
-        if (!checked_value.template Cast<int16_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<int16_t>>(casted_value);
-        return true;
-      }
-      case Kind::kInt32: {
-        int32_t casted_value;
-        if (!checked_value.template Cast<int32_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<int32_t>>(casted_value);
-        return true;
-      }
-      case Kind::kInt64: {
-        int64_t casted_value;
-        if (!checked_value.template Cast<int64_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<int64_t>>(casted_value);
-        return true;
-      }
-      case Kind::kUint8: {
-        uint8_t casted_value;
-        if (!checked_value.template Cast<uint8_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<uint8_t>>(casted_value);
-        return true;
-      }
-      case Kind::kUint16: {
-        uint16_t casted_value;
-        if (!checked_value.template Cast<uint16_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<uint16_t>>(casted_value);
-        return true;
-      }
-      case Kind::kUint32: {
-        uint32_t casted_value;
-        if (!checked_value.template Cast<uint32_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<uint32_t>>(casted_value);
-        return true;
-      }
-      case Kind::kUint64: {
-        uint64_t casted_value;
-        if (!checked_value.template Cast<uint64_t>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<uint64_t>>(casted_value);
-        return true;
-      }
-      case Kind::kFloat32: {
-        float casted_value;
-        if (!checked_value.template Cast<float>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<float>>(casted_value);
-        return true;
-      }
-      case Kind::kFloat64: {
-        double casted_value;
-        if (!checked_value.template Cast<double>().AssignIfValid(&casted_value)) {
-          return false;
-        }
-        *out_value = std::make_unique<NumericConstantValue<double>>(casted_value);
-        return true;
-      }
-      case Kind::kDocComment:
-      case Kind::kString:
-      case Kind::kBool:
-        return false;
-    }
-  }
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override;
 
   static NumericConstantValue<ValueType> Min() {
     return NumericConstantValue<ValueType>(std::numeric_limits<ValueType>::lowest());
@@ -243,20 +155,10 @@ struct BoolConstantValue final : ConstantValue {
   }
 
   friend std::ostream& operator<<(std::ostream& os, const BoolConstantValue& v) {
-    os << v.value;
-    return os;
+    return os << v.value;
   }
 
-  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-    assert(out_value != nullptr);
-    switch (kind) {
-      case Kind::kBool:
-        *out_value = std::make_unique<BoolConstantValue>(value);
-        return true;
-      default:
-        return false;
-    }
-  }
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override;
 
   bool value;
 };
@@ -266,29 +168,13 @@ struct DocCommentConstantValue final : ConstantValue {
       : ConstantValue(ConstantValue::Kind::kDocComment), value(value) {}
 
   friend std::ostream& operator<<(std::ostream& os, const DocCommentConstantValue& v) {
-    os << v.value.data();
-    return os;
+    return os << v.value.data();
   }
 
-  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-    assert(out_value != nullptr);
-    switch (kind) {
-      case Kind::kDocComment:
-        *out_value = std::make_unique<DocCommentConstantValue>(std::string_view(value));
-        return true;
-      default:
-        return false;
-    }
-  }
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const;
+  std::string MakeContents() const;
 
   std::string_view value;
-
-  std::string MakeContents() const {
-    if (value.empty()) {
-      return "";
-    }
-    return fidl::utils::strip_doc_comment_slashes(value);
-  }
 };
 
 struct StringConstantValue final : ConstantValue {
@@ -300,25 +186,10 @@ struct StringConstantValue final : ConstantValue {
     return os;
   }
 
-  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const override {
-    assert(out_value != nullptr);
-    switch (kind) {
-      case Kind::kString:
-        *out_value = std::make_unique<StringConstantValue>(std::string_view(value));
-        return true;
-      default:
-        return false;
-    }
-  }
+  bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const;
+  std::string MakeContents() const;
 
   std::string_view value;
-
-  std::string MakeContents() const {
-    if (value.empty()) {
-      return "";
-    }
-    return fidl::utils::strip_string_literal_quotes(value);
-  }
 };
 
 // Constant represents the _use_ of a constant. (For the _declaration_, see
@@ -333,21 +204,8 @@ struct Constant {
   explicit Constant(Kind kind, SourceSpan span) : kind(kind), span(span), value_(nullptr) {}
 
   bool IsResolved() const { return value_ != nullptr; }
-
-  void ResolveTo(std::unique_ptr<ConstantValue> value, const Type* type) {
-    assert(value != nullptr);
-    assert(!IsResolved() && "Constants should only be resolved once!");
-    value_ = std::move(value);
-    this->type = type;
-  }
-
-  const ConstantValue& Value() const {
-    if (!IsResolved()) {
-      std::cout << span.data() << std::endl;
-    }
-    assert(IsResolved() && "Accessing the value of an unresolved Constant!");
-    return *value_;
-  }
+  void ResolveTo(std::unique_ptr<ConstantValue> value, const Type* type);
+  const ConstantValue& Value() const;
 
   const Kind kind;
   const SourceSpan span;
@@ -370,8 +228,7 @@ struct IdentifierConstant final : Constant {
 };
 
 struct LiteralConstant final : Constant {
-  explicit LiteralConstant(std::unique_ptr<raw::Literal> literal)
-      : Constant(Kind::kLiteral, literal->span()), literal(std::move(literal)) {}
+  explicit LiteralConstant(std::unique_ptr<raw::Literal> literal);
 
   std::unique_ptr<raw::Literal> literal;
 };

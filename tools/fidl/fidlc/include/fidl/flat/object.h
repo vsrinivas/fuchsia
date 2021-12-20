@@ -5,7 +5,9 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_OBJECT_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_OBJECT_H_
 
-#include "../type_shape.h"
+#include <any>
+
+#include "fidl/type_shape.h"
 
 namespace fidl::flat {
 

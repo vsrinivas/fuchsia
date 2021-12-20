@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/flat_ast.h>
+#include <fidl/lexer.h>
+#include <fidl/names.h>
+#include <fidl/parser.h>
+#include <fidl/source_file.h>
+
 #include <algorithm>
 #include <chrono>
 #include <map>
 #include <random>
 #include <string>
 
-#include <fidl/flat_ast.h>
-#include <fidl/lexer.h>
-#include <fidl/names.h>
-#include <fidl/parser.h>
-#include <fidl/source_file.h>
 #include <zxtest/zxtest.h>
 
 #include "error_test.h"
