@@ -11,6 +11,7 @@
 #include <string_view>
 
 #include "constants.h"
+#include "internal/phdr-error.h"
 
 namespace elfldltl {
 
@@ -90,6 +91,40 @@ class PhdrNullObserver : public PhdrObserver<PhdrNullObserver<Elf>, ElfPhdrType:
   constexpr bool Finish(Diag& diag) {
     return true;
   }
+};
+
+// A class of observer corresponding to the simpler segment metadata types:
+// it merely stores any program header that it sees at the provided reference,
+// complaining if it observes more than one segment of the same type.
+template <class Elf, ElfPhdrType Type>
+class PhdrSingletonObserver : public PhdrObserver<PhdrSingletonObserver<Elf, Type>, Type> {
+ public:
+  using Phdr = typename Elf::Phdr;
+
+  explicit PhdrSingletonObserver(std::optional<Phdr>& phdr) : phdr_(phdr) {}
+
+  template <class Diag>
+  constexpr bool Observe(Diag& diag, PhdrTypeMatch<Type> type, const Phdr& phdr) {
+    // Warning, since a wrong PHDRS clause in a linker script could cause
+    // this and be harmless in practice rather than indicating a linker bug
+    // or corrupted data.
+    if (phdr_ && !diag.FormatWarning(internal::PhdrError<Type>::kDuplicateHeader)) {
+      return false;
+    }
+    phdr_ = phdr;
+    return true;
+  }
+
+  template <class Diag>
+  constexpr bool Finish(Diag& diag) {
+    return true;
+  }
+
+ protected:
+  std::optional<Phdr>& phdr() { return phdr_; }
+
+ private:
+  std::optional<Phdr>& phdr_;
 };
 
 }  // namespace elfldltl
