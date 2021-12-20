@@ -179,6 +179,7 @@ pub struct InputDispatcher {
     /// Note we're assuming a single wl_seat for now, so these all are pointers
     /// associated with that seat.
     pub pointers: ObjectRefSet<Pointer>,
+    pub v5_pointers: ObjectRefSet<Pointer>,
     /// The set of bound wl_pointer objects for this client.
     ///
     /// Note we're assuming a single wl_seat for now, so these all are keyboards
@@ -271,6 +272,7 @@ impl InputDispatcher {
             pressed_keys: HashSet::new(),
             modifiers: 0,
             pointers: ObjectRefSet::new(),
+            v5_pointers: ObjectRefSet::new(),
             keyboards: ObjectRefSet::new(),
             touches: ObjectRefSet::new(),
             pointer_focus: None,
@@ -531,7 +533,7 @@ impl InputDispatcher {
 
     fn send_pointer_frame(&self) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::send_pointer_frame");
-        self.pointers
+        self.v5_pointers
             .iter()
             .try_for_each(|p| self.event_queue.post(p.id(), wl_pointer::Event::Frame))
     }
@@ -688,6 +690,9 @@ impl RequestReceiver<WlSeat> for Seat {
                 // a coherence issue between the client object map and the set
                 // of bound pointers.
                 assert!(client.input_dispatcher.pointers.add(pointer));
+                if this.get(client)?.client_version >= 5 {
+                    assert!(client.input_dispatcher.v5_pointers.add(pointer));
+                }
             }
             WlSeatRequest::GetKeyboard { id } => {
                 let keyboard = id.implement(client, Keyboard::new(this))?;
@@ -718,6 +723,7 @@ impl RequestReceiver<WlPointer> for Pointer {
         match request {
             WlPointerRequest::Release => {
                 client.input_dispatcher.pointers.remove(this);
+                client.input_dispatcher.v5_pointers.remove(this);
                 client.delete_id(this.id())?;
             }
             WlPointerRequest::SetCursor { .. } => {}
