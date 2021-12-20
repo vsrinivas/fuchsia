@@ -360,6 +360,7 @@ mod tests {
             device_id: 0,
             absolute_x_range: None,
             absolute_y_range: None,
+            buttons: None,
         });
     const CLICK_TO_DRAG_THRESHOLD: f32 = 16.0;
     const SMALL_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD * 0.1;

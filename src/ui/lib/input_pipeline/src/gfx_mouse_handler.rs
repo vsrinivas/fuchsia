@@ -61,7 +61,7 @@ impl InputHandler for GfxMouseHandler {
         match input_event {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(ref mouse_event),
-                device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
+                device_descriptor: input_device::InputDeviceDescriptor::Mouse(ref mouse_descriptor),
                 event_time,
                 handled: input_device::Handled::No,
             } => {
@@ -319,6 +319,7 @@ mod tests {
             device_id,
             absolute_x_range: None,
             absolute_y_range: None,
+            buttons: None,
         })
     }
 
@@ -624,6 +625,7 @@ mod tests {
                 device_id: DEVICE_ID,
                 absolute_x_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
                 absolute_y_range: Some(fidl_input_report::Range { min: -50, max: 50 }),
+                buttons: None,
             });
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(

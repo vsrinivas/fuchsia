@@ -500,6 +500,7 @@ mod tests {
                     device_id: 1,
                     absolute_x_range: None,
                     absolute_y_range: None,
+                    buttons: None,
                 },
             ),
             event_time: zx::Time::get_monotonic().into_nanos() as input_device::EventTime,
@@ -517,7 +518,7 @@ mod tests {
     ///
     /// # Parameters
     /// - `input_device_request`: The request to handle.
-    fn handle_input_device_reqeust(
+    fn handle_input_device_request(
         input_device_request: fidl_fuchsia_input_report::InputDeviceRequest,
     ) {
         match input_device_request {
@@ -530,7 +531,7 @@ mod tests {
                             movement_y: None,
                             scroll_v: None,
                             scroll_h: None,
-                            buttons: None,
+                            buttons: Some(vec![0]),
                             position_x: None,
                             position_y: None,
                             ..fidl_fuchsia_input_report::MouseInputDescriptor::EMPTY
@@ -659,7 +660,7 @@ mod tests {
                             if let Some(input_device_request) =
                                 request_stream.try_next().await.unwrap()
                             {
-                                handle_input_device_reqeust(input_device_request);
+                                handle_input_device_request(input_device_request);
                                 count += 1;
                             }
                         }
@@ -725,7 +726,8 @@ mod tests {
             input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
                 device_id: 1,
                 absolute_x_range: None,
-                absolute_y_range: None
+                absolute_y_range: None,
+                buttons: Some(vec![0])
             })
         );
     }
@@ -744,7 +746,7 @@ mod tests {
                             if let Some(input_device_request) =
                                 request_stream.try_next().await.unwrap()
                             {
-                                handle_input_device_reqeust(input_device_request);
+                                handle_input_device_request(input_device_request);
                                 count += 1;
                             }
                         }
@@ -827,7 +829,7 @@ mod tests {
                 if let Some(input_device_request) =
                     input_device_request_stream.try_next().await.unwrap()
                 {
-                    handle_input_device_reqeust(input_device_request);
+                    handle_input_device_request(input_device_request);
                     count += 1;
                 }
             }

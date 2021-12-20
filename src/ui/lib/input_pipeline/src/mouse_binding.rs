@@ -89,7 +89,7 @@ pub struct MouseBinding {
     device_descriptor: MouseDeviceDescriptor,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct MouseDeviceDescriptor {
     /// The id of the connected mouse input device.
     pub device_id: u32,
@@ -99,6 +99,9 @@ pub struct MouseDeviceDescriptor {
 
     /// The range of possible y values of absolute mouse positions reported by this device.
     pub absolute_y_range: Option<fidl_input_report::Range>,
+
+    /// This is a vector of id's for the mouse buttons.
+    pub buttons: Option<Vec<MouseButton>>,
 }
 
 #[async_trait]
@@ -172,6 +175,7 @@ impl MouseBinding {
             device_id,
             absolute_x_range: mouse_input_descriptor.position_x.map(|axis| axis.range),
             absolute_y_range: mouse_input_descriptor.position_y.map(|axis| axis.range),
+            buttons: mouse_input_descriptor.buttons,
         };
 
         Ok(MouseBinding { event_sender: input_event_sender, device_descriptor })
@@ -367,6 +371,7 @@ mod tests {
             device_id,
             absolute_x_range: None,
             absolute_y_range: None,
+            buttons: None,
         })
     }
 
