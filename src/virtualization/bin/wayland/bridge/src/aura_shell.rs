@@ -41,7 +41,7 @@ impl RequestReceiver<ZauraShell> for AuraShell {
                 let aura_output_ref = id.implement(client, aura_output)?;
                 let output: ObjectRef<Output> = output.into();
                 output.get_mut(client)?.set_aura_output(aura_output_ref);
-                let display_info = client.display_info();
+                let display_info = client.display().display_info();
                 Output::post_display_info(output, client, &display_info)?;
             }
         }

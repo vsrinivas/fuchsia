@@ -53,12 +53,10 @@ impl WaylandDispatcher {
         });
         registry.add_global(WlOutput, move |id, _, client| {
             let output = Output::new();
-            let display_info = client.display_info();
-            // Send current display info.
+            let display_info = client.display().display_info();
+            // Send display info.
             Output::post_output_info(id, client, &display_info)?;
             Output::post_output_done(id, client)?;
-            // Query actual display info.
-            Output::update_display_info(id, client);
             Ok(Box::new(RequestDispatcher::new(output)))
         });
         {

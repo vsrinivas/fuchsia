@@ -1307,9 +1307,12 @@ impl XdgToplevel {
                     })
                     .unwrap_or((0, 0, false))
             } else {
-                let display_info = client.display_info();
-                let physical_size =
-                    view.as_ref().map(|view| view.lock().physical_size()).unwrap_or(Size {
+                let display_info = client.display().display_info();
+                let physical_size = view
+                    .as_ref()
+                    .map(|view| view.lock().physical_size())
+                    .filter(|size| size.width != 0 && size.height != 0)
+                    .unwrap_or(Size {
                         width: display_info.width_in_px as i32,
                         height: display_info.height_in_px as i32,
                     });

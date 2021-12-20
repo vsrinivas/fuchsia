@@ -10,6 +10,7 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_element::{GraphicalPresenterMarker, GraphicalPresenterProxy},
     fidl_fuchsia_ui_app::ViewProviderMarker,
+    fidl_fuchsia_ui_gfx::DisplayInfo,
     fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
     fidl_fuchsia_wayland::{ViewProducerControlHandle, ViewSpec},
     fuchsia_async as fasync,
@@ -70,6 +71,8 @@ pub struct Display {
     view_producer_client: ViewProducerClient,
     /// Number of view providers requested.
     view_provider_requests: Arc<AtomicUsize>,
+    /// The current display info.
+    display_info: DisplayInfo,
 }
 
 impl Display {
@@ -84,6 +87,7 @@ impl Display {
             graphical_presenter: Arc::new(graphical_presenter),
             view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
             view_provider_requests: Arc::new(AtomicUsize::new(0)),
+            display_info: DisplayInfo { width_in_px: 0, height_in_px: 0 },
         })
     }
 
@@ -102,6 +106,8 @@ impl Display {
             view_producer_client: ViewProducerClient::Local(client),
             // Set this to 0 when new_local clients have been updated to request views.
             view_provider_requests: Arc::new(AtomicUsize::new(1)),
+            // TODO(fxbug.dev/90630): Remove these default values.
+            display_info: DisplayInfo { width_in_px: 1920, height_in_px: 1080 },
         })
     }
 
@@ -119,6 +125,7 @@ impl Display {
             graphical_presenter: Arc::new(graphical_presenter),
             view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
             view_provider_requests: Arc::new(AtomicUsize::new(0)),
+            display_info: DisplayInfo { width_in_px: 0, height_in_px: 0 },
         })
     }
 
@@ -237,6 +244,16 @@ impl Display {
 
         // Start polling the channel for messages.
         client.start();
+    }
+
+    /// The current display info.
+    pub fn display_info(&self) -> DisplayInfo {
+        self.display_info
+    }
+
+    /// Set the current display info.
+    pub fn set_display_info(&mut self, display_info: &DisplayInfo) {
+        self.display_info = *display_info;
     }
 }
 

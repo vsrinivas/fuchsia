@@ -77,14 +77,22 @@ fn spawn_view_producer_service(mut stream: ViewProducerRequestStream, display: D
 
 fn main() -> Result<(), Error> {
     trace_provider_create_with_fdio();
-    let mut exec = fasync::LocalExecutor::new()?;
-    let dispatcher = WaylandDispatcher::new()?;
+    let mut executor = fasync::LocalExecutor::new()?;
+    let mut dispatcher = WaylandDispatcher::new()?;
+
+    // Try to get display properties before serving.
+    let scenic = dispatcher.display.scenic().clone();
+    match executor.run_singlethreaded(async { scenic.get_display_info().await }) {
+        Ok(display_info) => dispatcher.display.set_display_info(&display_info),
+        Err(e) => eprintln!("get_display_info error: {:?}", e),
+    }
+
     let display = &dispatcher.display;
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(|stream| spawn_wayland_dispatcher_service(stream, display.clone()))
         .add_fidl_service(|stream| spawn_view_producer_service(stream, display.clone()));
     fs.take_and_serve_directory_handle().unwrap();
-    exec.run_singlethreaded(fs.collect::<()>());
+    executor.run_singlethreaded(fs.collect::<()>());
     Ok(())
 }

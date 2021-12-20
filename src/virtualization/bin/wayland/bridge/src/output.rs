@@ -8,8 +8,7 @@ use {
     crate::object::{ObjectRef, RequestReceiver},
     anyhow::Error,
     fidl_fuchsia_ui_gfx::DisplayInfo,
-    fuchsia_async as fasync, fuchsia_wayland_core as wl,
-    futures::prelude::*,
+    fuchsia_wayland_core as wl,
     wayland::{wl_output, WlOutput, WlOutputEvent, WlOutputRequest},
 };
 
@@ -26,34 +25,6 @@ impl Output {
 
     pub fn set_aura_output(&mut self, aura_output: ObjectRef<AuraOutput>) {
         self.aura_output = Some(aura_output);
-    }
-
-    /// Queries the system display info and posts back to the client.
-    pub fn update_display_info(this: wl::ObjectId, client: &mut Client) {
-        let scenic = client.display().scenic().clone();
-        let task_queue = client.task_queue();
-        fasync::Task::local(scenic.get_display_info().map(move |result| {
-            if let Ok(display_info) = result {
-                let display_info = DisplayInfo { ..display_info };
-                task_queue.post(move |client| {
-                    // Early out if display has not changed.
-                    if client.display_info() == display_info {
-                        return Ok(());
-                    }
-                    client.set_display_info(&display_info);
-                    // Only post messages if the underlying output is still valid. This is
-                    // to guard against the case where the wl_output has been released
-                    // after querying scenic for display info and before the response has
-                    // been received. This isn't an error, so we'll just no-op here.
-                    let output_ref: ObjectRef<Self> = this.into();
-                    if output_ref.is_valid(client) {
-                        Self::post_display_info(output_ref, client, &display_info)?;
-                    }
-                    Ok(())
-                });
-            }
-        }))
-        .detach();
     }
 
     pub fn post_output_info(
