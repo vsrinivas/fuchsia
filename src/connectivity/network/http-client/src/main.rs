@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::Context as _,
     fidl::prelude::*,
     fidl_fuchsia_net_http as net_http,
     fuchsia_async::{self as fasync, TimeoutExt as _},
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_hyper as fhyper,
     fuchsia_zircon::{self as zx, AsHandleRef},
-    futures::{future::BoxFuture, prelude::*, StreamExt},
+    futures::{prelude::*, StreamExt},
     hyper,
-    tracing::{debug, error, info, trace},
     std::convert::TryFrom,
     std::str::FromStr as _,
+    tracing::{debug, error, info, trace},
 };
 
 static MAX_REDIRECTS: u8 = 10;
@@ -195,7 +195,7 @@ struct Loader {
 }
 
 impl Loader {
-    async fn new(req: net_http::Request) -> Result<Self, Error> {
+    async fn new(req: net_http::Request) -> Result<Self, anyhow::Error> {
         let net_http::Request { method, url, headers, body, deadline, .. } = req;
         let method = method.as_ref().map(|method| hyper::Method::from_str(method)).transpose()?;
         let method = method.unwrap_or(hyper::Method::GET);
@@ -209,7 +209,7 @@ impl Loader {
                     let value = hyper::header::HeaderValue::from_bytes(&value)?;
                     Ok((name, value))
                 })
-                .collect::<Result<hyper::HeaderMap, Error>>()?;
+                .collect::<Result<hyper::HeaderMap, anyhow::Error>>()?;
 
             let body = match body {
                 Some(net_http::Body::Buffer(buffer)) => {
@@ -238,109 +238,101 @@ impl Loader {
 
             Ok(Loader { method, url, headers, body, deadline })
         } else {
-            Err(Error::msg("Request missing URL"))
+            Err(anyhow::Error::msg("Request missing URL"))
         }
     }
 
-    fn build_request(&self) -> Result<hyper::Request<hyper::Body>, http::Error> {
-        let mut builder = hyper::Request::builder().method(&self.method).uri(&self.url);
-        for (name, value) in &self.headers {
-            builder = builder.header(name, value);
-        }
-        builder.body(self.body.clone().into())
+    fn build_request(&self) -> hyper::Request<hyper::Body> {
+        let Self { method, url, headers, body, deadline: _ } = self;
+        let mut request = hyper::Request::new(body.clone().into());
+        *request.method_mut() = method.clone();
+        *request.uri_mut() = url.clone();
+        *request.headers_mut() = headers.clone();
+        request
     }
 
-    fn start(
-        mut self,
-        loader_client: net_http::LoaderClientProxy,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        async move {
-            let client = fhyper::new_https_client_from_tcp_options(tcp_options());
-            let hyper_response = match client.request(self.build_request()?).await {
-                Ok(response) => response,
+    async fn start(mut self, loader_client: net_http::LoaderClientProxy) -> Result<(), zx::Status> {
+        let client = fhyper::new_https_client_from_tcp_options(tcp_options());
+        loop {
+            break match client.request(self.build_request()).await {
+                Ok(hyper_response) => {
+                    let redirect = redirect_info(&self.url, &self.method, &hyper_response);
+                    if let Some(redirect) = redirect {
+                        if let Some(url) = redirect.url {
+                            self.url = url;
+                            self.method = redirect.method;
+                            trace!(
+                                "Reporting redirect to OnResponse: {} {}",
+                                self.method,
+                                self.url
+                            );
+                            let response =
+                                to_success_response(&self.url, &self.method, hyper_response)
+                                    .await?;
+                            match loader_client.on_response(response).await {
+                                Ok(()) => {}
+                                Err(e) => {
+                                    debug!("Not redirecting because: {}", e);
+                                    break Ok(());
+                                }
+                            };
+                            trace!("Redirect allowed to {} {}", self.method, self.url);
+                            continue;
+                        }
+                    }
+                    let response =
+                        to_success_response(&self.url, &self.method, hyper_response).await?;
+                    // We don't care if on_response returns an error since this is the last
+                    // callback.
+                    let _: Result<_, _> = loader_client.on_response(response).await;
+                    Ok(())
+                }
                 Err(error) => {
                     info!("Received network level error from hyper: {}", error);
-                    // We don't care if on_response never returns, since this is the last callback.
-                    let _ =
+                    // We don't care if on_response returns an error since this is the last
+                    // callback.
+                    let _: Result<_, _> =
                         loader_client.on_response(to_error_response(to_fidl_error(&error))).await;
-                    return Ok(());
+                    Ok(())
                 }
             };
-            let redirect = redirect_info(&self.url, &self.method, &hyper_response);
-
-            if let Some(redirect) = redirect {
-                if let Some(url) = redirect.url {
-                    self.url = url;
-                    self.method = redirect.method;
-                    trace!("Reporting redirect to OnResponse: {} {}", self.method, self.url);
-                    match loader_client
-                        .on_response(
-                            to_success_response(&self.url, &self.method, hyper_response).await?,
-                        )
-                        .await
-                    {
-                        Err(e) => {
-                            debug!("Not redirecting because: {}", e);
-                            return Ok(());
-                        }
-                        _ => {}
-                    }
-                    trace!("Redirect allowed to {} {}", self.method, self.url);
-                    self.start(loader_client).await?;
-
-                    return Ok(());
-                }
-            }
-
-            // We don't care if on_response never returns, since this is the last callback.
-            let _ = loader_client
-                .on_response(to_success_response(&self.url, &self.method, hyper_response).await?)
-                .await;
-
-            Ok(())
         }
-        .boxed()
     }
 
-    fn fetch(
+    async fn fetch(
         mut self,
-        redirects_remaining: u8,
-    ) -> BoxFuture<
-        'static,
-        Result<
-            Result<(hyper::Response<hyper::Body>, hyper::Uri, hyper::Method), net_http::Error>,
-            http::Error,
-        >,
-    > {
+    ) -> Result<(hyper::Response<hyper::Body>, hyper::Uri, hyper::Method), net_http::Error> {
         let deadline = self.deadline;
+        let client = fhyper::new_https_client_from_tcp_options(tcp_options());
 
         async move {
-            let client = fhyper::new_https_client_from_tcp_options(tcp_options());
-            let result = client.request(self.build_request()?).await;
-
-            Ok(match result {
-                Ok(hyper_response) => {
-                    if redirects_remaining > 0 {
-                        let redirect = redirect_info(&self.url, &self.method, &hyper_response);
-                        if let Some(redirect) = redirect {
-                            if let Some(url) = redirect.url {
-                                self.url = url;
-                                self.method = redirect.method;
-                                trace!("Redirecting to {} {}", self.method, self.url);
-                                return self.fetch(redirects_remaining - 1).await;
+            let mut redirects = 0;
+            loop {
+                break match client.request(self.build_request()).await {
+                    Ok(hyper_response) => {
+                        if redirects != MAX_REDIRECTS {
+                            let redirect = redirect_info(&self.url, &self.method, &hyper_response);
+                            if let Some(redirect) = redirect {
+                                if let Some(url) = redirect.url {
+                                    self.url = url;
+                                    self.method = redirect.method;
+                                    trace!("Redirecting to {} {}", self.method, self.url);
+                                    redirects += 1;
+                                    continue;
+                                }
                             }
                         }
+                        Ok((hyper_response, self.url, self.method))
                     }
-                    Ok((hyper_response, self.url, self.method))
-                }
-                Err(e) => {
-                    info!("Received network level error from hyper: {}", e);
-                    Err(to_fidl_error(&e))
-                }
-            })
+                    Err(e) => {
+                        info!("Received network level error from hyper: {}", e);
+                        Err(to_fidl_error(&e))
+                    }
+                };
+            }
         }
-        .on_timeout(deadline, || Ok(Err(net_http::Error::DeadlineExceeded)))
-        .boxed()
+        .on_timeout(deadline, || Err(net_http::Error::DeadlineExceeded))
+        .await
     }
 }
 
@@ -376,7 +368,7 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
                                     .unwrap_or_default(),
                                 request
                             );
-                            let result = Loader::new(request).await?.fetch(MAX_REDIRECTS).await?;
+                            let result = Loader::new(request).await?.fetch().await;
                             responder.send(match result {
                                 Ok((hyper_response, final_url, final_method)) => {
                                     to_success_response(&final_url, &final_method, hyper_response)
@@ -409,7 +401,7 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
 }
 
 #[fuchsia::component]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<(), anyhow::Error> {
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(spawn_server);
     let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
