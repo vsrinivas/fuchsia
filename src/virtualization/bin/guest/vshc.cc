@@ -585,7 +585,7 @@ zx_status_t handle_vsh(std::optional<uint32_t> o_env_id, std::optional<uint32_t>
     vm_tools::vsh::GuestMessage msg_out;
     msg_out.mutable_data_message()->set_stream(vm_tools::vsh::STDIN_STREAM);
     msg_out.mutable_data_message()->set_data(
-        "function buster() { lxc exec buster -- login -f machina ; } \n\n");
+        "function penguin() { lxc exec penguin -- login -f machina ; } \n\n");
     if (!vsh::SendMessage(socket, msg_out)) {
       std::cerr << "Warning: Failed to inject helper function.\n";
     }

@@ -42,9 +42,9 @@ namespace {
 
 constexpr const char kLinuxGuestPackage[] =
     "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cmx";
-constexpr const char kContainerName[] = "buster";
-constexpr const char kContainerImageAlias[] = "debian/buster";
-constexpr const char kContainerImageServer[] = "https://storage.googleapis.com/cros-containers/%d";
+constexpr const char kContainerName[] = "penguin";
+constexpr const char kContainerImageAlias[] = "debian/bullseye";
+constexpr const char kContainerImageServer[] = "https://storage.googleapis.com/cros-containers/96";
 constexpr const char kDefaultContainerUser[] = "machina";
 constexpr const char kLinuxUriScheme[] = "linux://";
 constexpr const char kLinuxTerminalDesktopFileId[] = "garcon-terminal";

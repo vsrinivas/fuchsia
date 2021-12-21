@@ -145,9 +145,9 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 
     if (found_container_args) {
       if (args.empty()) {
-        args = {"lxc", "exec", "buster", "--", "login", "-f", "machina"};
+        args = {"lxc", "exec", "penguin", "--", "login", "-f", "machina"};
       } else {
-        args.insert(args.begin(), {"lxc", "exec", "buster", "--"});
+        args.insert(args.begin(), {"lxc", "exec", "penguin", "--"});
       }
     }
 
