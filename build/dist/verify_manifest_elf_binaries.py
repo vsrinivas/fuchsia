@@ -185,6 +185,10 @@ def find_unstripped_file(
         if lib_dir:
             build_id_dir = os.path.join(lib_dir, 'debug', '.build-id')
             if not os.path.exists(build_id_dir):
+                # Local rust builds don't contain debug in the path, so fallback
+                # to a path without debug.
+                build_id_dir = os.path.join(lib_dir, '.build-id')
+            if not os.path.exists(build_id_dir):
                 return None
             build_id = elfinfo.get_elf_info(filename).build_id
             # The build-id value is an hexadecimal string, used to locate the
