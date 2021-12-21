@@ -30,16 +30,7 @@ Runner::Runner()
       close_([this]() { CloseImpl(); }),
       interrupt_([this] { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
-  // Start the worker and ensure is up and running.
   worker_ = std::thread([this]() { Worker(); });
-  bool idle = true;
-  do {
-    std::this_thread::yield();
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      idle = idle_;
-    }
-  } while (!idle);
 }
 
 Runner::~Runner() {
@@ -104,10 +95,6 @@ void Runner::Merge(fit::function<void(zx_status_t)> callback) {
 
 void Runner::Worker() {
   while (true) {
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      idle_ = true;
-    }
     // Wait indefinitely. Destroying this object will call |StopImpl|.
     worker_sync_.WaitFor("more work to do");
     worker_sync_.Reset();
@@ -144,7 +131,11 @@ void Runner::Worker() {
       default:
         FX_NOTREACHED();
     }
-    callback(status);
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      callback(status);
+      idle_ = true;
+    }
   }
 }
 

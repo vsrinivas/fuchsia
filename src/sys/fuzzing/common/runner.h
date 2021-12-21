@@ -132,7 +132,7 @@ class Runner {
   // Worker variables.
   std::thread worker_;
   SyncWait worker_sync_;
-  bool idle_ FXL_GUARDED_BY(mutex_) = false;
+  bool idle_ FXL_GUARDED_BY(mutex_) = true;
   std::atomic<bool> stopped_ = false;
 
   uint8_t action_ FXL_GUARDED_BY(mutex_);
