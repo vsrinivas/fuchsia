@@ -198,7 +198,7 @@ fn clipped_duration(secs: f64) -> Duration {
 /// [RFC 8415, Section 16.1]: https://tools.ietf.org/html/rfc8415#section-16.1
 pub fn transaction_id() -> [u8; 3] {
     let mut id = [0u8; 3];
-    let () = thread_rng().fill(&mut id[..]);
+    thread_rng().fill(&mut id[..]);
     id
 }
 
@@ -263,7 +263,7 @@ impl InformationRequesting {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::InformationRequest, transaction_id, options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
 
         let retrans_timeout = self.retransmission_timeout(rng);
 
@@ -655,7 +655,7 @@ impl ServerDiscovery {
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Solicit, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
 
         let retrans_timeout =
             ServerDiscovery::retransmission_timeout(retrans_timeout, solicit_max_rt, rng);
@@ -1301,7 +1301,7 @@ impl Requesting {
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Request, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
 
         Transition {
             state: ClientState::Requesting(Requesting {
@@ -2525,7 +2525,7 @@ pub(crate) mod testutil {
         }
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // The client should transition to Requesting and select the server that
@@ -2555,7 +2555,7 @@ pub(crate) mod testutil {
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
@@ -2668,7 +2668,7 @@ mod tests {
                 want_options,
             );
             let mut want_buf = vec![0; builder.bytes_len()];
-            let () = builder.serialize(&mut want_buf);
+            builder.serialize(&mut want_buf);
             assert_eq!(
                 actions[..],
                 [
@@ -2690,7 +2690,7 @@ mod tests {
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
             let mut buf = vec![0; builder.bytes_len()];
-            let () = builder.serialize(&mut buf);
+            builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -2752,7 +2752,7 @@ mod tests {
             &client;
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -2772,7 +2772,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::InformationRequest, *transaction_id, &[]);
         let mut want_buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut want_buf);
+        builder.serialize(&mut want_buf);
         assert_eq!(
             actions[..],
             [
@@ -2992,7 +2992,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -3016,7 +3016,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -3095,7 +3095,7 @@ mod tests {
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -3187,7 +3187,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -3381,7 +3381,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id } =
@@ -3416,7 +3416,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id } =
@@ -3454,7 +3454,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
@@ -3491,7 +3491,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
@@ -3561,7 +3561,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
@@ -3634,7 +3634,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
@@ -3744,7 +3744,7 @@ mod tests {
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
             let mut buf = vec![0; builder.bytes_len()];
-            let () = builder.serialize(&mut buf);
+            builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
             let Transition { state, actions: _, transaction_id: _ } =
@@ -3795,7 +3795,7 @@ mod tests {
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(client.handle_message_receive(msg)[..], []);
@@ -3828,7 +3828,7 @@ mod tests {
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(client.handle_message_receive(msg)[..], []);
@@ -4104,7 +4104,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
@@ -4135,7 +4135,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
@@ -4165,7 +4165,7 @@ mod tests {
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
@@ -4200,7 +4200,7 @@ mod tests {
             &[],
         );
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -4225,7 +4225,7 @@ mod tests {
                 &client;
             let builder = v6::MessageBuilder::new(msg_type, *transaction_id, &[]);
             let mut buf = vec![0; builder.bytes_len()];
-            let () = builder.serialize(&mut buf);
+            builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
@@ -4253,7 +4253,7 @@ mod tests {
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Transition to InformationReceived state.
@@ -4272,7 +4272,7 @@ mod tests {
         );
 
         let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
+        builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Extra replies received in information received state are ignored.
