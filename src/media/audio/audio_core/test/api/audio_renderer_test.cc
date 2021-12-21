@@ -1082,6 +1082,7 @@ TEST_F(AudioRendererTransportTest, Play) {
 }
 
 // This is the sole test case to expressly target PlayNoReply, although it is used elsewhere.
+// Just touch the API in a cursory way.
 TEST_F(AudioRendererTransportTest, PlayNoReply) {
   audio_renderer_->SetPcmStreamType(kTestStreamType);
   CreateAndAddPayloadBuffer(0);
@@ -1169,34 +1170,37 @@ TEST_F(AudioRendererTransportTest, Pause) {
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, 0, AddCallback("Play"));
-  // Ensure that the transition to Play has completed fully
+  // Ensure that the transition to Play has completed fully.
   ExpectCallbacks();
 
-  audio_renderer_->Pause(AddCallback("Pause"));
-  // Ensure that the transition to Pause has completed fully
-  ExpectCallbacks();
+  int64_t pause_pts = fuchsia::media::NO_TIMESTAMP;
+  audio_renderer_->Pause(
+      AddCallback("Pause", [&pause_pts](int64_t pause_ref_time, int64_t pause_media_time) {
+        pause_pts = pause_media_time;
+      }));
 
+  // Ensure that the transition to Pause has completed fully.
+  ExpectCallbacks();
+  EXPECT_NE(pause_pts, fuchsia::media::NO_TIMESTAMP);
+
+  // Submit a packet after the stated Pause time. If we are paused, this packet should not complete.
   auto packet = kTestPacket;
-  packet.pts = ZX_MSEC(100);
-  // If we are paused, this newly-submitted packet should not complete
+  packet.pts = pause_pts + 1;
   audio_renderer_->SendPacket(std::move(packet), AddUnexpectedCallback("SendPacket"));
 
   ExpectConnected();  // fail on disconnect or the SendPacket completion
 }
 
 // This is the sole test case to expressly target PauseNoReply, although it is used elsewhere.
+// Just touch the API in a cursory way.
 TEST_F(AudioRendererTransportTest, PauseNoReply) {
   CreateAndAddPayloadBuffer(0);
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, 0, AddCallback("Play"));
   ExpectCallbacks();
-  audio_renderer_->PauseNoReply();
 
-  auto packet = kTestPacket;
-  packet.pts = ZX_MSEC(100);
-  // If we are paused, this newly-submitted packet should not complete
-  audio_renderer_->SendPacket(std::move(packet), AddUnexpectedCallback("SendPacket"));
+  audio_renderer_->PauseNoReply();
 
   ExpectConnected();
 }
@@ -1229,10 +1233,20 @@ TEST_F(AudioRendererTransportTest, QuickPlayPause) {
   audio_renderer_->SetPcmStreamType(kTestStreamType);
 
   audio_renderer_->Play(fuchsia::media::NO_TIMESTAMP, 0, AddCallback("Play"));
-  audio_renderer_->Pause(AddCallback("Pause"));
+  int64_t pause_pts = fuchsia::media::NO_TIMESTAMP;
+  audio_renderer_->Pause(
+      AddCallback("Pause", [&pause_pts](int64_t pause_ref_time, int64_t pause_media_time) {
+        pause_pts = pause_media_time;
+      }));
 
-  // If we are paused, this packet will not complete.
-  audio_renderer_->SendPacket(kTestPacket, AddUnexpectedCallback("SendPacket"));
+  // Ensure that the transition to Pause has completed fully
+  ExpectCallbacks();
+  EXPECT_NE(pause_pts, fuchsia::media::NO_TIMESTAMP);
+
+  // Submit a packet after the stated Pause time. If we are paused, this packet should not complete.
+  auto packet = kTestPacket;
+  packet.pts = pause_pts + 1;
+  audio_renderer_->SendPacket(std::move(packet), AddUnexpectedCallback("SendPacket"));
 
   ExpectConnected();
 }
