@@ -8,6 +8,7 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
@@ -89,9 +90,16 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     return device;
   }
 
-  void EnableVirtualAudio(const zx::channel& devfs) {
+  void EnableVirtualAudio(zx::channel devfs) {
+    fbl::unique_fd devfs_fd, fd;
+    ASSERT_EQ(ZX_OK, fdio_fd_create(devfs.release(), devfs_fd.reset_and_get_address()));
+    ASSERT_EQ(ZX_OK, devmgr_integration_test::RecursiveWaitForFile(
+                         devfs_fd, "sys/platform/00:00:2f/virtual_audio", &fd));
+
+    fdio_cpp::UnownedFdioCaller caller(devfs_fd.get());
+
     fuchsia::virtualaudio::ForwarderPtr virtualaudio;
-    fdio_service_connect_at(devfs.get(), "sys/platform/00:00:2f/virtual_audio",
+    fdio_service_connect_at(caller.borrow_channel(), "sys/platform/00:00:2f/virtual_audio",
                             virtualaudio.NewRequest().TakeChannel().release());
 
     // Perform a simple RPC with a reply to sanity check we're talking to the driver.
@@ -321,7 +329,7 @@ TEST_F(DevmgrTest, ExposeDriverFromComponentNamespace) {
   zx::channel::create(0, &devfs_req, &devfs);
   services->Connect("fuchsia.example.IsolatedDevmgr", std::move(devfs_req));
 
-  EnableVirtualAudio(devfs);
+  EnableVirtualAudio(std::move(devfs));
 }
 
 TEST_F(DevmgrTest, ExposeDevfsToHub) {
