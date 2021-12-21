@@ -754,7 +754,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
 
     if (result->result.is_err()) {
       orphaned();
-      LOGF(ERROR, "Failed to match Node '%s': %s", driver_node->name().data(),
+      LOGF(WARNING, "Failed to match Node '%s': %s", driver_node->name().data(),
            zx_status_get_string(result->result.err()));
       return;
     }
