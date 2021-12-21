@@ -194,3 +194,9 @@ pkgfs also doesn't support these times, but returns a placeholder value
 package-directory supports `ReadAt()` on meta-as-file.
 
 pkgfs only supports reading that file with `Read()`, not `ReadAt()`.
+
+### `/meta` opened as a file supports `Seek()`
+
+package-directory supports `Seek()` on meta-as-file.
+
+pkgfs only supports reading from the beginning of that file.
