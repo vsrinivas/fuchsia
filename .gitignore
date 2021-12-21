@@ -81,6 +81,8 @@ tables_generator_tests_*.txt
 /out/
 /prebuilt/
 /test_data/
+
+# Third party repos.
 /third_party/*
 !/third_party/llvm-libc/
 /third_party/llvm-libc/src
@@ -100,6 +102,9 @@ tables_generator_tests_*.txt
 /third_party/re2/src
 !/third_party/pyyaml/
 /third_party/pyyaml/src
+!/third_party/jinja2/
+/third_party/jinja2/src
+
 /tmp/
 /topaz/
 /vendor/
