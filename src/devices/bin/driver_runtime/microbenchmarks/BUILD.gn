@@ -8,6 +8,7 @@ executable("bin") {
   output_name = "driver_runtime_microbenchmarks"
   testonly = true
   sources = [
+    "arena.cc",
     "channels.cc",
     "handle_creation.cc",
     "round_trips.cc",
@@ -18,6 +19,7 @@ executable("bin") {
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
