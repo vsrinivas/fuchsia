@@ -21,6 +21,14 @@ python_binary("gn_generate_cmd") {
   ]
 }
 
+python_binary("gn_generate_services_macro") {
+  main_source = "gn_generate_services_macro.py"
+  deps = [
+    "//third_party/jinja2",
+    "//third_party/markupsafe",
+  ]
+}
+
 if (is_host) {
   # This is the build configuration for the ffx environment used by ffx_action()
   #
