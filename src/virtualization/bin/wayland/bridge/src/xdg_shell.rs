@@ -1277,6 +1277,9 @@ pub struct XdgToplevel {
     parent_ref: Option<ObjectRef<XdgToplevel>>,
     /// Optional title for `XdgToplevel`.
     title: Option<String>,
+    /// Maximum size for `XdgToplevel`. A value of zero means no maximum
+    /// size in the given dimension.
+    max_size: Size,
     /// This handle can be used to terminate the |SessionListener| FIDL service
     /// associated with this toplevel.
     #[cfg(not(feature = "flatland"))]
@@ -1289,11 +1292,12 @@ impl XdgToplevel {
     pub fn configure(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgToplevel::configure");
         let (width, height, maximized, surface_ref) = {
-            let (view, surface_ref, maybe_parent_ref) = {
+            let (view, max_size, surface_ref, maybe_parent_ref) = {
                 let toplevel = this.get(client)?;
+                let max_size = toplevel.max_size;
                 let xdg_surface_ref = toplevel.xdg_surface_ref;
                 let xdg_surface = xdg_surface_ref.get(client)?;
-                (xdg_surface.view.clone(), toplevel.surface_ref, toplevel.parent_ref)
+                (xdg_surface.view.clone(), max_size, toplevel.surface_ref, toplevel.parent_ref)
             };
             // Let the client determine the size if it has a parent.
             let (width, height, maximized) = if maybe_parent_ref.is_some() {
@@ -1314,7 +1318,19 @@ impl XdgToplevel {
                         width: display_info.width_in_px as i32,
                         height: display_info.height_in_px as i32,
                     });
-                (physical_size.width, physical_size.height, true)
+                (
+                    if max_size.width > 0 {
+                        physical_size.width.min(max_size.width)
+                    } else {
+                        physical_size.width
+                    },
+                    if max_size.height > 0 {
+                        physical_size.height.min(max_size.height)
+                    } else {
+                        physical_size.height
+                    },
+                    true,
+                )
             };
             (width, height, maximized, surface_ref)
         };
@@ -1353,6 +1369,11 @@ impl XdgToplevel {
         self.title = title;
     }
 
+    /// Sets the maximum size for this `XdgToplevel`.
+    fn set_max_size(&mut self, max_size: Size) {
+        self.max_size = max_size;
+    }
+
     fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
         ftrace::duration!("wayland", "XdgToplevel::close");
         client.event_queue().post(this.id(), XdgToplevelEvent::Close)
@@ -1378,6 +1399,7 @@ impl XdgToplevel {
             waiting_for_initial_commit: true,
             parent_ref: None,
             title: None,
+            max_size: Size { width: 0, height: 0 },
         })
     }
 
@@ -1530,6 +1552,7 @@ impl XdgToplevel {
             .expect("fidl error");
         let xdg_surface_ref = toplevel.xdg_surface_ref;
         let surface_ref = toplevel.surface_ref;
+        let max_size = toplevel.max_size;
         let task_queue = client.task_queue();
         XdgSurface::spawn_keyboard_listener(surface_ref, view_ref_dup2, task_queue.clone())?;
         XdgSurface::spawn_view_ref_focused_listener(
@@ -1550,7 +1573,7 @@ impl XdgToplevel {
             surface_ref,
             None,
             Some((0, 0)),
-            Rect { x: 0, y: 0, width: 0, height: 0 },
+            Rect { x: 0, y: 0, width: max_size.width, height: max_size.height },
         )?;
         XdgSurfaceView::finish_setup_scene(&view_ptr, client)?;
         xdg_surface_ref.get_mut(client)?.set_view(view_ptr.clone());
@@ -1680,6 +1703,7 @@ impl XdgToplevel {
             waiting_for_initial_commit: true,
             parent_ref: None,
             title: None,
+            max_size: Size { width: 0, height: 0 },
             session_listener_controller: None,
         })
     }
@@ -1800,6 +1824,7 @@ impl XdgToplevel {
         );
         let xdg_surface_ref = toplevel.xdg_surface_ref;
         let surface_ref = toplevel.surface_ref;
+        let max_size = toplevel.max_size;
         let task_queue = client.task_queue();
         XdgSurface::spawn_keyboard_listener(surface_ref, view_ref, task_queue.clone())?;
         let view_ptr = XdgSurfaceView::new(
@@ -1810,7 +1835,7 @@ impl XdgToplevel {
             surface_ref,
             None,
             Some((0, 0)),
-            Rect { x: 0, y: 0, width: 0, height: 0 },
+            Rect { x: 0, y: 0, width: max_size.width, height: max_size.height },
         )?;
         XdgSurfaceView::finish_setup_scene(&view_ptr, client)?;
         xdg_surface_ref.get_mut(client)?.set_view(view_ptr.clone());
@@ -1971,7 +1996,10 @@ impl RequestReceiver<xdg_shell::XdgToplevel> for XdgToplevel {
             XdgToplevelRequest::ShowWindowMenu { .. } => {}
             XdgToplevelRequest::Move { .. } => {}
             XdgToplevelRequest::Resize { .. } => {}
-            XdgToplevelRequest::SetMaxSize { .. } => {}
+            XdgToplevelRequest::SetMaxSize { width, height } => {
+                let toplevel = this.get_mut(client)?;
+                toplevel.set_max_size(Size { width, height });
+            }
             XdgToplevelRequest::SetMinSize { .. } => {}
             XdgToplevelRequest::SetMaximized => {}
             XdgToplevelRequest::UnsetMaximized => {}
@@ -2047,27 +2075,43 @@ impl XdgSurfaceView {
         local_offset: &Option<(i32, i32)>,
         geometry: &Rect,
     ) -> (i32, i32) {
-        // Allow a non-zero absolute offset if we have a parent view.
-        parent.as_ref().map_or((0, 0), |parent| {
-            // Center in available space by default and relative to parent if
-            // local offset is set.
-            local_offset.map_or_else(
-                || {
-                    if physical_size.width != 0 && physical_size.width != 0 {
-                        (
-                            (physical_size.width as i32 - geometry.width) / 2,
-                            (physical_size.height as i32 - geometry.height) / 2,
-                        )
-                    } else {
-                        (0, 0)
-                    }
+        // Use local offset if we have a parent view.
+        parent.as_ref().map_or_else(
+            ||
+            // Center in available space if geometry is non-zero.
+            (
+                if geometry.width != 0 {
+                    (physical_size.width as i32 - geometry.width) / 2
+                } else {
+                    0
                 },
-                |(x, y)| {
-                    let parent_offset = parent.lock().absolute_offset();
-                    (parent_offset.0 + x, parent_offset.1 + y)
-                },
-            )
-        })
+                if geometry.height != 0 {
+                    (physical_size.height as i32 - geometry.height) / 2
+                } else {
+                    0
+                }
+            ),
+            |parent| {
+                // Center in available space by default and relative to parent if
+                // local offset is set.
+                local_offset.map_or_else(
+                    || {
+                        if physical_size.width != 0 && physical_size.width != 0 {
+                            (
+                                (physical_size.width as i32 - geometry.width) / 2,
+                                (physical_size.height as i32 - geometry.height) / 2,
+                            )
+                        } else {
+                            (0, 0)
+                        }
+                    },
+                    |(x, y)| {
+                        let parent_offset = parent.lock().absolute_offset();
+                        (parent_offset.0 + x, parent_offset.1 + y)
+                    },
+                )
+            },
+        )
     }
 
     fn update_absolute_offset(&mut self) {
@@ -2171,6 +2215,7 @@ impl XdgSurfaceView {
         self.transform.as_ref().map(|transform| {
             self.flatland.proxy().set_root_transform(&mut transform.clone()).expect("fidl error");
         });
+        // TODO(fxbug.dev/90666): Add background color if there's no parent.
     }
 
     fn update(&mut self) {
@@ -2380,7 +2425,12 @@ impl XdgSurfaceView {
         self.container_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
 
         let material = Material::new(self.session.as_inner().clone());
-        material.set_color(ColorRgba { red: 0x0, green: 0x0, blue: 0x0, alpha: 0x0 });
+        // Transparent background if we have a parent, otherwise gray.
+        if self.parent.is_some() {
+            material.set_color(ColorRgba { red: 0x0, green: 0x0, blue: 0x0, alpha: 0x0 });
+        } else {
+            material.set_color(ColorRgba { red: 0x29, green: 0x29, blue: 0x29, alpha: 0xff });
+        }
         // To debug child views:
         // material.set_color(ColorRgba { red: 0x0, green: 0xff, blue: 0x0, alpha: 0x40 });
         self.background_node.set_material(&material);
