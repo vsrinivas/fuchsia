@@ -40,7 +40,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/storage/vfs/cpp/inspectable.h"
+#include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -168,23 +168,6 @@ class TransactionalFs {
   virtual Allocator& GetInodeAllocator() = 0;
 };
 
-class InspectableMinfs : public fs::Inspectable {
- public:
-  // Returns an immutable reference to the superblock.
-  virtual const Superblock& Info() const = 0;
-
-  // Gets an immutable reference to the InodeManager.
-  virtual const InspectableInodeManager* GetInodeManager() const = 0;
-
-  // Gets an immutable reference to the block_allocator.
-  virtual const Allocator& GetBlockAllocator() const = 0;
-
-#ifndef __Fuchsia__
-  // Gets an immutable copy of offsets_.
-  virtual BlockOffsets GetBlockOffsets() const = 0;
-#endif
-};
-
 class Minfs :
 #ifdef __Fuchsia__
     public fs::ManagedVfs,
@@ -192,8 +175,7 @@ class Minfs :
     public fs::Vfs,
 #endif
     public fbl::RefCounted<Minfs>,
-    public TransactionalFs,
-    public InspectableMinfs {
+    public TransactionalFs {
  public:
   // Not copyable or movable
   Minfs(const Minfs&) = delete;
@@ -383,8 +365,8 @@ class Minfs :
   MountState GetMountState() const { return mount_state_; }
 #endif
 
-  // InspectableFilesystem interface.
-  const Superblock& Info() const final { return sb_->Info(); }
+  // Returns an immutable reference to the superblock.
+  const Superblock& Info() const { return sb_->Info(); }
 
   uint64_t BlockSize() const {
     // Either intentionally or unintentionally, we do not want to change block
@@ -396,9 +378,11 @@ class Minfs :
     return Info().BlockSize();
   }
 
-  const InspectableInodeManager* GetInodeManager() const final { return inodes_.get(); }
+  // Gets an immutable reference to the InodeManager.
+  const InspectableInodeManager* GetInodeManager() const { return inodes_.get(); }
 
-  const Allocator& GetBlockAllocator() const final { return *block_allocator_; }
+  // Gets an immutable reference to the block_allocator.
+  const Allocator& GetBlockAllocator() const { return *block_allocator_; }
   // Returns number of blocks available.
   size_t BlocksAvailable() const { return GetBlockAllocator().GetAvailable(); }
 
@@ -408,10 +392,12 @@ class Minfs :
   size_t BlocksReserved() const { return GetBlockAllocator().GetReserved(); }
 
 #ifndef __Fuchsia__
-  BlockOffsets GetBlockOffsets() const final { return offsets_; }
+  // Gets an immutable copy of offsets_.
+  BlockOffsets GetBlockOffsets() const { return offsets_; }
 #endif
 
-  [[nodiscard]] zx_status_t ReadBlock(blk_t start_block_num, void* data) const final;
+  // Used by the disk inspector.
+  zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const;
 
   const TransactionLimits& Limits() const { return limits_; }
 

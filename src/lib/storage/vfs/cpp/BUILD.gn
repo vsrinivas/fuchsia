@@ -43,7 +43,6 @@ static_library("cpp") {
       "fidl_transaction.h",
       "file_connection.h",
       "fuchsia_vfs.h",
-      "inspectable.h",
       "lazy_dir.h",
       "managed_vfs.h",
       "mount_channel.h",

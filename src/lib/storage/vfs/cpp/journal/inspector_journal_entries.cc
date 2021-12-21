@@ -120,8 +120,7 @@ void JournalEntries::GetValue(const void** out_buffer, size_t* out_buffer_size) 
 std::unique_ptr<disk_inspector::DiskObject> JournalEntries::GetElementAt(uint32_t index) const {
   if (index < length_) {
     std::array<uint8_t, kJournalBlockSize> data;
-    zx_status_t status =
-        inspectable_->ReadBlock(static_cast<blk_t>(start_block_ + index), data.data());
+    zx_status_t status = read_block_(start_block_ + index, data.data());
     if (status != ZX_OK) {
       return nullptr;
     }

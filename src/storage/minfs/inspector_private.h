@@ -32,7 +32,7 @@ class RootObject : public disk_inspector::DiskObject {
   RootObject& operator=(const RootObject&) = delete;
   RootObject& operator=(RootObject&&) = delete;
 
-  RootObject(std::unique_ptr<InspectableMinfs> fs) : fs_(std::move(fs)) {}
+  explicit RootObject(std::unique_ptr<Minfs> fs) : fs_(std::move(fs)) {}
 
   // DiskObject interface
   const char* GetName() const override { return kRootName; }
@@ -57,7 +57,7 @@ class RootObject : public disk_inspector::DiskObject {
   std::unique_ptr<disk_inspector::DiskObject> GetBackupSuperBlock() const;
 
   // Pointer to the Minfs instance.
-  std::unique_ptr<InspectableMinfs> fs_;
+  std::unique_ptr<Minfs> fs_;
 };
 
 std::unique_ptr<disk_inspector::DiskObjectUint64> CreateUint64DiskObj(fbl::String fieldName,

@@ -8,7 +8,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/lib/storage/vfs/cpp/inspectable.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 
@@ -86,7 +85,7 @@ constexpr std::string_view kFlagsStr = "flags";
 constexpr std::string_view kPayloadBlocksStr = "payload blocks";
 constexpr std::string_view kTargetBlockStr = "target block";
 
-class FakeInspectableJournal : public fs::Inspectable {
+class FakeInspectableJournal {
  public:
   explicit FakeInspectableJournal(uint32_t entry_count) {
     JournalInfo *info = reinterpret_cast<JournalInfo *>(buffer_);
@@ -106,10 +105,12 @@ class FakeInspectableJournal : public fs::Inspectable {
     *revocation = kJournalRevocationBlock;
   }
 
-  zx_status_t ReadBlock(blk_t start_block_num, void *out_data) const {
-    EXPECT_LT(start_block_num, kCapacity);
-    memcpy(out_data, &buffer_[start_block_num * kBlockSize], kBlockSize);
-    return ZX_OK;
+  BlockReadCallback GetBlockReadCallback() {
+    return [this](uint64_t start_block_num, void *out_data) {
+      EXPECT_LT(start_block_num, kCapacity);
+      memcpy(out_data, &buffer_[start_block_num * kBlockSize], kBlockSize);
+      return ZX_OK;
+    };
   }
 
  private:
@@ -120,7 +121,7 @@ class FakeInspectableJournal : public fs::Inspectable {
 TEST(JournalInspector, JournalObject) {
   FakeInspectableJournal fake_journal(3);
   JournalInfo info = kJournalInfo;
-  JournalObject journalObj(info, 0, kCapacity, &fake_journal);
+  JournalObject journalObj(info, 0, kCapacity, fake_journal.GetBlockReadCallback());
 
   EXPECT_EQ(fs::kJournalName, journalObj.GetName());
   ASSERT_EQ(fs::kJournalNumElements, journalObj.GetNumElements());
@@ -172,7 +173,7 @@ TEST(JournalInspector, JournalObject) {
 TEST(JournalInspector, EntriesNumOfElements) {
   FakeInspectableJournal fake_journal(3);
   JournalInfo info = kJournalInfo;
-  JournalObject journalObj(info, 0, kCapacity, &fake_journal);
+  JournalObject journalObj(info, 0, kCapacity, fake_journal.GetBlockReadCallback());
   auto entries = journalObj.GetElementAt(5);
 
   ASSERT_EQ(kCapacity - kJournalMetadataBlocks, entries->GetNumElements());
@@ -181,7 +182,7 @@ TEST(JournalInspector, EntriesNumOfElements) {
 TEST(JournalInspector, EntriesBlocks) {
   FakeInspectableJournal fake_journal(3);
   JournalInfo info = kJournalInfo;
-  JournalObject journalObj(info, 0, kCapacity, &fake_journal);
+  JournalObject journalObj(info, 0, kCapacity, fake_journal.GetBlockReadCallback());
   auto entries = journalObj.GetElementAt(5);
 
   for (uint32_t i = 0; i < entries->GetNumElements(); i++) {
@@ -208,7 +209,7 @@ TEST(JournalInspector, EntriesBlocks) {
 TEST(JournalInspector, EntryHeader) {
   FakeInspectableJournal fake_journal(3);
   JournalInfo info = kJournalInfo;
-  JournalObject journalObj(info, 0, kCapacity, &fake_journal);
+  JournalObject journalObj(info, 0, kCapacity, fake_journal.GetBlockReadCallback());
   auto entries = journalObj.GetElementAt(5);
 
   auto entry = entries->GetElementAt(kHeaderBlockOffset - kJournalMetadataBlocks);
@@ -263,7 +264,7 @@ TEST(JournalInspector, EntryHeader) {
 TEST(JournalInspector, EntryCommit) {
   FakeInspectableJournal fake_journal(3);
   JournalInfo info = kJournalInfo;
-  JournalObject journalObj(info, 0, kCapacity, &fake_journal);
+  JournalObject journalObj(info, 0, kCapacity, fake_journal.GetBlockReadCallback());
   auto entries = journalObj.GetElementAt(5);
 
   auto entry = entries->GetElementAt(kCommitBlockOffset - kJournalMetadataBlocks);
@@ -300,7 +301,7 @@ TEST(JournalInspector, EntryCommit) {
 TEST(JournalInspector, EntryRevocationRecord) {
   FakeInspectableJournal fake_journal(3);
   JournalInfo info = kJournalInfo;
-  JournalObject journalObj(info, 0, kCapacity, &fake_journal);
+  JournalObject journalObj(info, 0, kCapacity, fake_journal.GetBlockReadCallback());
   auto entries = journalObj.GetElementAt(5);
 
   auto entry = entries->GetElementAt(kRevocationBlockOffset - kJournalMetadataBlocks);

@@ -7,7 +7,6 @@
 
 #include <disk_inspector/common_types.h>
 
-#include "src/lib/storage/vfs/cpp/inspectable.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 
 namespace fs {
@@ -17,6 +16,7 @@ constexpr uint32_t kJournalNumElements = 6;
 constexpr char kJournalName[] = "journal";
 constexpr char kJournalEntriesName[] = "journal-entries";
 
+using BlockReadCallback = std::function<zx_status_t(uint64_t, void*)>;
 class JournalObject : public disk_inspector::DiskObject {
  public:
   JournalObject() = delete;
@@ -26,11 +26,13 @@ class JournalObject : public disk_inspector::DiskObject {
   JournalObject& operator=(JournalObject&&) = delete;
 
   JournalObject(fs::JournalInfo info, uint64_t start_block, uint64_t length,
-                const Inspectable* inspectable)
+                BlockReadCallback read_block)
       : journal_info_(std::move(info)),
         start_block_(start_block),
         length_(length),
-        inspectable_(inspectable) {}
+        read_block_(std::move(read_block)) {
+    ZX_ASSERT(read_block_ != nullptr);
+  }
 
   // DiskObject interface:
   const char* GetName() const override { return kJournalName; }
@@ -45,7 +47,7 @@ class JournalObject : public disk_inspector::DiskObject {
   fs::JournalInfo journal_info_;
   uint64_t start_block_;
   uint64_t length_;
-  const Inspectable* inspectable_;
+  BlockReadCallback read_block_;
 };
 
 }  // namespace fs

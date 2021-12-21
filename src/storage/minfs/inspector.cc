@@ -10,6 +10,7 @@
 #include <block-client/cpp/block-device.h>
 #include <disk_inspector/common_types.h>
 #include <fbl/unique_fd.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/storage/minfs/bcache.h"
@@ -94,8 +95,11 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
     return nullptr;
   }
   fs::JournalInfo* info = reinterpret_cast<fs::JournalInfo*>(data);
+  auto block_reader = [fs = fs_.get()](uint64_t start, void* data) {
+    return fs->ReadBlock(safemath::checked_cast<blk_t>(start), data);
+  };
   return std::unique_ptr<disk_inspector::DiskObject>(
-      new fs::JournalObject(*info, start_block, length, fs_.get()));
+      new fs::JournalObject(*info, start_block, length, std::move(block_reader)));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetBackupSuperBlock() const {

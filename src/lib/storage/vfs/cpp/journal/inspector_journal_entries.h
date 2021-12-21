@@ -6,11 +6,11 @@
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
 
 #include <array>
+#include <functional>
 
 #include <disk_inspector/common_types.h>
 #include <fbl/string_printf.h>
 
-#include "src/lib/storage/vfs/cpp/inspectable.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 
@@ -54,11 +54,13 @@ class JournalEntries : public disk_inspector::DiskObject {
   JournalEntries& operator=(JournalEntries&&) = delete;
 
   JournalEntries(fs::JournalInfo info, uint64_t start_block, uint64_t length,
-                 const Inspectable* inspectable)
+                 BlockReadCallback read_block)
       : journal_info_(std::move(info)),
         start_block_(start_block),
         length_(length),
-        inspectable_(inspectable) {}
+        read_block_(std::move(read_block)) {
+    ZX_ASSERT(read_block_ != nullptr);
+  }
 
   // DiskObject interface:
   const char* GetName() const override { return kJournalEntriesName; }
@@ -73,7 +75,7 @@ class JournalEntries : public disk_inspector::DiskObject {
   fs::JournalInfo journal_info_;
   uint64_t start_block_;
   uint64_t length_;
-  const Inspectable* inspectable_;
+  BlockReadCallback read_block_;
 };
 
 }  // namespace fs

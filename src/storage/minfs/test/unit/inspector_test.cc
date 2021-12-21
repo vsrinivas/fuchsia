@@ -33,7 +33,7 @@ constexpr uint32_t kBlockSize = 512;
 // Mock InodeManager class to be used in inspector tests.
 class MockInodeManager : public InspectableInodeManager {
  public:
-  MockInodeManager();
+  MockInodeManager() = default;
   MockInodeManager(const MockInodeManager&) = delete;
   MockInodeManager(MockInodeManager&&) = delete;
   MockInodeManager& operator=(const MockInodeManager&) = delete;
@@ -44,34 +44,12 @@ class MockInodeManager : public InspectableInodeManager {
   const Allocator* GetInodeAllocator() const final;
 };
 
-MockInodeManager::MockInodeManager() {}
-
 void MockInodeManager::Load(ino_t inode_num, Inode* out) const {}
 
 // We fake that only the inode at index 1 is allocated.
 bool MockInodeManager::CheckAllocated(uint32_t inode_num) const { return (inode_num == 1); }
 
 const Allocator* MockInodeManager::GetInodeAllocator() const { return nullptr; }
-
-constexpr Superblock superblock = {};
-
-// Mock Minfs class to be used in inspector tests.
-class MockMinfs : public InspectableMinfs {
- public:
-  MockMinfs() = default;
-  MockMinfs(const MockMinfs&) = delete;
-  MockMinfs(MockMinfs&&) = delete;
-  MockMinfs& operator=(const MockMinfs&) = delete;
-  MockMinfs& operator=(MockMinfs&&) = delete;
-
-  const Superblock& Info() const { return superblock; }
-
-  const InspectableInodeManager* GetInodeManager() const final { return nullptr; }
-
-  const Allocator& GetBlockAllocator() const final { ZX_ASSERT(false); }
-
-  zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const final { return ZX_OK; }
-};
 
 uint64_t GetUint64Value(const disk_inspector::DiskObject* object) {
   size_t size;
@@ -134,28 +112,6 @@ void RunSuperblockTest(SuperblockType version) {
   std::unique_ptr<disk_inspector::DiskObject> obj6 = superblock->GetElementAt(5);
   obj6->GetValue(&buffer, &size);
   ASSERT_EQ(kMinfsInodeSize, *(reinterpret_cast<const uint32_t*>(buffer)));
-}
-
-TEST(InspectorTest, TestRoot) {
-  auto fs = std::unique_ptr<MockMinfs>(new MockMinfs());
-
-  std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
-  ASSERT_EQ(root_obj->GetName(), std::string_view(kRootName));
-  ASSERT_EQ(kRootNumElements, root_obj->GetNumElements());
-
-  // Superblock.
-  std::unique_ptr<disk_inspector::DiskObject> obj0 = root_obj->GetElementAt(0);
-  ASSERT_EQ(obj0->GetName(), std::string_view(kSuperBlockName));
-  ASSERT_EQ(kSuperblockNumElements, obj0->GetNumElements());
-
-  // Inode Table.
-  std::unique_ptr<disk_inspector::DiskObject> obj1 = root_obj->GetElementAt(1);
-  ASSERT_EQ(obj1->GetName(), std::string_view(kInodeTableName));
-
-  // Journal info.
-  std::unique_ptr<disk_inspector::DiskObject> obj2 = root_obj->GetElementAt(2);
-  ASSERT_EQ(obj2->GetName(), std::string_view(fs::kJournalName));
-  ASSERT_EQ(fs::kJournalNumElements, obj2->GetNumElements());
 }
 
 TEST(InspectorTest, TestInodeTable) {
@@ -231,6 +187,19 @@ TEST(InspectorTest, CorrectJournalLocation) {
 
   uint64_t journal_length = JournalBlocks(fs->Info());
   std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
+
+  // Root name
+  ASSERT_EQ(root_obj->GetName(), std::string_view(kRootName));
+  ASSERT_EQ(kRootNumElements, root_obj->GetNumElements());
+
+  // Superblock.
+  auto obj0 = root_obj->GetElementAt(0);
+  ASSERT_EQ(obj0->GetName(), std::string_view(kSuperBlockName));
+  ASSERT_EQ(kSuperblockNumElements, obj0->GetNumElements());
+
+  // Inode Table.
+  auto obj1 = root_obj->GetElementAt(1);
+  ASSERT_EQ(obj1->GetName(), std::string_view(kInodeTableName));
 
   // Journal info.
   auto journalObj = root_obj->GetElementAt(2);
