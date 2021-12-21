@@ -108,7 +108,7 @@ struct TransportWaiter {
 // Storage for |TransportWaiter|.
 // This avoids heap allocation while using a virtual waiter interface.
 // |kCapacity| must be larger than the sizes of all of the individual transport waiters.
-using AnyTransportWaiter = Any<TransportWaiter, /* kCapacity= */ 256ull>;
+using AnyTransportWaiter = NonMovableAny<TransportWaiter, /* kCapacity= */ 256ull>;
 
 // Function receiving notification of successful waits on a TransportWaiter.
 using TransportWaitSuccessHandler =

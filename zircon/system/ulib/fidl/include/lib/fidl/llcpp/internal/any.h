@@ -15,32 +15,30 @@
 namespace fidl {
 namespace internal {
 
-// |Any| is a polymorphic container used to implement type erasure.
-//
-// It is similar to |std::any|, with the following notable differences:
-// * The contained object must implement (i.e. be a subclass of) |Interface|.
-// * It will never heap allocate.
-//
-// This avoids additional memory allocations while using a virtual interface.
-// |kCapacity| must be larger than the sizes of all of the individual |Interface| implementations.
-template <typename Interface, size_t kCapacity = 16ull, size_t kAlignment = 16ull>
-class Any {
+template <typename Interface, size_t kCapacity, size_t kAlignment, bool kMovable>
+class AnyImpl {
  public:
   // Creates an invalid container that does not hold an object.
-  Any() = default;
-  ~Any() { reset(); }
+  AnyImpl() = default;
+  ~AnyImpl() { reset(); }
 
-  Any(const Any& other) = delete;
-  Any& operator=(const Any& other) = delete;
+  AnyImpl(const AnyImpl& other) = delete;
+  AnyImpl& operator=(const AnyImpl& other) = delete;
 
   // Moving an invalid |Any| results in another invalid |Any|.
   // Moving a valid |Any| invokes the move constructor of the contained type,
   // and resets the moved-from object back to an invalid state.
-  Any(Any&& other) noexcept { MoveImpl(std::move(other)); }
-  Any& operator=(Any&& other) noexcept {
+  AnyImpl(AnyImpl&& other) noexcept {
+    if constexpr (kMovable) {
+      MoveImpl(std::move(other));
+    }
+  }
+  AnyImpl& operator=(AnyImpl&& other) noexcept {
     if (this != &other) {
       reset();
-      MoveImpl(std::move(other));
+      if constexpr (kMovable) {
+        MoveImpl(std::move(other));
+      }
     }
     return *this;
   }
@@ -63,7 +61,9 @@ class Any {
 
     reset();
 
-    move_ = MoveConstructImpl<T>;
+    if constexpr (kMovable) {
+      move_ = MoveConstructImpl<T>;
+    }
     interface_ = AdjustPointerImpl<T>(storage_);
     return *new (&storage_) T(std::forward<Args>(args)...);
   }
@@ -96,10 +96,13 @@ class Any {
       interface_->~Interface();
     }
     interface_ = nullptr;
-    move_ = nullptr;
+    if constexpr (kMovable) {
+      move_ = nullptr;
+    }
   }
 
-  void MoveImpl(Any&& other) {
+  void MoveImpl(AnyImpl&& other) {
+    ZX_DEBUG_ASSERT(kMovable);
     move_ = other.move_;
     if (move_) {
       move_(storage_, other.storage_, &interface_);
@@ -133,6 +136,39 @@ class Any {
   // stored in |source| into |dest|, then adjusts the |interface| pointer to
   // point to the correct offset within |dest|.
   void (*move_)(Storage& dest, Storage& source, Interface** interface) = nullptr;
+};
+
+// |Any| is a polymorphic container used to implement type erasure.
+//
+// Unlike |NonMovableAny|, |Any| is movable and any type placed inside of it
+// must be movable.
+//
+// It is similar to |std::any|, with the following notable differences:
+// * The contained object must implement (i.e. be a subclass of) |Interface|.
+// * It will never heap allocate.
+//
+// This avoids additional memory allocations while using a virtual interface.
+// |kCapacity| must be larger than the sizes of all of the individual |Interface| implementations.
+template <typename Interface, size_t kCapacity = 16ull, size_t kAlignment = 16ull>
+using Any = AnyImpl<Interface, kCapacity, kAlignment, true>;
+
+// |NonMovableAny| is a polymorphic container used to implement type erasure.
+//
+// Unlike |Any|, |NonMovable| cannot be moved, but it can hold non-movable types.
+//
+// It is similar to |std::any|, with the following notable differences:
+// * The contained object must implement (i.e. be a subclass of) |Interface|.
+// * It will never heap allocate.
+//
+// This avoids additional memory allocations while using a virtual interface.
+// |kCapacity| must be larger than the sizes of all of the individual |Interface| implementations.
+template <typename Interface, size_t kCapacity = 16ull, size_t kAlignment = 16ull>
+class NonMovableAny : public AnyImpl<Interface, kCapacity, kAlignment, false> {
+ public:
+  NonMovableAny() = default;
+
+  NonMovableAny(NonMovableAny&&) = delete;
+  NonMovableAny& operator=(NonMovableAny&&) = delete;
 };
 
 }  // namespace internal

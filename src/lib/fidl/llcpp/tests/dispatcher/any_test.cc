@@ -53,6 +53,7 @@ class Six : public DiceRoll {
 };
 
 using AnyDiceRoll = ::fidl::internal::Any<DiceRoll>;
+using NonMovableAnyDiceRoll = ::fidl::internal::NonMovableAny<DiceRoll>;
 
 }  // namespace
 
@@ -150,4 +151,29 @@ TEST(Any, MultipleInheritance) {
   EXPECT_FALSE(any.is_valid());
   EXPECT_TRUE(any2.is_valid());
   EXPECT_EQ("hello", any2->GetValue());
+}
+
+TEST(NonMovableAny, DefaultConstruction) {
+  NonMovableAnyDiceRoll roll;
+  EXPECT_FALSE(roll.is_valid());
+}
+
+TEST(NonMovableAny, WrapObject) {
+  NonMovableAnyDiceRoll roll;
+  roll.emplace<Four>();
+  EXPECT_TRUE(roll.is_valid());
+  EXPECT_EQ(4, roll->value());
+  roll.emplace<Six>();
+  EXPECT_TRUE(roll.is_valid());
+  EXPECT_EQ(6, roll->value());
+}
+
+TEST(NonMovableAny, Destruction) {
+  int receiver = 0;
+  {
+    NonMovableAnyDiceRoll roll;
+    roll.emplace<Four>(&receiver);
+    EXPECT_EQ(0, receiver);
+  }
+  EXPECT_EQ(4, receiver);
 }
