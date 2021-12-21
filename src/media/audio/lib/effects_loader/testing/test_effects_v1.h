@@ -116,7 +116,12 @@ class TestEffectsV1Module {
   TestEffectsV1Module(TestEffectsV1Module&& o) = delete;
   TestEffectsV1Module& operator=(TestEffectsV1Module&& o) = delete;
 
-  ~TestEffectsV1Module() { ClearEffects(); }
+  ~TestEffectsV1Module() {
+    zx_status_t status = ClearEffects();
+    if (status != ZX_OK) {
+      FX_PLOGS(FATAL, status) << "Failed to clear audio effects";
+    }
+  }
 
   // Creates a new effect for the library. Must be called while the number of active effect
   // instances is zero.

@@ -140,12 +140,12 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
     driver_->set_formats(std::move(formats));
   }
 
+  testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
   VolumeCurve volume_curve_ = VolumeCurve::DefaultForMinGain(Gain::kMinGainDb);
   std::unique_ptr<testing::FakeAudioDriver> driver_;
   std::shared_ptr<DriverOutput> output_;
   fzl::VmoMapper ring_buffer_mapper_;
   zx::vmo ring_buffer_;
-  testing::TestEffectsV1Module test_effects_ = testing::TestEffectsV1Module::Open();
 };
 
 // Simple sanity test that the DriverOutput properly initializes the driver.

@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/audio_output.h"
 
+#include <lib/fit/defer.h>
+
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
@@ -461,6 +463,10 @@ TEST_F(AudioOutputTest, UpdateOutputPipeline) {
 
   bool updated_device_profile = false;
   auto promise = audio_output_->UpdateDeviceProfile(profile_params);
+  // |audio_output_| now holds an active effect instance. It must be destroyed *before*
+  // |test_effects| is dropped to allow the latter's destructor to clean up the list of effects and
+  // avoid test pollution.
+  auto cleanup = fit::defer([this]() { audio_output_.reset(); });
   context().threading_model().FidlDomain().executor()->schedule_task(
       promise.then([&updated_device_profile](fpromise::result<void, zx_status_t>& result) {
         updated_device_profile = true;
