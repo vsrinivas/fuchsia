@@ -230,7 +230,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	if r.serialLogFile != "" {
 		eg.Go(func() error {
 			logger.Debugf(ctx, "starting serial collection")
-			return t0.CaptureSerialLog(r.serialLogFile)
+			if err := t0.CaptureSerialLog(r.serialLogFile); err != nil && ctx.Err() == nil {
+				return err
+			}
+			return nil
 		})
 	}
 
@@ -287,7 +290,13 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			defer cancel()
 			r.stopTargets(ctx, targetSlice)
 		}()
-		return r.runAgainstTarget(ctx, t0, args, testbedConfig)
+		err = r.runAgainstTarget(ctx, t0, args, testbedConfig)
+		// Cancel ctx to notify other goroutines that this routine has completed.
+		// If another goroutine gets an error and the context is canceled, it
+		// should return nil so that we always prioritize the result from this
+		// goroutine.
+		cancel()
+		return err
 	})
 
 	return eg.Wait()
