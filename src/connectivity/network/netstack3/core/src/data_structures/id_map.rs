@@ -55,81 +55,20 @@ impl FreeList {
     }
 }
 
-// The following is to mimic the `Option<T>` API.
 impl<T> IdMapEntry<T> {
-    /// If the entry is allocated, return the reference, otherwise, return
-    /// `None`.
-    fn as_ref(&self) -> Option<&T> {
+    /// Returns a reference to the freelist link if the entry is free, otherwise None.
+    fn as_free_or_none(&self) -> Option<&FreeListLink> {
         match self {
-            IdMapEntry::Allocated(e) => Some(e),
-            IdMapEntry::Free(_) => None,
+            IdMapEntry::Free(link) => Some(link),
+            IdMapEntry::Allocated(_) => None,
         }
     }
 
-    /// If the entry is allocated, return the mutable reference, otherwise,
-    /// return `None`.
-    fn as_mut(&mut self) -> Option<&mut T> {
+    /// Returns a mutable reference to the freelist link if the entry is free, otherwise None.
+    fn as_free_or_none_mut(&mut self) -> Option<&mut FreeListLink> {
         match self {
-            IdMapEntry::Allocated(e) => Some(e),
-            IdMapEntry::Free(_) => None,
-        }
-    }
-
-    /// Convert the entry into an option.
-    fn into_option(self) -> Option<T> {
-        match self {
-            IdMapEntry::Allocated(e) => Some(e),
-            IdMapEntry::Free(_) => None,
-        }
-    }
-
-    /// Return whether the entry is allocated.
-    fn is_allocated(&self) -> bool {
-        match self {
-            IdMapEntry::Allocated(_) => true,
-            IdMapEntry::Free(_) => false,
-        }
-    }
-
-    /// Return whether the entry is free.
-    fn is_free(&self) -> bool {
-        !self.is_allocated()
-    }
-
-    /// Return the old entry and replace it with `new`.
-    fn replace(&mut self, new: T) -> IdMapEntry<T> {
-        core::mem::replace(self, IdMapEntry::Allocated(new))
-    }
-
-    /// Take the old allocated entry and replace it with a free entry.
-    ///
-    /// The new free entry's `prev` pointer will be `None`, so the new free
-    /// entry is intended to be inserted at the front of the freelist. If the
-    /// old entry is already free, this is a no-op.
-    fn take_allocated(&mut self, next: Option<usize>) -> Option<T> {
-        if self.is_allocated() {
-            core::mem::replace(self, IdMapEntry::Free(FreeListLink { prev: None, next }))
-                .into_option()
-        } else {
-            // If it is currently free, we don't want to unlink the entry and
-            // link it back at the head again.
-            None
-        }
-    }
-
-    /// Return a mutable reference to the freelist link, panic if allocated.
-    fn freelist_link_mut(&mut self) -> &mut FreeListLink {
-        match self {
-            IdMapEntry::Free(link) => link,
-            _ => unreachable!("An allocated block should never be linked into the free list"),
-        }
-    }
-
-    /// Return a reference to the freelist link, panic if allocated.
-    fn freelist_link(&self) -> &FreeListLink {
-        match self {
-            IdMapEntry::Free(link) => link,
-            _ => unreachable!("An allocated block should never be linked into the free list"),
+            IdMapEntry::Free(link) => Some(link),
+            IdMapEntry::Allocated(_) => None,
         }
     }
 }
@@ -174,13 +113,19 @@ impl<T> IdMap<T> {
     /// Returns a reference to the item indexed by `key`, or `None` if the `key`
     /// doesn't exist.
     pub fn get(&self, key: Key) -> Option<&T> {
-        self.data.get(key).and_then(|v| v.as_ref())
+        self.data.get(key).and_then(|v| match v {
+            IdMapEntry::Allocated(t) => Some(t),
+            IdMapEntry::Free(_) => None,
+        })
     }
 
     /// Returns a mutable reference to the item indexed by `key`, or `None` if
     /// the `key` doesn't exist.
     pub fn get_mut(&mut self, key: Key) -> Option<&mut T> {
-        self.data.get_mut(key).and_then(|v| v.as_mut())
+        self.data.get_mut(key).and_then(|v| match v {
+            IdMapEntry::Allocated(t) => Some(t),
+            IdMapEntry::Free(_) => None,
+        })
     }
 
     /// Removes item indexed by `key` from the container.
@@ -198,17 +143,34 @@ impl<T> IdMap<T> {
     }
 
     fn remove_inner(&mut self, key: Key) -> Option<T> {
-        let old_head = self.freelist.map(|l| l.head);
-        let r = self.data.get_mut(key).and_then(|v| v.take_allocated(old_head));
+        let Self { data, freelist } = self;
+        let r = data.get_mut(key).and_then(|v| {
+            match v {
+                IdMapEntry::Allocated(_) => {
+                    let old_head = freelist.map(|l| l.head);
+                    let new_link = IdMapEntry::Free(FreeListLink { prev: None, next: old_head });
+                    match core::mem::replace(v, new_link) {
+                        IdMapEntry::Allocated(t) => Some(t),
+                        IdMapEntry::Free(_) => unreachable!("already matched"),
+                    }
+                }
+                // If it is currently free, we don't want to unlink the entry and
+                // link it back at the head again.
+                IdMapEntry::Free(_) => None,
+            }
+        });
         if r.is_some() {
             // If it was allocated, we add the removed entry to the head of the
             // free-list.
-            match self.freelist.as_mut() {
+            match freelist.as_mut() {
                 Some(FreeList { head, .. }) => {
-                    self.data[*head].freelist_link_mut().prev = Some(key);
+                    data[*head]
+                        .as_free_or_none_mut()
+                        .unwrap_or_else(|| panic!("freelist head node {} is not free", head))
+                        .prev = Some(key);
                     *head = key;
                 }
-                None => self.freelist = Some(FreeList::singleton(key)),
+                None => *freelist = Some(FreeList::singleton(key)),
             }
         }
         r
@@ -223,10 +185,14 @@ impl<T> IdMap<T> {
     /// than the number of items currently held by the [`IdMap`].
     pub fn insert(&mut self, key: Key, item: T) -> Option<T> {
         if key < self.data.len() {
-            if self.data[key].is_free() {
-                self.freelist_unlink(key);
+            let prev = core::mem::replace(&mut self.data[key], IdMapEntry::Allocated(item));
+            match prev {
+                IdMapEntry::Free(link) => {
+                    self.freelist_unlink(link);
+                    None
+                }
+                IdMapEntry::Allocated(t) => Some(t),
             }
-            self.data[key].replace(item).into_option()
         } else {
             let start_len = self.data.len();
             // Fill the gap `start_len .. key` with free entries. Currently, the
@@ -256,7 +222,10 @@ impl<T> IdMap<T> {
                 let new_tail = key - 1;
                 match self.freelist.as_mut() {
                     Some(FreeList { tail, .. }) => {
-                        self.data[*tail].freelist_link_mut().next = Some(start_len);
+                        self.data[*tail]
+                            .as_free_or_none_mut()
+                            .unwrap_or_else(|| panic!("freelist tail node {} is not free", tail))
+                            .next = Some(start_len);
                         *tail = new_tail;
                     }
                     None => {
@@ -285,11 +254,17 @@ impl<T> IdMap<T> {
             let ret = *head;
             let old =
                 core::mem::replace(self.data.get_mut(ret).unwrap(), IdMapEntry::Allocated(item));
+            let old_link = old
+                .as_free_or_none()
+                .unwrap_or_else(|| panic!("freelist head node {} is not free", head));
             // Update the head of the freelist.
-            match old.freelist_link().next {
+            match old_link.next {
                 Some(new_head) => {
                     *head = new_head;
-                    self.data[new_head].freelist_link_mut().prev = None;
+                    self.data[new_head]
+                        .as_free_or_none_mut()
+                        .unwrap_or_else(|| panic!("new free list head {} is not free", new_head))
+                        .prev = None;
                 }
                 None => self.freelist = None,
             }
@@ -309,16 +284,14 @@ impl<T> IdMap<T> {
     /// shrinking the internal `Vec`.
     fn compress(&mut self) {
         // First, find the last non-free entry.
-        if let Some(idx) = self.data.iter().enumerate().rev().find_map(|(k, v)| {
-            if v.is_allocated() {
-                Some(k)
-            } else {
-                None
-            }
+        if let Some(idx) = self.data.iter().enumerate().rev().find_map(|(k, v)| match v {
+            IdMapEntry::Allocated(_) => Some(k),
+            IdMapEntry::Free(_) => None,
         }) {
             // Remove all the trailing free entries.
             for i in idx + 1..self.data.len() {
-                self.freelist_unlink(i);
+                let link = *self.data[i].as_free_or_none().expect("already confirmed as free");
+                self.freelist_unlink(link);
             }
             self.data.truncate(idx + 1);
         } else {
@@ -330,19 +303,25 @@ impl<T> IdMap<T> {
 
     /// Creates an iterator over the containing items and their associated keys.
     pub fn iter(&self) -> impl Iterator<Item = (Key, &T)> {
-        self.data.iter().enumerate().filter_map(|(k, v)| v.as_ref().map(|t| (k, t)))
+        self.data.iter().enumerate().filter_map(|(k, v)| match v {
+            IdMapEntry::Allocated(t) => Some((k, t)),
+            IdMapEntry::Free(_) => None,
+        })
     }
 
     /// Creates a mutable iterator over the containing items and their
     /// associated keys.
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Key, &mut T)> {
-        self.data.iter_mut().enumerate().filter_map(|(k, v)| v.as_mut().map(|t| (k, t)))
+        self.data.iter_mut().enumerate().filter_map(|(k, v)| match v {
+            IdMapEntry::Allocated(t) => Some((k, t)),
+            IdMapEntry::Free(_) => None,
+        })
     }
 
     /// Gets the given key's corresponding entry in the map for in-place
     /// manipulation.
     pub fn entry(&mut self, key: usize) -> Entry<'_, usize, T> {
-        if key < self.data.len() && self.data[key].is_allocated() {
+        if let Some(IdMapEntry::Allocated(_)) = self.data.get(key) {
             Entry::Occupied(OccupiedEntry { key, id_map: self })
         } else {
             Entry::Vacant(VacantEntry { key, id_map: self })
@@ -404,22 +383,35 @@ impl<T> IdMap<T> {
     /// Unlink an entry from the freelist.
     ///
     /// We want to do so whenever a freed block turns allocated.
-    fn freelist_unlink(&mut self, idx: usize) {
-        let FreeListLink { prev, next } = self.data[idx].freelist_link().clone();
+    fn freelist_unlink(&mut self, link: FreeListLink) {
+        let FreeListLink { prev, next } = link;
+
         match (prev, next) {
             (Some(prev), Some(next)) => {
                 // A normal node in the middle of a list.
-                self.data[prev].freelist_link_mut().next = Some(next);
-                self.data[next].freelist_link_mut().prev = Some(prev);
+                self.data[prev]
+                    .as_free_or_none_mut()
+                    .unwrap_or_else(|| panic!("free's prev {} is not free", prev))
+                    .next = Some(next);
+                self.data[next]
+                    .as_free_or_none_mut()
+                    .unwrap_or_else(|| panic!("free's next {} is not free", next))
+                    .prev = Some(prev);
             }
             (Some(prev), None) => {
                 // The node at the tail.
-                self.data[prev].freelist_link_mut().next = next;
+                self.data[prev]
+                    .as_free_or_none_mut()
+                    .unwrap_or_else(|| panic!("tail's prev {} is not free", prev))
+                    .next = next;
                 self.freelist.as_mut().unwrap().tail = prev;
             }
             (None, Some(next)) => {
                 // The node at the head.
-                self.data[next].freelist_link_mut().prev = prev;
+                self.data[next]
+                    .as_free_or_none_mut()
+                    .unwrap_or_else(|| panic!("head's next {} is not free", next))
+                    .prev = prev;
                 self.freelist.as_mut().unwrap().head = next;
             }
             (None, None) => {
@@ -460,7 +452,10 @@ impl<'a, K, T> VacantEntry<'a, K, T> {
         K: EntryKey,
     {
         assert!(self.id_map.insert(self.key.get_key_index(), value).is_none());
-        self.id_map.data[self.key.get_key_index()].as_mut().unwrap()
+        match &mut self.id_map.data[self.key.get_key_index()] {
+            IdMapEntry::Allocated(t) => t,
+            IdMapEntry::Free(_) => unreachable!("entry is known to be vacant"),
+        }
     }
 
     /// Gets a reference to the key that would be used when inserting a value
@@ -1160,17 +1155,21 @@ mod tests {
         while let Some((index, link)) = next {
             found.push(index);
             next = link.next.map(|next_i| {
-                let next_free = data[next_i].freelist_link();
+                let next_free = match &data[next_i] {
+                    IdMapEntry::Free(f) => f,
+                    IdMapEntry::Allocated(_) => panic!("free list element is not free"),
+                };
                 assert_eq!(Some(index), next_free.prev, "data[{}] and data[{}]", index, next_i);
                 (next_i, next_free)
             })
         }
 
         // The freelist should contain all of the free data elements.
-        data.iter().enumerate().for_each(|(i, e)| {
-            if e.is_free() {
-                assert!(found.contains(&i), "data[{}] is free but not in the list", i);
+        data.iter().enumerate().for_each(|(i, e)| match e {
+            IdMapEntry::Free(_) => {
+                assert!(found.contains(&i), "data[{}] is free but not in the list", i)
             }
+            IdMapEntry::Allocated(_) => (),
         });
         found
     }
@@ -1188,7 +1187,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "allocated")]
+    #[should_panic(expected = "not free")]
     fn test_find_free_elements_includes_allocated() {
         let data = vec![Allocated(1), free_head(0), free_tail(0)];
         let _ = find_free_elements(&data);
@@ -1222,7 +1221,10 @@ mod tests {
                 match freelist {
                     None => {
                         // No freelist means all nodes are allocated.
-                        data.iter().enumerate().for_each(|(i, d)| assert!(d.is_allocated(), "no freelist but data[{}] is free", i));
+                        data.iter().enumerate().for_each(|(i, d)| match d {
+                            IdMapEntry::Free(_) => panic!("no freelist but data[{}] is free", i),
+                            IdMapEntry::Allocated(_) => (),
+                        })
                     },
                     Some(FreeList {head, tail}) => {
                         let traversed = find_free_elements(data);
