@@ -32,6 +32,50 @@ class ScreenReaderMessageGenerator {
     zx::duration delay = zx::msec(0);
   };
 
+  // Holds the row and column headers for a table cell. Each entry is ONLY set
+  // if it's different from the row/column header of the previously focused
+  // node.
+  struct TableCellContext {
+    std::string row_header;
+    std::string column_header;
+  };
+
+  // Holds relevant information about a node's surrounding context that may be
+  // required to describe the node.
+  struct ScreenReaderMessageContext {
+    // The node corresponding to the container to which the described node
+    // belongs. A value of nullptr indicates that the described node does not
+    // belong to a container. This field is used to give users a hint that they have
+    // entered or exited a container, and describe the container if the former.
+    const fuchsia::accessibility::semantics::Node* current_container = nullptr;
+
+    // The node corresponding to the container to which the previuosly described
+    // node belongs. A value of nullptr indicates that the previously described
+    // node did not belong to a container. This field is used to give users a
+    // hint that they have entered or exited a container.
+    const fuchsia::accessibility::semantics::Node* previous_container = nullptr;
+
+    // We need to treat the case where a user has exited a nested container
+    // differently from the case where a user has exited a top-level container
+    // and immediately entered a new one. These cases are indistinguishable
+    // without semantic knowledge (which the ScreenReaderMessageGenerator
+    // doesn't have), so we need an extra bit of state.
+    bool exited_nested_container = false;
+
+    // Holds information required to describe a table cell node that's not
+    // present in the node's data.
+    std::optional<TableCellContext> table_cell_context;
+
+    ScreenReaderMessageContext()
+        : current_container(nullptr),
+          previous_container(nullptr),
+          table_cell_context(std::nullopt) {}
+
+    // Returns true if the current and/or previous containers are
+    // describable.
+    bool HasDescribableContainer() { return current_container || previous_container; }
+  };
+
   // |message_formatter| is the resourses object used by this class tto retrieeve localized message
   // strings by their unique MessageId. The language used is the language loaded in
   // |message_formatter|.
@@ -40,7 +84,8 @@ class ScreenReaderMessageGenerator {
 
   // Returns a description of the semantic node.
   virtual std::vector<UtteranceAndContext> DescribeNode(
-      const fuchsia::accessibility::semantics::Node* node);
+      const fuchsia::accessibility::semantics::Node* node,
+      ScreenReaderMessageContext message_context = ScreenReaderMessageContext());
 
   // Returns an utterance for a message retrieved by message ID. If the message contains positional
   // named arguments, they must be passed in |arg_names|, with corresponding values in |arg_values|.
@@ -63,6 +108,11 @@ class ScreenReaderMessageGenerator {
   ScreenReaderMessageGenerator() = default;
 
  private:
+  // Gives the appropriate entered/exited container hint and describes the
+  // current container, if necessary.
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> DescribeContainer(
+      ScreenReaderMessageContext message_context);
+
   // Helper method to describe a node that is a radio button.
   UtteranceAndContext DescribeRadioButton(const fuchsia::accessibility::semantics::Node* node);
 
@@ -74,6 +124,33 @@ class ScreenReaderMessageGenerator {
 
   // Helper method to describe a node that is a toggle switch.
   UtteranceAndContext DescribeToggleSwitch(const fuchsia::accessibility::semantics::Node* node);
+
+  // Helper method to describe a node that represents a table.
+  // The message will be:
+  //
+  // <label>, <row count> rows, <column count> columns, table
+  std::vector<UtteranceAndContext> DescribeTable(
+      const fuchsia::accessibility::semantics::Node* node);
+
+  // Helper method to describe a node that represents a table cell.
+  // The message will be:
+  //
+  // <label>, <row header>*, <column header>*, <row span>^, <column
+  // span>^, <row index>, <column index>, table cell
+  //
+  // *If different from the previous cell read.
+  // ^If greater than 1.
+  std::vector<UtteranceAndContext> DescribeTableCell(
+      const fuchsia::accessibility::semantics::Node* node,
+      ScreenReaderMessageContext message_context);
+
+  // Helper method to describe a node that represents a table row/column header.
+  // The message will be:
+  //
+  // <label>, row <row span>, spans <row/column span> rows/columns, row/column
+  // header
+  std::vector<UtteranceAndContext> DescribeRowOrColumnHeader(
+      const fuchsia::accessibility::semantics::Node* node);
 
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
 

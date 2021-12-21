@@ -19,8 +19,8 @@ void MockScreenReaderMessageGenerator::set_message(fuchsia::intl::l10n::MessageI
 }
 
 std::vector<a11y::ScreenReaderMessageGenerator::UtteranceAndContext>
-MockScreenReaderMessageGenerator::DescribeNode(
-    const fuchsia::accessibility::semantics::Node* node) {
+MockScreenReaderMessageGenerator::DescribeNode(const fuchsia::accessibility::semantics::Node* node,
+                                               ScreenReaderMessageContext message_context) {
   if (description_) {
     auto value = std::move(*description_);
     description_ = std::nullopt;

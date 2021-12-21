@@ -473,5 +473,279 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeSearchBox) {
   ASSERT_EQ(result[1].utterance.message(), "search box");
 }
 
+TEST_F(ScreenReaderMessageGeneratorTest, NodeTableRowHeader) {
+  Node node;
+  node.mutable_attributes()->set_label("label");
+  // Row span of 1 should not be read.
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_row_span(1);
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_column_span(2);
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_row_index(3);
+  node.set_role(Role::ROW_HEADER);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::ROLE_TABLE_ROW_HEADER), "row header");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SPAN),
+                                               "row span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN),
+                                               "column span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SUMMARY),
+                                               "row summary");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SUMMARY),
+                                               "column summary");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 4u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "label");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "row summary");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "column span");
+  ASSERT_TRUE(result[3].utterance.has_message());
+  ASSERT_EQ(result[3].utterance.message(), "row header");
+
+  {
+    const auto& args =
+        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN));
+    ASSERT_EQ(args.size(), 1u);
+    EXPECT_EQ(args[0].first, "column_span");
+    EXPECT_EQ(args[0].second, "2");
+  }
+
+  {
+    const auto& args =
+        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::ROW_SUMMARY));
+    ASSERT_EQ(args.size(), 1u);
+    EXPECT_EQ(args[0].first, "row_index");
+    EXPECT_EQ(args[0].second, "3");
+  }
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeTableColumnHeader) {
+  Node node;
+  node.mutable_attributes()->set_label("label");
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_row_span(2);
+  // Column span of 1 should not be read.
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_column_span(1);
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_column_index(3);
+  node.set_role(Role::COLUMN_HEADER);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::ROLE_TABLE_COLUMN_HEADER), "column header");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SPAN),
+                                               "row span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN),
+                                               "column span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SUMMARY),
+                                               "row summary");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SUMMARY),
+                                               "column summary");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 4u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "label");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "column summary");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "row span");
+  ASSERT_TRUE(result[3].utterance.has_message());
+  ASSERT_EQ(result[3].utterance.message(), "column header");
+
+  {
+    const auto& args =
+        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::ROW_SPAN));
+    ASSERT_EQ(args.size(), 1u);
+    EXPECT_EQ(args[0].first, "row_span");
+    EXPECT_EQ(args[0].second, "2");
+  }
+
+  {
+    const auto& args = mock_message_formatter_ptr_->GetArgsForId(
+        static_cast<uint64_t>(MessageIds::COLUMN_SUMMARY));
+    ASSERT_EQ(args.size(), 1u);
+    EXPECT_EQ(args[0].first, "column_index");
+    EXPECT_EQ(args[0].second, "3");
+  }
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeTableCellWithAllAttributes) {
+  Node node;
+  node.mutable_attributes()->set_label("label");
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_row_span(2);
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_column_span(3);
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_row_index(4);
+  node.mutable_attributes()->mutable_table_cell_attributes()->set_column_index(5);
+  a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext context;
+  a11y::ScreenReaderMessageGenerator::TableCellContext cell_context;
+  cell_context.row_header = "row header";
+  cell_context.column_header = "column header";
+  context.table_cell_context.emplace(cell_context);
+  node.set_role(Role::CELL);
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE_CELL),
+                                               "table cell");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SPAN),
+                                               "row span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN),
+                                               "column span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::CELL_SUMMARY),
+                                               "cell summary");
+  auto result = screen_reader_message_generator_->DescribeNode(&node, std::move(context));
+  ASSERT_EQ(result.size(), 5u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "row header, column header, label");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "row span");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  ASSERT_EQ(result[2].utterance.message(), "column span");
+  ASSERT_TRUE(result[3].utterance.has_message());
+  ASSERT_EQ(result[3].utterance.message(), "cell summary");
+  ASSERT_TRUE(result[4].utterance.has_message());
+  ASSERT_EQ(result[4].utterance.message(), "table cell");
+
+  {
+    const auto& args =
+        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::ROW_SPAN));
+    ASSERT_EQ(args.size(), 1u);
+    EXPECT_EQ(args[0].first, "row_span");
+    EXPECT_EQ(args[0].second, "2");
+  }
+
+  {
+    const auto& args =
+        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN));
+    ASSERT_EQ(args.size(), 1u);
+    EXPECT_EQ(args[0].first, "column_span");
+    EXPECT_EQ(args[0].second, "3");
+  }
+
+  {
+    const auto& args =
+        mock_message_formatter_ptr_->GetArgsForId(static_cast<uint64_t>(MessageIds::CELL_SUMMARY));
+    ASSERT_EQ(args.size(), 2u);
+    EXPECT_EQ(args[0].first, "row_index");
+    EXPECT_EQ(args[0].second, "4");
+    EXPECT_EQ(args[1].first, "column_index");
+    EXPECT_EQ(args[1].second, "5");
+  }
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeTableCellWithLabelOnly) {
+  Node node;
+  node.set_role(Role::CELL);
+  node.mutable_attributes()->set_label("label");
+  // Add unused messages to avoid confounding variable of unavailable message
+  // string.
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE_CELL),
+                                               "table cell");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SPAN),
+                                               "row span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN),
+                                               "column span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::CELL_SUMMARY),
+                                               "cell summary");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "label");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  ASSERT_EQ(result[1].utterance.message(), "table cell");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeTableCellWithNoAttributes) {
+  Node node;
+  node.set_role(Role::CELL);
+  // Add unused messages to avoid confounding variable of unavailable message
+  // string.
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE_CELL),
+                                               "table cell");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROW_SPAN),
+                                               "row span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::COLUMN_SPAN),
+                                               "column span");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::CELL_SUMMARY),
+                                               "cell summary");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "table cell");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, EnteredTable) {
+  Node node;
+  node.mutable_attributes()->set_label("node label");
+
+  Node table;
+  table.set_role(Role::TABLE);
+  table.mutable_attributes()->set_label("table label");
+  table.mutable_attributes()->mutable_table_attributes()->set_number_of_rows(2);
+  table.mutable_attributes()->mutable_table_attributes()->set_number_of_columns(3);
+
+  a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context;
+  message_context.current_container = &table;
+  message_context.previous_container = nullptr;
+
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ENTERED_TABLE),
+                                               "entered table");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::ROLE_TABLE),
+                                               "table");
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::TABLE_DIMENSIONS),
+                                               "dimensions");
+  auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
+  ASSERT_EQ(result.size(), 5u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  EXPECT_EQ(result[0].utterance.message(), "entered table");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  EXPECT_EQ(result[1].utterance.message(), "table label");
+  ASSERT_TRUE(result[2].utterance.has_message());
+  EXPECT_EQ(result[2].utterance.message(), "dimensions");
+  ASSERT_TRUE(result[3].utterance.has_message());
+  EXPECT_EQ(result[3].utterance.message(), "table");
+  ASSERT_TRUE(result[4].utterance.has_message());
+  EXPECT_EQ(result[4].utterance.message(), "node label");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, ExitedTable) {
+  Node node;
+  node.mutable_attributes()->set_label("node label");
+
+  Node table;
+  table.set_role(Role::TABLE);
+
+  a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context;
+  message_context.current_container = nullptr;
+  message_context.previous_container = &table;
+
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::EXITED_TABLE),
+                                               "exited table");
+  auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  EXPECT_EQ(result[0].utterance.message(), "exited table");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  EXPECT_EQ(result[1].utterance.message(), "node label");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, ExitedNestedTable) {
+  Node node;
+  node.mutable_attributes()->set_label("node label");
+
+  Node table;
+  table.set_role(Role::TABLE);
+
+  Node table_2;
+  table_2.set_role(Role::TABLE);
+
+  a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context;
+  message_context.current_container = &table_2;
+  message_context.previous_container = &table;
+  message_context.exited_nested_container = true;
+
+  mock_message_formatter_ptr_->SetMessageForId(static_cast<uint64_t>(MessageIds::EXITED_TABLE),
+                                               "exited table");
+  auto result = screen_reader_message_generator_->DescribeNode(&node, message_context);
+  ASSERT_EQ(result.size(), 2u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  EXPECT_EQ(result[0].utterance.message(), "exited table");
+  ASSERT_TRUE(result[1].utterance.has_message());
+  EXPECT_EQ(result[1].utterance.message(), "node label");
+}
+
 }  // namespace
 }  // namespace accessibility_test

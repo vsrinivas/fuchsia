@@ -33,7 +33,8 @@ class MockScreenReaderMessageGenerator : public a11y::ScreenReaderMessageGenerat
 
   // |ScreenReaderMessageGenerator|
   std::vector<UtteranceAndContext> DescribeNode(
-      const fuchsia::accessibility::semantics::Node* node) override;
+      const fuchsia::accessibility::semantics::Node* node,
+      ScreenReaderMessageContext message_context) override;
 
   // |ScreenReaderMessageGenerator|
   UtteranceAndContext GenerateUtteranceByMessageId(

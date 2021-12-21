@@ -110,9 +110,47 @@ ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
 }
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
-  // TODO(fxbug.dev/81707): Refactor screen reader message generator method to describe nodes.
+ScreenReaderMessageGenerator::DescribeContainer(ScreenReaderMessageContext message_context) {
   std::vector<UtteranceAndContext> description;
+
+  if (message_context.current_container != message_context.previous_container) {
+    // If the current container is null, then the previous container must NOT be
+    // null, so the user has exited a container. It's also possible that the
+    // current container was a descendant of the previous container, in
+    // which case we only want to announce that we've exited the previous
+    // container.
+    //
+    // Otherwise, we must have entered a new container.
+    if (!message_context.current_container ||
+        (message_context.previous_container && message_context.exited_nested_container)) {
+      if (message_context.previous_container->has_role() &&
+          message_context.previous_container->role() == Role::TABLE) {
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::EXITED_TABLE));
+      }
+    } else {
+      if (message_context.current_container->has_role() &&
+          message_context.current_container->role() == Role::TABLE) {
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_TABLE));
+        auto container_description = DescribeTable(message_context.current_container);
+        std::copy(std::make_move_iterator(container_description.begin()),
+                  std::make_move_iterator(container_description.end()),
+                  std::back_inserter(description));
+      }
+    }
+  }
+
+  return description;
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeNode(const Node* node,
+                                           ScreenReaderMessageContext message_context) {
+  // TODO(fxbug.dev/81707): Clean up the logic in this method.
+  std::vector<UtteranceAndContext> description;
+  if (message_context.HasDescribableContainer()) {
+    description = DescribeContainer(message_context);
+  }
+
   {
     const std::string label = node->has_attributes() && node->attributes().has_label() &&
                                       !node->attributes().label().empty()
@@ -137,12 +175,22 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node) {
       Utterance utterance;
       utterance.set_message(GetSliderLabelAndRangeMessage(node));
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+    } else if (node->has_role() &&
+               (node->role() == Role::ROW_HEADER || node->role() == Role::COLUMN_HEADER)) {
+      auto header_description = DescribeRowOrColumnHeader(node);
+      std::copy(std::make_move_iterator(header_description.begin()),
+                std::make_move_iterator(header_description.end()), std::back_inserter(description));
+    } else if (node->has_role() && node->role() == Role::CELL) {
+      auto cell_description = DescribeTableCell(node, std::move(message_context));
+      std::copy(std::make_move_iterator(cell_description.begin()),
+                std::make_move_iterator(cell_description.end()), std::back_inserter(description));
     } else if (!label.empty()) {
       Utterance utterance;
       utterance.set_message(label);
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
     }
   }
+
   {
     Utterance utterance;
     if (node->has_role()) {
@@ -266,6 +314,179 @@ ScreenReaderMessageGenerator::FormatCharacterForSpelling(const std::string& char
 
   utterance.utterance.set_message(character);
   return utterance;
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TABLE);
+
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+
+  if (node->has_attributes()) {
+    const auto& attributes = node->attributes();
+
+    // Add the table label to the description.
+    std::string label;
+    if (attributes.has_label() && !attributes.label().empty()) {
+      label = attributes.label();
+      Utterance utterance;
+      utterance.set_message(label);
+      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+    }
+
+    // Add the table dimensions to the description.
+    if (attributes.has_table_attributes()) {
+      const auto& table_attributes = attributes.table_attributes();
+
+      // The table dimensions will only make sense if we have both the number of rows and the number
+      // of columns.
+      if (table_attributes.has_number_of_rows() && table_attributes.has_number_of_columns()) {
+        auto num_rows = std::to_string(table_attributes.number_of_rows());
+        auto num_columns = std::to_string(table_attributes.number_of_columns());
+        description.emplace_back(
+            GenerateUtteranceByMessageId(MessageIds::TABLE_DIMENSIONS, zx::duration(zx::msec(0)),
+                                         {"num_rows", "num_columns"}, {num_rows, num_columns}));
+      }
+    }
+  }
+
+  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE));
+
+  return description;
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::semantics::Node* node,
+                                                ScreenReaderMessageContext message_context) {
+  FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::CELL);
+
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+
+  if (node->has_attributes()) {
+    const auto& attributes = node->attributes();
+
+    // Add the cell label to the description.
+    std::string label;
+    if (attributes.has_label() && !attributes.label().empty()) {
+      if (message_context.table_cell_context) {
+        // The message context will only have the row/column header fields
+        // populated if the user has navigated to a new row/column since the
+        // last cell was read. So, we can add them to the description unconditionally
+        // here if they are present.
+        if (!message_context.table_cell_context->row_header.empty()) {
+          label += message_context.table_cell_context->row_header + ", ";
+        }
+
+        if (!message_context.table_cell_context->column_header.empty()) {
+          label += message_context.table_cell_context->column_header + ", ";
+        }
+      }
+
+      label += attributes.label();
+
+      Utterance utterance;
+      utterance.set_message(label);
+      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+    }
+
+    // Add the cell row/column spans and row/column indices to the description.
+    if (attributes.has_table_cell_attributes()) {
+      const auto& table_cell_attributes = attributes.table_cell_attributes();
+
+      // We only want to speak the row span if it's > 1.
+      if (table_cell_attributes.has_row_span() && table_cell_attributes.row_span() > 1) {
+        auto row_span = std::to_string(table_cell_attributes.row_span());
+        description.emplace_back(GenerateUtteranceByMessageId(
+            MessageIds::ROW_SPAN, zx::duration(zx::msec(0)), {"row_span"}, {row_span}));
+      }
+
+      // We only want to speak the column span if it's > 1.
+      if (table_cell_attributes.has_column_span() && table_cell_attributes.column_span() > 1) {
+        auto column_span = std::to_string(table_cell_attributes.column_span());
+        description.emplace_back(GenerateUtteranceByMessageId(
+            MessageIds::COLUMN_SPAN, zx::duration(zx::msec(0)), {"column_span"}, {column_span}));
+      }
+
+      if (table_cell_attributes.has_row_index() && table_cell_attributes.has_column_index()) {
+        auto row_index = std::to_string(table_cell_attributes.row_index());
+        auto column_index = std::to_string(table_cell_attributes.column_index());
+        description.emplace_back(
+            GenerateUtteranceByMessageId(MessageIds::CELL_SUMMARY, zx::duration(zx::msec(0)),
+                                         {"row_index", "column_index"}, {row_index, column_index}));
+      }
+    }
+  }
+
+  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_CELL));
+
+  return description;
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
+    const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() &&
+            (node->role() == fuchsia::accessibility::semantics::Role::ROW_HEADER ||
+             node->role() == fuchsia::accessibility::semantics::Role::COLUMN_HEADER));
+
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+
+  if (node->has_attributes()) {
+    const auto& attributes = node->attributes();
+
+    // Add the label to the description.
+    std::string label;
+    if (attributes.has_label() && !attributes.label().empty()) {
+      Utterance utterance;
+      utterance.set_message(attributes.label());
+      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+    }
+
+    if (attributes.has_table_cell_attributes()) {
+      const auto& table_cell_attributes = attributes.table_cell_attributes();
+
+      // Add the row/column index to the description. Note that only one of
+      // these should be set, depending on whether this header is a row or a
+      // column header.
+      if (table_cell_attributes.has_row_index()) {
+        // Row index should only be set for a row header.
+        FX_DCHECK(node->role() == fuchsia::accessibility::semantics::Role::ROW_HEADER);
+        auto row_index = std::to_string(table_cell_attributes.row_index());
+        description.emplace_back(GenerateUtteranceByMessageId(
+            MessageIds::ROW_SUMMARY, zx::duration(zx::msec(0)), {"row_index"}, {row_index}));
+      }
+
+      if (table_cell_attributes.has_column_index()) {
+        // Column index should only be set for a column header.
+        FX_DCHECK(node->role() == fuchsia::accessibility::semantics::Role::COLUMN_HEADER);
+        auto column_index = std::to_string(table_cell_attributes.column_index());
+        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::COLUMN_SUMMARY,
+                                                              zx::duration(zx::msec(0)),
+                                                              {"column_index"}, {column_index}));
+      }
+
+      // Add the row/column span to the description.
+      if (table_cell_attributes.has_row_span() && table_cell_attributes.row_span() > 1) {
+        auto row_span = std::to_string(table_cell_attributes.row_span());
+        description.emplace_back(GenerateUtteranceByMessageId(
+            MessageIds::ROW_SPAN, zx::duration(zx::msec(0)), {"row_span"}, {row_span}));
+      }
+
+      if (table_cell_attributes.has_column_span() && table_cell_attributes.column_span() > 1) {
+        auto column_span = std::to_string(table_cell_attributes.column_span());
+        description.emplace_back(GenerateUtteranceByMessageId(
+            MessageIds::COLUMN_SPAN, zx::duration(zx::msec(0)), {"column_span"}, {column_span}));
+      }
+    }
+  }
+
+  if (node->role() == fuchsia::accessibility::semantics::Role::ROW_HEADER) {
+    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_ROW_HEADER));
+  } else {
+    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_COLUMN_HEADER));
+  }
+
+  return description;
 }
 
 }  // namespace a11y
