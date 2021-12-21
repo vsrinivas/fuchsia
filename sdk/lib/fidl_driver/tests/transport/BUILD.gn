@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("transport") {
+  testonly = true
+  deps = [ ":fidl_driver_transport_tests" ]
+}
+
+test("fidl_driver_transport_tests_bin") {
+  output_name = "fidl_driver_transport_tests"
+  sources = [ "two_way_test.cc" ]
+  deps = [
+    "//sdk/lib/driver_runtime:driver_runtime_internal",
+    "//sdk/lib/fidl_driver",
+    "//src/devices/bin/driver_runtime:driver_runtime_impl",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_driver_transport_tests") {
+  deps = [ ":fidl_driver_transport_tests_bin" ]
+}

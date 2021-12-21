@@ -72,6 +72,7 @@ sdk_source_set("driver_runtime_internal") {
   sources = [ "include/lib/fdf/internal.h" ]
   visibility = [
     "//sdk/lib/driver_runtime/*",
+    "//sdk/lib/fidl_driver/tests/transport/*",
     "//src/devices/bin/driver_host/*",
     "//src/devices/bin/driver_runtime/*",
   ]

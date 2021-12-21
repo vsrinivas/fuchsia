@@ -7,11 +7,15 @@ config("include") {
 }
 
 source_set("fidl_driver") {
-  sources = [ "include/lib/fidl/driver/wire_messaging.h" ]
+  sources = [
+    "include/lib/fidl_driver/cpp/transport.h",
+    "include/lib/fidl_driver/cpp/wire_messaging.h",
+    "transport.cc",
+  ]
   public_configs = [ ":include" ]
-  public_deps = []
-  deps = [
+  public_deps = [
     "//sdk/lib/driver_runtime",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 }

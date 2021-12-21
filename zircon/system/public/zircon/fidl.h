@@ -472,6 +472,7 @@ typedef uint8_t fidl_transport_type;
 
 #define FIDL_TRANSPORT_TYPE_INVALID 0x00
 #define FIDL_TRANSPORT_TYPE_CHANNEL 0x01
+#define FIDL_TRANSPORT_TYPE_DRIVER 0x02
 // Designated transport type for use in tests.
 #define FIDL_TRANSPORT_TYPE_TEST 0xff
 
