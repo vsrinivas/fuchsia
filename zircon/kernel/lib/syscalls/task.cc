@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/counters.h>
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/userabi/vdso.h>
@@ -38,6 +39,8 @@
 #define LOCAL_TRACE 0
 
 namespace {
+
+KCOUNTER(thread_legacy_yield, "thread.legacy_yield")
 
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
@@ -175,6 +178,16 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
     return status;
 
   return thread->WriteState(static_cast<zx_thread_state_topic_t>(kind), buffer, buffer_size);
+}
+
+// zx_status_t zx_thread_legacy_yield
+zx_status_t sys_thread_legacy_yield(uint32_t options) {
+  if (options != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  kcounter_add(thread_legacy_yield, 1);
+  Thread::Current::Yield();
+  return ZX_OK;
 }
 
 // zx_status_t zx_task_suspend

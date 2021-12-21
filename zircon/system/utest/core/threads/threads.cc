@@ -14,6 +14,7 @@
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
@@ -23,6 +24,7 @@
 #include <zircon/types.h>
 
 #include <atomic>
+#include <limits>
 
 #include <mini-process/mini-process.h>
 #include <runtime/thread.h>
@@ -1963,4 +1965,10 @@ TEST(Threads, SyscallDebuggerModifyResult) {
   ASSERT_OK(event.signal(0, ZX_USER_SIGNAL_0));
   ASSERT_OK(thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), nullptr));
   ASSERT_EQ(arg.status, ZX_ERR_CANCELED);
+}
+
+TEST(Threads, YieldWithZeroOptionIsOk) { ASSERT_OK(zx_thread_legacy_yield(0)); }
+
+TEST(Threads, YieldWithNonZeroOptionIsInvalidArgs) {
+  ASSERT_STATUS(zx_thread_legacy_yield(std::numeric_limits<uint32_t>::max()), ZX_ERR_INVALID_ARGS);
 }

@@ -51,4 +51,15 @@ protocol thread {
     }) -> (struct {
         status status;
     });
+
+    /// Yield the CPU of the current thread back to the scheduler.
+    /// Yield may result in other threads with similar importance running ahead of the
+    /// current thread, however, the exact behavior is unspecified.
+    ///
+    /// |options| must be zero.
+    thread_legacy_yield(resource struct {
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 };

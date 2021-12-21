@@ -894,6 +894,10 @@ TEXT ·Sys_thread_read_state(SB),NOSPLIT,$0
 TEXT ·Sys_thread_write_state(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_thread_write_state(SB)
 
+// func Sys_thread_legacy_yield(options uint32) Status
+TEXT ·Sys_thread_legacy_yield(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_thread_legacy_yield(SB)
+
 // func Sys_timer_create(options uint32, clock_id uint32, out *Handle) Status
 TEXT ·Sys_timer_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_timer_create(SB)
@@ -1678,6 +1682,10 @@ func Sys_thread_write_state(handle Handle, kind uint32, buffer unsafe.Pointer, b
 
 //go:noescape
 //go:nosplit
+func Sys_thread_legacy_yield(options uint32) Status
+
+//go:noescape
+//go:nosplit
 func Sys_timer_create(options uint32, clock_id uint32, out *Handle) Status
 
 //go:noescape
@@ -2455,6 +2463,10 @@ TEXT ·Sys_thread_read_state(SB),NOSPLIT,$0
 // func Sys_thread_write_state(handle Handle, kind uint32, buffer unsafe.Pointer, buffer_size uint) Status
 TEXT ·Sys_thread_write_state(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_thread_write_state(SB)
+
+// func Sys_thread_legacy_yield(options uint32) Status
+TEXT ·Sys_thread_legacy_yield(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_thread_legacy_yield(SB)
 
 // func Sys_timer_create(options uint32, clock_id uint32, out *Handle) Status
 TEXT ·Sys_timer_create(SB),NOSPLIT,$0
@@ -5667,6 +5679,22 @@ TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$0-28
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_thread_legacy_yield(options uint32) int32
+TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$0-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW options+0(FP), R0
+	BL vdso_zx_thread_legacy_yield(SB)
+	MOVW R0, ret+8(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_timer_create(options uint32, clock_id uint32, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_timer_create(SB),NOSPLIT,$0-20
 	GO_ARGS
@@ -6342,6 +6370,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_thread_start", 0xea59505a, &vdso_zx_thread_start},
 	{"_zx_thread_read_state", 0x82fd0a88, &vdso_zx_thread_read_state},
 	{"_zx_thread_write_state", 0xb9265eb7, &vdso_zx_thread_write_state},
+	{"_zx_thread_legacy_yield", 0x1b146d17, &vdso_zx_thread_legacy_yield},
 	{"_zx_timer_create", 0x943773a9, &vdso_zx_timer_create},
 	{"_zx_timer_set", 0xa2689081, &vdso_zx_timer_set},
 	{"_zx_timer_cancel", 0x9308c91b, &vdso_zx_timer_cancel},
@@ -6536,6 +6565,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_thread_start zx_thread_start
 //go:cgo_import_dynamic vdso_zx_thread_read_state zx_thread_read_state
 //go:cgo_import_dynamic vdso_zx_thread_write_state zx_thread_write_state
+//go:cgo_import_dynamic vdso_zx_thread_legacy_yield zx_thread_legacy_yield
 //go:cgo_import_dynamic vdso_zx_timer_create zx_timer_create
 //go:cgo_import_dynamic vdso_zx_timer_set zx_timer_set
 //go:cgo_import_dynamic vdso_zx_timer_cancel zx_timer_cancel
@@ -6729,6 +6759,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_thread_start vdso_zx_thread_start
 //go:linkname vdso_zx_thread_read_state vdso_zx_thread_read_state
 //go:linkname vdso_zx_thread_write_state vdso_zx_thread_write_state
+//go:linkname vdso_zx_thread_legacy_yield vdso_zx_thread_legacy_yield
 //go:linkname vdso_zx_timer_create vdso_zx_timer_create
 //go:linkname vdso_zx_timer_set vdso_zx_timer_set
 //go:linkname vdso_zx_timer_cancel vdso_zx_timer_cancel
@@ -7422,6 +7453,10 @@ func vdsoCall_zx_thread_write_state(handle uint32, kind uint32, buffer unsafe.Po
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_thread_legacy_yield(options uint32) int32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_timer_create(options uint32, clock_id uint32, out unsafe.Pointer) int32
 
 //go:noescape
@@ -7691,6 +7726,7 @@ var (
 	vdso_zx_thread_start uintptr
 	vdso_zx_thread_read_state uintptr
 	vdso_zx_thread_write_state uintptr
+	vdso_zx_thread_legacy_yield uintptr
 	vdso_zx_timer_create uintptr
 	vdso_zx_timer_set uintptr
 	vdso_zx_timer_cancel uintptr
@@ -11542,6 +11578,26 @@ TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$8-28
 	MOVQ vdso_zx_thread_write_state(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_thread_legacy_yield(options uint32) int32
+TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL options+0(FP), DI
+	MOVQ vdso_zx_thread_legacy_yield(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -18814,6 +18870,27 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_status_t"
     },
     {
+      "name": "thread_legacy_yield",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Yield", "the", "CPU", "of", "the", "current", "thread", "back", "to", "the", "scheduler", "."
+      ],
+      "requirements": [
+      ],
+      "arguments": [
+        {
+          "name": "options",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "timer_create",
       "attributes": [
         "*"
@@ -20940,6 +21017,10 @@ KERNEL_SYSCALL(thread_write_state, zx_status_t, /* no attributes */, 4,
     user_in_ptr<const void> buffer,
     size_t buffer_size))
 
+KERNEL_SYSCALL(thread_legacy_yield, zx_status_t, /* no attributes */, 1,
+    (options), (
+    uint32_t options))
+
 KERNEL_SYSCALL(timer_create, zx_status_t, /* no attributes */, 3,
     (options, clock_id, out), (
     uint32_t options,
@@ -22261,6 +22342,12 @@ syscall_result wrapper_thread_write_state(SafeSyscallArgument<zx_handle_t>::RawT
         return result;
     });
 }
+syscall_result wrapper_thread_legacy_yield(SafeSyscallArgument<uint32_t>::RawType options, uint64_t pc) {
+    return do_syscall(ZX_SYS_thread_legacy_yield, pc, &VDso::ValidSyscallPC::thread_legacy_yield, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_thread_legacy_yield(SafeSyscallArgument<uint32_t>::Sanitize(options));
+        return result;
+    });
+}
 syscall_result wrapper_timer_create(SafeSyscallArgument<uint32_t>::RawType options, SafeSyscallArgument<zx_clock_t>::RawType clock_id, SafeSyscallArgument<zx_handle_t*>::RawType out, uint64_t pc) {
     return do_syscall(ZX_SYS_timer_create, pc, &VDso::ValidSyscallPC::timer_create, [&](ProcessDispatcher* current_process) -> uint64_t {
         user_out_handle out_handle_out;
@@ -23560,6 +23647,10 @@ KERNEL_SYSCALL(thread_write_state, zx_status_t, /* no attributes */, 4,
     const void* buffer,
     size_t buffer_size))
 
+KERNEL_SYSCALL(thread_legacy_yield, zx_status_t, /* no attributes */, 1,
+    (options), (
+    uint32_t options))
+
 KERNEL_SYSCALL(timer_create, zx_status_t, /* no attributes */, 3,
     (options, clock_id, out), (
     uint32_t options,
@@ -24665,6 +24756,10 @@ _ZX_SYSCALL_DECL(thread_write_state, zx_status_t, /* no attributes */, 4,
     uint32_t kind,
     const void* buffer,
     size_t buffer_size))
+
+_ZX_SYSCALL_DECL(thread_legacy_yield, zx_status_t, /* no attributes */, 1,
+    (options), (
+    uint32_t options))
 
 _ZX_SYSCALL_DECL(timer_create, zx_status_t, /* no attributes */, 3,
     (options, clock_id, out), (
@@ -25891,6 +25986,10 @@ extern {
         buffer_size: usize
         ) -> zx_status_t;
 
+    pub fn zx_thread_legacy_yield(
+        options: u32
+        ) -> zx_status_t;
+
     pub fn zx_timer_create(
         options: u32,
         clock_id: zx_clock_t,
@@ -26220,33 +26319,34 @@ extern {
 #define ZX_SYS_thread_start 147
 #define ZX_SYS_thread_read_state 148
 #define ZX_SYS_thread_write_state 149
-#define ZX_SYS_timer_create 150
-#define ZX_SYS_timer_set 151
-#define ZX_SYS_timer_cancel 152
-#define ZX_SYS_vcpu_create 153
-#define ZX_SYS_vcpu_enter 154
-#define ZX_SYS_vcpu_kick 155
-#define ZX_SYS_vcpu_interrupt 156
-#define ZX_SYS_vcpu_read_state 157
-#define ZX_SYS_vcpu_write_state 158
-#define ZX_SYS_vmar_allocate 159
-#define ZX_SYS_vmar_destroy 160
-#define ZX_SYS_vmar_map 161
-#define ZX_SYS_vmar_unmap 162
-#define ZX_SYS_vmar_protect 163
-#define ZX_SYS_vmar_op_range 164
-#define ZX_SYS_vmo_create 165
-#define ZX_SYS_vmo_read 166
-#define ZX_SYS_vmo_write 167
-#define ZX_SYS_vmo_get_size 168
-#define ZX_SYS_vmo_set_size 169
-#define ZX_SYS_vmo_op_range 170
-#define ZX_SYS_vmo_create_child 171
-#define ZX_SYS_vmo_set_cache_policy 172
-#define ZX_SYS_vmo_replace_as_executable 173
-#define ZX_SYS_vmo_create_contiguous 174
-#define ZX_SYS_vmo_create_physical 175
-#define ZX_SYS_COUNT 176
+#define ZX_SYS_thread_legacy_yield 150
+#define ZX_SYS_timer_create 151
+#define ZX_SYS_timer_set 152
+#define ZX_SYS_timer_cancel 153
+#define ZX_SYS_vcpu_create 154
+#define ZX_SYS_vcpu_enter 155
+#define ZX_SYS_vcpu_kick 156
+#define ZX_SYS_vcpu_interrupt 157
+#define ZX_SYS_vcpu_read_state 158
+#define ZX_SYS_vcpu_write_state 159
+#define ZX_SYS_vmar_allocate 160
+#define ZX_SYS_vmar_destroy 161
+#define ZX_SYS_vmar_map 162
+#define ZX_SYS_vmar_unmap 163
+#define ZX_SYS_vmar_protect 164
+#define ZX_SYS_vmar_op_range 165
+#define ZX_SYS_vmo_create 166
+#define ZX_SYS_vmo_read 167
+#define ZX_SYS_vmo_write 168
+#define ZX_SYS_vmo_get_size 169
+#define ZX_SYS_vmo_set_size 170
+#define ZX_SYS_vmo_op_range 171
+#define ZX_SYS_vmo_create_child 172
+#define ZX_SYS_vmo_set_cache_policy 173
+#define ZX_SYS_vmo_replace_as_executable 174
+#define ZX_SYS_vmo_create_contiguous 175
+#define ZX_SYS_vmo_create_physical 176
+#define ZX_SYS_COUNT 177
 ----- syscall-numbers.h END -----
 
 

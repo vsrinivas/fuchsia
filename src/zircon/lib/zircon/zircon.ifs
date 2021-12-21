@@ -158,6 +158,7 @@ Symbols:
   - { Name: _zx_task_suspend_token, Type: Func }
   - { Name: _zx_thread_create, Type: Func }
   - { Name: _zx_thread_exit, Type: Func }
+  - { Name: _zx_thread_legacy_yield, Type: Func }
   - { Name: _zx_thread_read_state, Type: Func }
   - { Name: _zx_thread_start, Type: Func }
   - { Name: _zx_thread_write_state, Type: Func }
@@ -346,6 +347,7 @@ Symbols:
   - { Name: zx_task_suspend_token, Type: Func, Weak: true }
   - { Name: zx_thread_create, Type: Func, Weak: true }
   - { Name: zx_thread_exit, Type: Func, Weak: true }
+  - { Name: zx_thread_legacy_yield, Type: Func, Weak: true }
   - { Name: zx_thread_read_state, Type: Func, Weak: true }
   - { Name: zx_thread_start, Type: Func, Weak: true }
   - { Name: zx_thread_write_state, Type: Func, Weak: true }

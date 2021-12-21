@@ -52,6 +52,8 @@ toc:
     path: /docs/reference/syscalls/thread_start.md
   - title: "zx_thread_write_state"
     path: /docs/reference/syscalls/thread_write_state.md
+  - title: "zx_thread_legacy_yield"
+    path: /docs/reference/syscalls/thread_legacy_yield.md
 - title: "Processes"
   section:
   - title: "zx_process_create"
