@@ -966,7 +966,7 @@ int Dwc2::IrqThread() {
       if (gintsts.usbreset()) {
         HandleReset();
       }
-      if (gintsts.usbsuspend() || gintsts.erlysuspend()) {
+      if (gintsts.usbsuspend()) {
         HandleSuspend();
       }
       if (gintsts.enumdone()) {

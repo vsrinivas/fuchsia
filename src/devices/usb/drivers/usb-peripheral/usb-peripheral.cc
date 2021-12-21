@@ -736,6 +736,10 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
         *static_cast<uint8_t*>(read_buffer) = configuration_;
         *out_read_actual = sizeof(uint8_t);
         return ZX_OK;
+      } else if (request_type == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE) &&
+                 request == USB_REQ_GET_STATUS && length == 2) {
+        static_cast<uint8_t*>(read_buffer)[1] = 1 << USB_DEVICE_SELF_POWERED;
+        *out_read_actual = read_size;
       } else {
         // Delegate to one of the function drivers.
         // USB_RECIP_DEVICE should only be used when there is a single active interface.
