@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_debug_symbolize") {
+  version = "0.1.0"
+  edition = "2018"
+
+  args_sources = [ "src/args.rs" ]
+  sources = [ "src/lib.rs" ]
+
+  deps = [
+    "//src/developer/ffx/lib/symbol-index",
+    "//src/lib/fuchsia-async",
+  ]
+
+  data_deps = [ "//tools/symbolizer" ]
+}

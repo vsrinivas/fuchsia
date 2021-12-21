@@ -13,6 +13,7 @@ ffx_plugin("ffx_debug_plugin") {
     "fidlcat:ffx_debug_fidlcat",
     "run:ffx_debug_run",
     "symbol-index:ffx_debug_symbol_index",
+    "symbolize:ffx_debug_symbolize",
   ]
 
   args_sources = [ "src/args.rs" ]
