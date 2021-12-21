@@ -267,6 +267,10 @@ impl FxFile {
     pub async fn flush(&self) -> Result<(), Error> {
         self.handle.flush().await
     }
+
+    pub fn get_block_size(&self) -> u64 {
+        self.handle.block_size()
+    }
 }
 
 impl Drop for FxFile {

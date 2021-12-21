@@ -41,8 +41,8 @@ pub mod testing;
 const BLOCK_VMOID_INVALID: u16 = 0;
 const TEMP_VMO_SIZE: usize = 65536;
 
-const BLOCKIO_READ: u32 = 1;
-const BLOCKIO_WRITE: u32 = 2;
+pub const BLOCKIO_READ: u32 = 1;
+pub const BLOCKIO_WRITE: u32 = 2;
 const BLOCKIO_FLUSH: u32 = 3;
 const BLOCKIO_TRIM: u32 = 4;
 pub const BLOCKIO_CLOSE_VMO: u32 = 5;
