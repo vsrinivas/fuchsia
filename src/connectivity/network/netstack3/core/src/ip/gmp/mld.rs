@@ -33,8 +33,9 @@ use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext
 use crate::device::link::LinkDevice;
 use crate::device::DeviceIdContext;
 use crate::ip::gmp::{
-    handle_gmp_message, Action, Actions, GmpAction, GmpContext, GmpHandler, GmpMessage,
-    GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet, ProtocolSpecific,
+    gmp_join_group, gmp_leave_group, handle_gmp_message, Action, Actions, GmpAction, GmpContext,
+    GmpHandler, GmpMessage, GmpStateMachine, GroupJoinResult, GroupLeaveResult, MulticastGroupSet,
+    ProtocolSpecific,
 };
 use crate::Instant;
 
@@ -87,11 +88,7 @@ impl<D: LinkDevice, C: MldContext<D>> GmpHandler<D, Ipv6> for C {
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) -> GroupJoinResult {
-        let now = self.now();
-        let (state, rng) = self.get_state_rng_with(device);
-        state
-            .join_group_gmp(group_addr, rng, now)
-            .map(|actions| self.run_actions(device, actions, group_addr))
+        gmp_join_group(self, device, group_addr)
     }
 
     fn gmp_leave_group(
@@ -99,9 +96,7 @@ impl<D: LinkDevice, C: MldContext<D>> GmpHandler<D, Ipv6> for C {
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
     ) -> GroupLeaveResult {
-        self.get_state_mut_with(device)
-            .leave_group_gmp(group_addr)
-            .map(|actions| self.run_actions(device, actions, group_addr))
+        gmp_leave_group(self, device, group_addr)
     }
 }
 

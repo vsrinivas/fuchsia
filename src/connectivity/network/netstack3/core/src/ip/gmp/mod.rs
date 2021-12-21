@@ -50,6 +50,7 @@ use crate::data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashM
 use crate::device::link::LinkDevice;
 use crate::device::DeviceIdContext;
 use crate::Instant;
+use crate::InstantContext;
 
 /// The result of joining a multicast group.
 ///
@@ -827,6 +828,49 @@ where
         return Ok(());
     }
     Err(C::not_a_member_err(group_addr))
+}
+
+fn gmp_join_group<C, D, I, PS, GS>(
+    ctx: &mut C,
+    device: C::DeviceId,
+    group_addr: MulticastAddr<I::Addr>,
+) -> GroupJoinResult
+where
+    C: GmpContext<D, I, PS>
+        + DeviceIdContext<D>
+        + InstantContext
+        + RngStateContext<MulticastGroupSet<I::Addr, GS>, <C as DeviceIdContext<D>>::DeviceId>,
+    D: LinkDevice,
+    PS: ProtocolSpecific + Default,
+    PS::Config: Default,
+    I: Ip,
+    GS: From<GmpStateMachine<<C as InstantContext>::Instant, PS>>,
+{
+    let now = ctx.now();
+    let (state, rng) = ctx.get_state_rng_with(device);
+    state
+        .join_group_gmp(group_addr, rng, now)
+        .map(|actions| ctx.run_actions(device, actions, group_addr))
+}
+
+fn gmp_leave_group<C, D, I, PS, GS>(
+    ctx: &mut C,
+    device: C::DeviceId,
+    group_addr: MulticastAddr<I::Addr>,
+) -> GroupLeaveResult
+where
+    C: GmpContext<D, I, PS>
+        + DeviceIdContext<D>
+        + InstantContext
+        + RngStateContext<MulticastGroupSet<I::Addr, GS>, <C as DeviceIdContext<D>>::DeviceId>,
+    D: LinkDevice,
+    PS: ProtocolSpecific,
+    I: Ip,
+    GmpStateMachine<<C as InstantContext>::Instant, PS>: From<GS>,
+{
+    ctx.get_state_mut_with(device)
+        .leave_group_gmp(group_addr)
+        .map(|actions| ctx.run_actions(device, actions, group_addr))
 }
 
 #[cfg(test)]
