@@ -5,6 +5,7 @@
 import("//build/python/python_library.gni")
 
 python_library("jinja2") {
+  source_root = "src"
   sources = [
     "__init__.py",
     "_compat.py",
