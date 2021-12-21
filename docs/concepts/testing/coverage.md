@@ -269,7 +269,7 @@ usage, and slower test execution time. Some steps were taken to offset this:
 *   Tests in profile variants are afforded longer timeouts.
 *   Tests in profile variants are compiled with some optimizations.
 *   Coverage currently runs on emulators, where storage is less constrained.
-*   For incremental coverage, only binaries affected by the change are
+*   For incremental coverage, only sources affected by the change are
     instrumented.
 
 The profile runtime library on Fuchsia stores the profile data in a [VMO][vmo],
