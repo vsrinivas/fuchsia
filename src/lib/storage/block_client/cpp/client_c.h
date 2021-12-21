@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_C_H_
+#define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_C_H_
 
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
@@ -41,3 +41,5 @@ void block_fifo_release_client(fifo_client_t* client);
 zx_status_t block_fifo_txn(fifo_client_t* client, block_fifo_request_t* requests, size_t count);
 
 __END_CDECLS
+
+#endif  // SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_C_H_

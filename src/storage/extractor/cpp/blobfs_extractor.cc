@@ -23,11 +23,11 @@
 #include <safemath/checked_math.h>
 
 #include "lib/async/dispatcher.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/extractor/c/extractor.h"
 #include "src/storage/extractor/cpp/extractor.h"
-#include "zircon/system/ulib/block-client/include/block-client/cpp/remote-block-device.h"
 
 namespace extractor {
 namespace {

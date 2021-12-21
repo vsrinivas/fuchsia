@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
+#include "src/lib/storage/block_client/cpp/client.h"
 
-#include <block-client/client.h>
-#include <block-client/cpp/client.h>
-#include <fbl/macros.h>
 #include <lib/zx/fifo.h>
+#include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
+
+#include <fbl/macros.h>
+
+#include "src/lib/storage/block_client/cpp/client_c.h"
 
 namespace block_client {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOCK_CLIENT_CPP_FAKE_DEVICE_H_
-#define BLOCK_CLIENT_CPP_FAKE_DEVICE_H_
+#ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_FAKE_BLOCK_DEVICE_H_
+#define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_FAKE_BLOCK_DEVICE_H_
 
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -13,11 +13,12 @@
 #include <map>
 #include <optional>
 
-#include <block-client/cpp/block-device.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <range/range.h>
 #include <storage-metrics/block-metrics.h>
+
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace block_client {
 
@@ -177,4 +178,4 @@ class FakeFVMBlockDevice : public FakeBlockDevice {
 
 }  // namespace block_client
 
-#endif  // BLOCK_CLIENT_CPP_FAKE_DEVICE_H_
+#endif  // SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_FAKE_BLOCK_DEVICE_H_

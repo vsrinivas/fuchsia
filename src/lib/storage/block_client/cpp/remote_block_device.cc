@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
+
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/vfs.h>
-
-#include <block-client/cpp/remote-block-device.h>
 
 namespace fio = fuchsia_io;
 

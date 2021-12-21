@@ -10,7 +10,7 @@
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 
-#include <block-client/client.h>
+#include "src/lib/storage/block_client/cpp/client_c.h"
 
 // Writes on a FIFO, repeating the write later if the FIFO is full.
 static zx_status_t do_write(zx_handle_t fifo, block_fifo_request_t* request, size_t count) {

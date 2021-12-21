@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOCK_CLIENT_CPP_BLOCK_GROUP_REGISTRY_H_
-#define BLOCK_CLIENT_CPP_BLOCK_GROUP_REGISTRY_H_
+#ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_GROUP_REGISTRY_H_
+#define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_GROUP_REGISTRY_H_
 
+#include <pthread.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 
 #include <array>
 #include <optional>
-#include <pthread.h>
 #include <thread>
 
 #include <fbl/mutex.h>
@@ -33,4 +33,4 @@ class BlockGroupRegistry {
 
 }  // namespace block_client
 
-#endif  // BLOCK_CLIENT_CPP_BLOCK_GROUP_REGISTRY_H_
+#endif  // SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_GROUP_REGISTRY_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
-#define BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
+#ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
+#define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -14,7 +14,7 @@
 
 #include <memory>
 
-#include <block-client/cpp/block-device.h>
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace block_client {
 
@@ -52,4 +52,4 @@ class RemoteBlockDevice final : public BlockDevice {
 
 }  // namespace block_client
 
-#endif  // BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_
+#endif  // SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_REMOTE_BLOCK_DEVICE_H_

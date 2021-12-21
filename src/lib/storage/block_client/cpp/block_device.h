@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
-#define BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
+#ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
+#define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -13,8 +13,9 @@
 
 #include <memory>
 
-#include <block-client/cpp/client.h>
 #include <storage/buffer/vmoid_registry.h>
+
+#include "src/lib/storage/block_client/cpp/client.h"
 
 namespace block_client {
 
@@ -53,4 +54,4 @@ class BlockDevice : public storage::VmoidRegistry {
 
 }  // namespace block_client
 
-#endif  // BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_
+#endif  // SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_BLOCK_DEVICE_H_

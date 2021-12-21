@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
+
 #include <zircon/errors.h>
 
 #include <array>
 #include <iterator>
 
-#include <block-client/cpp/fake-device.h>
 #include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 

@@ -2,25 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_
+#define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_
 
-#ifndef __cplusplus
-#error "C++ Only file"
-#endif  // __cplusplus
-
-#include <stdlib.h>
-
-#include <block-client/client.h>
-#include <fbl/macros.h>
 #include <lib/zx/fifo.h>
+#include <stdlib.h>
 #include <zircon/types.h>
+
+#include <fbl/macros.h>
+
+#include "src/lib/storage/block_client/cpp/client_c.h"
 
 namespace block_client {
 
 class Client {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Client);
-
   // Constructs an invalid Client.
   //
   // It is invalid to call any block client operations with this
@@ -55,3 +51,5 @@ class Client {
 };
 
 }  // namespace block_client
+
+#endif  // SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_

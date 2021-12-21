@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
+
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <zircon/assert.h>
 
 #include <vector>
 
-#include <block-client/cpp/fake-device.h>
 #include <fbl/auto_lock.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"

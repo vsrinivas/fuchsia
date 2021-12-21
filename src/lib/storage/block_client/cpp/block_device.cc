@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "block-client/cpp/block-device.h"
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace block_client {
 

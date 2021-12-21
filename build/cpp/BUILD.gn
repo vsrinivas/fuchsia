@@ -150,6 +150,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/lib/loader_service:loader_service",
     "//src/lib/loader_service:loader_service_test",
     "//src/lib/loader_service:loader_service_test_fixture",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management/cpp:fs-management",
     "//src/lib/storage/fs_management/cpp:fs-management-test",
     "//src/media/audio/drivers/lib/intel-hda:intel-hda",
@@ -219,7 +220,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/ui/light/drivers/aml-light:aml-light-test",
     "//src/virtualization/bin/guest:bin",
     "//src/virtualization/bin/guest_runner:bin",
-    "//zircon/system/ulib/block-client:block-client",
     "//zircon/system/ulib/c/test:cdebugdata-test",
     "//zircon/system/ulib/debugdata/test:debugdata",
     "//zircon/system/ulib/fdio-caller/test:fdio-caller",
@@ -274,9 +274,9 @@ config("fidl-llcpp-deprecated-wire-try-dispatch") {
     "//src/devices/cpu/bin/cpuctl:cpuctl-test-bin",
     "//src/devices/rtc/drivers/intel-rtc:intel-rtc-driver",
     "//src/devices/rtc/drivers/intel-rtc:intel-rtc-test-bin",
+    "//src/lib/storage/block_client/cpp:block_client_unit_test",
     "//src/lib/storage/vfs/cpp",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-driver",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
-    "//zircon/system/ulib/block-client/test:block-client-unit-test",
   ]
 }
