@@ -7,8 +7,7 @@
 
 #include <fuchsia/images/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-
-#include "third_party/libpng/png.h"
+#include <png.h>
 
 namespace forensics {
 namespace feedback_data {
