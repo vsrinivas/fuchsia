@@ -77,14 +77,4 @@ source_set("libpng") {
   public_configs = [ ":libpng_config" ]
   public_deps = [ "//third_party/zlib" ]
   configs += [ ":clang_warnings" ]
-
-  # TODO(fxbug.dev/77808): pull new code for libpng before we allow it to be
-  # used in more places.
-  visibility = [
-    "//src/camera/bin/factory/*",
-    "//src/developer/forensics/feedback_data/*",
-    "//src/ui/examples/frame-compression/*",
-    "//src/ui/tools/gltf_export/*",
-    "//third_party/freetype2/*",
-  ]
 }
