@@ -255,6 +255,7 @@ Ongoing work:
     significantly reduce the memory overhead of asan, making instrumentation
     viable on RAM-constrained devices and working to close testing gaps for
     hardware-dependent code.
+    See also: [RFC-0143: Userspace Top-Byte-Ignore][rfc-0143].
 *   [GWP-ASan][llvm-gwp-asan]{:.external}: efforts are currently underway to
     demonstrate the use of this sampling version of asan to detect bugs in the
     field.
@@ -295,6 +296,7 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [nuc]: /docs/development/hardware/intel_nuc.md
 [qemu]: https://www.qemu.org
 [rfc-0078]: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
+[rfc-0143]: /docs/contribute/governance/rfcs/0143_userspace_top_byte_ignore.md
 [rust-heap]: https://doc.rust-lang.org/1.22.0/book/first-edition/the-stack-and-the-heap.html#the-heap
 [rust-leaks]: https://doc.rust-lang.org/nomicon/leaking.html
 [rust-panic-abort]: https://doc.rust-lang.org/book/ch09-01-unrecoverable-errors-with-panic.html#unwinding-the-stack-or-aborting-in-response-to-a-panic
