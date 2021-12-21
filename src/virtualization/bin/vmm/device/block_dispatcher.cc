@@ -11,9 +11,9 @@
 #include <zircon/status.h>
 
 #include <bitmap/rle-bitmap.h>
-#include <block-client/cpp/remote-block-device.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/virtualization/bin/vmm/device/block.h"
 #include "src/virtualization/bin/vmm/device/qcow.h"
 #include "src/virtualization/bin/vmm/device/request_queue.h"

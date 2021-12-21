@@ -127,7 +127,7 @@ static_library("minfs") {
       "//src/lib/cobalt/cpp:cobalt_logger",
 
       # fsck.h includes block-client/cpp/block-device.h
-      "//zircon/system/ulib/block-client",
+      "//src/lib/storage/block_client/cpp",
 
       # minfs_inspector.h includes journal/format.h
       "//src/lib/storage/vfs/cpp/journal",

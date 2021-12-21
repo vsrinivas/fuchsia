@@ -12,11 +12,11 @@
 #include <mutex>
 #include <sstream>
 
-#include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gtest/gtest.h>
 #include <storage/buffer/vmo_buffer.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/directory.h"

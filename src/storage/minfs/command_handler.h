@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 
-#include <block-client/cpp/block-device.h>
 #include <disk_inspector/command.h>
 #include <disk_inspector/command_handler.h>
 #include <disk_inspector/common_types.h>
@@ -19,6 +18,7 @@
 #include <disk_inspector/inspector_transaction_handler.h>
 #include <storage/buffer/vmo_buffer.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_inspector.h"
 

@@ -11,9 +11,9 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <storage/buffer/vmoid_registry.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"

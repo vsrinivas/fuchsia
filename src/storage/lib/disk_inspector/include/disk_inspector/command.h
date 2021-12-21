@@ -15,7 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <block-client/cpp/block-device.h>
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace disk_inspector {
 

@@ -16,13 +16,13 @@
 #include <thread>
 #include <vector>
 
-#include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/header_view.h"
 #include "src/lib/storage/vfs/cpp/journal/initializer.h"

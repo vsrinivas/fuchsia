@@ -20,11 +20,11 @@
 #include <optional>
 #include <utility>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/factory/factoryfs/fsck.h"
 #include "src/storage/factory/factoryfs/mkfs.h"

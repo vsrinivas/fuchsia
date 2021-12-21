@@ -9,8 +9,9 @@
 
 #include <memory>
 
-#include <block-client/cpp/block-device.h>
 #include <fbl/macros.h>
+
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 // Wrapper around a BlockDevice that provides a simple ReadBlock/WriteBlock API using blobfs block
 // indices instead of device block indices. This class is not threadsafe.
@@ -39,8 +40,7 @@ class FsBlockClient {
 
  private:
   FsBlockClient(std::unique_ptr<block_client::BlockDevice> device,
-                fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo,
-                storage::Vmoid vmoid);
+                fuchsia_hardware_block_BlockInfo block_info, zx::vmo vmo, storage::Vmoid vmoid);
   uint64_t device_blocks_per_blobfs_block() const;
   uint64_t fs_block_to_device_block(uint64_t block) const;
 

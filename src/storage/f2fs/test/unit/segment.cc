@@ -4,10 +4,10 @@
 
 #include <unordered_set>
 
-#include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/f2fs/f2fs.h"
 #include "unit_lib.h"
 

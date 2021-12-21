@@ -29,9 +29,8 @@
 #include <utility>
 #include <vector>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/remote-block-device.h>
-
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 

@@ -4,9 +4,9 @@
 
 #include "src/storage/factory/factoryfs/fsck.h"
 
-#include <block-client/cpp/fake-device.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
 #include "src/storage/factory/factoryfs/mkfs.h"
 #include "utils.h"

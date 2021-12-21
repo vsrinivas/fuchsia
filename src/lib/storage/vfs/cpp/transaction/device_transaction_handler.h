@@ -5,8 +5,7 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
 #define SRC_LIB_STORAGE_VFS_CPP_TRANSACTION_DEVICE_TRANSACTION_HANDLER_H_
 
-#include <block-client/cpp/block-device.h>
-
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 
 namespace fs {

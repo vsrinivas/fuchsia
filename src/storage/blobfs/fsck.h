@@ -4,11 +4,11 @@
 
 // This file contains functionality for checking the consistency of Blobfs.
 
-#ifndef SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FSCK_H_
-#define SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FSCK_H_
+#ifndef SRC_STORAGE_BLOBFS_FSCK_H_
+#define SRC_STORAGE_BLOBFS_FSCK_H_
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/mount.h"
-#include <block-client/cpp/block-device.h>
 
 namespace blobfs {
 
@@ -16,4 +16,4 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountO
 
 }  // namespace blobfs
 
-#endif  // SRC_STORAGE_BLOBFS_INCLUDE_BLOBFS_FSCK_H_
+#endif  // SRC_STORAGE_BLOBFS_FSCK_H_

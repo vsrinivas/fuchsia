@@ -9,9 +9,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
+
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #endif  // __Fuchsia__
 
 #include <assert.h>

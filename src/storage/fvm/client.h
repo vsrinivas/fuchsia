@@ -15,7 +15,7 @@
 #include <lib/zx/channel.h>
 #include <zircon/device/block.h>
 
-#include <block-client/cpp/block-device.h>
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace fvm {
 

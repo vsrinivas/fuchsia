@@ -20,7 +20,6 @@
 #include <memory>
 #include <string_view>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
@@ -30,6 +29,7 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"

@@ -8,10 +8,10 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs-corrupt/corrupt_blob.h"
 #include "src/storage/blobfs-corrupt/fs_block_client.h"

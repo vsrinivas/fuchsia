@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <lib/fit/defer.h>
 
-#include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/resizeable_vmo_buffer.h"
 #include "src/storage/minfs/writeback.h"

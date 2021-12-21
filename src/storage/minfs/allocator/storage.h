@@ -19,8 +19,9 @@
 #include "src/storage/minfs/superblock.h"
 
 #ifdef __Fuchsia__
-#include <block-client/cpp/block-device.h>
 #include <storage/buffer/owned_vmoid.h>
+
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #endif
 
 #include "src/storage/minfs/allocator/metadata.h"

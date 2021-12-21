@@ -4,8 +4,9 @@
 
 #include "src/storage/fvm/client.h"
 
-#include <block-client/cpp/block-device.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace fvm {
 namespace {

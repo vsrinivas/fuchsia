@@ -14,8 +14,6 @@
 #include <optional>
 #include <sstream>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/remote-block-device.h>
 #include <disk_inspector/command.h>
 #include <disk_inspector/command_handler.h>
 #include <disk_inspector/disk_inspector.h>
@@ -24,6 +22,8 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/line_input/modal_line_input.h"
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/minfs/command_handler.h"
 #include "src/storage/minfs/minfs_inspector.h"
 

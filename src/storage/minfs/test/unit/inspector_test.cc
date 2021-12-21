@@ -10,11 +10,11 @@
 #include <lib/async-loop/default.h>
 #include <lib/sync/completion.h>
 
-#include <block-client/cpp/fake-device.h>
 #include <disk_inspector/disk_inspector.h>
 #include <fbl/string_printf.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/inspector_journal.h"
 #include "src/storage/minfs/inspector_inode.h"
 #include "src/storage/minfs/inspector_inode_table.h"

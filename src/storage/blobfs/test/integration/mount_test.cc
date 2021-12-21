@@ -16,13 +16,13 @@
 #include <zircon/errors.h>
 #include <zircon/rights.h>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/runner.h"
 #include "src/storage/blobfs/test/blob_utils.h"

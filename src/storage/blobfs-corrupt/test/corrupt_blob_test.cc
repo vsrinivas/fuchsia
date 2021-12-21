@@ -6,10 +6,10 @@
 
 #include <iterator>
 
-#include <block-client/cpp/fake-device.h>
 #include <storage/buffer/owned_vmoid.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/mkfs.h"
 

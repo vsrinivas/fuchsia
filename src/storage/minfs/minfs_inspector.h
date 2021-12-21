@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
-#include <block-client/cpp/block-device.h>
 #include <disk_inspector/buffer_factory.h>
 #include <disk_inspector/common_types.h>
 #include <disk_inspector/inspector_transaction_handler.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/storage/minfs/format.h"
 

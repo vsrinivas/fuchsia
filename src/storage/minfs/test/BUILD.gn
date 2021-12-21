@@ -40,6 +40,8 @@ test("minfs_unit") {
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
+    "//src/lib/storage/block_client/cpp:fake_device",
     "//src/lib/storage/fs_management",
     "//src/storage/fvm",
     "//src/storage/lib/disk_inspector",
@@ -49,8 +51,6 @@ test("minfs_unit") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
@@ -212,11 +212,11 @@ storage_driver_test_realm_v2_component("minfs-integration-fs-tests") {
 fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
+    "//src/lib/storage/block_client/cpp:fake_device",
     "//src/storage/minfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]

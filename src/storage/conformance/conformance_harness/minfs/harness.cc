@@ -18,11 +18,11 @@
 #include <string>
 #include <vector>
 
-#include <block-client/cpp/fake-device.h>
 #include <fbl/ref_ptr.h>
 
 #include "fuchsia/io/cpp/fidl.h"
 #include "fuchsia/io/test/cpp/fidl.h"
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/directory.h"

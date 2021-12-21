@@ -224,7 +224,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/async/*",
     "//zircon/system/ulib/backtrace-request/*",
     "//zircon/system/ulib/bitmap/*",
-    "//zircon/system/ulib/block-client/*",
     "//zircon/system/ulib/c/*",
     "//zircon/system/ulib/closure-queue/*",
     "//zircon/system/ulib/cmdline/*",

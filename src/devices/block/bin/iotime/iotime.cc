@@ -18,8 +18,9 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#include <block-client/client.h>
 #include <ramdevice-client/ramdisk.h>
+
+#include "src/lib/storage/block_client/cpp/client_c.h"
 
 static uint64_t number(const char* str) {
   char* end;

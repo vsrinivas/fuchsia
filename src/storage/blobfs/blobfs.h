@@ -26,8 +26,6 @@
 #include <shared_mutex>
 
 #include <bitmap/raw-bitmap.h>
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/client.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -37,6 +35,8 @@
 #include <storage/operation/unbuffered_operations_builder.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"

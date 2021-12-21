@@ -40,7 +40,6 @@
 #include <thread>
 #include <vector>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
@@ -51,6 +50,7 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/node-digest.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"

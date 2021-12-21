@@ -132,8 +132,8 @@ source_set("block") {
     ":device",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/block_client/cpp",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/trace",
     "//zircon/third_party/ulib/safemath",
   ]

@@ -36,7 +36,6 @@
 #include <memory>
 #include <utility>
 
-#include <block-client/cpp/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
@@ -48,6 +47,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "sdk/lib/device-watcher/cpp/device-watcher.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 
 namespace ramdisk {
 namespace {

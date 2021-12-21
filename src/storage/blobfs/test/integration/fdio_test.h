@@ -9,10 +9,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/hierarchy.h>
 
-#include <block-client/cpp/fake-device.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/mount.h"

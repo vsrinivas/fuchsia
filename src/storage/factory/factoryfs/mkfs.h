@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FACTORY_FACTORYFS_MKFS_H_
 #define SRC_STORAGE_FACTORY_FACTORYFS_MKFS_H_
 
-#include <block-client/cpp/block-device.h>
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace factoryfs {
 

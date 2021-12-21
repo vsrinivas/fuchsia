@@ -152,11 +152,11 @@ static_library("blobfs") {
       ":fuchsia.blobfs.internal_llcpp",
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_llcpp",
       "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+      "//src/lib/storage/block_client/cpp",
       "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
       "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
       "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
       "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
-      "//zircon/system/ulib/block-client",
     ]
     deps += [
       "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
@@ -166,6 +166,7 @@ static_library("blobfs") {
       "//sdk/lib/fdio",
       "//sdk/lib/sys/inspect/cpp",
       "//sdk/lib/syslog/cpp",
+      "//src/lib/storage/block_client/cpp",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-default",
@@ -173,7 +174,6 @@ static_library("blobfs") {
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/backtrace-request",
-      "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/fzl",

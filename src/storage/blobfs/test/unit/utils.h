@@ -9,10 +9,10 @@
 #include <optional>
 #include <vector>
 
-#include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/transaction_manager.h"
 

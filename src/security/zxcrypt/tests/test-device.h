@@ -19,12 +19,12 @@
 
 #include <memory>
 
-#include <block-client/client.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/block_client/cpp/client_c.h"
 #include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/fdio-volume.h"

@@ -6,10 +6,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/mkfs.h"
 #include "src/storage/blobfs/mount.h"

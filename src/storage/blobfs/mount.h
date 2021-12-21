@@ -11,10 +11,10 @@
 
 #include <optional>
 
-#include <block-client/cpp/block-device.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/function.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/blobfs/cache_policy.h"
 #include "src/storage/blobfs/compression_settings.h"
 

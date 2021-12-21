@@ -8,8 +8,9 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/default.h>
 
-#include <block-client/cpp/block-device.h>
 #include <fbl/function.h>
+
+#include "src/lib/storage/block_client/cpp/block_device.h"
 
 namespace factoryfs {
 

@@ -26,11 +26,11 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/zx/vmo.h>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/client.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 #else
 #include <fbl/vector.h>

@@ -11,11 +11,11 @@
 #include <algorithm>
 #include <memory>
 
-#include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/blob_compressor.h"

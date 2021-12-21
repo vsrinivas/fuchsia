@@ -26,13 +26,14 @@
 #include <limits>
 #include <memory>
 
-#include <block-client/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <pretty/hexdump.h>
 #include <zxtest/zxtest.h>
+
+#include "src/lib/storage/block_client/cpp/client_c.h"
 
 namespace tests {
 

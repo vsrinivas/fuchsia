@@ -12,12 +12,12 @@
 #include <condition_variable>
 #include <memory>
 
-#include <block-client/cpp/fake-device.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/node-digest.h"
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"

@@ -10,9 +10,9 @@
 
 #include <lib/async/dispatcher.h>
 
-#include <block-client/cpp/block-device.h>
 #include <disk_inspector/common_types.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/minfs/bcache.h"
 
 namespace minfs {

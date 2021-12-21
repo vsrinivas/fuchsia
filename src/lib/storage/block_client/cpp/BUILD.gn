@@ -22,13 +22,6 @@ static_library("cpp") {
     "client.h",
     "client_c.h",
     "remote_block_device.h",
-
-    # Temporary forwarding headers.
-    "include/block-client/client.h",
-    "include/block-client/cpp/block-device.h",
-    "include/block-client/cpp/block-group-registry.h",
-    "include/block-client/cpp/client.h",
-    "include/block-client/cpp/remote-block-device.h",
   ]
   sources = [
     "block_device.cc",
@@ -81,17 +74,7 @@ static_library("cpp") {
 
 static_library("fake_device") {
   testonly = true
-  public = [
-    "fake_block_device.h",
-
-    # Temporary forwarding headers.
-    "include/block-client/client.h",
-    "include/block-client/cpp/block-device.h",
-    "include/block-client/cpp/block-group-registry.h",
-    "include/block-client/cpp/client.h",
-    "include/block-client/cpp/fake-device.h",
-    "include/block-client/cpp/remote-block-device.h",
-  ]
+  public = [ "fake_block_device.h" ]
   sources = [ "fake_block_device.cc" ]
   public_deps = [
     ":cpp",
@@ -129,13 +112,13 @@ test("block_client_unit_test") {
   public_configs = [ ":migration" ]
 
   deps = [
+    ":cpp",
+    ":fake_device",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/storage/fvm",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/range",

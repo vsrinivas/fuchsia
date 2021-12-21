@@ -7,8 +7,7 @@
 #ifndef SRC_STORAGE_FACTORY_FACTORYFS_FSCK_H_
 #define SRC_STORAGE_FACTORY_FACTORYFS_FSCK_H_
 
-#include <block-client/cpp/block-device.h>
-
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/storage/factory/factoryfs/mount.h"
 
 namespace factoryfs {

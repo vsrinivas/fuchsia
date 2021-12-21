@@ -19,10 +19,10 @@ test("disk_inspector_unit") {
   ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
+    "//src/lib/storage/block_client/cpp:fake_device",
     "//src/storage/lib/disk_inspector",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
     "//zircon/system/ulib/zx",
@@ -74,9 +74,9 @@ if (is_fuchsia) {
 
       public_deps += [
         "//sdk/lib/fit-promise",
+        "//src/lib/storage/block_client/cpp",
         "//src/lib/storage/vfs/cpp",
         "//src/lib/storage/vfs/cpp/transaction",
-        "//zircon/system/ulib/block-client",
         "//zircon/system/ulib/storage/buffer",
       ]
 

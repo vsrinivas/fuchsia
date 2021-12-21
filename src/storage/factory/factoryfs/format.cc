@@ -6,10 +6,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/client.h>
 #include <storage/buffer/owned_vmoid.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/storage/factory/factoryfs/factoryfs.h"
 #include "src/storage/factory/factoryfs/mkfs.h"
 #include "src/storage/factory/factoryfs/superblock.h"

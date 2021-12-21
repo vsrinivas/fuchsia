@@ -20,7 +20,7 @@
 #include "src/storage/minfs/format.h"
 
 #ifdef __Fuchsia__
-#include <block-client/cpp/block-device.h>
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #endif
 
 namespace minfs {

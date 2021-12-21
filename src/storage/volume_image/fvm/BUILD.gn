@@ -192,6 +192,7 @@ test("fvm_sparse_image_reader_test") {
   deps = [
     ":fvm-sparse-image",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/fs_management",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
@@ -199,7 +200,6 @@ test("fvm_sparse_image_reader_test") {
     "//src/storage/volume_image/ftl:ftl-image",
     "//src/storage/volume_image/utils:fd-io",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
   ]
 }

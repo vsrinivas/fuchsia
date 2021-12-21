@@ -10,9 +10,10 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <safemath/checked_math.h>
 #include <storage/buffer/vmo_buffer.h>
+
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
 namespace disk_inspector {
 

@@ -8,7 +8,7 @@ executable("iochk") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_c",
     "//sdk/lib/fdio",
-    "//zircon/system/ulib/block-client",
+    "//src/lib/storage/block_client/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",

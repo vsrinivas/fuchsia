@@ -10,12 +10,12 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <zircon/hw/gpt.h>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/fvm.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/testing/fvm.h"

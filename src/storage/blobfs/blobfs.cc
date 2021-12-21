@@ -29,14 +29,14 @@
 #include <string_view>
 #include <utility>
 
-#include <block-client/cpp/pass-through-read-only-device.h>
-#include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/ref_ptr.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
+#include "src/lib/storage/block_client/cpp/pass_through_read_only_device.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
 #include "src/lib/storage/vfs/cpp/journal/replay.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"

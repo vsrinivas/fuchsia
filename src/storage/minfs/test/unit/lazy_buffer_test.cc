@@ -6,9 +6,9 @@
 
 #include <lib/stdcompat/span.h>
 
-#include <block-client/cpp/fake-device.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/minfs/bcache.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs.h"

@@ -24,7 +24,6 @@
 #include <cstddef>
 #include <memory>
 
-#include <block-client/cpp/client.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/string_buffer.h>
@@ -34,6 +33,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #include "pave-logging.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/fshost/constants.h"

@@ -17,13 +17,13 @@
 
 #include <utility>
 
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 

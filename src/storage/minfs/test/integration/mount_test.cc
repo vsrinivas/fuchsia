@@ -18,8 +18,6 @@
 
 #include <utility>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
@@ -28,6 +26,8 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"

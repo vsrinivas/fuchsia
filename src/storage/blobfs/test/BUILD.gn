@@ -50,11 +50,11 @@ source_set("test_utils") {
     "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
+    "//src/lib/storage/block_client/cpp:fake_device",
     "//src/storage/blobfs",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/id_allocator",
   ]
 }
@@ -97,6 +97,7 @@ test("blobfs_unittest") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp:fake_device",
     "//src/lib/storage/fs_management",
     "//src/lib/testing/predicates",
     "//src/storage/blobfs",
@@ -104,7 +105,6 @@ test("blobfs_unittest") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/storage/buffer",

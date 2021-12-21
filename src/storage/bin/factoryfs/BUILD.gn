@@ -6,6 +6,7 @@ executable("factoryfs") {
   sources = [ "main.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/lib/storage/block_client/cpp",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/factory/factoryfs",
     "//zircon/system/ulib/async",
@@ -14,7 +15,6 @@ executable("factoryfs") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",

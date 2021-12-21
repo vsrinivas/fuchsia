@@ -15,10 +15,10 @@ test("minfs-allocator-unit") {
   deps = [
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_c",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp",
     "//src/storage/minfs",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/block-client",
   ]
 }
 

@@ -5,11 +5,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
-#include <block-client/cpp/fake-device.h>
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/cobalt/cpp/testing/mock_cobalt_logger.h"
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"

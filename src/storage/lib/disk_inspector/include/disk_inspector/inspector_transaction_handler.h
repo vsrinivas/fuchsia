@@ -10,11 +10,11 @@
 
 #include <memory>
 
-#include <block-client/cpp/block-device.h>
 #include <storage/buffer/block_buffer.h>
 #include <storage/buffer/vmoid_registry.h>
 #include <storage/operation/operation.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/vfs/cpp/transaction/device_transaction_handler.h"
 
 namespace disk_inspector {

@@ -89,7 +89,7 @@ static_library("f2fs") {
   if (is_fuchsia) {
     public_deps += [
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-      "//zircon/system/ulib/block-client",
+      "//src/lib/storage/block_client/cpp",
       "//zircon/system/ulib/zircon-internal",
     ]
 

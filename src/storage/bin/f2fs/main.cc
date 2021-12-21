@@ -19,10 +19,10 @@
 #include <iostream>
 #include <string>
 
-#include <block-client/cpp/block-device.h>
-#include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
+#include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/storage/f2fs/f2fs.h"
 
 int main(int argc, char** argv) {

@@ -26,11 +26,12 @@
 #include <memory>
 #include <utility>
 
-#include <block-client/cpp/client.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
+
+#include "src/lib/storage/block_client/cpp/client.h"
 
 namespace {
 

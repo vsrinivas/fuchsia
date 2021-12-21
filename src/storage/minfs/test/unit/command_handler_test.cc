@@ -9,11 +9,11 @@
 
 #include <iostream>
 
-#include <block-client/cpp/fake-device.h>
 #include <disk_inspector/vmo_buffer_factory.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/minfs_private.h"
 

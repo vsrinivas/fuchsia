@@ -8,11 +8,11 @@
 #include <memory>
 #include <optional>
 
-#include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/block_client/cpp/block_device.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #include "src/storage/factory/factoryfs/format.h"
 
