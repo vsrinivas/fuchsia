@@ -468,10 +468,17 @@ async fn locked_account_can_be_unlocked_again() {
         .await
         .expect_err("failed to open file");
 
-    // The account channel should be closed.
+    // The account channel should be closed.  We might race with the server and still get
+    // the FIDL request in before the channel shuts down, but if we do, the response should
+    // still come back with an error.
     let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
-    account_proxy.get_data_directory(server_end).await.expect_err("get_data_directory FIDL");
+    let gdd_fidl_result = account_proxy.get_data_directory(server_end).await;
+    match gdd_fidl_result {
+        Err(_) => (), // Channel got closed before we could get the reply in
+        Ok(gdd_result) => assert!(gdd_result.is_err(), "get_data_directory server reply"),
+    }
 
+    // TODO(jsankey): determine if this can lose a race against the lock() call from above
     // Unlock the account again.
     let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
@@ -521,17 +528,20 @@ async fn locking_account_terminates_all_clients() {
 
     account_proxy1.lock().await.expect("lock FIDL").expect("lock");
 
-    // Verify that both proxies are disconnected.
+    // Verify that both proxies are disconnected, or if the channel hasn't closed yet,
+    // at least get_data_directory should return failures.
+    // TODO(jsankey): verify that the channels actually close within some reasonable time
+    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+    let gdd_fidl_result_1 = account_proxy1.get_data_directory(server_end).await;
+    match gdd_fidl_result_1 {
+        Err(_) => (), // Channel got closed before we could get the reply in
+        Ok(gdd_result) => assert!(gdd_result.is_err(), "get_data_directory server reply 1"),
+    }
 
     let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
-    account_proxy1
-        .get_data_directory(server_end)
-        .await
-        .expect_err("get_data_directory FIDL should fail");
-
-    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
-    account_proxy2
-        .get_data_directory(server_end)
-        .await
-        .expect_err("get_data_directory FIDL should fail");
+    let gdd_fidl_result_2 = account_proxy2.get_data_directory(server_end).await;
+    match gdd_fidl_result_2 {
+        Err(_) => (),
+        Ok(gdd_result) => assert!(gdd_result.is_err(), "get_data_directory server reply 2"),
+    }
 }
