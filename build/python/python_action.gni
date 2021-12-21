@@ -42,10 +42,7 @@ template("python_action") {
                            ])
 
     script = binary_tool_output_name
-    deps = [
-      "//build/python:interpreter($host_toolchain)",
-      binary_label,
-    ]
+    deps = [ binary_label ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
