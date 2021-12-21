@@ -212,7 +212,7 @@ You can enable incremental rebuilds by adding `export FUCHSIA_DISABLED_increment
 to your `~/.bashrc` or equivalent. This change results in the following:
 
 * `pm` (and by consequence `fx serve`) watches for packages before they are
-  created. When a package is created or modified, `pm' auto-publishes that package,
+  created. When a package is created or modified, `pm` auto-publishes that package,
   so you can keep 'fx serve' running from an empty tree and it will publish
   incrementally as you go.
 
