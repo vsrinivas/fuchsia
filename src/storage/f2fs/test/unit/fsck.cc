@@ -359,13 +359,13 @@ TEST(FsckTest, WrongInodeHardlinkCount) {
 
     fbl::RefPtr<VnodeF2fs> child_file = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(child));
 
-    std::string link_name("link");
-    ASSERT_EQ(root_dir->Link(link_name, child_file), ZX_OK);
+    ASSERT_EQ(root_dir->Link(std::string("link"), child_file), ZX_OK);
+    ASSERT_EQ(root_dir->Link(std::string("link2"), child_file), ZX_OK);
 
     // Save the inode number for fsck to retrieve it.
     ino = child_file->GetKey();
     links = child_file->GetNlink();
-    ASSERT_EQ(links, 2u);
+    ASSERT_EQ(links, 3u);
 
     ASSERT_EQ(child_file->Close(), ZX_OK);
     child_file = nullptr;
@@ -385,20 +385,36 @@ TEST(FsckTest, WrongInodeHardlinkCount) {
   auto [fs_block, node_info] = std::move(*ret);
   auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
 
-  // This inode has link count 2.
+  // This inode has link count 3.
   ASSERT_EQ(LeToCpu(node_block->i.i_links), links);
 
-  node_block->i.i_links = links - 1;
+  // Inject fault at link count and see fsck detects it.
+  node_block->i.i_links = 1u;
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), node_info.blk_addr), ZX_OK);
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+
+  // Repair the link count and fsck should succeed.
+  ASSERT_EQ(fsck.RepairInodeLinks(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_OK);
+
+  // Repeat above for some other values.
+  node_block->i.i_links = 2u;
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), node_info.blk_addr), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.RepairInodeLinks(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_OK);
 
   node_block->i.i_links = links + 1;
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), node_info.blk_addr), ZX_OK);
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.RepairInodeLinks(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_OK);
 
   node_block->i.i_links = 0xdeadbeef;
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), node_info.blk_addr), ZX_OK);
-  ASSERT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.RepairInodeLinks(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_OK);
 }
 
 TEST(FsckTest, InconsistentCheckpointNodeCount) {

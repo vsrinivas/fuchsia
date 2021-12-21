@@ -18,6 +18,11 @@ struct OrphanInfo {
   uint32_t *ino_list = nullptr;
 };
 
+struct InodeLinkInfo {
+  uint32_t links = 0;
+  uint32_t actual_links = 0;
+};
+
 struct FsckInfo {
   OrphanInfo orphani;
   struct FsckResult {
@@ -28,7 +33,7 @@ struct FsckInfo {
     uint32_t multi_hard_link_files = 0;
   } result;
 
-  std::map<nid_t, uint32_t> hard_link_map;
+  std::map<nid_t, InodeLinkInfo> inode_link_map;
   std::unique_ptr<uint8_t[]> main_area_bitmap;
   std::unique_ptr<uint8_t[]> nat_area_bitmap;
 
@@ -165,6 +170,8 @@ class FsckWorker {
   // RepairCheckpoint() corrects members in the checkpoint, including
   // |valid_block_count|, |valid_node_count|, |valid_inode_count|.
   zx_status_t RepairCheckpoint();
+  // RepairInodeLinks() iterates over inode link map and corrects link count for each inode.
+  zx_status_t RepairInodeLinks();
   void DoUmount();
   zx_status_t Run();
 
@@ -204,8 +211,8 @@ class FsckWorker {
   SegmentEntry &GetSegmentEntry(uint32_t segno);
   uint32_t GetSegmentNumber(uint32_t block_address);
   zx::status<NodeInfo> GetNodeInfo(nid_t nid);
-  void AddIntoHardLinkMap(nid_t nid, uint32_t link_count);
-  zx_status_t FindAndDecreaseHardLinkMap(nid_t nid);
+  void AddIntoInodeLinkMap(nid_t nid, uint32_t link_count);
+  zx_status_t FindAndIncreaseInodeLinkMap(nid_t nid);
 
   inline bool IsValidSsaNodeBlock(nid_t nid, uint32_t block_address);
   inline bool IsValidSsaDataBlock(uint32_t block_address, uint32_t parent_nid,

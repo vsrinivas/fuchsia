@@ -97,17 +97,17 @@ zx_status_t FsckWorker::WriteBlock(FsBlock &fs_block, block_t bno) {
 #endif  // __Fuchsia__
 }
 
-void FsckWorker::AddIntoHardLinkMap(nid_t nid, uint32_t link_count) {
-  auto ret = fsck_.hard_link_map.insert({nid, link_count});
+void FsckWorker::AddIntoInodeLinkMap(nid_t nid, uint32_t link_count) {
+  auto ret = fsck_.inode_link_map.insert({nid, {.links = link_count, .actual_links = 1}});
   ZX_ASSERT(ret.second);
-  FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has hard links [0x" << link_count << "]";
+  if (link_count > 1) {
+    FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has hard links [0x" << link_count << "]";
+  }
 }
 
-zx_status_t FsckWorker::FindAndDecreaseHardLinkMap(nid_t nid) {
-  if (auto ret = fsck_.hard_link_map.find(nid); ret != fsck_.hard_link_map.end()) {
-    if (--ret->second; ret->second == 1) {
-      fsck_.hard_link_map.erase(ret);
-    }
+zx_status_t FsckWorker::FindAndIncreaseInodeLinkMap(nid_t nid) {
+  if (auto ret = fsck_.inode_link_map.find(nid); ret != fsck_.inode_link_map.end()) {
+    ++ret->second.actual_links;
     return ZX_OK;
   }
   return ZX_ERR_NOT_FOUND;
@@ -212,10 +212,12 @@ zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfo node
 
     if (ntype == NodeType::kTypeInode) {
       uint32_t i_links = LeToCpu(node_block.i.i_links);
-      if (ftype != FileType::kFtDir && i_links > 1) {
-        // First time. Create new hard link node.
-        AddIntoHardLinkMap(nid, i_links);
-        ++fsck_.result.multi_hard_link_files;
+      if (ftype != FileType::kFtDir) {
+        // First time visiting this inode.
+        AddIntoInodeLinkMap(nid, i_links);
+        if (i_links > 1) {
+          ++fsck_.result.multi_hard_link_files;
+        }
       }
       ++fsck_.result.valid_inode_count;
     }
@@ -237,16 +239,10 @@ zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfo node
                     << node_info.blk_addr;
       return zx::error(ZX_ERR_INTERNAL);
     } else {
-      if (i_links <= 1) {
-        FX_LOGS(ERROR) << "Error. Node ID [0x" << std::hex << nid << "].";
-        FX_LOGS(ERROR) << " There exists another hard link. But i_links is [0x" << std::hex
-                       << i_links << "].";
-        return zx::error(ZX_ERR_INTERNAL);
-      }
       FX_LOGS(INFO) << "ino[0x" << std::hex << nid << "] has hard links [0x" << std::hex << i_links
                     << "]";
       // We don't go deeper.
-      if (auto status = FindAndDecreaseHardLinkMap(nid); status != ZX_OK) {
+      if (auto status = FindAndIncreaseInodeLinkMap(nid); status != ZX_OK) {
         return zx::error(status);
       }
       return zx::ok(false);
@@ -766,8 +762,18 @@ zx_status_t FsckWorker::Verify() {
     }
   }
 
-  for (auto const [nid, links] : fsck_.hard_link_map) {
-    printf("NID[0x%x] has [0x%x] more unreachable links\n", nid, links);
+  auto iter = fsck_.inode_link_map.begin();
+  while (iter != fsck_.inode_link_map.end()) {
+    if (iter->second.links == iter->second.actual_links) {
+      iter = fsck_.inode_link_map.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+
+  for (auto const [nid, links] : fsck_.inode_link_map) {
+    std::cout << std::hex << "NID[0x" << nid << "] has inconsistent link count [0x" << links.links
+              << "] (actual: 0x" << links.actual_links << ")\n";
   }
 
   printf("[FSCK] Unreachable nat entries                       ");
@@ -787,7 +793,7 @@ zx_status_t FsckWorker::Verify() {
   }
 
   printf("[FSCK] Hard link checking for regular file           ");
-  if (fsck_.hard_link_map.empty()) {
+  if (fsck_.inode_link_map.empty()) {
     printf(" [Ok..] [0x%x]\n", fsck_.result.multi_hard_link_files);
   } else {
     printf(" [Fail] [0x%x]\n", fsck_.result.multi_hard_link_files);
@@ -1038,6 +1044,28 @@ zx_status_t FsckWorker::RepairCheckpoint() {
   return ZX_OK;
 }
 
+zx_status_t FsckWorker::RepairInodeLinks() {
+  for (auto const [nid, links] : fsck_.inode_link_map) {
+    auto status = ReadNodeBlock(nid);
+    if (status.is_error()) {
+      return ZX_ERR_INTERNAL;
+    }
+
+    auto [fs_block, node_info] = std::move(*status);
+#ifdef __Fuchsia__
+    auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+#else   // __Fuchsia__
+    auto node_block = reinterpret_cast<Node *>(fs_block->GetData());
+#endif  // __Fuchsia__
+
+    node_block->i.i_links = CpuToLe(links.actual_links);
+    if (WriteBlock(*fs_block.get(), node_info.blk_addr) != ZX_OK) {
+      return ZX_ERR_INTERNAL;
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t FsckWorker::Repair() {
   if (auto ret = RepairNat(); ret != ZX_OK) {
     return ret;
@@ -1046,6 +1074,9 @@ zx_status_t FsckWorker::Repair() {
     return ret;
   }
   if (auto ret = RepairCheckpoint(); ret != ZX_OK) {
+    return ret;
+  }
+  if (auto ret = RepairInodeLinks(); ret != ZX_OK) {
     return ret;
   }
   return ZX_OK;
