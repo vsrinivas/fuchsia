@@ -563,13 +563,13 @@ zx_status_t PlatformBus::Create(zx_device_t* parent, const char* name, zx::chann
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  suspend_ptr->pbus_instance = bus.get();
 
   if (zx_status_t status = bus->Init(); status != ZX_OK) {
     return status;
   }
   // devmgr is now in charge of the device.
   platform_bus::PlatformBus* bus_ptr = bus.release();
+  suspend_ptr->pbus_instance = bus_ptr;
 
   // Create /dev/sys/cpu-trace.
   // But only do so if we have an iommu handle. Normally we do, but tests
