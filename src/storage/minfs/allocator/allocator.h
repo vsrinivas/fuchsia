@@ -137,9 +137,8 @@ class Allocator {
   Allocator(const Allocator&) = delete;
   Allocator& operator=(const Allocator&) = delete;
 
-  static zx_status_t Create(fs::BufferedOperationsBuilder* builder,
-                            std::unique_ptr<AllocatorStorage> storage,
-                            std::unique_ptr<Allocator>* out);
+  static zx::status<std::unique_ptr<Allocator>> Create(fs::BufferedOperationsBuilder* builder,
+                                                       std::unique_ptr<AllocatorStorage> storage);
 
   // Return the number of total available elements, after taking reservations into account.
   size_t GetAvailable() const __TA_EXCLUDES(lock_);
@@ -168,7 +167,7 @@ class Allocator {
 
   // Reserve |count| elements. This is required in order to later allocate them.
   // Outputs a |reservation| which contains reservation details.
-  zx_status_t Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count)
+  zx::status<> Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count)
       __TA_EXCLUDES(lock_);
 
   // Unreserve |count| elements. This may be called in the event of failure, or if we
@@ -192,13 +191,13 @@ class Allocator {
   Allocator(std::unique_ptr<AllocatorStorage> storage)
       : reserved_(0), first_free_(0), storage_(std::move(storage)) {}
 
-  zx_status_t LoadStorage(fs::BufferedOperationsBuilder* builder) __TA_EXCLUDES(lock_);
+  zx::status<> LoadStorage(fs::BufferedOperationsBuilder* builder) __TA_EXCLUDES(lock_);
 
   // See |GetAvailable()|.
   size_t GetAvailableLocked() const __TA_REQUIRES(lock_);
 
-  // Grows the map to |new_size|, returning the current size as |old_size|.
-  zx_status_t GrowMapLocked(size_t new_size, size_t* old_size) __TA_REQUIRES(lock_);
+  // Grows the map to |new_size|, returning the current size.
+  zx::status<size_t> GrowMapLocked(size_t new_size) __TA_REQUIRES(lock_);
 
   // Acquire direct access to the underlying map storage.
   WriteData GetMapDataLocked() __TA_REQUIRES(lock_);

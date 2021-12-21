@@ -17,8 +17,8 @@ namespace minfs {
 class LazyBuffer {
  public:
   // A callback responsible for writing the |range| blocks in buffer to |device_block|.
-  using Writer = fit::function<zx_status_t(ResizeableBufferType* buffer, BlockRange range,
-                                           DeviceBlock device_block)>;
+  using Writer = fit::function<zx::status<>(ResizeableBufferType* buffer, BlockRange range,
+                                            DeviceBlock device_block)>;
 
   class Reader : public MappedFileReader {
    public:
@@ -40,17 +40,17 @@ class LazyBuffer {
   ResizeableBufferType& buffer() { return buffer_; }
 
   // Users must call Detach before destruction.
-  zx_status_t Detach(Bcache* bcache) { return buffer_.Detach(bcache); }
+  zx::status<> Detach(Bcache* bcache) { return buffer_.Detach(bcache); }
 
-  [[nodiscard]] zx_status_t Grow(size_t block_count) { return buffer_.Grow(block_count); }
+  [[nodiscard]] zx::status<> Grow(size_t block_count) { return buffer_.Grow(block_count); }
 
   // Shrink the buffer. Does nothing if buffer is smaller.
   void Shrink(size_t block_count);
 
   // Iterates through all the blocks in the view, maps from file offset to device offset using
   // |mapper| and then calls |writer| to actually write the data to the backing store.
-  [[nodiscard]] zx_status_t Flush(PendingWork* transaction, MapperInterface* mapper,
-                                  BaseBufferView* view, const Writer& writer);
+  [[nodiscard]] zx::status<> Flush(PendingWork* transaction, MapperInterface* mapper,
+                                   BaseBufferView* view, const Writer& writer);
 
   // Returns a read/write view for the given range. |flusher| will be called by the view if
   // modified. Implementations should call the Flush method above to flush the buffer, which
@@ -68,9 +68,9 @@ class LazyBuffer {
   [[nodiscard]] zx::status<BufferView<T>> GetView(size_t index, size_t count, Reader* reader,
                                                   BaseBufferView::Flusher flusher) {
     const size_t offset = index * sizeof(T);
-    zx_status_t status = Read(ByteRange(offset, offset + count * sizeof(T)), reader);
-    if (status != ZX_OK)
-      return zx::error(status);
+    auto status = Read(ByteRange(offset, offset + count * sizeof(T)), reader);
+    if (status.is_error())
+      return status.take_error();
     return zx::ok(
         BufferView<T>(BufferPtr::FromBlockBuffer(&buffer_), index, count, std::move(flusher)));
   }
@@ -85,7 +85,7 @@ class LazyBuffer {
   LazyBuffer(uint32_t block_size) : buffer_(block_size) {}
 
   // Calls lazy_reader_ to read |range| bytes (if not already present).
-  zx_status_t Read(ByteRange range, Reader* reader);
+  zx::status<> Read(ByteRange range, Reader* reader);
 
   LazyReader lazy_reader_;
   ResizeableBufferType buffer_;

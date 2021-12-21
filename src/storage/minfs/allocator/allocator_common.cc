@@ -43,31 +43,28 @@ size_t PendingChange::GetNextUnreserved(size_t start) const {
   return item;
 }
 
-// Static.
-zx_status_t Allocator::Create(fs::BufferedOperationsBuilder* builder,
-                              std::unique_ptr<AllocatorStorage> storage,
-                              std::unique_ptr<Allocator>* out) __TA_NO_THREAD_SAFETY_ANALYSIS {
+// static
+zx::status<std::unique_ptr<Allocator>> Allocator::Create(fs::BufferedOperationsBuilder* builder,
+                                                         std::unique_ptr<AllocatorStorage> storage)
+    __TA_NO_THREAD_SAFETY_ANALYSIS {
   // Ignore thread-safety analysis on the |allocator| object; no one has an
   // external reference to it yet.
-  zx_status_t status;
   std::unique_ptr<Allocator> allocator(new Allocator(std::move(storage)));
 
   blk_t total_blocks = allocator->storage_->PoolTotal();
   blk_t pool_blocks = allocator->storage_->PoolBlocks();
-  if ((status = allocator->map_.Reset(pool_blocks * kMinfsBlockBits)) != ZX_OK) {
-    return status;
+  if (zx_status_t status = allocator->map_.Reset(pool_blocks * kMinfsBlockBits); status != ZX_OK) {
+    return zx::error(status);
   }
-  if ((status = allocator->map_.Shrink(total_blocks)) != ZX_OK) {
-    return status;
-  }
-
-  status = allocator->LoadStorage(builder);
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = allocator->map_.Shrink(total_blocks); status != ZX_OK) {
+    return zx::error(status);
   }
 
-  *out = std::move(allocator);
-  return ZX_OK;
+  if (auto status = allocator->LoadStorage(builder); status.is_error()) {
+    return status.take_error();
+  }
+
+  return zx::ok(std::move(allocator));
 }
 
 size_t Allocator::GetAvailable() const {
@@ -176,33 +173,31 @@ void Allocator::Free(AllocatorReservation* reservation, size_t index) {
   }
 }
 
-zx_status_t Allocator::GrowMapLocked(size_t new_size, size_t* old_size) {
+zx::status<size_t> Allocator::GrowMapLocked(size_t new_size) {
   ZX_DEBUG_ASSERT(new_size >= map_.size());
-  *old_size = map_.size();
+  size_t old_size = map_.size();
   // Grow before shrinking to ensure the underlying storage is a multiple
   // of kMinfsBlockSize.
   zx_status_t status;
   if ((status = map_.Grow(fbl::round_up(new_size, kMinfsBlockBits))) != ZX_OK) {
     FX_LOGS(ERROR) << "Allocator::GrowMapLocked: failed to Grow (in memory): " << status;
-    return ZX_ERR_NO_SPACE;
+    return zx::error(ZX_ERR_NO_SPACE);
   }
 
   map_.Shrink(new_size);
-  return ZX_OK;
+  return zx::ok(old_size);
 }
 
-zx_status_t Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count) {
+zx::status<> Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count) {
   std::scoped_lock lock(lock_);
   if (GetAvailableLocked() < count) {
     // If we do not have enough free elements, attempt to extend the partition.
-    auto grow_map =
-        ([this](size_t pool_size, size_t* old_pool_size) __TA_NO_THREAD_SAFETY_ANALYSIS {
-          return this->GrowMapLocked(pool_size, old_pool_size);
-        });
+    auto grow_map = ([this](size_t pool_size)
+                         __TA_NO_THREAD_SAFETY_ANALYSIS { return this->GrowMapLocked(pool_size); });
 
-    zx_status_t status;
     // TODO(planders): Allow Extend to take in count.
-    if ((status = storage_->Extend(transaction, GetMapDataLocked(), grow_map)) != ZX_OK) {
+    if (auto status = storage_->Extend(transaction, GetMapDataLocked(), grow_map);
+        status.is_error()) {
       return status;
     }
 
@@ -210,7 +205,7 @@ zx_status_t Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction
   }
 
   reserved_ += count;
-  return ZX_OK;
+  return zx::ok();
 }
 
 bool Allocator::CheckAllocated(size_t index) const {

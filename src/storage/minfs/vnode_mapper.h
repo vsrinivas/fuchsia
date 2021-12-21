@@ -113,8 +113,8 @@ class VnodeIterator {
   // Initialize the iterator so that it is pointing at file_block. |transaction| can be nullptr in
   // which case the returned iterator is read-only. The iterator is left in an undefined state if
   // Init fails (except that it is safe to destroy).
-  [[nodiscard]] zx_status_t Init(VnodeMapper* mapper, PendingWork* transaction,
-                                 uint64_t file_block);
+  [[nodiscard]] zx::status<> Init(VnodeMapper* mapper, PendingWork* transaction,
+                                  uint64_t file_block);
 
   // Returns the file block that the iterator is currently located at.
   uint64_t file_block() const { return file_block_; }
@@ -126,7 +126,7 @@ class VnodeIterator {
 
   // Sets the target block. The iterator will need to be flushed after calling this (by calling the
   // Flush method).
-  [[nodiscard]] zx_status_t SetBlk(blk_t block) { return SetBlk(levels_.data(), block); }
+  [[nodiscard]] zx::status<> SetBlk(blk_t block) { return SetBlk(levels_.data(), block); }
 
   // Returns the length in blocks of a contiguous range at most |max_blocks|. For
   // efficiency/simplicity reasons, it might return fewer than there actually are.
@@ -135,11 +135,11 @@ class VnodeIterator {
 
   // Flushes any changes that may have been made. This is a no-op if there are no changes or
   // this iterator is read-only.
-  [[nodiscard]] zx_status_t Flush();
+  [[nodiscard]] zx::status<> Flush();
 
   // Advances the iterator by |advance| blocks. This will also flush the iterator first if
   // necessary.
-  [[nodiscard]] zx_status_t Advance(uint64_t advance = 1);
+  [[nodiscard]] zx::status<> Advance(uint64_t advance = 1);
 
  private:
   using ViewGetter = fit::function<zx::status<BufferView<blk_t>>(PendingWork*, VnodeMinfs* vnode,
@@ -178,18 +178,18 @@ class VnodeIterator {
   // the implementation file for more detail.
   static constexpr int kMaxLevels = 3;
 
-  zx_status_t InitializeLevel(int level, BlockPointerRange range, uint64_t block,
-                              ViewGetter view_getter);
-  zx_status_t InitializeIndirectLevel(int level, uint64_t relative_block);
+  zx::status<> InitializeLevel(int level, BlockPointerRange range, uint64_t block,
+                               ViewGetter view_getter);
+  zx::status<> InitializeIndirectLevel(int level, uint64_t relative_block);
 
   // Flushes the given level if there are any changes.
-  [[nodiscard]] zx_status_t FlushLevel(int level);
+  [[nodiscard]] zx::status<> FlushLevel(int level);
 
   // Finds a contiguous run of blocks, but not necessarily the longest.
   uint64_t ComputeContiguousBlockCount() const;
 
   // Sets a block pointer in the given level.
-  zx_status_t SetBlk(Level* level, blk_t block);
+  zx::status<> SetBlk(Level* level, blk_t block);
 
   // The owning mapper.
   VnodeMapper* mapper_ = nullptr;

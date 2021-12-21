@@ -53,62 +53,61 @@ zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& o
   return ZX_OK;
 }
 
-zx_status_t Bcache::Readblk(blk_t bno, void* data) {
+zx::status<> Bcache::Readblk(blk_t bno, void* data) {
   off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
   assert(off / kMinfsBlockSize == bno);  // Overflow
   off += offset_;
   if (lseek(fd_.get(), off, SEEK_SET) < 0) {
     FX_LOGS(ERROR) << "cannot seek to block " << bno;
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
   if (read(fd_.get(), data, kMinfsBlockSize) != kMinfsBlockSize) {
     FX_LOGS(ERROR) << "cannot read block " << bno;
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
+zx::status<> Bcache::Writeblk(blk_t bno, const void* data) {
   off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
   assert(off / kMinfsBlockSize == bno);  // Overflow
   off += offset_;
   if (lseek(fd_.get(), off, SEEK_SET) < 0) {
     FX_LOGS(ERROR) << "cannot seek to block " << bno << ". " << errno;
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
   ssize_t ret = write(fd_.get(), data, kMinfsBlockSize);
   if (ret != kMinfsBlockSize) {
     FX_LOGS(ERROR) << "cannot write block " << bno << " (" << ret << ")";
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Bcache::Sync() {
+zx::status<> Bcache::Sync() {
   // No-op.
-  return ZX_OK;
+  return zx::ok();
 }
 
-// Static.
-zx_status_t Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out) {
-  out->reset(new Bcache(std::move(fd), max_blocks));
-  return ZX_OK;
+// static
+zx::status<std::unique_ptr<Bcache>> Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks) {
+  return zx::ok(std::unique_ptr<Bcache>(new Bcache(std::move(fd), max_blocks)));
 }
 
 Bcache::Bcache(fbl::unique_fd fd, uint32_t max_blocks)
     : fd_(std::move(fd)), max_blocks_(max_blocks) {}
 
-zx_status_t Bcache::SetOffset(off_t offset) {
-  if (offset_ || extent_lengths_.size() > 0) {
-    return ZX_ERR_ALREADY_BOUND;
+zx::status<> Bcache::SetOffset(off_t offset) {
+  if (offset_ || !extent_lengths_.empty()) {
+    return zx::error(ZX_ERR_ALREADY_BOUND);
   }
   offset_ = offset;
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths) {
-  if (offset_ || extent_lengths_.size() > 0) {
-    return ZX_ERR_ALREADY_BOUND;
+zx::status<> Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths) {
+  if (offset_ || !extent_lengths_.empty()) {
+    return zx::error(ZX_ERR_ALREADY_BOUND);
   }
 
   ZX_ASSERT(extent_lengths.size() == kExtentCount);
@@ -117,7 +116,7 @@ zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_le
   extent_lengths_.reset(new (&ac) size_t[kExtentCount], kExtentCount);
 
   if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   for (size_t i = 0; i < extent_lengths.size(); i++) {
@@ -125,7 +124,7 @@ zx_status_t Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_le
   }
 
   offset_ = offset;
-  return ZX_OK;
+  return zx::ok();
 }
 
 }  // namespace minfs

@@ -55,18 +55,21 @@ class InodeManager : public InspectableInodeManager {
   ~InodeManager() override = default;
 
 #ifdef __Fuchsia__
-  static zx_status_t Create(block_client::BlockDevice* device, SuperblockManager* sb,
-                            fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
-                            blk_t start_block, size_t inodes, std::unique_ptr<InodeManager>* out);
+  static zx::status<std::unique_ptr<InodeManager>> Create(block_client::BlockDevice* device,
+                                                          SuperblockManager* sb,
+                                                          fs::BufferedOperationsBuilder* builder,
+                                                          AllocatorMetadata metadata,
+                                                          blk_t start_block, size_t inodes);
 #else
-  static zx_status_t Create(Bcache* bc, SuperblockManager* sb,
-                            fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
-                            blk_t start_block, size_t inodes, std::unique_ptr<InodeManager>* out);
+  static zx::status<std::unique_ptr<InodeManager>> Create(Bcache* bc, SuperblockManager* sb,
+                                                          fs::BufferedOperationsBuilder* builder,
+                                                          AllocatorMetadata metadata,
+                                                          blk_t start_block, size_t inodes);
 #endif
 
   // Reserve |inodes| inodes in the allocator.
-  static zx_status_t Reserve(PendingWork* transaction, size_t inodes,
-                             AllocatorReservation* reservation) {
+  static zx::status<> Reserve(PendingWork* transaction, size_t inodes,
+                              AllocatorReservation* reservation) {
     return reservation->Reserve(transaction, inodes);
   }
 

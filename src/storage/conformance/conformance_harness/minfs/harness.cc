@@ -42,10 +42,13 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
     auto device = std::make_unique<block_client::FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
-    std::unique_ptr<Bcache> bcache;
-    ZX_ASSERT(Bcache::Create(std::move(device), kBlockCount, &bcache) == ZX_OK);
-    ZX_ASSERT(Mkfs(bcache.get()) == ZX_OK);
-    ZX_ASSERT(Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache), {}, &minfs_) == ZX_OK);
+    auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+    ZX_ASSERT(bcache_or.is_ok());
+    ZX_ASSERT(Mkfs(bcache_or.value().get()).is_ok());
+
+    auto minfs_or = Minfs::Create(vfs_loop_.dispatcher(), std::move(bcache_or.value()), {});
+    ZX_ASSERT(minfs_or.is_ok());
+    minfs_ = std::move(minfs_or.value());
   }
 
   ~MinfsHarness() override {
@@ -153,9 +156,9 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
   }
 
   fbl::RefPtr<Directory> GetRootNode() {
-    fbl::RefPtr<VnodeMinfs> vn;
-    ZX_ASSERT(minfs_->VnodeGet(&vn, kMinfsRootIno) == ZX_OK);
-    auto root = fbl::RefPtr<Directory>::Downcast(std::move(vn));
+    auto vn_or = minfs_->VnodeGet(kMinfsRootIno);
+    ZX_ASSERT(vn_or.is_ok());
+    auto root = fbl::RefPtr<Directory>::Downcast(std::move(vn_or.value()));
     ZX_ASSERT_MSG(root != nullptr, "The root node wasn't a directory");
     return root;
   }

@@ -27,14 +27,14 @@ class Device : public storage::VmoidRegistry {
 
 TEST(ResizeableVmoBufferTest, Grow) {
   ResizeableVmoBuffer buffer(kBlockSize);
-  ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
-  auto detach = fit::defer([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
-  ASSERT_EQ(buffer.Grow(2), ZX_OK);
+  ASSERT_TRUE(buffer.Attach("test", &device).is_ok());
+  auto detach = fit::defer([&]() { EXPECT_TRUE(buffer.Detach(&device).is_ok()); });
+  ASSERT_TRUE(buffer.Grow(2).is_ok());
   EXPECT_EQ(buffer.capacity(), 2ul);
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_EQ(buffer.Grow(50), ZX_OK);
+  ASSERT_TRUE(buffer.Grow(50).is_ok());
   // Check that after growing, the data is still there.
   EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
   EXPECT_EQ(buffer.capacity(), 50ul);
@@ -42,13 +42,13 @@ TEST(ResizeableVmoBufferTest, Grow) {
 
 TEST(ResizeableVmoBufferTest, Shrink) {
   ResizeableVmoBuffer buffer(kBlockSize);
-  ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
-  auto detach = fit::defer([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
-  ASSERT_EQ(buffer.Grow(5), ZX_OK);
+  ASSERT_TRUE(buffer.Attach("test", &device).is_ok());
+  auto detach = fit::defer([&]() { EXPECT_TRUE(buffer.Detach(&device).is_ok()); });
+  ASSERT_TRUE(buffer.Grow(5).is_ok());
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_EQ(buffer.Shrink(2), ZX_OK);
+  ASSERT_TRUE(buffer.Shrink(2).is_ok());
   EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
   EXPECT_EQ(buffer.capacity(), 2ul);
 }
@@ -56,9 +56,9 @@ TEST(ResizeableVmoBufferTest, Shrink) {
 TEST(ResizeableVmoBufferTest, Zero) {
   constexpr int kBlocks = 10;
   ResizeableVmoBuffer buffer(kBlockSize);
-  ASSERT_EQ(buffer.Attach("test", &device), ZX_OK);
-  auto detach = fit::defer([&]() { EXPECT_EQ(buffer.Detach(&device), ZX_OK); });
-  ASSERT_EQ(buffer.Grow(kBlocks), ZX_OK);
+  ASSERT_TRUE(buffer.Attach("test", &device).is_ok());
+  auto detach = fit::defer([&]() { EXPECT_TRUE(buffer.Detach(&device).is_ok()); });
+  ASSERT_TRUE(buffer.Grow(kBlocks).is_ok());
   static const uint8_t kFill = 0xaf;
   memset(buffer.Data(0), kFill, kBlocks * kBlockSize);
   constexpr int kStart = 5;

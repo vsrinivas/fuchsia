@@ -41,15 +41,15 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
   return vnodes;
 }
 
-zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
-                                       std::unique_ptr<CachedBlockTransaction> cached_transaction,
-                                       std::unique_ptr<Transaction>* out) {
+zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
+                                        std::unique_ptr<CachedBlockTransaction> cached_transaction,
+                                        std::unique_ptr<Transaction>* out) {
   if (journal_ == nullptr) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   if (!journal_->IsWritebackEnabled()) {
-    return ZX_ERR_IO_REFUSED;
+    return zx::error(ZX_ERR_IO_REFUSED);
   }
 
   // TODO(unknown): Once we are splitting up write
@@ -60,7 +60,7 @@ zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
 
   // Reserve blocks from allocators before returning WritebackWork to client.
   auto status = (*out)->ExtendBlockReservation(reserve_blocks);
-  if (status == ZX_ERR_NO_SPACE && reserve_blocks > 0) {
+  if (status.status_value() == ZX_ERR_NO_SPACE && reserve_blocks > 0) {
     // When there's no more space, flush the journal in case a recent transaction has freed blocks
     // but has yet to be flushed from the journal and committed. Then, try again.
     FX_LOGS(INFO)
@@ -70,22 +70,23 @@ zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
       FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
       OnOutOfSpace();
       // Return the original status.
-      return status;
+      return sync_status.take_error();
     }
 
     status = (*out)->ExtendBlockReservation(reserve_blocks);
-    if (status == ZX_OK) {
+    if (status.is_ok()) {
       OnRecoveredFreeSpace();
     }
   }
 
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to extend block reservation (status: "
-                   << zx::make_status(status).status_string() << ")";
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Failed to extend block reservation (status: " << status.status_string()
+                   << ")";
     OnOutOfSpace();
+    return status.take_error();
   }
 
-  return status;
+  return zx::ok();
 }
 
 zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {

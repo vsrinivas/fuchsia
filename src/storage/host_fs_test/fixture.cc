@@ -62,14 +62,14 @@ int HostFilesystemTest::RunFsck() {
 
   size_t size = stats.st_size /= minfs::kMinfsBlockSize;
 
-  std::unique_ptr<minfs::Bcache> block_cache;
-  if (minfs::Bcache::Create(std::move(disk), static_cast<uint32_t>(size), &block_cache) != ZX_OK) {
+  auto block_cache_or = minfs::Bcache::Create(std::move(disk), static_cast<uint32_t>(size));
+  if (block_cache_or.is_error()) {
     std::cerr << "error: cannot create block cache" << std::endl;
     return -1;
   }
 
   // The filesystem is never repaired on the host side.
-  return Fsck(std::move(block_cache), minfs::FsckOptions{.quiet = true});
+  return Fsck(std::move(block_cache_or.value()), minfs::FsckOptions{.quiet = true}).status_value();
 }
 
 }  // namespace fs_test

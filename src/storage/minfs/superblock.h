@@ -48,9 +48,10 @@ class SuperblockManager {
 
   ~SuperblockManager();
 
-  static zx_status_t Create(block_client::BlockDevice* device, const Superblock* info,
-                            uint32_t max_blocks, IntegrityCheck checks,
-                            std::unique_ptr<SuperblockManager>* out);
+  static zx::status<std::unique_ptr<SuperblockManager>> Create(block_client::BlockDevice* device,
+                                                               const Superblock& info,
+                                                               uint32_t max_blocks,
+                                                               IntegrityCheck checks);
 
   bool is_dirty() const { return dirty_; }
 
@@ -78,7 +79,7 @@ class SuperblockManager {
   void Write(PendingWork* transaction, UpdateBackupSuperblock write_backup);
 
  private:
-  SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper);
+  SuperblockManager(const Superblock& info, fzl::OwnedVmoMapper mapper);
 
   fzl::OwnedVmoMapper mapping_;
   bool dirty_ = false;
@@ -98,8 +99,9 @@ class SuperblockManager {
 
   ~SuperblockManager();
 
-  static zx_status_t Create(const Superblock* info, uint32_t max_blocks, IntegrityCheck checks,
-                            std::unique_ptr<SuperblockManager>* out);
+  static zx::status<std::unique_ptr<SuperblockManager>> Create(const Superblock& info,
+                                                               uint32_t max_blocks,
+                                                               IntegrityCheck checks);
 
   bool is_dirty() const { return dirty_; }
 
@@ -127,7 +129,7 @@ class SuperblockManager {
   void Write(PendingWork* transaction, UpdateBackupSuperblock write_backup);
 
  private:
-  SuperblockManager(const Superblock* info);
+  SuperblockManager(const Superblock& info);
 
   uint8_t info_blk_[kMinfsBlockSize];
   bool dirty_ = false;

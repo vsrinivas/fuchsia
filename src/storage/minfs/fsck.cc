@@ -93,27 +93,33 @@ blk_t LogicalBlockDoublyIndirect(blk_t doubly_indirect, blk_t indirect = 0, blk_
 
 class MinfsChecker {
  public:
-  static zx_status_t Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache> bc,
-                            const FsckOptions& options, std::unique_ptr<MinfsChecker>* out);
+  static zx::status<std::unique_ptr<MinfsChecker>> Create(FuchsiaDispatcher* dispatcher,
+                                                          std::unique_ptr<Bcache> bc,
+                                                          const FsckOptions& options);
 
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<MinfsChecker> checker) {
     return Minfs::Destroy(std::move(checker->fs_));
   }
 
   void CheckReserved();
-  zx_status_t CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot);
-  zx_status_t CheckUnlinkedInodes();
-  zx_status_t CheckForUnusedBlocks() const;
-  zx_status_t CheckForUnusedInodes() const;
-  zx_status_t CheckLinkCounts() const;
-  zx_status_t CheckAllocatedCounts() const;
-  zx_status_t CheckSuperblockIntegrity() const;
+  zx::status<> CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot);
+  zx::status<> CheckUnlinkedInodes();
+  zx::status<> CheckForUnusedBlocks() const;
+  zx::status<> CheckForUnusedInodes() const;
+  zx::status<> CheckLinkCounts() const;
+  zx::status<> CheckAllocatedCounts() const;
+  zx::status<> CheckSuperblockIntegrity() const;
 
   void DumpStats();
 
   bool conforming() const { return conforming_; }
 
  private:
+  struct InodeNthBnoResult {
+    blk_t bno = 0;
+    blk_t next_n = false;
+  };
+
   explicit MinfsChecker(const FsckOptions& fsck_options) : fsck_options_(fsck_options) {}
 
   // Not copyable or movable
@@ -124,17 +130,18 @@ class MinfsChecker {
 
   // Reads the inode and optionally checks the magic value to ensure it is either a file or
   // directory.
-  zx_status_t GetInode(Inode* inode, ino_t ino, bool check_magic = true) const;
+  zx::status<Inode> GetInode(ino_t ino, bool check_magic = true) const;
 
   // Returns the nth block within an inode, relative to the start of the
-  // file. Returns the "next_n" which might contain a bno. This "next_n"
-  // is for performance reasons -- it allows fsck to avoid repeatedly checking
-  // the same indirect / doubly indirect blocks with all internal
-  // bno unallocated.
-  zx_status_t GetInodeNthBno(Inode* inode, blk_t n, blk_t* next_n, blk_t* bno_out);
-  zx_status_t CheckDirectory(Inode* inode, ino_t ino, ino_t parent, uint32_t flags);
+  // file. Returns the
+  //
+  // Returns a pair of `next_n` and `bno`. `next_n` might contain a bno. This `next_n` is for
+  // performance reasons -- it allows fsck to avoid repeatedly checking the same
+  // indirect / doubly indirect blocks with all internal bno unallocated.
+  zx::status<InodeNthBnoResult> GetInodeNthBno(Inode* inode, blk_t n);
+  zx::status<> CheckDirectory(Inode* inode, ino_t ino, ino_t parent, uint32_t flags);
   std::optional<std::string> CheckDataBlock(blk_t bno, BlockInfo block_info);
-  zx_status_t CheckFile(Inode* inode, ino_t ino);
+  zx::status<> CheckFile(Inode* inode, ino_t ino);
 
   const FsckOptions fsck_options_;
 
@@ -164,30 +171,35 @@ class MinfsChecker {
   uint32_t directory_blocks_ = 0;
 };
 
-zx_status_t MinfsChecker::GetInode(Inode* inode, ino_t ino, bool check_magic) const {
+zx::status<Inode> MinfsChecker::GetInode(ino_t ino, bool check_magic) const {
   if (ino >= fs_->Info().inode_count) {
     FX_LOGS(ERROR) << "check: ino " << ino << " out of range (>=" << fs_->Info().inode_count << ")";
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  fs_->GetInodeManager()->Load(ino, inode);
-  if (check_magic && (inode->magic != kMinfsMagicFile) && (inode->magic != kMinfsMagicDir)) {
-    FX_LOGS(ERROR) << "check: ino " << ino << " has bad magic 0x" << std::hex << inode->magic;
-    return ZX_ERR_IO_DATA_INTEGRITY;
+  Inode inode;
+  fs_->GetInodeManager()->Load(ino, &inode);
+  if (check_magic && (inode.magic != kMinfsMagicFile) && (inode.magic != kMinfsMagicDir)) {
+    FX_LOGS(ERROR) << "check: ino " << ino << " has bad magic 0x" << std::hex << inode.magic;
+    return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
   }
-  return ZX_OK;
+  return zx::ok(inode);
 }
 
 #define CD_DUMP 1
 #define CD_RECURSE 2
 
-zx_status_t MinfsChecker::GetInodeNthBno(Inode* inode, blk_t n, blk_t* next_n, blk_t* bno_out) {
-  // The default value for the "next n". It's easier to set it here anyway,
-  // since we proceed to modify n in the code below.
-  *next_n = n + 1;
+zx::status<MinfsChecker::InodeNthBnoResult> MinfsChecker::GetInodeNthBno(Inode* inode, blk_t n) {
+  InodeNthBnoResult result{
+      .bno{},
+      // The default value for the "next n". It's easier to set it here anyway,
+      // since we proceed to modify n in the code below.
+      .next_n = n + 1,
+  };
+
   if (n < kMinfsDirect) {
-    *bno_out = inode->dnum[n];
-    return ZX_OK;
+    result.bno = inode->dnum[n];
+    return zx::ok(result);
   }
 
   n -= kMinfsDirect;
@@ -197,22 +209,21 @@ zx_status_t MinfsChecker::GetInodeNthBno(Inode* inode, blk_t n, blk_t* next_n, b
   if (i < kMinfsIndirect) {
     blk_t ibno;
     if ((ibno = inode->inum[i]) == 0) {
-      *bno_out = 0;
-      *next_n = kMinfsDirect + (i + 1) * kMinfsDirectPerIndirect;
-      return ZX_OK;
+      result.bno = 0;
+      result.next_n = kMinfsDirect + (i + 1) * kMinfsDirectPerIndirect;
+      return zx::ok(result);
     }
 
     if (cached_indirect_ != ibno) {
-      zx_status_t status;
-      if ((status = fs_->ReadDat(ibno, indirect_cache_)) != ZX_OK) {
-        return status;
+      if (auto status = fs_->ReadDat(ibno, indirect_cache_); status.is_error()) {
+        return status.take_error();
       }
       cached_indirect_ = ibno;
     }
 
     uint32_t* ientry = reinterpret_cast<uint32_t*>(indirect_cache_);
-    *bno_out = ientry[j];
-    return ZX_OK;
+    result.bno = ientry[j];
+    return zx::ok(result);
   }
 
   n -= kMinfsIndirect * kMinfsDirectPerIndirect;
@@ -224,16 +235,15 @@ zx_status_t MinfsChecker::GetInodeNthBno(Inode* inode, blk_t n, blk_t* next_n, b
   if (i < kMinfsDoublyIndirect) {
     blk_t dibno;
     if ((dibno = inode->dinum[i]) == 0) {
-      *bno_out = 0;
-      *next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
-                (i + 1) * kMinfsDirectPerDindirect;
-      return ZX_OK;
+      result.bno = 0;
+      result.next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
+                      (i + 1) * kMinfsDirectPerDindirect;
+      return zx::ok(result);
     }
 
     if (cached_doubly_indirect_ != dibno) {
-      zx_status_t status;
-      if ((status = fs_->ReadDat(dibno, doubly_indirect_cache_)) != ZX_OK) {
-        return status;
+      if (auto status = fs_->ReadDat(dibno, doubly_indirect_cache_); status.is_error()) {
+        return status.take_error();
       }
       cached_doubly_indirect_ = dibno;
     }
@@ -241,35 +251,34 @@ zx_status_t MinfsChecker::GetInodeNthBno(Inode* inode, blk_t n, blk_t* next_n, b
     uint32_t* dientry = reinterpret_cast<uint32_t*>(doubly_indirect_cache_);
     blk_t ibno;
     if ((ibno = dientry[j]) == 0) {
-      *bno_out = 0;
-      *next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
-                (i * kMinfsDirectPerDindirect) + (j + 1) * kMinfsDirectPerIndirect;
-      return ZX_OK;
+      result.bno = 0;
+      result.next_n = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect +
+                      (i * kMinfsDirectPerDindirect) + (j + 1) * kMinfsDirectPerIndirect;
+      return zx::ok(result);
     }
 
     if (cached_indirect_ != ibno) {
-      zx_status_t status;
-      if ((status = fs_->ReadDat(ibno, indirect_cache_)) != ZX_OK) {
-        return status;
+      if (auto status = fs_->ReadDat(ibno, indirect_cache_); status.is_error()) {
+        return status.take_error();
       }
       cached_indirect_ = ibno;
     }
 
     uint32_t* ientry = reinterpret_cast<uint32_t*>(indirect_cache_);
-    *bno_out = ientry[k];
-    return ZX_OK;
+    result.bno = ientry[k];
+    return zx::ok(result);
   }
 
-  return ZX_ERR_OUT_OF_RANGE;
+  return zx::error(ZX_ERR_OUT_OF_RANGE);
 }
 
-zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, uint32_t flags) {
+zx::status<> MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, uint32_t flags) {
   unsigned eno = 0;
   bool dot = false;
   bool dotdot = false;
   uint32_t dirent_count = 0;
 
-  zx_status_t status;
+  zx::status<> status;
   fbl::RefPtr<VnodeMinfs> vn;
   VnodeMinfs::Recreate(fs_.get(), ino, &vn);
 
@@ -278,11 +287,11 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     DirentBuffer dirent_buffer;
     size_t actual;
     status = vn->ReadInternal(nullptr, &dirent_buffer.dirent, kMinfsDirentSize, off, &actual);
-    if (status == ZX_OK && actual == 0 && inode->link_count == 0 && parent == 0) {
+    if (status.is_ok() && actual == 0 && inode->link_count == 0 && parent == 0) {
       // This is OK as it's an unlinked directory.
       break;
     }
-    if (status != ZX_OK || actual != kMinfsDirentSize) {
+    if (status.is_error() || actual != kMinfsDirentSize) {
       FX_LOGS(ERROR) << "check: ino#" << eno << ": Could not read de[" << ino << "] at " << off;
       if (inode->dirent_count >= 2 && inode->dirent_count == eno - 1) {
         // So we couldn't read the last direntry, for whatever reason, but our
@@ -290,7 +299,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
         FX_LOGS(ERROR) << "check: de count (" << eno << ") > inode_dirent_count ("
                        << inode->dirent_count << ")";
       }
-      return status != ZX_OK ? status : ZX_ERR_IO;
+      return status.is_error() ? status.take_error() : zx::error(ZX_ERR_IO);
     }
 
     Dirent* de = &dirent_buffer.dirent;
@@ -302,7 +311,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       FX_LOGS(ERROR) << "check: ino#" << ino << ": de[" << eno << "]: bad dirent reclen (" << rlen
                      << ") dlen(" << dlen << "), maxsize(" << kMinfsMaxDirentSize << "), size("
                      << kMinfsDirentSize << ")";
-      return ZX_ERR_IO_DATA_INTEGRITY;
+      return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
     }
     if (de->ino == 0) {
       if (flags & CD_DUMP) {
@@ -312,9 +321,9 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       // Re-read the dirent to acquire the full name
       uint32_t record_full[DirentSize(NAME_MAX)];
       status = vn->ReadInternal(nullptr, record_full, DirentSize(de->namelen), off, &actual);
-      if (status != ZX_OK || actual != DirentSize(de->namelen)) {
+      if (status.is_error() || actual != DirentSize(de->namelen)) {
         FX_LOGS(ERROR) << "check: Error reading dirent of size: " << DirentSize(de->namelen);
-        return ZX_ERR_IO;
+        return zx::error(ZX_ERR_IO);
       }
       de = reinterpret_cast<Dirent*>(record_full);
       bool dot_or_dotdot = false;
@@ -322,7 +331,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       if ((de->namelen == 0) || (de->namelen > (rlen - kMinfsDirentSize))) {
         FX_LOGS(ERROR) << "check: ino#" << ino << ": de[" << eno << "]: invalid namelen "
                        << de->namelen;
-        return ZX_ERR_IO_DATA_INTEGRITY;
+        return zx::error(ZX_ERR_IO_DATA_INTEGRITY);
       }
       if ((de->namelen == 1) && (de->name[0] == '.')) {
         if (dot) {
@@ -357,8 +366,8 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
       }
 
       if (flags & CD_RECURSE) {
-        if ((status = CheckInode(de->ino, ino, dot_or_dotdot)) < 0) {
-          return status;
+        if (auto status = CheckInode(de->ino, ino, dot_or_dotdot); status.is_error()) {
+          return status.take_error();
         }
       }
       dirent_count++;
@@ -388,7 +397,7 @@ zx_status_t MinfsChecker::CheckDirectory(Inode* inode, ino_t ino, ino_t parent, 
     FX_LOGS(ERROR) << "check: ino#" << ino << ": directory missing '..'";
     conforming_ = false;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo block_info) {
@@ -426,7 +435,7 @@ std::optional<std::string> MinfsChecker::CheckDataBlock(blk_t bno, BlockInfo blo
   return std::nullopt;
 }
 
-zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
+zx::status<> MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
   FX_LOGS(DEBUG) << "Direct blocks: ";
   for (unsigned n = 0; n < kMinfsDirect; n++) {
     FX_LOGS(DEBUG) << " " << inode->dnum[n] << ",";
@@ -462,9 +471,8 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
       block_count++;
 
       char data[kMinfsBlockSize];
-      zx_status_t status;
-      if ((status = fs_->ReadDat(inode->dinum[n], data)) != ZX_OK) {
-        return status;
+      if (auto status = fs_->ReadDat(inode->dinum[n], data); status.is_error()) {
+        return status.take_error();
       }
       uint32_t* entry = reinterpret_cast<uint32_t*>(data);
 
@@ -493,29 +501,28 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
 
   blk_t n = 0;
   while (true) {
-    zx_status_t status;
-    blk_t bno;
-    blk_t next_n;
-    if ((status = GetInodeNthBno(inode, n, &next_n, &bno)) < 0) {
-      if (status == ZX_ERR_OUT_OF_RANGE) {
+    auto nth_bno_or = GetInodeNthBno(inode, n);
+    if (nth_bno_or.is_error()) {
+      if (nth_bno_or.error_value() == ZX_ERR_OUT_OF_RANGE) {
         break;
       } else {
-        return status;
+        return nth_bno_or.take_error();
       }
     }
-    assert(next_n > n);
-    if (bno) {
+
+    assert(nth_bno_or->next_n > n);
+    if (nth_bno_or->bno) {
       next_blk = n + 1;
       block_count++;
       BlockInfo block_info = {ino, n, BlockType::kDirect};
-      auto msg = CheckDataBlock(bno, block_info);
+      auto msg = CheckDataBlock(nth_bno_or->bno, block_info);
       if (msg) {
-        FX_LOGS(WARNING) << "check: ino#" << ino << ": block " << n << "(@" << bno
+        FX_LOGS(WARNING) << "check: ino#" << ino << ": block " << n << "(@" << nth_bno_or->bno
                          << "): " << msg.value();
         conforming_ = false;
       }
     }
-    n = next_n;
+    n = nth_bno_or->next_n;
   }
   if (next_blk) {
     unsigned max_blocks = fbl::round_up(inode->size, kMinfsBlockSize) / kMinfsBlockSize;
@@ -529,7 +536,7 @@ zx_status_t MinfsChecker::CheckFile(Inode* inode, ino_t ino) {
                      << ", actual blocks " << block_count;
     conforming_ = false;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 void MinfsChecker::CheckReserved() {
@@ -553,36 +560,36 @@ void MinfsChecker::CheckReserved() {
   }
 }
 
-zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot) {
-  Inode inode;
-  zx_status_t status;
-
-  if ((status = GetInode(&inode, ino)) < 0) {
-    FX_LOGS(ERROR) << "check: ino#" << ino << ": not readable: " << status;
-    return status;
+zx::status<> MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot) {
+  auto inode_or = GetInode(ino);
+  if (inode_or.is_error()) {
+    FX_LOGS(ERROR) << "check: ino#" << ino << ": not readable: " << inode_or.error_value();
+    return inode_or.take_error();
   }
+
+  Inode inode = std::move(inode_or.value());
 
   bool prev_checked = checked_inodes_.Get(ino, ino + 1);
 
   if (inode.magic == kMinfsMagicDir && prev_checked && !dot_or_dotdot) {
     FX_LOGS(ERROR) << "check: ino#" << ino
                    << ": Multiple hard links to directory (excluding '.' and '..') found";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   if (!safemath::CheckAdd(links_[ino - 1], 1).AssignIfValid(&links_[ino - 1])) {
     FX_LOGS(ERROR) << "Ino " << ino << " overflowed int64_t.";
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 
   if (prev_checked) {
     // we've been here before
-    return ZX_OK;
+    return zx::ok();
   }
 
   if (!safemath::CheckSub(links_[ino - 1], inode.link_count).AssignIfValid(&links_[ino - 1])) {
     FX_LOGS(ERROR) << "Ino " << ino << " underflowed int64_t.";
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
   checked_inodes_.Set(ino, ino + 1);
   max_inode_ = std::max(ino, max_inode_);
@@ -596,31 +603,31 @@ zx_status_t MinfsChecker::CheckInode(ino_t ino, ino_t parent, bool dot_or_dotdot
   if (inode.magic == kMinfsMagicDir) {
     FX_LOGS(DEBUG) << "ino#" << ino << ": DIR blks=" << inode.block_count
                    << " links=" << inode.link_count;
-    if ((status = CheckFile(&inode, ino)) < 0) {
-      return status;
+    if (auto status = CheckFile(&inode, ino); status.is_error()) {
+      return status.take_error();
     }
-    if ((status = CheckDirectory(&inode, ino, parent, CD_DUMP)) < 0) {
-      return status;
+    if (auto status = CheckDirectory(&inode, ino, parent, CD_DUMP); status.is_error()) {
+      return status.take_error();
     }
-    if ((status = CheckDirectory(&inode, ino, parent, CD_RECURSE)) < 0) {
-      return status;
+    if (auto status = CheckDirectory(&inode, ino, parent, CD_RECURSE); status.is_error()) {
+      return status.take_error();
     }
     directory_blocks_ += inode.block_count;
   } else {
     if (ino == kMinfsRootIno) {
       FX_LOGS(ERROR) << "Root inode must be a directory";
-      return ZX_ERR_BAD_STATE;
+      return zx::error(ZX_ERR_BAD_STATE);
     }
     FX_LOGS(DEBUG) << "ino#" << ino << ": FILE blks=" << inode.block_count
                    << " links=" << inode.link_count << " size=" << inode.size;
-    if ((status = CheckFile(&inode, ino)) < 0) {
-      return status;
+    if (auto status = CheckFile(&inode, ino); status.is_error()) {
+      return status.take_error();
     }
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t MinfsChecker::CheckUnlinkedInodes() {
+zx::status<> MinfsChecker::CheckUnlinkedInodes() {
   ino_t last_ino = 0;
   ino_t next_ino = fs_->Info().unlinked_head;
   ino_t unlinked_count = 0;
@@ -628,28 +635,29 @@ zx_status_t MinfsChecker::CheckUnlinkedInodes() {
   while (next_ino != 0) {
     unlinked_count++;
 
-    Inode inode;
-    zx_status_t status = GetInode(&inode, next_ino);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "check: ino#" << next_ino << ": not readable: " << status;
-      return status;
+    auto inode_or = GetInode(next_ino);
+    if (inode_or.is_error()) {
+      FX_LOGS(ERROR) << "check: ino#" << next_ino << ": not readable: " << inode_or.error_value();
+      return inode_or.take_error();
     }
+
+    Inode inode = std::move(inode_or.value());
 
     if (inode.link_count > 0) {
       FX_LOGS(ERROR) << "check: ino#" << next_ino << ": should have 0 links";
-      return ZX_ERR_BAD_STATE;
+      return zx::error(ZX_ERR_BAD_STATE);
     }
 
     if (inode.last_inode != last_ino) {
       FX_LOGS(ERROR) << "check: ino#" << next_ino << ": incorrect last unlinked inode";
-      return ZX_ERR_BAD_STATE;
+      return zx::error(ZX_ERR_BAD_STATE);
     }
 
     links_[next_ino - 1] = -1;
 
-    if ((status = CheckInode(next_ino, 0, 0)) != ZX_OK) {
-      FX_LOGS(ERROR) << "minfs_check: CheckInode failure: " << status;
-      return status;
+    if (auto status = CheckInode(next_ino, 0, 0); status.is_error()) {
+      FX_LOGS(ERROR) << "minfs_check: CheckInode failure: " << status.error_value();
+      return status.take_error();
     }
 
     last_ino = next_ino;
@@ -658,17 +666,17 @@ zx_status_t MinfsChecker::CheckUnlinkedInodes() {
 
   if (fs_->Info().unlinked_tail != last_ino) {
     FX_LOGS(ERROR) << "minfs_check: Incorrect unlinked tail: " << fs_->Info().unlinked_tail;
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   if (unlinked_count > 0 && !fsck_options_.quiet) {
     FX_LOGS(WARNING) << "minfs_check: Warning: " << unlinked_count << " unlinked inodes found";
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
+zx::status<> MinfsChecker::CheckForUnusedBlocks() const {
   unsigned missing = 0;
 
   for (unsigned n = 0; n < fs_->Info().block_count; n++) {
@@ -678,15 +686,15 @@ zx_status_t MinfsChecker::CheckForUnusedBlocks() const {
       }
     }
   }
-  if (missing) {
+  if (missing > 0) {
     FX_LOGS(ERROR) << "check: " << missing << " allocated block" << (missing > 1 ? "s" : "")
                    << " not in use";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t MinfsChecker::CheckForUnusedInodes() const {
+zx::status<> MinfsChecker::CheckForUnusedInodes() const {
   unsigned missing = 0;
   for (unsigned n = 0; n < fs_->Info().inode_count; n++) {
     if (fs_->GetInodeManager()->GetInodeAllocator()->CheckAllocated(n)) {
@@ -700,46 +708,46 @@ zx_status_t MinfsChecker::CheckForUnusedInodes() const {
   if (missing > 0) {
     FX_LOGS(ERROR) << "check: " << missing << " allocated inode" << (missing > 1 ? "s" : "")
                    << " not in use";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t MinfsChecker::CheckLinkCounts() const {
+zx::status<> MinfsChecker::CheckLinkCounts() const {
   unsigned error = 0;
   for (uint32_t n = 0; n < fs_->Info().inode_count; n++) {
     if (links_[n] != 0) {
       error += 1;
       FX_LOGS(ERROR) << "check: inode#" << n + 1 << " has incorrect link count " << links_[n];
-      return ZX_ERR_BAD_STATE;
+      return zx::error(ZX_ERR_BAD_STATE);
     }
   }
   if (error) {
     FX_LOGS(ERROR) << "check: " << error << " inode" << (error > 1 ? "s" : "")
                    << " with incorrect link count";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t MinfsChecker::CheckAllocatedCounts() const {
-  zx_status_t status = ZX_OK;
+zx::status<> MinfsChecker::CheckAllocatedCounts() const {
+  zx::status<> status = zx::ok();
   if (alloc_blocks_ != fs_->Info().alloc_block_count) {
     FX_LOGS(ERROR) << "check: incorrect allocated block count " << fs_->Info().alloc_block_count
                    << " (should be " << alloc_blocks_ << ")";
-    status = ZX_ERR_BAD_STATE;
+    status = zx::error(ZX_ERR_BAD_STATE);
   }
 
   if (alloc_inodes_ != fs_->Info().alloc_inode_count) {
     FX_LOGS(ERROR) << "check: incorrect allocated inode count " << fs_->Info().alloc_inode_count
                    << " (should be " << alloc_inodes_ << ")";
-    status = ZX_ERR_BAD_STATE;
+    status = zx::error(ZX_ERR_BAD_STATE);
   }
 
   return status;
 }
 
-zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
+zx::status<> MinfsChecker::CheckSuperblockIntegrity() const {
   char data[kMinfsBlockSize];
   blk_t journal_block;
 
@@ -749,16 +757,16 @@ zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
   journal_block = fs_->GetBlockOffsets().JournalStartBlock();
 #endif
 
-  if (fs_->bc_->Readblk(journal_block, data) < 0) {
+  if (fs_->bc_->Readblk(journal_block, data).is_error()) {
     FX_LOGS(ERROR) << "could not read journal block";
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
   // Check that the journal superblock is valid.
   fs::JournalInfo* journal_info = reinterpret_cast<fs::JournalInfo*>(data);
   if (journal_info->magic != fs::kJournalMagic) {
     FX_LOGS(ERROR) << "invalid journal magic";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   uint32_t old_checksum = journal_info->checksum;
@@ -766,7 +774,7 @@ zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
   journal_info->checksum = crc32(0, reinterpret_cast<uint8_t*>(data), sizeof(fs::JournalInfo));
   if (journal_info->checksum != old_checksum) {
     FX_LOGS(ERROR) << "invalid journal checksum";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 
   // Check that the backup superblock is valid.
@@ -781,38 +789,36 @@ zx_status_t MinfsChecker::CheckSuperblockIntegrity() const {
 #endif
   }
 
-  if (fs_->bc_->Readblk(backup_location, data) < 0) {
+  if (fs_->bc_->Readblk(backup_location, data).is_error()) {
     FX_LOGS(ERROR) << "could not read backup superblock";
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
   Superblock* backup_info = reinterpret_cast<Superblock*>(data);
 #ifdef __Fuchsia__
-  return CheckSuperblock(backup_info, fs_->bc_->device(), fs_->bc_->Maxblk());
+  return CheckSuperblock(*backup_info, fs_->bc_->device(), fs_->bc_->Maxblk());
 #else
-  return CheckSuperblock(backup_info, fs_->bc_->Maxblk());
+  return CheckSuperblock(*backup_info, fs_->bc_->Maxblk());
 #endif
 }
 
-zx_status_t MinfsChecker::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache> bc,
-                                 const FsckOptions& fsck_options,
-                                 std::unique_ptr<MinfsChecker>* out) {
-  std::unique_ptr<Minfs> fs;
-  zx_status_t status = Minfs::Create(
+zx::status<std::unique_ptr<MinfsChecker>> MinfsChecker::Create(FuchsiaDispatcher* dispatcher,
+                                                               std::unique_ptr<Bcache> bc,
+                                                               const FsckOptions& fsck_options) {
+  auto fs_or = Minfs::Create(
       dispatcher, std::move(bc),
       MountOptions{
           .readonly = fsck_options.read_only,
           .repair_filesystem = fsck_options.repair,
           .fsck_after_every_transaction = false,  // Explicit in case the default is overridden.
           .quiet = fsck_options.quiet,
-      },
-      &fs);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "MinfsChecker::Create Failed to Create Minfs: " << status;
-    return status;
+      });
+  if (fs_or.is_error()) {
+    FX_LOGS(ERROR) << "MinfsChecker::Create Failed to Create Minfs: " << fs_or.error_value();
+    return fs_or.take_error();
   }
 
-  const Superblock& info = fs->Info();
+  const Superblock& info = fs_or->Info();
 
   auto checker = std::unique_ptr<MinfsChecker>(new MinfsChecker(fsck_options));
   checker->links_.reset(new int64_t[info.inode_count]{0}, info.inode_count);
@@ -820,17 +826,17 @@ zx_status_t MinfsChecker::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<
   checker->cached_doubly_indirect_ = 0;
   checker->cached_indirect_ = 0;
 
-  if ((status = checker->checked_inodes_.Reset(info.inode_count)) != ZX_OK) {
+  if (zx_status_t status = checker->checked_inodes_.Reset(info.inode_count); status != ZX_OK) {
     FX_LOGS(ERROR) << "MinfsChecker::Init Failed to reset checked inodes: " << status;
-    return status;
+    return zx::error(status);
   }
-  if ((status = checker->checked_blocks_.Reset(info.block_count)) != ZX_OK) {
+  if (zx_status_t status = checker->checked_blocks_.Reset(info.block_count); status != ZX_OK) {
     FX_LOGS(ERROR) << "MinfsChecker::Init Failed to reset checked blocks: " << status;
-    return status;
+    return zx::error(status);
   }
-  checker->fs_ = std::move(fs);
-  *out = std::move(checker);
-  return ZX_OK;
+
+  checker->fs_ = std::move(fs_or.value());
+  return zx::ok(std::move(checker));
 }
 
 void MinfsChecker::DumpStats() {
@@ -845,14 +851,14 @@ void MinfsChecker::DumpStats() {
 #ifdef __Fuchsia__
 
 // Write Superblock and Backup Superblock to disk.
-zx_status_t WriteSuperblockAndBackupSuperblock(fs::DeviceTransactionHandler* transaction_handler,
-                                               block_client::BlockDevice* device,
-                                               Superblock* info) {
+zx::status<> WriteSuperblockAndBackupSuperblock(fs::DeviceTransactionHandler* transaction_handler,
+                                                block_client::BlockDevice* device,
+                                                Superblock* info) {
   storage::VmoBuffer buffer;
   zx_status_t status =
       buffer.Initialize(transaction_handler->GetDevice(), 1, kMinfsBlockSize, "fsck-super-block");
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   memcpy(buffer.Data(0), info, sizeof(*info));
   fs::BufferedOperationsBuilder builder;
@@ -868,30 +874,31 @@ zx_status_t WriteSuperblockAndBackupSuperblock(fs::DeviceTransactionHandler* tra
                                                                          : kNonFvmSuperblockBackup),
                               .length = 1},
            &buffer);
-  return transaction_handler->RunRequests(builder.TakeOperations());
+  return zx::make_status(transaction_handler->RunRequests(builder.TakeOperations()));
 }
 
 // Reads backup superblock from correct location depending on whether filesystem has FVM support.
-zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
-                                 block_client::BlockDevice* device, uint32_t max_blocks,
-                                 uint32_t backup_location, Superblock* out_backup) {
-  zx_status_t status = device->ReadBlock(backup_location, kMinfsBlockSize, out_backup);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = CheckSuperblock(out_backup, device, max_blocks);
-  if (status != ZX_OK) {
-    return status;
-  }
-  // Found a valid backup superblock. Confirm if the FVM flags are set in the backup superblock.
-  if ((backup_location == kFvmSuperblockBackup) && ((out_backup->flags & kMinfsFlagFVM) == 0)) {
-    return ZX_ERR_BAD_STATE;
-  } else if ((backup_location == kNonFvmSuperblockBackup) &&
-             ((out_backup->flags & kMinfsFlagFVM) != 0)) {
-    return ZX_ERR_BAD_STATE;
+zx::status<Superblock> ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
+                                            block_client::BlockDevice* device, uint32_t max_blocks,
+                                            uint32_t backup_location) {
+  Superblock backup;
+  if (zx_status_t status = device->ReadBlock(backup_location, kMinfsBlockSize, &backup);
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  return ZX_OK;
+  if (auto status = CheckSuperblock(backup, device, max_blocks); status.is_error()) {
+    return status.take_error();
+  }
+  // Found a valid backup superblock. Confirm if the FVM flags are set in the backup superblock.
+  if ((backup_location == kFvmSuperblockBackup) && ((backup.flags & kMinfsFlagFVM) == 0)) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  } else if ((backup_location == kNonFvmSuperblockBackup) &&
+             ((backup.flags & kMinfsFlagFVM) != 0)) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  return zx::ok(std::move(backup));
 }
 #endif
 
@@ -899,33 +906,35 @@ zx_status_t ReadBackupSuperblock(fs::TransactionHandler* transaction_handler,
 
 // Repairs superblock from backup.
 #ifdef __Fuchsia__
-zx_status_t RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
-                             block_client::BlockDevice* device, uint32_t max_blocks,
-                             Superblock* info_out) {
-  Superblock backup_info;
+zx::status<Superblock> RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
+                                        block_client::BlockDevice* device, uint32_t max_blocks) {
   // Try the FVM backup location first.
-  zx_status_t status = ReadBackupSuperblock(transaction_handler, device, max_blocks,
-                                            kFvmSuperblockBackup, &backup_info);
+  auto backup_info_or =
+      ReadBackupSuperblock(transaction_handler, device, max_blocks, kFvmSuperblockBackup);
 
-  if (status != ZX_OK) {
+  if (backup_info_or.is_error()) {
     // Try the non-fvm backup superblock location.
-    status = ReadBackupSuperblock(transaction_handler, device, max_blocks, kNonFvmSuperblockBackup,
-                                  &backup_info);
+    backup_info_or =
+        ReadBackupSuperblock(transaction_handler, device, max_blocks, kNonFvmSuperblockBackup);
   }
 
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Fsck::RepairSuperblock failed. Unrepairable superblock: " << status;
-    return status;
+  if (backup_info_or.is_error()) {
+    FX_LOGS(ERROR) << "Fsck::RepairSuperblock failed. Unrepairable superblock: "
+                   << backup_info_or.error_value();
+    return backup_info_or.take_error();
   }
   FX_LOGS(INFO) << "Superblock corrupted. Repairing filesystem from backup superblock.";
 
+  Superblock& backup_info = backup_info_or.value();
+
   // Try to reconstruct alloc_*_counts of the backup superblock, since the
   // alloc_*_counts might be out-of-sync with the actual values.
-  status = ReconstructAllocCounts(transaction_handler, device, &backup_info);
+  zx::status<> status = ReconstructAllocCounts(transaction_handler, device, &backup_info);
 
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Fsck::ReconstructAllocCounts failed. Unrepairable superblock: " << status;
-    return status;
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Fsck::ReconstructAllocCounts failed. Unrepairable superblock: "
+                   << status.status_value();
+    return status.take_error();
   }
   // Recalculate checksum.
   UpdateChecksum(&backup_info);
@@ -933,80 +942,80 @@ zx_status_t RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
   // Update superblock and backup superblock.
   status = WriteSuperblockAndBackupSuperblock(transaction_handler, device, &backup_info);
 
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Fsck::RepairSuperblock failed to repair superblock from backup :" << status;
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Fsck::RepairSuperblock failed to repair superblock from backup :"
+                   << status.status_value();
   }
 
-  // Updating in-memory info.
-  memcpy(info_out, &backup_info, sizeof(backup_info));
-  return status;
+  return zx::ok(std::move(backup_info));
 }
 #endif
 
-zx_status_t LoadSuperblock(Bcache* bc, Superblock* out_info) {
-  zx_status_t status = bc->Readblk(kSuperblockStart, out_info);
-  if (status != ZX_OK) {
+zx::status<Superblock> LoadSuperblock(Bcache* bc) {
+  Superblock info;
+  zx::status<> status = bc->Readblk(kSuperblockStart, &info);
+  if (status.is_error()) {
     FX_LOGS(ERROR) << "could not read info block.";
-    return status;
+    return status.take_error();
   }
-  DumpInfo(*out_info);
+  DumpInfo(info);
 #ifdef __Fuchsia__
-  status = CheckSuperblock(out_info, bc->device(), bc->Maxblk());
+  status = CheckSuperblock(info, bc->device(), bc->Maxblk());
 #else
-  status = CheckSuperblock(out_info, bc->Maxblk());
+  status = CheckSuperblock(info, bc->Maxblk());
 #endif
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Fsck: check_info failure: " << status;
-    return status;
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Fsck: check_info failure: " << status.error_value();
+    return status.take_error();
   }
-  return ZX_OK;
+  return zx::ok(info);
 }
 
-zx_status_t UsedDataSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size) {
-  zx_status_t status;
-  Superblock info = {};
-  if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
-    return status;
+zx::status<uint64_t> UsedDataSize(std::unique_ptr<Bcache>& bc) {
+  auto info_or = LoadSuperblock(bc.get());
+  if (info_or.is_error()) {
+    return info_or.take_error();
   }
+  Superblock& info = info_or.value();
 
-  *out_size = (info.alloc_block_count * info.block_size);
-  return ZX_OK;
+  uint64_t size =
+      static_cast<uint64_t>(info.alloc_block_count) * static_cast<uint64_t>(info.block_size);
+  return zx::ok(size);
 }
 
-zx_status_t UsedInodes(std::unique_ptr<Bcache>& bc, uint64_t* out_inodes) {
-  zx_status_t status;
-  Superblock info = {};
-  if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
-    return status;
+zx::status<uint64_t> UsedInodes(std::unique_ptr<Bcache>& bc) {
+  auto info_or = LoadSuperblock(bc.get());
+  if (info_or.is_error()) {
+    return info_or.take_error();
   }
 
-  *out_inodes = info.alloc_inode_count;
-  return ZX_OK;
+  Superblock& info = info_or.value();
+  return zx::ok(info.alloc_inode_count);
 }
 
-zx_status_t UsedSize(std::unique_ptr<Bcache>& bc, uint64_t* out_size) {
-  zx_status_t status;
-  Superblock info = {};
-  if ((status = LoadSuperblock(bc.get(), &info)) != ZX_OK) {
-    return status;
+zx::status<uint64_t> UsedSize(std::unique_ptr<Bcache>& bc) {
+  auto info_or = LoadSuperblock(bc.get());
+  if (info_or.is_error()) {
+    return info_or.take_error();
   }
 
-  *out_size = (NonDataBlocks(info) + info.alloc_block_count) * info.block_size;
-  return ZX_OK;
+  Superblock& info = info_or.value();
+  uint64_t size = (NonDataBlocks(info) + info.alloc_block_count) * info.block_size;
+  return zx::ok(size);
 }
 
 #ifdef __Fuchsia__
-zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler,
-                                   block_client::BlockDevice* device, blk_t start_block,
-                                   uint32_t num_blocks, uint32_t* out_bits_set) {
+zx::status<uint32_t> CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler,
+                                            block_client::BlockDevice* device, blk_t start_block,
+                                            uint32_t num_blocks) {
 #else
-zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, blk_t start_block,
-                                   uint32_t num_blocks, uint32_t* out_bits_set) {
+zx::status<uint32_t> CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler,
+                                            blk_t start_block, uint32_t num_blocks) {
 #endif
   minfs::RawBitmap bitmap;
   zx_status_t status = bitmap.Reset(num_blocks * kMinfsBlockBits);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
 #ifdef __Fuchsia__
@@ -1014,7 +1023,7 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
   status =
       device->BlockAttachVmo(bitmap.StorageUnsafe()->GetVmo(), &map_vmoid.GetReference(device));
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
   fs::internal::BorrowedBuffer buffer(map_vmoid.get());
 #else
@@ -1027,7 +1036,7 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
                                                            .length = num_blocks},
                                         &buffer);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // Efficiently iterate through the bitmap to count the number of bits set in the bitmap.
@@ -1051,55 +1060,53 @@ zx_status_t CalculateBitsSetBitmap(fs::TransactionHandler* transaction_handler, 
     }
   }
 
-  *out_bits_set = static_cast<uint32_t>(count);
-  return ZX_OK;
+  return zx::ok(static_cast<uint32_t>(count));
 }
 
 #ifdef __Fuchsia__
-zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
-                                   block_client::BlockDevice* device, Superblock* out_info) {
+zx::status<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+                                    block_client::BlockDevice* device, Superblock* out_info) {
 #else
-zx_status_t ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
-                                   Superblock* out_info) {
+zx::status<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+                                    Superblock* out_info) {
 #endif
   uint32_t allocation_bitmap_num_blocks =
       (out_info->block_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
 #ifdef __Fuchsia__
   // Correct allocated block count.
-  zx_status_t status =
-      CalculateBitsSetBitmap(transaction_handler, device, out_info->abm_block,
-                             allocation_bitmap_num_blocks, &(out_info->alloc_block_count));
+  auto alloc_block_count_or = CalculateBitsSetBitmap(
+      transaction_handler, device, out_info->abm_block, allocation_bitmap_num_blocks);
 #else
-  zx_status_t status =
-      CalculateBitsSetBitmap(transaction_handler, out_info->abm_block, allocation_bitmap_num_blocks,
-                             &(out_info->alloc_block_count));
+  auto alloc_block_count_or = CalculateBitsSetBitmap(transaction_handler, out_info->abm_block,
+                                                     allocation_bitmap_num_blocks);
 #endif
-  if (status != ZX_OK) {
-    return status;
+  if (alloc_block_count_or.is_error()) {
+    return alloc_block_count_or.take_error();
   }
+  out_info->alloc_block_count = alloc_block_count_or.value();
+
   uint32_t inode_bitmap_num_blocks =
       (out_info->inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
 
 #ifdef __Fuchsia__
   // Correct allocated inode count.
-  status = CalculateBitsSetBitmap(transaction_handler, device, out_info->ibm_block,
-                                  inode_bitmap_num_blocks, &(out_info->alloc_inode_count));
+  auto alloc_inode_count_or = CalculateBitsSetBitmap(transaction_handler, device,
+                                                     out_info->ibm_block, inode_bitmap_num_blocks);
 #else
-  status = CalculateBitsSetBitmap(transaction_handler, out_info->ibm_block, inode_bitmap_num_blocks,
-                                  &(out_info->alloc_inode_count));
+  auto alloc_inode_count_or =
+      CalculateBitsSetBitmap(transaction_handler, out_info->ibm_block, inode_bitmap_num_blocks);
 #endif
 
-  if (status != ZX_OK) {
-    return status;
+  if (alloc_inode_count_or.is_error()) {
+    return alloc_inode_count_or.take_error();
   }
-  return ZX_OK;
+  out_info->alloc_inode_count = alloc_inode_count_or.value();
+
+  return zx::ok();
 }
 
-zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
-                 std::unique_ptr<Bcache>* out_bc) {
-  std::unique_ptr<MinfsChecker> chk;
-
+zx::status<std::unique_ptr<Bcache>> Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options) {
 #ifdef __Fuchsia__
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
@@ -1107,48 +1114,46 @@ zx_status_t Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options,
   std::nullptr_t dispatcher = nullptr;  // Use null for the dispatcher on host.
 #endif
 
-  zx_status_t status = MinfsChecker::Create(dispatcher, std::move(bc), options, &chk);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Fsck: Init failure: " << status;
-    return status;
+  auto chk_or = MinfsChecker::Create(dispatcher, std::move(bc), options);
+  if (chk_or.is_error()) {
+    FX_LOGS(ERROR) << "Fsck: Init failure: " << chk_or.error_value();
+    return chk_or.take_error();
   }
 
-  chk->CheckReserved();
+  chk_or->CheckReserved();
 
-  status = chk->CheckInode(kMinfsRootIno, kMinfsRootIno, 0);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Fsck: CheckInode failure: " << status;
-    return status;
+  if (auto status = chk_or->CheckInode(kMinfsRootIno, kMinfsRootIno, 0); status.is_error()) {
+    FX_LOGS(ERROR) << "Fsck: CheckInode failure: " << status.error_value();
+    return status.take_error();
   }
 
-  zx_status_t r;
+  zx::status<> r;
+  zx_status_t status = ZX_OK;
 
   // Save an error if it occurs, but check for subsequent errors anyway.
-  r = chk->CheckUnlinkedInodes();
-  status |= (status != ZX_OK) ? 0 : r;
-  r = chk->CheckForUnusedBlocks();
-  status |= (status != ZX_OK) ? 0 : r;
-  r = chk->CheckForUnusedInodes();
-  status |= (status != ZX_OK) ? 0 : r;
-  r = chk->CheckLinkCounts();
-  status |= (status != ZX_OK) ? 0 : r;
-  r = chk->CheckAllocatedCounts();
-  status |= (status != ZX_OK) ? 0 : r;
+  r = chk_or->CheckUnlinkedInodes();
+  status |= (status != ZX_OK) ? 0 : r.status_value();
+  r = chk_or->CheckForUnusedBlocks();
+  status |= (status != ZX_OK) ? 0 : r.status_value();
+  r = chk_or->CheckForUnusedInodes();
+  status |= (status != ZX_OK) ? 0 : r.status_value();
+  r = chk_or->CheckLinkCounts();
+  status |= (status != ZX_OK) ? 0 : r.status_value();
+  r = chk_or->CheckAllocatedCounts();
+  status |= (status != ZX_OK) ? 0 : r.status_value();
 
-  r = chk->CheckSuperblockIntegrity();
-  status |= (status != ZX_OK) ? 0 : r;
+  r = chk_or->CheckSuperblockIntegrity();
+  status |= (status != ZX_OK) ? 0 : r.status_value();
 
-  status |= (status != ZX_OK) ? 0 : (chk->conforming() ? ZX_OK : ZX_ERR_BAD_STATE);
+  status |= (status != ZX_OK) ? 0 : (chk_or->conforming() ? ZX_OK : ZX_ERR_BAD_STATE);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  chk->DumpStats();
+  chk_or->DumpStats();
 
-  if (out_bc != nullptr) {
-    *out_bc = MinfsChecker::Destroy(std::move(chk));
-  }
-  return ZX_OK;
+  bc = MinfsChecker::Destroy(std::move(chk_or.value()));
+  return zx::ok(std::move(bc));
 }
 
 }  // namespace minfs

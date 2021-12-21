@@ -16,12 +16,12 @@ const uint32_t kBlockSize = 8192;
 
 TEST(ResizeableArrayBufferTest, Grow) {
   ResizeableArrayBuffer buffer(kBlockSize);
-  ASSERT_EQ(buffer.Grow(2), ZX_OK);
+  ASSERT_TRUE(buffer.Grow(2).is_ok());
   EXPECT_EQ(buffer.capacity(), 2ul);
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_EQ(buffer.Grow(50), ZX_OK);
+  ASSERT_TRUE(buffer.Grow(50).is_ok());
   // Check that after growing, the data is still there.
   EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
   EXPECT_EQ(buffer.capacity(), 50ul);
@@ -32,7 +32,7 @@ TEST(ResizeableArrayBufferTest, Shrink) {
   char buf[kBlockSize];
   memset(buf, 'a', sizeof(buf));
   memcpy(buffer.Data(1), buf, kBlockSize);
-  ASSERT_EQ(buffer.Shrink(2), ZX_OK);
+  ASSERT_TRUE(buffer.Shrink(2).is_ok());
   EXPECT_EQ(memcmp(buf, buffer.Data(1), kBlockSize), 0);
   EXPECT_EQ(buffer.capacity(), 2ul);
 }
@@ -54,17 +54,17 @@ TEST(ResizeableArrayBufferTest, Zero) {
 
 TEST(ResizeableArrayBufferDeathTest, BadGrow) {
   ResizeableArrayBuffer buffer(10, kBlockSize);
-  ASSERT_DEATH({ [[maybe_unused]] zx_status_t status = buffer.Grow(4); }, _);
+  ASSERT_DEATH({ [[maybe_unused]] auto status = buffer.Grow(4); }, _);
 }
 
 TEST(ResizeableArrayBufferDeathTest, BadShrink) {
   ResizeableArrayBuffer buffer(10, kBlockSize);
-  ASSERT_DEATH({ [[maybe_unused]] zx_status_t status = buffer.Shrink(15); }, _);
+  ASSERT_DEATH({ [[maybe_unused]] auto status = buffer.Shrink(15); }, _);
 }
 
 TEST(ResizeableArrayBufferDeathTest, BadShrink2) {
   ResizeableArrayBuffer buffer(10, kBlockSize);
-  ASSERT_DEATH({ [[maybe_unused]] zx_status_t status = buffer.Shrink(0); }, _);
+  ASSERT_DEATH({ [[maybe_unused]] auto status = buffer.Shrink(0); }, _);
 }
 
 }  // namespace

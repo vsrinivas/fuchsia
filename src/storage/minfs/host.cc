@@ -119,14 +119,13 @@ int emu_mkfs(const char* path) {
 
   off_t size = s.st_size / minfs::kMinfsBlockSize;
 
-  std::unique_ptr<minfs::Bcache> bc;
-  zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error: cannot create block cache: " << status;
+  auto bc_or = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size));
+  if (bc_or.is_error()) {
+    FX_LOGS(ERROR) << "error: cannot create block cache: " << bc_or.error_value();
     return -1;
   }
 
-  return Mkfs(bc.get());
+  return Mkfs(bc_or.value().get()).status_value();
 }
 
 int emu_mount_bcache(std::unique_ptr<minfs::Bcache> bc) {
@@ -153,14 +152,13 @@ int emu_create_bcache(const char* path, std::unique_ptr<minfs::Bcache>* out_bc) 
 
   off_t size = s.st_size / minfs::kMinfsBlockSize;
 
-  std::unique_ptr<minfs::Bcache> bc;
-  zx_status_t status = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size), &bc);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "error: cannot create block cache: " << status;
+  auto bc_or = minfs::Bcache::Create(std::move(fd), static_cast<uint32_t>(size));
+  if (bc_or.is_error()) {
+    FX_LOGS(ERROR) << "error: cannot create block cache: " << bc_or.status_value();
     return -1;
   }
 
-  *out_bc = std::move(bc);
+  *out_bc = std::move(bc_or.value());
   return 0;
 }
 
@@ -178,17 +176,25 @@ int emu_get_used_resources(const char* path, uint64_t* out_data_size, uint64_t* 
   if (emu_create_bcache(path, &bc) != 0) {
     return -1;
   }
-  if (minfs::UsedDataSize(bc, out_data_size) != ZX_OK) {
+
+  auto data_size_or = minfs::UsedDataSize(bc);
+  if (data_size_or.is_error()) {
     return -1;
   }
 
-  if (minfs::UsedInodes(bc, out_inodes) != ZX_OK) {
+  auto inodes_or = minfs::UsedInodes(bc);
+  if (inodes_or.is_error()) {
     return -1;
   }
 
-  if (minfs::UsedSize(bc, out_used_size) != ZX_OK) {
+  auto used_size_or = minfs::UsedSize(bc);
+  if (used_size_or.is_error()) {
     return -1;
   }
+
+  *out_data_size = data_size_or.value();
+  *out_inodes = inodes_or.value();
+  *out_used_size = used_size_or.value();
 
   return 0;
 }

@@ -43,7 +43,9 @@ class BcacheTest : public zxtest::Test {
     fbl::unique_fd file(open(kFile, O_RDWR | O_CREAT, 0666));
     ASSERT_TRUE(file);
 
-    ASSERT_OK(minfs::Bcache::Create(std::move(file), kNumBlocks, &bcache_));
+    auto bcache_or = minfs::Bcache::Create(std::move(file), kNumBlocks);
+    ASSERT_TRUE(bcache_or.is_ok());
+    bcache_ = std::move(bcache_or.value());
   }
 
   void TearDown() final { bcache_.reset(); }

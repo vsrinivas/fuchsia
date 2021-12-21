@@ -41,9 +41,9 @@ std::unique_ptr<Bcache> JournalIntegrationFixture::CutOffDevice(uint64_t allowed
       std::make_unique<FakeFVMBlockDevice>(kBlockCount, kBlockSize, kSliceSize, kSliceCount);
   // Attempt to "cut-off" the operation partway by reducing the number of writes.
   PerformOperationWithTransactionLimit(allowed_blocks, &device);
-  std::unique_ptr<Bcache> bcache;
-  EXPECT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  return bcache;
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  EXPECT_TRUE(bcache_or.is_ok());
+  return std::move(bcache_or.value());
 }
 
 void JournalIntegrationFixture::RecordWriteCount(Minfs* fs) {
@@ -57,53 +57,56 @@ void JournalIntegrationFixture::RecordWriteCount(Minfs* fs) {
 void JournalIntegrationFixture::CountWritesToPerformOperation(
     std::unique_ptr<FakeFVMBlockDevice>* in_out_device) {
   auto device = std::move(*in_out_device);
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
 
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
   // After formatting the device, count the number of blocks issued to the underlying device.
-  TakeDeviceFromBcache(std::move(bcache), &device);
+  TakeDeviceFromBcache(std::move(bcache_or.value()), &device);
   device->ResetBlockCounts();
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+
+  bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
   MountOptions options = {};
-  std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+  auto fs_or = Minfs::Create(dispatcher(), std::move(bcache_or.value()), options);
+  ASSERT_TRUE(fs_or.is_ok());
 
   // Perform the caller-requested operation.
-  PerformOperation(fs.get());
+  PerformOperation(fs_or.value().get());
   if (write_count_ == 0) {
-    RecordWriteCount(fs.get());
+    RecordWriteCount(fs_or.value().get());
   }
 
-  TakeDeviceFromMinfs(std::move(fs), &device);
+  TakeDeviceFromMinfs(std::move(fs_or.value()), &device);
   *in_out_device = std::move(device);
 }
 
 void JournalIntegrationFixture::PerformOperationWithTransactionLimit(
     uint64_t write_count, std::unique_ptr<FakeFVMBlockDevice>* in_out_device) {
   auto device = std::move(*in_out_device);
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
 
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
   // After formatting the device, create a transaction limit on the underlying device.
-  TakeDeviceFromBcache(std::move(bcache), &device);
+  TakeDeviceFromBcache(std::move(bcache_or.value()), &device);
   device->ResetBlockCounts();
   device->SetWriteBlockLimit(write_count);
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
+  bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
   MountOptions options = {};
-  std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+  auto fs_or = Minfs::Create(dispatcher(), std::move(bcache_or.value()), options);
+  ASSERT_TRUE(fs_or.is_ok());
 
   // Perform the caller-requested operation.
-  PerformOperation(fs.get());
+  PerformOperation(fs_or.value().get());
 
   // Always do a sync (to match what happens in CountWritesToPerformOperation).
   sync_completion_t completion;
-  fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  fs_or->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
-  TakeDeviceFromMinfs(std::move(fs), &device);
+  TakeDeviceFromMinfs(std::move(fs_or.value()), &device);
   device->ResetWriteBlockLimit();
   *in_out_device = std::move(device);
 }

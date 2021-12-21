@@ -41,37 +41,36 @@ std::unique_ptr<disk_inspector::DiskObjectUint32Array> CreateUint32ArrayDiskObj(
 }
 
 zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out) {
-  std::unique_ptr<minfs::Bcache> bc;
-  bool readonly_device = false;
-  zx_status_t status = CreateBcache(std::move(device_), &readonly_device, &bc);
-  if (status != ZX_OK) {
+  auto bc_or = CreateBcache(std::move(device_));
+  if (bc_or.is_error()) {
     FX_LOGS(ERROR) << "cannot create block cache";
-    return status;
+    return bc_or.error_value();
+  }
+  auto [bc, _] = std::move(bc_or.value());
+
+  auto root_or = CreateRoot(std::move(bc));
+  if (root_or.is_error()) {
+    FX_LOGS(ERROR) << "cannot create root object";
+    return root_or.error_value();
   }
 
-  status = CreateRoot(std::move(bc), out);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "cannot create root object";
-    return status;
-  }
+  *out = std::move(root_or.value());
   return ZX_OK;
 }
 
-zx_status_t Inspector::CreateRoot(std::unique_ptr<Bcache> bc,
-                                  std::unique_ptr<disk_inspector::DiskObject>* out) {
+zx::status<std::unique_ptr<disk_inspector::DiskObject>> Inspector::CreateRoot(
+    std::unique_ptr<Bcache> bc) {
   MountOptions options = {};
   options.readonly_after_initialization = true;
   options.repair_filesystem = false;
 
-  std::unique_ptr<Minfs> fs;
-  zx_status_t status = Minfs::Create(dispatcher_, std::move(bc), options, &fs);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "minfsInspector: Create Failed to Create Minfs: " << status;
-    return status;
+  auto fs_or = Minfs::Create(dispatcher_, std::move(bc), options);
+  if (fs_or.is_error()) {
+    FX_LOGS(ERROR) << "minfsInspector: Create Failed to Create Minfs: " << fs_or.error_value();
+    return fs_or.take_error();
   }
 
-  *out = std::make_unique<RootObject>(std::move(fs));
-  return ZX_OK;
+  return zx::ok(std::make_unique<RootObject>(std::move(fs_or.value())));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetSuperBlock() const {

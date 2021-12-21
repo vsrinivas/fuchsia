@@ -17,10 +17,10 @@ namespace minfs {
 
 Allocator::~Allocator() {}
 
-zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
+zx::status<> Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
   fs::internal::BorrowedBuffer buffer(GetMapDataLocked());
   storage_->Load(builder, &buffer);
-  return ZX_OK;
+  return zx::ok();
 }
 
 size_t Allocator::GetAvailableLocked() const {

@@ -25,32 +25,32 @@ TEST(UnlinkTest, PurgedFileHasCorrectMagic) {
   constexpr uint64_t kBlockCount = 1 << 20;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
-  std::unique_ptr<Bcache> bcache;
-  EXPECT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  EXPECT_EQ(Mkfs(bcache.get()), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  EXPECT_TRUE(bcache_or.is_ok());
+  EXPECT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
   MountOptions options = {};
 
-  std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  EXPECT_TRUE(fs_or.is_ok());
 
   ino_t ino;
   uint32_t inode_block;
   {
-    fbl::RefPtr<VnodeMinfs> root;
-    EXPECT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
+    auto root_or = fs_or->VnodeGet(kMinfsRootIno);
+    EXPECT_TRUE(root_or.is_ok());
     fbl::RefPtr<fs::Vnode> fs_child;
-    EXPECT_EQ(root->Create("foo", 0, &fs_child), ZX_OK);
+    EXPECT_EQ(root_or->Create("foo", 0, &fs_child), ZX_OK);
     auto child = fbl::RefPtr<File>::Downcast(std::move(fs_child));
 
     ino = child->GetIno();
     EXPECT_EQ(child->Close(), ZX_OK);
-    EXPECT_EQ(root->Unlink("foo", /*must_be_dir=*/false), ZX_OK);
-    inode_block = fs->Info().ino_block + ino / kMinfsInodesPerBlock;
+    EXPECT_EQ(root_or->Unlink("foo", /*must_be_dir=*/false), ZX_OK);
+    inode_block = fs_or->Info().ino_block + ino / kMinfsInodesPerBlock;
   }
-  bcache = Minfs::Destroy(std::move(fs));
+  bcache_or = zx::ok(Minfs::Destroy(std::move(fs_or.value())));
 
   Inode inodes[kMinfsInodesPerBlock];
-  EXPECT_EQ(bcache->Readblk(inode_block, &inodes), ZX_OK);
+  EXPECT_TRUE(bcache_or->Readblk(inode_block, &inodes).is_ok());
 
   EXPECT_EQ(inodes[ino % kMinfsInodesPerBlock].magic, kMinfsMagicPurged);
 }
@@ -61,29 +61,30 @@ TEST(UnlinkTest, UnlinkedDirectoryFailure) {
   constexpr uint64_t kBlockCount = 1 << 20;
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
 
-  std::unique_ptr<Bcache> bcache;
-  EXPECT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  EXPECT_EQ(Mkfs(bcache.get()), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  EXPECT_TRUE(bcache_or.is_ok());
+  EXPECT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
   MountOptions options = {};
 
-  std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  EXPECT_TRUE(fs_or.is_ok());
 
   {
-    fbl::RefPtr<VnodeMinfs> root;
-    EXPECT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
+    auto root_or = fs_or->VnodeGet(kMinfsRootIno);
+    EXPECT_TRUE(root_or.is_ok());
     fbl::RefPtr<fs::Vnode> fs_child;
-    EXPECT_EQ(root->Create("foo", S_IFDIR, &fs_child), ZX_OK);
-    EXPECT_EQ(root->Unlink("foo", true), ZX_OK);
+    EXPECT_EQ(root_or->Create("foo", S_IFDIR, &fs_child), ZX_OK);
+    EXPECT_EQ(root_or->Unlink("foo", true), ZX_OK);
     auto child = fbl::RefPtr<Directory>::Downcast(std::move(fs_child));
     EXPECT_EQ(0ul, child->GetInode()->size);
     EXPECT_EQ(child->Unlink("bar", false), ZX_ERR_NOT_FOUND);
-    EXPECT_EQ(child->Rename(root, "bar", "bar", false, false), ZX_ERR_NOT_FOUND);
+    EXPECT_EQ(child->Rename(root_or.value(), "bar", "bar", false, false), ZX_ERR_NOT_FOUND);
     fbl::RefPtr<fs::Vnode> unused_child;
     EXPECT_EQ(child->Lookup("bar", &unused_child), ZX_ERR_NOT_FOUND);
     EXPECT_EQ(child->Close(), ZX_OK);
   }
-  bcache = Minfs::Destroy(std::move(fs));
+
+  [[maybe_unused]] auto bcache = Minfs::Destroy(std::move(fs_or.value()));
 }
 
 }  // namespace

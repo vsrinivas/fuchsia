@@ -28,15 +28,15 @@ TEST_F(ReadWriteTest, WriteZeroLength) {
   const int kNumBlocks = 1 << 20;
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kMinfsBlockSize);
   ASSERT_TRUE(device);
-  std::unique_ptr<Bcache> bcache;
-  std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
-  ASSERT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), MountOptions(), &fs), ZX_OK);
-  fbl::RefPtr<VnodeMinfs> root;
-  ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kNumBlocks);
+  ASSERT_TRUE(bcache_or.is_ok());
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
+  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), MountOptions());
+  ASSERT_TRUE(fs_or.is_ok());
+  auto root_or = fs_or->VnodeGet(kMinfsRootIno);
+  ASSERT_TRUE(root_or.is_ok());
   fbl::RefPtr<fs::Vnode> foo;
-  ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
+  ASSERT_EQ(root_or->Create("foo", 0, &foo), ZX_OK);
 
   constexpr size_t kBufferSize = 65374;
   std::unique_ptr<uint8_t[]> buffer(new uint8_t[kBufferSize]());

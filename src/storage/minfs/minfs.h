@@ -6,6 +6,7 @@
 #define SRC_STORAGE_MINFS_MINFS_H_
 
 #include <inttypes.h>
+#include <lib/zx/status.h>
 
 #include <functional>
 #include <memory>
@@ -19,7 +20,6 @@
 
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
-#include <lib/zx/status.h>
 
 #include "src/lib/cobalt/cpp/cobalt_logger.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -101,18 +101,22 @@ struct MountOptions {
 uint32_t CalculateVsliceCount(const Superblock& superblock);
 
 // Format the partition backed by |bc| as MinFS.
-zx_status_t Mkfs(const MountOptions& options, Bcache* bc);
+zx::status<> Mkfs(const MountOptions& options, Bcache* bc);
 
 // Format the partition backed by |bc| as MinFS.
-inline zx_status_t Mkfs(Bcache* bc) { return Mkfs({}, bc); }
+inline zx::status<> Mkfs(Bcache* bc) { return Mkfs({}, bc); }
 
 #ifdef __Fuchsia__
 
+struct CreateBcacheResult {
+  std::unique_ptr<minfs::Bcache> bcache;
+  bool is_read_only;
+};
+
 // Creates a Bcache using |device|.
 //
-// Identifies if the underlying device is read-only in |out_readonly|.
-zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
-                         std::unique_ptr<minfs::Bcache>* out);
+// Returns the bcache and a boolean indicating if the underlying device is read-only.
+zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device);
 
 // Mount the filesystem backed by |bcache| and serve under the provided |mount_channel|.
 // The layout of the served directory is controlled by |serve_layout|.

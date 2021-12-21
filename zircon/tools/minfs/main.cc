@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "zircon/errors.h"
 #define _XOPEN_SOURCE
 
 #include <errno.h>
@@ -355,80 +356,80 @@ zx_status_t MinfsCreator::CalculateRequiredSize(off_t* out) {
 }
 
 zx_status_t MinfsCreator::Mkfs() {
-  zx_status_t status;
-  std::unique_ptr<minfs::Bcache> bc;
-
   // Create the bcache.
-  if ((status = GenerateBcache(&bc)) != ZX_OK) {
-    return status;
+  auto bc_or = GenerateBcache();
+  if (bc_or.is_error()) {
+    return bc_or.error_value();
   }
 
   // Consume the bcache to mkfs.
-  if ((status = minfs::Mkfs(bc.get())) != ZX_OK) {
-    return status;
+  if (auto mkfs_or = minfs::Mkfs(bc_or.value().get()); mkfs_or.is_error()) {
+    return mkfs_or.error_value();
   }
 
   // Add any directories/files that have been pre-processed.
-  if ((status = Add()) != ZX_OK) {
+  if (zx_status_t status = Add(); status != ZX_OK) {
     fprintf(stderr,
             "Warning: Adding files on create failed - required size may have been "
             "miscalculated\n");
+    return status;
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t MinfsCreator::Fsck() {
-  zx_status_t status;
-  std::unique_ptr<minfs::Bcache> bc;
-  if ((status = GenerateBcache(&bc)) != ZX_OK) {
-    return status;
+  auto bc_or = GenerateBcache();
+  if (bc_or.is_error()) {
+    return bc_or.error_value();
   }
-  return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
+
+  bc_or = minfs::Fsck(std::move(bc_or.value()), minfs::FsckOptions{.repair = true});
+  return bc_or.status_value();
 }
 
 zx_status_t MinfsCreator::UsedDataSize() {
-  zx_status_t status;
-  uint64_t size;
-  std::unique_ptr<minfs::Bcache> bc;
-  if ((status = GenerateBcache(&bc)) != ZX_OK) {
-    return status;
-  }
-  if ((status = minfs::UsedDataSize(bc, &size)) != ZX_OK) {
-    return status;
+  auto bc_or = GenerateBcache();
+  if (bc_or.is_error()) {
+    return bc_or.error_value();
   }
 
-  printf("%" PRIu64 "\n", size);
+  auto size_or = minfs::UsedDataSize(bc_or.value());
+  if (size_or.is_error()) {
+    return size_or.error_value();
+  }
+
+  printf("%" PRIu64 "\n", size_or.value());
   return ZX_OK;
 }
 
 zx_status_t MinfsCreator::UsedInodes() {
-  zx_status_t status;
-  uint64_t used_inodes;
-  std::unique_ptr<minfs::Bcache> bc;
-  if ((status = GenerateBcache(&bc)) != ZX_OK) {
-    return status;
-  }
-  if ((status = minfs::UsedInodes(bc, &used_inodes)) != ZX_OK) {
-    return status;
+  auto bc_or = GenerateBcache();
+  if (bc_or.is_error()) {
+    return bc_or.error_value();
   }
 
-  printf("%" PRIu64 "\n", used_inodes);
+  auto used_inodes_or = minfs::UsedInodes(bc_or.value());
+  if (used_inodes_or.is_error()) {
+    return used_inodes_or.error_value();
+  }
+
+  printf("%" PRIu64 "\n", used_inodes_or.value());
   return ZX_OK;
 }
 
 zx_status_t MinfsCreator::UsedSize() {
-  zx_status_t status;
-  uint64_t size;
-  std::unique_ptr<minfs::Bcache> bc;
-  if ((status = GenerateBcache(&bc)) != ZX_OK) {
-    return status;
-  }
-  if ((status = minfs::UsedSize(bc, &size)) != ZX_OK) {
-    return status;
+  auto bc_or = GenerateBcache();
+  if (bc_or.is_error()) {
+    return bc_or.error_value();
   }
 
-  printf("%" PRIu64 "\n", size);
+  auto size_or = minfs::UsedSize(bc_or.value());
+  if (size_or.is_error()) {
+    return size_or.error_value();
+  }
+
+  printf("%" PRIu64 "\n", size_or.value());
   return ZX_OK;
 }
 
@@ -699,22 +700,23 @@ zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
   return ZX_OK;
 }
 
-zx_status_t MinfsCreator::GenerateBcache(std::unique_ptr<minfs::Bcache>* out) {
+zx::status<std::unique_ptr<minfs::Bcache>> MinfsCreator::GenerateBcache() {
   uint32_t block_count = static_cast<uint32_t>(GetLength() / minfs::kMinfsBlockSize);
 
   // Duplicate the fd so that we can re-open the minfs partition if we need to.
   int dupfd = dup(fd_.get());
 
-  std::unique_ptr<minfs::Bcache> bc;
-  if (minfs::Bcache::Create(std::move(fd_), block_count, &bc) != ZX_OK) {
+  auto bc_or = minfs::Bcache::Create(std::move(fd_), block_count);
+  if (bc_or.is_error()) {
     fprintf(stderr, "error: cannot create block cache\n");
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
 
-  bc->SetOffset(GetOffset());
+  if (auto status = bc_or->SetOffset(GetOffset()); status.is_error()) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
   fd_.reset(dupfd);
-  *out = std::move(bc);
-  return ZX_OK;
+  return bc_or;
 }
 
 zx_status_t MinfsCreator::MountMinfs() {
@@ -723,13 +725,12 @@ zx_status_t MinfsCreator::MountMinfs() {
     return ZX_OK;
   }
 
-  zx_status_t status;
-  std::unique_ptr<minfs::Bcache> bc;
-  if ((status = GenerateBcache(&bc)) != ZX_OK) {
-    return status;
+  auto bc_or = GenerateBcache();
+  if (bc_or.is_error()) {
+    return bc_or.error_value();
   }
 
-  return emu_mount_bcache(std::move(bc));
+  return emu_mount_bcache(std::move(bc_or.value()));
 }
 
 int main(int argc, char** argv) {

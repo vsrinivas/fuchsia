@@ -10,6 +10,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <lib/zx/status.h>
 
 #include <atomic>
 #include <shared_mutex>
@@ -42,7 +43,7 @@ namespace minfs {
 #ifdef __Fuchsia__
 
 // A helper function for converting "fd" to "BlockDevice".
-zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::BlockDevice>* out);
+zx::status<std::unique_ptr<block_client::BlockDevice>> FdToBlockDevice(fbl::unique_fd& fd);
 
 class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
  public:
@@ -77,8 +78,8 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   // These do not track blocks (or attempt to access the block cache)
   // NOTE: Not marked as final, since these are overridden methods on host,
   // but not on __Fuchsia__.
-  zx_status_t Readblk(blk_t bno, void* data);
-  zx_status_t Writeblk(blk_t bno, const void* data);
+  zx::status<> Readblk(blk_t bno, void* data);
+  zx::status<> Writeblk(blk_t bno, const void* data);
 
   // TODO(rvargas): Move this to BlockDevice.
   // VmoidRegistry interface:
@@ -90,11 +91,11 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
 
   // This factory allows building this object from a BlockDevice. Bcache can take ownership of the
   // device (the first Create method), or not (the second Create method).
-  static zx_status_t Create(std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks,
-                            std::unique_ptr<Bcache>* out);
+  static zx::status<std::unique_ptr<Bcache>> Create(
+      std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks);
 
-  static zx_status_t Create(block_client::BlockDevice* device, uint32_t max_blocks,
-                            std::unique_ptr<Bcache>* out);
+  static zx::status<std::unique_ptr<Bcache>> Create(block_client::BlockDevice* device,
+                                                    uint32_t max_blocks);
 
   // Returns the maximum number of available blocks,
   // assuming the filesystem is non-resizable.
@@ -103,7 +104,7 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   block_client::BlockDevice* device() { return device_; }
   const block_client::BlockDevice* device() const { return device_; }
 
-  zx_status_t Sync();
+  zx::status<> Sync();
 
   // Blocks all I/O operations to the underlying device (that go via the RunRequests method). This
   // does *not* block operations that go directly to the device.
@@ -118,7 +119,7 @@ class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistr
   Bcache(block_client::BlockDevice* device, uint32_t max_blocks);
 
   // Used during initialization of this object.
-  zx_status_t VerifyDeviceInfo();
+  zx::status<> VerifyDeviceInfo();
 
   uint32_t max_blocks_;
   fuchsia_hardware_block_BlockInfo info_ = {};
@@ -150,13 +151,13 @@ class Bcache : public fs::TransactionHandler {
   // These do not track blocks (or attempt to access the block cache)
   // NOTE: Not marked as final, since these are overridden methods on host,
   // but not on __Fuchsia__.
-  zx_status_t Readblk(blk_t bno, void* data);
-  zx_status_t Writeblk(blk_t bno, const void* data);
+  zx::status<> Readblk(blk_t bno, void* data);
+  zx::status<> Writeblk(blk_t bno, const void* data);
 
   ////////////////
   // Other methods.
 
-  static zx_status_t Create(fbl::unique_fd fd, uint32_t max_blocks, std::unique_ptr<Bcache>* out);
+  static zx::status<std::unique_ptr<Bcache>> Create(fbl::unique_fd fd, uint32_t max_blocks);
 
   // Returns the maximum number of available blocks,
   // assuming the filesystem is non-resizable.
@@ -165,13 +166,13 @@ class Bcache : public fs::TransactionHandler {
   // Lengths of each extent (in bytes)
   fbl::Array<size_t> extent_lengths_;
   // Tell Bcache to look for Minfs partition starting at |offset| bytes
-  zx_status_t SetOffset(off_t offset);
+  zx::status<> SetOffset(off_t offset);
   // Tell the Bcache it is pointing at a sparse file
   // |offset| indicates where the minfs partition begins within the file
   // |extent_lengths| contains the length of each extent (in bytes)
-  zx_status_t SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths);
+  zx::status<> SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths);
 
-  int Sync();
+  zx::status<> Sync();
 
  private:
   friend class BlockNode;

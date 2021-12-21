@@ -29,17 +29,17 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   static Minfs& fs = [&loop]() -> Minfs& {
     constexpr uint64_t kBlockCount = 1 << 17;
     auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
-    std::unique_ptr<Bcache> bcache;
-    ZX_ASSERT(Bcache::Create(std::move(device), kBlockCount, &bcache) == ZX_OK);
-    ZX_ASSERT(Mkfs(bcache.get()) == ZX_OK);
+    auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+    ZX_ASSERT(bcache_or.is_ok());
+    ZX_ASSERT(Mkfs(bcache_or.value().get()).is_ok());
     MountOptions options = {};
-    std::unique_ptr<Minfs> fs;
-    ZX_ASSERT(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs) == ZX_OK);
-    return *fs.release();
+    auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+    ZX_ASSERT(fs_or.is_ok());
+    return *fs_or.value().release();
   }();
 
-  fbl::RefPtr<VnodeMinfs> root;
-  ZX_ASSERT(fs.VnodeGet(&root, kMinfsRootIno) == ZX_OK);
+  auto root_or = fs.VnodeGet(kMinfsRootIno);
+  ZX_ASSERT(root_or.is_ok());
 
   std::array<fbl::RefPtr<VnodeMinfs>, 10> files;
   int open_files = 0;
@@ -59,7 +59,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         }
         free(buffer);
         for (auto& name : created_files) {
-          ZX_ASSERT(root->Unlink(name, /*must_be_dir=*/false) == ZX_OK);
+          ZX_ASSERT(root_or->Unlink(name, /*must_be_dir=*/false) == ZX_OK);
         }
         ZX_ASSERT(fs.Info().alloc_block_count == 2);
         ZX_ASSERT(fs.Info().alloc_inode_count == 2);
@@ -72,7 +72,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         if (files[index])
           --open_files;
         fbl::RefPtr<fs::Vnode> vnode;
-        zx_status_t status = root->Create(name, mode, &vnode);
+        zx_status_t status = root_or->Create(name, mode, &vnode);
         if (status == ZX_OK) {
           created_files.push_back(std::move(name));
           if (files[index]) {

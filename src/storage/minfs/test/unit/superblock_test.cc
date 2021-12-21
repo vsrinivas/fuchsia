@@ -125,8 +125,7 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
   ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Reconstruct alloc_*_counts from respective bitmaps.
-  zx_status_t status = ReconstructAllocCounts(transaction_handler.get(), &device, &info);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_TRUE(ReconstructAllocCounts(transaction_handler.get(), &device, &info).is_ok());
 
   // Confirm that alloc_*_counts are updated correctly.
   ASSERT_EQ(info.alloc_block_count, 32u);
@@ -141,8 +140,7 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
   ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Reconstruct alloc_*_counts from respective bitmaps.
-  status = ReconstructAllocCounts(transaction_handler.get(), &device, &info);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_TRUE(ReconstructAllocCounts(transaction_handler.get(), &device, &info).is_ok());
 
   // Confirm the alloc_*_counts are updated correctly.
   ASSERT_EQ(info.alloc_block_count, 0u);
@@ -162,8 +160,7 @@ TEST(SuperblockTest, TestBitmapReconstruction) {
   ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Reconstruct alloc_*_counts from respective bitmaps.
-  status = ReconstructAllocCounts(transaction_handler.get(), &device, &info);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_TRUE(ReconstructAllocCounts(transaction_handler.get(), &device, &info).is_ok());
 
   // Confirm the alloc_*_counts are updated correctly.
   ASSERT_EQ(info.alloc_block_count, 11u);
@@ -201,9 +198,10 @@ TEST(SuperblockTest, TestCorruptSuperblockWithoutCorrection) {
   ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Try to correct the corrupted superblock.
-  zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
-                                        info.dat_block + info.block_count, &info);
-  ASSERT_NE(status, ZX_OK);
+  auto info_or =
+      RepairSuperblock(transaction_handler.get(), &device, info.dat_block + info.block_count);
+  ASSERT_TRUE(info_or.is_error());
+
   // Read back the superblock and backup superblock.
   ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
   ASSERT_EQ(device.ReadBlock(kNonFvmSuperblockBackup, kMinfsBlockSize, &backup), ZX_OK);
@@ -239,10 +237,12 @@ TEST(SuperblockTest, TestCorruptSuperblockWithCorrection) {
   FillWriteRequest(transaction_handler.get(), kSuperblockStart, kNonFvmSuperblockBackup,
                    vmoid.get(), request);
   ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
+
   // Try to correct the corrupted superblock.
-  zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
-                                        info.dat_block + info.block_count, &info);
-  ASSERT_EQ(status, ZX_OK);
+  auto info_or =
+      RepairSuperblock(transaction_handler.get(), &device, info.dat_block + info.block_count);
+  ASSERT_TRUE(info_or.is_ok());
+  info = info_or.value();
 
   // Read back the superblock and backup superblock.
   ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);
@@ -292,9 +292,10 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   ASSERT_EQ(device.FifoTransaction(request, 2), ZX_OK);
 
   // Try to correct the corrupted superblock.
-  zx_status_t status = RepairSuperblock(transaction_handler.get(), &device,
-                                        backup.dat_block + backup.block_count, &info);
-  ASSERT_EQ(status, ZX_OK);
+  auto info_or =
+      RepairSuperblock(transaction_handler.get(), &device, backup.dat_block + backup.block_count);
+  ASSERT_TRUE(info_or.is_ok());
+  info = info_or.value();
 
   // Read back the superblock and backup superblock.
   ASSERT_EQ(device.ReadBlock(kSuperblockStart, kMinfsBlockSize, &info), ZX_OK);

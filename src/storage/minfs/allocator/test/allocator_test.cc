@@ -32,13 +32,13 @@ class FakeStorage : public AllocatorStorage {
   ~FakeStorage() {}
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return ZX_OK; }
+  zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return zx::ok(); }
 #endif
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
 
-  zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
-    return ZX_ERR_NO_SPACE;
+  zx::status<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
+    return zx::error(ZX_ERR_NO_SPACE);
   }
 
   uint32_t PoolAvailable() const final { return pool_total_ - pool_used_; }
@@ -87,26 +87,26 @@ void CreateAllocator(std::unique_ptr<Allocator>* out) {
   // Create an Allocator with FakeStorage.
   // Give it 1 more than total_elements since element 0 will be unavailable.
   std::unique_ptr<FakeStorage> storage(new FakeStorage(kTotalElements + 1));
-  std::unique_ptr<Allocator> allocator;
   fs::BufferedOperationsBuilder builder;
-  ASSERT_EQ(ZX_OK, Allocator::Create(&builder, std::move(storage), &allocator));
+  auto allocator_or = Allocator::Create(&builder, std::move(storage));
+  ASSERT_TRUE(allocator_or.is_ok());
 
   // Allocate the '0' index (the Allocator assumes that this is reserved).
-  AllocatorReservation zero_reservation(allocator.get());
-  zero_reservation.Reserve(nullptr, 1);
+  AllocatorReservation zero_reservation(allocator_or.value().get());
+  ASSERT_TRUE(zero_reservation.Reserve(nullptr, 1).is_ok());
   size_t index = zero_reservation.Allocate();
   ZX_DEBUG_ASSERT(index == 0);
-  ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
+  ASSERT_EQ(allocator_or->GetAvailable(), kTotalElements);
   FakeTransaction transaction;
   zero_reservation.Commit(&transaction);
 
-  *out = std::move(allocator);
+  *out = std::move(allocator_or.value());
 }
 
 // Initializes the |reservation| with |reserved_count| elements from |allocator|.
 // Should only be called if initialization is expected to succeed.
 void InitializeReservation(size_t reserved_count, AllocatorReservation* reservation) {
-  ASSERT_EQ(ZX_OK, reservation->Reserve(nullptr, reserved_count));
+  ASSERT_TRUE(reservation->Reserve(nullptr, reserved_count).is_ok());
   ASSERT_EQ(reservation->GetReserved(), reserved_count);
 }
 
@@ -127,7 +127,7 @@ TEST(AllocatorTest, OverReserve) {
 
   // Attempt to reserve more elements than the allocator has.
   AllocatorReservation reservation(allocator.get());
-  ASSERT_NE(ZX_OK, reservation.Reserve(nullptr, kTotalElements + 1));
+  ASSERT_TRUE(reservation.Reserve(nullptr, kTotalElements + 1).is_error());
 }
 
 TEST(AllocatorTest, ReserveTwiceFails) {
@@ -139,7 +139,7 @@ TEST(AllocatorTest, ReserveTwiceFails) {
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements - 1);
 
   // Attempting to initialize a previously initialized AllocatorReservation should fail.
-  ASSERT_NE(ZX_OK, reservation.Reserve(nullptr, 1));
+  ASSERT_TRUE(reservation.Reserve(nullptr, 1).is_error());
 
   reservation.Cancel();
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
@@ -152,9 +152,9 @@ TEST(AllocatorTest, ExtendReservationByZeroDoesNotFail) {
   // Initialize an empty AllocatorReservation (with no reserved units);
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
   AllocatorReservation reservation(allocator.get());
-  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, 1));
+  ASSERT_TRUE(reservation.Reserve(nullptr, 1).is_ok());
 
-  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, 0));
+  ASSERT_TRUE(reservation.ExtendReservation(nullptr, 0).is_ok());
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements - 1);
 }
 
@@ -167,9 +167,9 @@ TEST(AllocatorTest, ExtendReservationByFewBlocks) {
   // Initialize an empty AllocatorReservation (with no reserved units);
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements);
   AllocatorReservation reservation(allocator.get());
-  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kInitialReservation));
+  ASSERT_TRUE(reservation.Reserve(nullptr, kInitialReservation).is_ok());
 
-  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservation));
+  ASSERT_TRUE(reservation.ExtendReservation(nullptr, kExtendedReservation).is_ok());
   ASSERT_EQ(allocator->GetAvailable(),
             kTotalElements - (kInitialReservation + kExtendedReservation));
 }
@@ -181,10 +181,10 @@ TEST(AllocatorTest, OverExtendFails) {
   constexpr size_t kExtendedReservation = kTotalElements + 1 - kInitialReservation;
 
   AllocatorReservation reservation(allocator.get());
-  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kInitialReservation));
+  ASSERT_TRUE(reservation.Reserve(nullptr, kInitialReservation).is_ok());
 
   // Attempt to extend reservation more elements than the allocator has.
-  ASSERT_NE(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservation));
+  ASSERT_TRUE(reservation.ExtendReservation(nullptr, kExtendedReservation).is_error());
   ASSERT_EQ(allocator->GetAvailable(), kTotalElements - kInitialReservation);
 }
 
@@ -202,16 +202,16 @@ TEST(AllocatorTest, GetReserved) {
   ASSERT_EQ(reservation.GetReserved(), 0ul);
 
   // kInitialReservation elements should be reserved.
-  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kInitialReservation));
+  ASSERT_TRUE(reservation.Reserve(nullptr, kInitialReservation).is_ok());
   ASSERT_EQ(reservation.GetReserved(), kInitialReservation);
 
   // kInitialReservation + kExtendedReservation elements should be reserved.
-  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservation));
+  ASSERT_TRUE(reservation.ExtendReservation(nullptr, kExtendedReservation).is_ok());
   ASSERT_EQ(reservation.GetReserved(), kInitialReservation + kExtendedReservation);
 
   // Attempt to extend reservation more elements than the allocator has. The reserved elements
   // should be unchanged.
-  ASSERT_NE(ZX_OK, reservation.ExtendReservation(nullptr, kExtendedReservationFail));
+  ASSERT_TRUE(reservation.ExtendReservation(nullptr, kExtendedReservationFail).is_error());
   ASSERT_EQ(reservation.GetReserved(), kInitialReservation + kExtendedReservation);
 
   // On cancelling reservation, number of reserved elements should be 0.
@@ -281,8 +281,8 @@ void PerformFree(Allocator* allocator, const fbl::Array<size_t>& indices) {
 void ReserveAndExtend(AllocatorReservation& reservation, size_t elements) {
   size_t extend_by = elements / 2;
   size_t reserve = elements - extend_by;
-  ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, reserve));
-  ASSERT_EQ(ZX_OK, reservation.ExtendReservation(nullptr, extend_by));
+  ASSERT_TRUE(reservation.Reserve(nullptr, reserve).is_ok());
+  ASSERT_TRUE(reservation.ExtendReservation(nullptr, extend_by).is_ok());
   ASSERT_EQ(reservation.GetReserved(), elements);
 }
 
@@ -321,7 +321,7 @@ TEST(AllocatorTest, Swap) {
   {
     // Reserve all of the elements.
     AllocatorReservation reservation(allocator.get());
-    ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kTotalElements));
+    ASSERT_TRUE(reservation.Reserve(nullptr, kTotalElements).is_ok());
 
     // Swap half of the reservation's reserved elements.
     ASSERT_GT(swap_count, 0u);
@@ -349,7 +349,7 @@ TEST(AllocatorTest, AllocateSwap) {
   {
     // Reserve all of the elements.
     AllocatorReservation reservation(allocator.get());
-    ASSERT_EQ(ZX_OK, reservation.Reserve(nullptr, kTotalElements));
+    ASSERT_TRUE(reservation.Reserve(nullptr, kTotalElements).is_ok());
 
     // Allocate half of the reservation's reserved elements.
     size_t allocate_count = kTotalElements / 2;
@@ -396,16 +396,16 @@ TEST(AllocatorTest, PendingAllocationIsReserved) {
 
   AllocatorReservation reservation1(allocator.get());
   FakeTransaction transaction;
-  ASSERT_EQ(ZX_OK, reservation1.Reserve(&transaction, 1));
+  ASSERT_TRUE(reservation1.Reserve(&transaction, 1).is_ok());
   size_t item = reservation1.Allocate();
 
   AllocatorReservation reservation2(allocator.get());
-  ASSERT_EQ(ZX_OK, reservation2.Reserve(&transaction, 1));
+  ASSERT_TRUE(reservation2.Reserve(&transaction, 1).is_ok());
   size_t item2 = reservation2.Allocate();
   EXPECT_NE(item, item2);
 
   AllocatorReservation reservation3(allocator.get());
-  ASSERT_EQ(ZX_OK, reservation3.Reserve(&transaction, 1));
+  ASSERT_TRUE(reservation3.Reserve(&transaction, 1).is_ok());
   size_t item3 = reservation3.Allocate();
   EXPECT_NE(item, item3);
   EXPECT_NE(item2, item3);
@@ -419,7 +419,7 @@ TEST(AllocatorTest, PendingDeallocationIsReserved) {
   {
     AllocatorReservation reservation(allocator.get());
     FakeTransaction transaction;
-    ASSERT_EQ(ZX_OK, reservation.Reserve(&transaction, 1));
+    ASSERT_TRUE(reservation.Reserve(&transaction, 1).is_ok());
     item = reservation.Allocate();
     reservation.Commit(&transaction);
   }
@@ -433,14 +433,14 @@ TEST(AllocatorTest, PendingDeallocationIsReserved) {
 
     // Even though we have freed the item, we won't reuse it until reservation goes out of scope.
     AllocatorReservation reservation2(allocator.get());
-    reservation2.Reserve(&transaction, 1);
+    EXPECT_TRUE(reservation2.Reserve(&transaction, 1).is_ok());
     EXPECT_NE(item, reservation2.Allocate());
   }
 
   // Now we should be able to allocate that item.
   AllocatorReservation reservation(allocator.get());
   FakeTransaction transaction;
-  reservation.Reserve(&transaction, 1);
+  EXPECT_TRUE(reservation.Reserve(&transaction, 1).is_ok());
   EXPECT_EQ(item, reservation.Allocate());
 }
 

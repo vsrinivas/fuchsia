@@ -54,9 +54,10 @@ class MountTestTemplate : public testing::Test {
     ASSERT_EQ(fdio_fd_clone(ramdisk_block_fd, block_channel.reset_and_get_address()), ZX_OK);
     std::unique_ptr<block_client::RemoteBlockDevice> device;
     ASSERT_EQ(block_client::RemoteBlockDevice::Create(std::move(block_channel), &device), ZX_OK);
-    bool readonly_device = false;
-    ASSERT_EQ(minfs::CreateBcache(std::move(device), &readonly_device, &bcache_), ZX_OK);
-    ASSERT_FALSE(readonly_device);
+    auto bcache_or = minfs::CreateBcache(std::move(device));
+    ASSERT_TRUE(bcache_or.is_ok());
+    ASSERT_FALSE(bcache_or->is_read_only);
+    bcache_ = std::move(bcache_or->bcache);
 
     ASSERT_EQ(zx::channel::create(0, &root_client_end_, &root_server_end_), ZX_OK);
     ASSERT_EQ(loop_.StartThread("minfs test dispatcher"), ZX_OK);

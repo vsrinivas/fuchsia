@@ -16,9 +16,9 @@ PersistentStorage::PersistentStorage(SuperblockManager* sb, size_t unit_size, Gr
       metadata_(std::move(metadata)),
       block_size_(block_size) {}
 
-zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
-                                      GrowMapCallback grow_map) {
-  return ZX_ERR_NO_SPACE;
+zx::status<> PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
+                                       GrowMapCallback grow_map) {
+  return zx::error(ZX_ERR_NO_SPACE);
 }
 
 }  // namespace minfs

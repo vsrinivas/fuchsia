@@ -75,24 +75,24 @@ static inline BlockRange BytesToBlocks(ByteRange range, unsigned block_size) {
 // |callback| can modify |block_count| to indicate how many blocks it processed if less than all of
 // the blocks, or leave it unchanged if all blocks are processed.
 template <typename BlockType, typename F>
-[[nodiscard]] zx_status_t EnumerateBlocks(range::Range<BlockType> range, F callback) {
+[[nodiscard]] zx::status<> EnumerateBlocks(range::Range<BlockType> range, F callback) {
   uint64_t len;
   BlockType block = range.Start();
   for (; block < range.End(); block += len) {
     zx::status<uint64_t> status = callback(range::Range(block, range.End()));
     if (status.is_error())
-      return status.status_value();
+      return status.take_error();
     len = status.value();
     ZX_DEBUG_ASSERT(len > 0);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 // Same, but for bytes rather than blocks. It will enumerate all blocks touched by the range.
 template <typename F>
-[[nodiscard]] zx_status_t EnumerateBlocks(ByteRange range, unsigned block_size, F callback) {
+[[nodiscard]] zx::status<> EnumerateBlocks(ByteRange range, unsigned block_size, F callback) {
   if (range.Length() == 0)
-    return ZX_OK;
+    return zx::ok();
   return EnumerateBlocks(BytesToBlocks(range, block_size), callback);
 }
 

@@ -19,8 +19,8 @@ class TruncateTest : public JournalIntegrationFixture {
   // should see the new length, but if it fails, we should still see the old length with the old
   // contents.
   void PerformOperation(Minfs* fs) {
-    fbl::RefPtr<VnodeMinfs> root;
-    ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
+    auto root = fs->VnodeGet(kMinfsRootIno);
+    ASSERT_TRUE(root.is_ok());
     fbl::RefPtr<fs::Vnode> foo;
     ASSERT_EQ(root->Create("foo", 0, &foo), ZX_OK);
     auto close = fit::defer([foo]() { ASSERT_EQ(foo->Close(), ZX_OK); });
@@ -40,12 +40,12 @@ TEST_F(TruncateTest, EnsureOldDataWhenTransactionFails) {
   auto bcache = CutOffDevice(write_count() - 12 * kDiskBlocksPerFsBlock);
 
   // Since we cut off the transaction, we should see the old length with the old contents.
-  std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), MountOptions{}, &fs), ZX_OK);
+  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache), MountOptions{});
+  ASSERT_TRUE(fs_or.is_ok());
 
   // Open the 'foo' file.
-  fbl::RefPtr<VnodeMinfs> root;
-  ASSERT_EQ(fs->VnodeGet(&root, kMinfsRootIno), ZX_OK);
+  auto root = fs_or->VnodeGet(kMinfsRootIno);
+  ASSERT_TRUE(root.is_ok());
   fbl::RefPtr<fs::Vnode> foo;
   ASSERT_EQ(root->Lookup("foo", &foo), ZX_OK);
   auto validated_options = foo->ValidateOptions(fs::VnodeConnectionOptions());

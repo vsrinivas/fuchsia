@@ -97,7 +97,7 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
     // Since we reserved enough space ahead of time, this should not fail.
     ZX_ASSERT_MSG(
-        BlocksSwap(transaction.get(), bno_start, bno_count, allocated_blocks.data()) == ZX_OK,
+        BlocksSwap(transaction.get(), bno_start, bno_count, allocated_blocks.data()).is_ok(),
         "Failed to reserve blocks.");
 
     // Enqueue each data block one at a time, as they may not be contiguous on disk.
@@ -155,15 +155,15 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
   Vfs()->CommitTransaction(std::move(transaction));
 }
 
-zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count, blk_t* bnos) {
+zx::status<> File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count, blk_t* bnos) {
   if (count == 0)
-    return ZX_OK;
+    return zx::ok();
 
   VnodeMapper mapper(this);
   VnodeIterator iterator;
-  zx_status_t status = iterator.Init(&mapper, transaction, start);
-  if (status != ZX_OK)
-    return status;
+  auto status = iterator.Init(&mapper, transaction, start);
+  if (status.is_error())
+    return status.take_error();
 
   while (count > 0) {
     const blk_t file_block = static_cast<blk_t>(iterator.file_block());
@@ -178,9 +178,9 @@ zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count,
     // For copy-on-write, swap the block out if it's a data block.
     blk_t new_block = old_block;
     Vfs()->BlockSwap(transaction, old_block, &new_block);
-    zx_status_t status = iterator.SetBlk(new_block);
-    if (status != ZX_OK)
-      return status;
+    status = iterator.SetBlk(new_block);
+    if (status.is_error())
+      return status.take_error();
     *bnos++ = new_block;
     bool cleared = allocation_state_.ClearPending(file_block, old_block != 0);
     ZX_DEBUG_ASSERT(cleared);
@@ -189,8 +189,8 @@ zx_status_t File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count,
     Vfs()->SubtractDirtyBytes(Vfs()->BlockSize(), old_block != 0);
     --count;
     status = iterator.Advance();
-    if (status != ZX_OK)
-      return status;
+    if (status.is_error())
+      return status.take_error();
   }
   return iterator.Flush();
 }
@@ -276,7 +276,7 @@ void File::CancelPendingWriteback() {
 
 #endif
 
-zx_status_t File::CanUnlink() const { return ZX_OK; }
+zx::status<> File::CanUnlink() const { return zx::ok(); }
 
 fs::VnodeProtocolSet File::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
@@ -295,7 +295,7 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
       [&ticker, &out_actual, this]() { Vfs()->UpdateReadMetrics(*out_actual, ticker.End()); });
 
   Transaction transaction(Vfs());
-  return ReadInternal(&transaction, data, len, off, out_actual);
+  return ReadInternal(&transaction, data, len, off, out_actual).status_value();
 }
 
 zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
@@ -315,7 +315,7 @@ zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
 zx::status<> File::CheckAndFlush(bool is_truncate, size_t length, size_t offset) {
   auto status = ShouldFlush(is_truncate, length, offset);
   if (status.is_error()) {
-    return zx::error(status.error_value());
+    return status.take_error();
   }
   if (!status.value()) {
     return zx::ok();
@@ -334,21 +334,24 @@ zx::status<std::unique_ptr<Transaction>> File::GetTransaction(uint32_t reserve_b
                     "Cached transaction is enabled on non-dirty cache configuration.");
     }
   }
-  zx_status_t status;
   if (!DirtyCacheEnabled() || cached_transaction == nullptr) {
-    if ((status = Vfs()->BeginTransaction(0, reserve_blocks, &transaction)) != ZX_OK) {
-      return zx::error(status);
+    auto transaction_or = Vfs()->BeginTransaction(0, reserve_blocks);
+    if (transaction_or.is_error()) {
+      return transaction_or.take_error();
     }
+
+    transaction = std::move(transaction_or.value());
   } else {
-    if ((status = Vfs()->ContinueTransaction(reserve_blocks, std::move(cached_transaction),
-                                             &transaction)) != ZX_OK) {
+    auto status =
+        Vfs()->ContinueTransaction(reserve_blocks, std::move(cached_transaction), &transaction);
+    if (status.is_error()) {
       // Failure here means that we ran out of space. Force flush pending writes
       // and return the failure.
       if (transaction != nullptr) {
         [[maybe_unused]] auto error =
             FlushTransaction(std::move(transaction), /*force_flush=*/true).status_value();
       }
-      return zx::error(status);
+      return status.take_error();
     }
   }
 
@@ -388,7 +391,6 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
   }
 
   size_t reserve_blocks = reserve_blocks_or.value();
-  zx_status_t status;
   auto transaction_or = GetTransaction(static_cast<uint32_t>(reserve_blocks));
   if (transaction_or.is_error()) {
     return transaction_or.error_value();
@@ -402,10 +404,10 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
     }
   }
 
-  status =
-      WriteInternal(transaction.get(), static_cast<const uint8_t*>(data), len, offset, out_actual);
-  if (status != ZX_OK) {
-    return status;
+  if (auto status = WriteInternal(transaction.get(), static_cast<const uint8_t*>(data), len, offset,
+                                  out_actual);
+      status.is_error()) {
+    return status.error_value();
   }
 
   if (*out_actual == 0) {
@@ -439,17 +441,16 @@ zx_status_t File::Truncate(size_t len) {
   fs::Ticker ticker(Vfs()->StartTicker());
   auto get_metrics = fit::defer([&ticker, this] { Vfs()->UpdateTruncateMetrics(ticker.End()); });
 
-  std::unique_ptr<Transaction> transaction;
   // Due to file copy-on-write, up to 1 new (data) block may be required.
   size_t reserve_blocks = 1;
-  zx_status_t status;
 
-  if ((status = Vfs()->BeginTransaction(0, reserve_blocks, &transaction)) != ZX_OK) {
-    return status;
+  auto transaction_or = Vfs()->BeginTransaction(0, reserve_blocks);
+  if (transaction_or.is_error()) {
+    return transaction_or.error_value();
   }
 
-  if ((status = TruncateInternal(transaction.get(), len)) != ZX_OK) {
-    return status;
+  if (auto status = TruncateInternal(transaction_or.value().get(), len); status.is_error()) {
+    return status.status_value();
   }
 
   // Force sync the inode to persistent storage: although our data blocks will be allocated
@@ -457,7 +458,7 @@ zx_status_t File::Truncate(size_t len) {
   //
   // Ensure our inode is consistent with that metadata.
   UpdateModificationTime();
-  auto result = FlushTransaction(std::move(transaction), true);
+  auto result = FlushTransaction(std::move(transaction_or.value()), true);
   ZX_ASSERT_MSG(result.is_ok(), "Failed to force sync inode: %u", result.status_value());
   return ZX_OK;
 }

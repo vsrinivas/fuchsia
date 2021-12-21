@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_RESIZEABLE_ARRAY_BUFFER_H_
 #define SRC_STORAGE_MINFS_RESIZEABLE_ARRAY_BUFFER_H_
 
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
 #include <storage/buffer/array_buffer.h>
@@ -27,13 +28,13 @@ class ResizeableArrayBuffer : public storage::ArrayBuffer {
   // different handle types should go away and this should no longer be required.
   Handle GetHandle() { return Data(0); }
 
-  [[nodiscard]] zx_status_t Attach(const char* name, fs::TransactionHandler* device) {
-    return ZX_OK;
+  [[nodiscard]] zx::status<> Attach(const char* name, fs::TransactionHandler* device) {
+    return zx::ok();
   }
-  zx_status_t Detach(fs::TransactionHandler* device) { return ZX_OK; }
+  zx::status<> Detach(fs::TransactionHandler* device) { return zx::ok(); }
 
-  [[nodiscard]] zx_status_t Shrink(size_t block_count);
-  [[nodiscard]] zx_status_t Grow(size_t block_count);
+  [[nodiscard]] zx::status<> Shrink(size_t block_count);
+  [[nodiscard]] zx::status<> Grow(size_t block_count);
 };
 
 }  // namespace minfs

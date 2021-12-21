@@ -60,8 +60,18 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   zx_status_t Truncate(size_t len) final;
 
  private:
+  // Possible non-error return values for DirentCallback:
+  enum class IteratorCommand {
+    // Immediately stop iterating over the directory.
+    kIteratorDone,
+    // Access the next direntry in the directory. Offsets updated.
+    kIteratorNext,
+    // Identify that the direntry record was modified. Stop iterating.
+    kIteratorSaveSync,
+  };
+
   // minfs::Vnode interface.
-  zx_status_t CanUnlink() const final;
+  zx::status<> CanUnlink() const final;
   blk_t GetBlockCount() const final;
   uint64_t GetSize() const final;
   void SetSize(uint32_t new_size) final;
@@ -87,13 +97,13 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   // Other, non-virtual methods:
 
   // Lookup which can traverse '..'
-  zx_status_t LookupInternal(std::string_view name, fbl::RefPtr<fs::Vnode>* out);
+  zx::status<fbl::RefPtr<fs::Vnode>> LookupInternal(std::string_view name);
 
   // Verify that the 'newdir' inode is not a subdirectory of this Vnode.
   // Traces the path from newdir back to the root inode.
-  zx_status_t CheckNotSubdirectory(fbl::RefPtr<Directory> newdir);
+  zx::status<> CheckNotSubdirectory(fbl::RefPtr<Directory> newdir);
 
-  using DirentCallback = zx_status_t (*)(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  using DirentCallback = zx::status<IteratorCommand> (*)(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
 
   // Enumerates directories.
   // On success returns true if the exit was a result of the callback, and false if the listing was
@@ -105,20 +115,27 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   // The following functions are passable to |ForEachDirent|, which reads the parent directory,
   // one dirent at a time, and passes each entry to the callback function, along with the DirArgs
   // information passed to the initial call of |ForEachDirent|.
-  static zx_status_t DirentCallbackFind(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-  static zx_status_t DirentCallbackUnlink(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-  static zx_status_t DirentCallbackForceUnlink(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-  static zx_status_t DirentCallbackAttemptRename(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-  static zx_status_t DirentCallbackUpdateInode(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
-  static zx_status_t DirentCallbackFindSpace(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx::status<IteratorCommand> DirentCallbackFind(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
+  static zx::status<IteratorCommand> DirentCallbackUnlink(fbl::RefPtr<Directory>, Dirent*,
+                                                          DirArgs*);
+  static zx::status<IteratorCommand> DirentCallbackForceUnlink(fbl::RefPtr<Directory>, Dirent*,
+                                                               DirArgs*);
+  static zx::status<IteratorCommand> DirentCallbackAttemptRename(fbl::RefPtr<Directory>, Dirent*,
+                                                                 DirArgs*);
+  static zx::status<IteratorCommand> DirentCallbackUpdateInode(fbl::RefPtr<Directory>, Dirent*,
+                                                               DirArgs*);
+  static zx::status<IteratorCommand> DirentCallbackFindSpace(fbl::RefPtr<Directory>, Dirent*,
+                                                             DirArgs*);
+
+  static zx::status<IteratorCommand> NextDirent(Dirent* de, DirectoryOffset* offs);
 
   // Appends a new directory at the specified offset within |args|. This requires a prior call to
   // DirentCallbackFindSpace to find an offset where there is space for the direntry. It takes
   // the same |args| that were passed into DirentCallbackFindSpace.
-  zx_status_t AppendDirent(DirArgs* args);
+  zx::status<> AppendDirent(DirArgs* args);
 
-  zx_status_t UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMinfs> child, Dirent* de,
-                          DirectoryOffset* offs);
+  zx::status<IteratorCommand> UnlinkChild(Transaction* transaction, fbl::RefPtr<VnodeMinfs> child,
+                                          Dirent* de, DirectoryOffset* offs);
 };
 
 }  // namespace minfs

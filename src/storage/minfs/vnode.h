@@ -112,10 +112,10 @@ class VnodeMinfs : public fs::Vnode,
   //
   // If the response is not ZX_OK, operations to unlink (or rename on top of) this
   // vnode will fail.
-  virtual zx_status_t CanUnlink() const = 0;
+  virtual zx::status<> CanUnlink() const = 0;
 
   // Removes from disk an unlinked and closed vnode. Asserts that inode IsUnlinked().
-  zx_status_t RemoveUnlinked();
+  zx::status<> RemoveUnlinked();
 
   // Issues a write on all dirty bytes within a vnode.
   virtual zx::status<> FlushCachedWrites() = 0;
@@ -198,14 +198,14 @@ class VnodeMinfs : public fs::Vnode,
 
   // Local implementations of read, write, and truncate functions which
   // may operate on either files or directories.
-  zx_status_t ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
-                           size_t* actual);
-  zx_status_t ReadExactInternal(PendingWork* transaction, void* data, size_t len, size_t off);
-  zx_status_t WriteInternal(Transaction* transaction, const uint8_t* data, size_t len, size_t off,
+  zx::status<> ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
                             size_t* actual);
-  zx_status_t WriteExactInternal(Transaction* transaction, const void* data, size_t len,
-                                 size_t off);
-  zx_status_t TruncateInternal(Transaction* transaction, size_t len);
+  zx::status<> ReadExactInternal(PendingWork* transaction, void* data, size_t len, size_t off);
+  zx::status<> WriteInternal(Transaction* transaction, const uint8_t* data, size_t len, size_t off,
+                             size_t* actual);
+  zx::status<> WriteExactInternal(Transaction* transaction, const void* data, size_t len,
+                                  size_t off);
+  zx::status<> TruncateInternal(Transaction* transaction, size_t len);
 
   // Update the vnode's inode and write it to disk.
   void InodeSync(PendingWork* transaction, uint32_t flags);
@@ -216,7 +216,7 @@ class VnodeMinfs : public fs::Vnode,
   // If the link count becomes zero, the node either:
   // 1) Calls |Purge()| (if no open fds exist), or
   // 2) Adds itself to the "unlinked list", to be purged later.
-  [[nodiscard]] zx_status_t RemoveInodeLink(Transaction* transaction);
+  [[nodiscard]] zx::status<> RemoveInodeLink(Transaction* transaction);
 
   // Allocates an indirect block.
   void AllocateIndirect(PendingWork* transaction, blk_t* block);
@@ -228,7 +228,7 @@ class VnodeMinfs : public fs::Vnode,
   // of the file. Does not update mtime/atime.
   // This can be extended to return indices of deleted bnos, or to delete a specific number of
   // bnos
-  zx_status_t BlocksShrink(PendingWork* transaction, blk_t start);
+  zx::status<> BlocksShrink(PendingWork* transaction, blk_t start);
 
   // Although file sizes don't need to be block-aligned, the underlying VMO is
   // always kept at a size which is a multiple of |kMinfsBlockSize|.
@@ -256,20 +256,18 @@ class VnodeMinfs : public fs::Vnode,
   //
   // May or may not allocate |bno|; certain Vnodes (like File) delay allocation
   // until writeback, and will return a sentinel value of zero.
-  //
-  // TODO(unknown): Use types to represent that |bno|, as an output, is optional.
-  zx_status_t BlockGetWritable(Transaction* transaction, blk_t n, blk_t* bno);
+  zx::status<blk_t> BlockGetWritable(Transaction* transaction, blk_t n);
 
   // Get the disk block 'bno' corresponding to relative block address |n| within the file.
   // Does not allocate any blocks, direct or indirect, to acquire this block.
-  zx_status_t BlockGetReadable(blk_t n, blk_t* bno);
+  zx::status<blk_t> BlockGetReadable(blk_t n);
 
   // Deletes this Vnode from disk, freeing the inode and blocks.
   //
   // Must only be called on Vnodes which
   // - Have no open fds
   // - Are fully unlinked (link count == 0)
-  [[nodiscard]] zx_status_t Purge(Transaction* transaction);
+  [[nodiscard]] zx::status<> Purge(Transaction* transaction);
 
 #ifdef __Fuchsia__
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
@@ -281,7 +279,7 @@ class VnodeMinfs : public fs::Vnode,
   // Since we cannot yet register the filesystem as a paging service (and
   // cleanly fault on pages when they are actually needed), we currently read an
   // entire file to a VMO when a file's data block are accessed.
-  zx_status_t InitVmo();
+  zx::status<> InitVmo();
 
   // Use the watcher container to implement a directory watcher
   void Notify(std::string_view name, unsigned event) final;

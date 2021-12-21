@@ -53,7 +53,9 @@ class BcacheTestWithMockDevice : public testing::Test {
     ASSERT_TRUE(device);
     device_ = device.get();
 
-    ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache_), ZX_OK);
+    auto bcache_or = Bcache::Create(std::move(device), kNumBlocks);
+    ASSERT_TRUE(bcache_or.is_ok());
+    bcache_ = std::move(bcache_or.value());
   }
 
  protected:
@@ -105,27 +107,27 @@ TEST_F(BcacheTestWithMockDevice, RunOperation) {
 
 TEST(BcacheTest, WriteblkThenReadblk) {
   auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kNumBlocks, &bcache), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kNumBlocks);
+  ASSERT_TRUE(bcache_or.is_ok());
   std::unique_ptr<uint8_t[]> source_buffer(new uint8_t[kMinfsBlockSize]);
 
   // Write 'a' to block 1.
   memset(source_buffer.get(), 'a', kMinfsBlockSize);
-  ASSERT_EQ(bcache->Writeblk(1, source_buffer.get()), ZX_OK);
+  ASSERT_TRUE(bcache_or->Writeblk(1, source_buffer.get()).is_ok());
 
   // Write 'b' to block 2.
   memset(source_buffer.get(), 'b', kMinfsBlockSize);
-  ASSERT_EQ(bcache->Writeblk(2, source_buffer.get()), ZX_OK);
+  ASSERT_TRUE(bcache_or->Writeblk(2, source_buffer.get()).is_ok());
 
   std::unique_ptr<uint8_t[]> destination_buffer(new uint8_t[kMinfsBlockSize]);
   // Read 'a' from block 1.
   memset(source_buffer.get(), 'a', kMinfsBlockSize);
-  ASSERT_EQ(bcache->Readblk(1, destination_buffer.get()), ZX_OK);
+  ASSERT_TRUE(bcache_or->Readblk(1, destination_buffer.get()).is_ok());
   EXPECT_EQ(memcmp(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize), 0);
 
   // Read 'b' from block 2.
   memset(source_buffer.get(), 'b', kMinfsBlockSize);
-  ASSERT_EQ(bcache->Readblk(2, destination_buffer.get()), ZX_OK);
+  ASSERT_TRUE(bcache_or->Readblk(2, destination_buffer.get()).is_ok());
   EXPECT_EQ(memcmp(source_buffer.get(), destination_buffer.get(), kMinfsBlockSize), 0);
 }
 

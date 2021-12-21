@@ -9,9 +9,9 @@ namespace minfs {
 zx::status<std::unique_ptr<LazyBuffer>> LazyBuffer::Create(Bcache* bcache, const char* name,
                                                            uint32_t block_size) {
   std::unique_ptr<LazyBuffer> buffer(new LazyBuffer(block_size));
-  zx_status_t status = buffer->buffer_.Attach(name, bcache);
-  if (status != ZX_OK)
-    return zx::error(status);
+  auto status = buffer->buffer_.Attach(name, bcache);
+  if (status.is_error())
+    return status.take_error();
   return zx::ok(std::move(buffer));
 }
 
@@ -21,25 +21,24 @@ void LazyBuffer::Shrink(size_t block_count) {
   if (block_count < 1)
     block_count = 1;
   if (block_count < buffer_.capacity()) {
-    zx_status_t status = buffer_.Shrink(block_count);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    auto status = buffer_.Shrink(block_count);
+    ZX_DEBUG_ASSERT(status.is_ok());
   }
 }
 
-zx_status_t LazyBuffer::Read(ByteRange range, Reader* reader) {
+zx::status<> LazyBuffer::Read(ByteRange range, Reader* reader) {
   if (range.Length() == 0)
-    return ZX_OK;
+    return zx::ok();
   uint64_t required_blocks = BytesToBlocks(range, buffer_.BlockSize()).End();
   if (required_blocks > buffer_.capacity()) {
-    zx_status_t status = Grow(required_blocks);
-    if (status != ZX_OK)
-      return status;
+    if (auto status = Grow(required_blocks); status.is_error())
+      return status.take_error();
   }
   return lazy_reader_.Read(range, reader);
 }
 
-zx_status_t LazyBuffer::Flush(PendingWork* transaction, MapperInterface* mapper,
-                              BaseBufferView* view, const Writer& writer) {
+zx::status<> LazyBuffer::Flush(PendingWork* transaction, MapperInterface* mapper,
+                               BaseBufferView* view, const Writer& writer) {
   // TODO(fxbug.dev/50606): If this or the transaction fails, this will leave memory in an
   // indeterminate state. For now, this is no worse than it has been for some time.
   view->set_dirty(false);
@@ -51,11 +50,11 @@ zx_status_t LazyBuffer::Flush(PendingWork* transaction, MapperInterface* mapper,
             mapper->MapForWrite(transaction, range, &allocated);
         if (device_range.is_error())
           return device_range.take_error();
-        zx_status_t status = writer(
+        auto status = writer(
             &buffer_, BlockRange(range.Start(), range.Start() + device_range.value().count()),
             device_range.value().block());
-        if (status != ZX_OK)
-          return zx::error(status);
+        if (status.is_error())
+          return status.take_error();
         return zx::ok(device_range.value().count());
       });
 }

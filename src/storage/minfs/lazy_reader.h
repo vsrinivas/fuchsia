@@ -45,7 +45,7 @@ class LazyReader {
     [[nodiscard]] virtual zx::status<uint64_t> Enqueue(BlockRange range) = 0;
 
     // Issues the queued reads and returns the result.
-    [[nodiscard]] virtual zx_status_t RunRequests() = 0;
+    [[nodiscard]] virtual zx::status<> RunRequests() = 0;
 
     virtual uint32_t BlockSize() const = 0;
   };
@@ -53,7 +53,7 @@ class LazyReader {
   // Reads |length| bytes at offset |offset| into the buffer (if it isn't already pressent) using
   // the provided ReaderInterface. The actual reads will be blocks and so |range| will be aligned to
   // the nearest block boundaries that encompass |range|.
-  [[nodiscard]] zx_status_t Read(ByteRange range, ReaderInterface* reader);
+  [[nodiscard]] zx::status<> Read(ByteRange range, ReaderInterface* reader);
 
   // Marks the given block range as loaded or not according to |set|.
   void SetLoaded(BlockRange range, bool set);
@@ -95,8 +95,8 @@ class MappedFileReader : public LazyReader::ReaderInterface {
 
   zx::status<uint64_t> Enqueue(BlockRange range) override;
 
-  [[nodiscard]] zx_status_t RunRequests() override {
-    return handler_.RunRequests(builder_.TakeOperations());
+  [[nodiscard]] zx::status<> RunRequests() override {
+    return zx::make_status(handler_.RunRequests(builder_.TakeOperations()));
   }
 
   MapperInterface& mapper() { return mapper_; }

@@ -172,21 +172,20 @@ TEST(InspectorTest, CorrectJournalLocation) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
 
   // Format the device.
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
 
-  std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_EQ(minfs::Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+  auto fs_or = minfs::Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  ASSERT_TRUE(fs_or.is_ok());
 
   // Ensure the dirty bit is propagated to the device.
   sync_completion_t completion;
-  fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  fs_or->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
-  uint64_t journal_length = JournalBlocks(fs->Info());
-  std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs)));
+  uint64_t journal_length = JournalBlocks(fs_or->Info());
+  std::unique_ptr<RootObject> root_obj(new RootObject(std::move(fs_or.value())));
 
   // Root name
   ASSERT_EQ(root_obj->GetName(), std::string_view(kRootName));

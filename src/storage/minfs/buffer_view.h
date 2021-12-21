@@ -61,7 +61,7 @@ class BufferPtr {
 // BlockBuffer is resized, in which case its mapped address can change.
 class BaseBufferView {
  public:
-  using Flusher = fit::function<zx_status_t(BaseBufferView* view)>;
+  using Flusher = fit::function<zx::status<>(BaseBufferView* view)>;
 
   BaseBufferView() = default;
 
@@ -89,7 +89,7 @@ class BaseBufferView {
 
   // Does nothing if the buffer is not dirty. The buffer is always marked clean after calling flush;
   // it is up to the caller to handle errors appropriately.
-  [[nodiscard]] zx_status_t Flush();
+  [[nodiscard]] zx::status<> Flush();
 
  protected:
   // N.B. Take care with the 'as' methods and alignment. On some architectures, unaligned access is

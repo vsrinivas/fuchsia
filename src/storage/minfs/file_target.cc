@@ -49,8 +49,8 @@ zx::status<> File::WalkFileBlocks(size_t offset, size_t length,
   while (aligned_length > 0) {
     VnodeMapper mapper(this);
     VnodeIterator iterator;
-    if (auto status = iterator.Init(&mapper, nullptr, start_block); status != ZX_OK) {
-      return zx::error(status);
+    if (auto status = iterator.Init(&mapper, nullptr, start_block); status.is_error()) {
+      return status.take_error();
     }
 
     bool allocated = !(iterator.Blk() == 0);
@@ -80,7 +80,7 @@ zx::status<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, siz
     return zx::ok();
   };
   if (auto status = WalkFileBlocks(offset, length, count_blocks); status.is_error()) {
-    return zx::error(status.status_value());
+    return status.take_error();
   }
   if (data_blocks_to_write == 0) {
     uncached_block_count = 0;
@@ -100,13 +100,13 @@ zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length) {
       allocation_state_.SetPending(block, allocated);
       auto status = Vfs()->AddDirtyBytes(Vfs()->BlockSize(), allocated);
       if (status.is_error()) {
-        return zx::error(status.error_value());
+        return status.take_error();
       }
     }
     return zx::ok();
   };
   if (auto status = WalkFileBlocks(offset, length, mark_pending); status.is_error()) {
-    return zx::error(status.error_value());
+    return status.take_error();
   }
   return zx::ok();
 }
@@ -164,8 +164,8 @@ zx::status<> File::FlushCachedWrites() {
 
   std::unique_ptr<Transaction> transaction;
   if (auto status = Vfs()->ContinueTransaction(0, std::move(cached_transaction), &transaction);
-      status != ZX_OK) {
-    return zx::error(status);
+      status.is_error()) {
+    return status.take_error();
   }
 
   return ForceFlushTransaction(std::move(transaction));
@@ -188,7 +188,7 @@ zx::status<bool> File::ShouldFlush(bool is_truncate, size_t length, size_t offse
   // some of the blocks reserved for copy-on-write.
   auto reserve_blocks_or = GetRequiredBlockCount(offset, length);
   if (reserve_blocks_or.is_error()) {
-    return zx::error(reserve_blocks_or.error_value());
+    return reserve_blocks_or.take_error();
   }
 
   size_t reserve_blocks = reserve_blocks_or.value();

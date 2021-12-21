@@ -43,17 +43,17 @@ Allocator::~Allocator() {
   ZX_ASSERT(pending_changes_.empty());
 }
 
-zx_status_t Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
+zx::status<> Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
   std::scoped_lock lock(lock_);
   storage::OwnedVmoid vmoid;
-  zx_status_t status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &vmoid);
-  if (status != ZX_OK) {
-    return status;
+  auto status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &vmoid);
+  if (status.is_error()) {
+    return status.take_error();
   }
   UnownedBuffer buffer(vmoid.get());
   builder->AddVmoid(std::move(vmoid));
   storage_->Load(builder, &buffer);
-  return ZX_OK;
+  return zx::ok();
 }
 
 size_t Allocator::GetAvailableLocked() const {

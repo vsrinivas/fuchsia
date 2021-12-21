@@ -21,9 +21,9 @@ BaseBufferView& BaseBufferView::operator=(BaseBufferView&& other) {
   return *this;
 }
 
-zx_status_t BaseBufferView::Flush() {
+zx::status<> BaseBufferView::Flush() {
   if (!dirty_)
-    return ZX_OK;
+    return zx::ok();
   dirty_ = false;
   return flusher_(this);
 }

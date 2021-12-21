@@ -19,34 +19,35 @@ namespace minfs {
 InodeManager::InodeManager(blk_t start_block, uint32_t block_size)
     : start_block_(start_block), block_size_(block_size) {}
 
-zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockManager* sb,
-                                 fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata,
-                                 blk_t start_block, size_t inodes,
-                                 std::unique_ptr<InodeManager>* out) {
+zx::status<std::unique_ptr<InodeManager>> InodeManager::Create(
+    block_client::BlockDevice* device, SuperblockManager* sb,
+    fs::BufferedOperationsBuilder* builder, AllocatorMetadata metadata, blk_t start_block,
+    size_t inodes) {
   auto mgr = std::unique_ptr<InodeManager>(new InodeManager(start_block, sb->BlockSize()));
   InodeManager* mgr_raw = mgr.get();
 
   auto grow_cb = [mgr_raw](uint32_t pool_size) { return mgr_raw->Grow(pool_size); };
 
-  zx_status_t status;
   std::unique_ptr<PersistentStorage> storage(new PersistentStorage(
       device, sb, kMinfsInodeSize, std::move(grow_cb), std::move(metadata), sb->BlockSize()));
-
-  if ((status = Allocator::Create(builder, std::move(storage), &mgr->inode_allocator_)) != ZX_OK) {
-    return status;
+  auto inode_allocator_or = Allocator::Create(builder, std::move(storage));
+  if (inode_allocator_or.is_error()) {
+    return inode_allocator_or.take_error();
   }
+  mgr->inode_allocator_ = std::move(inode_allocator_or.value());
 
   uint32_t inoblks =
       (static_cast<uint32_t>(inodes) + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-  if ((status = mgr->inode_table_.CreateAndMap(inoblks * sb->BlockSize(), "minfs-inode-table")) !=
-      ZX_OK) {
-    return status;
+  if (zx_status_t status =
+          mgr->inode_table_.CreateAndMap(inoblks * sb->BlockSize(), "minfs-inode-table");
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
   storage::Vmoid vmoid;
-  status = device->BlockAttachVmo(mgr->inode_table_.vmo(), &vmoid);
-  if (status != ZX_OK) {
-    return status;
+  if (zx_status_t status = device->BlockAttachVmo(mgr->inode_table_.vmo(), &vmoid);
+      status != ZX_OK) {
+    return zx::error(status);
   }
   vmoid_t id = vmoid.get();
   builder->AddVmoid(storage::OwnedVmoid(std::move(vmoid), device));
@@ -61,8 +62,7 @@ zx_status_t InodeManager::Create(block_client::BlockDevice* device, SuperblockMa
   fs::internal::BorrowedBuffer buffer(id);
   builder->Add(operation, &buffer);
 
-  *out = std::move(mgr);
-  return ZX_OK;
+  return zx::ok(std::move(mgr));
 }
 
 void InodeManager::Update(PendingWork* transaction, ino_t ino, const Inode* inode) {

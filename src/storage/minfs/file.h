@@ -38,7 +38,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   void fbl_recycle() { RecycleNode(); }
 
  private:
-  zx_status_t CanUnlink() const final;
+  zx::status<> CanUnlink() const final;
 
   // minfs::Vnode interface.
   blk_t GetBlockCount() const final;
@@ -119,7 +119,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // For all data blocks in the range |start| to |start + count|, reserve specific blocks in
   // the allocator to be swapped in at the time the old blocks are swapped out. Metadata blocks
   // are expected to have been allocated previously.
-  zx_status_t BlocksSwap(Transaction* state, blk_t start, blk_t count, blk_t* bno);
+  zx::status<> BlocksSwap(Transaction* state, blk_t start, blk_t count, blk_t* bno);
 
   // Describes pending allocation data for the vnode. This should only be accessed while a valid
   // Transaction object is held, as it may be modified asynchronously by the DataBlockAssigner

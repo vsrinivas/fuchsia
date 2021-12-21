@@ -17,12 +17,17 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
   return vnodes;
 }
 
-zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
-                                       std::unique_ptr<CachedBlockTransaction> cached_transaction,
-                                       std::unique_ptr<Transaction>* out) {
+zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
+                                        std::unique_ptr<CachedBlockTransaction> cached_transaction,
+                                        std::unique_ptr<Transaction>* out) {
   // Reserve blocks from allocators before returning WritebackWork to client.
   *out = Transaction::FromCachedBlockTransaction(this, std::move(cached_transaction));
-  return (*out)->ExtendBlockReservation(reserve_blocks);
+
+  if (auto status = (*out)->ExtendBlockReservation(reserve_blocks); status.is_error()) {
+    return status.take_error();
+  }
+
+  return zx::ok();
 }
 
 zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) { return zx::ok(); }

@@ -18,28 +18,25 @@
 
 namespace minfs {
 
-SuperblockManager::SuperblockManager(const Superblock* info) {
-  memcpy(info_blk_, info, sizeof(Superblock));
+SuperblockManager::SuperblockManager(const Superblock& info) {
+  memcpy(info_blk_, &info, sizeof(Superblock));
 }
 
 SuperblockManager::~SuperblockManager() = default;
 
-// Static.
-zx_status_t SuperblockManager::Create(const Superblock* info, uint32_t max_blocks,
-                                      IntegrityCheck checks,
-                                      std::unique_ptr<SuperblockManager>* out) {
-  zx_status_t status = ZX_OK;
+// static
+zx::status<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(const Superblock& info,
+                                                                         uint32_t max_blocks,
+                                                                         IntegrityCheck checks) {
   if (checks == IntegrityCheck::kAll) {
-    status = CheckSuperblock(info, max_blocks);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "SuperblockManager::Create failed to check info: " << status;
-      return status;
+    if (auto status = CheckSuperblock(info, max_blocks); status.is_error()) {
+      FX_LOGS(ERROR) << "SuperblockManager::Create failed to check info: " << status.error_value();
+      return status.take_error();
     }
   }
 
   auto sb = std::unique_ptr<SuperblockManager>(new SuperblockManager(info));
-  *out = std::move(sb);
-  return ZX_OK;
+  return zx::ok(std::move(sb));
 }
 
 void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock write_backup) {

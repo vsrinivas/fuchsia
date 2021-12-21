@@ -26,34 +26,38 @@ TEST(MountTest, OldestRevisionUpdatedOnMount) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
-  Superblock superblock = {};
-  ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
+  auto superblock_or = LoadSuperblock(bcache_or.value().get());
+  ASSERT_TRUE(superblock_or.is_ok());
 
-  ASSERT_EQ(kMinfsCurrentMinorVersion, superblock.oldest_minor_version);
+  ASSERT_EQ(kMinfsCurrentMinorVersion, superblock_or->oldest_minor_version);
 
-  superblock.oldest_minor_version = kMinfsCurrentMinorVersion + 1;
-  UpdateChecksum(&superblock);
-  ASSERT_EQ(bcache->Writeblk(kSuperblockStart, &superblock), ZX_OK);
-  ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
-  ASSERT_EQ(kMinfsCurrentMinorVersion + 1, superblock.oldest_minor_version);
+  superblock_or->oldest_minor_version = kMinfsCurrentMinorVersion + 1;
+  UpdateChecksum(&superblock_or.value());
+  ASSERT_TRUE(bcache_or->Writeblk(kSuperblockStart, &superblock_or.value()).is_ok());
+  superblock_or = LoadSuperblock(bcache_or.value().get());
+  ASSERT_TRUE(superblock_or.is_ok());
+  ASSERT_EQ(kMinfsCurrentMinorVersion + 1, superblock_or->oldest_minor_version);
 
   MountOptions options = {};
-  std::unique_ptr<Minfs> fs;
-  ASSERT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
-  bcache = Minfs::Destroy(std::move(fs));
+  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+  ASSERT_TRUE(fs_or.is_ok());
 
-  ASSERT_EQ(LoadSuperblock(bcache.get(), &superblock), ZX_OK);
-  ASSERT_EQ(kMinfsCurrentMinorVersion, superblock.oldest_minor_version);
+  bcache_or = zx::ok(Minfs::Destroy(std::move(fs_or.value())));
+
+  superblock_or = LoadSuperblock(bcache_or.value().get());
+  ASSERT_TRUE(superblock_or.is_ok());
+  ASSERT_EQ(kMinfsCurrentMinorVersion, superblock_or->oldest_minor_version);
 }
 
 TEST(MountTest, VersionLoggedWithCobalt) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
 
   class Logger : public cobalt::MockCobaltLogger {
     using MockCobaltLogger::MockCobaltLogger;
@@ -80,7 +84,7 @@ TEST(MountTest, VersionLoggedWithCobalt) {
     zx::channel mount_channel, remote_mount_channel;
     ASSERT_EQ(zx::channel::create(0, &mount_channel, &remote_mount_channel), ZX_OK);
     auto fs_or = MountAndServe(
-        options, loop.dispatcher(), std::move(bcache), std::move(mount_channel), [] {},
+        options, loop.dispatcher(), std::move(bcache_or.value()), std::move(mount_channel), [] {},
         ServeLayout::kExportDirectory);
     ASSERT_EQ(fs_or.status_value(), ZX_OK);
     fs = std::move(fs_or).value();
@@ -97,9 +101,9 @@ TEST(MountTest, VersionLoggedWithCobalt) {
 TEST(MountTest, ReadsExceptForSuperBlockFail) {
   auto device = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
   auto* device_ptr = device.get();
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(device), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(device), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
 
   // Fail request for block 8 which should be the first block of the inode bitmap.
   device_ptr->set_hook([](const block_fifo_request_t& request, const zx::vmo*) {
@@ -108,8 +112,8 @@ TEST(MountTest, ReadsExceptForSuperBlockFail) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  std::unique_ptr<Minfs> fs;
-  EXPECT_EQ(Minfs::Create(loop.dispatcher(), std::move(bcache), {}, &fs), ZX_ERR_IO);
+  auto fs_or = Minfs::Create(loop.dispatcher(), std::move(bcache_or.value()), {});
+  EXPECT_EQ(fs_or.status_value(), ZX_ERR_IO);
 }
 
 }  // namespace

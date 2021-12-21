@@ -6,9 +6,9 @@
 
 namespace minfs {
 
-zx_status_t LazyReader::Read(ByteRange range, ReaderInterface* reader) {
+zx::status<> LazyReader::Read(ByteRange range, ReaderInterface* reader) {
   if (range.Length() == 0)
-    return ZX_OK;
+    return zx::ok();
 
   // Find the first block that isn't loaded.
   const range::Range block_range = BytesToBlocks(range, reader->BlockSize());
@@ -21,21 +21,20 @@ zx_status_t LazyReader::Read(ByteRange range, ReaderInterface* reader) {
   while (block < block_range.End()) {
     uint64_t end;
     mapped_.Find(true, block + 1, block_range.End(), 1, &end);
-    zx_status_t status = EnumerateBlocks(BlockRange(block, end),
-                                         [&](BlockRange range) { return reader->Enqueue(range); });
-    if (status != ZX_OK)
-      return status;
+    auto status = EnumerateBlocks(BlockRange(block, end),
+                                  [&](BlockRange range) { return reader->Enqueue(range); });
+    if (status.is_error())
+      return status.take_error();
     mapped_.Find(false, end + 1, block_range.End(), 1, &block);
   }
 
   // Issue and wait for the reads to complete.
-  zx_status_t status = reader->RunRequests();
-  if (status != ZX_OK)
-    return status;
+  if (auto status = reader->RunRequests(); status.is_error())
+    return status.take_error();
 
   // Mark the whole range as loaded.
   mapped_.Set(block_range.Start(), block_range.End());
-  return ZX_OK;
+  return zx::ok();
 }
 
 void LazyReader::SetLoaded(BlockRange range, bool set) {

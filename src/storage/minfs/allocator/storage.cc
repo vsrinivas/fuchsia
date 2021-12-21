@@ -25,17 +25,17 @@ PersistentStorage::PersistentStorage(block_client::BlockDevice* device, Superblo
       metadata_(std::move(metadata)),
       block_size_(block_size) {}
 
-zx_status_t PersistentStorage::AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* out) {
-  return device_->BlockAttachVmo(vmo, &out->GetReference(device_));
+zx::status<> PersistentStorage::AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* out) {
+  return zx::make_status(device_->BlockAttachVmo(vmo, &out->GetReference(device_)));
 }
 
-zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
-                                      GrowMapCallback grow_map) {
+zx::status<> PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
+                                       GrowMapCallback grow_map) {
   TRACE_DURATION("minfs", "Minfs::PersistentStorage::Extend");
   ZX_DEBUG_ASSERT(write_transaction != nullptr);
   if (!metadata_.UsingFvm()) {
     FX_LOGS_FIRST_N(WARNING, 10) << "PersistentStorage::Extent can't extend on non-FVM devices.";
-    return ZX_ERR_NO_SPACE;
+    return zx::error(ZX_ERR_NO_SPACE);
   }
   uint32_t data_slices_diff = 1;
 
@@ -59,7 +59,7 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
     // TODO(planders): Once we start growing the [block] bitmap,
     //                 we will need to start growing the journal as well.
     FX_LOGS(ERROR) << "Minfs allocator needs to increase bitmap size";
-    return ZX_ERR_NO_SPACE;
+    return zx::error(ZX_ERR_NO_SPACE);
   }
 
   // Make the request to the FVM.
@@ -71,20 +71,20 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to extend volume from " << data_slices << " slices to "
                      << data_slices_new << " slices, error " << status;
-    return status;
+    return zx::error(status);
   }
 
   if (grow_cb_) {
     if ((status = grow_cb_(pool_size)) != ZX_OK) {
       FX_LOGS(ERROR) << "Allocator grow callback failure: " << status;
-      return status;
+      return zx::error(status);
     }
   }
 
   // Extend the in memory representation of our allocation pool -- it grew!
-  size_t old_pool_size;
-  if ((status = grow_map(pool_size, &old_pool_size)) != ZX_OK) {
-    return status;
+  auto old_pool_size_or = grow_map(pool_size);
+  if (old_pool_size_or.is_error()) {
+    return old_pool_size_or.take_error();
   }
 
   metadata_.Fvm().SetDataSlices(data_slices_new);
@@ -92,8 +92,9 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
   sb_->Write(write_transaction, UpdateBackupSuperblock::kUpdate);
 
   // Update the block bitmap.
-  PersistRange(write_transaction, data, old_pool_size, pool_size - old_pool_size);
-  return ZX_OK;
+  PersistRange(write_transaction, data, old_pool_size_or.value(),
+               pool_size - old_pool_size_or.value());
+  return zx::ok();
 }
 
 }  // namespace minfs

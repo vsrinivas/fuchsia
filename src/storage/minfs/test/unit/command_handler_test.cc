@@ -116,7 +116,7 @@ void CreateMinfsInspector(std::unique_ptr<block_client::BlockDevice> device,
 }
 // Make sure commands don't fail when running on an unformatted device.
 TEST(MinfsCommandHandler, CheckSupportedCommandsNoFail) {
-  for (auto command : GetTestCommands()) {
+  for (auto& command : GetTestCommands()) {
     auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
     std::unique_ptr<MinfsInspector> inspector;
     CreateMinfsInspector(std::move(temp), &inspector);
@@ -137,22 +137,23 @@ TEST(MinfsCommandHandler, CheckSupportedCommandsSuccess) {
   auto temp = std::make_unique<FakeBlockDevice>(kBlockCount, kBlockSize);
 
   // Format the device.
-  std::unique_ptr<Bcache> bcache;
-  ASSERT_EQ(Bcache::Create(std::move(temp), kBlockCount, &bcache), ZX_OK);
-  ASSERT_EQ(Mkfs(bcache.get()), ZX_OK);
+  auto bcache_or = Bcache::Create(std::move(temp), kBlockCount);
+  ASSERT_TRUE(bcache_or.is_ok());
+  ASSERT_TRUE(Mkfs(bcache_or.value().get()).is_ok());
+  std::unique_ptr<Bcache> bcache = std::move(bcache_or.value());
 
   // Write journal info to the device by creating a minfs and waiting for it
   // to finish.
-  std::unique_ptr<Minfs> fs;
   MountOptions options = {};
-  ASSERT_EQ(minfs::Minfs::Create(loop.dispatcher(), std::move(bcache), options, &fs), ZX_OK);
+  auto fs_or = minfs::Minfs::Create(loop.dispatcher(), std::move(bcache), options);
+  ASSERT_TRUE(fs_or.is_ok());
   sync_completion_t completion;
-  fs->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
+  fs_or->Sync([&completion](zx_status_t status) { sync_completion_signal(&completion); });
   ASSERT_EQ(sync_completion_wait(&completion, zx::duration::infinite().get()), ZX_OK);
 
   // We only care about the disk format written into the fake block device,
   // so we destroy the minfs/bcache used to format it.
-  bcache = Minfs::Destroy(std::move(fs));
+  bcache = Minfs::Destroy(std::move(fs_or.value()));
   std::unique_ptr<MinfsInspector> inspector;
   CreateMinfsInspector(Bcache::Destroy(std::move(bcache)), &inspector);
 

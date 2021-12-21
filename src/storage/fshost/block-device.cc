@@ -555,19 +555,19 @@ zx_status_t BlockDevice::CheckFilesystem() {
         status = CheckCustomFilesystem(std::move(binary_path));
       } else {
         uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-        std::unique_ptr<block_client::BlockDevice> device;
-        status = minfs::FdToBlockDevice(fd_, &device);
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
-          return status;
+        auto device_or = minfs::FdToBlockDevice(fd_);
+        if (device_or.is_error()) {
+          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
+          return device_or.error_value();
         }
-        std::unique_ptr<minfs::Bcache> bc;
-        status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(device_size), &bc);
-        if (status != ZX_OK) {
+        auto bc_or =
+            minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(device_size));
+        if (bc_or.is_error()) {
           FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
-          return status;
+          return bc_or.error_value();
         }
-        status = minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
+        status = minfs::Fsck(std::move(bc_or.value()), minfs::FsckOptions{.repair = true})
+                     .status_value();
       }
 
       if (status != ZX_OK) {
@@ -625,20 +625,19 @@ zx_status_t BlockDevice::FormatFilesystem() {
       } else {
         FX_LOGS(INFO) << "Formatting minfs.";
         uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-        std::unique_ptr<block_client::BlockDevice> device;
-        zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
+        auto device_or = minfs::FdToBlockDevice(fd_);
+        if (device_or.is_error()) {
+          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << device_or.error_value();
           return status;
         }
-        std::unique_ptr<minfs::Bcache> bc;
-        status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(blocks), &bc);
-        if (status != ZX_OK) {
+        auto bc_or =
+            minfs::Bcache::Create(std::move(device_or.value()), static_cast<uint32_t>(blocks));
+        if (bc_or.is_error()) {
           FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
-          return status;
+          return bc_or.error_value();
         }
         minfs::MountOptions options = {};
-        if ((status = minfs::Mkfs(options, bc.get())) != ZX_OK) {
+        if (status = minfs::Mkfs(options, bc_or.value().get()).status_value(); status != ZX_OK) {
           FX_LOGS(ERROR) << "Could not format minfs filesystem.";
           return status;
         }

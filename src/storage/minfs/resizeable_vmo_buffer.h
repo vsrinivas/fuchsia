@@ -6,6 +6,7 @@
 #define SRC_STORAGE_MINFS_RESIZEABLE_VMO_BUFFER_H_
 
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
 #include <storage/buffer/block_buffer.h>
@@ -34,15 +35,19 @@ class ResizeableVmoBuffer : public storage::BlockBuffer {
   }
 
   const zx::vmo& vmo() { return vmo_.vmo(); }
-  zx_status_t Grow(size_t block_count) { return vmo_.Grow(block_count * block_size_); }
-  zx_status_t Shrink(size_t block_count) { return vmo_.Shrink(block_count * block_size_); }
+  zx::status<> Grow(size_t block_count) {
+    return zx::make_status(vmo_.Grow(block_count * block_size_));
+  }
+  zx::status<> Shrink(size_t block_count) {
+    return zx::make_status(vmo_.Shrink(block_count * block_size_));
+  }
 
   // Avoid using this method unless *absolutely* necessary. Eventually, other interfaces that take
   // different handle types should go away and this should no longer be required.
   Handle GetHandle() { return vmoid(); }
 
-  [[nodiscard]] zx_status_t Attach(const char* name, storage::VmoidRegistry* device);
-  zx_status_t Detach(storage::VmoidRegistry* device);
+  [[nodiscard]] zx::status<> Attach(const char* name, storage::VmoidRegistry* device);
+  zx::status<> Detach(storage::VmoidRegistry* device);
 
   void Zero(size_t index, size_t count) override;
 

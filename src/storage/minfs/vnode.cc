@@ -75,11 +75,10 @@ void VnodeMinfs::InodeSync(PendingWork* transaction, uint32_t flags) {
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
-zx_status_t VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
+zx::status<> VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
   VnodeMapper mapper(this);
   VnodeIterator iterator;
-  zx_status_t status = iterator.Init(&mapper, transaction, start);
-  if (status != ZX_OK)
+  if (auto status = iterator.Init(&mapper, transaction, start); status.is_error())
     return status;
   uint64_t block_count = VnodeMapper::kMaxBlocks - start;
   while (block_count > 0) {
@@ -90,17 +89,14 @@ zx_status_t VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
       count = 1;
       DeleteBlock(transaction, static_cast<blk_t>(iterator.file_block()), iterator.Blk(),
                   /*indirect=*/false);
-      zx_status_t status = iterator.SetBlk(0);
-      if (status != ZX_OK)
+      if (auto status = iterator.SetBlk(0); status.is_error())
         return status;
     }
-    status = iterator.Advance(count);
-    if (status != ZX_OK)
+    if (auto status = iterator.Advance(count); status.is_error())
       return status;
     block_count -= count;
   }
-  status = iterator.Flush();
-  if (status != ZX_OK)
+  if (auto status = iterator.Flush(); status.is_error())
     return status;
   // Shrink the buffer backing the virtual indirect file.
   if (indirect_file_) {
@@ -117,7 +113,7 @@ zx_status_t VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
         fbl::round_up(indirect_block_pointers * sizeof(blk_t), fs_->BlockSize()) /
         fs_->BlockSize());
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
@@ -136,34 +132,32 @@ zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
 // TODO(smklein): Even this hack can be optimized; a bitmap could be used to
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
-zx_status_t VnodeMinfs::InitVmo() {
+zx::status<> VnodeMinfs::InitVmo() {
   TRACE_DURATION("minfs", "VnodeMinfs::InitVmo");
   if (vmo_.is_valid()) {
-    return ZX_OK;
+    return zx::ok();
   }
 
-  zx_status_t status;
   fs::Ticker ticker(fs_->StartTicker());
   const size_t vmo_size = fbl::round_up(GetSize(), fs_->BlockSize());
-  if ((status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
+  if (zx_status_t status = zx::vmo::create(vmo_size, ZX_VMO_RESIZABLE, &vmo_); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to initialize vmo; error: " << status;
-    return status;
+    return zx::error(status);
   }
   vmo_size_ = vmo_size;
 
   zx_object_set_property(vmo_.get(), ZX_PROP_NAME, "minfs-inode", 11);
 
-  if ((status = fs_->bc_->BlockAttachVmo(vmo_, &vmoid_)) != ZX_OK) {
+  if (zx_status_t status = fs_->bc_->BlockAttachVmo(vmo_, &vmoid_); status != ZX_OK) {
     vmo_.reset();
-    return status;
+    return zx::error(status);
   }
 
   fs::BufferedOperationsBuilder builder;
   VnodeMapper mapper(this);
   VnodeIterator iterator;
-  status = iterator.Init(&mapper, nullptr, 0);
-  if (status != ZX_OK)
-    return status;
+  if (auto status = iterator.Init(&mapper, nullptr, 0); status.is_error())
+    return status.take_error();
   uint64_t block_count = vmo_size / fs_->BlockSize();
   while (block_count > 0) {
     blk_t block = iterator.Blk();
@@ -177,17 +171,17 @@ zx_status_t VnodeMinfs::InitVmo() {
                                      .length = count},
                   &buffer);
     }
-    status = iterator.Advance(count);
-    if (status != ZX_OK)
-      return status;
+    if (auto status = iterator.Advance(count); status.is_error())
+      return status.take_error();
     block_count -= count;
   }
-  status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
+
+  zx_status_t status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
   ValidateVmoTail(GetSize());
   // For now, we only track the time it takes to initialize VMOs.
   // TODO(fxbug.dev/51589): add more expansive init metrics.
   fs_->UpdateInitMetrics(0, 0, 0, 0, ticker.End());
-  return status;
+  return zx::make_status(status);
 }
 
 #endif
@@ -198,61 +192,62 @@ void VnodeMinfs::AllocateIndirect(PendingWork* transaction, blk_t* block) {
   inode_.block_count++;
 }
 
-zx_status_t VnodeMinfs::BlockGetWritable(Transaction* transaction, blk_t n, blk_t* bno) {
+zx::status<blk_t> VnodeMinfs::BlockGetWritable(Transaction* transaction, blk_t n) {
   VnodeMapper mapper(this);
   VnodeIterator iterator;
-  zx_status_t status = iterator.Init(&mapper, transaction, n);
-  if (status != ZX_OK)
-    return status;
+  if (auto status = iterator.Init(&mapper, transaction, n); status.is_error())
+    return status.take_error();
   blk_t block = iterator.Blk();
   AcquireWritableBlock(transaction, n, block, &block);
   if (block != iterator.Blk()) {
-    status = iterator.SetBlk(block);
-    if (status != ZX_OK)
-      return status;
+    if (auto status = iterator.SetBlk(block); status.is_error())
+      return status.take_error();
   }
-  *bno = block;
-  return iterator.Flush();
+
+  if (auto status = iterator.Flush(); status.is_error()) {
+    return status.take_error();
+  }
+
+  return zx::ok(block);
 }
 
-zx_status_t VnodeMinfs::BlockGetReadable(blk_t n, blk_t* bno) {
+zx::status<blk_t> VnodeMinfs::BlockGetReadable(blk_t n) {
   VnodeMapper mapper(this);
   zx::status<std::pair<blk_t, uint64_t>> mapping = mapper.MapToBlk(BlockRange(n, n + 1));
   if (mapping.is_error())
-    return mapping.status_value();
-  *bno = mapping.value().first;
-  return ZX_OK;
+    return mapping.take_error();
+
+  return zx::ok(mapping.value().first);
 }
 
-zx_status_t VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, size_t len,
-                                          size_t off) {
-  size_t actual;
-  zx_status_t status = ReadInternal(transaction, data, len, off, &actual);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (actual != len) {
-    return ZX_ERR_IO;
-  }
-  return ZX_OK;
-}
-
-zx_status_t VnodeMinfs::WriteExactInternal(Transaction* transaction, const void* data, size_t len,
+zx::status<> VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, size_t len,
                                            size_t off) {
   size_t actual;
-  zx_status_t status =
-      WriteInternal(transaction, static_cast<const uint8_t*>(data), len, off, &actual);
-  if (status != ZX_OK) {
+  auto status = ReadInternal(transaction, data, len, off, &actual);
+  if (status.is_error()) {
     return status;
   }
   if (actual != len) {
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
-  InodeSync(transaction, kMxFsSyncMtime);
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
+zx::status<> VnodeMinfs::WriteExactInternal(Transaction* transaction, const void* data, size_t len,
+                                            size_t off) {
+  size_t actual;
+  auto status = WriteInternal(transaction, static_cast<const uint8_t*>(data), len, off, &actual);
+  if (status.is_error()) {
+    return status;
+  }
+  if (actual != len) {
+    return zx::error(ZX_ERR_IO);
+  }
+  InodeSync(transaction, kMxFsSyncMtime);
+  return zx::ok();
+}
+
+zx::status<> VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
   ZX_ASSERT(inode_.link_count > 0);
 
   // This effectively 'unlinks' the target node without deleting the direntry
@@ -280,8 +275,7 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
       // No need to flush/retain dirty cache or the reservations for unlinked
       // inode.
       DropCachedWrites();
-      zx_status_t status = Purge(transaction);
-      if (status != ZX_OK) {
+      if (auto status = Purge(transaction); status.is_error()) {
         return status;
       }
     } else {
@@ -290,8 +284,7 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
         // If it's a directory, we need to remove the . and .. entries, which should be the only
         // entries.
         inode_.dirent_count = 0;
-        zx_status_t status = TruncateInternal(transaction, 0);
-        if (status != ZX_OK) {
+        if (auto status = TruncateInternal(transaction, 0); status.is_error()) {
           return status;
         }
       }
@@ -299,7 +292,7 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
   }
 
   InodeSync(transaction, kMxFsSyncMtime);
-  return ZX_OK;
+  return zx::ok();
 }
 
 void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
@@ -353,12 +346,12 @@ VnodeMinfs::~VnodeMinfs() {
   }
 #endif
   if (indirect_file_) {
-    zx_status_t status = indirect_file_->Detach(fs_->bc_.get());
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+    auto status = indirect_file_->Detach(fs_->bc_.get());
+    ZX_DEBUG_ASSERT(status.is_ok());
   }
 }
 
-zx_status_t VnodeMinfs::Purge(Transaction* transaction) {
+zx::status<> VnodeMinfs::Purge(Transaction* transaction) {
   {
     std::lock_guard lock(mutex_);
     ZX_DEBUG_ASSERT(open_count() == 0);
@@ -368,28 +361,27 @@ zx_status_t VnodeMinfs::Purge(Transaction* transaction) {
   return fs_->InoFree(transaction, this);
 }
 
-zx_status_t VnodeMinfs::RemoveUnlinked() {
+zx::status<> VnodeMinfs::RemoveUnlinked() {
   ZX_ASSERT(IsUnlinked());
-  zx_status_t status;
-  std::unique_ptr<Transaction> transaction;
 
-  if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
+  auto transaction_or = fs_->BeginTransaction(0, 0);
+  if (transaction_or.is_error()) {
     // In case of error, we still need to release this vnode because it's not possible to retry,
     // and we cannot block destruction. The inode will get cleaned up on next remount.
     fs_->VnodeRelease(this);
-    return status;
+    return transaction_or.take_error();
   }
   // The transaction may go async in journal layer. Hold the reference over this
   // vnode so that we keep the vnode around until the transaction is complete.
-  transaction->PinVnode(fbl::RefPtr(this));
+  transaction_or->PinVnode(fbl::RefPtr(this));
 
-  fs_->RemoveUnlinked(transaction.get(), this);
-  if ((status = Purge(transaction.get())) != ZX_OK) {
+  fs_->RemoveUnlinked(transaction_or.value().get(), this);
+  if (auto status = Purge(transaction_or.value().get()); status.is_error()) {
     return status;
   }
 
-  fs_->CommitTransaction(std::move(transaction));
-  return ZX_OK;
+  fs_->CommitTransaction(std::move(transaction_or.value()));
+  return zx::ok();
 }
 
 zx_status_t VnodeMinfs::CloseNode() {
@@ -412,27 +404,26 @@ zx_status_t VnodeMinfs::CloseNode() {
   // This vnode is unlinked and open_count() == 0. We don't need not flush the dirty
   // contents of the vnode to disk.
   DropCachedWrites();
-  return RemoveUnlinked();
+  return RemoveUnlinked().status_value();
 }
 
 // Internal read. Usable on directories.
-zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size_t len, size_t off,
-                                     size_t* actual) {
+zx::status<> VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size_t len, size_t off,
+                                      size_t* actual) {
   // clip to EOF
   if (off >= GetSize()) {
     *actual = 0;
-    return ZX_OK;
+    return zx::ok();
   }
   if (len > (GetSize() - off)) {
     len = GetSize() - off;
   }
 
-  zx_status_t status;
 #ifdef __Fuchsia__
-  if ((status = InitVmo()) != ZX_OK) {
-    return status;
-  } else if ((status = vmo_.read(vdata, off, len)) != ZX_OK) {
-    return status;
+  if (auto status = InitVmo(); status.is_error()) {
+    return status.take_error();
+  } else if (zx_status_t status = vmo_.read(vdata, off, len); status != ZX_OK) {
+    return zx::error(status);
   } else {
     *actual = len;
   }
@@ -450,15 +441,15 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
       xfer = len;
     }
 
-    blk_t bno;
-    if ((status = BlockGetReadable(n, &bno)) != ZX_OK) {
-      return status;
+    auto bno_or = BlockGetReadable(n);
+    if (bno_or.is_error()) {
+      return bno_or.take_error();
     }
-    if (bno != 0) {
+    if (bno_or.value() != 0) {
       char bdata[fs_->BlockSize()];
-      if (fs_->ReadDat(bno, bdata)) {
-        FX_LOGS(ERROR) << "Failed to read data block " << bno;
-        return ZX_ERR_IO;
+      if (auto status = fs_->ReadDat(bno_or.value(), bdata); status.is_error()) {
+        FX_LOGS(ERROR) << "Failed to read data block " << bno_or.value();
+        return zx::error(ZX_ERR_IO);
       }
       memcpy(data, bdata + adjust, xfer);
     } else {
@@ -473,26 +464,25 @@ zx_status_t VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size
   }
   *actual = data - start;
 #endif
-  return ZX_OK;
+  return zx::ok();
 }
 
 // Internal write. Usable on directories.
-zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* data, size_t len,
-                                      size_t off, size_t* actual) {
+zx::status<> VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* data, size_t len,
+                                       size_t off, size_t* actual) {
   // We should be called after validating offset and length. Assert if they are invalid.
   auto new_size_or = safemath::CheckAdd(len, off);
   ZX_ASSERT(new_size_or.IsValid() && new_size_or.ValueOrDie() <= kMinfsMaxFileSize);
 
   if (len == 0) {
     *actual = 0;
-    return ZX_OK;
+    return zx::ok();
   }
-  zx_status_t status;
 #ifdef __Fuchsia__
   // TODO(planders): Once we are splitting up write transactions, assert this on host as well.
   ZX_DEBUG_ASSERT(len <= TransactionLimits::kMaxWriteBytes);
-  if ((status = InitVmo()) != ZX_OK) {
-    return status;
+  if (auto status = InitVmo(); status.is_error()) {
+    return status.take_error();
   }
 
 #else
@@ -517,41 +507,43 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
     if ((xfer_off + xfer) > vmo_size_) {
       size_t new_size = fbl::round_up(xfer_off + xfer, fs_->BlockSize());
       ZX_DEBUG_ASSERT(new_size >= GetSize());  // Overflow.
-      if ((status = vmo_.set_size(new_size)) != ZX_OK) {
+      if (zx_status_t status = vmo_.set_size(new_size); status != ZX_OK) {
         break;
       }
       vmo_size_ = new_size;
     }
 
     // Update this block of the in-memory VMO
-    if ((status = vmo_.write(data, xfer_off, xfer)) != ZX_OK) {
+    if (zx_status_t status = vmo_.write(data, xfer_off, xfer); status != ZX_OK) {
       break;
     }
 
     if (!DirtyCacheEnabled()) {
       // Update this block on-disk
-      blk_t bno;
-      if ((status = BlockGetWritable(transaction, n, &bno))) {
+      auto bno_or = BlockGetWritable(transaction, n);
+      if (bno_or.is_error()) {
         break;
       }
 
-      IssueWriteback(transaction, n, bno + fs_->Info().dat_block, 1);
+      IssueWriteback(transaction, n, bno_or.value() + fs_->Info().dat_block, 1);
     }
 #else   // __Fuchsia__
-    blk_t bno;
-    if ((status = BlockGetWritable(transaction, n, &bno))) {
+    auto bno_or = BlockGetWritable(transaction, n);
+    if (bno_or.is_error()) {
       break;
     }
-    ZX_DEBUG_ASSERT(bno != 0);
+    ZX_DEBUG_ASSERT(bno_or.value() != 0);
     char wdata[fs_->BlockSize()];
-    if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, wdata)) {
+    if (auto status = fs_->bc_->Readblk(bno_or.value() + fs_->Info().dat_block, wdata);
+        status.is_error()) {
       break;
     }
     memcpy(wdata + adjust, data, xfer);
     if (len < fs_->BlockSize() && max_size >= GetSize()) {
       memset(wdata + adjust + xfer, 0, fs_->BlockSize() - (adjust + xfer));
     }
-    if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, wdata)) {
+    if (auto status = fs_->bc_->Writeblk(bno_or.value() + fs_->Info().dat_block, wdata);
+        status.is_error()) {
       break;
     }
 #endif  // __Fuchsia__
@@ -567,11 +559,11 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
     // If more than zero bytes were requested, but zero bytes were written,
     // return an error explicitly (rather than zero).
     if (off >= kMinfsMaxFileSize) {
-      return ZX_ERR_FILE_BIG;
+      return zx::error(ZX_ERR_FILE_BIG);
     }
 
     FX_LOGS_FIRST_N(WARNING, 10) << "Minfs::WriteInternal can't write any bytes.";
-    return ZX_ERR_NO_SPACE;
+    return zx::error(ZX_ERR_NO_SPACE);
   }
 
   if ((off + len) > GetSize()) {
@@ -581,7 +573,7 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* d
   *actual = len;
 
   ValidateVmoTail(GetSize());
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx_status_t VnodeMinfs::GetAttributes(fs::VnodeAttributes* a) {
@@ -623,14 +615,13 @@ zx_status_t VnodeMinfs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   // happen later.
   if (dirty && !DirtyCacheEnabled()) {
     // write to disk, but don't overwrite the time
-    zx_status_t status;
-    std::unique_ptr<Transaction> transaction;
-    if ((status = fs_->BeginTransaction(0, 0, &transaction)) != ZX_OK) {
-      return status;
+    auto transaction_or = fs_->BeginTransaction(0, 0);
+    if (transaction_or.is_error()) {
+      return transaction_or.status_value();
     }
-    InodeSync(transaction.get(), kMxFsSyncDefault);
-    transaction->PinVnode(fbl::RefPtr(this));
-    fs_->CommitTransaction(std::move(transaction));
+    InodeSync(transaction_or.value().get(), kMxFsSyncDefault);
+    transaction_or->PinVnode(fbl::RefPtr(this));
+    fs_->CommitTransaction(std::move(transaction_or.value()));
   }
   return ZX_OK;
 }
@@ -731,17 +722,16 @@ void VnodeMinfs::GetMountState(GetMountStateRequestView request,
 
 #endif
 
-zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
+zx::status<> VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
   // We should be called after validating length. Assert if len is unexpected.
   ZX_ASSERT(len <= kMinfsMaxFileSize);
 
-  zx_status_t status = ZX_OK;
 #ifdef __Fuchsia__
   // TODO(smklein): We should only init up to 'len'; no need
   // to read in the portion of a large file we plan on deleting.
-  if ((status = InitVmo()) != ZX_OK) {
-    FX_LOGS(ERROR) << "Truncate failed to initialize VMO: " << status;
-    return ZX_ERR_IO;
+  if (auto status = InitVmo(); status.is_error()) {
+    FX_LOGS(ERROR) << "Truncate failed to initialize VMO: " << status.status_value();
+    return zx::error(ZX_ERR_IO);
   }
 #endif
 
@@ -755,15 +745,16 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     // [start_bno, EOF) blocks should be deleted entirely.
     blk_t start_bno = static_cast<blk_t>((len % fs_->BlockSize() == 0) ? trunc_bno : trunc_bno + 1);
 
-    if ((status = BlocksShrink(transaction, start_bno)) != ZX_OK) {
-      return status;
+    if (auto shrink_or = BlocksShrink(transaction, start_bno); shrink_or.is_error()) {
+      return shrink_or.take_error();
     }
 
 #ifdef __Fuchsia__
     uint64_t decommit_offset = fbl::round_up(len, fs_->BlockSize());
     uint64_t decommit_length = fbl::round_up(inode_size, fs_->BlockSize()) - decommit_offset;
     if (decommit_length > 0) {
-      status = vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length, nullptr, 0);
+      zx_status_t status =
+          vmo_.op_range(ZX_VMO_OP_DECOMMIT, decommit_offset, decommit_length, nullptr, 0);
       if (status != ZX_OK) {
         // TODO(fxbug.dev/35948): This is a known issue; the additional logging here is to help
         // diagnose.
@@ -785,41 +776,48 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     if (len < GetSize()) {
       char bdata[fs_->BlockSize()];
       blk_t rel_bno = static_cast<blk_t>(len / fs_->BlockSize());
-      bno = 0;
-      if ((status = BlockGetReadable(rel_bno, &bno)) != ZX_OK) {
-        FX_LOGS(ERROR) << "Truncate failed to get block " << rel_bno << " of file: " << status;
-        return ZX_ERR_IO;
+
+      if (auto bno_or = BlockGetReadable(rel_bno); bno_or.is_ok()) {
+        bno = bno_or.value();
+      } else {
+        FX_LOGS(ERROR) << "Truncate failed to get block " << rel_bno
+                       << " of file: " << bno_or.status_value();
+        return zx::error(ZX_ERR_IO);
       }
 
       size_t adjust = len % fs_->BlockSize();
 #ifdef __Fuchsia__
       bool allocated = (bno != 0);
       if (allocated || HasPendingAllocation(rel_bno)) {
-        if ((status = vmo_.read(bdata, len - adjust, adjust)) != ZX_OK) {
+        if (zx_status_t status = vmo_.read(bdata, len - adjust, adjust); status != ZX_OK) {
           FX_LOGS(ERROR) << "Truncate failed to read last block: " << status;
-          return ZX_ERR_IO;
+          return zx::error(ZX_ERR_IO);
         }
         memset(bdata + adjust, 0, fs_->BlockSize() - adjust);
 
-        if ((status = vmo_.write(bdata, len - adjust, fs_->BlockSize())) != ZX_OK) {
+        if (zx_status_t status = vmo_.write(bdata, len - adjust, fs_->BlockSize());
+            status != ZX_OK) {
           FX_LOGS(ERROR) << "Truncate failed to write last block: " << status;
-          return ZX_ERR_IO;
+          return zx::error(ZX_ERR_IO);
         }
 
-        if ((status = BlockGetWritable(transaction, rel_bno, &bno)) != ZX_OK) {
-          FX_LOGS(ERROR) << "Truncate failed to get block " << rel_bno << " of file: " << status;
-          return ZX_ERR_IO;
+        if (auto bno_or = BlockGetWritable(transaction, rel_bno); bno_or.is_ok()) {
+          bno = bno_or.value();
+        } else {
+          FX_LOGS(ERROR) << "Truncate failed to get block " << rel_bno
+                         << " of file: " << bno_or.status_value();
+          return zx::error(ZX_ERR_IO);
         }
         IssueWriteback(transaction, rel_bno, bno + fs_->Info().dat_block, 1);
       }
 #else   // __Fuchsia__
       if (bno != 0) {
-        if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata)) {
-          return ZX_ERR_IO;
+        if (fs_->bc_->Readblk(bno + fs_->Info().dat_block, bdata).is_error()) {
+          return zx::error(ZX_ERR_IO);
         }
         memset(bdata + adjust, 0, fs_->BlockSize() - adjust);
-        if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, bdata)) {
-          return ZX_ERR_IO;
+        if (fs_->bc_->Writeblk(bno + fs_->Info().dat_block, bdata).is_error()) {
+          return zx::error(ZX_ERR_IO);
         }
       }
 #endif  // __Fuchsia__
@@ -827,24 +825,24 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
   } else if (len > inode_size) {
     // Truncate should make the file longer, filled with zeroes.
     if (kMinfsMaxFileSize < len) {
-      return ZX_ERR_INVALID_ARGS;
+      return zx::error(ZX_ERR_INVALID_ARGS);
     }
 #ifdef __Fuchsia__
     uint64_t new_size = fbl::round_up(len, fs_->BlockSize());
-    if ((status = vmo_.set_size(new_size)) != ZX_OK) {
-      return status;
+    if (zx_status_t status = vmo_.set_size(new_size); status != ZX_OK) {
+      return zx::error(status);
     }
     vmo_size_ = new_size;
 #endif
   } else {
-    return ZX_OK;
+    return zx::ok();
   }
 
   // Setting the size does not ensure the on-disk inode is updated. Ensuring
   // writeback occurs is the responsibility of the caller.
   SetSize(static_cast<uint32_t>(len));
   ValidateVmoTail(GetSize());
-  return ZX_OK;
+  return zx::ok();
 }
 
 #ifdef __Fuchsia__
@@ -870,7 +868,7 @@ void VnodeMinfs::Sync(SyncCallback closure) {
       cb(status);
       return;
     }
-    status = vn->fs_->bc_->Sync();
+    status = vn->fs_->bc_->Sync().status_value();
     cb(status);
   });
   return;

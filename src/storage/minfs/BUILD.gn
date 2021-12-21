@@ -69,6 +69,7 @@ static_library("minfs") {
     "//src/lib/storage/vfs/cpp/transaction",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/zxc",
   ]
   deps = [
     "//sdk/lib/fit",
@@ -80,7 +81,6 @@ static_library("minfs") {
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/operation",
     "//zircon/system/ulib/zircon-internal",
-    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
   ]
@@ -156,7 +156,6 @@ static_library("minfs") {
       "//zircon/system/ulib/sync",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
-      "//zircon/system/ulib/zx",
     ]
   } else {
     public += [ "host.h" ]

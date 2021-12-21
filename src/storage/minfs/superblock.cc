@@ -19,35 +19,32 @@
 
 namespace minfs {
 
-SuperblockManager::SuperblockManager(const Superblock* info, fzl::OwnedVmoMapper mapper)
+SuperblockManager::SuperblockManager(const Superblock& info, fzl::OwnedVmoMapper mapper)
     : mapping_(std::move(mapper)) {}
 
 SuperblockManager::~SuperblockManager() = default;
 
-// Static.
-zx_status_t SuperblockManager::Create(block_client::BlockDevice* device, const Superblock* info,
-                                      uint32_t max_blocks, IntegrityCheck checks,
-                                      std::unique_ptr<SuperblockManager>* out) {
-  zx_status_t status = ZX_OK;
+// static
+zx::status<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(
+    block_client::BlockDevice* device, const Superblock& info, uint32_t max_blocks,
+    IntegrityCheck checks) {
   if (checks == IntegrityCheck::kAll) {
-    status = CheckSuperblock(info, device, max_blocks);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "SuperblockManager::Create failed to check info: " << status;
-      return status;
+    if (auto status = CheckSuperblock(info, device, max_blocks); status.is_error()) {
+      FX_LOGS(ERROR) << "SuperblockManager::Create failed to check info: " << status.error_value();
+      return status.take_error();
     }
   }
 
   fzl::OwnedVmoMapper mapper;
   // Create the info vmo
-  if ((status = mapper.CreateAndMap(kMinfsBlockSize, "minfs-superblock")) != ZX_OK) {
-    return status;
+  if (auto status = mapper.CreateAndMap(kMinfsBlockSize, "minfs-superblock"); status != ZX_OK) {
+    return zx::error(status);
   }
 
-  memcpy(mapper.start(), info, sizeof(Superblock));
+  memcpy(mapper.start(), &info, sizeof(Superblock));
 
   auto sb = std::unique_ptr<SuperblockManager>(new SuperblockManager(info, std::move(mapper)));
-  *out = std::move(sb);
-  return ZX_OK;
+  return zx::ok(std::move(sb));
 }
 
 void SuperblockManager::Write(PendingWork* transaction, UpdateBackupSuperblock write_backup) {

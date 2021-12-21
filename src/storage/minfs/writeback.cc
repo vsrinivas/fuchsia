@@ -33,33 +33,32 @@
 
 namespace minfs {
 
-zx_status_t Transaction::Create(TransactionalFs* minfs, size_t reserve_inodes,
-                                size_t reserve_blocks, InodeManager* inode_manager,
-                                std::unique_ptr<Transaction>* out) {
+zx::status<std::unique_ptr<Transaction>> Transaction::Create(TransactionalFs* minfs,
+                                                             size_t reserve_inodes,
+                                                             size_t reserve_blocks,
+                                                             InodeManager* inode_manager) {
   auto transaction = std::make_unique<Transaction>(minfs, nullptr);
 
   if (reserve_inodes) {
     // The inode allocator is currently not accessed asynchronously.
     // However, acquiring the reservation may cause the superblock to be modified via extension,
     // so we still need to acquire the lock first.
-    zx_status_t status =
+    auto status =
         inode_manager->Reserve(transaction.get(), reserve_inodes, &transaction->inode_reservation_);
-    if (status != ZX_OK) {
-      return status;
+    if (status.is_error()) {
+      return status.take_error();
     }
   }
 
   if (reserve_blocks) {
-    zx_status_t status =
+    auto status =
         transaction->block_reservation_->ExtendReservation(transaction.get(), reserve_blocks);
-    if (status != ZX_OK) {
-      *out = std::move(transaction);
-      return status;
+    if (status.is_error()) {
+      return status.take_error();
     }
   }
 
-  *out = std::move(transaction);
-  return ZX_OK;
+  return zx::ok(std::move(transaction));
 }
 
 std::unique_ptr<Transaction> Transaction::FromCachedBlockTransaction(
@@ -128,7 +127,7 @@ void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer
 void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {}
 #endif
 
-zx_status_t Transaction::ExtendBlockReservation(size_t reserve_blocks) {
+zx::status<> Transaction::ExtendBlockReservation(size_t reserve_blocks) {
   return block_reservation_->ExtendReservation(this, reserve_blocks);
 }
 

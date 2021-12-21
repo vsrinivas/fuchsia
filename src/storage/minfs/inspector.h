@@ -34,8 +34,7 @@ class Inspector : public disk_inspector::DiskInspector {
 
  private:
   // Creates root DiskObject.
-  zx_status_t CreateRoot(std::unique_ptr<Bcache> bc,
-                         std::unique_ptr<disk_inspector::DiskObject>* out);
+  zx::status<std::unique_ptr<disk_inspector::DiskObject>> CreateRoot(std::unique_ptr<Bcache> bc);
 
   async_dispatcher_t* dispatcher_ = nullptr;
 

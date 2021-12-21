@@ -6,16 +6,16 @@
 
 namespace minfs {
 
-zx_status_t ResizeableVmoBuffer::Attach(const char* name, storage::VmoidRegistry* device) {
+zx::status<> ResizeableVmoBuffer::Attach(const char* name, storage::VmoidRegistry* device) {
   ZX_DEBUG_ASSERT(!vmoid_.IsAttached());
   zx_status_t status = vmo_.CreateAndMap(block_size_, name);
   if (status != ZX_OK)
-    return status;
-  return device->BlockAttachVmo(vmo_.vmo(), &vmoid_);
+    return zx::error(status);
+  return zx::make_status(device->BlockAttachVmo(vmo_.vmo(), &vmoid_));
 }
 
-zx_status_t ResizeableVmoBuffer::Detach(storage::VmoidRegistry* device) {
-  return device->BlockDetachVmo(std::move(vmoid_));
+zx::status<> ResizeableVmoBuffer::Detach(storage::VmoidRegistry* device) {
+  return zx::make_status(device->BlockDetachVmo(std::move(vmoid_)));
 }
 
 void ResizeableVmoBuffer::Zero(size_t index, size_t count) {

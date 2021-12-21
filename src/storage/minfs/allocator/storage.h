@@ -8,6 +8,8 @@
 #ifndef SRC_STORAGE_MINFS_ALLOCATOR_STORAGE_H_
 #define SRC_STORAGE_MINFS_ALLOCATOR_STORAGE_H_
 
+#include <lib/zx/status.h>
+
 #include <fbl/function.h>
 #include <fbl/macros.h>
 #include <storage/operation/operation.h>
@@ -25,7 +27,7 @@
 
 namespace minfs {
 
-using GrowMapCallback = fbl::Function<zx_status_t(size_t pool_size, size_t* old_pool_size)>;
+using GrowMapCallback = fbl::Function<zx::status<size_t>(size_t pool_size)>;
 
 // Interface for an Allocator's underlying storage.
 class AllocatorStorage {
@@ -36,7 +38,7 @@ class AllocatorStorage {
   virtual ~AllocatorStorage() {}
 
 #ifdef __Fuchsia__
-  virtual zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) = 0;
+  virtual zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) = 0;
 #endif
 
   // Loads data from disk into |data| using |builder|.
@@ -49,8 +51,8 @@ class AllocatorStorage {
   virtual void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) = 0;
 
   // Extend the on-disk extent containing map_.
-  virtual zx_status_t Extend(PendingWork* transaction, WriteData data,
-                             GrowMapCallback grow_map) = 0;
+  virtual zx::status<> Extend(PendingWork* transaction, WriteData data,
+                              GrowMapCallback grow_map) = 0;
 
   // Returns the number of unallocated elements.
   virtual uint32_t PoolAvailable() const = 0;
@@ -94,12 +96,12 @@ class PersistentStorage : public AllocatorStorage {
   ~PersistentStorage() {}
 
 #ifdef __Fuchsia__
-  zx_status_t AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) override;
+  zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) override;
 #endif
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final;
 
-  zx_status_t Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final;
+  zx::status<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final;
 
   uint32_t PoolAvailable() const final { return metadata_.PoolAvailable(); }
 

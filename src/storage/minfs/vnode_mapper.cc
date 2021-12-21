@@ -85,7 +85,7 @@ DeviceBlock ToDeviceBlock(VnodeMinfs* vnode, blk_t block) {
 BaseBufferView::Flusher GetDirectFlusher(VnodeMinfs* vnode, PendingWork* transaction) {
   return [vnode, transaction](BaseBufferView* view) {
     vnode->InodeSync(transaction, kMxFsSyncDefault);
-    return ZX_OK;
+    return zx::ok();
   };
 }
 
@@ -106,7 +106,7 @@ BaseBufferView::Flusher GetIndirectFlusher(VnodeMinfs* vnode, LazyBuffer* file,
                   .length = range.Length(),
               },
               buffer);
-          return ZX_OK;
+          return zx::ok();
         });
   };
 #else
@@ -116,21 +116,22 @@ BaseBufferView::Flusher GetIndirectFlusher(VnodeMinfs* vnode, LazyBuffer* file,
   // memory).
   return [vnode, file, transaction](BaseBufferView* view) {
     VnodeIndirectMapper mapper(vnode);
-    return file->Flush(
+    auto status = file->Flush(
         transaction, &mapper, view,
         [vnode](ResizeableBufferType* buffer, BlockRange range, DeviceBlock device_block) {
           return EnumerateBlocks(
               range, [vnode, buffer, range, device_block](BlockRange r) -> zx::status<uint64_t> {
-                zx_status_t status = vnode->Vfs()->GetMutableBcache()->Writeblk(
+                auto status = vnode->Vfs()->GetMutableBcache()->Writeblk(
                     static_cast<blk_t>(device_block.block() + (r.Start() - range.Start())),
                     buffer->Data(r.Start()));
-                if (status == ZX_OK) {
+                if (status.is_ok()) {
                   return zx::ok(1);
                 } else {
-                  return zx::error(status);
+                  return status.take_error();
                 }
               });
         });
+    return status;
   };
 #endif
 }
@@ -234,9 +235,9 @@ zx::status<DeviceBlockRange> VnodeIndirectMapper::MapForWrite(PendingWork* trans
     ZX_ASSERT(new_block != 0);
     view.mut_ref() = new_block;
     *allocated = true;
-    zx_status_t status = view.Flush();
-    if (status != ZX_OK)
-      return zx::error(status);
+    auto status = view.Flush();
+    if (status.is_error())
+      return status.take_error();
   } else {
     if (allocated)
       *allocated = false;
@@ -249,9 +250,9 @@ zx::status<DeviceBlockRange> VnodeIndirectMapper::MapForWrite(PendingWork* trans
 
 zx::status<std::pair<blk_t, uint64_t>> VnodeMapper::MapToBlk(BlockRange range) {
   VnodeIterator iterator;
-  zx_status_t status = iterator.Init(this, nullptr, range.Start());
-  if (status != ZX_OK)
-    return zx::error(status);
+  auto status = iterator.Init(this, nullptr, range.Start());
+  if (status.is_error())
+    return status.take_error();
   return zx::ok(std::make_pair(iterator.Blk(), iterator.GetContiguousBlockCount(range.Length())));
 }
 
@@ -265,8 +266,8 @@ zx::status<DeviceBlockRange> VnodeMapper::Map(BlockRange range) {
 
 // -- VnodeIterator --
 
-zx_status_t VnodeIterator::Init(VnodeMapper* mapper, PendingWork* transaction,
-                                uint64_t file_block) {
+zx::status<> VnodeIterator::Init(VnodeMapper* mapper, PendingWork* transaction,
+                                 uint64_t file_block) {
   mapper_ = mapper;
   transaction_ = transaction;
   file_block_ = file_block;
@@ -276,53 +277,52 @@ zx_status_t VnodeIterator::Init(VnodeMapper* mapper, PendingWork* transaction,
   if (file_block < VnodeMapper::kIndirectFileStartBlock) {
     // We only need the dnum pointers.
     level_count_ = 1;
-    zx_status_t status =
+    auto status =
         InitializeLevel(0, BlockPointerRange(0, kMinfsDirect), file_block, &GetInodeDirectView);
-    if (status != ZX_OK)
+    if (status.is_error())
       return status;
   } else if (file_block < VnodeMapper::kDoubleIndirectFileStartBlock) {
     // We need the inum pointers and the blocks they point to.
     level_count_ = 2;
     uint64_t relative_block = file_block - VnodeMapper::kIndirectFileStartBlock;
-    zx_status_t status =
-        InitializeLevel(1, BlockPointerRange(0, kMinfsIndirect),
-                        relative_block / kMinfsDirectPerIndirect, &GetInodeIndirectView);
-    if (status != ZX_OK)
+    auto status = InitializeLevel(1, BlockPointerRange(0, kMinfsIndirect),
+                                  relative_block / kMinfsDirectPerIndirect, &GetInodeIndirectView);
+    if (status.is_error())
       return status;
     status = InitializeIndirectLevel(0, relative_block);
-    if (status != ZX_OK)
+    if (status.is_error())
       return status;
   } else if (file_block < VnodeMapper::kMaxBlocks) {
     // We need the dinum pointers and two more levels.
     level_count_ = 3;
     uint64_t relative_block = file_block - VnodeMapper::kDoubleIndirectFileStartBlock;
-    zx_status_t status =
+    auto status =
         InitializeLevel(2, BlockPointerRange(0, kMinfsDoublyIndirect),
                         relative_block / kMinfsDirectPerIndirect / kMinfsDirectPerIndirect,
                         &GetInodeDoubleIndirectView);
-    if (status != ZX_OK)
+    if (status.is_error())
       return status;
     status = InitializeIndirectLevel(
         1, relative_block / kMinfsDirectPerIndirect + kDoubleIndirectViewStart);
-    if (status != ZX_OK)
+    if (status.is_error())
       return status;
     status = InitializeIndirectLevel(0, relative_block + kDoubleIndirectLeafViewStart);
-    if (status != ZX_OK)
+    if (status.is_error())
       return status;
   } else if (file_block == VnodeMapper::kMaxBlocks) {
     // Allow the iterator to point at the end.
     level_count_ = 0;
   } else {
-    return ZX_ERR_OUT_OF_RANGE;
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 // Here |range| and |block| are blocks relative to the base of the pointers we are looking at, which
 // could be the dnum, inum, dinum pointers or the pointers in the virtual indirect file. |block|
 // must be contained within |range|.
-zx_status_t VnodeIterator::InitializeLevel(int level, BlockPointerRange range, uint64_t block,
-                                           ViewGetter view_getter) {
+zx::status<> VnodeIterator::InitializeLevel(int level, BlockPointerRange range, uint64_t block,
+                                            ViewGetter view_getter) {
   ZX_ASSERT(block >= range.Start() && block < range.End());
   levels_[level].range = range;
   levels_[level].count = range.End() - range.Start();
@@ -334,36 +334,36 @@ zx_status_t VnodeIterator::InitializeLevel(int level, BlockPointerRange range, u
   } else {
     zx::status<BufferView<blk_t>> view = view_getter(transaction_, &mapper_->vnode(), range);
     if (view.is_error())
-      return view.status_value();
+      return view.take_error();
     levels_[level].view = std::move(view).value();
     levels_[level].view_getter = nullptr;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
 // Convenience function for levels that point to the virtual indirect file. Here |relative_block| is
 // the pointer offset within the virtual indirect file.
-zx_status_t VnodeIterator::InitializeIndirectLevel(int level, uint64_t relative_block) {
+zx::status<> VnodeIterator::InitializeIndirectLevel(int level, uint64_t relative_block) {
   uint64_t first_block = fbl::round_down(relative_block, kMinfsDirectPerIndirect);
   return InitializeLevel(level,
                          BlockPointerRange(first_block, first_block + kMinfsDirectPerIndirect),
                          relative_block, &GetViewForIndirectFile);
 }
 
-zx_status_t VnodeIterator::SetBlk(Level* level, blk_t block) {
+zx::status<> VnodeIterator::SetBlk(Level* level, blk_t block) {
   ZX_ASSERT(level_count_ > 0);
   // If this level is sparse, try and get a view for it now.
   if (level->IsSparse()) {
     if (block == 0)
-      return ZX_OK;
+      return zx::ok();
     zx::status<BufferView<blk_t>> view =
         level->view_getter(transaction_, &mapper_->vnode(), level->range);
     if (view.is_error())
-      return view.status_value();
+      return view.take_error();
     level->view = std::move(view).value();
   }
   level->view.mut_ref(level->index) = block;
-  return ZX_OK;
+  return zx::ok();
 }
 
 uint64_t VnodeIterator::GetContiguousBlockCount(uint64_t max_blocks) const {
@@ -415,9 +415,9 @@ uint64_t VnodeIterator::ComputeContiguousBlockCount() const {
   }
 }
 
-zx_status_t VnodeIterator::FlushLevel(int level) {
+zx::status<> VnodeIterator::FlushLevel(int level) {
   if (!transaction_)
-    return ZX_OK;
+    return zx::ok();
   if (level + 1 < level_count_) {
     const blk_t parent_block = levels_[level + 1].blk();
     // If this block is now empty and we have a parent, deallocate rather than writing block. As an
@@ -435,9 +435,9 @@ zx_status_t VnodeIterator::FlushLevel(int level) {
       if (empty) {
         // Delete the block and update the parent.
         mapper_->vnode().DeleteBlock(transaction_, 0, parent_block, /*indirect=*/true);
-        SetBlk(&levels_[level + 1], 0);
+        [[maybe_unused]] auto status = SetBlk(&levels_[level + 1], 0);
         levels_[level].view.set_dirty(false);
-        return ZX_OK;
+        return zx::ok();
       }
     }
     // If there are modifications and the parent doesn't have a block, allocate it now. This isn't
@@ -448,26 +448,26 @@ zx_status_t VnodeIterator::FlushLevel(int level) {
       blk_t new_block;
       mapper_->vnode().AllocateIndirect(transaction_, &new_block);
       ZX_ASSERT(new_block != 0);
-      SetBlk(&levels_[level + 1], new_block);
+      [[maybe_unused]] auto status = SetBlk(&levels_[level + 1], new_block);
     }
   }
   return levels_[level].view.Flush();
 }
 
-zx_status_t VnodeIterator::Flush() {
+zx::status<> VnodeIterator::Flush() {
   if (!transaction_)
-    return ZX_OK;  // Iterator is read-only.
+    return zx::ok();  // Iterator is read-only.
   for (int level = 0; level < level_count_; ++level) {
-    zx_status_t status = FlushLevel(level);
-    if (status != ZX_OK)
+    auto status = FlushLevel(level);
+    if (status.is_error())
       return status;
   }
-  return ZX_OK;
+  return zx::ok();
 }
 
-zx_status_t VnodeIterator::Advance(const uint64_t advance) {
+zx::status<> VnodeIterator::Advance(const uint64_t advance) {
   if (level_count_ == 0) {
-    return advance == 0 ? ZX_OK : ZX_ERR_BAD_STATE;
+    return advance == 0 ? zx::ok() : zx::make_status(ZX_ERR_BAD_STATE);
   }
   // Short circuit for the common case.
   if (advance < levels_[0].remaining()) {
@@ -478,18 +478,18 @@ zx_status_t VnodeIterator::Advance(const uint64_t advance) {
     } else {
       contiguous_block_count_ -= advance;
     }
-    return ZX_OK;
+    return zx::ok();
   }
   // Get a new iterator for the new file block.
   VnodeIterator iterator;
-  zx_status_t status = iterator.Init(mapper_, transaction_, file_block_ + advance);
-  if (status != ZX_OK)
+  auto status = iterator.Init(mapper_, transaction_, file_block_ + advance);
+  if (status.is_error())
     return status;
   // Now see which of the old views need flushing.
   if (iterator.level_count_ != level_count_) {
     // The level count is different so we flush all of the levels.
     status = Flush();
-    if (status != ZX_OK)
+    if (status.is_error())
       return status;
   } else {
     // If the two iterators have the same view for a level, just move the view. This prevents us
@@ -502,13 +502,13 @@ zx_status_t VnodeIterator::Advance(const uint64_t advance) {
         iterator.levels_[level].view = std::move(levels_[level].view);
       } else {
         status = FlushLevel(level);
-        if (status != ZX_OK)
+        if (status.is_error())
           return status;
       }
     }
   }
   *this = std::move(iterator);
-  return ZX_OK;
+  return zx::ok();
 }
 
 }  // namespace minfs

@@ -38,10 +38,10 @@ TEST(BufferViewTest, FlushOnCleanViewIssuesNoFlush) {
   bool flushed = false;
   BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 4, [&](BaseBufferView* view) {
     flushed = true;
-    return ZX_OK;
+    return zx::ok();
   });
 
-  EXPECT_EQ(view.Flush(), ZX_OK);
+  EXPECT_TRUE(view.Flush().is_ok());
 
   EXPECT_FALSE(flushed);
 }
@@ -55,7 +55,7 @@ TEST(BufferViewTest, FlushOnDirtyViewIssuesFlush) {
   BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), kIndex, kLength,
                             [&](BaseBufferView* view) {
                               flushed = true;
-                              return ZX_OK;
+                              return zx::ok();
                             });
   static const uint32_t kData = 0xfacef00d;
   view.mut_ref(2) = kData;
@@ -63,7 +63,7 @@ TEST(BufferViewTest, FlushOnDirtyViewIssuesFlush) {
   EXPECT_TRUE(view.dirty());
   EXPECT_EQ(kData, view[2]);
 
-  EXPECT_EQ(view.Flush(), ZX_OK);
+  EXPECT_TRUE(view.Flush().is_ok());
 
   EXPECT_TRUE(flushed);
 }
@@ -74,12 +74,12 @@ TEST(BufferViewTest, FlushOnDirtyViewSetsStateToClean) {
   bool flushed = false;
   BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 4, [&](BaseBufferView* view) {
     flushed = true;
-    return ZX_OK;
+    return zx::ok();
   });
   view.mut_ref(3) = 0x12345678;
 
   view.set_dirty(false);
-  EXPECT_EQ(view.Flush(), ZX_OK);
+  EXPECT_TRUE(view.Flush().is_ok());
 
   EXPECT_FALSE(flushed);
 }
@@ -88,7 +88,7 @@ TEST(BufferViewTest, Move) {
   std::array<uint8_t, kArraySize> array;
   array.fill(kFill);
   BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3,
-                            [&](BaseBufferView* view) { return ZX_OK; });
+                            [&](BaseBufferView* view) { return zx::ok(); });
   static const uint32_t kData = 0xfacef00d;
   view.mut_ref(2) = kData;
   EXPECT_TRUE(view.dirty());
@@ -114,7 +114,7 @@ TEST(BufferViewDeathTest, OutOfRangeWriteAsserts) {
   auto test = [] {
     std::array<uint8_t, kArraySize> array;
     BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3,
-                              [&](BaseBufferView* view) { return ZX_OK; });
+                              [&](BaseBufferView* view) { return zx::ok(); });
     view.mut_ref(7) = 1;
     view.set_dirty(false);
   };
@@ -134,7 +134,7 @@ TEST(BufferViewDeathTest, DestructorWithDirtyStateAssertsFlushed) {
   auto test = [] {
     std::array<uint8_t, kArraySize> array;
     BufferView<uint32_t> view(BufferPtr::FromMemory(array.data()), 13, 3,
-                              [&](BaseBufferView* view) { return ZX_OK; });
+                              [&](BaseBufferView* view) { return zx::ok(); });
     view.mut_ref() = 10;
   };
   ASSERT_DEATH(test(), _);

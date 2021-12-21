@@ -39,9 +39,9 @@ namespace {
 
 int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
   if (options.readonly_after_initialization) {
-    return minfs::Fsck(std::move(bc), minfs::FsckOptions());
+    return minfs::Fsck(std::move(bc), minfs::FsckOptions()).status_value();
   }
-  return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
+  return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true}).status_value();
 }
 
 using minfs::ServeLayout;
@@ -103,7 +103,7 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
 }
 
 int Mkfs(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) {
-  return minfs::Mkfs(options, bc.get());
+  return minfs::Mkfs(options, bc.get()).status_value();
 }
 
 struct Command {
@@ -143,16 +143,16 @@ int usage(const std::vector<Command>& commands) {
 int CreateBcacheUpdatingOptions(std::unique_ptr<block_client::RemoteBlockDevice> device,
                                 minfs::MountOptions* options,
                                 std::unique_ptr<minfs::Bcache>* out_bcache) {
-  std::unique_ptr<minfs::Bcache> bc;
-  bool readonly_device = false;
-  if (CreateBcache(std::move(device), &readonly_device, &bc) != ZX_OK) {
+  auto bc_or = minfs::CreateBcache(std::move(device));
+  if (bc_or.is_error()) {
     fprintf(stderr, "minfs: error: cannot create block cache\n");
     FX_LOGS(ERROR) << "cannot create block cache";
     return EXIT_FAILURE;
   }
-  options->readonly_after_initialization |= readonly_device;
-  options->repair_filesystem &= !readonly_device;
-  *out_bcache = std::move(bc);
+
+  options->readonly_after_initialization |= bc_or->is_read_only;
+  options->repair_filesystem &= !bc_or->is_read_only;
+  *out_bcache = std::move(bc_or->bcache);
   return 0;
 }
 
