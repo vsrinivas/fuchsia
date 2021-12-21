@@ -71,7 +71,7 @@ func newConn(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, b
 	go func() {
 		defer func() {
 			if err := s.Close(); err != nil {
-				logger.Debugf(ctx, "error closing keepalive session: %s", err)
+				logger.Warningf(ctx, "Unexpected error closing keepalive session: %s", err)
 			}
 		}()
 
@@ -246,7 +246,7 @@ func (c *Conn) Start(ctx context.Context, command []string, stdout io.Writer, st
 
 	if err := session.Start(ctx, command); err != nil {
 		if err := session.Close(); err != nil {
-			logger.Debugf(ctx, "closing ssh session: %s", err)
+			logger.Debugf(ctx, "Error closing ssh session: %s", err)
 		}
 		return nil, err
 	}
@@ -262,7 +262,7 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 	}
 	defer func() {
 		if err := session.Close(); err != nil {
-			logger.Debugf(ctx, "closing ssh session: %s", err)
+			logger.Debugf(ctx, "Error closing ssh session: %s", err)
 		}
 	}()
 
@@ -420,7 +420,16 @@ type Session struct {
 }
 
 func (s *Session) Close() error {
-	return s.session.Close()
+	if err := s.session.Close(); err != nil {
+		// These errors almost always happen because the connection was already
+		// closed, which happens when the connection is shut down normally. So
+		// we should swallow them, effectively making Close() idempotent.
+		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *Session) Start(ctx context.Context, command []string) error {
