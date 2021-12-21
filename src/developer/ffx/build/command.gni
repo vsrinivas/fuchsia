@@ -5,7 +5,7 @@
 # Generates FFX subcommand with a plugin commands
 #
 
-import("//build/python/python.gni")
+import("//build/python/python_action.gni")
 
 template("command") {
   output_name = target_name
@@ -24,15 +24,14 @@ template("command") {
 
   generated_file = "$target_gen_dir/" + output_name
 
-  template = "//src/developer/ffx/build/templates/command.md"
-  lib_str = string_join(",", libraries)
-  action(target_name) {
-    script = "${root_out_dir}/obj/src/developer/ffx/build/gn_generate_cmd.pyz"
+  python_action(target_name) {
+    binary_label = "//src/developer/ffx/build:gn_generate_cmd"
+    template = "//src/developer/ffx/build/templates/command.md"
     args = [
       "--out",
       rebase_path(generated_file, root_build_dir),
       "--deps",
-      lib_str,
+      string_join(",", libraries),
       "--template",
       rebase_path(template, root_build_dir),
     ]

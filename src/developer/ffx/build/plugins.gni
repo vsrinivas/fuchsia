@@ -5,7 +5,7 @@
 # Generates FFX subcommand with a plugin commands
 #
 
-import("//build/python/python.gni")
+import("//build/python/python_action.gni")
 
 template("plugins") {
   output_name = target_name
@@ -63,9 +63,8 @@ template("plugins") {
     ]
   }
 
-  action(target_name) {
-    script =
-        "${root_out_dir}/obj/src/developer/ffx/build/gn_generate_plugins.pyz"
+  python_action(target_name) {
+    binary_label = "//src/developer/ffx/build:gn_generate_plugins"
     template = "//src/developer/ffx/build/templates/plugins.md"
     args = script_args + [
              "--template",
