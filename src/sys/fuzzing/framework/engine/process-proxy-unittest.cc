@@ -158,9 +158,7 @@ TEST_F(ProcessProxyTest, GetStats) {
   impl.GetStats(&stats);
   EXPECT_EQ(stats.koid, basic_info.koid);
   EXPECT_GE(stats.mem_mapped_bytes, task_stats.mem_mapped_bytes);
-  EXPECT_GE(stats.mem_private_bytes, task_stats.mem_private_bytes);
-  EXPECT_EQ(stats.mem_shared_bytes, task_stats.mem_shared_bytes);
-  EXPECT_EQ(stats.mem_scaled_shared_bytes, task_stats.mem_scaled_shared_bytes);
+  EXPECT_NE(stats.mem_private_bytes, 0U);
   EXPECT_GE(stats.cpu_time, task_runtime.cpu_time);
   EXPECT_GE(stats.page_fault_time, task_runtime.page_fault_time);
   EXPECT_GE(stats.lock_contention_time, task_runtime.lock_contention_time);
