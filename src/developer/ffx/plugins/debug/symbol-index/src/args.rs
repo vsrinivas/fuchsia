@@ -9,7 +9,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "symbol-index",
-    description = "manages symbol-index",
+    description = "manage symbol sources used by other debug commands",
     note = "symbol-index is a global configuration used by debugging tools to locate
 symbol files."
 )]

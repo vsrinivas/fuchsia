@@ -48,7 +48,7 @@ impl ProcessArguments {
 pub async fn fidlcat(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_fidlcat_args::FidlcatCommand,
-) -> Result<()> {
+) -> Result<i32> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
         log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
@@ -106,6 +106,8 @@ pub async fn fidlcat(
         arguments.add_flag("--quit-agent-on-exit", true);
     }
 
+    arguments.arguments.extend(cmd.extra_args);
+
     // Start fidlcat locally.
     let mut fidlcat = Command::new(&fidlcat_path).args(&arguments.arguments).spawn()?;
 
@@ -119,11 +121,7 @@ pub async fn fidlcat(
     });
 
     if let Some(exit_code) = unblock(move || fidlcat.wait()).await?.code() {
-        if exit_code == 0 {
-            Ok(())
-        } else {
-            Err(ffx_error!("fidlcat exits with code {}", exit_code).into())
-        }
+        Ok(exit_code)
     } else {
         Err(ffx_error!("fidlcat terminated by signal").into())
     }

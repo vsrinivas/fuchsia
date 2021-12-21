@@ -7,7 +7,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 /// Options for "ffx debug symbolize".
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "symbolize", description = "symbolize a log")]
+#[argh(subcommand, name = "symbolize", description = "symbolize backtraces in markup format")]
 pub struct SymbolizeCommand {
     /// extra arguments passed to the symbolizer. Any arguments starting with "-" must be after a "--" separator.
     #[argh(positional)]

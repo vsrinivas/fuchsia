@@ -16,9 +16,9 @@ pub use debug_agent::DebugAgentSocket;
 pub async fn run(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_run_args::RunCommand,
-) -> Result<()> {
+) -> Result<i32> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
-        log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
+        eprintln!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
 
     let socket = DebugAgentSocket::create(debugger_proxy)?;
@@ -29,10 +29,7 @@ pub async fn run(
         socket.unix_socket_path().to_owned().into(),
         "--quit-agent-on-exit".to_owned().into(),
     ];
-
-    // This is a very inaccurate way to split a string into arguments.
-    // A more sophisticated solution is to use something similar to shlex.
-    args.extend(cmd.zxdb_args.iter().flat_map(|a| a.split(" ").map(|s| s.to_owned().into())));
+    args.extend(cmd.zxdb_args.into_iter().map(|s| s.into()));
 
     let mut zxdb = Command::new(zxdb_path).args(args).spawn()?;
 
@@ -44,11 +41,7 @@ pub async fn run(
     });
 
     if let Some(exit_code) = unblock(move || zxdb.wait()).await?.code() {
-        if exit_code == 0 {
-            Ok(())
-        } else {
-            Err(ffx_error!("zxdb exits with code {}", exit_code).into())
-        }
+        Ok(exit_code)
     } else {
         Err(ffx_error!("zxdb terminated by signal").into())
     }

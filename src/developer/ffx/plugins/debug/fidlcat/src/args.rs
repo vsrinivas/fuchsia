@@ -7,11 +7,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 /// Options for "ffx debug fidl".
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(
-    subcommand,
-    name = "fidl",
-    description = "uses fidlcat to automatically manage breakpoints to trace the fidl messages and/or the syscalls"
-)]
+#[argh(subcommand, name = "fidl", description = "monitor FIDL traffic on the target")]
 pub struct FidlcatCommand {
     /// specifies the source.
     /// Source can be:
@@ -189,4 +185,8 @@ pub struct FidlcatCommand {
     /// This option can be specified multiple times.
     #[argh(option)]
     pub remote_job_name: Vec<String>,
+
+    /// extra arguments passed to fidlcat. Any arguments starting with "-" must be after a "--" separator.
+    #[argh(positional)]
+    pub extra_args: Vec<String>,
 }

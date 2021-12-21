@@ -7,9 +7,9 @@ use {argh::FromArgs, ffx_core::ffx_command};
 /// Options for "ffx debug run".
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "run", description = "start a debugging session")]
+#[argh(subcommand, name = "run", description = "start the debugger and connect to the target")]
 pub struct RunCommand {
-    /// extra arguments passed to zxdb
-    #[argh(option)]
+    /// extra arguments passed to zxdb. Any arguments starting with "-" must be after a "--" separator.
+    #[argh(positional)]
     pub zxdb_args: Vec<String>,
 }
