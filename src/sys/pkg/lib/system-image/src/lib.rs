@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod cache_packages;
 mod errors;
 mod non_static_allowlist;
 mod path_hash_mapping;
+mod system_image;
 
 pub use crate::{
-    errors::{AllowListError, PathHashMappingError},
+    cache_packages::CachePackages,
+    errors::{AllowListError, CachePackagesInitError, PathHashMappingError},
     non_static_allowlist::NonStaticAllowList,
-    path_hash_mapping::{CachePackages, StaticPackages},
+    path_hash_mapping::{Cache, PathHashMapping, StaticPackages},
+    system_image::{ExecutabilityRestrictions, SystemImage},
 };
 
 static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";

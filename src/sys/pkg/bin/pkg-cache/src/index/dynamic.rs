@@ -243,10 +243,16 @@ pub async fn load_cache_packages(
     // with *only* blobs that are readable, i.e. blobs for which the `USER_0` signal is set (which
     // is currently checked per-package per-blob by `blobfs.filter_to_missing_blobs()`). Would need
     // to confirm with the storage team that blobfs meets this requirement.
-    for (path, hash) in cache_packages.contents() {
+    // TODO(fxb/90656): ensure non-fuchsia.com URLs are correctly handled in dynamic index.
+    for url in cache_packages.contents() {
+        let hash = url.package_hash();
+        let path = PackagePath::from_name_and_variant(
+            url.name().clone(),
+            url.variant().unwrap_or(&fuchsia_pkg::PackageVariant::zero()).clone(),
+        );
         let required_blobs = match super::enumerate_package_blobs(blobfs, &hash).await {
             Ok(Some((path_from_far, required_blobs))) => {
-                if path_from_far != *path {
+                if path_from_far != path {
                     fx_log_err!(
                         "load_cache_packages: path mismatch for {} from manifest {} from far {}",
                         hash,
@@ -271,23 +277,23 @@ pub async fn load_cache_packages(
         if !blobfs.filter_to_missing_blobs(&required_blobs).await.is_empty() {
             continue;
         }
-        let () = index.start_install(*hash);
-        if let Err(e) = index.fulfill_meta_far(*hash, path.clone(), required_blobs) {
+        let () = index.start_install(hash);
+        if let Err(e) = index.fulfill_meta_far(hash, path, required_blobs) {
             fx_log_err!(
                 "load_cache_packages: fulfill_meta_far of {} failed: {:#}",
                 hash,
                 anyhow!(e)
             );
-            let () = index.cancel_install(hash);
+            let () = index.cancel_install(&hash);
             continue;
         }
-        if let Err(e) = index.complete_install(*hash) {
+        if let Err(e) = index.complete_install(hash) {
             fx_log_err!(
                 "load_cache_packages: complete_install of {} failed: {:#}",
                 hash,
                 anyhow!(e)
             );
-            let () = index.cancel_install(hash);
+            let () = index.cancel_install(&hash);
             continue;
         }
     }
@@ -358,6 +364,7 @@ mod tests {
         super::*,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::PackageBuilder,
+        fuchsia_url::pkg_url::PinnedPkgUrl,
         maplit::{hashmap, hashset},
         matches::assert_matches,
         std::str::FromStr,
@@ -688,13 +695,30 @@ mod tests {
         blobfs_dir.remove_file(missing_meta_far.contents().0.merkle.to_string()).unwrap();
 
         let cache_packages = CachePackages::from_entries(vec![
-            ("present0/0".parse().unwrap(), *present_package0.meta_far_merkle_root()),
-            (
-                "missing-content-blob/0".parse().unwrap(),
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/present0/0".to_string(),
+                *present_package0.meta_far_merkle_root(),
+            )
+            .unwrap(),
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/missing-content-blob/0".to_string(),
                 *missing_content_blob.meta_far_merkle_root(),
-            ),
-            ("missing-meta-far/0".parse().unwrap(), *missing_meta_far.meta_far_merkle_root()),
-            ("present1/0".parse().unwrap(), *present_package1.meta_far_merkle_root()),
+            )
+            .unwrap(),
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/missing-meta-far/0".to_string(),
+                *missing_meta_far.meta_far_merkle_root(),
+            )
+            .unwrap(),
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/present1/0".to_string(),
+                *present_package1.meta_far_merkle_root(),
+            )
+            .unwrap(),
         ]);
 
         let mut dynamic_index =

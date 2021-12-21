@@ -52,6 +52,7 @@ rustc_binary("bin") {
 
   test_deps = [
     "//garnet/lib/rust/files_async",
+    "//src/lib/fuchsia-url",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//third_party/rust_crates:maplit",

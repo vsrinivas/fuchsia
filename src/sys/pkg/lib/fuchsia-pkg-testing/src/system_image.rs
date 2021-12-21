@@ -6,15 +6,18 @@ use {
     crate::{Package, PackageBuilder},
     fuchsia_merkle::Hash,
     fuchsia_pkg::PackagePath,
+    fuchsia_url::pkg_url::PinnedPkgUrl,
     std::future::Future,
     system_image::{CachePackages, StaticPackages},
 };
+
+const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
 
 /// Builds a system_image package.
 #[derive(Default)]
 pub struct SystemImageBuilder<'a> {
     static_packages: Option<Vec<(PackagePath, Hash)>>,
-    cache_packages: Option<Vec<(PackagePath, Hash)>>,
+    cache_packages: Option<Vec<PinnedPkgUrl>>,
     pkgfs_non_static_packages_allowlist: Option<&'a [&'a str]>,
     pkgfs_disable_executability_restrictions: bool,
 }
@@ -42,7 +45,10 @@ impl<'a> SystemImageBuilder<'a> {
     /// Appends the given path and hash to the cache packages manifest, creating the manifest if it
     /// was not already staged to be added to the package.
     pub fn cache_package(mut self, path: PackagePath, hash: Hash) -> Self {
-        self.cache_packages.get_or_insert_with(Vec::new).push((path, hash));
+        let pinned_url =
+            PinnedPkgUrl::new_package(DEFAULT_PACKAGE_DOMAIN.to_string(), path.to_string(), hash)
+                .unwrap();
+        self.cache_packages.get_or_insert_with(Vec::new).push(pinned_url);
         self
     }
 
@@ -50,7 +56,7 @@ impl<'a> SystemImageBuilder<'a> {
     /// calling [`Self::cache_package`].
     pub fn cache_packages(mut self, cache_packages: &[&Package]) -> Self {
         assert_eq!(self.cache_packages, None);
-        self.cache_packages = Some(Self::packages_to_entries(cache_packages));
+        self.cache_packages = Some(Self::packages_to_urls(cache_packages));
         self
     }
 
@@ -80,6 +86,19 @@ impl<'a> SystemImageBuilder<'a> {
             .collect()
     }
 
+    fn packages_to_urls(pkgs: &[&Package]) -> Vec<PinnedPkgUrl> {
+        pkgs.iter()
+            .map(|pkg| {
+                PinnedPkgUrl::new_package(
+                    DEFAULT_PACKAGE_DOMAIN.to_string(),
+                    format!("/{}/{}", pkg.name(), fuchsia_url::pkg_url::PackageVariant::zero()),
+                    *pkg.meta_far_merkle_root(),
+                )
+                .unwrap()
+            })
+            .collect()
+    }
+
     /// Build the system_image package.
     pub fn build(&self) -> impl Future<Output = Package> {
         let mut builder = PackageBuilder::new("system_image");
@@ -92,7 +111,10 @@ impl<'a> SystemImageBuilder<'a> {
 
         if let Some(cache_packages) = &self.cache_packages {
             bytes.clear();
-            CachePackages::from_entries(cache_packages.clone()).serialize(&mut bytes).unwrap();
+            serlialize_cache_packages(
+                CachePackages::from_entries(cache_packages.to_vec()),
+                &mut bytes,
+            );
             builder = builder.add_resource_at("data/cache_packages", bytes.as_slice());
         }
 
@@ -110,5 +132,16 @@ impl<'a> SystemImageBuilder<'a> {
         }
 
         async move { builder.build().await.unwrap() }
+    }
+}
+
+fn serlialize_cache_packages(cache_packages: CachePackages, mut writer: impl std::io::Write) {
+    for url in cache_packages.contents() {
+        let package_hash = url.package_hash();
+        let path = fuchsia_pkg::PackagePath::from_name_and_variant(
+            url.name().clone(),
+            url.variant().unwrap_or(&fuchsia_pkg::PackageVariant::zero()).clone(),
+        );
+        writeln!(&mut writer, "{}={}", path, package_hash).unwrap();
     }
 }

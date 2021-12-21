@@ -965,11 +965,9 @@ async fn serve_cache_package_index(
     let package_entries = match &*cache_packages {
         Some(cache_packages) => cache_packages
             .contents()
-            .map(|(path, hash)| PackageIndexEntry {
-                package_url: PackageUrl {
-                    url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
-                },
-                meta_far_blob_id: BlobId::from(hash.clone()).into(),
+            .map(|package_url| PackageIndexEntry {
+                package_url: PackageUrl { url: package_url.strip_variant_and_hash().to_string() },
+                meta_far_blob_id: BlobId::from(package_url.package_hash()).into(),
             })
             .collect::<Vec<PackageIndexEntry>>(),
         None => vec![],
@@ -2939,19 +2937,25 @@ mod serve_base_package_index_tests {
 
 #[cfg(test)]
 mod serve_cache_package_index_tests {
-    use {super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_pkg::PackagePath};
+    use {
+        super::*, fidl_fuchsia_pkg::PackageIndexIteratorMarker, fuchsia_url::pkg_url::PinnedPkgUrl,
+    };
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn cache_packages_entries_converted_correctly() {
         let cache_packages = system_image::CachePackages::from_entries(vec![
-            (
-                PackagePath::from_name_and_variant("name0".parse().unwrap(), "0".parse().unwrap()),
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/name0/0".to_string(),
                 Hash::from([0u8; 32]),
-            ),
-            (
-                PackagePath::from_name_and_variant("name1".parse().unwrap(), "1".parse().unwrap()),
+            )
+            .unwrap(),
+            PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/name1/1".to_string(),
                 Hash::from([1u8; 32]),
-            ),
+            )
+            .unwrap(),
         ]);
 
         let (proxy, stream) =

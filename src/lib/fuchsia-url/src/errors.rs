@@ -36,6 +36,9 @@ pub enum ParseError {
     #[error("invalid variant")]
     InvalidVariant(#[source] PackagePathSegmentError),
 
+    #[error("missing hash")]
+    MissingHash,
+
     #[error("invalid hash")]
     InvalidHash(#[source] fuchsia_hash::ParseHashError),
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{index::PackageIndex, ExecutabilityRestrictions},
+    crate::index::PackageIndex,
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -17,7 +17,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::{collections::BTreeSet, str::FromStr, sync::Arc},
-    system_image::NonStaticAllowList,
+    system_image::{ExecutabilityRestrictions, NonStaticAllowList},
     vfs::{
         common::send_on_open_with_error,
         directory::{

@@ -28,13 +28,6 @@ mod retained_packages_service;
 mod test_utils;
 
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
-static DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_restrictions";
-
-#[derive(Debug, PartialEq, Eq)]
-enum ExecutabilityRestrictions {
-    Enforce,
-    DoNotEnforce,
-}
 
 #[derive(FromArgs, Debug, PartialEq)]
 /// Flags to the package cache.
@@ -82,37 +75,28 @@ async fn main_inner() -> Result<(), Error> {
     let (executability_restrictions, base_packages, cache_packages) = if ignore_system_image {
         fx_log_info!("not loading system_image due to process arguments");
         inspector.root().record_string("system_image", "ignored");
-        (ExecutabilityRestrictions::Enforce, None, None)
+        (system_image::ExecutabilityRestrictions::Enforce, None, None)
     } else {
         let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
             .context("error connecting to fuchsia.boot/Arguments")?;
-        let system_image = system_image::get_system_image_hash(&boot_args)
+        let system_image = system_image::SystemImage::new(blobfs.clone(), &boot_args)
             .await
-            .context("getting system_image hash")?;
-        inspector.root().record_string("system_image", system_image.to_string());
-        let system_image = package_directory::RootDir::new(blobfs.clone(), system_image)
-            .await
-            .context("creating RootDir for system_image")?;
+            .context("Accessing contents of system_image package")?;
 
-        let load_cache_packages_fut = async {
-            let cache_packages = system_image::CachePackages::deserialize(
-                system_image
-                    .read_file("data/cache_packages")
-                    .await
-                    .context("read system_image data/cache_packages")?
-                    .as_slice(),
-            )
-            .context("deserialize data/cache_packages")?;
-
-            let () = index::load_cache_packages(&mut package_index, &cache_packages, &blobfs).await;
-            Ok(Some(cache_packages))
-        };
+        inspector.root().record_string("system_image", system_image.hash().to_string());
 
         let base_packages_fut = BasePackages::new(
             &blobfs,
-            &system_image,
+            &system_image.root_dir(),
             inspector.root().create_child("base-packages"),
         );
+
+        let load_cache_packages_fut = async {
+            let cache_packages =
+                system_image.cache_packages().await.context("reading cache_packages")?;
+            index::load_cache_packages(&mut package_index, &cache_packages, &blobfs).await;
+            Ok(Some(cache_packages))
+        };
 
         let (cache_packages_res, base_packages_res) =
             join!(load_cache_packages_fut, base_packages_fut);
@@ -122,7 +106,7 @@ async fn main_inner() -> Result<(), Error> {
         });
 
         (
-            load_executability_restrictions(&system_image),
+            system_image.load_executability_restrictions(),
             Some(base_packages_res.context("loading base packages")?),
             cache_packages,
         )
@@ -203,13 +187,4 @@ async fn main_inner() -> Result<(), Error> {
     cobalt_fut.await;
 
     Ok(())
-}
-
-fn load_executability_restrictions(
-    system_image: &package_directory::RootDir,
-) -> ExecutabilityRestrictions {
-    match system_image.has_file(DISABLE_RESTRICTIONS_FILE_PATH) {
-        true => ExecutabilityRestrictions::DoNotEnforce,
-        false => ExecutabilityRestrictions::Enforce,
-    }
 }

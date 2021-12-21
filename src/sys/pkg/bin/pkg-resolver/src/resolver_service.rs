@@ -25,10 +25,10 @@ use {
     },
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
     fuchsia_cobalt::CobaltSender,
-    fuchsia_pkg::{PackageDirectory, PackagePath},
+    fuchsia_pkg::PackageDirectory,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
-    fuchsia_url::pkg_url::{PackageVariant, ParseError, PkgUrl},
+    fuchsia_url::pkg_url::{ParseError, PkgUrl},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
     std::sync::Arc,
@@ -424,14 +424,24 @@ fn hash_from_cache_packages_manifest<'a>(
     if url.host() != "fuchsia.com" {
         return None;
     }
-
-    let variant = match url.variant() {
-        Some(variant) if variant.is_zero() => PackageVariant::zero(),
-        None => PackageVariant::zero(),
-        _ => return None,
+    // We are in the process of removing the concept of package variant
+    // (generalizing fuchsia-pkg URL paths to be `(first-segment)(/more-segments)*`
+    // instead of requiring that paths are `(name)/(variant)`. Towards this goal,
+    // the PkgUrls the pkg-resolver gets from the pkg-cache from `PackageCache.CachePackageIndex`
+    // do not have variants. However, they are intended to match only URLs with variant of "0".
+    // Additionally, pkg-resolver allows clients to not specify a variant, in which case a
+    // variant of "0" will be assumed. This means that if the URL we are resolving has a
+    // variant that is not "0", it should never match anything in the cache packages manifest,
+    // and if the URL has a variant of "0", we should remove it before checking the cache manifest.
+    let url = match url.variant() {
+        None => url.clone(),
+        Some(variant) if !variant.is_zero() => {
+            return None;
+        }
+        Some(_) => url.strip_variant(),
     };
-    let package_path = PackagePath::from_name_and_variant(url.name().to_owned(), variant);
-    let cache_hash = system_cache_list.hash_for_package(&package_path).map(Into::into);
+
+    let cache_hash = system_cache_list.hash_for_package(&url).map(Into::into);
     match (cache_hash, url.package_hash()) {
         // This arm is less useful than (Some, None) b/c generally metadata lookup for pinned URLs
         // succeeds (because generally the package from the pinned URL exists in the repo), and if
@@ -701,24 +711,25 @@ fn resolve_result_to_resolve_code(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fuchsia_url::pkg_url::PinnedPkgUrl};
 
     #[test]
     fn test_hash_from_cache_packages_manifest() {
         let hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let cache_packages = CachePackages::from_entries(vec![(
-            PackagePath::from_name_and_variant("potato".parse().unwrap(), "0".parse().unwrap()),
+        let cache_packages = CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
+            "fuchsia.com".to_string(),
+            "/potato".to_string(),
             hash,
-        )]);
+        )
+        .unwrap()]);
         let empty_cache_packages = CachePackages::from_entries(vec![]);
 
         let fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
+        let variant_nonzero_fuchsia_url =
+            PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
         let variant_zero_fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
-        let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato/0").unwrap();
-        let wrong_variant_fuchsia_url =
-            PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/17").unwrap();
-
+        let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato").unwrap();
         assert_eq!(
             hash_from_cache_packages_manifest(&fuchsia_url, &cache_packages),
             Some(hash.into())
@@ -727,11 +738,44 @@ mod tests {
             hash_from_cache_packages_manifest(&variant_zero_fuchsia_url, &cache_packages),
             Some(hash.into())
         );
-        assert_eq!(hash_from_cache_packages_manifest(&other_repo_url, &cache_packages), None);
         assert_eq!(
-            hash_from_cache_packages_manifest(&wrong_variant_fuchsia_url, &cache_packages),
+            hash_from_cache_packages_manifest(&variant_nonzero_fuchsia_url, &cache_packages),
             None
         );
+        assert_eq!(hash_from_cache_packages_manifest(&other_repo_url, &cache_packages), None);
+        assert_eq!(hash_from_cache_packages_manifest(&fuchsia_url, &empty_cache_packages), None);
+    }
+
+    #[test]
+    fn test_hash_from_cache_packages_manifest_with_zero_variant() {
+        let hash =
+            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
+        let cache_packages = CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
+            "fuchsia.com".to_string(),
+            "/potato/0".to_string(),
+            hash,
+        )
+        .unwrap()]);
+        let empty_cache_packages = CachePackages::from_entries(vec![]);
+
+        let fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato").unwrap();
+        let variant_nonzero_fuchsia_url =
+            PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/1").unwrap();
+        let variant_zero_fuchsia_url = PkgUrl::parse("fuchsia-pkg://fuchsia.com/potato/0").unwrap();
+        let other_repo_url = PkgUrl::parse("fuchsia-pkg://nope.com/potato/0").unwrap();
+        // hash_from_cache_packages_manifest removes variant from URL provided, and
+        // since CachePackages is initialized with a variant and will only resolve url to a hash
+        // if the /0 variant is provided.
+        assert_eq!(hash_from_cache_packages_manifest(&fuchsia_url, &cache_packages), None);
+        assert_eq!(
+            hash_from_cache_packages_manifest(&variant_zero_fuchsia_url, &cache_packages),
+            None
+        );
+        assert_eq!(
+            hash_from_cache_packages_manifest(&variant_nonzero_fuchsia_url, &cache_packages),
+            None
+        );
+        assert_eq!(hash_from_cache_packages_manifest(&other_repo_url, &cache_packages), None);
         assert_eq!(hash_from_cache_packages_manifest(&fuchsia_url, &empty_cache_packages), None);
     }
 }

@@ -93,8 +93,8 @@ pub enum ParsePackageError {
     VersionNotSupported(String),
 }
 
-pub(crate) fn parse_packages_json(contents: &str) -> Result<Vec<PkgUrl>, ParsePackageError> {
-    match serde_json::from_str(&contents).map_err(ParsePackageError::JsonError)? {
+pub(crate) fn parse_packages_json(contents: &[u8]) -> Result<Vec<PkgUrl>, ParsePackageError> {
+    match serde_json::from_slice(&contents).map_err(ParsePackageError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(ParsePackageError::VersionNotSupported(version)),
     }
@@ -110,8 +110,7 @@ pub(crate) async fn packages(proxy: &DirectoryProxy) -> Result<Vec<PkgUrl>, Pars
     .await
     .map_err(ParsePackageError::FailedToOpen)?;
 
-    let contents =
-        io_util::file::read_to_string(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
+    let contents = io_util::file::read(&file).await.map_err(|e| ParsePackageError::ReadError(e))?;
     parse_packages_json(&contents)
 }
 
@@ -133,13 +132,13 @@ mod tests {
             "fuchsia-pkg://fuchsia.com/pkg-resolver/0?hash=26d43a3fc32eaa65e6981791874b6ab80fae31fbfca1ce8c31ab64275fd4e8c0",
         ])
         };
-        let packages_json = serde_json::to_string(&packages).unwrap();
+        let packages_json = serde_json::to_vec(&packages).unwrap();
         assert_eq!(parse_packages_json(&packages_json).unwrap(), packages.content);
     }
 
     #[test]
     fn expect_failure_parse_packages_json() {
-        assert_matches!(parse_packages_json("{}"), Err(ParsePackageError::JsonError(_)));
+        assert_matches!(parse_packages_json(&[]), Err(ParsePackageError::JsonError(_)));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

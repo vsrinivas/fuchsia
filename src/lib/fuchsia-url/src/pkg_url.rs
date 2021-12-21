@@ -5,7 +5,7 @@
 use {
     percent_encoding::{self, percent_decode},
     serde::{Deserialize, Deserializer, Serialize, Serializer},
-    std::{convert::TryFrom, fmt, str},
+    std::{convert::TryFrom, fmt, ops::Deref, str},
     url::{Host, Url},
 };
 
@@ -127,6 +127,30 @@ impl PkgUrl {
         }
     }
 
+    /// Produce a new [PkgUrl] with hash stripped off.
+    pub fn strip_hash(&self) -> PkgUrl {
+        PkgUrl {
+            repo: self.repo.clone(),
+            path: self.path.clone(),
+            hash: None,
+            resource: self.resource.clone(),
+            name: self.name().to_owned(),
+            variant: self.variant.clone(),
+        }
+    }
+
+    /// Produce a new [PkgUrl] with any variant or hash stripped off.
+    pub fn strip_variant_and_hash(&self) -> PkgUrl {
+        PkgUrl {
+            repo: self.repo.clone(),
+            path: format!("/{}", self.name()),
+            hash: None,
+            resource: self.resource.clone(),
+            name: self.name().to_owned(),
+            variant: None,
+        }
+    }
+
     pub fn new_package(
         host: String,
         path: String,
@@ -147,6 +171,72 @@ impl PkgUrl {
         let () = validate_resource_path(&resource).map_err(ParseError::InvalidResourcePath)?;
         url.resource = Some(resource);
         Ok(url)
+    }
+}
+
+/// `PinnedPkgUrl` represents a package URL, "pinned" to a specific package hash.
+/// Acts as a `PkgUrl` and is guaranteed to have a hash.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PinnedPkgUrl {
+    url: PkgUrl,
+}
+
+impl PinnedPkgUrl {
+    /// Build a new instance of `PinnedPkgUrl` from existing `PkgUrl`, overriding url's hash
+    /// with the one provided as an argument.
+    pub fn from_url_and_hash(mut url: PkgUrl, hash: Hash) -> Self {
+        url.hash = Some(hash);
+        Self { url }
+    }
+
+    /// Create a new instance of `PinnedPkgUrl` representing a package.
+    pub fn new_package(host: String, path: String, hash: Hash) -> Result<Self, ParseError> {
+        let url = PkgUrl::new_package(host, path, Some(hash))?;
+        Ok(Self { url })
+    }
+
+    /// Return the hash the URL is pinned to.
+    pub fn package_hash(&self) -> Hash {
+        // Unwrap is safe, because:
+        // 1. All public constructors guarantee hash will be set.
+        // 2. All &self and &mut self methods of PinnedPkgUrl keep the hash set.
+        // 3. All &self methods of PkgUrl (available through the Deref impl) keep the hash set.
+        self.hash.expect("initialized with a URL without a hash.")
+    }
+}
+
+impl TryFrom<PkgUrl> for PinnedPkgUrl {
+    type Error = ParseError;
+
+    fn try_from(url: PkgUrl) -> Result<Self, Self::Error> {
+        if url.hash.is_none() {
+            Err(ParseError::MissingHash)
+        } else {
+            Ok(Self { url })
+        }
+    }
+}
+
+impl Deref for PinnedPkgUrl {
+    type Target = PkgUrl;
+    fn deref(&self) -> &Self::Target {
+        &self.url
+    }
+}
+
+impl Serialize for PinnedPkgUrl {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        PkgUrl::serialize(self, ser)
+    }
+}
+
+impl<'de> Deserialize<'de> for PinnedPkgUrl {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let pkg_url = PkgUrl::deserialize(de)?;
+        PinnedPkgUrl::try_from(pkg_url).map_err(|err| serde::de::Error::custom(err))
     }
 }
 
@@ -1020,5 +1110,105 @@ mod tests {
                 PkgUrl::parse(want_url).unwrap()
             );
         }
+    }
+
+    #[test]
+    fn test_strip_variant_and_hash() {
+        let urls = &["fuchsia-pkg://fuchsia.com/foo", "fuchsia-pkg://fuchsia.com/name#bar"];
+        for url in urls {
+            // Don't change urls with no variant.
+            assert_eq!(
+                PkgUrl::parse(url).unwrap(),
+                PkgUrl::parse(url).unwrap().strip_variant_and_hash()
+            );
+        }
+
+        let var_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo/0",
+            "fuchsia-pkg://fuchsia.com/foo/0#bar",
+            "fuchsia-pkg://fuchsia.com/foo/0?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+        let stripped_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo",
+            "fuchsia-pkg://fuchsia.com/foo#bar",
+            "fuchsia-pkg://fuchsia.com/foo",
+        ];
+
+        for (i, want_url) in stripped_urls.iter().enumerate() {
+            assert_eq!(
+                PkgUrl::parse(var_urls[i]).unwrap().strip_variant_and_hash(),
+                PkgUrl::parse(want_url).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_strip_hash() {
+        let urls = &[
+            "fuchsia-pkg://fuchsia.com/foo",
+            "fuchsia-pkg://fuchsia.com/name#bar",
+            "fuchsia-pkg://fuchsia.com/name/0#bar",
+        ];
+        for url in urls {
+            // Don't change urls with no hash.
+            assert_eq!(PkgUrl::parse(url).unwrap(), PkgUrl::parse(url).unwrap().strip_hash());
+        }
+
+        let var_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+            "fuchsia-pkg://fuchsia.com/foo/0?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a#bar",
+            "fuchsia-pkg://fuchsia.com/foo/0?hash=80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a",
+        ];
+        let stripped_urls = &[
+            "fuchsia-pkg://fuchsia.com/foo",
+            "fuchsia-pkg://fuchsia.com/foo/0#bar",
+            "fuchsia-pkg://fuchsia.com/foo/0",
+        ];
+
+        for (i, want_url) in stripped_urls.iter().enumerate() {
+            assert_eq!(
+                PkgUrl::parse(var_urls[i]).unwrap().strip_hash(),
+                PkgUrl::parse(want_url).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn test_pinned_url_from_url_overrides_hash() {
+        let url_0 = PkgUrl::new_package(
+            "fuchsia.com".to_string(),
+            "/foo/0".to_string(),
+            Some(Hash::from([0; 32])),
+        )
+        .unwrap();
+        let url_1 = PkgUrl::new_package(
+            "fuchsia.com".to_string(),
+            "/foo/0".to_string(),
+            Some(Hash::from([1; 32])),
+        )
+        .unwrap();
+        let pinned_url = PinnedPkgUrl::from_url_and_hash(url_1, Hash::from([0; 32]));
+        assert_eq!(PinnedPkgUrl::try_from(url_0), Ok(pinned_url));
+    }
+
+    #[test]
+    fn test_pinned_url_from_url_succeeds() {
+        let url = PkgUrl::new_package(
+            "fuchsia.com".to_string(),
+            "/foo/0".to_string(),
+            Some(Hash::from([0; 32])),
+        )
+        .unwrap();
+        let pinned_url = PinnedPkgUrl::try_from(url.clone()).unwrap();
+        assert_matches!(pinned_url, PinnedPkgUrl { .. });
+
+        assert_eq!(PinnedPkgUrl::from_url_and_hash(url, Hash::from([0; 32])), pinned_url);
+    }
+
+    #[test]
+    fn test_pinned_url_from_url_fails_on_empty_hash() {
+        let url =
+            PkgUrl::new_package("fuchsia.com".to_string(), "/foo/0".to_string(), None).unwrap();
+        assert_matches!(PinnedPkgUrl::try_from(url), Err(ParseError::MissingHash));
     }
 }

@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context as _, fidl_fuchsia_pkg::PackageIndexIteratorMarker,
-    fuchsia_syslog::fx_log_warn, fuchsia_url::pkg_url::PkgUrl,
+    anyhow::Context as _,
+    fidl_fuchsia_pkg::PackageIndexIteratorMarker,
+    fuchsia_syslog::fx_log_warn,
+    fuchsia_url::pkg_url::{PinnedPkgUrl, PkgUrl},
 };
 
 /// Load the list of cache_packages from fuchsia.pkg/PackageCache.CachePackageIndex.
@@ -32,16 +34,7 @@ async fn from_proxy_impl(
         for entry in chunk {
             let pkg_url = PkgUrl::parse(&entry.package_url.url).context("parsing url")?;
             let blob_id = fidl_fuchsia_pkg_ext::BlobId::from(entry.meta_far_blob_id);
-            entries.push((
-                fuchsia_pkg::PackagePath::from_name_and_variant(
-                    pkg_url.name().clone(),
-                    pkg_url
-                        .variant()
-                        .cloned()
-                        .unwrap_or_else(|| fuchsia_pkg::PackageVariant::zero()),
-                ),
-                blob_id.into(),
-            ));
+            entries.push(PinnedPkgUrl::from_url_and_hash(pkg_url, blob_id.into()));
         }
         chunk = pkg_iterator.next().await.context("getting next iterator batch")?;
     }
@@ -138,7 +131,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn variant_defaults_to_zero() {
+    async fn variant_does_not_default_to_zero() {
         let client = spawn_pkg_cache(vec![(
             "fuchsia-pkg://fuchsia.com/no-variant".parse().unwrap(),
             BlobId::from([0; 32]),
@@ -147,10 +140,12 @@ mod tests {
         let cache_packages = from_proxy(&client).await;
         assert_eq!(
             cache_packages,
-            system_image::CachePackages::from_entries(vec![(
-                "no-variant/0".parse().unwrap(),
+            system_image::CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/no-variant".to_string(),
                 [0; 32].into()
-            )])
+            )
+            .unwrap(),])
         );
     }
 
@@ -164,10 +159,12 @@ mod tests {
         let cache_packages = from_proxy(&client).await;
         assert_eq!(
             cache_packages,
-            system_image::CachePackages::from_entries(vec![(
-                "has-variant/5".parse().unwrap(),
+            system_image::CachePackages::from_entries(vec![PinnedPkgUrl::new_package(
+                "fuchsia.com".to_string(),
+                "/has-variant/5".to_string(),
                 [0; 32].into()
-            )])
+            )
+            .unwrap(),])
         );
     }
 
@@ -198,15 +195,7 @@ mod tests {
 
             let expected_packages = expected_packages
                 .into_iter()
-                .map(|(url, blob)| {
-                    (
-                        fuchsia_pkg::PackagePath::from_name_and_variant(
-                            url.name().clone(),
-                            fuchsia_pkg::PackageVariant::zero(),
-                        ),
-                        blob.into(),
-                    )
-                })
+                .map(|(url, blob)| PinnedPkgUrl::from_url_and_hash(url, blob.into()))
                 .collect();
             assert_eq!(
                 cache_packages,

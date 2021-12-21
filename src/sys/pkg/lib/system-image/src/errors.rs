@@ -32,3 +32,27 @@ pub enum AllowListError {
     #[error("invalid package name")]
     PackageName(#[from] PackagePathSegmentError),
 }
+
+#[derive(Debug, Error)]
+pub enum CachePackagesInitError {
+    #[error("while parsing system image package")]
+    ParseSystemImagePackage(#[source] anyhow::Error),
+
+    #[error("while reading data/cache_packages.json file")]
+    ReadCachePackagesJson(#[source] package_directory::ReadFileError),
+
+    #[error("while reading data/cache_packages file")]
+    ReadCachePackages(#[source] package_directory::ReadFileError),
+
+    #[error("while processing data/cache_packages")]
+    ProcessingCachePackages(#[from] PathHashMappingError),
+
+    #[error("while parsing data/cache_packages")]
+    ParseConfig(#[from] fuchsia_url::errors::ParseError),
+
+    #[error("json parsing error while reading packages config")]
+    JsonError(#[source] serde_json::error::Error),
+
+    #[error("packages config version not supported: '{0:?}'")]
+    VersionNotSupported(String),
+}

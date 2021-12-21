@@ -17,14 +17,15 @@ use {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Static;
 /// PhantomData type marker to indicate a `PathHashMapping` is a "data/cache_packages" file.
+/// Deprecated, fxb/88888.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Cache;
 
 pub type StaticPackages = PathHashMapping<Static>;
-pub type CachePackages = PathHashMapping<Cache>;
 
 /// A `PathHashMapping` reads and writes line-oriented "{package_path}={hash}\n" files, e.g.
 /// "data/static_packages" and "data/cache_packages".
+/// Deprecated.
 #[derive(Debug, PartialEq, Eq)]
 pub struct PathHashMapping<T> {
     contents: Vec<(PackagePath, Hash)>,
