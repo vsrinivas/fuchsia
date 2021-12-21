@@ -26,13 +26,13 @@ TEST(CppSizeTest, Simple) {
   EXPECT_STR_EQ("1", FormattedBytes(1).Magnitude());
   EXPECT_EQ(SizeUnit::kBytes, FormattedBytes(1).Unit());
 
-  EXPECT_STR_EQ("1k", FormattedBytes(1024).str());
-  EXPECT_STR_EQ("1k", FormattedBytes(1024).c_str());
+  EXPECT_STR_EQ("1K", FormattedBytes(1024).str());
+  EXPECT_STR_EQ("1K", FormattedBytes(1024).c_str());
   EXPECT_STR_EQ("1", FormattedBytes(1024).Magnitude());
   EXPECT_EQ(SizeUnit::kKiB, FormattedBytes(1024).Unit());
 
-  EXPECT_STR_EQ("9.8k", FormattedBytes(10000).str());
-  EXPECT_STR_EQ("9.8k", FormattedBytes(10000).c_str());
+  EXPECT_STR_EQ("9.8K", FormattedBytes(10000).str());
+  EXPECT_STR_EQ("9.8K", FormattedBytes(10000).c_str());
   EXPECT_STR_EQ("9.8", FormattedBytes(10000).Magnitude());
   EXPECT_EQ(SizeUnit::kKiB, FormattedBytes(10000).Unit());
 
@@ -61,8 +61,8 @@ TEST(CppSizeTest, SetSize) {
   EXPECT_STR_EQ("1B", val.str());
   EXPECT_STR_EQ("1B", val.c_str());
   val.SetSize(10000);
-  EXPECT_STR_EQ("9.8k", val.str());
-  EXPECT_STR_EQ("9.8k", val.c_str());
+  EXPECT_STR_EQ("9.8K", val.str());
+  EXPECT_STR_EQ("9.8K", val.c_str());
   val.SetSize(10000, SizeUnit::kBytes);
   EXPECT_STR_EQ("10000B", val.str());
   val.SetSize(20000, SizeUnit::kBytes).SetSize(1);

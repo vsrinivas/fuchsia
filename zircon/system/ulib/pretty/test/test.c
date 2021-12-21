@@ -35,18 +35,18 @@ static const format_size_test_case_t format_size_test_cases[] = {
     // Larger values may still use a smaller unit
     // (e.g., "1k" + 1 == "1025B") to preserve precision.
     TC0(KILO - 1, "1023B"),
-    TC0(KILO, "1k"),
+    TC0(KILO, "1K"),
     TC0(KILO + 1, "1025B"),
-    TC0(KILO * 9, "9k"),
+    TC0(KILO * 9, "9K"),
     TC0(KILO * 9 + 1, "9217B"),
-    TC0(KILO * 10, "10k"),
+    TC0(KILO * 10, "10K"),
 
     // Same demonstration for the next unit.
-    TC0(MEGA - KILO, "1023k"),
+    TC0(MEGA - KILO, "1023K"),
     TC0(MEGA, "1M"),
-    TC0(MEGA + KILO, "1025k"),
+    TC0(MEGA + KILO, "1025K"),
     TC0(MEGA * 9, "9M"),
-    TC0(MEGA * 9 + KILO, "9217k"),
+    TC0(MEGA * 9 + KILO, "9217K"),
     TC0(MEGA * 10, "10M"),
 
     // Sanity checks for remaining units.
@@ -58,8 +58,8 @@ static const format_size_test_case_t format_size_test_cases[] = {
 
     // Non-whole multiples print decimals, and favor more whole digits
     // (e.g., "1024.0k" not "1.0M") to retain precision.
-    TC0(MEGA - 1, "1024.0k"),
-    TC0(MEGA + MEGA / 3, "1365.3k"),  // Only one decimal place is ever shown.
+    TC0(MEGA - 1, "1024.0K"),
+    TC0(MEGA + MEGA / 3, "1365.3K"),  // Only one decimal place is ever shown.
     TC0(GIGA - 1, "1024.0M"),
     TC0(TERA - 1, "1024.0G"),
     TC0(PETA - 1, "1024.0T"),
@@ -69,14 +69,14 @@ static const format_size_test_case_t format_size_test_cases[] = {
     // Never show more than four whole digits,
     // to make the values easier to eyeball.
     TC0(9999, "9999B"),
-    TC0(10000, "9.8k"),
-    TC0(KILO * 9999, "9999k"),
-    TC0(KILO * 9999 + 1, "9999.0k"),
+    TC0(10000, "9.8K"),
+    TC0(KILO * 9999, "9999K"),
+    TC0(KILO * 9999 + 1, "9999.0K"),
     TC0(KILO * 10000, "9.8M"),
 
     // Ensure values are correctly rounded.
-    TC0(10700, "10.4k"),                  // 10700 / 1024 == 10.4492187500
-    TC0(10701, "10.5k"),                  // 10701 / 1024 == 10.4501953125
+    TC0(10700, "10.4K"),                  // 10700 / 1024 == 10.4492187500
+    TC0(10701, "10.5K"),                  // 10701 / 1024 == 10.4501953125
     TC0(69887590, "66.6M"),               // 69887590 / 1M == ~66.64999961
     TC0(69887591, "66.7M"),               // 69887591 / 1M == ~66.65000057
     TC0(18389097998479209267u, "15.9E"),  // 18389097998479209267 / 1E == ~15.9499999999999999998
@@ -88,7 +88,7 @@ static const format_size_test_case_t format_size_test_cases[] = {
 
     // When fixed, we can see a lot more digits.
     TCF(UINT64_MAX, 'B', "18446744073709551615B"),
-    TCF(UINT64_MAX, 'k', "18014398509481984.0k"),
+    TCF(UINT64_MAX, 'K', "18014398509481984.0K"),
     TCF(UINT64_MAX, 'M', "17592186044416.0M"),
     TCF(UINT64_MAX, 'G', "17179869184.0G"),
     TCF(UINT64_MAX, 'T', "16777216.0T"),
@@ -96,14 +96,14 @@ static const format_size_test_case_t format_size_test_cases[] = {
     TCF(UINT64_MAX, 'E', "16.0E"),
 
     // Smaller than natural fixed unit.
-    TCF(GIGA, 'k', "1048576k"),
+    TCF(GIGA, 'K', "1048576K"),
 
     // Larger than natural fixed unit.
     TCF(MEGA / 10, 'M', "0.1M"),
 
     // Unknown units fall back to natural, but add a '?' prefix.
     TCF(GIGA, 'q', "?1G"),
-    TCF(KILO, 'q', "?1k"),
+    TCF(KILO, 'q', "?1K"),
     TCF(GIGA + 1, '#', "?1.0G"),
     TCF(KILO + 1, '#', "?1025B"),
 };
@@ -126,7 +126,7 @@ TEST(PrettyTests, format_size_fixed_test) {
 TEST(PrettyTests, format_size_short_buf_truncates) {
   // Widest possible output: four whole digits + decimal.
   static const size_t input = 1023 * 1024 + 1;
-  static const char expected_output[] = "1023.0k";
+  static const char expected_output[] = "1023.0K";
 
   char buf[sizeof(expected_output) * 2];
   char msg[128];

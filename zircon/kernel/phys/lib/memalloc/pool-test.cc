@@ -311,7 +311,7 @@ TEST(MemallocPoolTests, Bookkeeping) {
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | bookkeeping
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -347,8 +347,8 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | bookkeeping
+PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4K | free RAM
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -390,8 +390,8 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | peripheral
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | peripheral
+PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4K | bookkeeping
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -427,8 +427,8 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010800, 0x0000000000011000) |      2k | free RAM
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
+PREFIX: | [0x0000000000010800, 0x0000000000011000) |      2K | free RAM
+PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4K | bookkeeping
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -488,10 +488,10 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000010800) |      2k | free RAM
-PREFIX: | [0x0000000000010800, 0x0000000000011800) |      4k | peripheral
-PREFIX: | [0x0000000000011800, 0x0000000000012000) |      2k | free RAM
-PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | bookkeeping
+PREFIX: | [0x0000000000010000, 0x0000000000010800) |      2K | free RAM
+PREFIX: | [0x0000000000010800, 0x0000000000011800) |      4K | peripheral
+PREFIX: | [0x0000000000011800, 0x0000000000012000) |      2K | free RAM
+PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4K | bookkeeping
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -529,8 +529,8 @@ TEST(MemallocPoolTests, NullPointerRegionIsAutoPopulated) {
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000000000, 0x0000000000010000) |     64k | null pointer region
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
+PREFIX: | [0x0000000000000000, 0x0000000000010000) |     64K | null pointer region
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | bookkeeping
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -614,12 +614,12 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000000000, 0x0000000000001000) |      4k | null pointer region
-PREFIX: | [0x0000000000001000, 0x0000000000002000) |      4k | peripheral
-PREFIX: | [0x0000000000005000, 0x0000000000007000) |      8k | null pointer region
-PREFIX: | [0x0000000000009000, 0x000000000000a000) |      4k | peripheral
-PREFIX: | [0x000000000000f000, 0x0000000000010000) |      4k | null pointer region
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
+PREFIX: | [0x0000000000000000, 0x0000000000001000) |      4K | null pointer region
+PREFIX: | [0x0000000000001000, 0x0000000000002000) |      4K | peripheral
+PREFIX: | [0x0000000000005000, 0x0000000000007000) |      8K | null pointer region
+PREFIX: | [0x0000000000009000, 0x000000000000a000) |      4K | peripheral
+PREFIX: | [0x000000000000f000, 0x0000000000010000) |      4K | null pointer region
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | bookkeeping
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -663,8 +663,8 @@ TEST(MemallocPoolTests, ReservedRangesAreNotExplicitlyTracked) {
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
-PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | free RAM
+PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4K | bookkeeping
+PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4K | free RAM
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -706,8 +706,8 @@ PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | free RAM
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
-PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | free RAM
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | bookkeeping
+PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4K | free RAM
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
@@ -749,8 +749,8 @@ PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | free RAM
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4K | bookkeeping
+PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4K | free RAM
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));

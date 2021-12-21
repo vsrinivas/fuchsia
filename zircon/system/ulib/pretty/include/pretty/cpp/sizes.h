@@ -20,7 +20,7 @@ namespace pretty {
 enum class SizeUnit : char {
   kAuto = 0,  // Automatically select an appropriate unit.
   kBytes = 'B',
-  kKiB = 'k',
+  kKiB = 'K',
   kMiB = 'M',
   kGiB = 'G',
   kTiB = 'T',

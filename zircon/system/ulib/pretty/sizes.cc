@@ -20,7 +20,7 @@ std::string_view FormattedBytes::ToString(SizeUnit unit) {
     case SizeUnit::kBytes:
       return "B"sv;
     case SizeUnit::kKiB:
-      return "k"sv;
+      return "K"sv;
     case SizeUnit::kMiB:
       return "M"sv;
     case SizeUnit::kGiB:
@@ -50,7 +50,7 @@ static size_t rounding_divide(size_t n, size_t d) {
 }
 
 char* format_size_fixed(char* str, size_t str_size, size_t bytes, char unit) {
-  static const char units[] = "BkMGTPE";
+  static const char units[] = "BKMGTPE";
   static int num_units = sizeof(units) - 1;
 
   if (str_size == 0) {
