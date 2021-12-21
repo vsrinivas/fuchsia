@@ -1,0 +1,90 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/arm.gni")
+
+config("libpng_config") {
+  include_dirs = [ "src" ]
+  defines = []
+}
+
+# Must be in a config because of how GN orders flags (otherwise -Wall will
+# appear after this, and turn it back on).
+config("clang_warnings") {
+  if (is_clang) {
+    cflags = [
+      "-Wno-conversion",
+      "-Wno-implicit-fallthrough",
+      "-Wno-sign-compare",
+
+      # libpng checks that the width is not greater than PNG_SIZE_MAX.
+      # On platforms where size_t is 64-bits, this comparison will always
+      # be false.
+      "-Wno-tautological-constant-out-of-range-compare",
+
+      "-Wno-unused-but-set-parameter",
+      "-Wno-unused-but-set-variable",
+    ]
+  }
+}
+
+source_set("libpng") {
+  sources = [
+    "src/png.c",
+    "src/png.h",
+    "src/pngconf.h",
+    "src/pngerror.c",
+    "src/pngget.c",
+    "src/pnginfo.h",
+    "src/pnglibconf.h",
+    "src/pngmem.c",
+    "src/pngpread.c",
+    "src/pngprefix.h",
+    "src/pngpriv.h",
+    "src/pngread.c",
+    "src/pngrio.c",
+    "src/pngrtran.c",
+    "src/pngrutil.c",
+    "src/pngset.c",
+    "src/pngstruct.h",
+    "src/pngtrans.c",
+    "src/pngwio.c",
+    "src/pngwrite.c",
+    "src/pngwtran.c",
+    "src/pngwutil.c",
+  ]
+  defines = []
+  cflags = []
+  if (current_cpu == "x86" || current_cpu == "x64") {
+    sources += [
+      "src/intel/filter_sse2_intrinsics.c",
+      "src/intel/intel_init.c",
+    ]
+    defines += [ "PNG_INTEL_SSE_OPT=1" ]
+  } else if ((current_cpu == "arm" || current_cpu == "arm64") && arm_use_neon) {
+    sources += [
+      "src/arm/arm_init.c",
+      "src/arm/filter_neon_intrinsics.c",
+      "src/arm/palette_neon_intrinsics.c",
+    ]
+    defines += [
+      "PNG_ARM_NEON_OPT=2",
+      "PNG_ARM_NEON_IMPLEMENTATION=1",
+    ]
+  }
+
+  public_configs = [ ":libpng_config" ]
+  public_deps = [ "//third_party/zlib" ]
+  configs += [ ":clang_warnings" ]
+
+  # TODO(fxbug.dev/77808): pull new code for libpng before we allow it to be
+  # used in more places.
+  visibility = [
+    "//src/camera/bin/factory/*",
+    "//src/developer/forensics/feedback_data/*",
+    "//src/ui/examples/frame-compression/*",
+    "//src/ui/tools/gltf_export/*",
+    "//third_party/freetype2/*",
+  ]
+}
