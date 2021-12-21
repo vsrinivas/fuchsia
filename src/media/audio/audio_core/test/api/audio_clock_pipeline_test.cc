@@ -50,9 +50,6 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
   void TearDown() override {
     if constexpr (kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
       ExpectNoOverflowsOrUnderflows();
-    } else {
-      // We expect no renderer underflows: we pre-submit the whole signal. Keep that check enabled.
-      ExpectNoRendererUnderflows();
     }
 
     HermeticAudioTest::TearDown();
