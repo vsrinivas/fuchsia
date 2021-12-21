@@ -74,10 +74,7 @@ async fn destroy_impl<W: std::io::Write>(
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
-        std::io::BufWriter,
-    };
+    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
 
     fn setup_fake_lifecycle_controller(
         expected_moniker: &'static str,
@@ -109,14 +106,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_success() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller =
             setup_fake_lifecycle_controller("./core", "ffx-laboratory", "test");
         let response = destroy_impl(
             lifecycle_controller,
             "/core/ffx-laboratory:test".to_string(),
-            &mut writer,
+            &mut output,
         )
         .await;
         response.unwrap();

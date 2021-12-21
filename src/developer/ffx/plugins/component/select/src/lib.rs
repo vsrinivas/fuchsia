@@ -122,7 +122,7 @@ fn format_matches<W: Write>(writer: &mut W, matches: Vec<rc::ServiceMatch>) -> R
 
 #[cfg(test)]
 mod test {
-    use {super::*, std::io::BufWriter};
+    use super::*;
 
     const DEFAULT_MATCH_STR: &str = "\
 core/test
@@ -148,10 +148,9 @@ core/test
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_select_invalid_selector() -> Result<()> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let remote_proxy = setup_fake_remote_server();
-        let response = select_moniker(remote_proxy, writer, "a:b:").await;
+        let response = select_moniker(remote_proxy, &mut output, "a:b:").await;
         let e = response.unwrap_err();
         assert!(e.to_string().contains(SELECTOR_FORMAT_HELP));
         Ok(())
@@ -159,20 +158,18 @@ core/test
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_select_formats_rcs_response() -> Result<()> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let remote_proxy = setup_fake_remote_server();
-        let _response = select_moniker(remote_proxy, writer, "a:valid:selector")
+        let _response = select_moniker(remote_proxy, &mut output, "a:valid:selector")
             .await
             .expect("select should not fail");
+        let output = String::from_utf8(output).expect("Invalid UTF-8 bytes");
         assert_eq!(output, DEFAULT_MATCH_STR);
         Ok(())
     }
 
     #[test]
     fn test_format_matches_complex() -> Result<()> {
-        let mut output = String::new();
-
         let expected = "\
 core/test
 |
@@ -195,40 +192,40 @@ test
    |
    --fuchsia.myservice5\n";
 
-        {
-            let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-            format_matches(
-                &mut writer,
-                vec![
-                    rc::ServiceMatch {
-                        moniker: vec![String::from("core"), String::from("test")],
-                        subdir: String::from("out"),
-                        service: String::from("fuchsia.myservice3"),
-                    },
-                    rc::ServiceMatch {
-                        moniker: vec![String::from("core"), String::from("test")],
-                        subdir: String::from("in"),
-                        service: String::from("fuchsia.myservice"),
-                    },
-                    rc::ServiceMatch {
-                        moniker: vec![String::from("core"), String::from("test")],
-                        subdir: String::from("in"),
-                        service: String::from("fuchsia.myservice2"),
-                    },
-                    rc::ServiceMatch {
-                        moniker: vec![String::from("test")],
-                        subdir: String::from("out"),
-                        service: String::from("fuchsia.myservice5"),
-                    },
-                    rc::ServiceMatch {
-                        moniker: vec![String::from("test")],
-                        subdir: String::from("in"),
-                        service: String::from("fuchsia.myservice4"),
-                    },
-                ],
-            )
-            .unwrap();
-        }
+        let mut output_utf8 = Vec::new();
+        format_matches(
+            &mut output_utf8,
+            vec![
+                rc::ServiceMatch {
+                    moniker: vec![String::from("core"), String::from("test")],
+                    subdir: String::from("out"),
+                    service: String::from("fuchsia.myservice3"),
+                },
+                rc::ServiceMatch {
+                    moniker: vec![String::from("core"), String::from("test")],
+                    subdir: String::from("in"),
+                    service: String::from("fuchsia.myservice"),
+                },
+                rc::ServiceMatch {
+                    moniker: vec![String::from("core"), String::from("test")],
+                    subdir: String::from("in"),
+                    service: String::from("fuchsia.myservice2"),
+                },
+                rc::ServiceMatch {
+                    moniker: vec![String::from("test")],
+                    subdir: String::from("out"),
+                    service: String::from("fuchsia.myservice5"),
+                },
+                rc::ServiceMatch {
+                    moniker: vec![String::from("test")],
+                    subdir: String::from("in"),
+                    service: String::from("fuchsia.myservice4"),
+                },
+            ],
+        )
+        .unwrap();
+
+        let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
 
         // assert won't expand newlines, which makes failures hard to read.
         if output != expected {

@@ -55,7 +55,6 @@ mod test {
         fidl_fuchsia_io::*,
         fidl_fuchsia_sys2::StorageAdminRequest,
         futures::TryStreamExt,
-        std::io::BufWriter,
     };
 
     pub fn dirents(names: Vec<&'static str>) -> Vec<u8> {
@@ -131,10 +130,11 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_root() -> Result<()> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output_utf8 = Vec::new();
         let storage_admin = setup_fake_storage_admin("123456");
-        list_cmd(storage_admin, "123456::.".to_string(), writer).await?;
+        list_cmd(storage_admin, "123456::.".to_string(), &mut output_utf8).await?;
+
+        let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
         assert!(output.contains("foo"));
         assert!(output.contains("bar"));
         Ok(())

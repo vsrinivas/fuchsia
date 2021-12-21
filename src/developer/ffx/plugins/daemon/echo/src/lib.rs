@@ -28,9 +28,7 @@ async fn echo_impl<W: Write>(echo_proxy: EchoProxy, cmd: EchoCommand, mut writer
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*, anyhow::Context, fidl_fuchsia_developer_bridge::EchoRequest, std::io::BufWriter,
-    };
+    use {super::*, anyhow::Context, fidl_fuchsia_developer_bridge::EchoRequest};
 
     fn setup_fake_service() -> EchoProxy {
         setup_fake_echo_proxy(|req| match req {
@@ -44,12 +42,11 @@ mod test {
     }
 
     async fn run_echo_test(cmd: EchoCommand) -> String {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let proxy = setup_fake_service();
-        let result = echo_impl(proxy, cmd, writer).await.unwrap();
+        let result = echo_impl(proxy, cmd, &mut output).await.unwrap();
         assert_eq!(result, ());
-        output
+        String::from_utf8(output).expect("Invalid UTF-8 bytes")
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

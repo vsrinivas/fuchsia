@@ -123,10 +123,7 @@ async fn run_impl<W: std::io::Write>(
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt,
-        std::io::BufWriter,
-    };
+    use {super::*, fidl::endpoints::create_proxy_and_stream, futures::TryStreamExt};
 
     fn setup_fake_lifecycle_controller_ok(
         expected_parent_moniker: &'static str,
@@ -277,8 +274,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_ok() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller = setup_fake_lifecycle_controller_ok(
             "./core",
             "ffx-laboratory",
@@ -291,7 +287,7 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             None,
             false,
-            &mut writer,
+            &mut output,
         )
         .await;
         response.unwrap();
@@ -300,8 +296,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_name() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller = setup_fake_lifecycle_controller_ok(
             "./core",
             "ffx-laboratory",
@@ -314,7 +309,7 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             Some("foobar".to_string()),
             false,
-            &mut writer,
+            &mut output,
         )
         .await;
         response.unwrap();
@@ -323,8 +318,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fail() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller = setup_fake_lifecycle_controller_fail(
             "./core",
             "ffx-laboratory",
@@ -336,7 +330,7 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             None,
             false,
-            &mut writer,
+            &mut output,
         )
         .await;
         response.unwrap_err();
@@ -345,8 +339,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_recreate() -> Result<()> {
-        let mut output = String::new();
-        let mut writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let lifecycle_controller = setup_fake_lifecycle_controller_recreate(
             "./core",
             "ffx-laboratory",
@@ -359,7 +352,7 @@ mod test {
             "fuchsia-pkg://fuchsia.com/test#meta/test.cm".to_string(),
             None,
             true,
-            &mut writer,
+            &mut output,
         )
         .await;
         response.unwrap();

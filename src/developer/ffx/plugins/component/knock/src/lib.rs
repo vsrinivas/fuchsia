@@ -85,7 +85,6 @@ mod test {
         fidl::handle::AsyncChannel,
         fidl_fuchsia_developer_bridge::{DaemonRequest, DaemonRequestStream},
         futures::TryStreamExt,
-        std::io::BufWriter,
     };
 
     fn setup_fake_daemon_service(mut stream: DaemonRequestStream) {
@@ -128,10 +127,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_knock_invalid_selector() -> Result<()> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output = Vec::new();
         let remote_proxy = setup_fake_remote_server(false);
-        let response = knock(remote_proxy, writer, "a:b:").await;
+        let response = knock(remote_proxy, &mut output, "a:b:").await;
         let e = response.unwrap_err();
         assert!(e.to_string().contains(SELECTOR_FORMAT_HELP));
         Ok(())
@@ -139,10 +137,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_knock_working_service() -> Result<()> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output_utf8 = Vec::new();
         let remote_proxy = setup_fake_remote_server(true);
-        let _response = knock(remote_proxy, writer, "*:*:*").await.expect("knock should not fail");
+        let _response =
+            knock(remote_proxy, &mut output_utf8, "*:*:*").await.expect("knock should not fail");
+
+        let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
         assert!(output.contains("Success"));
         assert!(output.contains("core/test:out:fuchsia.myservice"));
         Ok(())
@@ -150,10 +150,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_knock_no_service_connected() -> Result<()> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut output_utf8 = Vec::new();
         let remote_proxy = setup_fake_remote_server(false);
-        let _response = knock(remote_proxy, writer, "*:*:*").await.expect("knock should not fail");
+        let _response =
+            knock(remote_proxy, &mut output_utf8, "*:*:*").await.expect("knock should not fail");
+
+        let output = String::from_utf8(output_utf8).expect("Invalid UTF-8 bytes");
         assert!(!output.contains("Success"));
         assert!(output.contains("Failure"));
         assert!(output.contains("core/test:out:fuchsia.myservice"));
