@@ -756,7 +756,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
     void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
       // Increment the request count. Yield to allow other threads to execute.
       auto i = ++req_cnt_;
-      zx_nanosleep(0);
+      zx_thread_legacy_yield(0);
       // Ensure that no other threads have entered Echo() after this thread.
       ASSERT_EQ(i, req_cnt_);
       // Let other threads in.
@@ -814,7 +814,7 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
       // Add the wait back to the dispatcher. Sleep to allow another thread in.
       completer.EnableNextDispatch();
-      zx_nanosleep(0);
+      zx_thread_legacy_yield(0);
       // Close with ZX_OK.
       completer.Close(ZX_OK);
     }

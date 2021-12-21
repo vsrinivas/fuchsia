@@ -1346,7 +1346,7 @@ void CloneThread(CloneThreadArgs* args) {
     // Yielding before unmapping significantly improves the ability of this test to detect bugs
     // (e.g. fxbug.dev/53882) by increasing the length of time that the file is closed but still has
     // a VMO clone.
-    zx_nanosleep(0);
+    zx_thread_legacy_yield(0);
     ASSERT_EQ(0, munmap(addr, args->info->size_data));
   }
 }

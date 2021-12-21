@@ -707,7 +707,7 @@ TEST(Threads, SuspendStopsThread) {
   // Let the thread resume and then wait for it to reset the value.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   while (atomic_load(&value) != kTestAtomicSetValue) {
-    zx_nanosleep(0);
+    zx_thread_legacy_yield(0);
   }
 
   // Clean up.
