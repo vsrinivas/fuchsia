@@ -4,6 +4,7 @@
 
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/adapters/llvm.h"
 
 int main(int argc, char const *argv[]) {
@@ -13,5 +14,6 @@ int main(int argc, char const *argv[]) {
   auto outgoing = context->outgoing();
   outgoing->AddPublicService(adapter.GetHandler());
   outgoing->ServeFromStartupInfo(adapter.dispatcher());
+  fuzzing::DisableSlowWaitLogging();
   return adapter.Run();
 }

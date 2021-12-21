@@ -94,7 +94,12 @@ void RunnerTest::RunUntilIdle() {
 }
 
 bool RunnerTest::HasTestInput() {
-  bool has_input = HasTestInput(zx::duration::infinite());
+  bool has_input = false;
+  Waiter waiter = [this, &has_input](zx::time deadline) {
+    has_input = HasTestInput(deadline);
+    return ZX_OK;
+  };
+  WaitFor("test input", &waiter);
   started_sync_.Signal();
   return has_input;
 }

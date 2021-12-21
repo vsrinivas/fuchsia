@@ -50,7 +50,10 @@ TEST_F(ControllerProviderTest, Stop) {
   auto provider = GetProvider();
   provider->Stop();
   auto channel = provider.unowned_channel();
-  auto status = channel->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+  Waiter waiter = [&channel](zx::time deadline) {
+    return channel->wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
+  };
+  auto status = WaitFor("channel to close", &waiter);
   // The local end of the channel may be closed before the wait.
   if (status != ZX_ERR_BAD_HANDLE) {
     EXPECT_EQ(status, ZX_OK);

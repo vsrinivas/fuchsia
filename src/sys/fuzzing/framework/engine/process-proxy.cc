@@ -97,7 +97,10 @@ void ProcessProxyImpl::Connect(zx::eventpair eventpair, zx::process process,
   exception_thread_ = std::thread([this]() {
     zx_exception_info_t info;
     zx::exception exception;
-    if (exception_channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr) != ZX_OK ||
+    Waiter waiter = [this](zx::time deadline) {
+      return exception_channel_.wait_one(ZX_CHANNEL_READABLE, deadline, nullptr);
+    };
+    if (WaitFor("exception", &waiter) != ZX_OK ||
         exception_channel_.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
                                 nullptr, nullptr) != ZX_OK) {
       // Process exited and channel was closed before or during the wait and/or read.
@@ -156,15 +159,14 @@ void ProcessProxyImpl::Kill() { process_.kill(); }
 
 Result ProcessProxyImpl::Join() {
   FX_DCHECK(options_);
-  auto status = process_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to wait for process to terminate: " << zx_status_get_string(status);
-  }
+  Waiter waiter = [this](zx::time deadline) {
+    return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
+  };
+  auto status = WaitFor("process to terminate", &waiter);
+  FX_CHECK(status == ZX_OK) << "failed to terminate process: " << zx_status_get_string(status);
   zx_info_process_t info;
   status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to get info for process: " << zx_status_get_string(status);
-  }
+  FX_CHECK(status == ZX_OK) << "failt to get process info: " << zx_status_get_string(status);
   FX_CHECK(info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
   if (result_ != Result::NO_ERRORS) {
     return result_;

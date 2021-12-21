@@ -299,7 +299,7 @@ TEST_F(ControllerTest, Execute) {
   SetError(ZX_OK);
   SetResult(Result::OOM);
   EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
   EXPECT_EQ(response.result, Result::OOM);
 }
@@ -318,7 +318,7 @@ TEST_F(ControllerTest, Minimize) {
   SetError(ZX_OK);
   SetResultInput(minimized);
   EXPECT_EQ(controller->Minimize(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
   auto received = Receive(std::move(response.minimized));
   EXPECT_EQ(received.ToHex(), minimized.ToHex());
@@ -338,7 +338,7 @@ TEST_F(ControllerTest, Cleanse) {
   SetError(ZX_OK);
   SetResultInput(cleansed);
   EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
   auto received = Receive(std::move(response.cleansed));
   EXPECT_EQ(received.ToHex(), cleansed.ToHex());
@@ -358,7 +358,7 @@ TEST_F(ControllerTest, Fuzz) {
   SetResult(Result::CRASH);
   SetResultInput(fuzzed);
   EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
-  ASSERT_TRUE(result.is_response());
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
   auto& response = result.response();
   EXPECT_EQ(response.result, Result::CRASH);
   auto received = Receive(std::move(response.error_input));

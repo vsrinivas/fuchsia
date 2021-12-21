@@ -12,11 +12,15 @@
 #include <zircon/processargs.h>
 #include <zircon/types.h>
 
+#include "src/sys/fuzzing/common/sync-wait.h"
+
 int main(int argc, char** argv) {
   zx::channel channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
   int exitcode = 0;
-  auto status = channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                 zx::deadline_after(zx::duration::infinite()), nullptr);
+  fuzzing::Waiter waiter = [&channel](zx::time deadline) {
+    return channel.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
+  };
+  auto status = fuzzing::WaitFor("channel to become readable", &waiter);
   FX_CHECK(status == ZX_OK);
   status = channel.read(0, &exitcode, nullptr, sizeof(exitcode), 0, nullptr, nullptr);
   FX_CHECK(status == ZX_OK);

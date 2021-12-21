@@ -72,10 +72,11 @@ class RunnerTest : public ::testing::Test {
   void AwaitStarted();
 
   // Returns false if the runner stops before providing any test inputs; otherwise waits for the
-  // first input (either indefinitely or until |timeout| elapses, depending on the version) and
-  // returns true. Unblocks |AwaitStarted| before returning.
+  // first input (either indefinitely, until |timeout| elapses, or until |deadline| passes,
+  // depending on the version) and returns true. Unblocks |AwaitStarted| before returning.
   bool HasTestInput();
-  virtual bool HasTestInput(const zx::duration& timeout) = 0;
+  bool HasTestInput(zx::duration timeout) { return HasTestInput(zx::deadline_after(timeout)); }
+  virtual bool HasTestInput(zx::time deadline) = 0;
 
   // Returns the test input for the next run. This must not be called unless |HasTestInput| returns
   // true.

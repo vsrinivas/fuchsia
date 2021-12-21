@@ -88,8 +88,11 @@ class Binding {
 
   // Blocks until the underlying channel is unbound and closed.
   zx_status_t AwaitClose() {
-    const auto& channel = binding_.channel();
-    auto status = channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+    Waiter waiter = [this](zx::time deadline) {
+      const auto& channel = binding_.channel();
+      return channel.wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
+    };
+    auto status = WaitFor("binding to close", &waiter);
     switch (status) {
       case ZX_ERR_BAD_HANDLE:
       case ZX_ERR_CANCELED:

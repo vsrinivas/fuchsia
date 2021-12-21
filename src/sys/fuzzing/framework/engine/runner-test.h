@@ -28,7 +28,7 @@ class RunnerImplTest : public RunnerTest {
  protected:
   // RunnerTest methods.
   void Configure(Runner* runner, const std::shared_ptr<Options>& options) override;
-  bool HasTestInput(const zx::duration& timeout) override;
+  bool HasTestInput(zx::time deadline) override;
   Input GetTestInput() override;
   void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
 

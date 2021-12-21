@@ -48,8 +48,8 @@ class FakeTargetAdapter final : public TargetAdapter {
   zx_signals_t AwaitSignal();
 
   // Like |AwaitSignal|, but returns ZX_OK and the observed signals via |out| if they are received
-  // before |timeout| elapses; otherwise returns ZX_ERR_TIMED_OUT.
-  zx_status_t AwaitSignal(const zx::duration& timeout, zx_signals_t* out);
+  // before |deadline| passes; otherwise returns ZX_ERR_TIMED_OUT.
+  zx_status_t AwaitSignal(zx::time deadline, zx_signals_t* out);
 
   // Sends a signal to the engine.
   void SignalPeer(Signal signal);

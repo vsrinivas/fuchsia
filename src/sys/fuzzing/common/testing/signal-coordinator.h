@@ -5,6 +5,9 @@
 #ifndef SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
 #define SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
 
+#include <mutex>
+
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
 #include "src/sys/fuzzing/common/sync-wait.h"
 
@@ -24,10 +27,10 @@ class FakeSignalCoordinator final {
   void Pair(zx::eventpair paired);
 
   // Fakes sending a signal to the peer.
-  bool SignalPeer(Signal signal);
+  bool SignalPeer(Signal signal) FXL_LOCKS_EXCLUDED(mutex_);
 
   // Blocks until the next call to |SignalPeer|.
-  zx_signals_t AwaitSignal();
+  zx_signals_t AwaitSignal() FXL_LOCKS_EXCLUDED(mutex_);
 
   void Join() { coordinator_.Join(); }
   void Reset() { coordinator_.Reset(); }
@@ -36,8 +39,9 @@ class FakeSignalCoordinator final {
   bool OnSignal(zx_signals_t observed);
 
   SignalCoordinator coordinator_;
+  std::mutex mutex_;
   SyncWait sync_;
-  zx_signals_t observed_ = 0;
+  zx_signals_t observed_ FXL_GUARDED_BY(mutex_) = 0;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeSignalCoordinator);
 };

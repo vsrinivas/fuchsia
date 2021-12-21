@@ -104,10 +104,12 @@ void Transceiver::ReceiveImpl(FidlInput&& fidl_input, Transceiver::ReceiveCallba
   Input input;
   auto size = input.Resize(fidl_input.size);
   auto* data = input.data();
+  Waiter waiter = [&fidl_input](zx::time deadline) {
+    auto flags = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
+    return fidl_input.socket.wait_one(flags, deadline, nullptr);
+  };
   for (size_t offset = 0; offset < size;) {
-    auto status = fidl_input.socket.wait_one(
-        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED,
-        zx::time::infinite(), nullptr);
+    auto status = WaitFor("socket to become readable", &waiter);
     FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
     size_t actual;
     status = fidl_input.socket.read(0, &data[offset], size - offset, &actual);
@@ -139,9 +141,11 @@ zx_status_t Transceiver::Transmit(Input input, FidlInput* out_fidl_input) {
 void Transceiver::TransmitImpl(const Input& input, zx::socket sender) {
   auto size = input.size();
   const auto* data = input.data();
+  Waiter waiter = [&sender](zx::time deadline) {
+    return sender.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, deadline, nullptr);
+  };
   for (size_t offset = 0; offset < size;) {
-    auto status =
-        sender.wait_one(ZX_SOCKET_WRITABLE | ZX_SOCKET_PEER_CLOSED, zx::time::infinite(), nullptr);
+    auto status = WaitFor("socket to become writable", &waiter);
     FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
     size_t actual = 0;
     status = sender.write(0, &data[offset], size - offset, &actual);

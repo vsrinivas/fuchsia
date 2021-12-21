@@ -23,9 +23,9 @@ void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& o
   runner_impl->SetTargetAdapter(std::move(target_adapter_client));
 }
 
-bool RunnerImplTest::HasTestInput(const zx::duration& timeout) {
+bool RunnerImplTest::HasTestInput(zx::time deadline) {
   zx_signals_t observed;
-  if (target_adapter_.AwaitSignal(timeout, &observed) != ZX_OK) {
+  if (target_adapter_.AwaitSignal(deadline, &observed) != ZX_OK) {
     return false;
   }
   EXPECT_EQ(observed, kStart);

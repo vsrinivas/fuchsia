@@ -15,7 +15,7 @@ namespace fuzzing {
 
 LLVMTargetAdapter::LLVMTargetAdapter() : binding_(this) {}
 
-LLVMTargetAdapter::~LLVMTargetAdapter() { sync_completion_signal(&connected_); }
+LLVMTargetAdapter::~LLVMTargetAdapter() { connected_.Signal(); }
 
 fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler() {
   return
@@ -37,7 +37,7 @@ void LLVMTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
   coordinator_.Pair(std::move(eventpair),
                     [this](zx_signals_t observed) { return OnSignal(observed); });
   callback();
-  sync_completion_signal(&connected_);
+  connected_.Signal();
 }
 
 bool LLVMTargetAdapter::OnSignal(zx_signals_t observed) {
@@ -56,7 +56,7 @@ bool LLVMTargetAdapter::OnSignal(zx_signals_t observed) {
 }
 
 zx_status_t LLVMTargetAdapter::Run() {
-  sync_completion_wait(&connected_, ZX_TIME_INFINITE);
+  connected_.WaitFor("engine to connect");
   return binding_.AwaitClose();
 }
 

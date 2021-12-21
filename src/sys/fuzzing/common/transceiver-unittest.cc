@@ -79,11 +79,13 @@ TEST(TransceiverTest, Transmit) {
   EXPECT_EQ(transceiver.Transmit(input.Duplicate(), &fidl_input), ZX_OK);
   EXPECT_EQ(fidl_input.size, input.size());
   auto* data = input.data();
+  Waiter waiter = [&fidl_input](zx::time deadline) {
+    auto flags = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED;
+    return fidl_input.socket.wait_one(flags, deadline, nullptr);
+  };
   for (size_t i = 0; i < input.size(); ++i) {
     uint8_t u8;
-    EXPECT_EQ(fidl_input.socket.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                                         zx::time::infinite(), nullptr),
-              ZX_OK);
+    EXPECT_EQ(WaitFor("socket to become readable", &waiter), ZX_OK);
     EXPECT_EQ(fidl_input.socket.read(0, &u8, sizeof(u8), nullptr), ZX_OK);
     EXPECT_EQ(data[i], u8);
   }

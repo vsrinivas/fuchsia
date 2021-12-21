@@ -11,6 +11,8 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include "src/sys/fuzzing/common/sync-wait.h"
+
 namespace fuzzing {
 
 TestTarget::~TestTarget() { Reset(); }
@@ -47,8 +49,10 @@ zx::process TestTarget::Launch() {
   status = process_.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exception_channel_);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   exception_thread_ = std::thread([this]() {
-    while (exception_channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr) ==
-           ZX_OK) {
+    Waiter waiter = [this](zx::time deadline) {
+      return exception_channel_.wait_one(ZX_CHANNEL_READABLE, deadline, nullptr);
+    };
+    while (WaitFor("exception", &waiter) == ZX_OK) {
       zx::exception exception;
       zx_exception_info_t info;
       uint32_t strategy;
@@ -87,7 +91,10 @@ void TestTarget::Exit(int32_t exitcode) {
 }
 
 void TestTarget::Join() {
-  auto status = process_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+  Waiter waiter = [this](zx::time deadline) {
+    return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
+  };
+  auto status = WaitFor("test target to terminate", &waiter);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
 }
 

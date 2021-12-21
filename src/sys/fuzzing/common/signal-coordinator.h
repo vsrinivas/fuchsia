@@ -46,7 +46,7 @@ class SignalCoordinator final {
   SignalCoordinator() = default;
   ~SignalCoordinator();
 
-  bool is_valid() const;
+  bool is_valid() const { return paired_.is_valid(); }
 
   // Both |Create| and |Pair| take an |on_signal| parameter, which should be callable with the
   // signature: bool on_signal(zx_signals_t signals);

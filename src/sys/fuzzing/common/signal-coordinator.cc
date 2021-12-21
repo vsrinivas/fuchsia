@@ -9,14 +9,11 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include "src/sys/fuzzing/common/sync-wait.h"
+
 namespace fuzzing {
 
 SignalCoordinator::~SignalCoordinator() { Reset(); }
-
-bool SignalCoordinator::is_valid() const {
-  return paired_.is_valid() && paired_.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(),
-                                                nullptr) == ZX_ERR_TIMED_OUT;
-}
 
 zx::eventpair SignalCoordinator::Create(SignalHandler on_signal) {
   Reset();
@@ -42,10 +39,12 @@ void SignalCoordinator::Pair(zx::eventpair paired, SignalHandler on_signal) {
 
 void SignalCoordinator::WaitLoop() {
   wait_loop_ = std::thread([this]() {
+    zx_signals_t observed;
+    Waiter waiter = [this, &observed](zx::time deadline) {
+      return paired_.wait_one(ZX_USER_SIGNAL_ALL | ZX_EVENTPAIR_PEER_CLOSED, deadline, &observed);
+    };
     while (true) {
-      zx_signals_t observed;
-      auto status = paired_.wait_one(ZX_USER_SIGNAL_ALL | ZX_EVENTPAIR_PEER_CLOSED,
-                                     zx::time::infinite(), &observed);
+      auto status = WaitFor("signal to be received", &waiter);
       // Check if another thread reset |paired_| before the call to |wait_one|, or during it.
       if (status == ZX_ERR_BAD_HANDLE || status == ZX_ERR_CANCELED) {
         break;

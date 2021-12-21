@@ -9,7 +9,6 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
 
@@ -21,6 +20,7 @@
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 // Fuzz target function provided by the user.
 __EXPORT extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
@@ -54,7 +54,7 @@ class LLVMTargetAdapter final : public TargetAdapter {
   bool OnSignal(zx_signals_t observed);
 
   Binding<TargetAdapter> binding_;
-  sync_completion_t connected_;
+  SyncWait connected_;
   std::vector<std::string> parameters_;
   SignalCoordinator coordinator_;
   SharedMemory test_input_;

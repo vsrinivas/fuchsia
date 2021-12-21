@@ -37,6 +37,7 @@ executable("target") {
   sources = [ "target-main.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
+    "//src/sys/fuzzing/common",
     "//zircon/system/ulib/zx",
   ]
 }
