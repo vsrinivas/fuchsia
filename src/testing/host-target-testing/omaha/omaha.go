@@ -91,6 +91,23 @@ type response struct {
 	Response responseConfig `json:"response"`
 }
 
+type requestApp struct {
+	AppId       string      `json:"appid"`
+	Cohort      string      `json:"cohort,omitempty"`
+	CohortHint  string      `json:"cohorthint,omitempty"`
+	CohortName  string      `json:"cohortname,omitempty"`
+	UpdateCheck interface{} `json:"updatecheck,omitempty"`
+}
+
+type requestConfig struct {
+	Protocol string       `json:"protocol"`
+	App      []requestApp `json:"app"`
+}
+
+type request struct {
+	Request requestConfig `json:"request"`
+}
+
 // NewOmahaServer starts an http server that serves the omaha response. The
 // `serverAddress` is the address the server will listen on. The
 // `localHostname` is the hostname running the server from the perspective of
@@ -157,6 +174,13 @@ func NewOmahaServer(ctx context.Context, serverAddress string, localHostname str
 		shuttingDown: shuttingDown,
 	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		var omahaRequest request
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&omahaRequest); err != nil {
+			logger.Infof(ctx, "Could not decode JSON: %v", err)
+			w.WriteHeader(400)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(200)
 		if len(o.updateHost) == 0 || len(o.updatePkg) == 0 {
@@ -172,7 +196,7 @@ func NewOmahaServer(ctx context.Context, serverAddress string, localHostname str
 					},
 					App: []app{{
 						CohortHint: "a-cohort-hint",
-						AppId:      "some-id",
+						AppId:      omahaRequest.Request.App[0].AppId,
 						Cohort:     "1:1:",
 						Status:     "ok",
 						CohortName: "a-cohort-name",

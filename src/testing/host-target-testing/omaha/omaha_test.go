@@ -5,6 +5,7 @@
 package omaha
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -23,6 +24,18 @@ func readExpected(t *testing.T, reader io.Reader, expected string) {
 	if n != expected_len || actual != expected {
 		t.Fatalf("Expected %s, got %s", expected, actual)
 	}
+}
+
+func getTestOmahaRequest(t *testing.T) []byte {
+	r, err := json.Marshal(&request{Request: requestConfig{
+		Protocol: "3.0",
+		App: []requestApp{{
+			AppId: "unit-test-app-id",
+		}}}})
+	if err != nil {
+		t.Fatalf("Unable to marshal JSON. %s", err)
+	}
+	return r
 }
 
 func TestSetPkgURL(t *testing.T) {
@@ -57,7 +70,8 @@ func TestBeforeAfterSetPkgURL(t *testing.T) {
 		t.Fatalf("failed to create omaha server: %v", err)
 	}
 
-	resp, err := http.Get(o.URL())
+	req := getTestOmahaRequest(t)
+	resp, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req))
 	if err != nil {
 		t.Fatalf("Get request shouldn't fail. %s", err)
 	}
@@ -72,7 +86,7 @@ func TestBeforeAfterSetPkgURL(t *testing.T) {
 		t.Fatalf("SetUpdatePkgURL should not fail with the given input. %s", err)
 	}
 
-	resp, err = http.Get(o.URL())
+	resp, err = http.Post(o.URL(), "application/json", bytes.NewBuffer(req))
 	if err != nil {
 		t.Fatalf("Get request shouldn't fail. %s", err)
 	}
@@ -83,7 +97,13 @@ func TestBeforeAfterSetPkgURL(t *testing.T) {
 		t.Fatalf("Could not decode")
 	}
 
-	updateCheck := data.Response.App[0].UpdateCheck
+	app := data.Response.App[0]
+
+	if app.AppId != "unit-test-app-id" {
+		t.Fatalf("AppId should be 'unit-test-app-id', is %s", app.AppId)
+	}
+
+	updateCheck := app.UpdateCheck
 
 	if updateCheck.Status != "ok" {
 		t.Fatalf("Status should be 'ok', is %s", updateCheck.Status)
@@ -131,7 +151,8 @@ func TestShutdown(t *testing.T) {
 		t.Fatalf("failed to create omaha server: %v", err)
 	}
 
-	resp, err := http.Get(o.URL())
+	req := getTestOmahaRequest(t)
+	resp, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req))
 	if err != nil {
 		t.Fatalf("Get request shouldn't fail. %s", err)
 	}
