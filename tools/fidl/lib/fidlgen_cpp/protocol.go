@@ -126,6 +126,7 @@ var (
 	WireClientImpl            = internalNs.member("WireClientImpl")
 	WireSyncClientImpl        = internalNs.member("WireSyncClientImpl")
 	WireSyncBufferClientImpl  = internalNs.member("WireSyncBufferClientImpl")
+	WireEventDispatcher       = internalNs.member("WireEventDispatcher")
 	WireServerDispatcher      = internalNs.member("WireServerDispatcher")
 
 	// Method related
@@ -158,6 +159,7 @@ type wireTypeNames struct {
 	WireClientImpl            name
 	WireSyncClientImpl        name
 	WireSyncBufferClientImpl  name
+	WireEventDispatcher       name
 	WireServerDispatcher      name
 }
 
@@ -176,6 +178,7 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 		WireClientImpl:            WireClientImpl.template(p),
 		WireSyncClientImpl:        WireSyncClientImpl.template(p),
 		WireSyncBufferClientImpl:  WireSyncBufferClientImpl.template(p),
+		WireEventDispatcher:       WireEventDispatcher.template(p),
 		WireServerDispatcher:      WireServerDispatcher.template(p),
 	}
 }

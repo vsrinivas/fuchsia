@@ -21,6 +21,17 @@ class TestProtocol {
   TestProtocol() = delete;
 };
 
+}  // namespace
+
+namespace fidl {
+
+template <>
+class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+
+}  // namespace fidl
+
+namespace {
+
 // A fake client that supports capturing the messages sent to the server.
 class FakeClientImpl : public fidl::internal::ClientBase {
  public:
@@ -34,12 +45,6 @@ class FakeClientImpl : public fidl::internal::ClientBase {
 
   fidl::Endpoints<TestProtocol>& endpoints() { return endpoints_; }
 
-  std::optional<fidl::UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, fidl::internal::AsyncEventHandler* maybe_event_handler,
-      fidl::internal::IncomingTransportContext* transport_context) override {
-    ZX_PANIC("Never used in this test");
-  }
-
   fidl::IncomingMessage ReadFromServer() {
     return fidl::MessageRead(endpoints_.server.channel(),
                              fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()), nullptr,
@@ -49,6 +54,19 @@ class FakeClientImpl : public fidl::internal::ClientBase {
  private:
   fidl::Endpoints<TestProtocol> endpoints_;
   FIDL_ALIGNDECL std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES> read_buffer_;
+};
+
+class FakeWireEventDispatcher
+    : public fidl::internal::IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>> {
+ public:
+  FakeWireEventDispatcher() : IncomingEventDispatcher(nullptr) {}
+
+ private:
+  std::optional<fidl::UnbindInfo> DispatchEvent(
+      fidl::IncomingMessage& msg,
+      fidl::internal::IncomingTransportContext* transport_context) override {
+    ZX_PANIC("Never used in this test");
+  }
 };
 
 constexpr uint64_t kTestOrdinal = 0x1234567812345678;
@@ -105,9 +123,10 @@ class NaturalClientMessengerTest : public zxtest::Test {
   static fidl::internal::ClientController Create(async_dispatcher_t* dispatcher) {
     std::shared_ptr impl = std::make_shared<FakeClientImpl>();
     fidl::internal::ClientController controller;
+    fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
+    event_dispatcher.emplace<FakeWireEventDispatcher>();
     controller.Bind(impl, fidl::internal::MakeAnyTransport(impl->endpoints().client.TakeChannel()),
-                    dispatcher,
-                    /* event_handler */ nullptr, fidl::AnyTeardownObserver::Noop(),
+                    dispatcher, std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
                     fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
     return controller;
   }

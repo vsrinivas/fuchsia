@@ -184,7 +184,8 @@ class Client {
             fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
     controller_.Bind(std::make_shared<WireClientImpl>(),
                      fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
-                     event_handler, fidl::AnyTeardownObserver::Noop(),
+                     internal::MakeAnyEventDispatcher(event_handler),
+                     fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
     natural_client_impl_.emplace(controller_.get());
   }
@@ -318,7 +319,7 @@ class SharedClient final {
   // the reason, if specified.
   //
   // |event_handler| will be destroyed when teardown completes.
-  template <typename AsyncEventHandler = fidl::AsyncEventHandler<Protocol>>
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   SharedClient(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
                std::unique_ptr<AsyncEventHandler> event_handler) {
     Bind(std::move(client_end), dispatcher, std::move(event_handler));
@@ -335,7 +336,7 @@ class SharedClient final {
   // managed independently of the client lifetime.
   //
   // See |SharedClient| above for other behavior aspects of the constructor.
-  template <typename AsyncEventHandler = fidl::AsyncEventHandler<Protocol>>
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   SharedClient(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
                AsyncEventHandler* event_handler,
                fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
@@ -346,7 +347,7 @@ class SharedClient final {
   // workaround C++ limitations on default arguments.
   //
   // See |SharedClient| above for other behavior aspects of the constructor.
-  template <typename AsyncEventHandler = fidl::AsyncEventHandler<Protocol>>
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   SharedClient(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
                fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     Bind(std::move(client_end), dispatcher, nullptr, std::move(teardown_observer));
@@ -398,7 +399,7 @@ class SharedClient final {
   //
   // |event_handler| will be destroyed when teardown completes.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-            std::unique_ptr<fidl::AsyncEventHandler<Protocol>> event_handler) {
+            std::unique_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler) {
     auto event_handler_raw = event_handler.get();
     Bind(std::move(client_end), dispatcher, event_handler_raw,
          fidl::AnyTeardownObserver::ByOwning(std::move(event_handler)));
@@ -415,12 +416,13 @@ class SharedClient final {
   // managed independently of the client lifetime.
   //
   // See |Bind| above for other behavior aspects of the function.
+  // TODO(fxbug.dev/60240): Switch to |fidl::AsyncEventHandler|.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-            fidl::AsyncEventHandler<Protocol>* event_handler,
+            fidl::WireAsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     controller_.Bind(std::make_shared<WireClientImpl>(),
                      fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
-                     event_handler, std::move(teardown_observer),
+                     internal::MakeAnyEventDispatcher(event_handler), std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
     natural_client_impl_ = std::make_shared<NaturalClientImpl>(controller_.get());
   }

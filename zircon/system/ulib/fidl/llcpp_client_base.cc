@@ -15,16 +15,17 @@ namespace internal {
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
 
 void ClientBase::Bind(std::shared_ptr<ClientBase> client, fidl::internal::AnyTransport transport,
-                      async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+                      async_dispatcher_t* dispatcher, AnyIncomingEventDispatcher&& event_dispatcher,
                       AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   ZX_DEBUG_ASSERT(!binding_.lock());
   ZX_DEBUG_ASSERT(client.get() == this);
   auto binding = AsyncClientBinding::Create(
       dispatcher, std::make_shared<fidl::internal::AnyTransport>(std::move(transport)),
-      std::move(client), event_handler, std::move(teardown_observer), threading_policy);
+      std::move(client), event_dispatcher->event_handler(), std::move(teardown_observer),
+      threading_policy);
   binding_ = binding;
   dispatcher_ = dispatcher;
-  event_handler_ = event_handler;
+  event_dispatcher_ = std::move(event_dispatcher);
   binding->BeginFirstWait();
 }
 
@@ -146,7 +147,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return DispatchEvent(msg, event_handler_, transport_context);
+    return event_dispatcher_->DispatchEvent(msg, transport_context);
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -167,12 +168,12 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
 
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl,
                             fidl::internal::AnyTransport client_end, async_dispatcher_t* dispatcher,
-                            AsyncEventHandler* event_handler,
+                            AnyIncomingEventDispatcher&& event_dispatcher,
                             AnyTeardownObserver&& teardown_observer,
                             ThreadingPolicy threading_policy) {
   ZX_ASSERT(!client_impl_);
   client_impl_ = std::move(client_impl);
-  client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, event_handler,
+  client_impl_->Bind(client_impl_, std::move(client_end), dispatcher, std::move(event_dispatcher),
                      std::move(teardown_observer), threading_policy);
   control_ = std::make_shared<ControlBlock>(client_impl_);
 }

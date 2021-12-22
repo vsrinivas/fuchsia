@@ -58,7 +58,7 @@ template <typename FidlProtocol>
 class WireSyncEventHandler;
 
 // WireAsyncEventHandler is used by asynchronous clients and adds a callback
-// for unbind completion on top of EventHandlerInterface.
+// for unbind completion on top of WireEventHandlerInterface.
 template <typename FidlProtocol>
 class WireAsyncEventHandler;
 
@@ -116,6 +116,9 @@ class WireSyncBufferClientImpl;
 
 template <typename FidlProtocol>
 class WireEventHandlerInterface;
+
+template <typename FidlProtocol>
+class WireEventDispatcher;
 
 template <typename FidlProtocol>
 struct WireServerDispatcher;

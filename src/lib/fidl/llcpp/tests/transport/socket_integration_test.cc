@@ -68,12 +68,26 @@ struct fidl::IsFidlMessage<TwoWayRequest> : public std::true_type {};
 template <>
 struct fidl::IsFidlMessage<TwoWayResponse> : public std::true_type {};
 
+class MockEventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
+ public:
+  MockEventDispatcher() : IncomingEventDispatcherBase(nullptr) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      fidl::internal::IncomingTransportContext* incoming_transport_context) override {
+    ZX_PANIC("unexpected event");
+  }
+};
+
 class TestClient : public fidl::internal::ClientBase {
  public:
   void Bind(std::shared_ptr<TestClient> client, zx::socket handle, async_dispatcher_t* dispatcher) {
+    fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
+    event_dispatcher.emplace<MockEventDispatcher>();
     fidl::internal::ClientBase::Bind(
-        client, fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher, nullptr,
-        fidl::AnyTeardownObserver::Noop(),
+        client, fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher,
+        std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
         fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }
 
@@ -99,13 +113,6 @@ class TestClient : public fidl::internal::ClientBase {
     auto* context = new TwoWayResponseContext(std::move(callback));
     fidl::OwnedEncodedMessage<TwoWayRequest, fidl::internal::SocketTransport> encoded(&request);
     fidl::internal::ClientBase::SendTwoWay(encoded.GetOutgoingMessage(), context);
-  }
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg, ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      fidl::internal::IncomingTransportContext* incoming_transport_context) override {
-    ZX_PANIC("unexpected event");
   }
 };
 

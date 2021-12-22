@@ -40,12 +40,28 @@ public:
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<{{ . }}> client_end);
 };
+
+template <>
+class {{ .WireEventDispatcher }} final :
+    public ::fidl::internal::IncomingEventDispatcher<{{ .WireAsyncEventHandler }}> {
+ public:
+  explicit {{ .WireEventDispatcher.Self }}({{ .WireAsyncEventHandler }}* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 {{- EndifFuchsia }}
 {{- end }}
 
 
+
 {{- define "Protocol:EventHandler:MessagingSource" }}
 {{ EnsureNamespace "" }}
+{{- IfdefFuchsia }}
+
 ::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::fidl::UnownedClientEnd<{{ . }}> client_end) {
   zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -105,5 +121,31 @@ public:
     }
   }
 }
+
+std::optional<::fidl::UnbindInfo>
+{{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+  {{- range .Events }}
+    case {{ .OrdinalName }}:
+    {
+      ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->{{ .Name }}(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+  {{- end }}
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+
+{{- EndifFuchsia }}
 {{- end }}
 

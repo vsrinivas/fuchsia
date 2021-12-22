@@ -329,34 +329,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::
             _allocator, &_request);
       });
 }
-
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::HandleRightsProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        internal::IncomingTransportContext* transport_context) {
-  auto* event_handler = static_cast<::fidl::WireAsyncEventHandler<
-      ::fidl_test_protocols::HandleRightsProtocol>*>(maybe_event_handler);
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
-          decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
-      }
-      if (event_handler) {
-        event_handler->AnEvent(decoded.PrimaryObject());
-      }
-      return std::nullopt;
-    }
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
@@ -419,6 +394,30 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>::
     }
   }
 }
+
+std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::HandleRightsProtocol>::
+    DispatchEvent(fidl::IncomingMessage& msg,
+                  internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::fidl_test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->AnEvent(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -1725,50 +1724,9 @@ fidl::internal::WireClientImpl<
             _allocator, &_request);
       });
 }
-
-std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
-    DispatchEvent(fidl::IncomingMessage& msg,
-                  ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-                  internal::IncomingTransportContext* transport_context) {
-  auto* event_handler = static_cast<::fidl::WireAsyncEventHandler<
-      ::fidl_test_protocols::WithAndWithoutRequestResponse>*>(
-      maybe_event_handler);
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::fidl_test_protocols::
-        kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::
-              OnEmptyResponse>>
-          decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
-      }
-      if (event_handler) {
-        event_handler->OnEmptyResponse(decoded.PrimaryObject());
-      }
-      return std::nullopt;
-    }
-    case ::fidl_test_protocols::
-        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
-      ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
-          decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
-      }
-      if (event_handler) {
-        event_handler->OnWithResponse(decoded.PrimaryObject());
-      }
-      return std::nullopt;
-    }
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 ::fidl::Result fidl::WireSyncEventHandler<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>::
@@ -1853,6 +1811,45 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     }
   }
 }
+
+std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+    DispatchEvent(fidl::IncomingMessage& msg,
+                  internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::fidl_test_protocols::
+        kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              OnEmptyResponse>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->OnEmptyResponse(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+    case ::fidl_test_protocols::
+        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->OnWithResponse(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -2580,35 +2577,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>::OneWay(
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
-
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::Transitional>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        internal::IncomingTransportContext* transport_context) {
-  auto* event_handler = static_cast<
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>*>(
-      maybe_event_handler);
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::fidl_test_protocols::kTransitional_Event_Ordinal: {
-      ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>
-          decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
-      }
-      if (event_handler) {
-        event_handler->Event(decoded.PrimaryObject());
-      }
-      return std::nullopt;
-    }
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
@@ -2669,6 +2640,30 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>::HandleOneEvent(
     }
   }
 }
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireEventDispatcher<::fidl_test_protocols::Transitional>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::fidl_test_protocols::kTransitional_Event_Ordinal: {
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->Event(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
@@ -2925,12 +2920,65 @@ namespace fidl_test_protocols {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::MethodWithUnion>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+            client_end) {
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
+  if (status != ZX_OK) {
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
+  }
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
+  ::fidl::internal::InlineMessageBuffer<0> read_storage;
+  std::array<zx_handle_t, kHandleAllocSize> read_handles;
+  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
+      read_handle_metadata;
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new
+    // event, whose size exceeds the maximum of known events in the current
+    // protocol.
+    return ::fidl::Result::UnexpectedMessage(Unknown());
+  }
+  if (!msg.ok()) {
+    return msg;
+  }
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    default: {
+      return ::fidl::Result::UnexpectedMessage(Unknown());
+    }
+  }
+}
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::MethodWithUnion>::DispatchEvent(
+    WireEventDispatcher<::fidl_test_protocols::MethodWithUnion>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
         internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    default:
+      break;
+  }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -3648,12 +3696,65 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::
             _allocator, &_request);
       });
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::WithProtocolEnds>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+            client_end) {
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
+  if (status != ZX_OK) {
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
+  }
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
+  ::fidl::internal::InlineMessageBuffer<32> read_storage;
+  std::array<zx_handle_t, kHandleAllocSize> read_handles;
+  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
+      read_handle_metadata;
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new
+    // event, whose size exceeds the maximum of known events in the current
+    // protocol.
+    return ::fidl::Result::UnexpectedMessage(Unknown());
+  }
+  if (!msg.ok()) {
+    return msg;
+  }
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    default: {
+      return ::fidl::Result::UnexpectedMessage(Unknown());
+    }
+  }
+}
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithProtocolEnds>::DispatchEvent(
+    WireEventDispatcher<::fidl_test_protocols::WithProtocolEnds>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
         internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    default:
+      break;
+  }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -4023,12 +4124,64 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>::Fifteen(
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Result fidl::
+    WireSyncEventHandler<::fidl_test_protocols::ManyParameters>::HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+            client_end) {
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
+  if (status != ZX_OK) {
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
+  }
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
+  ::fidl::internal::InlineMessageBuffer<0> read_storage;
+  std::array<zx_handle_t, kHandleAllocSize> read_handles;
+  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
+      read_handle_metadata;
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new
+    // event, whose size exceeds the maximum of known events in the current
+    // protocol.
+    return ::fidl::Result::UnexpectedMessage(Unknown());
+  }
+  if (!msg.ok()) {
+    return msg;
+  }
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    default: {
+      return ::fidl::Result::UnexpectedMessage(Unknown());
+    }
+  }
+}
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ManyParameters>::DispatchEvent(
+    WireEventDispatcher<::fidl_test_protocols::ManyParameters>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
         internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    default:
+      break;
+  }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -4921,12 +5074,65 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
             _allocator, &_request);
       });
 }
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::WithErrorSyntax>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+            client_end) {
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
+  if (status != ZX_OK) {
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
+  }
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
+  ::fidl::internal::InlineMessageBuffer<64> read_storage;
+  std::array<zx_handle_t, kHandleAllocSize> read_handles;
+  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
+      read_handle_metadata;
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new
+    // event, whose size exceeds the maximum of known events in the current
+    // protocol.
+    return ::fidl::Result::UnexpectedMessage(Unknown());
+  }
+  if (!msg.ok()) {
+    return msg;
+  }
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    default: {
+      return ::fidl::Result::UnexpectedMessage(Unknown());
+    }
+  }
+}
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::DispatchEvent(
+    WireEventDispatcher<::fidl_test_protocols::WithErrorSyntax>::DispatchEvent(
         fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
         internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    default:
+      break;
+  }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -5369,12 +5575,65 @@ namespace fidl_test_protocols {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
+#endif  // __Fuchsia__
 
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::DiscoverableProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        internal::IncomingTransportContext* transport_context) {
+#ifdef __Fuchsia__
+
+::fidl::Result
+fidl::WireSyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>::
+    HandleOneEvent(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+            client_end) {
+  zx_status_t status = client_end.channel()->wait_one(
+      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
+      nullptr);
+  if (status != ZX_OK) {
+    return ::fidl::Result::TransportError(
+        status, ::fidl::internal::kErrorWaitOneFailed);
+  }
+  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
+    uint32_t x = 0;
+    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
+      x = ZX_CHANNEL_MAX_MSG_HANDLES;
+    }
+    return x;
+  })();
+  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
+  ::fidl::internal::InlineMessageBuffer<0> read_storage;
+  std::array<zx_handle_t, kHandleAllocSize> read_handles;
+  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
+  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
+      read_handle_metadata;
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), read_storage.view(),
+      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
+      ReadOptions{.discardable = true});
+  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
+    // Message size is unexpectedly larger than calculated.
+    // This can only be due to a newer version of the protocol defining a new
+    // event, whose size exceeds the maximum of known events in the current
+    // protocol.
+    return ::fidl::Result::UnexpectedMessage(Unknown());
+  }
+  if (!msg.ok()) {
+    return msg;
+  }
+  fidl_message_header_t* hdr = msg.header();
+  switch (hdr->ordinal) {
+    default: {
+      return ::fidl::Result::UnexpectedMessage(Unknown());
+    }
+  }
+}
+
+std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::DiscoverableProtocol>::
+    DispatchEvent(fidl::IncomingMessage& msg,
+                  internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    default:
+      break;
+  }
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -6144,35 +6403,9 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
             _allocator, &_request);
       });
 }
-
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_protocols::ChannelProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        internal::IncomingTransportContext* transport_context) {
-  auto* event_handler = static_cast<
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>*>(
-      maybe_event_handler);
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::fidl_test_protocols::kChannelProtocol_EventA_Ordinal: {
-      ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>>
-          decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
-      }
-      if (event_handler) {
-        event_handler->EventA(decoded.PrimaryObject());
-      }
-      return std::nullopt;
-    }
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
@@ -6236,6 +6469,30 @@ fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>::
     }
   }
 }
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireEventDispatcher<::fidl_test_protocols::ChannelProtocol>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::fidl_test_protocols::kChannelProtocol_EventA_Ordinal: {
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->EventA(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 

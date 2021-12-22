@@ -685,6 +685,24 @@ class ::fidl::WireSyncEventHandler<
       ::fidl::UnownedClientEnd<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
           client_end);
 };
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
     final : public ::fidl::internal::WireSyncClientBase<
@@ -982,12 +1000,6 @@ class ::fidl::internal::WireClientImpl<
       ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
   CallWhichMayFail_Sync(::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      internal::IncomingTransportContext* transport_context) override;
 };
 namespace fidl {
 #endif  // __Fuchsia__

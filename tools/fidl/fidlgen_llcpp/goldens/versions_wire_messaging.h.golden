@@ -118,6 +118,23 @@ class ::fidl::WireSyncEventHandler<::fidl_test_versions::OtherProtocol>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_versions::OtherProtocol> client_end);
 };
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::fidl_test_versions::OtherProtocol>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::fidl_test_versions::OtherProtocol>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_versions::OtherProtocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_versions::OtherProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -324,6 +341,22 @@ class ::fidl::WireSyncEventHandler<::fidl_test_versions::Protocol>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> client_end);
 };
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::fidl_test_versions::Protocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<::fidl_test_versions::Protocol>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_versions::Protocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_versions::Protocol> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -459,12 +492,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_versions::OtherProtocol>
     final : public ::fidl::internal::ClientBase {
  public:
   WireClientImpl() = default;
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      internal::IncomingTransportContext* transport_context) override;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -528,12 +555,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_versions::Protocol> final
   // necessary.
   ::fidl::Result Foo();
   WireClientImpl() = default;
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 

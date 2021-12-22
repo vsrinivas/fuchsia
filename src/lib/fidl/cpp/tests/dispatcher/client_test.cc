@@ -47,11 +47,17 @@ class WireClientImpl<TestProtocol> : public ClientBase {
         });
     EXPECT_OK(result.status());
   }
+};
+
+template <>
+class WireEventDispatcher<TestProtocol>
+    : public IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>> {
+ public:
+  using IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>>::IncomingEventDispatcher;
 
  private:
   std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, AsyncEventHandler* maybe_event_handler,
-      internal::IncomingTransportContext* transport_context) override {
+      fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) override {
     ZX_PANIC("Not used in this test");
   }
 };

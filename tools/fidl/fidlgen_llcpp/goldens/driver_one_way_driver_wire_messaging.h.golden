@@ -211,6 +211,23 @@ class ::fidl::WireSyncEventHandler<::fidl_test_driveroneway::OneWay>
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<::fidl_test_driveroneway::OneWay> client_end);
 };
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::fidl_test_driveroneway::OneWay>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::fidl_test_driveroneway::OneWay>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_driveroneway::OneWay>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_driveroneway::OneWay> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -279,12 +296,6 @@ class ::fidl::internal::WireClientImpl<::fidl_test_driveroneway::OneWay> final
   ::fidl::Result Send(::fidl::BufferSpan _buffer_span,
                       const ::fidl_test_driveroneway::wire::Payload& payload);
   WireClientImpl() = default;
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      internal::IncomingTransportContext* transport_context) override;
 };
 namespace fidl {
 #endif  // __Fuchsia__

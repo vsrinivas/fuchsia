@@ -149,9 +149,7 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{ template "Protocol:ClientImpl:MessagingSource" . }}
 
-{{- if .Events }}
-  {{- template "Protocol:EventHandler:MessagingSource" . }}
-{{- end }}
+{{ template "Protocol:EventHandler:MessagingSource" . }}
 
 {{- /* Server implementation */}}
 {{ template "Protocol:Dispatcher:MessagingSource" . }}

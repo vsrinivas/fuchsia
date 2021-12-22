@@ -210,7 +210,7 @@ class ClientBase {
   // teardown. NOTE: This is not thread-safe and must be called exactly once,
   // before any other APIs.
   void Bind(std::shared_ptr<ClientBase> client, AnyTransport transport,
-            async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+            async_dispatcher_t* dispatcher, AnyIncomingEventDispatcher&& event_dispatcher,
             fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   // Asynchronously unbind the client from the dispatcher. |teardown_observer|
@@ -284,16 +284,8 @@ class ClientBase {
   //
   // ## Handling events
   //
-  // If the incoming message is an event, the implementation should dispatch it
-  // using the optional |maybe_event_handler|.
-  //
-  // If |maybe_event_handler| is null, the implementation should perform all the
-  // checks that the message is valid and a recognized event, but not
-  // actually invoke the event handler.
-  //
-  // If |maybe_event_handler| is present, it should point to a event handler
-  // subclass which corresponds to the protocol of |ClientImpl|. This constraint
-  // is typically enforced when creating the client.
+  // If the incoming message is an event, the implementation will dispatch it
+  // using |event_dispatcher_| which is created when binding the client.
   //
   // ## Message ownership
   //
@@ -307,34 +299,6 @@ class ClientBase {
   // |std::nullopt|.
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
                                      internal::IncomingTransportContext* transport_context);
-
-  // Dispatches an incoming event.
-  //
-  // This should be implemented by the generated messaging layer.
-  //
-  // ## Handling events
-  //
-  // If |maybe_event_handler| is null, the implementation should perform all the
-  // checks that the message is valid and a recognized event, but not
-  // actually invoke the event handler.
-  //
-  // If |maybe_event_handler| is present, it should point to a event handler
-  // subclass which corresponds to the protocol of |ClientImpl|. This constraint
-  // is typically enforced when creating the client.
-  //
-  // ## Message ownership
-  //
-  // If a matching event handler is found, |msg| is then consumed, regardless of
-  // decoding error. Otherwise, |msg| is not consumed.
-  //
-  // ## Return value
-  //
-  // If errors occur during dispatching, the function will return an
-  // |UnbindInfo| describing the error. Otherwise, it will return
-  // |std::nullopt|.
-  virtual std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, AsyncEventHandler* maybe_event_handler,
-      internal::IncomingTransportContext* transport_context) = 0;
 
  private:
   // Handles errors in sending one-way or two-way FIDL requests. This may lead
@@ -365,8 +329,8 @@ class ClientBase {
   // The dispatcher that is monitoring FIDL messages.
   async_dispatcher_t* dispatcher_ = nullptr;
 
-  // The user supplied event handler.
-  AsyncEventHandler* event_handler_ = nullptr;
+  // The event dispatcher to decode and notify FIDL events.
+  AnyIncomingEventDispatcher event_dispatcher_;
 
   // State for tracking outstanding transactions.
   std::mutex lock_;
@@ -405,7 +369,7 @@ class ClientController {
   //
   // It is an error to call |Bind| more than once on the same controller.
   void Bind(std::shared_ptr<ClientBase>&& client_impl, AnyTransport client_end,
-            async_dispatcher_t* dispatcher, AsyncEventHandler* event_handler,
+            async_dispatcher_t* dispatcher, AnyIncomingEventDispatcher&& event_dispatcher,
             fidl::AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   // Begins to unbind the transport from the dispatcher. In particular, it

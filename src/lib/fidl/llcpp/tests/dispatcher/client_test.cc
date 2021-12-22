@@ -205,22 +205,20 @@ TEST(ClientBindingTestCase, Events) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
    public:
-    EventHandler(sync_completion_t& unbound, WireSharedClient<TestProtocol>& client)
-        : unbound_(unbound), client_(client) {}
+    EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
-      EXPECT_EQ(10, client_->GetEventCount());  // Expect 10 events.
+      EXPECT_EQ(10, event_count());  // Expect 10 events.
       sync_completion_signal(&unbound_);
     }
 
    private:
     sync_completion_t& unbound_;
-    WireSharedClient<TestProtocol>& client_;
   };
 
-  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound, client));
+  client.Bind(std::move(local), loop.dispatcher(), std::make_unique<EventHandler>(unbound));
 
   // In parallel, send 10 event messages from the remote end of the channel.
   std::thread threads[10];

@@ -77,9 +77,23 @@ class TestClient : public fidl::internal::ClientBase {
  public:
   void Bind(std::shared_ptr<TestClient> client, fdf::Channel handle,
             async_dispatcher_t* dispatcher) {
+    class EventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
+     public:
+      EventDispatcher() : IncomingEventDispatcherBase(nullptr) {}
+
+     private:
+      std::optional<fidl::UnbindInfo> DispatchEvent(
+          fidl::IncomingMessage& msg,
+          fidl::internal::IncomingTransportContext* transport_context) override {
+        ZX_PANIC("unexpected event");
+      }
+    };
+    fidl::internal::AnyIncomingEventDispatcher event_dispatcher;
+    event_dispatcher.emplace<EventDispatcher>();
+
     fidl::internal::ClientBase::Bind(
-        client, fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher, nullptr,
-        fidl::AnyTeardownObserver::Noop(),
+        client, fidl::internal::MakeAnyTransport(std::move(handle)), dispatcher,
+        std::move(event_dispatcher), fidl::AnyTeardownObserver::Noop(),
         fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }
 
@@ -114,13 +128,6 @@ class TestClient : public fidl::internal::ClientBase {
     fidl::internal::ClientBase::SendTwoWay(
         encoded.GetOutgoingMessage(), context,
         fidl::WriteOptions{.outgoing_transport_context = outgoing_transport_context});
-  }
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg, ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      fidl::internal::IncomingTransportContext* incoming_transport_context) override {
-    ZX_PANIC("unexpected event");
   }
 };
 

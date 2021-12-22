@@ -29,6 +29,31 @@ class ::fidl::WireAsyncEventHandler<fidl_testing::TestProtocol>
   ~WireAsyncEventHandler() override = default;
 
   void on_fidl_error(::fidl::UnbindInfo info) override {}
+
+  void LogEvent() { event_count_++; }
+
+  uint32_t event_count() const { return event_count_; }
+
+ private:
+  uint32_t event_count_ = 0;
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<fidl_testing::TestProtocol>
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<fidl_testing::TestProtocol>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<fidl_testing::TestProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  // For each event, increment the event count.
+  std::optional<UnbindInfo> DispatchEvent(
+      fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) override {
+    event_handler()->LogEvent();
+    return {};
+  }
 };
 
 template <>
@@ -62,11 +87,6 @@ class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
     return internal::ClientBase::MakeSyncCallWith(std::forward<Callable>(sync_call));
   }
 
-  uint32_t GetEventCount() {
-    std::unique_lock lock(lock_);
-    return event_count_;
-  }
-
   bool IsPending(zx_txid_t txid) {
     std::unique_lock lock(lock_);
     return txids_.count(txid);
@@ -81,17 +101,8 @@ class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
   WireClientImpl() = default;
 
  private:
-  // For each event, increment the event count.
-  std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, AsyncEventHandler* event_handler,
-      internal::IncomingTransportContext* transport_context) override {
-    event_count_++;
-    return {};
-  }
-
   std::mutex lock_;
   std::unordered_set<zx_txid_t> txids_;
-  uint32_t event_count_ = 0;
 };
 
 namespace fidl_testing {

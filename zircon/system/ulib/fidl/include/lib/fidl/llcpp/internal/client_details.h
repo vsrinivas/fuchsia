@@ -5,7 +5,9 @@
 #ifndef LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_
 #define LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_
 
+#include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/result.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/variant.h>
 
@@ -40,6 +42,83 @@ class AsyncEventHandler {
   // invoked on the thread calling dispatcher shutdown.
   virtual void on_fidl_error(::fidl::UnbindInfo error) {}
 };
+
+// |IncomingEventDispatcher| decodes events and invokes the corresponding
+// methods in an event handler. It is the client side counterpart to the server
+// side |IncomingMessageDispatcher|.
+//
+// On the server side, the server implementation would inherit from
+// |IncomingMessageDispatcher|, which decodes and invokes methods on the
+// subclass. Over on the client side, the event dispatcher and event handlers
+// are unrelated by inheritance, because the user may pass a |nullptr| event
+// handler to ignore all events.
+class IncomingEventDispatcherBase {
+ public:
+  explicit IncomingEventDispatcherBase(AsyncEventHandler* event_handler)
+      : event_handler_(event_handler) {}
+
+  virtual ~IncomingEventDispatcherBase() = default;
+
+  // Dispatches an incoming event.
+  //
+  // This should be implemented by the generated messaging layer.
+  //
+  // ## Handling events
+  //
+  // If |event_handler| is null, the implementation should perform all the
+  // checks that the message is valid and a recognized event, but not actually
+  // invoke the event handler.
+  //
+  // If |event_handler| is present, it should point to a event handler subclass
+  // which corresponds to the protocol of |ClientImpl|. This constraint is
+  // typically enforced when creating the client.
+  //
+  // ## Message ownership
+  //
+  // If a matching event handler is found, |msg| is then consumed, regardless of
+  // decoding error. Otherwise, |msg| is not consumed.
+  //
+  // ## Return value
+  //
+  // If errors occur during dispatching, the function will return an
+  // |UnbindInfo| describing the error. Otherwise, it will return
+  // |std::nullopt|.
+  virtual std::optional<UnbindInfo> DispatchEvent(
+      fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) = 0;
+
+  AsyncEventHandler* event_handler() const { return event_handler_; }
+
+ private:
+  AsyncEventHandler* event_handler_;
+};
+
+using AnyIncomingEventDispatcher = Any<IncomingEventDispatcherBase>;
+
+// |IncomingEventDispatcher| is the corresponding event dispatcher for a
+// protocol whose event handler is of type |EventHandler|. The generated code
+// should contain a |fidl::internal::WireEventDispatcher<Protocol>| which
+// subclasses |IncomingEventDispatcher<EventHandler>|, and dispatches events for
+// that protocol.
+template <typename EventHandler>
+class IncomingEventDispatcher : public IncomingEventDispatcherBase {
+ public:
+  explicit IncomingEventDispatcher(EventHandler* event_handler)
+      : IncomingEventDispatcherBase(event_handler) {}
+
+  EventHandler* event_handler() const {
+    // This static_cast is safe because the only way to get an |event_handler|
+    // is from the constructor, which takes |ProtocolEventHandler*|.
+    return static_cast<EventHandler*>(IncomingEventDispatcherBase::event_handler());
+  }
+};
+
+template <typename Protocol>
+AnyIncomingEventDispatcher MakeAnyEventDispatcher(
+    fidl::WireAsyncEventHandler<Protocol>* event_handler) {
+  AnyIncomingEventDispatcher event_dispatcher;
+  event_dispatcher.emplace<fidl::internal::WireEventDispatcher<Protocol>>(event_handler);
+  return event_dispatcher;
+}
 
 }  // namespace internal
 

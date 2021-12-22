@@ -310,35 +310,9 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
             _allocator, &_request);
       });
 }
-
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        internal::IncomingTransportContext* transport_context) {
-  auto* event_handler = static_cast<
-      ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>*>(
-      maybe_event_handler);
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
-      ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
-          decoded{std::move(msg)};
-      if (!decoded.ok()) {
-        return ::fidl::UnbindInfo{decoded};
-      }
-      if (event_handler) {
-        event_handler->Receive(decoded.PrimaryObject());
-      }
-      return std::nullopt;
-    }
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
@@ -402,6 +376,30 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
     }
   }
 }
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireEventDispatcher<::fidl_test_emptystruct::EmptyProtocol>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        internal::IncomingTransportContext* transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
+          decoded{std::move(msg)};
+      if (!decoded.ok()) {
+        return ::fidl::UnbindInfo{decoded};
+      }
+      if (event_handler()) {
+        event_handler()->Receive(decoded.PrimaryObject());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
