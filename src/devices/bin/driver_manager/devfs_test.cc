@@ -7,9 +7,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/driver.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 #include <lib/svc/outgoing.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/bin/driver_manager/devfs_exporter.h"
 
 namespace fio = fuchsia_io;
 
@@ -121,4 +124,83 @@ TEST(Devfs, Export_FailedToClone) {
 
   ASSERT_EQ(ZX_ERR_BAD_HANDLE,
             devfs_export(&root_node, {}, "svc", "one/two", ZX_PROTOCOL_BLOCK, out));
+}
+
+TEST(Devfs, Export_DropDevfs) {
+  Devnode root_node("root");
+  std::vector<std::unique_ptr<Devnode>> out;
+
+  ASSERT_OK(devfs_export(&root_node, {}, "svc", "one/two", 0, out));
+
+  ASSERT_EQ(1, root_node.children.size_slow());
+  {
+    auto& node_one = root_node.children.front();
+    EXPECT_EQ("one", node_one.name);
+    ASSERT_EQ(1, node_one.children.size_slow());
+    auto& node_two = node_one.children.front();
+    EXPECT_EQ("two", node_two.name);
+  }
+
+  out.clear();
+
+  ASSERT_EQ(0, root_node.children.size_slow());
+}
+
+TEST(Devfs, ExportWatcher_Export) {
+  Devnode root_node("root");
+  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  // Create a fake service at svc/test.
+  service::OutgoingDirectory outgoing(loop.dispatcher());
+  zx::channel service_channel;
+  auto vnode = fbl::MakeRefCounted<fs::Service>([&service_channel, &loop](zx::channel server) {
+    service_channel = std::move(server);
+    loop.Quit();
+    return ZX_OK;
+  });
+  outgoing.svc_dir()->AddEntry("test", vnode);
+
+  // Export the svc/test.
+  auto endpoints = fidl::CreateEndpoints<fio::Directory>();
+  ASSERT_OK(endpoints.status_value());
+  ASSERT_OK(outgoing.Serve(std::move(endpoints->server)));
+
+  auto result = driver_manager::ExportWatcher::Create(loop.dispatcher(), &root_node,
+                                                      std::move(endpoints->client), "svc/test",
+                                                      "one/two", ZX_PROTOCOL_BLOCK);
+  ASSERT_EQ(ZX_OK, result.status_value());
+
+  // Set our ExportWatcher to let us know if the service was closed.
+  bool did_close = false;
+  result.value()->set_on_close_callback([&did_close, &loop]() {
+    did_close = true;
+    loop.Quit();
+  });
+
+  // Make sure the directories were set up correctly.
+  ASSERT_EQ(1, root_node.children.size_slow());
+  {
+    auto& node_one = root_node.children.front();
+    EXPECT_EQ("one", node_one.name);
+    ASSERT_EQ(1, node_one.children.size_slow());
+    auto& node_two = node_one.children.front();
+    EXPECT_EQ("two", node_two.name);
+  }
+
+  // Run the loop and make sure ExportWatcher connected to our service.
+  loop.Run();
+  loop.ResetQuit();
+  ASSERT_NE(service_channel.get(), ZX_HANDLE_INVALID);
+  ASSERT_FALSE(did_close);
+  ASSERT_EQ(1, root_node.children.size_slow());
+
+  // Close the server end and check that ExportWatcher noticed.
+  service_channel.reset();
+  loop.Run();
+  ASSERT_TRUE(did_close);
+  ASSERT_EQ(1, root_node.children.size_slow());
+
+  // Drop ExportWatcher and make sure the devfs nodes disappeared.
+  result.value().reset();
+  ASSERT_EQ(0, root_node.children.size_slow());
 }

@@ -12,6 +12,36 @@
 
 namespace driver_manager {
 
+// Each ExportWatcher represents one call to `DevfsExporter::Export`. It holds all of the
+// nodes created by that export.
+class ExportWatcher : public fidl::WireAsyncEventHandler<fuchsia_io::Node> {
+ public:
+  explicit ExportWatcher() = default;
+
+  // Create an ExportWatcher.
+  static zx::status<std::unique_ptr<ExportWatcher>> Create(
+      async_dispatcher_t* dispatcher, Devnode* root,
+      fidl::ClientEnd<fuchsia_io::Directory> service_dir, std::string_view service_path,
+      std::string_view devfs_path, uint32_t protocol_id);
+
+  // Set a callback that will be called when the connection to `service_path` is closed.
+  void set_on_close_callback(fit::callback<void()> callback) { callback_ = std::move(callback); }
+
+  // Because `ExportWatcher` is bound to `client_`, this will be called whenever
+  // there is a FIDL error on `client_`. Since we do not send reports, we know
+  // that this will only be called when the connection closes.
+  void on_fidl_error(fidl::UnbindInfo error) override {
+    if (callback_) {
+      callback_();
+    }
+  }
+
+ private:
+  fit::callback<void()> callback_;
+  fidl::WireClient<fuchsia_io::Node> client_;
+  std::vector<std::unique_ptr<Devnode>> devnodes_;
+};
+
 class DevfsExporter : public fidl::WireServer<fuchsia_device_fs::Exporter> {
  public:
   // The `root` Devnode must outlive `this`.
@@ -26,7 +56,7 @@ class DevfsExporter : public fidl::WireServer<fuchsia_device_fs::Exporter> {
   Devnode* const root_;
   async_dispatcher_t* const dispatcher_;
 
-  std::vector<std::unique_ptr<Devnode>> devnodes_;
+  std::vector<std::unique_ptr<ExportWatcher>> exports_;
 };
 
 }  // namespace driver_manager
