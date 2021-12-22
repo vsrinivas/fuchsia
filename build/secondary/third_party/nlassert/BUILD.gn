@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("nlassert") {
+  public = [
+    "src/include/nlassert-config.h.in",
+    "src/include/nlassert-internal.h",
+    "src/include/nlassert-nonproduction.h",
+    "src/include/nlassert-production.h",
+    "src/include/nlassert.h",
+    "src/include/stdc/assert.h",
+  ]
+  public_configs = [ ":nlassert_config" ]
+}
+
+config("nlassert_config") {
+  include_dirs = [ "src/include" ]
+}
