@@ -4,12 +4,12 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Source tree
-### print lines in the Fuchsia and Zircon sources matching the given pattern
+### print lines in the Fuchsia sources matching the given pattern
 
 ## usage: fx grep [options] <pattern> [-- type_filter...]
 ##
-## Convenience wrapper around 'jiri grep' to search the Fuchsia and Zircon
-## source tree and print lines matching the given pattern.
+## Convenience wrapper around 'jiri grep' to search the Fuchsia source tree and
+## print lines matching the given pattern.
 ##
 ## Narrow your search to specific file types:
 ##   c, cpp: C/C++ source and header files
