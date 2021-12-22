@@ -75,6 +75,7 @@ class Guest : public vm_tools::StartupListener::Service,
  private:
   fpromise::promise<> Start();
   fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> StartGrpcServer();
+  std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_image_size);
   void StartGuest();
   void MountExtrasPartition();
   void MountVmTools();

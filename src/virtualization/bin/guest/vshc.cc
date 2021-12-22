@@ -378,7 +378,7 @@ static void log_container_status(const fuchsia::virtualization::LinuxGuestInfo& 
     case fuchsia::virtualization::ContainerStatus::READY:
       break;
     case fuchsia::virtualization::ContainerStatus::FAILED:
-      std::cout << "Failed to start container: " << info.failure_reason();
+      std::cout << "Failed to start container: " << info.failure_reason() << "\n";
       break;
   }
 }

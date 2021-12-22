@@ -234,45 +234,6 @@ zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
   return zx::ok(std::move(file));
 }
 
-std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_image_size) {
-  TRACE_DURATION("linux_runner", "GetBlockDevices");
-
-  std::vector<fuchsia::virtualization::BlockSpec> devices;
-
-  // Get/create the stateful partition.
-  zx::channel stateful;
-  if (kStatefulImage.format == fuchsia::virtualization::BlockFormat::BLOCK) {
-    auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size);
-    FX_CHECK(handle.is_ok()) << "Failed to find or allocate a partition";
-    stateful = handle->TakeChannel();
-  } else {
-    auto handle = GetPartition(kStatefulImage);
-    FX_CHECK(handle.is_ok()) << "Failed to open or create stateful file";
-    stateful = handle->TakeChannel();
-  }
-  devices.push_back({
-      .id = "stateful",
-      .mode = (kStatefulImage.read_only || kForceVolatileWrites)
-                  ? fuchsia::virtualization::BlockMode::VOLATILE_WRITE
-                  : fuchsia::virtualization::BlockMode::READ_WRITE,
-      .format = kStatefulImage.format,
-      .client = std::move(stateful),
-  });
-
-  // Add the extras partition if it exists.
-  auto extras = GetPartition(kExtrasImage);
-  if (extras.is_ok()) {
-    devices.push_back({
-        .id = "extras",
-        .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
-        .format = kExtrasImage.format,
-        .client = extras->TakeChannel(),
-    });
-  }
-
-  return devices;
-}
-
 const char* GetBridgePackage(sys::ComponentContext* context) {
   TRACE_DURATION("linux_runner", "GetBridgePackage");
   fuchsia::ui::scenic::ScenicSyncPtr scenic;
@@ -439,14 +400,65 @@ fpromise::promise<std::unique_ptr<GrpcVsockServer>, zx_status_t> Guest::StartGrp
   return builder.Build();
 }
 
+std::vector<fuchsia::virtualization::BlockSpec> Guest::GetBlockDevices(size_t stateful_image_size) {
+  TRACE_DURATION("linux_runner", "Guest::GetBlockDevices");
+
+  std::vector<fuchsia::virtualization::BlockSpec> devices;
+
+  // Get/create the stateful partition.
+  zx::channel stateful;
+  if (kStatefulImage.format == fuchsia::virtualization::BlockFormat::BLOCK) {
+    auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size);
+    if (handle.is_error()) {
+      PostContainerFailure("Failed to find or allocate a partition");
+      return devices;
+    }
+    stateful = handle->TakeChannel();
+  } else {
+    auto handle = GetPartition(kStatefulImage);
+    if (handle.is_error()) {
+      PostContainerFailure("Failed to open or create stateful file");
+      return devices;
+    }
+    stateful = handle->TakeChannel();
+  }
+  devices.push_back({
+      .id = "stateful",
+      .mode = (kStatefulImage.read_only || kForceVolatileWrites)
+                  ? fuchsia::virtualization::BlockMode::VOLATILE_WRITE
+                  : fuchsia::virtualization::BlockMode::READ_WRITE,
+      .format = kStatefulImage.format,
+      .client = std::move(stateful),
+  });
+
+  // Add the extras partition if it exists.
+  auto extras = GetPartition(kExtrasImage);
+  if (extras.is_ok()) {
+    devices.push_back({
+        .id = "extras",
+        .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
+        .format = kExtrasImage.format,
+        .client = extras->TakeChannel(),
+    });
+  }
+
+  return devices;
+}
+
 void Guest::StartGuest() {
   TRACE_DURATION("linux_runner", "Guest::StartGuest");
   FX_CHECK(!guest_controller_) << "Called StartGuest with an existing instance";
   FX_LOGS(INFO) << "Launching guest...";
 
+  auto block_devices = GetBlockDevices(config_.stateful_image_size);
+  if (block_devices.empty()) {
+    FX_LOGS(ERROR) << "Failed to start guest: missing block device";
+    return;
+  }
+
   fuchsia::virtualization::GuestConfig cfg;
   cfg.set_virtio_gpu(false);
-  cfg.set_block_devices(GetBlockDevices(config_.stateful_image_size));
+  cfg.set_block_devices(std::move(block_devices));
   cfg.mutable_wayland_device()->dispatcher = wayland_dispatcher_.NewBinding();
   cfg.set_magma_device(fuchsia::virtualization::MagmaDevice());
 
