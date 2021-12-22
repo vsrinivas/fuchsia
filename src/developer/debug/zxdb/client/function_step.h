@@ -9,13 +9,17 @@ namespace zxdb {
 
 class Thread;
 
+// Actions that might be performend when entering a new function. Some functions may be skipped
+// or stepped through transparently depending on what they are and the debugger configuration.
 enum class FunctionStep {
   // Do nothing special for this call. This will mean "stop" or "continue" depending on the
   // context.
   kDefault,
 
+  // Used to step through PLT stubs to get to the destination function.
+  kStepThroughPlt,
+
   // Single-step CPU instructions as long as there is no line information for the given address.
-  // This is used to step through PLT stubs to get to the destination function, for example.
   kStepNoLineInfo,
 
   // Immediately step out of this function. This might be used to ignore libc calls, for example.

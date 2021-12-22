@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/finish_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/step_through_plt_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
@@ -18,7 +19,7 @@
 namespace zxdb {
 
 FunctionThreadController::FunctionThreadController(FunctionStep mode) : mode_(mode) {
-  FX_DCHECK(mode == FunctionStep::kStepOut || mode == FunctionStep::kStepNoLineInfo);
+  FX_DCHECK(mode != FunctionStep::kDefault);
 }
 
 void FunctionThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
@@ -29,6 +30,10 @@ void FunctionThreadController::InitWithThread(Thread* thread, fit::callback<void
       // Should not be hit.
       FX_DCHECK(false);
       cb(Err());
+      break;
+    case FunctionStep::kStepThroughPlt:
+      sub_ = std::make_unique<StepThroughPltThreadController>();
+      sub_->InitWithThread(thread, std::move(cb));
       break;
     case FunctionStep::kStepNoLineInfo:
       // No initialization necessary.
@@ -54,8 +59,9 @@ ThreadController::ContinueOp FunctionThreadController::GetContinueOp() {
   return ContinueOp::StepInstruction();
 }
 
-ThreadController::StopOp FunctionThreadController::OnThreadStop(debug_ipc::ExceptionType stop_type,
-                    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+ThreadController::StopOp FunctionThreadController::OnThreadStop(
+    debug_ipc::ExceptionType stop_type,
+    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (sub_)
     return sub_->OnThreadStop(stop_type, hit_breakpoints);
 

@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <vector>
+
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
@@ -16,6 +18,7 @@
 namespace zxdb {
 
 class Breakpoint;
+class BreakpointLocation;
 class Err;
 class System;
 class Target;
@@ -51,6 +54,11 @@ class UntilThreadController : public ThreadController {
   StopOp OnThreadStop(debug_ipc::ExceptionType stop_type,
                       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   const char* GetName() const override { return "Until"; }
+
+  // Returns the resolved locations where this thread controller is running to. When active, this
+  // will always contain at least one element (InitWithThread() will report error if there are no
+  // addresses resolved).
+  std::vector<const BreakpointLocation*> GetLocations() const;
 
  private:
   System* GetSystem();

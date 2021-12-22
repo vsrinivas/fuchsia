@@ -82,7 +82,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     Log("Done stepping out of sub-frame.");
     finish_.reset();
   } else {
-    if (auto op = step_into_->OnThreadStop(stop_type, {}); op != kStopDone) {
+    if (auto op = step_into_->OnThreadStop(stop_type, hit_breakpoints); op != kStopDone) {
       Log("Still in range after stepping.");
       return op;
     }

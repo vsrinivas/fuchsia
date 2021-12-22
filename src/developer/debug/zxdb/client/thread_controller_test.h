@@ -45,6 +45,12 @@ class ThreadControllerTest : public RemoteAPITest {
   // their own implementation by overriding MakeModuleSymbols().
   MockModuleSymbols* module_symbols() const { return module_symbols_.get(); }
 
+  // The mock module symbols for the unsymbolized module. An unsymbolized module will normally
+  // still have some ELF/PLT symbols.
+  MockModuleSymbols* unsymbolized_module_symbols() const {
+    return unsymbolized_module_symbols_.get();
+  }
+
  protected:
   // Makes the MockModuleSymbols object used for the symbolized module.
   //
@@ -58,6 +64,7 @@ class ThreadControllerTest : public RemoteAPITest {
   Thread* thread_ = nullptr;
 
   fxl::RefPtr<MockModuleSymbols> module_symbols_;
+  fxl::RefPtr<MockModuleSymbols> unsymbolized_module_symbols_;
 };
 
 }  // namespace zxdb

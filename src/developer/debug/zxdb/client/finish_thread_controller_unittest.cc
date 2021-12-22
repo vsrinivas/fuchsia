@@ -36,8 +36,10 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   bool function_completion_called = false;
 
   // "Finish" from the top stack frame, which is an inline one.
-  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 0,
-      [&function_completion_called](const FunctionReturnInfo&){ function_completion_called = true; });
+  auto finish_controller = std::make_unique<FinishThreadController>(
+      thread()->GetStack(), 0, [&function_completion_called](const FunctionReturnInfo&) {
+        function_completion_called = true;
+      });
   bool continued = false;
   thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
     if (!err.has_error())
@@ -91,7 +93,8 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   std::optional<FunctionReturnInfo> return_info;
 
   // "Finish" frame 3,
-  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 3,
+  auto finish_controller = std::make_unique<FinishThreadController>(
+      thread()->GetStack(), 3,
       [&return_info](const FunctionReturnInfo& info) { return_info = info; });
   bool continued = false;
   thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
@@ -233,9 +236,11 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline2) {
                                   SymbolContext::ForRelativeAddresses(), middle2_2_func));
 
   // Send the software breakpoint exception for PHYSICAL to finish.
+  debug_ipc::BreakpointStats breakpoint{
+      .id = static_cast<uint32_t>(mock_remote_api()->last_breakpoint_id()), .hit_count = 1};
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::ExceptionType::kSoftwareBreakpoint,
-                           MockFrameVectorToFrameVector(std::move(stack)), true);
+                           MockFrameVectorToFrameVector(std::move(stack)), true, {breakpoint});
   // That should have finished PHYSICAL (deleting the temporary breakpoint) and OVER#1. Then started
   // stepping over OVER#2 which should continue.
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());

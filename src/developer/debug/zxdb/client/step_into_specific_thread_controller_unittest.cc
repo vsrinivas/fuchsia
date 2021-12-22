@@ -58,12 +58,15 @@ TEST_F(StepIntoSpecificThreadControllerTest, Step) {
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
-  // Execution returns to the original "middle" frame at the next instruction.
+  // Execution returns to the original "middle" frame at the next instruction. This is a software
+  // breakpoint set by the "until" controller.
+  debug_ipc::BreakpointStats breakpoint{
+      .id = static_cast<uint32_t>(mock_remote_api()->last_breakpoint_id()), .hit_count = 1};
   mock_frames = GetStackAtMiddleInline2();
   mock_frames[0]->SetAddress(kFromAddress + 1);  // Set to next instruction.
-  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::ExceptionType::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+  InjectExceptionWithStack(
+      process()->GetKoid(), thread()->GetKoid(), debug_ipc::ExceptionType::kSingleStep,
+      MockFrameVectorToFrameVector(std::move(mock_frames)), true, {breakpoint});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Now exit the range.

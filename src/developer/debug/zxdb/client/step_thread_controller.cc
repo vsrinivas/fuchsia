@@ -198,18 +198,17 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       // handling. We either went from having symbols to not having symbols, or got into a new
       // function.
       FunctionStep func_step = GetFunctionStepAction(thread());
-      switch (func_step) {
-        case FunctionStep::kDefault:
-          Log("Got into new function with no special handling required.");
-          break;
-        case FunctionStep::kStepNoLineInfo:
-        case FunctionStep::kStepOut:
-          Log("Got a new function, step mode of %s", FunctionStepToString(func_step));
-          function_step_ = std::make_unique<FunctionThreadController>(func_step);
-          function_step_->InitWithThread(thread(), [](const Err&) {});
-          return function_step_->OnThreadStop(stop_type, hit_breakpoints);
+      if (func_step != FunctionStep::kDefault) {
+        Log("Got a new function, step mode of %s", FunctionStepToString(func_step));
+        function_step_ = std::make_unique<FunctionThreadController>(func_step);
+        function_step_->InitWithThread(thread(), [](const Err&) {});
+        // Use a "none" exception type to request that the re-evaluate this location, ignoring
+        // the type and any breakpoints (which were created before the function_step_ was created).
+        return function_step_->OnThreadStop(debug_ipc::ExceptionType::kNone, {});
       }
+
       // Continue through the default behavior.
+      Log("Got into new function with no special handling required.");
     }
 
     // When stepping by source line the current_ranges_ will be the entry for the current line in

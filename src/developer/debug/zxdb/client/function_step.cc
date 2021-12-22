@@ -43,6 +43,8 @@ const char* FunctionStepToString(FunctionStep fs) {
   switch (fs) {
     case FunctionStep::kDefault:
       return "kDefault";
+    case FunctionStep::kStepThroughPlt:
+      return "kStepThroughPlt";
     case FunctionStep::kStepNoLineInfo:
       return "kStepNoLineInfo";
     case FunctionStep::kStepOut:
@@ -63,11 +65,8 @@ FunctionStep GetFunctionStepAction(Thread* thread) {
 
   // Always step through PLT stubs. The caller will evaluate whether the function should be stepped
   // into or over when the destination function is reached.
-  //
-  // TODO(fxbug.dev/80275) enhance PLT stepping. This implementation is very simplistic and has
-  // some significant disadvantages as described in the bug.
   if (IsPltStub(loc))
-    return FunctionStep::kStepNoLineInfo;
+    return FunctionStep::kStepThroughPlt;
 
   if (!loc.symbol()) {
     // Unsymbolized code, check the user preference for what to do.

@@ -52,12 +52,15 @@ TEST_F(UntilThreadControllerTest, Basic) {
   // The thread should have continued.
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
-  // Report a software breakpoint stop at the target address.
+  // Report a software breakpoint stop at the target address. The breakpoint must correspond to
+  // the one the controller set.
+  debug_ipc::BreakpointStats breakpoint{
+      .id = static_cast<uint32_t>(mock_remote_api()->last_breakpoint_id()), .hit_count = 1};
   mock_frames = GetStack();
   mock_frames[0]->SetAddress(dest_address);
-  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::ExceptionType::kSoftwareBreakpoint,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+  InjectExceptionWithStack(
+      process()->GetKoid(), thread()->GetKoid(), debug_ipc::ExceptionType::kSoftwareBreakpoint,
+      MockFrameVectorToFrameVector(std::move(mock_frames)), true, {breakpoint});
 
   // Should not have continued and the controller should be done.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stop.

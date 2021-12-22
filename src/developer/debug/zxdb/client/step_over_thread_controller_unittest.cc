@@ -292,15 +292,19 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
   // Execution returns to the original frame at the next instruction. This is the instruction with
   // the "line 0" annotation and it should be resumed.  We can't use GetMiddleFrame() here because
   // we need to supply a specific FileLine.
+  //
+  // This is a software breakpoint set by the "until" controller we have to emulate.
+  debug_ipc::BreakpointStats breakpoint{
+      .id = static_cast<uint32_t>(mock_remote_api()->last_breakpoint_id()), .hit_count = 1};
   mock_frames.push_back(std::make_unique<MockFrame>(
       nullptr, nullptr,
       Location(kReturnAddress, kZeroFileLine, 0, SymbolContext::ForRelativeAddresses(),
                GetMiddleFunction()),
       kMiddleSP, kBottomSP, std::vector<debug::RegisterValue>(), kMiddleSP));
   mock_frames.push_back(GetBottomFrame(kBottomAddress));
-  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::ExceptionType::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+  InjectExceptionWithStack(
+      process()->GetKoid(), thread()->GetKoid(), debug_ipc::ExceptionType::kSoftwareBreakpoint,
+      MockFrameVectorToFrameVector(std::move(mock_frames)), true, {breakpoint});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // The next instruction is on a different line, reporting a stop there should finish stepping.
@@ -343,12 +347,15 @@ TEST_F(StepOverThreadControllerTest, Range) {
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
-  // Execution returns to the original "middle" frame at the next instruction.
+  // Execution returns to the original "middle" frame at the next instruction. This is done via a
+  // software breakpoint set by the "until" controller which we need to emulate hitting.
+  debug_ipc::BreakpointStats breakpoint{
+      .id = static_cast<uint32_t>(mock_remote_api()->last_breakpoint_id()), .hit_count = 1};
   mock_frames = GetStackAtMiddleInline2();
   mock_frames[0]->SetAddress(kFromAddress + 1);  // Set to next instruction.
-  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
-                           debug_ipc::ExceptionType::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+  InjectExceptionWithStack(
+      process()->GetKoid(), thread()->GetKoid(), debug_ipc::ExceptionType::kSoftwareBreakpoint,
+      MockFrameVectorToFrameVector(std::move(mock_frames)), true, {breakpoint});
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());  // Continue.
 
   // Now exit the range.

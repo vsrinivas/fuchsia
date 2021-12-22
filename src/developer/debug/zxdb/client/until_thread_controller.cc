@@ -6,13 +6,17 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <sstream>
+
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
@@ -47,12 +51,26 @@ void UntilThreadController::InitWithThread(Thread* thread, fit::callback<void(co
   breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
   breakpoint_->SetSettings(settings);
 
-  if (breakpoint_->GetLocations().empty()) {
+  const std::vector<const BreakpointLocation*>& locs = GetLocations();
+  if (locs.empty()) {
     // Setting the breakpoint may have resolved to no locations and the breakpoint is now pending.
     // For "until" this is not good because if the user does "until SomethingNonexistant" they would
     // like to see the error rather than have the thread transparently continue without stopping.
     cb(Err("Destination to run until matched no location."));
   } else {
+    if (enable_debug_logging()) {
+      // Log the addresses we resolved.
+      std::ostringstream log;
+      log << "Matched addr(s): ";
+
+      for (size_t i = 0; i < locs.size(); i++) {
+        log << to_hex_string(locs[i]->GetLocation().address());
+        if (i + 1 < locs.size())
+          log << ", ";
+      }
+      std::string log_str = log.str();
+      Log(log_str.c_str());
+    }
     cb(Err());
   }
 }
@@ -66,6 +84,16 @@ ThreadController::ContinueOp UntilThreadController::GetContinueOp() {
 ThreadController::StopOp UntilThreadController::OnThreadStop(
     debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  if (stop_type == debug_ipc::ExceptionType::kNone) {
+    // A "none" exception type will be passed in to us to see if we apply to the current location
+    // when being initialized in nested controller context.
+    //
+    // Since the "until" controller only triggers on breakpoints, we always want to continue in
+    // these cases. Even if the breakpoint is at the current address, continuing at this address
+    // will hit it again.
+    return kContinue;
+  }
+
   // Other controllers such as the StepOverRangeThreadController can use this as a sub-controller.
   // If the controllers don't care about breakpoint set failures, they may start using the thread
   // right away without waiting for the callback in InitWithThread() to asynchronously complete
@@ -83,7 +111,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   // as long as the breakpoint was hit, we don't care how the program got there (it could have
   // single-stepped to the breakpoint).
   Breakpoint* our_breakpoint = breakpoint_.get();
-  bool is_our_breakpoint = true;
+  bool is_our_breakpoint = false;
   for (auto& hit : hit_breakpoints) {
     if (hit && hit.get() == our_breakpoint) {
       is_our_breakpoint = true;
@@ -96,7 +124,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   }
 
   if (!threshold_frame_.is_valid()) {
-    Log("No frame check required.");
+    Log("No frame check required, we're done.");
     return kStopDone;
   }
 
@@ -124,8 +152,17 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     Log("In threshold frame, ignoring.");
     return kContinue;
   }
-  Log("Found target frame (or older).");
+  Log("Found target frame (or older), 'until' operation complete.");
   return kStopDone;
+}
+
+std::vector<const BreakpointLocation*> UntilThreadController::GetLocations() const {
+  if (!breakpoint_) {
+    FX_NOTREACHED();
+    return {};
+  }
+
+  return const_cast<const Breakpoint*>(breakpoint_.get())->GetLocations();
 }
 
 System* UntilThreadController::GetSystem() { return &thread()->session()->system(); }

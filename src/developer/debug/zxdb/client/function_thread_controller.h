@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FUNCTION_THREAD_CONTROLLER_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FUNCTION_THREAD_CONTROLLER_H_
 
 #include "src/developer/debug/zxdb/client/function_step.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
@@ -12,7 +13,8 @@ namespace zxdb {
 // The function thread controller handles the different options for how we might transparently
 // handle a function call. It will dispatch to different operations:
 //  - It might step through PLT stubs.
-//  - It might step out of library calls.
+//  - It might step out of standard library calls.
+//  - It might step out of unsymbolized functions.
 class FunctionThreadController : public ThreadController {
  public:
   explicit FunctionThreadController(FunctionStep mode);
@@ -33,3 +35,4 @@ class FunctionThreadController : public ThreadController {
 
 }  // namespace zxdb
 
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FUNCTION_THREAD_CONTROLLER_H_
