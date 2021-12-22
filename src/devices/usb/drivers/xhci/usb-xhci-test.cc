@@ -14,6 +14,7 @@
 
 #include <fake-dma-buffer/fake-dma-buffer.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
+#include <zxtest/zxtest.h>
 
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
 

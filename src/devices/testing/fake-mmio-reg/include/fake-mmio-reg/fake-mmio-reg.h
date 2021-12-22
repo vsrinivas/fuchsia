@@ -10,7 +10,6 @@
 #include <lib/mmio/mmio.h>
 
 #include <fbl/vector.h>
-#include <zxtest/zxtest.h>
 
 namespace ddk_fake {
 
