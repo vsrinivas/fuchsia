@@ -17,7 +17,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:thiserror",
   ]
@@ -26,6 +25,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/hash_tree.rs",
+    "src/label_generator.rs",
     "src/main.rs",
   ]
 }

@@ -3,20 +3,23 @@
 // found in the LICENSE file.
 #![allow(dead_code)]
 
-use {anyhow::anyhow, anyhow::Error, rand::Rng, sha2::Digest, sha2::Sha256, thiserror::Error};
+use {
+    crate::label_generator::{BitstringLabelGenerator, Label},
+    anyhow::{anyhow, Error},
+    sha2::{Digest, Sha256},
+    thiserror::Error,
+};
 
-// An alias for node labels.
-type Label = i64;
-// An alias for hashes stored in the nodes. For leaf nodes, this will be the
-// hash of the credential metadata. For inner nodes, this will be the hash of
-// all child node hashes.
+/// An alias for hashes stored in the nodes. For leaf nodes, this will be the
+/// hash of the credential metadata. For inner nodes, this will be the hash of
+/// all child node hashes.
 type Hash = [u8; 32];
-// An alias for a vector of sibling hashes for a particular node, the node
-// itself will be None, whereas its siblings will be Some(Hash).
+/// An alias for a vector of sibling hashes for a particular node, the node
+/// itself will be None, whereas its siblings will be Some(Hash).
 type SiblingHashes = Vec<Option<Hash>>;
 
-// By definition the hash of an unused leaf node used when generating a parent
-// hash is [0u8; 32].
+/// By definition the hash of an unused leaf node used when generating a parent
+/// hash is [0u8; 32].
 const DEFAULT_EMPTY_HASH: &[u8; 32] = &[0; 32];
 
 #[derive(Error, Debug)]
@@ -28,66 +31,67 @@ pub enum HashTreeError {
     #[error("found label but is for a non-leaf node")]
     NonLeafLabel,
     #[error("invalid tree")]
-    InvalidTree { leaf_label: i64, tree_height: u8, children_per_node: u8 },
+    InvalidTree { leaf_label: Label, tree_height: u8, children_per_node: u8 },
     #[error(transparent)]
     InvalidInput(#[from] anyhow::Error),
 }
 
-// A HashTree is a representation of a Merkle Tree where each of the leaf
-// nodes contain a hash, and each parent node's hash is constructed from the
-// concatenation of its child hashes.
-// This allows the HashTree to have the property that the hash of the root can
-// be used to verify the integrity of any of the inner or leaf nodes.
+/// A HashTree is a representation of a Merkle Tree where each of the leaf
+/// nodes contain a hash, and each parent node's hash is constructed from the
+/// concatenation of its child hashes.
+/// This allows the HashTree to have the property that the hash of the root can
+/// be used to verify the integrity of any of the inner or leaf nodes.
 #[derive(Debug)]
 struct HashTree {
     height: u8,
     children_per_node: u8,
     root: Node,
+    label_gen: BitstringLabelGenerator,
 }
 
 impl HashTree {
-    // Given a `height` and number of `children_per_node`, construct a full
-    // Hash Tree in which leaves will hold hash values. There will be
-    // `children_per_node^(height-1)` total leaves in which it is possible to
-    // store hashes.
+    /// Given a `height` and number of `children_per_node`, construct a full
+    /// Hash Tree in which leaves will hold hash values. There will be
+    /// `children_per_node^(height-1)` total leaves in which it is possible to
+    /// store hashes.
     fn new(height: u8, children_per_node: u8) -> Result<Self, HashTreeError> {
         if height < 2 || children_per_node < 1 {
             return Err(HashTreeError::InvalidInput(anyhow!(
                 "invalid height or children_per_node"
             )));
         }
-        let root = Node::new(new_label(), children_per_node, height - 1)?;
-        let hash_tree = Self { height, children_per_node, root };
+        let label_gen = BitstringLabelGenerator::new(height, children_per_node)?;
+        let root = Node::new(label_gen.root(), children_per_node, height - 1, &label_gen)?;
+        let hash_tree = Self { height, children_per_node, root, label_gen };
         Ok(hash_tree)
     }
 
-    // Returns the root hash of the tree.
+    /// Returns the root hash of the tree.
     fn get_root_hash<'a>(&'a self) -> Result<&'a Hash, HashTreeError> {
         Ok(&self.root.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH))
     }
 
-    // Attempts to find an unused leaf node and store the given metadata hash
-    // in it, recalculating all inner nodes along the path to leaf.
-    // TODO(arkay): Split this into "get_available_leaf" or something, since we
-    // need CR50 to calculate the new root hash when generating the metadata hash
-    // hash which means we need aux_hashes prior to insertion.
-    fn populate_leaf(&mut self, metadata: &Hash) -> Result<Label, HashTreeError> {
-        match self.root.populate_leaf(metadata) {
-            PopulateLeafOutcome::NoLeafNodes => Err(HashTreeError::NoLeafNodes),
-            PopulateLeafOutcome::OnLeafPath(leaf_label) => Ok(leaf_label),
+    /// Attempts to find an unused leaf node.
+    /// This should be used prior to update_leaf_hash when inserting a new leaf
+    /// metadata, as the label (and its auxiliary hashes) are required for CR50
+    /// to calculate the updated root.
+    fn get_free_leaf_label(&self) -> Result<Label, HashTreeError> {
+        match self.root.get_free_leaf_label() {
+            GetFreeLeafOutcome::NoLeafNodes => Err(HashTreeError::NoLeafNodes),
+            GetFreeLeafOutcome::OnLeafPath(leaf_label) => Ok(leaf_label),
         }
     }
 
-    // Returns all sibling hashes along the path from leaf -> root.
-    // These will be returned as a vector of vector of hashes. Each outer layer
-    // entry will correspond with a layer of the tree from bottom to top, and
-    // each inner layer entry will contain sibling nodes from left to right.
-    // Hashes for nodes along the path to the leaf (including the leaf itself)
-    // _will not_ be returned, but instead _will_ have an empty vector where
-    // the calculated hash should be. This is necessary because we don't have
-    // knowledge of _where_ the leaf-path child is, and the order of children
-    // in the calculation of the parent hash is important.
-    // TODO(arkay): Update this to output hashes as CR50 expects them.
+    /// Returns all sibling hashes along the path from leaf -> root.
+    /// These will be returned as a vector of vector of hashes. Each outer layer
+    /// entry will correspond with a layer of the tree from bottom to top, and
+    /// each inner layer entry will contain sibling nodes from left to right.
+    /// Hashes for nodes along the path to the leaf (including the leaf itself)
+    /// _will not_ be returned, but instead _will_ have an empty vector where
+    /// the calculated hash should be. This is necessary because we don't have
+    /// knowledge of _where_ the leaf-path child is, and the order of children
+    /// in the calculation of the parent hash is important.
+    /// TODO(arkay): Update this to output hashes as CR50 expects them.
     fn get_auxiliary_hashes(&self, label: &Label) -> Result<Vec<SiblingHashes>, HashTreeError> {
         match self.root.find_siblings(label) {
             FindSiblingsOutcome::LeafFound(aux_hashes) => Ok(aux_hashes),
@@ -96,11 +100,11 @@ impl HashTree {
         }
     }
 
-    // Returns the metadata hash associated with this label, or returns an
-    // error if a matching leaf node is not found.
-    // If the leaf_label is associated with an unused/empty leaf, the metadata
-    // hash returned with be all 0s, as per the default expectations for unused
-    // leaves.
+    /// Returns the metadata hash associated with this label, or returns an
+    /// error if a matching leaf node is not found.
+    /// If the leaf_label is associated with an unused/empty leaf, the metadata
+    /// hash returned with be all 0s, as per the default expectations for unused
+    /// leaves.
     fn get_leaf_hash(&self, label: &Label) -> Result<&Hash, HashTreeError> {
         match self.root.read_leaf(label) {
             ReadLeafOutcome::LeafFound(hash) => Ok(hash),
@@ -109,8 +113,8 @@ impl HashTree {
         }
     }
 
-    // Updates the metadata hash associated with this label, or returns an
-    // error if a matching leaf node is not found.
+    /// Updates the metadata hash associated with this label, or returns an
+    /// error if a matching leaf node is not found.
     fn update_leaf_hash(&mut self, label: &Label, metadata: Hash) -> Result<bool, HashTreeError> {
         match self.root.write_leaf(label, &Some(metadata)) {
             WriteLeafOutcome::LeafUpdated => Ok(true),
@@ -119,8 +123,8 @@ impl HashTree {
         }
     }
 
-    // Deletes the metadata hash associated with this label, or returns an
-    // error if a matching leaf node is not found.
+    /// Deletes the metadata hash associated with this label, or returns an
+    /// error if a matching leaf node is not found.
     fn delete_leaf(&mut self, label: &Label) -> Result<(), HashTreeError> {
         match self.root.write_leaf(label, &None) {
             WriteLeafOutcome::LeafUpdated => Ok(()),
@@ -129,16 +133,21 @@ impl HashTree {
         }
     }
 
-    // Clears all leaves from a tree and reinstantiates the tree's structure.
+    /// Clears all leaves from a tree and reinstantiates the tree's structure.
     fn reset(&mut self) -> Result<(), HashTreeError> {
         // Resetting a tree should be as simple as dropping the reference to
         // the root node, which will cause it and its subtree to be cleaned up.
-        self.root = Node::new(new_label(), self.children_per_node, self.height - 1)?;
+        self.root = Node::new(
+            self.label_gen.root(),
+            self.children_per_node,
+            self.height - 1,
+            &self.label_gen,
+        )?;
         Ok(())
     }
 
-    // Verifies the tree by ensuring that all inner nodes' hashes are
-    // equivalent to the hash of their child nodes.
+    /// Verifies the tree by ensuring that all inner nodes' hashes are
+    /// equivalent to the hash of their child nodes.
     fn verify_tree(&self) -> Result<(), HashTreeError> {
         self.root.verify().map_err(|label| HashTreeError::InvalidTree {
             leaf_label: label,
@@ -148,13 +157,7 @@ impl HashTree {
     }
 }
 
-// Helper function that creates a new label.
-// TODO(arkay): Change this to use a generator function to generate the bitstring label.
-fn new_label() -> Label {
-    rand::thread_rng().gen::<i64>()
-}
-
-enum PopulateLeafOutcome {
+enum GetFreeLeafOutcome {
     NoLeafNodes,
     OnLeafPath(Label),
 }
@@ -185,17 +188,27 @@ struct Node {
 }
 
 impl Node {
-    // Creates a new node and `children_per_node` children if layers > 1,
-    // also updates the internal hash to be the hash of its children.
-    fn new(label: Label, children_per_node: u8, layers: u8) -> Result<Self, Error> {
+    /// Creates a new node and `children_per_node` children if layers > 1,
+    /// also updates the internal hash to be the hash of its children.
+    fn new(
+        label: Label,
+        children_per_node: u8,
+        layers: u8,
+        label_gen: &BitstringLabelGenerator,
+    ) -> Result<Self, Error> {
         let mut node = Self { label: label, hash: None, children: Vec::new() };
         if layers == 0 {
             return Ok(node);
         }
 
         let mut hasher = Sha256::new();
-        for _ in 0..children_per_node {
-            let child = Node::new(new_label(), children_per_node, layers - 1)?;
+        for child_index in 0..children_per_node {
+            let child = Node::new(
+                label_gen.child_label(&node.label, child_index)?,
+                children_per_node,
+                layers - 1,
+                label_gen,
+            )?;
             hasher.update(&child.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH));
             node.children.push(child);
         }
@@ -211,44 +224,28 @@ impl Node {
         self.hash.is_none()
     }
 
-    // Finds an unused leaf, if it exists, and sets the Hash `value` of that leaf,
-    // recalculating the hash of the tree if the tree was changed.
-    // If no unused leaf was found, returns PopulateLeafOutcome::NoLeafNodes.
-    fn populate_leaf(&mut self, value: &Hash) -> PopulateLeafOutcome {
+    /// Finds an unused leaf, if it exists, and sets the Hash `value` of that leaf,
+    /// recalculating the hash of the tree if the tree was changed.
+    /// If no unused leaf was found, returns GetFreeLeafOutcome::NoLeafNodes.
+    fn get_free_leaf_label(&self) -> GetFreeLeafOutcome {
         // If we're a leaf and unused, set our value to the passed in value.
         if self.is_leaf() && self.is_unused() {
-            self.hash = Some(value.clone());
-            return PopulateLeafOutcome::OnLeafPath(self.label);
+            // TODO(arkay): Should we reserve this label in some way?
+            // If not, we should add a lock.
+            return GetFreeLeafOutcome::OnLeafPath(self.label);
         }
 
-        // First iteration, recursively looking for a child leaf to populate.
-        let updated_leaf_label = {
-            let mut iter = self.children.iter_mut();
-            loop {
-                match iter.next() {
-                    Some(child) => {
-                        match child.populate_leaf(&value) {
-                            PopulateLeafOutcome::OnLeafPath(leaf_label) => {
-                                // Found and populated the leaf, break out.
-                                break leaf_label;
-                            }
-                            PopulateLeafOutcome::NoLeafNodes => continue,
-                        }
-                    }
-                    // Return early if we exhausted all children and did not find
-                    // a leaf.
-                    None => return PopulateLeafOutcome::NoLeafNodes,
-                }
-            }
-        };
-
-        // If necessary, second iteration, updates the hash.
-        let mut hasher = Sha256::new();
+        // Recursively look for a child leaf to reserve.
         for child in self.children.iter() {
-            hasher.update(child.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH));
+            match child.get_free_leaf_label() {
+                GetFreeLeafOutcome::OnLeafPath(leaf_label) => {
+                    // Found a free leaf, return it.
+                    return GetFreeLeafOutcome::OnLeafPath(leaf_label);
+                }
+                GetFreeLeafOutcome::NoLeafNodes => continue,
+            }
         }
-        self.hash = Some(hasher.finalize().into());
-        PopulateLeafOutcome::OnLeafPath(updated_leaf_label)
+        GetFreeLeafOutcome::NoLeafNodes
     }
 
     fn read_leaf<'a>(&'a self, label: &Label) -> ReadLeafOutcome<'a> {
@@ -278,11 +275,11 @@ impl Node {
         ReadLeafOutcome::NotFound
     }
 
-    // Find siblings of all nodes along the path to the leaf label node.
-    // This recursively attempts to find a leaf node with `label` and returns
-    // all hashes of sibling nodes from left to right, bottom to top, with
-    // None indicating the index of the node that is on the path to the leaf
-    // (or the leaf itself).
+    /// Find siblings of all nodes along the path to the leaf label node.
+    /// This recursively attempts to find a leaf node with `label` and returns
+    /// all hashes of sibling nodes from left to right, bottom to top, with
+    /// None indicating the index of the node that is on the path to the leaf
+    /// (or the leaf itself).
     fn find_siblings(&self, label: &Label) -> FindSiblingsOutcome {
         if self.label == *label {
             if self.is_leaf() {
@@ -356,7 +353,7 @@ impl Node {
             }
         }
 
-        // First iteration, recursively looking for a child leaf to populate.
+        // First iteration, recursively looking for the correct leaf node.
         let mut iter = self.children.iter_mut();
         loop {
             match iter.next() {
@@ -388,8 +385,8 @@ impl Node {
         WriteLeafOutcome::LeafUpdated
     }
 
-    // Returns Ok(()) if the tree is valid, otherwise, returns Err(label)
-    // where label is the label of the first node with an mismatched hash.
+    /// Returns Ok(()) if the tree is valid, otherwise, returns Err(label)
+    /// where label is the label of the first node with an mismatched hash.
     fn verify(&self) -> Result<(), Label> {
         // Leaf nodes store a hash supplied by the user and are always valid.
         if self.is_leaf() {
@@ -416,8 +413,7 @@ impl Node {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    const BAD_LABEL: i64 = -1;
+    use crate::label_generator::BAD_LABEL;
 
     fn create_tree(height: u8, children_per_node: u8) -> (HashTree, u8) {
         (
@@ -433,7 +429,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         for i in 1..6 {
-            let node_label = tree.populate_leaf(&[i; 32]).unwrap();
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i; 32]).unwrap();
             assert_eq!(&[i; 32], tree.get_leaf_hash(&node_label).unwrap());
         }
         assert!(tree.verify_tree().is_ok());
@@ -456,7 +453,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         for i in 1..=max_leaves {
-            let node_label = tree.populate_leaf(&[i; 32]).unwrap();
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i; 32]).unwrap();
             assert_eq!(&[i; 32], tree.get_leaf_hash(&node_label).unwrap());
         }
         assert!(tree.verify_tree().is_ok());
@@ -471,11 +469,13 @@ mod test {
 
         // Fill up the tree with 8 leaves.
         for i in 1..=max_leaves {
-            tree.populate_leaf(&[i; 32]).unwrap();
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i; 32]).unwrap();
+            assert_eq!(&[i; 32], tree.get_leaf_hash(&node_label).unwrap());
         }
 
         // Insert a 9th leaf which should fail.
-        assert!(tree.populate_leaf(&[max_leaves + 1; 32]).is_err());
+        assert!(tree.get_free_leaf_label().is_err());
     }
 
     #[test]
@@ -484,7 +484,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Insert a leaf.
-        let node_label = tree.populate_leaf(&[1; 32]).unwrap();
+        let node_label = tree.get_free_leaf_label().unwrap();
+        tree.update_leaf_hash(&node_label, [1; 32]).unwrap();
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
 
@@ -498,7 +499,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Insert a leaf.
-        let node_label = tree.populate_leaf(&[1; 32]).unwrap();
+        let node_label = tree.get_free_leaf_label().unwrap();
+        tree.update_leaf_hash(&node_label, [1; 32]).unwrap();
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
 
@@ -514,7 +516,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Insert a leaf.
-        let node_label = tree.populate_leaf(&[1; 32]).unwrap();
+        let node_label = tree.get_free_leaf_label().unwrap();
+        tree.update_leaf_hash(&node_label, [1; 32]).unwrap();
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
 
@@ -530,7 +533,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Insert a leaf.
-        let node_label = tree.populate_leaf(&[1; 32]).unwrap();
+        let node_label = tree.get_free_leaf_label().unwrap();
+        tree.update_leaf_hash(&node_label, [1; 32]).unwrap();
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
 
@@ -546,7 +550,8 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Insert a leaf.
-        let node_label = tree.populate_leaf(&[1; 32]).unwrap();
+        let node_label = tree.get_free_leaf_label().unwrap();
+        tree.update_leaf_hash(&node_label, [1; 32]).unwrap();
         assert_eq!(&[1; 32], tree.get_leaf_hash(&node_label).unwrap());
         assert!(tree.verify_tree().is_ok());
 
@@ -562,21 +567,26 @@ mod test {
         assert!(tree.verify_tree().is_ok());
 
         // Insert 2^(4-1) leaves.
-        let mut node_label: Label = 0;
+        let mut node_label = None;
         for i in 1..=max_leaves {
-            node_label = tree.populate_leaf(&[i; 32]).unwrap();
+            let leaf_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&leaf_label, [i; 32]).unwrap();
+            assert_eq!(&[i; 32], tree.get_leaf_hash(&leaf_label).unwrap());
+            node_label = Some(leaf_label);
         }
-        assert_ne!(node_label, 0);
+        assert!(node_label.is_some());
 
         // Check that we cannot a 9th leaf.
-        assert!(tree.populate_leaf(&[max_leaves + 1; 32]).is_err());
+        assert!(tree.get_free_leaf_label().is_err());
 
         // Delete the last added leaf.
-        tree.delete_leaf(&node_label).unwrap();
+        tree.delete_leaf(&node_label.unwrap()).unwrap();
         assert!(tree.verify_tree().is_ok());
 
         // Check that now we _can_ add a 9th leaf.
-        assert!(tree.populate_leaf(&[max_leaves + 1; 32]).is_ok());
+        let leaf_label = tree.get_free_leaf_label().unwrap();
+        tree.update_leaf_hash(&leaf_label, [max_leaves + 1; 32]).unwrap();
+        assert_eq!(&[max_leaves + 1; 32], tree.get_leaf_hash(&leaf_label).unwrap());
         assert!(tree.verify_tree().is_ok());
     }
 
@@ -587,11 +597,13 @@ mod test {
 
         // Insert 2^(4-1) leaves.
         for i in 1..=max_leaves {
-            tree.populate_leaf(&[i; 32]).unwrap();
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i; 32]).unwrap();
+            assert_eq!(&[i; 32], tree.get_leaf_hash(&node_label).unwrap());
         }
 
         // Check that we cannot a 9th leaf.
-        assert!(tree.populate_leaf(&[max_leaves + 1; 32]).is_err());
+        assert!(tree.get_free_leaf_label().is_err());
 
         // Delete the last added leaf.
         tree.reset().unwrap();
@@ -599,7 +611,9 @@ mod test {
 
         // Check that now we can add another 2^(4-1) leaves.
         for i in 1..=max_leaves {
-            tree.populate_leaf(&[i; 32]).unwrap();
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i + 10; 32]).unwrap();
+            assert_eq!(&[i + 10; 32], tree.get_leaf_hash(&node_label).unwrap());
         }
         assert!(tree.verify_tree().is_ok());
     }
@@ -612,7 +626,10 @@ mod test {
         // Fill up the tree, keeping track of all node labels for leaves.
         let mut leaf_labels = vec![];
         for i in 1..=max_leaves {
-            leaf_labels.push(tree.populate_leaf(&[i; 32]).unwrap());
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i; 32]).unwrap();
+            assert_eq!(&[i; 32], tree.get_leaf_hash(&node_label).unwrap());
+            leaf_labels.push(node_label);
         }
         assert!(!leaf_labels.is_empty());
 
@@ -646,7 +663,10 @@ mod test {
         // Fill up all but one leaf of the tree, keeping track of the labels.
         let mut leaf_label_opt = None;
         for i in 1..max_leaves {
-            leaf_label_opt = Some(tree.populate_leaf(&[i; 32]).unwrap());
+            let node_label = tree.get_free_leaf_label().unwrap();
+            tree.update_leaf_hash(&node_label, [i; 32]).unwrap();
+            assert_eq!(&[i; 32], tree.get_leaf_hash(&node_label).unwrap());
+            leaf_label_opt = Some(node_label);
         }
         assert!(leaf_label_opt.is_some());
 

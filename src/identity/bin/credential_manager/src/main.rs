@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 mod hash_tree;
+mod label_generator;
 
 use anyhow::Error;
 use fuchsia_async as fasync;
