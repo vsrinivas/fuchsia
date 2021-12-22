@@ -24,12 +24,45 @@ rustc_binary("reporter_bin") {
   sources = [ "reporter.rs" ]
 }
 
+rustc_binary("child_bin") {
+  name = "child"
+  edition = "2018"
+  source_root = "child.rs"
+  testonly = true
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "child.rs" ]
+}
+
+rustc_binary("cleanup_bin") {
+  name = "cleanup"
+  edition = "2018"
+  source_root = "cleanup.rs"
+  testonly = true
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/component-events",
+  ]
+
+  sources = [ "cleanup.rs" ]
+}
+
 rustc_test("bin") {
   name = "diagnostics_integration_test"
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/lib/component-events",
   ]
@@ -43,6 +76,28 @@ fuchsia_component("reporter") {
   manifest = "meta/reporter.cml"
 }
 
+fuchsia_component("parent") {
+  testonly = true
+  manifest = "meta/parent.cml"
+}
+
+fuchsia_component("child") {
+  testonly = true
+  deps = [ ":child_bin" ]
+  manifest = "meta/child.cml"
+}
+
+fuchsia_component("cleanup") {
+  testonly = true
+  deps = [ ":cleanup_bin" ]
+  manifest = "meta/cleanup.cml"
+}
+
+fuchsia_component("cleanup-root") {
+  testonly = true
+  manifest = "meta/cleanup-root.cml"
+}
+
 fuchsia_component("component-manager-inspect") {
   testonly = true
   manifest = "meta/component-manager-inspect.cml"
@@ -54,7 +109,11 @@ fuchsia_unittest_package("diagnostics-integration-test") {
   manifest = "meta/diagnostics-integration-test.cmx"
   deps = [
     ":bin",
+    ":child",
+    ":cleanup",
+    ":cleanup-root",
     ":component-manager-inspect",
+    ":parent",
     ":reporter",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
   ]

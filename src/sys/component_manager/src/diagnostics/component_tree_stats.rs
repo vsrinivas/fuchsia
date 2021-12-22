@@ -108,9 +108,9 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
             }
             .boxed()
         });
-        let weak_self_clone = weak_self.clone();
+        let weak_self_clone_for_fut = weak_self.clone();
         this.node.record_lazy_child("recent_usage", move || {
-            let weak_self_clone = weak_self.clone();
+            let weak_self_clone = weak_self_clone_for_fut.clone();
             async move {
                 if let Some(this) = weak_self_clone.upgrade() {
                     Ok(this.write_recent_usage_to_inspect().await)
@@ -122,7 +122,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         });
 
         this.measure().await;
-        *(this.sampler_task.lock().await) = Some(Self::spawn_measuring_task(weak_self_clone));
+        *(this.sampler_task.lock().await) = Some(Self::spawn_measuring_task(weak_self));
 
         this
     }
@@ -141,7 +141,8 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
     async fn write_measurements_to_inspect(self: &Arc<Self>) -> inspect::Inspector {
         let inspector = inspect::Inspector::new_with_size(MAX_INSPECT_SIZE);
         let components = inspector.root().create_child("components");
-        let task_count = self.write_measurements(&components).await;
+        let (component_count, task_count) = self.write_measurements(&components).await;
+        inspector.root().record_uint("component_count", component_count);
         inspector.root().record_uint("task_count", task_count);
         inspector.root().record(components);
 
@@ -157,10 +158,12 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         inspector
     }
 
-    async fn write_measurements(&self, node: &inspect::Node) -> u64 {
+    async fn write_measurements(&self, node: &inspect::Node) -> (u64, u64) {
         let mut task_count = 0;
+        let mut components_count = 0;
         for (moniker, stats) in self.tree.lock().await.iter() {
             let stats_guard = stats.lock().await;
+            components_count += 1;
             if stats_guard.is_measuring() {
                 // TODO(fxbug.dev/73169): unify diagnostics and component manager monikers.
                 let key = match moniker {
@@ -178,7 +181,7 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
                 node.record(child);
             }
         }
-        task_count
+        (components_count, task_count)
     }
 
     /// Takes a measurement of all tracked tasks and updated the totals. If any task is not alive
@@ -257,6 +260,18 @@ impl<T: 'static + RuntimeStatsSource + Debug + Send + Sync> ComponentTreeStats<T
         }
     }
 
+    async fn on_component_stopped(self: &Arc<Self>, moniker: ExtendedMoniker) {
+        // When  a component stops, remove the stats we were tracking unless we are measuring
+        // something for that component.
+        let mut tree_guard = self.tree.lock().await;
+        if let Some(stats) = tree_guard.remove(&moniker) {
+            let is_measuring = stats.lock().await.is_measuring();
+            if is_measuring {
+                tree_guard.insert(moniker, stats);
+            }
+        }
+    }
+
     async fn diagnostics_waiter_task<C>(
         weak_self: Weak<Self>,
         moniker: ExtendedMoniker,
@@ -310,7 +325,7 @@ impl ComponentTreeStats<DiagnosticsTask> {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "ComponentTreeStats",
-            vec![EventType::Started],
+            vec![EventType::Started, EventType::Stopped],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -342,6 +357,11 @@ impl Hook for ComponentTreeStats<DiagnosticsTask> {
             EventType::Started => {
                 if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {
                     self.on_component_started(target_moniker, runtime).await;
+                }
+            }
+            EventType::Stopped => {
+                if let Some(EventPayload::Stopped { .. }) = event.result.as_ref().ok() {
+                    self.on_component_stopped(target_moniker).await;
                 }
             }
             _ => {}

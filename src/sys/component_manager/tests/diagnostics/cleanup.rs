@@ -1,0 +1,93 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use component_events::{events::*, matcher::*, sequence::*};
+use diagnostics_reader::{assert_data_tree, ArchiveReader, Inspect};
+use fidl_fuchsia_component as fcomponent;
+use fidl_fuchsia_component_decl as fdecl;
+use fuchsia_component::client;
+use fuchsia_component_test::ScopedInstanceFactory;
+
+#[fuchsia::component]
+async fn main() {
+    let mut reader = ArchiveReader::new();
+    reader.add_selector("<component_manager>:root");
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
+        .expect("could not connect to Realm service");
+
+    let factory = ScopedInstanceFactory::new("coll");
+    let instance = factory
+        .new_named_instance(
+            "parent",
+            "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/parent.cm",
+        )
+        .await
+        .expect("create scoped instance");
+    instance.start_with_binder_sync().await.expect("connect to binder");
+
+    let data = reader.snapshot::<Inspect>().await.expect("got inspect data");
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: contains {
+        cpu_stats: contains {
+            measurements: contains {
+                component_count: 6u64,
+                task_count: 4u64,
+                components: {
+                    "<component_manager>": contains {},
+                    "archivist": contains {},
+                    "cleanup": contains {},
+                    "cleanup/coll:parent/child": contains {}
+                    // The parent has no tasks associated, so "cleanup/coll:parent" isn't present
+                    // here. However, as the count shows it's being tracked as pending. Same for
+                    // the root.
+                }
+            }
+        }
+    });
+
+    let event_source = EventSource::new().expect("conenct to event source");
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Purged::NAME], EventMode::Async)])
+        .await
+        .unwrap();
+
+    // Destroy the parent component.
+    let mut child_ref =
+        fdecl::ChildRef { name: "parent".to_string(), collection: Some("coll".to_string()) };
+    realm
+        .destroy_child(&mut child_ref)
+        .await
+        .expect("destroy_child failed")
+        .expect("failed to destroy child");
+
+    EventSequence::new()
+        .all_of(
+            vec![
+                EventMatcher::default().r#type(Purged::TYPE).moniker_regex("./coll:parent/child"),
+                EventMatcher::default().r#type(Purged::TYPE).moniker_regex("./coll:parent"),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
+
+    // We should no longer see the `cleanup/coll:parent` component. It was a component with no diagnostics
+    // associated, so it's cleaned up. Retry until we see this.
+    let data = reader.snapshot::<Inspect>().await.expect("got inspect data");
+    assert_data_tree!(data[0].payload.as_ref().unwrap(), root: contains {
+        cpu_stats: contains {
+            measurements: contains {
+                // 5 = root + component_manager + archivist + cleanup + child
+                component_count: 5u64,
+                task_count: 4u64,
+                components: {
+                    "<component_manager>": contains {},
+                    "archivist": contains {},
+                    "cleanup": contains {},
+                    "cleanup/coll:parent/child": contains {}
+                }
+            }
+        }
+    });
+}

@@ -1,0 +1,43 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/cleanup",
+    },
+    collections: [
+        {
+            name: "coll",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+        },
+        {
+            event: [
+                "purged",
+                "started",
+            ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#coll",
+        },
+    ],
+}

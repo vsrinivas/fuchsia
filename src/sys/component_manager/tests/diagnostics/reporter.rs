@@ -43,6 +43,7 @@ async fn main() {
         },
         cpu_stats: contains {
             measurements: {
+                component_count: 4u64,
                 task_count: 3u64,
                 "fuchsia.inspect.Stats": {
                     current_size: AnyProperty,
