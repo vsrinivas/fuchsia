@@ -1889,3 +1889,17 @@
   reviewers: ['hjfreyer@google.com', 'geb@google.com', 'ampearce@google.com', 'computerdruid@google.com', 'senj@google.com', 'jsankey@google.com', 'marvinpaul@google.com', 'camrdale@google.com']
   submitted: '2021-10-15'
   reviewed: '2021-12-13'
+
+- name: 'RFC-0146'
+  title: 'Structured Config Schemas in CML'
+  short_description: 'Design, implementation strategy and other decisions made regarding structured config schemas in CML'
+  authors: ['xbhatnag@google.com']
+  file: '0146_structured_config_schemas_in_cml.md'
+  area: ['Component Framework']
+  issue: ['86128']
+  gerrit_change_id: ['595204']
+  status: 'Accepted'
+  reviewers: ['adamperry@google.com', 'jsankey@google.com', 'geb@google.com', 'pascallouis@google.com', 'cpu@google.com']
+  consulted: ['aaronwood@google.com', 'yifeit@google.com', 'surajmalhotra@google.com', 'shayba@google.com']
+  submitted: '2021-10-18'
+  reviewed: '2021-12-22'

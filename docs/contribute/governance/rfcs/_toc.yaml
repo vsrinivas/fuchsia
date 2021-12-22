@@ -303,4 +303,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0144_size_check_tool.md
 - title: "RFC-0145: Eager Package Updates"
   path: /docs/contribute/governance/rfcs/0145_eager_package_updates.md
-
+- title: "RFC-0146: Structured Config Schemas in CML"
+  path: /docs/contribute/governance/rfcs/0146_structured_config_schemas_in_cml.md
