@@ -173,12 +173,11 @@ inline void HandleDestroyer::operator()(Handle* handle) {
 
 // A minimal wrapper around a Dispatcher which is owned by the kernel.
 //
-// Intended usage when creating new a Dispatcher object is:
+// Intended usage when creating a new Dispatcher object is:
 //   1. Create a KernelHandle on the stack (cannot fail)
 //   2. Move the RefPtr<Dispatcher> into the KernelHandle (cannot fail)
 //   3. When ready to give the handle to a process, upgrade the KernelHandle
-//      to a full HandleOwner via UpgradeToHandleOwner() or
-//      user_out_handle::make() (can fail)
+//      to a full HandleOwner via Handle::Make() (can fail)
 //
 // This sequence ensures that the Dispatcher's on_zero_handles() method is
 // called even if errors occur during or before HandleOwner creation, which
