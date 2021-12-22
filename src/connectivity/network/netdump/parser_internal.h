@@ -221,10 +221,19 @@ class Syntax {
       set_failed(ERROR_EXPECTED_LENGTH);
       return std::nullopt;  // Must return null explicitly for the right type.
     }
-    size_t num_end;
+
     std::string input = TOKEN->get_term();
-    long int num = stol(input, &num_end, 10);  // Base-10 number.
-    if (num < 0 || num_end < input.length()) {
+
+    // `c_str()` ensures null term, making it safe to use `strtol()`.
+    char* num_end = nullptr;
+    const char* const num_start = input.c_str();
+    long int num = strtol(num_start, &num_end, 10);  // Base-10 number.
+    if (!num && num_end == num_start) {
+      set_failed(ERROR_INVALID_LENGTH);
+      return std::nullopt;
+    }
+
+    if (num < 0) {
       set_failed(ERROR_INVALID_LENGTH);
       return std::nullopt;
     }

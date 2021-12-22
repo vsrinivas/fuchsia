@@ -266,10 +266,18 @@ class TestParser : public Parser {
     // Do not track `FilterBuilder` function calls for error cases as the parser may partially
     // construct the filter before failing.
     bld_.stop_call_mocks();
-    Environment env = TestEnv("less -100");
-    ExpectError(parse(&env, &bld_));
-    EXPECT_STR_EQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
-    EXPECT_STR_EQ("-100", (**env.error_loc)->get_term().c_str());
+    {
+      Environment env = TestEnv("less -100");
+      ExpectError(parse(&env, &bld_));
+      EXPECT_STR_EQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
+      EXPECT_STR_EQ("-100", (**env.error_loc)->get_term().c_str());
+    }
+    {
+      Environment env = TestEnv("less onehundred");
+      ExpectError(parse(&env, &bld_));
+      EXPECT_STR_EQ(ERROR_INVALID_LENGTH, env.error_cause.c_str());
+      EXPECT_STR_EQ("onehundred", (**env.error_loc)->get_term().c_str());
+    }
   }
 
   void NotTest() {
