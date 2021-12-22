@@ -33,6 +33,11 @@ def main():
     # The destination is the path when placed inside "built/artifacts".
     # If the path is prefixed with ../../, the prefix is removed.
     def add_file(file_path):
+        # Absolute paths are not portable out-of-tree, therefore if a file is
+        # using an absolute path we throw an error.
+        if os.path.isabs(file_path):
+            raise Exception("Absolute paths are not allowed", file_path)
+
         source = os.path.relpath(file_path, os.getcwd())
         prefix = "../../"
         if source.startswith(prefix):

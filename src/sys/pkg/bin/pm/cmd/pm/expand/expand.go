@@ -65,12 +65,7 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	// Make sure the path is absolute so it doesn't matter where the
-	// consumers of the package are run from.
-	outputDir, err := filepath.Abs(filepath.Clean(cfg.OutputDir))
-	if err != nil {
-		return err
-	}
+	outputDir := filepath.Clean(cfg.OutputDir)
 
 	if err := writeMetadataAndManifest(pkgArchive, outputDir); err != nil {
 		return err
@@ -185,19 +180,10 @@ func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 		return err
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	// Write blobs.manifest
 	var buf bytes.Buffer
 	for _, blob := range blobs {
-		relpath, err := filepath.Rel(cwd, blob.SourcePath)
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle, relpath)
+		fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle, blob.SourcePath)
 	}
 	if err := ioutil.WriteFile(filepath.Join(outputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
 		return err
