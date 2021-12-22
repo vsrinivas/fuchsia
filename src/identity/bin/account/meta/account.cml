@@ -4,6 +4,10 @@
             name: "password_authenticator",
             url: "fuchsia-pkg://fuchsia.com/password_authenticator#meta/password-authenticator.cm",
         },
+        {
+            name: "credential_manager",
+            url: "fuchsia-pkg://fuchsia.com/credential_manager#meta/credential-manager.cm",
+        },
     ],
     offer: [
         {
@@ -12,11 +16,21 @@
             to: "#password_authenticator",
         },
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-            ],
+            protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
+            to: [
+                "#credential_manager",
+                "#password_authenticator",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+            from: "parent",
+            to: "#password_authenticator",
+        },
+        {
+            protocol: [ "fuchsia.identity.credential.CredentialManager" ],
+            from: "#credential_manager",
             to: "#password_authenticator",
         },
     ],
