@@ -161,7 +161,7 @@ host$ fx traceutil record --buffer-size=64 --duration=2s \
 
 - cpu:user - collect data for code running in userspace.
 
-- cpu:profile_pc - collect pc data associated with each event
+- cpu:pc - collect pc data associated with each event
 
 This is useful when wanting to know where, for example, cache misses
 are generally occurring (statistically speaking, depending upon the
