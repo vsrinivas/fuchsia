@@ -4,7 +4,6 @@
 
 pub mod error;
 mod parser;
-mod selector_evaluator;
 mod selectors;
 mod types;
 mod validate;
