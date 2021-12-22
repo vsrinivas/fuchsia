@@ -26,12 +26,8 @@ use {
     cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::lock::Mutex,
     moniker::ExtendedMoniker,
-    std::{
-        path::PathBuf,
-        sync::{Arc, Weak},
-    },
+    std::{path::PathBuf, sync::Weak},
 };
 
 /// A system responsible for implementing basic events functionality on a scoped realm.
@@ -49,13 +45,6 @@ pub struct EventSource {
     /// server end of the static event streams.
     stream_provider: Weak<EventStreamProvider>,
 
-    /// Used for OpaqueTest:
-    /// The implicit static EventStream is dropped when the EventSource goes out of scope.
-    /// TODO(fxbug.dev/48245): this shouldn't be done for any EventSource once OpaqueTest goes away.
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    resolve_instance_event_stream: Arc<Mutex<Option<fasync::Task<()>>>>,
-
     /// The options used to subscribe to events.
     options: SubscriptionOptions,
 }
@@ -70,24 +59,20 @@ impl EventSource {
         stream_provider: Weak<EventStreamProvider>,
     ) -> Result<Self, ModelError> {
         // TODO(fxbug.dev/48245): this shouldn't be done for any EventSource. Only for tests.
-        let resolve_instance_event_stream =
-            Arc::new(Mutex::new(match (&options.subscription_type, &options.execution_mode) {
-                (SubscriptionType::AboveRoot, ExecutionMode::Debug) => {
-                    let stream_provider =
-                        stream_provider.upgrade().ok_or(EventsError::StreamProviderNotFound)?;
-                    Some(
-                        stream_provider
-                            .create_static_event_stream(
-                                &ExtendedMoniker::ComponentManager,
-                                "StartComponentTree".to_string(),
-                                vec![EventSubscription::new("resolved".into(), EventMode::Sync)],
-                            )
-                            .await?,
-                    )
-                }
-                (_, _) => None,
-            }));
-        Ok(Self { registry, stream_provider, model, resolve_instance_event_stream, options })
+        if let (SubscriptionType::AboveRoot, ExecutionMode::Debug) =
+            (&options.subscription_type, &options.execution_mode)
+        {
+            let stream_provider =
+                stream_provider.upgrade().ok_or(EventsError::StreamProviderNotFound)?;
+            stream_provider
+                .create_static_event_stream(
+                    &ExtendedMoniker::ComponentManager,
+                    "StartComponentTree".to_string(),
+                    vec![EventSubscription::new("resolved".into(), EventMode::Sync)],
+                )
+                .await?;
+        }
+        Ok(Self { registry, stream_provider, model, options })
     }
 
     pub async fn new_for_debug(

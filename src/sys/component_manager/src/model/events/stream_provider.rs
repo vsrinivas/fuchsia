@@ -31,7 +31,10 @@ pub struct EventStreamAttachment {
     /// The name of this event stream.
     name: String,
     /// The server end of a component's event stream.
-    server_end: ServerEnd<fsys::EventStreamMarker>,
+    server_end: Option<ServerEnd<fsys::EventStreamMarker>>,
+    /// The task serving the event stream and using the client_end
+    /// associated with the above server_end
+    _task: fasync::Task<()>,
 }
 
 /// Creates EventStreams on component resolution according to statically declared
@@ -71,11 +74,10 @@ impl EventStreamProvider {
     ) -> Option<ServerEnd<fsys::EventStreamMarker>> {
         let mut streams = self.streams.lock().await;
         if let Some(event_streams) = streams.get_mut(&target_moniker) {
-            if let Some(pos) =
-                event_streams.iter().position(|event_stream| event_stream.name == stream_name)
+            if let Some(attachment) =
+                event_streams.iter_mut().find(|event_stream| event_stream.name == stream_name)
             {
-                let event_stream = event_streams.remove(pos);
-                return Some(event_stream.server_end);
+                return attachment.server_end.take();
             }
         }
         return None;
@@ -88,7 +90,7 @@ impl EventStreamProvider {
         target_moniker: &ExtendedMoniker,
         stream_name: String,
         subscriptions: Vec<EventSubscription>,
-    ) -> Result<fasync::Task<()>, ModelError> {
+    ) -> Result<(), ModelError> {
         let registry = self.registry.upgrade().ok_or(EventsError::RegistryNotFound)?;
         let subscription_type = match target_moniker {
             ExtendedMoniker::ComponentManager => SubscriptionType::AboveRoot,
@@ -101,10 +103,15 @@ impl EventStreamProvider {
         let mut streams = self.streams.lock().await;
         let event_streams = streams.entry(target_moniker.clone()).or_insert(vec![]);
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
-        event_streams.push(EventStreamAttachment { name: stream_name, server_end });
-        Ok(fasync::Task::spawn(async move {
+        let task = fasync::Task::spawn(async move {
             serve_event_stream(event_stream, client_end).await;
-        }))
+        });
+        event_streams.push(EventStreamAttachment {
+            name: stream_name,
+            server_end: Some(server_end),
+            _task: task,
+        });
+        Ok(())
     }
 
     async fn on_component_purged(
@@ -139,8 +146,7 @@ impl EventStreamProvider {
                             })
                             .collect(),
                     )
-                    .await?
-                    .detach();
+                    .await?;
                 }
                 _ => {}
             }

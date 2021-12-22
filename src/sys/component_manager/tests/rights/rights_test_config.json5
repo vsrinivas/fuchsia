@@ -1,5 +1,5 @@
 {
-    debug: true,
+    debug: false,
     maintain_utc_clock: false,
     use_builtin_process_launcher: false,
     num_threads: 1,
@@ -12,26 +12,35 @@
                 "fuchsia.process.Launcher",
             ],
         },
+
         // For route_directories_from_component_manager_namespace test
         {
             directory: "read_only",
             path: "/read_only",
-            rights: [ "r*" ],
+            rights: [
+                "r*",
+            ],
         },
         {
             directory: "read_write",
             path: "/read_write",
-            rights: [ "rw*" ],
+            rights: [
+                "rw*",
+            ],
         },
         {
             directory: "read_write_dup",
             path: "/read_write_dup",
-            rights: [ "rw*" ],
+            rights: [
+                "rw*",
+            ],
         },
         {
             directory: "read_exec",
             path: "/read_exec",
-            rights: [ "rx*" ],
+            rights: [
+                "rx*",
+            ],
         },
         {
             directory: "read_admin",
@@ -44,7 +53,9 @@
         {
             directory: "read_only_after_scoped",
             path: "/read_only_after_scoped",
-            rights: [ "r*" ],
+            rights: [
+                "r*",
+            ],
         },
     ],
     builtin_capabilities: [

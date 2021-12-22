@@ -971,6 +971,15 @@ impl BuiltinEnvironment {
             }
             OutDirContents::Svc => {
                 info!("Field `out_dir_contents` is set to Svc.");
+
+                if self.execution_mode.is_debug() {
+                    panic!(
+                        "Debug mode requires `out_dir_contents` to be `hub`. This is because the
+                        component tree can only be started from the `fuchsia.sys2.EventSource`
+                        protocol which is available when `out_dir_contents` is set to `hub`."
+                    )
+                }
+
                 let hub_proxy = self.bind_service_fs_for_hub().await?;
                 self.model.start().await;
                 // List the services exposed by the root component.
