@@ -49,6 +49,8 @@ template("fidl_rust") {
       json_representation,
       "//rustfmt.toml",
       "$fidl_rust_dir/bin/rustfmt",
+
+      # Ensure bindings are regenerated after Rust toolchain rolls.
       "$fidl_rust_dir/.versions/rust.cipd_version",
     ]
 
