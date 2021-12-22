@@ -15,6 +15,8 @@ use {
         },
         plugins::{register_plugins, Plugin},
     },
+    anyhow::{bail, Error},
+    fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
     serde::{self, Deserialize},
     std::collections::HashMap,
 };
@@ -132,6 +134,21 @@ pub enum Action {
     Warning(Warning),
     Gauge(Gauge),
     Snapshot(Snapshot),
+}
+
+pub(crate) fn validate_actions(actions: &ActionsSchema) -> Result<(), Error> {
+    for (action_name, action) in actions {
+        // The only validation we do so far is make sure the snapshot signature isn't too long.
+        match action {
+            Action::Snapshot(snapshot) => {
+                if snapshot.signature.len() > MAX_CRASH_SIGNATURE_LENGTH as usize {
+                    bail!("Signature too long in {}", action_name);
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 /// Action that is triggered if a predicate is met.

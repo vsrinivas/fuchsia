@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        act::{Actions, ActionsSchema},
+        act::{self, Actions, ActionsSchema},
         metrics::{
             fetch::{InspectFetcher, KeyValueFetcher, SelectorString, TextFetcher},
             Metric, Metrics,
@@ -102,10 +102,17 @@ impl TryFrom<String> for ConfigFileSchema {
 
     fn try_from(s: String) -> Result<Self, Self::Error> {
         match serde_json5::from_str::<ConfigFileSchema>(&s) {
-            Ok(config) => Ok(config),
+            Ok(config) => validate_config(config),
             Err(e) => return Err(format_err!("Error {}", e)),
         }
     }
+}
+
+fn validate_config(config: ConfigFileSchema) -> Result<ConfigFileSchema, Error> {
+    if let Some(ref actions) = config.file_actions {
+        act::validate_actions(actions)?;
+    }
+    Ok(config)
 }
 
 pub enum DataFetcher {
@@ -280,6 +287,7 @@ mod test {
         super::*,
         crate::act::{Action, Warning},
         anyhow::Error,
+        fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
         maplit::hashmap,
     };
 
@@ -555,5 +563,43 @@ mod test {
         assert!(selectors.contains(&s!("INSPECT:d:e:f")));
         // Internal logic test: Make sure we're not returning eval entries.
         assert!(!selectors.contains(&s!("2+2")));
+    }
+
+    #[fuchsia::test]
+    fn too_long_signature_rejected() {
+        macro_rules! s {
+            ($s:expr) => {
+                $s.to_string()
+            };
+        }
+        // {:a<1$} means pad the interpolated arg with "a" to N chars, where N is from parameter 1.
+        let signature_ok_config = format!(
+            r#"{{
+                act: {{ foo: {{
+                    type: "Snapshot",
+                    repeat: "1",
+                    trigger: "1>0",
+                    signature: "{:a<1$}",
+                }} }}
+            }} "#,
+            "", // Empty string for "aaaa..." padding
+            MAX_CRASH_SIGNATURE_LENGTH as usize
+        );
+        let signature_too_long_config = format!(
+            r#"{{
+                act: {{ foo: {{
+                    type: "Snapshot",
+                    repeat: "1",
+                    trigger: "1>0",
+                    signature: "{:a<1$}",
+                }} }}
+            }} "#,
+            "", // Empty string for "aaaa..." padding
+            MAX_CRASH_SIGNATURE_LENGTH as usize + 1
+        );
+        let file_map_ok = hashmap![s!("file") => signature_ok_config];
+        let file_map_err = hashmap![s!("file") => signature_too_long_config];
+        assert!(ParseResult::new(&file_map_ok, &ActionTagDirective::AllowAll).is_ok());
+        assert!(ParseResult::new(&file_map_err, &ActionTagDirective::AllowAll).is_err());
     }
 }
