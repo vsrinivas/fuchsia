@@ -218,26 +218,6 @@ impl<E: ErrorState> ClockUpdateBuilder<AbsoluteValue, Null, E> {
     }
 }
 
-// TODO(jsankey): Remove this implementation once Timekeeper has migrated to absolute values.
-impl<E: ErrorState> ClockUpdateBuilder<ApproximateValue, Null, E> {
-    /// Adds a rate change in parts per million to this `ClockUpdateBuilder`.
-    ///
-    /// Combinations of approximate value and rate will not be supported in the final API, but this
-    /// implementation is provided temporarily to decouple the changes necessary in clients to use
-    /// absolute values.
-    #[inline]
-    pub fn rate_adjust(
-        self,
-        rate_adjust_ppm: i32,
-    ) -> ClockUpdateBuilder<ApproximateValue, Rate, E> {
-        ClockUpdateBuilder {
-            value_state: self.value_state,
-            rate_state: Rate(rate_adjust_ppm),
-            error_state: self.error_state,
-        }
-    }
-}
-
 impl<V: ValueState, R: RateState> ClockUpdateBuilder<V, R, Null> {
     /// Adds an error bound in nanoseconds to this `ClockUpdateBuilder`.
     #[inline]
