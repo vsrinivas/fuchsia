@@ -19,6 +19,7 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
@@ -528,16 +529,39 @@ func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.
 }
 
 func (t *FuchsiaSSHTester) copySinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, localOutputDir string) error {
-	startTime := clock.Now(ctx)
-	sinkMap, err := t.copier.Copy(sinkRefs, localOutputDir)
-	if err != nil {
+	strategy := retry.WithMaxAttempts(retry.NewConstantBackoff(time.Second), 4)
+	disconnected := false
+	if err := retry.Retry(ctx, strategy, func() error {
+		if disconnected {
+			logger.Debugf(ctx, "reconnecting to retry downloading data sinks...")
+			if err := t.reconnect(ctx); err != nil {
+				return retry.Fatal(err)
+			}
+			disconnected = false
+			logger.Debugf(ctx, "successfully reconnected, will retry downloading data sinks")
+		}
+		startTime := clock.Now(ctx)
+
+		// Copy() is assumed to be idempotent and thus safe to retry, which is
+		// the case for the SFTP-based data sink copier.
+		sinkMap, err := t.copier.Copy(sinkRefs, localOutputDir)
+		if err != nil {
+			if errors.Is(err, sftp.ErrSSHFxConnectionLost) {
+				logger.Warningf(ctx, "connection lost while downlading data sinks: %s", err)
+				disconnected = true
+				return err
+			}
+			return retry.Fatal(err)
+		}
+		copyDuration := clock.Now(ctx).Sub(startTime)
+		sinkRef := runtests.DataSinkReference{Sinks: sinkMap}
+		numSinks := sinkRef.Size()
+		if numSinks > 0 {
+			logger.Debugf(ctx, "copied %d data sinks in %s", numSinks, copyDuration)
+		}
+		return nil
+	}, nil); err != nil {
 		return fmt.Errorf("failed to copy data sinks off target: %w", err)
-	}
-	copyDuration := clock.Now(ctx).Sub(startTime)
-	sinkRef := runtests.DataSinkReference{Sinks: sinkMap}
-	numSinks := sinkRef.Size()
-	if numSinks > 0 {
-		logger.Debugf(ctx, "copied %d data sinks in %s", numSinks, copyDuration)
 	}
 	return nil
 }

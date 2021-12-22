@@ -18,6 +18,7 @@ go_library("lib") {
 
   deps = [
     ":constants",
+    "//third_party/golibs:github.com/pkg/sftp",
     "//third_party/golibs:golang.org/x/crypto",
     "//tools/build",
     "//tools/debug/elflib",
