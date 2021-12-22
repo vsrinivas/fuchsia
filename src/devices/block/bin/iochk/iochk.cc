@@ -667,10 +667,12 @@ int iochk(int argc, char** argv) {
       return -1;
     }
 
-    if (block_client::Client::Create(std::move(fifo), &ctx.block.client) != ZX_OK) {
+    auto client_or = block_client::Client::Create(std::move(fifo));
+    if (client_or.is_error()) {
       printf("cannot create block client for device\n");
       return -1;
     }
+    ctx.block.client = std::move(*client_or);
 
     BlockChecker::ResetAtomic();
   }

@@ -10,6 +10,8 @@
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
+// TODO(brettw) this file's contents should be moved into the C++ object in client.h.
+
 __BEGIN_CDECLS
 
 typedef struct fifo_client fifo_client_t;

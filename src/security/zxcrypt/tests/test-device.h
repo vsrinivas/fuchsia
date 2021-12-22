@@ -18,13 +18,14 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <optional>
 
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/lib/storage/block_client/cpp/client_c.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/fdio-volume.h"
@@ -153,7 +154,7 @@ class TestDevice final {
     req_.length = static_cast<uint32_t>(len);
     req_.dev_offset = off;
     req_.vmo_offset = 0;
-    return ::block_fifo_txn(client_, &req_, 1);
+    return client_->Transaction(&req_, 1);
   }
 
   // Sends |num| requests over the block fifo to read or write blocks.
@@ -162,7 +163,7 @@ class TestDevice final {
       requests[i].group = req_.group;
       requests[i].vmoid = req_.vmoid;
     }
-    return ::block_fifo_txn(client_, requests, num);
+    return client_->Transaction(requests, num);
   }
 
   // TEST HELPERS
@@ -239,7 +240,7 @@ class TestDevice final {
   driver_integration_test::IsolatedDevmgr devmgr_;
 
   // The ramdisk client
-  ramdisk_client_t* ramdisk_;
+  ramdisk_client_t* ramdisk_ = nullptr;
 
   // The pathname of the FVM partition.
   char fvm_part_path_[PATH_MAX];
@@ -254,13 +255,13 @@ class TestDevice final {
   // The zxcrypt volume
   std::unique_ptr<zxcrypt::VolumeManager> volume_manager_;
   // The cached block count.
-  size_t block_count_;
+  size_t block_count_ = 0;
   // The cached block size.
-  size_t block_size_;
+  size_t block_size_ = 0;
   // The root key for this device.
   crypto::Secret key_;
-  // Client for the block I/O protocol to the block server.
-  fifo_client_t* client_;
+  // Client for the block I/O protocol to the block server. Created/destroyed on demand.
+  std::optional<block_client::Client> client_;
   // Request structure used to send messages via the block I/O protocol.
   block_fifo_request_t req_;
   // VMO attached to the zxcrypt device for use with the block I/O protocol.
@@ -272,11 +273,11 @@ class TestDevice final {
   // Lock to coordinate waking thread
   fbl::Mutex lock_;
   // Thread used to manage sleeping/waking.
-  thrd_t tid_;
+  thrd_t tid_ = 0;
   // It would be nice if thrd_t had a reserved invalid value...
-  bool need_join_;
+  bool need_join_ = false;
   // The number of transactions before waking.
-  uint64_t wake_after_ __TA_GUARDED(lock_);
+  uint64_t wake_after_ __TA_GUARDED(lock_) = 0;
   // Timeout before waking regardless of transactions
   zx::time wake_deadline_ __TA_GUARDED(lock_);
 };

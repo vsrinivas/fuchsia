@@ -157,13 +157,13 @@ zx_status_t RemoteBlockDevice::Create(zx::channel device, std::unique_ptr<Remote
     FX_LOGS(ERROR) << "Could not acquire block fifo: " << status;
     return status;
   }
-  block_client::Client fifo_client;
-  status = block_client::Client::Create(std::move(fifo), &fifo_client);
-  if (status != ZX_OK) {
-    return status;
+
+  zx::status<block_client::Client> fifo_client = block_client::Client::Create(std::move(fifo));
+  if (fifo_client.is_error()) {
+    return fifo_client.status_value();
   }
   *out = std::unique_ptr<RemoteBlockDevice>(
-      new RemoteBlockDevice(std::move(device), std::move(fifo_client)));
+      new RemoteBlockDevice(std::move(device), std::move(*fifo_client)));
   return ZX_OK;
 }
 

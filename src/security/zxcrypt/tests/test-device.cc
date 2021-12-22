@@ -64,15 +64,7 @@ zx_status_t ToStatus(ssize_t result) {
 
 }  // namespace
 
-TestDevice::TestDevice()
-    : ramdisk_(nullptr),
-      block_count_(0),
-      block_size_(0),
-      client_(nullptr),
-      tid_(0),
-      need_join_(false),
-      wake_after_(0),
-      wake_deadline_(0) {
+TestDevice::TestDevice() {
   memset(fvm_part_path_, 0, sizeof(fvm_part_path_));
   memset(&req_, 0, sizeof(req_));
 }
@@ -413,7 +405,10 @@ void TestDevice::Connect() {
                                                 fifo.reset_and_get_address()));
   ASSERT_OK(status);
   req_.group = 0;
-  ASSERT_OK(block_fifo_create_client(fifo.release(), &client_));
+
+  auto client_or = block_client::Client::Create(std::move(fifo));
+  ASSERT_OK(client_or.status_value());
+  client_ = std::move(*client_or);
 
   // Create the vmo and get a transferable handle to give to the block server
   ASSERT_OK(zx::vmo::create(size(), 0, &vmo_));
@@ -440,8 +435,7 @@ void TestDevice::Disconnect() {
     zx_status_t status;
     fuchsia_hardware_block_BlockCloseFifo(zxcrypt_channel()->get(), &status);
     memset(&req_, 0, sizeof(req_));
-    block_fifo_release_client(client_);
-    client_ = nullptr;
+    client_ = std::nullopt;
   }
   zxcrypt_.reset();
   volume_manager_.reset();

@@ -60,7 +60,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-#include "src/lib/storage/block_client/cpp/client_c.h"
+#include "src/lib/storage/block_client/cpp/client.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_check.h"
@@ -298,7 +298,7 @@ class VmoClient : public fbl::RefCounted<VmoClient> {
   void CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
   void CheckRead(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len);
   void Transaction(block_fifo_request_t* requests, size_t count) {
-    ASSERT_OK(block_fifo_txn(client_, requests, count));
+    ASSERT_OK(client_.Transaction(requests, count));
   }
 
   int fd() const { return fd_; }
@@ -307,7 +307,7 @@ class VmoClient : public fbl::RefCounted<VmoClient> {
  private:
   int fd_;
   fuchsia_hardware_block_BlockInfo info_;
-  fifo_client_t* client_;
+  block_client::Client client_;
 };
 
 class VmoBuf {
@@ -358,7 +358,7 @@ class VmoBuf {
 };
 
 void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
-  fbl::RefPtr<VmoClient> vc = fbl::AdoptRef(new VmoClient());
+  fbl::RefPtr<VmoClient> vc = fbl::MakeRefCounted<VmoClient>();
 
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
   zx::unowned_channel channel(disk_connection.borrow_channel());
@@ -372,7 +372,11 @@ void VmoClient::Create(int fd, fbl::RefPtr<VmoClient>* out) {
 
   ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &vc->info_), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(block_fifo_create_client(fifo.release(), &vc->client_), ZX_OK);
+
+  auto client_or = block_client::Client::Create(std::move(fifo));
+  ASSERT_TRUE(client_or.is_ok());
+  vc->client_ = std::move(*client_or);
+
   vc->fd_ = fd;
   *out = std::move(vc);
 }
@@ -381,7 +385,6 @@ VmoClient::~VmoClient() {
   fdio_cpp::UnownedFdioCaller disk_connection(fd());
   zx_status_t status;
   fuchsia_hardware_block_BlockCloseFifo(disk_connection.borrow_channel(), &status);
-  block_fifo_release_client(client_);
 }
 
 void VmoClient::CheckWrite(VmoBuf* vbuf, size_t buf_off, size_t dev_off, size_t len) {

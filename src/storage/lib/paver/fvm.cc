@@ -146,7 +146,11 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo, vm
   }
 
   *out_vmoid = response2.vmoid->id;
-  return block_client::Client::Create(std::move(response.fifo), out_client);
+
+  zx::status<block_client::Client> client = block_client::Client::Create(std::move(response.fifo));
+  if (client.is_ok())
+    *out_client = std::move(*client);
+  return client.status_value();
 }
 
 zx_status_t FlushClient(block_client::Client* client) {

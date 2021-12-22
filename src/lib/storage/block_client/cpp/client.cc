@@ -27,14 +27,11 @@ Client& Client::operator=(Client&& other) {
 
 Client::~Client() { Reset(); }
 
-zx_status_t Client::Create(zx::fifo fifo, Client* out) {
+zx::status<Client> Client::Create(zx::fifo fifo) {
   fifo_client_t* client;
-  zx_status_t status = block_fifo_create_client(fifo.release(), &client);
-  if (status != ZX_OK) {
-    return status;
-  }
-  *out = Client(client);
-  return ZX_OK;
+  if (zx_status_t status = block_fifo_create_client(fifo.release(), &client); status != ZX_OK)
+    return zx::error(status);
+  return zx::ok(Client(client));
 }
 
 zx_status_t Client::Transaction(block_fifo_request_t* requests, size_t count) const {

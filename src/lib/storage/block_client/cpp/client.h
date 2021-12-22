@@ -6,6 +6,7 @@
 #define SRC_LIB_STORAGE_BLOCK_CLIENT_CPP_CLIENT_H_
 
 #include <lib/zx/fifo.h>
+#include <lib/zx/status.h>
 #include <stdlib.h>
 #include <zircon/types.h>
 
@@ -19,28 +20,22 @@ class Client {
  public:
   // Constructs an invalid Client.
   //
-  // It is invalid to call any block client operations with this
-  // empty block client wrapper.
+  // It is invalid to call any block client operations with this empty block client wrapper.
   Client();
 
-  // Constructs a valid Client, capable of issuing
-  // block client operations.
-  explicit Client(fifo_client_t* client);
   Client(Client&& other);
   Client& operator=(Client&& other);
   ~Client();
 
-  // Initializer for a BlockClient, which, on success,
-  // will make |out| a valid Client.
-  static zx_status_t Create(zx::fifo fifo, Client* out);
+  // Factory function.
+  static zx::status<Client> Create(zx::fifo fifo);
 
-  // BLOCK CLIENT OPERATIONS.
-
-  // Issues a group of block requests over the underlying fifo,
-  // and waits for a response.
+  // Issues a group of block requests over the underlying fifo, and waits for a response.
   zx_status_t Transaction(block_fifo_request_t* requests, size_t count) const;
 
  private:
+  explicit Client(fifo_client_t* client);
+
   // Replace the current fifo_client with a new one.
   void Reset(fifo_client_t* client = nullptr);
 
