@@ -51,14 +51,15 @@ pub use crate::device::{
     DeviceLayerEventDispatcher,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
-pub use crate::ip::socket::IpSockCreationError;
+pub use crate::ip::socket::{IpSockCreationError, IpSockSendError, IpSockUnroutableError};
 pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
 };
 pub use crate::transport::udp::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext,
-    SendError as UdpSendError, UdpConnId, UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo,
+    BufferUdpStateContext, SendError as UdpSendError, UdpConnId, UdpConnInfo, UdpContext,
+    UdpListenerId, UdpListenerInfo, UdpStateContext,
 };
 pub use crate::transport::TransportStateBuilder;
 

@@ -6,8 +6,6 @@
 
 pub(crate) mod datagram;
 
-use std::num::NonZeroU16;
-
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket as psocket;
@@ -16,7 +14,8 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use netstack3_core::{
-    LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
+    IpSockCreationError, IpSockSendError, IpSockUnroutableError, LocalAddressError, NetstackError,
+    RemoteAddressError, SocketError, UdpSendError,
 };
 
 use crate::bindings::{
@@ -41,7 +40,7 @@ pub(crate) async fn serve<C>(
 ) -> Result<(), fidl::Error>
 where
     C: LockableContext,
-    C::Dispatcher: datagram::UdpWorkerDispatcher,
+    C::Dispatcher: datagram::SocketWorkerDispatcher,
     C: Clone + Send + Sync + 'static,
 {
     stream
@@ -120,11 +119,6 @@ pub(crate) trait SockAddr: std::fmt::Debug + Sized {
     /// Gets a `SpecifiedAddr` witness type for this `SockAddr`'s address.
     fn get_specified_addr(&self) -> Option<SpecifiedAddr<Self::AddrType>> {
         SpecifiedAddr::<Self::AddrType>::new(self.addr())
-    }
-
-    /// Gets a `NonZeroU16` witness type for this `SockAddr`'s port.
-    fn get_specified_port(&self) -> Option<NonZeroU16> {
-        NonZeroU16::new(self.port())
     }
 
     /// Converts this `SockAddr` into an [`fnet::SocketAddress`].
@@ -292,7 +286,7 @@ mod testutil {
 
 /// Trait expressing the conversion of error types into
 /// [`fidl_fuchsia_posix::Errno`] errors for the POSIX-lite wrappers.
-trait IntoErrno {
+pub(crate) trait IntoErrno {
     /// Returns the most equivalent POSIX error code for `self`.
     fn into_errno(self) -> Errno;
 }
@@ -321,6 +315,43 @@ impl IntoErrno for SocketError {
         match self {
             SocketError::Remote(e) => e.into_errno(),
             SocketError::Local(e) => e.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for IpSockUnroutableError {
+    fn into_errno(self) -> Errno {
+        match self {
+            IpSockUnroutableError::LocalAddrNotAssigned => Errno::Eaddrnotavail,
+            IpSockUnroutableError::NoRouteToRemoteAddr => Errno::Ehostunreach,
+        }
+    }
+}
+
+impl IntoErrno for IpSockCreationError {
+    fn into_errno(self) -> Errno {
+        match self {
+            IpSockCreationError::LocalAddrNotUnicast => Errno::Einval,
+            IpSockCreationError::NoLocalAddrAvailable => Errno::Eaddrnotavail,
+            IpSockCreationError::Unroutable(e) => e.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for IpSockSendError {
+    fn into_errno(self) -> Errno {
+        match self {
+            IpSockSendError::Mtu => Errno::Einval,
+            IpSockSendError::Unroutable(e) => e.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for netstack3_core::icmp::IcmpSockCreationError {
+    fn into_errno(self) -> Errno {
+        match self {
+            netstack3_core::icmp::IcmpSockCreationError::Ip(e) => e.into_errno(),
+            netstack3_core::icmp::IcmpSockCreationError::SockAddrConflict => Errno::Eaddrinuse,
         }
     }
 }

@@ -109,6 +109,11 @@ pub struct IcmpEchoReply {
 }
 
 impl IcmpEchoReply {
+    /// Constructs a new `IcmpEchoReply`.
+    pub fn new(id: u16, seq: u16) -> Self {
+        Self { id_seq: IdAndSeq::new(id, seq) }
+    }
+
     /// The ID of this message.
     pub fn id(&self) -> u16 {
         self.id_seq.id.get()

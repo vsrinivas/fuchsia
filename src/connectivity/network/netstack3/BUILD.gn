@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-types",
+    "//src/connectivity/lib/packet-formats",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

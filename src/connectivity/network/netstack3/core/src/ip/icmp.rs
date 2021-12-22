@@ -30,7 +30,7 @@ use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{CounterContext, InstantContext, StateContext};
-use crate::data_structures::token_bucket::TokenBucket;
+use crate::data_structures::{token_bucket::TokenBucket, IdMapCollectionKey};
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::FrameDestination;
 use crate::ip::{
@@ -265,9 +265,23 @@ impl<I: Ip> IcmpConnId<I> {
     }
 }
 
-impl<I: Ip> From<IcmpConnId<I>> for usize {
-    fn from(id: IcmpConnId<I>) -> usize {
-        id.0
+impl<I: Ip> Into<usize> for IcmpConnId<I> {
+    fn into(self) -> usize {
+        let Self(id, _marker) = self;
+        id
+    }
+}
+
+impl<I: Ip> IdMapCollectionKey for IcmpConnId<I> {
+    const VARIANT_COUNT: usize = 1;
+
+    fn get_variant(&self) -> usize {
+        0
+    }
+
+    fn get_id(&self) -> usize {
+        let Self(id, _marker) = *self;
+        id
     }
 }
 
@@ -349,7 +363,15 @@ pub trait IcmpContext<I: IcmpIpExt> {
 /// sockets.
 pub trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>: IcmpContext<I> {
     /// Receives an ICMP echo reply.
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B);
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: IcmpConnId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
+        seq_num: u16,
+        data: B,
+    );
 }
 
 impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>> IcmpContext<I> for Ctx<D> {
@@ -365,8 +387,16 @@ impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>> IcmpContext<I> for Ctx<D
 impl<I: IcmpIpExt, B: BufferMut, D: EventDispatcher + BufferIcmpContext<I, B>>
     BufferIcmpContext<I, B> for Ctx<D>
 {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
-        self.dispatcher.receive_icmp_echo_reply(conn, seq_num, data);
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: IcmpConnId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
+        self.dispatcher.receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data);
     }
 }
 
@@ -1865,7 +1895,14 @@ fn receive_icmp_echo_reply<I: IcmpIpExt + IpExt, B: BufferMut, C: InnerBufferIcm
             icmp_id: id,
         }) {
             trace!("receive_icmp_echo_reply: Received echo reply for local socket");
-            ctx.receive_icmp_echo_reply(IcmpConnId::new(conn), seq, body);
+            ctx.receive_icmp_echo_reply(
+                IcmpConnId::new(conn),
+                src_ip.get(),
+                dst_ip.get(),
+                id,
+                seq,
+                body,
+            );
         } else {
             // TODO(fxbug.dev/47952): Neither the ICMPv4 or ICMPv6 RFCs
             // explicitly state what to do in case we receive an "unsolicited"
@@ -2825,6 +2862,9 @@ mod tests {
     struct ReceiveIcmpEchoReply<I: Ip> {
         conn: IcmpConnId<I>,
         seq_num: u16,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
         data: Vec<u8>,
     }
 
@@ -3002,11 +3042,17 @@ mod tests {
                 fn receive_icmp_echo_reply(
                     &mut self,
                     conn: IcmpConnId<$ip>,
+                    src_ip: <$ip as Ip>::Addr,
+                    dst_ip: <$ip as Ip>::Addr,
+                    id: u16,
                     seq_num: u16,
                     data: B,
                 ) {
                     self.get_mut().inner.receive_icmp_echo_reply.push(ReceiveIcmpEchoReply {
                         conn,
+                        src_ip,
+                        dst_ip,
+                        id,
                         seq_num,
                         data: data.as_ref().to_vec(),
                     });

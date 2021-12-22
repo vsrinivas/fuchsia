@@ -31,11 +31,12 @@ use netstack3_core::{
     IpSockCreationError, StackStateBuilder, TimerId, UdpConnId, UdpContext, UdpListenerId,
 };
 use packet::{Buf, BufferMut, Serializer};
+use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 
 use crate::bindings::{
     context::Lockable,
     devices::{DeviceInfo, Devices},
-    socket::datagram::UdpSocketIpExt,
+    socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
 };
@@ -127,7 +128,7 @@ where
     }
 }
 
-impl<I: UdpSocketIpExt + IcmpIpExt> UdpContext<I> for TestDispatcher {
+impl<I: SocketCollectionIpExt<Udp> + IcmpIpExt> UdpContext<I> for TestDispatcher {
     fn receive_icmp_error(
         &mut self,
         id: Result<UdpConnId<I>, UdpListenerId<I>>,
@@ -137,7 +138,9 @@ impl<I: UdpSocketIpExt + IcmpIpExt> UdpContext<I> for TestDispatcher {
     }
 }
 
-impl<I: UdpSocketIpExt + IpExt, B: BufferMut> BufferUdpContext<I, B> for TestDispatcher {
+impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
+    for TestDispatcher
+{
     fn receive_udp_from_conn(
         &mut self,
         conn: netstack3_core::UdpConnId<I>,
@@ -212,7 +215,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for TestDispatcher {
     }
 }
 
-impl<I: IcmpIpExt> IcmpContext<I> for TestDispatcher {
+impl<I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt> IcmpContext<I> for TestDispatcher {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
         IcmpContext::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
     }
@@ -224,11 +227,20 @@ impl<I: IcmpIpExt> IcmpContext<I> for TestDispatcher {
 
 impl<I, B> BufferIcmpContext<I, B> for TestDispatcher
 where
-    I: IcmpIpExt,
+    I: SocketCollectionIpExt<IcmpEcho> + IcmpIpExt,
     B: BufferMut,
+    IcmpEchoReply: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
 {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
-        self.disp.receive_icmp_echo_reply(conn, seq_num, data)
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: IcmpConnId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
+        self.disp.receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data)
     }
 }
 

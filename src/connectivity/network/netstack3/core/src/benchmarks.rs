@@ -77,7 +77,15 @@ impl<I: IcmpIpExt> IcmpContext<I> for BenchmarkEventDispatcher {
 }
 
 impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BenchmarkEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _data: B) {
+    fn receive_icmp_echo_reply(
+        &mut self,
+        _conn: IcmpConnId<I>,
+        _src_ip: I::Addr,
+        _dst_ip: I::Addr,
+        _id: u16,
+        _seq_num: u16,
+        _data: B,
+    ) {
         unimplemented!()
     }
 }

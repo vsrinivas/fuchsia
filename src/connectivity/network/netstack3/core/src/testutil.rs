@@ -761,14 +761,30 @@ impl<I: IcmpIpExt> IcmpContext<I> for DummyEventDispatcher {
 }
 
 impl<B: BufferMut> BufferIcmpContext<Ipv4, B> for DummyEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv4>, seq_num: u16, data: B) {
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: IcmpConnId<Ipv4>,
+        _src_ip: Ipv4Addr,
+        _dst_ip: Ipv4Addr,
+        _id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
         let replies = self.icmpv4_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }
 }
 
 impl<B: BufferMut> BufferIcmpContext<Ipv6, B> for DummyEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv6>, seq_num: u16, data: B) {
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: IcmpConnId<Ipv6>,
+        _src_ip: Ipv6Addr,
+        _dst_ip: Ipv6Addr,
+        _id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
         let replies = self.icmpv6_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }

@@ -34,9 +34,10 @@ use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::{lock::Mutex, sink::SinkExt as _, FutureExt as _, StreamExt as _, TryStreamExt as _};
-use log::{debug, error, trace, warn};
+use log::{debug, error, warn};
 use net_types::ethernet::Mac;
 use packet::{BufferMut, Serializer};
+use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
 use rand::rngs::OsRng;
 use util::ConversionContext;
 
@@ -46,11 +47,9 @@ use timers::TimerDispatcher;
 
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
-    handle_timer,
-    icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
-    initialize_device, remove_device, BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher,
-    EventDispatcher, IpExt, IpSockCreationError, StackStateBuilder, TimerId, UdpConnId, UdpContext,
-    UdpListenerId,
+    handle_timer, icmp, initialize_device, remove_device, BufferUdpContext, Ctx, DeviceId,
+    DeviceLayerEventDispatcher, EventDispatcher, IpExt, IpSockCreationError, StackStateBuilder,
+    TimerId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 pub(crate) trait LockableContext: for<'a> Lockable<'a, Ctx<Self::Dispatcher>> {
@@ -69,6 +68,9 @@ pub(crate) trait DeviceStatusNotifier {
     fn device_status_changed(&mut self, id: u64);
 }
 
+type IcmpEchoSockets = socket::datagram::SocketCollectionPair<socket::datagram::IcmpEcho>;
+type UdpSockets = socket::datagram::SocketCollectionPair<socket::datagram::Udp>;
+
 /// `BindingsDispatcher` is the dispatcher used by [`Netstack`] and it
 /// implements the regular network stack operation, sending outgoing frames to
 /// the appropriate devices, and proxying calls to their appropriate submodules.
@@ -80,7 +82,8 @@ pub(crate) struct BindingsDispatcher {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId>,
     rng: OsRng,
-    udp_sockets: socket::datagram::UdpSocketCollection,
+    icmp_echo_sockets: IcmpEchoSockets,
+    udp_sockets: UdpSockets,
 }
 
 impl BindingsDispatcher {
@@ -89,6 +92,7 @@ impl BindingsDispatcher {
             devices: Devices::default(),
             timers: timers::TimerDispatcher::new(),
             rng: Default::default(),
+            icmp_echo_sockets: Default::default(),
             udp_sockets: Default::default(),
         }
     }
@@ -133,14 +137,26 @@ impl<'a> Lockable<'a, Ctx<BindingsDispatcher>> for Netstack {
     }
 }
 
-impl AsRef<socket::datagram::UdpSocketCollection> for BindingsDispatcher {
-    fn as_ref(&self) -> &socket::datagram::UdpSocketCollection {
+impl AsRef<IcmpEchoSockets> for BindingsDispatcher {
+    fn as_ref(&self) -> &IcmpEchoSockets {
+        &self.icmp_echo_sockets
+    }
+}
+
+impl AsMut<IcmpEchoSockets> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut IcmpEchoSockets {
+        &mut self.icmp_echo_sockets
+    }
+}
+
+impl AsRef<UdpSockets> for BindingsDispatcher {
+    fn as_ref(&self) -> &UdpSockets {
         &self.udp_sockets
     }
 }
 
-impl AsMut<socket::datagram::UdpSocketCollection> for BindingsDispatcher {
-    fn as_mut(&mut self) -> &mut socket::datagram::UdpSocketCollection {
+impl AsMut<UdpSockets> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut UdpSockets {
         &mut self.udp_sockets
     }
 }
@@ -268,26 +284,41 @@ where
     }
 }
 
-impl<I: IcmpIpExt> IcmpContext<I> for BindingsDispatcher {
-    fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
-        // TODO(https://fxbug.dev/47321): implement.
-        warn!("IcmpContext::receive_icmp_error unimplemented; ignoring error");
+impl<I> icmp::IcmpContext<I> for BindingsDispatcher
+where
+    I: socket::datagram::SocketCollectionIpExt<socket::datagram::IcmpEcho> + icmp::IcmpIpExt,
+{
+    fn receive_icmp_error(&mut self, conn: icmp::IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
+        I::get_collection_mut(self).receive_icmp_error(conn, seq_num, err)
     }
 
-    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: IpSockCreationError) {
-        // TODO(https://fxbug.dev/47321): implement.
-        unimplemented!()
-    }
-}
-
-impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BindingsDispatcher {
-    fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, seq_num: u16, data: B) {
-        // TODO(https://fxbug.dev/47321): implement.
-        trace!("Received ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
+    fn close_icmp_connection(&mut self, conn: icmp::IcmpConnId<I>, err: IpSockCreationError) {
+        I::get_collection_mut(self).close_icmp_connection(conn, err)
     }
 }
 
-impl<I: socket::datagram::UdpSocketIpExt + IcmpIpExt> UdpContext<I> for BindingsDispatcher {
+impl<I, B: BufferMut> icmp::BufferIcmpContext<I, B> for BindingsDispatcher
+where
+    I: socket::datagram::SocketCollectionIpExt<socket::datagram::IcmpEcho> + icmp::IcmpIpExt,
+    IcmpEchoReply: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
+{
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: icmp::IcmpConnId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
+        I::get_collection_mut(self).receive_icmp_echo_reply(conn, src_ip, dst_ip, id, seq_num, data)
+    }
+}
+
+impl<I> UdpContext<I> for BindingsDispatcher
+where
+    I: socket::datagram::SocketCollectionIpExt<socket::datagram::Udp> + icmp::IcmpIpExt,
+{
     fn receive_icmp_error(
         &mut self,
         id: Result<UdpConnId<I>, UdpListenerId<I>>,
@@ -297,8 +328,9 @@ impl<I: socket::datagram::UdpSocketIpExt + IcmpIpExt> UdpContext<I> for Bindings
     }
 }
 
-impl<I: socket::datagram::UdpSocketIpExt + IpExt, B: BufferMut> BufferUdpContext<I, B>
-    for BindingsDispatcher
+impl<I, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatcher
+where
+    I: socket::datagram::SocketCollectionIpExt<socket::datagram::Udp> + IpExt,
 {
     fn receive_udp_from_conn(
         &mut self,

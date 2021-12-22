@@ -21,15 +21,27 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
 use futures::{StreamExt as _, TryFutureExt as _};
 use log::{error, trace};
-use net_types::ip::{Ip, Ipv4, Ipv6};
-use netstack3_core::{
-    connect_udp, get_udp_conn_info, get_udp_listener_info, icmp::IcmpIpExt, listen_udp,
-    remove_udp_conn, remove_udp_listener, send_udp, send_udp_conn, send_udp_listener,
-    BufferUdpContext, Ctx, EventDispatcher, IdMap, IdMapCollection, IpExt, UdpConnId, UdpConnInfo,
-    UdpContext, UdpListenerId, UdpListenerInfo,
+use net_types::{
+    ip::{Ip, Ipv4, Ipv6},
+    SpecifiedAddr,
 };
-use packet::{Buf, BufferMut};
+use netstack3_core::{
+    connect_udp, get_udp_conn_info, get_udp_listener_info, icmp, listen_udp, remove_udp_conn,
+    remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferDispatcher,
+    BufferUdpContext, BufferUdpStateContext, Ctx, EventDispatcher, IdMap, IdMapCollection,
+    IdMapCollectionKey, IpExt, IpSockCreationError, IpSockSendError, SocketError, UdpConnId,
+    UdpConnInfo, UdpContext, UdpListenerId, UdpListenerInfo, UdpSendError, UdpStateContext,
+};
+use packet::{Buf, BufferMut, SerializeError};
+use packet_formats::{
+    error::ParseError,
+    icmp::{
+        IcmpEchoReply, IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder,
+        IcmpParseArgs, IcmpUnusedCode,
+    },
+};
 use std::collections::VecDeque;
+use thiserror::Error;
 
 use crate::bindings::{Lockable, LockableContext};
 
@@ -43,22 +55,294 @@ use super::{
 // TODO(brunodalbo) move this to a buffer pool instead.
 const MAX_OUTSTANDING_APPLICATION_MESSAGES: usize = 50;
 
-#[derive(Default)]
-pub(crate) struct UdpSocketCollection {
-    v4: UdpSocketCollectionInner<Ipv4>,
-    v6: UdpSocketCollectionInner<Ipv6>,
+/// A minimal abstraction over transport protocols that allows bindings-side state to be stored.
+pub(crate) trait Transport<I>: std::fmt::Debug {
+    type ConnId: std::fmt::Debug + Copy + IdMapCollectionKey;
+    type ListenerId: std::fmt::Debug + Copy + IdMapCollectionKey;
 }
 
-#[derive(Default)]
-pub(crate) struct UdpSocketCollectionInner<I: Ip> {
-    binding_data: IdMap<BindingData<I>>,
-    /// Maps a `UdpConnId` to an index into the `binding_data` `IdMap`.
-    conns: IdMapCollection<UdpConnId<I>, usize>,
-    /// Maps a `UdpListenerId` to an index into the `binding_data` `IdMap`.
-    listeners: IdMapCollection<UdpListenerId<I>, usize>,
+pub(crate) struct SocketCollection<I: Ip, T: Transport<I>> {
+    binding_data: IdMap<BindingData<I, T>>,
+    conns: IdMapCollection<T::ConnId, usize>,
+    listeners: IdMapCollection<T::ListenerId, usize>,
 }
 
-impl<I: IcmpIpExt> UdpContext<I> for UdpSocketCollectionInner<I> {
+impl<I: Ip, T: Transport<I>> Default for SocketCollection<I, T> {
+    fn default() -> Self {
+        Self {
+            binding_data: Default::default(),
+            conns: Default::default(),
+            listeners: Default::default(),
+        }
+    }
+}
+
+pub(crate) struct SocketCollectionPair<T>
+where
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+{
+    v4: SocketCollection<Ipv4, T>,
+    v6: SocketCollection<Ipv6, T>,
+}
+
+impl<T> Default for SocketCollectionPair<T>
+where
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+{
+    fn default() -> Self {
+        Self { v4: Default::default(), v6: Default::default() }
+    }
+}
+
+/// An extension trait that allows generic access to IP-specific state.
+pub(crate) trait SocketCollectionIpExt<T>: Ip
+where
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<Self>,
+{
+    fn get_collection<D: AsRef<SocketCollectionPair<T>>>(
+        dispatcher: &D,
+    ) -> &SocketCollection<Self, T>;
+
+    fn get_collection_mut<D: AsMut<SocketCollectionPair<T>>>(
+        dispatcher: &mut D,
+    ) -> &mut SocketCollection<Self, T>;
+}
+
+impl<T> SocketCollectionIpExt<T> for Ipv4
+where
+    T: 'static,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+{
+    fn get_collection<D: AsRef<SocketCollectionPair<T>>>(
+        dispatcher: &D,
+    ) -> &SocketCollection<Ipv4, T> {
+        &dispatcher.as_ref().v4
+    }
+
+    fn get_collection_mut<D: AsMut<SocketCollectionPair<T>>>(
+        dispatcher: &mut D,
+    ) -> &mut SocketCollection<Ipv4, T> {
+        &mut dispatcher.as_mut().v4
+    }
+}
+
+impl<T> SocketCollectionIpExt<T> for Ipv6
+where
+    T: 'static,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+{
+    fn get_collection<D: AsRef<SocketCollectionPair<T>>>(
+        dispatcher: &D,
+    ) -> &SocketCollection<Ipv6, T> {
+        &dispatcher.as_ref().v6
+    }
+
+    fn get_collection_mut<D: AsMut<SocketCollectionPair<T>>>(
+        dispatcher: &mut D,
+    ) -> &mut SocketCollection<Ipv6, T> {
+        &mut dispatcher.as_mut().v6
+    }
+}
+
+/// A special case of TryFrom that avoids the associated error type in generic contexts.
+pub(crate) trait OptionFromU16: Sized {
+    fn from_u16(_: u16) -> Option<Self>;
+}
+
+/// An abstraction over transport protocols that allows generic manipulation of Core state.
+pub(crate) trait TransportState<I: Ip, C>: Transport<I> {
+    type CreateError: IntoErrno;
+    type LocalIdentifier: OptionFromU16 + Into<u16>;
+    type RemoteIdentifier: OptionFromU16 + Into<u16>;
+
+    fn create_connection(
+        ctx: &mut C,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        local_id: Option<Self::LocalIdentifier>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+    ) -> Result<Self::ConnId, Self::CreateError>;
+
+    fn create_listener(
+        ctx: &mut C,
+        addr: Option<SpecifiedAddr<I::Addr>>,
+        port: Option<Self::LocalIdentifier>,
+    ) -> Result<Self::ListenerId, Self::CreateError>;
+
+    fn get_conn_info(
+        ctx: &C,
+        id: Self::ConnId,
+    ) -> (
+        SpecifiedAddr<I::Addr>,
+        Self::LocalIdentifier,
+        SpecifiedAddr<I::Addr>,
+        Self::RemoteIdentifier,
+    );
+
+    fn get_listener_info(
+        ctx: &C,
+        id: Self::ListenerId,
+    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier);
+
+    fn remove_conn(
+        ctx: &mut C,
+        id: Self::ConnId,
+    ) -> (
+        SpecifiedAddr<I::Addr>,
+        Self::LocalIdentifier,
+        SpecifiedAddr<I::Addr>,
+        Self::RemoteIdentifier,
+    );
+
+    fn remove_listener(
+        ctx: &mut C,
+        id: Self::ListenerId,
+    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier);
+}
+
+/// An abstraction over transport protocols that allows data to be sent via the Core.
+pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C>: TransportState<I, C> {
+    type SendError: IntoErrno;
+
+    fn send(
+        ctx: &mut C,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        local_id: Option<Self::LocalIdentifier>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+        body: B,
+    ) -> netstack3_core::error::Result<()>;
+
+    fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), Self::SendError>;
+
+    fn send_listener(
+        ctx: &mut C,
+        listener: Self::ListenerId,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+        body: B,
+    ) -> Result<(), Self::SendError>;
+}
+
+#[derive(Debug)]
+pub(crate) enum Udp {}
+
+impl<I: Ip> Transport<I> for Udp {
+    type ConnId = UdpConnId<I>;
+    type ListenerId = UdpListenerId<I>;
+}
+
+impl OptionFromU16 for NonZeroU16 {
+    fn from_u16(t: u16) -> Option<Self> {
+        Self::new(t)
+    }
+}
+
+impl<I: icmp::IcmpIpExt, C: UdpStateContext<I>> TransportState<I, C> for Udp {
+    type CreateError = SocketError;
+    type LocalIdentifier = NonZeroU16;
+    type RemoteIdentifier = NonZeroU16;
+
+    fn create_connection(
+        ctx: &mut C,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        local_id: Option<Self::LocalIdentifier>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+    ) -> Result<Self::ConnId, Self::CreateError> {
+        connect_udp(ctx, local_ip, local_id, remote_ip, remote_id)
+    }
+
+    fn create_listener(
+        ctx: &mut C,
+        addr: Option<SpecifiedAddr<I::Addr>>,
+        port: Option<Self::LocalIdentifier>,
+    ) -> Result<Self::ListenerId, Self::CreateError> {
+        listen_udp(ctx, addr, port)
+    }
+
+    fn get_conn_info(
+        ctx: &C,
+        id: Self::ConnId,
+    ) -> (
+        SpecifiedAddr<I::Addr>,
+        Self::LocalIdentifier,
+        SpecifiedAddr<I::Addr>,
+        Self::RemoteIdentifier,
+    ) {
+        let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } =
+            get_udp_conn_info(ctx, id);
+        (local_ip, local_port, remote_ip, remote_port)
+    }
+
+    fn get_listener_info(
+        ctx: &C,
+        id: Self::ListenerId,
+    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+        let UdpListenerInfo { local_ip, local_port } = get_udp_listener_info(ctx, id);
+        (local_ip, local_port)
+    }
+
+    fn remove_conn(
+        ctx: &mut C,
+        id: Self::ConnId,
+    ) -> (
+        SpecifiedAddr<I::Addr>,
+        Self::LocalIdentifier,
+        SpecifiedAddr<I::Addr>,
+        Self::RemoteIdentifier,
+    ) {
+        let UdpConnInfo { local_ip, local_port, remote_ip, remote_port } = remove_udp_conn(ctx, id);
+        (local_ip, local_port, remote_ip, remote_port)
+    }
+
+    fn remove_listener(
+        ctx: &mut C,
+        id: Self::ListenerId,
+    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+        let UdpListenerInfo { local_ip, local_port } = remove_udp_listener(ctx, id);
+        (local_ip, local_port)
+    }
+}
+
+impl<I: IpExt, B: BufferMut, C: BufferUdpStateContext<I, B>> BufferTransportState<I, B, C> for Udp {
+    type SendError = UdpSendError;
+
+    fn send(
+        ctx: &mut C,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        local_id: Option<Self::LocalIdentifier>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+        body: B,
+    ) -> netstack3_core::error::Result<()> {
+        send_udp(ctx, local_ip, local_id, remote_ip, remote_id, body)
+    }
+
+    fn send_conn(ctx: &mut C, conn: Self::ConnId, body: B) -> Result<(), Self::SendError> {
+        send_udp_conn(ctx, conn, body)
+    }
+
+    fn send_listener(
+        ctx: &mut C,
+        listener: Self::ListenerId,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+        body: B,
+    ) -> Result<(), Self::SendError> {
+        send_udp_listener(ctx, listener, local_ip, remote_ip, remote_id, body)
+    }
+}
+
+impl<I: icmp::IcmpIpExt> UdpContext<I> for SocketCollection<I, Udp> {
     fn receive_icmp_error(
         &mut self,
         id: Result<UdpConnId<I>, UdpListenerId<I>>,
@@ -75,7 +359,7 @@ impl<I: IcmpIpExt> UdpContext<I> for UdpSocketCollectionInner<I> {
     }
 }
 
-impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for UdpSocketCollectionInner<I> {
+impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp> {
     fn receive_udp_from_conn(
         &mut self,
         conn: UdpConnId<I>,
@@ -114,50 +398,318 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for UdpSocketCollectionInner
     }
 }
 
-/// Extension trait for [`Ip`] for UDP sockets operations.
-pub(crate) trait UdpSocketIpExt: Ip {
-    fn get_collection<D: AsRef<UdpSocketCollection>>(
-        dispatcher: &D,
-    ) -> &UdpSocketCollectionInner<Self>;
-    fn get_collection_mut<D: AsMut<UdpSocketCollection>>(
-        dispatcher: &mut D,
-    ) -> &mut UdpSocketCollectionInner<Self>;
-}
+// NB: the POSIX API for ICMP sockets operates on ICMP packets in both directions. In other words,
+// the calling process is expected to send complete ICMP packets and will likewise receive complete
+// ICMP packets on reads - header and all. Note that outbound ICMP packets are parsed and validated
+// before being sent on the wire.
+#[derive(Debug)]
+pub enum IcmpEcho {}
 
-impl UdpSocketIpExt for Ipv4 {
-    fn get_collection<D: AsRef<UdpSocketCollection>>(
-        dispatcher: &D,
-    ) -> &UdpSocketCollectionInner<Self> {
-        &dispatcher.as_ref().v4
+// TODO(https://fxbug.dev/47321): this uninhabited type is a stand-in; the real type needs to be
+// defined in the Core.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum IcmpListenerId {}
+
+impl IdMapCollectionKey for IcmpListenerId {
+    const VARIANT_COUNT: usize = 0;
+
+    fn get_variant(&self) -> usize {
+        match *self {}
     }
 
-    fn get_collection_mut<D: AsMut<UdpSocketCollection>>(
-        dispatcher: &mut D,
-    ) -> &mut UdpSocketCollectionInner<Self> {
-        &mut dispatcher.as_mut().v4
-    }
-}
-
-impl UdpSocketIpExt for Ipv6 {
-    fn get_collection<D: AsRef<UdpSocketCollection>>(
-        dispatcher: &D,
-    ) -> &UdpSocketCollectionInner<Self> {
-        &dispatcher.as_ref().v6
-    }
-
-    fn get_collection_mut<D: AsMut<UdpSocketCollection>>(
-        dispatcher: &mut D,
-    ) -> &mut UdpSocketCollectionInner<Self> {
-        &mut dispatcher.as_mut().v6
+    fn get_id(&self) -> usize {
+        match *self {}
     }
 }
 
-/// Worker that serves the fuchsia.posix.socket.Control FIDL.
-struct UdpSocketWorker<I, C> {
-    ctx: C,
-    id: usize,
-    rights: u32,
-    _marker: PhantomData<I>,
+impl<I: Ip> Transport<I> for IcmpEcho {
+    type ConnId = icmp::IcmpConnId<I>;
+    type ListenerId = IcmpListenerId;
+}
+
+pub(crate) struct IcmpRemoteIdentifier;
+
+impl Into<u16> for IcmpRemoteIdentifier {
+    fn into(self) -> u16 {
+        // TODO(https://fxbug.dev/47321): unclear that this is the right thing to do. This is only
+        // used in the implementation of getpeername, we should test to see what this does on
+        // Linux.
+        0
+    }
+}
+
+impl OptionFromU16 for IcmpRemoteIdentifier {
+    fn from_u16(_: u16) -> Option<Self> {
+        // TODO(https://fxbug.dev/47321): unclear that this is the right thing to do. This is only
+        // used in the implementation of connect, we should test to see what this does on Linux. We
+        // may need to store the value so that we can spit it back out in getpeername.
+        Some(Self)
+    }
+}
+
+#[derive(Error, Debug)]
+pub(crate) enum IcmpSendError {
+    #[error(transparent)]
+    IpSock(#[from] IpSockSendError),
+    #[error(transparent)]
+    ParseError(#[from] ParseError),
+}
+
+impl IntoErrno for IcmpSendError {
+    fn into_errno(self) -> fposix::Errno {
+        match self {
+            Self::IpSock(e) => e.into_errno(),
+            Self::ParseError(e) => match e {
+                ParseError::NotSupported
+                | ParseError::NotExpected
+                | ParseError::Checksum
+                | ParseError::Format => fposix::Errno::Einval,
+            },
+        }
+    }
+}
+
+/// An extension trait that allows generic access to IP-specific ICMP functionality in the Core.
+pub(crate) trait IcmpEchoIpExt: IcmpIpExt {
+    fn new_icmp_connection<D: EventDispatcher>(
+        ctx: &mut Ctx<D>,
+        local_addr: Option<SpecifiedAddr<Self::Addr>>,
+        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D>>>::LocalIdentifier>,
+        remote_addr: SpecifiedAddr<Self::Addr>,
+    ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError>;
+
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+        ctx: &mut Ctx<D>,
+        conn: icmp::IcmpConnId<Self>,
+        seq: u16,
+        body: B,
+    ) -> Result<(), IcmpSendError>;
+
+    fn send_conn<B: BufferMut, D: BufferDispatcher<B>>(
+        ctx: &mut Ctx<D>,
+        conn: icmp::IcmpConnId<Self>,
+        mut body: B,
+    ) -> Result<(), IcmpSendError>
+    where
+        IcmpEchoRequest: for<'a> IcmpMessage<Self, &'a [u8]>,
+    {
+        use net_types::Witness as _;
+
+        let (src_ip, _id, dst_ip, IcmpRemoteIdentifier {}) = IcmpEcho::get_conn_info(ctx, conn);
+        let packet: IcmpPacket<Self, _, IcmpEchoRequest> =
+            body.parse_with(IcmpParseArgs::new(src_ip.get(), dst_ip.get()))?;
+        let message = packet.message();
+        let seq = message.seq();
+        // Drop the packet so we can reuse `body`, which now holds the ICMP packet's body. This is
+        // fragile; we should perhaps expose a mutable getter instead.
+        std::mem::drop(packet);
+        Self::send_icmp_echo_request(ctx, conn, seq, body)
+    }
+}
+
+impl IcmpEchoIpExt for Ipv4 {
+    fn new_icmp_connection<D: EventDispatcher>(
+        ctx: &mut Ctx<D>,
+        local_addr: Option<SpecifiedAddr<Self::Addr>>,
+        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D>>>::LocalIdentifier>,
+        remote_addr: SpecifiedAddr<Self::Addr>,
+    ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
+        icmp::new_icmpv4_connection(ctx, local_addr, remote_addr, local_id.unwrap_or_default())
+    }
+
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+        ctx: &mut Ctx<D>,
+        conn: icmp::IcmpConnId<Self>,
+        seq: u16,
+        body: B,
+    ) -> Result<(), IcmpSendError> {
+        icmp::send_icmpv4_echo_request(ctx, conn, seq, body).map_err(Into::into)
+    }
+}
+
+impl IcmpEchoIpExt for Ipv6 {
+    fn new_icmp_connection<D: EventDispatcher>(
+        ctx: &mut Ctx<D>,
+        local_addr: Option<SpecifiedAddr<Self::Addr>>,
+        local_id: Option<<IcmpEcho as TransportState<Self, Ctx<D>>>::LocalIdentifier>,
+        remote_addr: SpecifiedAddr<Self::Addr>,
+    ) -> Result<icmp::IcmpConnId<Self>, icmp::IcmpSockCreationError> {
+        icmp::new_icmpv6_connection(ctx, local_addr, remote_addr, local_id.unwrap_or_default())
+    }
+
+    fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
+        ctx: &mut Ctx<D>,
+        conn: icmp::IcmpConnId<Self>,
+        seq: u16,
+        body: B,
+    ) -> Result<(), IcmpSendError> {
+        icmp::send_icmpv6_echo_request(ctx, conn, seq, body).map_err(Into::into)
+    }
+}
+
+impl OptionFromU16 for u16 {
+    fn from_u16(t: u16) -> Option<Self> {
+        Some(t)
+    }
+}
+
+impl<I: IcmpEchoIpExt, D: EventDispatcher> TransportState<I, Ctx<D>> for IcmpEcho {
+    type CreateError = icmp::IcmpSockCreationError;
+    type LocalIdentifier = u16;
+    type RemoteIdentifier = IcmpRemoteIdentifier;
+
+    fn create_connection(
+        ctx: &mut Ctx<D>,
+        local_addr: Option<SpecifiedAddr<I::Addr>>,
+        local_id: Option<Self::LocalIdentifier>,
+        remote_addr: SpecifiedAddr<I::Addr>,
+        remote_id: Self::RemoteIdentifier,
+    ) -> Result<Self::ConnId, Self::CreateError> {
+        let IcmpRemoteIdentifier {} = remote_id;
+        I::new_icmp_connection(ctx, local_addr, local_id, remote_addr)
+    }
+
+    fn create_listener(
+        _ctx: &mut Ctx<D>,
+        _addr: Option<SpecifiedAddr<I::Addr>>,
+        _id: Option<Self::LocalIdentifier>,
+    ) -> Result<Self::ListenerId, Self::CreateError> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn get_conn_info(
+        _ctx: &Ctx<D>,
+        _id: Self::ConnId,
+    ) -> (
+        SpecifiedAddr<I::Addr>,
+        Self::LocalIdentifier,
+        SpecifiedAddr<I::Addr>,
+        Self::RemoteIdentifier,
+    ) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn get_listener_info(
+        _ctx: &Ctx<D>,
+        _id: Self::ListenerId,
+    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn remove_conn(
+        _ctx: &mut Ctx<D>,
+        _id: Self::ConnId,
+    ) -> (
+        SpecifiedAddr<I::Addr>,
+        Self::LocalIdentifier,
+        SpecifiedAddr<I::Addr>,
+        Self::RemoteIdentifier,
+    ) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn remove_listener(
+        _ctx: &mut Ctx<D>,
+        _id: Self::ListenerId,
+    ) -> (Option<SpecifiedAddr<I::Addr>>, Self::LocalIdentifier) {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+}
+
+impl<I: IcmpEchoIpExt, B: BufferMut, D: BufferDispatcher<B>> BufferTransportState<I, B, Ctx<D>>
+    for IcmpEcho
+where
+    IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8]>,
+{
+    type SendError = IcmpSendError;
+
+    fn send(
+        _ctx: &mut Ctx<D>,
+        _local_ip: Option<SpecifiedAddr<I::Addr>>,
+        _local_id: Option<Self::LocalIdentifier>,
+        _remote_ip: SpecifiedAddr<I::Addr>,
+        _remote_id: Self::RemoteIdentifier,
+        _body: B,
+    ) -> netstack3_core::error::Result<()> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn send_conn(ctx: &mut Ctx<D>, conn: Self::ConnId, body: B) -> Result<(), Self::SendError> {
+        I::send_conn(ctx, conn, body)
+    }
+
+    fn send_listener(
+        _ctx: &mut Ctx<D>,
+        _listener: Self::ListenerId,
+        _local_ip: Option<SpecifiedAddr<I::Addr>>,
+        _remote_ip: SpecifiedAddr<I::Addr>,
+        _remote_id: Self::RemoteIdentifier,
+        _body: B,
+    ) -> Result<(), Self::SendError> {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+}
+
+impl<I: icmp::IcmpIpExt> icmp::IcmpContext<I> for SocketCollection<I, IcmpEcho> {
+    fn receive_icmp_error(&mut self, conn: icmp::IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
+        let Self { binding_data, conns, listeners: _ } = self;
+        let binding_data =
+            conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
+        // NB: Logging at error as a means of failing tests that provoke this condition.
+        error!("unimplemented receive_icmp_error {:?} seq={} on {:?}", err, seq_num, binding_data)
+    }
+
+    fn close_icmp_connection(&mut self, conn: icmp::IcmpConnId<I>, err: IpSockCreationError) {
+        let Self { binding_data, conns, listeners: _ } = self;
+        let binding_data =
+            conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
+        todo!("https://fxbug.dev/47321: err={}; ICMP should 'stay open' on {:?}", err, binding_data)
+    }
+}
+
+impl<I: icmp::IcmpIpExt, B: BufferMut> icmp::BufferIcmpContext<I, B>
+    for SocketCollection<I, IcmpEcho>
+where
+    IcmpEchoReply: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
+{
+    fn receive_icmp_echo_reply(
+        &mut self,
+        conn: icmp::IcmpConnId<I>,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        id: u16,
+        seq_num: u16,
+        data: B,
+    ) {
+        use packet::Serializer as _;
+
+        match data
+            .encapsulate(IcmpPacketBuilder::<I, _, _>::new(
+                src_ip,
+                dst_ip,
+                IcmpUnusedCode,
+                IcmpEchoReply::new(id, seq_num),
+            ))
+            .serialize_vec_outer()
+        {
+            Ok(body) => {
+                let Self { binding_data, conns, listeners: _ } = self;
+                let binding_data =
+                    conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
+                match binding_data.receive_datagram(src_ip, id, body.as_ref()) {
+                    Ok(()) => (),
+                    Err(e) => error!("receive_udp_from_conn failed: {:?}", e),
+                }
+            }
+            Err((err, serializer)) => {
+                let _: packet::serialize::Nested<B, IcmpPacketBuilder<_, _, _>> = serializer;
+                match err {
+                    SerializeError::Alloc(never) => match never {},
+                    SerializeError::Mtu => panic!("MTU constraint exceeded but not provided"),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -167,17 +719,16 @@ struct AvailableMessage<A> {
     data: Vec<u8>,
 }
 
-/// Internal state of a [`UdpSocketWorker`].
 #[derive(Debug)]
-struct BindingData<I: Ip> {
+struct BindingData<I: Ip, T: Transport<I>> {
     local_event: zx::EventPair,
     peer_event: zx::EventPair,
-    info: SocketControlInfo<I>,
+    info: SocketControlInfo<I, T>,
     available_data: VecDeque<AvailableMessage<I::Addr>>,
     ref_count: usize,
 }
 
-impl<I: Ip> BindingData<I> {
+impl<I: Ip, T: Transport<I>> BindingData<I, T> {
     /// Creates a new `BindingData` with the provided event pair and
     /// `properties`.
     fn new(
@@ -196,7 +747,7 @@ impl<I: Ip> BindingData<I> {
 
     fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) -> Result<(), Error> {
         if self.available_data.len() >= MAX_OUTSTANDING_APPLICATION_MESSAGES {
-            return Err(format_err!("UDP application buffers are full"));
+            return Err(format_err!("application buffers are full"));
         }
 
         self.available_data.push_back(AvailableMessage {
@@ -213,20 +764,20 @@ impl<I: Ip> BindingData<I> {
 
 /// Information on socket control plane.
 #[derive(Debug)]
-pub struct SocketControlInfo<I: Ip> {
+pub(crate) struct SocketControlInfo<I: Ip, T: Transport<I>> {
     _properties: SocketWorkerProperties,
-    state: SocketState<I>,
+    state: SocketState<I, T>,
 }
 
-/// Possible states for a UDP socket.
+/// Possible states for a datagram socket.
 #[derive(Debug)]
-enum SocketState<I: Ip> {
+enum SocketState<I: Ip, T: Transport<I>> {
     Unbound,
-    BoundListen { listener_id: UdpListenerId<I> },
-    BoundConnect { conn_id: UdpConnId<I>, shutdown_read: bool, shutdown_write: bool },
+    BoundListen { listener_id: T::ListenerId },
+    BoundConnect { conn_id: T::ConnId, shutdown_read: bool, shutdown_write: bool },
 }
 
-impl<I: Ip> SocketState<I> {
+impl<I: Ip, T: Transport<I>> SocketState<I, T> {
     fn is_bound(&self) -> bool {
         match self {
             SocketState::Unbound => false,
@@ -235,15 +786,20 @@ impl<I: Ip> SocketState<I> {
     }
 }
 
-pub(crate) trait UdpWorkerDispatcher:
-    RequestHandlerDispatcher<Ipv4> + RequestHandlerDispatcher<Ipv6>
+pub(crate) trait SocketWorkerDispatcher:
+    RequestHandlerDispatcher<Ipv4, Udp>
+    + RequestHandlerDispatcher<Ipv6, Udp>
+    + RequestHandlerDispatcher<Ipv4, IcmpEcho>
+    + RequestHandlerDispatcher<Ipv6, IcmpEcho>
 {
 }
 
-impl<T> UdpWorkerDispatcher for T
+impl<T> SocketWorkerDispatcher for T
 where
-    T: RequestHandlerDispatcher<Ipv4>,
-    T: RequestHandlerDispatcher<Ipv6>,
+    T: RequestHandlerDispatcher<Ipv4, Udp>,
+    T: RequestHandlerDispatcher<Ipv6, Udp>,
+    T: RequestHandlerDispatcher<Ipv4, IcmpEcho>,
+    T: RequestHandlerDispatcher<Ipv6, IcmpEcho>,
 {
 }
 
@@ -256,27 +812,51 @@ pub(super) fn spawn_worker<C>(
 ) -> Result<(), fposix::Errno>
 where
     C: LockableContext,
-    C::Dispatcher: UdpWorkerDispatcher,
+    C::Dispatcher: SocketWorkerDispatcher,
     C: Clone + Send + Sync + 'static,
 {
     match (domain, proto) {
         (fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp) => {
-            UdpSocketWorker::<Ipv4, C>::spawn(ctx, properties, events)
+            SocketWorker::<Ipv4, Udp, C>::spawn(ctx, properties, events)
         }
         (fposix_socket::Domain::Ipv6, fposix_socket::DatagramSocketProtocol::Udp) => {
-            UdpSocketWorker::<Ipv6, C>::spawn(ctx, properties, events)
+            SocketWorker::<Ipv6, Udp, C>::spawn(ctx, properties, events)
         }
-        (
-            fposix_socket::Domain::Ipv4 | fposix_socket::Domain::Ipv6,
-            fposix_socket::DatagramSocketProtocol::IcmpEcho,
-        ) => Err(fposix::Errno::Eprotonosupport),
+        (fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::IcmpEcho) => {
+            SocketWorker::<Ipv4, IcmpEcho, C>::spawn(ctx, properties, events)
+        }
+        (fposix_socket::Domain::Ipv6, fposix_socket::DatagramSocketProtocol::IcmpEcho) => {
+            SocketWorker::<Ipv6, IcmpEcho, C>::spawn(ctx, properties, events)
+        }
     }
 }
 
-impl<I, C> UdpSocketWorker<I, C>
+struct SocketWorker<I, T, C> {
+    ctx: C,
+    id: usize,
+    rights: u32,
+    _marker: PhantomData<(I, T)>,
+}
+
+impl<I, T, C> SocketWorker<I, T, C>
 where
-    I: UdpSocketIpExt + IpExt + IpSockAddrExt,
-    C: RequestHandlerContext<I>,
+    C: LockableContext,
+{
+    async fn make_handler(&self) -> RequestHandler<'_, I, T, C> {
+        let ctx = self.ctx.lock().await;
+        RequestHandler { ctx, binding_id: self.id, rights: self.rights, _marker: PhantomData }
+    }
+}
+
+impl<I, T, C> SocketWorker<I, T, C>
+where
+    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    T: BufferTransportState<I, Buf<Vec<u8>>, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    C: RequestHandlerContext<I, T>,
+    T: Send + Sync + 'static,
     C: Clone + Send + Sync + 'static,
 {
     /// Starts servicing events from the provided event stream.
@@ -289,19 +869,20 @@ where
             zx::EventPair::create().map_err(|_| fposix::Errno::Enobufs)?;
         // signal peer that OUTGOING is available.
         // TODO(brunodalbo): We're currently not enforcing any sort of
-        // flow-control for outgoing UDP datagrams. That'll get fixed once we
+        // flow-control for outgoing datagrams. That'll get fixed once we
         // limit the number of in flight datagrams per socket (i.e. application
         // buffers).
         if let Err(e) = local_event.signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_OUTGOING) {
-            error!("UDP socket failed to signal peer: {:?}", e);
+            error!("socket failed to signal peer: {:?}", e);
         }
         fasync::Task::spawn(
             async move {
                 let id = {
-                    let mut locked = ctx.lock().await;
-                    I::get_collection_mut(&mut locked.dispatcher)
-                        .binding_data
-                        .push(BindingData::<I>::new(local_event, peer_event, properties))
+                    let mut guard = ctx.lock().await;
+                    let Ctx { state: _, dispatcher } = &mut *guard;
+                    let SocketCollection { binding_data, conns: _, listeners: _ } =
+                        I::get_collection_mut(dispatcher);
+                    binding_data.push(BindingData::new(local_event, peer_event, properties))
                 };
                 let worker = Self {
                     ctx,
@@ -316,13 +897,13 @@ where
             // scope and is dropped, meaning that the event stream's underlying
             // channel is closed. If any errors occured as a result of the
             // closure, we just log them.
-            .unwrap_or_else(|e: fidl::Error| error!("UDP socket control request error: {:?}", e)),
+            .unwrap_or_else(|e: fidl::Error| error!("socket control request error: {:?}", e)),
         )
         .detach();
         Ok(())
     }
 
-    async fn clone(&self) -> UdpSocketWorker<I, C> {
+    async fn clone(&self) -> Self {
         let mut handler = self.make_handler().await;
         let state = handler.get_state_mut();
         state.ref_count += 1;
@@ -330,12 +911,7 @@ where
     }
 
     // Starts servicing a [Clone request](fposix_socket::DatagramSocketRequest::Clone).
-    fn clone_spawn(
-        &self,
-        flags: u32,
-        object: ServerEnd<fio::NodeMarker>,
-        mut worker: UdpSocketWorker<I, C>,
-    ) {
+    fn clone_spawn(&self, flags: u32, object: ServerEnd<fio::NodeMarker>, mut worker: Self) {
         fasync::Task::spawn(
             async move {
                 let channel = AsyncChannel::from_channel(object.into_channel())
@@ -383,14 +959,9 @@ where
                 }
                 worker.handle_stream(events).await
             }
-            .unwrap_or_else(|e: fidl::Error| error!("UDP socket control request error: {:?}", e)),
+            .unwrap_or_else(|e: fidl::Error| error!("socket control request error: {:?}", e)),
         )
         .detach();
-    }
-
-    async fn make_handler(&self) -> RequestHandler<'_, I, C> {
-        let ctx = self.ctx.lock().await;
-        RequestHandler { ctx, binding_id: self.id, rights: self.rights, _marker: PhantomData }
     }
 
     /// Handles [a stream of POSIX socket requests].
@@ -958,31 +1529,25 @@ where
     }
 }
 
-pub(crate) trait RequestHandlerDispatcher<I>:
-    EventDispatcher
-    + AsRef<UdpSocketCollection>
-    + AsMut<UdpSocketCollection>
-    + UdpContext<I>
-    + BufferUdpContext<I, Buf<Vec<u8>>>
+pub(crate) trait RequestHandlerDispatcher<I, T>:
+    EventDispatcher + AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
 where
     I: IpExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
 {
 }
 
-impl<I, T> RequestHandlerDispatcher<I> for T
+impl<I, T, D> RequestHandlerDispatcher<I, T> for D
 where
     I: IpExt,
-    T: EventDispatcher,
-    T: AsRef<UdpSocketCollection> + AsMut<UdpSocketCollection>,
-    T: UdpContext<I> + BufferUdpContext<I, Buf<Vec<u8>>>,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+    D: EventDispatcher,
+    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>,
 {
-}
-
-struct RequestHandler<'a, I, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::Dispatcher>>>::Guard,
-    binding_id: usize,
-    rights: u32,
-    _marker: PhantomData<I>,
 }
 
 // TODO(https://github.com/rust-lang/rust/issues/20671): Replace the duplicate associated type with
@@ -992,27 +1557,43 @@ struct RequestHandler<'a, I, C: LockableContext> {
 //
 // TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
 // a bound on the parent trait's associated type.
-trait RequestHandlerContext<I>:
-    LockableContext<Dispatcher = <Self as RequestHandlerContext<I>>::Dispatcher>
+trait RequestHandlerContext<I, T>:
+    LockableContext<Dispatcher = <Self as RequestHandlerContext<I, T>>::Dispatcher>
 where
     I: IpExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
 {
-    type Dispatcher: RequestHandlerDispatcher<I>;
+    type Dispatcher: RequestHandlerDispatcher<I, T>;
 }
 
-impl<I, T> RequestHandlerContext<I> for T
+impl<I, T, C> RequestHandlerContext<I, T> for C
 where
     I: IpExt,
-    T: LockableContext,
-    T::Dispatcher: RequestHandlerDispatcher<I>,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+    C: LockableContext,
+    C::Dispatcher: RequestHandlerDispatcher<I, T>,
 {
-    type Dispatcher = T::Dispatcher;
+    type Dispatcher = C::Dispatcher;
 }
 
-impl<'a, I, C> RequestHandler<'a, I, C>
+struct RequestHandler<'a, I, T, C: LockableContext> {
+    ctx: <C as Lockable<'a, Ctx<C::Dispatcher>>>::Guard,
+    binding_id: usize,
+    rights: u32,
+    _marker: PhantomData<(I, T)>,
+}
+
+impl<'a, I, T, C> RequestHandler<'a, I, T, C>
 where
-    I: UdpSocketIpExt + IpExt + IpSockAddrExt,
-    C: RequestHandlerContext<I>,
+    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+    C: RequestHandlerContext<I, T>,
 {
     fn describe(&self) -> Option<fio::NodeInfo> {
         self.get_state()
@@ -1022,24 +1603,34 @@ where
             .ok()
     }
 
-    fn get_state(&self) -> &BindingData<I> {
+    fn get_state(&self) -> &BindingData<I, T> {
         I::get_collection(&self.ctx.dispatcher).binding_data.get(self.binding_id).unwrap()
     }
 
-    fn get_state_mut(&mut self) -> &mut BindingData<I> {
+    fn get_state_mut(&mut self) -> &mut BindingData<I, T> {
         I::get_collection_mut(&mut self.ctx.dispatcher)
             .binding_data
             .get_mut(self.binding_id)
             .unwrap()
     }
+}
 
+impl<'a, I, T, C> RequestHandler<'a, I, T, C>
+where
+    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    C: RequestHandlerContext<I, T>,
+{
     /// Handles a [POSIX socket connect request].
     ///
     /// [POSIX socket connect request]: fposix_socket::DatagramSocketRequest::Connect
     fn connect(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
-        trace!("connect UDP sockaddr: {:?}", sockaddr);
-        let remote_port = sockaddr.get_specified_port().ok_or(fposix::Errno::Econnrefused)?;
+        trace!("connect sockaddr: {:?}", sockaddr);
+        let remote_port =
+            T::RemoteIdentifier::from_u16(sockaddr.port()).ok_or(fposix::Errno::Econnrefused)?;
         let remote_addr = sockaddr.get_specified_addr().ok_or(fposix::Errno::Einval)?;
 
         let (local_addr, local_port) = match self.get_state().info.state {
@@ -1051,31 +1642,41 @@ where
             SocketState::BoundListen { listener_id } => {
                 // if we're bound to a listen mode, we need to remove the
                 // listener, and retrieve the bound local addr and port.
-                let list_info = remove_udp_listener(self.ctx.deref_mut(), listener_id);
+                let (local_ip, local_port) = T::remove_listener(self.ctx.deref_mut(), listener_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
                     I::get_collection_mut(&mut self.ctx.dispatcher).listeners.remove(&listener_id),
                     None
                 );
 
-                (list_info.local_ip, Some(list_info.local_port))
+                (local_ip, Some(local_port))
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 // if we're bound to a connect mode, we need to remove the
                 // connection, and retrieve the bound local addr and port.
-                let conn_info = remove_udp_conn(self.ctx.deref_mut(), conn_id);
+                let (local_ip, local_port, _, _): (
+                    _,
+                    _,
+                    SpecifiedAddr<I::Addr>,
+                    T::RemoteIdentifier,
+                ) = T::remove_conn(self.ctx.deref_mut(), conn_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
                     I::get_collection_mut(&mut self.ctx.dispatcher).conns.remove(&conn_id),
                     None
                 );
-                (Some(conn_info.local_ip), Some(conn_info.local_port))
+                (Some(local_ip), Some(local_port))
             }
         };
 
-        let conn_id =
-            connect_udp(self.ctx.deref_mut(), local_addr, local_port, remote_addr, remote_port)
-                .map_err(IntoErrno::into_errno)?;
+        let conn_id = T::create_connection(
+            self.ctx.deref_mut(),
+            local_addr,
+            local_port,
+            remote_addr,
+            remote_port,
+        )
+        .map_err(IntoErrno::into_errno)?;
 
         self.get_state_mut().info.state =
             SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
@@ -1091,14 +1692,14 @@ where
     /// [POSIX socket bind request]: fposix_socket::DatagramSocketRequest::Bind
     fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
-        trace!("bind UDP sockaddr: {:?}", sockaddr);
+        trace!("bind sockaddr: {:?}", sockaddr);
         if self.get_state().info.state.is_bound() {
             return Err(fposix::Errno::Ealready);
         }
         let local_addr = sockaddr.get_specified_addr();
-        let local_port = sockaddr.get_specified_port();
+        let local_port = T::LocalIdentifier::from_u16(sockaddr.port());
 
-        let listener_id = listen_udp(self.ctx.deref_mut(), local_addr, local_port)
+        let listener_id = T::create_listener(self.ctx.deref_mut(), local_addr, local_port)
             .map_err(IntoErrno::into_errno)?;
         self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
         assert_eq!(
@@ -1119,16 +1720,18 @@ where
                 return Err(fposix::Errno::Enotsock);
             }
             SocketState::BoundConnect { conn_id, .. } => {
-                let info = get_udp_conn_info(self.ctx.deref(), conn_id);
-                Ok(I::SocketAddress::new(*info.local_ip, info.local_port.get()).into_sock_addr())
+                let (local_ip, local_port, _, _): (
+                    _,
+                    _,
+                    SpecifiedAddr<I::Addr>,
+                    T::RemoteIdentifier,
+                ) = T::get_conn_info(self.ctx.deref(), conn_id);
+                Ok(I::SocketAddress::new(*local_ip, local_port.into()).into_sock_addr())
             }
             SocketState::BoundListen { listener_id } => {
-                let info = get_udp_listener_info(self.ctx.deref(), listener_id);
-                let local_ip = match info.local_ip {
-                    Some(addr) => *addr,
-                    None => I::UNSPECIFIED_ADDRESS,
-                };
-                Ok(I::SocketAddress::new(local_ip, info.local_port.get()).into_sock_addr())
+                let (local_ip, local_port) = T::get_listener_info(self.ctx.deref(), listener_id);
+                let local_ip = local_ip.map_or(I::UNSPECIFIED_ADDRESS, |local_ip| *local_ip);
+                Ok(I::SocketAddress::new(local_ip, local_port.into()).into_sock_addr())
             }
         }
     }
@@ -1145,8 +1748,13 @@ where
                 return Err(fposix::Errno::Enotconn);
             }
             SocketState::BoundConnect { conn_id, .. } => {
-                let info = get_udp_conn_info(self.ctx.deref(), conn_id);
-                Ok(I::SocketAddress::new(*info.remote_ip, info.remote_port.get()).into_sock_addr())
+                let (_, _, remote_ip, remote_port): (
+                    SpecifiedAddr<I::Addr>,
+                    T::LocalIdentifier,
+                    _,
+                    _,
+                ) = T::get_conn_info(self.ctx.deref(), conn_id);
+                Ok(I::SocketAddress::new(*remote_ip, remote_port.into()).into_sock_addr())
             }
         }
     }
@@ -1161,7 +1769,8 @@ where
                     None
                 );
                 // remove from core:
-                let _: UdpListenerInfo<_> = remove_udp_listener(self.ctx.deref_mut(), listener_id);
+                let _: (Option<SpecifiedAddr<I::Addr>>, T::LocalIdentifier) =
+                    T::remove_listener(self.ctx.deref_mut(), listener_id);
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
@@ -1170,7 +1779,12 @@ where
                     None
                 );
                 // remove from core:
-                let _: UdpConnInfo<_> = remove_udp_conn(self.ctx.deref_mut(), conn_id);
+                let _: (
+                    SpecifiedAddr<I::Addr>,
+                    T::LocalIdentifier,
+                    SpecifiedAddr<I::Addr>,
+                    T::RemoteIdentifier,
+                ) = T::remove_conn(self.ctx.deref_mut(), conn_id);
             }
         }
         self.get_state_mut().info.state = SocketState::Unbound;
@@ -1195,6 +1809,14 @@ where
             );
         } else {
             inner.ref_count -= 1;
+        }
+    }
+
+    fn need_rights(&self, required: u32) -> Result<(), fposix::Errno> {
+        if self.rights & required == required {
+            Ok(())
+        } else {
+            Err(fposix::Errno::Eperm)
         }
     }
 
@@ -1244,7 +1866,7 @@ where
         if state.available_data.is_empty() {
             if let Err(e) = state.local_event.signal_peer(ZXSIO_SIGNAL_INCOMING, zx::Signals::NONE)
             {
-                error!("UDP socket failed to signal peer: {:?}", e);
+                error!("socket failed to signal peer: {:?}", e);
             }
         }
         Ok((
@@ -1254,7 +1876,17 @@ where
             truncated.try_into().unwrap_or(u32::MAX),
         ))
     }
+}
 
+impl<'a, I, T, C> RequestHandler<'a, I, T, C>
+where
+    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: TransportState<I, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    T: BufferTransportState<I, Buf<Vec<u8>>, Ctx<<C as RequestHandlerContext<I, T>>::Dispatcher>>,
+    C: RequestHandlerContext<I, T>,
+{
     fn send_msg(
         &mut self,
         addr: Option<fnet::SocketAddress>,
@@ -1262,12 +1894,11 @@ where
     ) -> Result<i64, fposix::Errno> {
         let () = self.need_rights(fio::OPEN_RIGHT_WRITABLE)?;
         let remote = if let Some(addr) = addr {
-            let addr = I::SocketAddress::from_sock_addr(addr)?;
-            Some(
-                addr.get_specified_addr()
-                    .and_then(|a| addr.get_specified_port().map(|p| (a, p)))
-                    .ok_or(fposix::Errno::Einval)?,
-            )
+            let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
+            let addr = sockaddr.get_specified_addr().ok_or(fposix::Errno::Einval)?;
+            let port =
+                T::RemoteIdentifier::from_u16(sockaddr.port()).ok_or(fposix::Errno::Einval)?;
+            Some((addr, port))
         } else {
             None
         };
@@ -1286,13 +1917,18 @@ where
                 match remote {
                     Some((addr, port)) => {
                         // Caller specified a remote socket address; use
-                        // stateless UDP send using the local address and port
+                        // stateless send using the local address and port
                         // in `conn_id`.
-                        let conn_info = get_udp_conn_info(self.ctx.deref(), conn_id);
-                        send_udp::<I, Buf<Vec<u8>>, _>(
+                        let (local_ip, local_port, _, _): (
+                            _,
+                            _,
+                            SpecifiedAddr<I::Addr>,
+                            T::RemoteIdentifier,
+                        ) = T::get_conn_info(self.ctx.deref(), conn_id);
+                        T::send(
                             self.ctx.deref_mut(),
-                            Some(conn_info.local_ip),
-                            Some(conn_info.local_port),
+                            Some(local_ip),
+                            Some(local_port),
                             addr,
                             port,
                             body,
@@ -1302,21 +1938,16 @@ where
                     None => {
                         // Caller did not specify a remote socket address; just
                         // use the existing conn.
-                        send_udp_conn::<_, Buf<Vec<u8>>, _>(self.ctx.deref_mut(), conn_id, body)
+                        T::send_conn(self.ctx.deref_mut(), conn_id, body)
                             .map_err(IntoErrno::into_errno)
                     }
                 }
             }
             SocketState::BoundListen { listener_id } => match remote {
-                Some((addr, port)) => send_udp_listener::<_, Buf<Vec<u8>>, _>(
-                    self.ctx.deref_mut(),
-                    listener_id,
-                    None,
-                    addr,
-                    port,
-                    body,
-                )
-                .map_err(IntoErrno::into_errno),
+                Some((addr, port)) => {
+                    T::send_listener(self.ctx.deref_mut(), listener_id, None, addr, port, body)
+                        .map_err(IntoErrno::into_errno)
+                }
                 None => Err(fposix::Errno::Edestaddrreq),
             },
         }
@@ -1324,7 +1955,7 @@ where
     }
 
     fn shutdown(mut self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {
-        // Only "connected" UDP sockets can be shutdown.
+        // Only "connected" sockets can be shutdown.
         if let SocketState::BoundConnect { ref mut shutdown_read, ref mut shutdown_write, .. } =
             self.get_state_mut().info.state
         {
@@ -1350,15 +1981,6 @@ where
         }
         Err(fposix::Errno::Enotconn)
     }
-
-    /// Tests if we have sufficient rights as required; if we don't, then an
-    /// error is returned.
-    fn need_rights(&self, required: u32) -> Result<(), fposix::Errno> {
-        if self.rights & required == 0 {
-            return Err(fposix::Errno::Eperm);
-        }
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -1380,8 +2002,9 @@ mod tests {
     use crate::bindings::socket::testutil::TestSockAddr;
     use net_types::ip::{Ip, IpAddress};
 
-    async fn udp_prepare_test<A: TestSockAddr>() -> (TestSetup, fposix_socket::DatagramSocketProxy)
-    {
+    async fn prepare_test<A: TestSockAddr>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) -> (TestSetup, fposix_socket::DatagramSocketProxy) {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
             .add_stack(
@@ -1391,16 +2014,17 @@ mod tests {
             .build()
             .await
             .unwrap();
-        let proxy = get_socket::<A>(t.get(0)).await;
+        let proxy = get_socket::<A>(t.get(0), proto).await;
         (t, proxy)
     }
 
     async fn get_socket<A: TestSockAddr>(
         test_stack: &mut TestStack,
+        proto: fposix_socket::DatagramSocketProtocol,
     ) -> fposix_socket::DatagramSocketProxy {
         let socket_provider = test_stack.connect_socket_provider().unwrap();
         let socket = socket_provider
-            .datagram_socket(A::DOMAIN, fposix_socket::DatagramSocketProtocol::Udp)
+            .datagram_socket(A::DOMAIN, proto)
             .await
             .unwrap()
             .expect("Socket succeeds");
@@ -1411,8 +2035,9 @@ mod tests {
 
     async fn get_socket_and_event<A: TestSockAddr>(
         test_stack: &mut TestStack,
+        proto: fposix_socket::DatagramSocketProtocol,
     ) -> (fposix_socket::DatagramSocketProxy, zx::EventPair) {
-        let ctlr = get_socket::<A>(test_stack).await;
+        let ctlr = get_socket::<A>(test_stack, proto).await;
         let node_info = ctlr.describe().await.expect("Socked describe succeeds");
         let event = match node_info {
             fio::NodeInfo::DatagramSocket(e) => e.event,
@@ -1421,8 +2046,53 @@ mod tests {
         (ctlr, event)
     }
 
-    async fn test_udp_connect_failure<A: TestSockAddr>() {
-        let (_t, proxy) = udp_prepare_test::<A>().await;
+    macro_rules! declare_tests {
+        ($test_fn:ident, icmp $(#[$icmp_attributes:meta])*) => {
+            mod $test_fn {
+                use super::*;
+
+                #[fasync::run_singlethreaded(test)]
+                async fn udp_v4() {
+                    $test_fn::<fnet::Ipv4SocketAddress, Udp>(
+                        fposix_socket::DatagramSocketProtocol::Udp,
+                    )
+                    .await
+                }
+
+                #[fasync::run_singlethreaded(test)]
+                async fn udp_v6() {
+                    $test_fn::<fnet::Ipv6SocketAddress, Udp>(
+                        fposix_socket::DatagramSocketProtocol::Udp,
+                    )
+                    .await
+                }
+
+                #[fasync::run_singlethreaded(test)]
+                $(#[$icmp_attributes])*
+                async fn icmp_echo_v4() {
+                    $test_fn::<fnet::Ipv4SocketAddress, IcmpEcho>(
+                        fposix_socket::DatagramSocketProtocol::IcmpEcho,
+                    )
+                    .await
+                }
+
+                #[fasync::run_singlethreaded(test)]
+                $(#[$icmp_attributes])*
+                async fn icmp_echo_v6() {
+                    $test_fn::<fnet::Ipv6SocketAddress, IcmpEcho>(
+                        fposix_socket::DatagramSocketProtocol::IcmpEcho,
+                    )
+                    .await
+                }
+            }
+        };
+        ($test_fn:ident) => {
+            declare_tests!($test_fn, icmp);
+        };
+    }
+
+    async fn connect_failure<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
+        let (_t, proxy) = prepare_test::<A>(proto).await;
 
         // Pass a bad domain.
         let res = proxy
@@ -1440,16 +2110,18 @@ mod tests {
             .expect_err("connect fails");
         assert_eq!(res, fposix::Errno::Einval);
 
-        // Pass a bad port.
-        let res = proxy
-            .connect(&mut A::create(A::LOCAL_ADDR, 0))
-            .await
-            .unwrap()
-            .expect_err("connect fails");
-        assert_eq!(res, fposix::Errno::Econnrefused);
+        // Pass a zero port. UDP disallows it, ICMP allows it.
+        let res = proxy.connect(&mut A::create(A::LOCAL_ADDR, 0)).await.unwrap();
+        match proto {
+            fposix_socket::DatagramSocketProtocol::Udp => {
+                assert_eq!(res, Err(fposix::Errno::Econnrefused));
+            }
+            fposix_socket::DatagramSocketProtocol::IcmpEcho => {
+                assert_eq!(res, Ok(()));
+            }
+        };
 
-        // Pass an unreachable address (tests error forwarding from
-        // `udp_connect`).
+        // Pass an unreachable address (tests error forwarding from `create_connection`).
         let res = proxy
             .connect(&mut A::create(A::UNREACHABLE_ADDR, 1010))
             .await
@@ -1458,18 +2130,13 @@ mod tests {
         assert_eq!(res, fposix::Errno::Enetunreach);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_connect_failure_v4() {
-        test_udp_connect_failure::<fnet::Ipv4SocketAddress>().await;
-    }
+    declare_tests!(
+        connect_failure,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_connect_failure_v6() {
-        test_udp_connect_failure::<fnet::Ipv6SocketAddress>().await;
-    }
-
-    async fn test_udp_connect<A: TestSockAddr>() {
-        let (_t, proxy) = udp_prepare_test::<A>().await;
+    async fn connect<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
+        let (_t, proxy) = prepare_test::<A>(proto).await;
         let () = proxy
             .connect(&mut A::create(A::REMOTE_ADDR, 200))
             .await
@@ -1484,18 +2151,13 @@ mod tests {
             .expect("connect suceeds");
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_connect_v4() {
-        test_udp_connect::<fnet::Ipv4SocketAddress>().await;
-    }
+    declare_tests!(
+        connect,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_connect_v6() {
-        test_udp_connect::<fnet::Ipv6SocketAddress>().await;
-    }
-
-    async fn test_udp_bind<A: TestSockAddr>() {
-        let (mut t, socket) = udp_prepare_test::<A>().await;
+    async fn bind<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
+        let (mut t, socket) = prepare_test::<A>(proto).await;
         let stack = t.get(0);
         // Can bind to local address.
         let () =
@@ -1507,12 +2169,12 @@ mod tests {
         assert_eq!(res, fposix::Errno::Ealready);
 
         // Can bind another socket to a different port.
-        let socket = get_socket::<A>(stack).await;
+        let socket = get_socket::<A>(stack, proto).await;
         let () =
             socket.bind(&mut A::create(A::LOCAL_ADDR, 201)).await.unwrap().expect("bind succeeds");
 
         // Can bind to unspecified address in a different port.
-        let socket = get_socket::<A>(stack).await;
+        let socket = get_socket::<A>(stack, proto).await;
         let () = socket
             .bind(&mut A::create(<A::AddrType as IpAddress>::Version::UNSPECIFIED_ADDRESS, 202))
             .await
@@ -1520,18 +2182,12 @@ mod tests {
             .expect("bind succeeds");
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_bind_v4() {
-        test_udp_bind::<fnet::Ipv4SocketAddress>().await;
-    }
+    declare_tests!(bind,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_bind_v6() {
-        test_udp_bind::<fnet::Ipv6SocketAddress>().await;
-    }
-
-    async fn test_udp_bind_then_connect<A: TestSockAddr>() {
-        let (_t, socket) = udp_prepare_test::<A>().await;
+    async fn bind_then_connect<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
+        let (_t, socket) = prepare_test::<A>(proto).await;
         // Can bind to local address.
         let () =
             socket.bind(&mut A::create(A::LOCAL_ADDR, 200)).await.unwrap().expect("bind suceeds");
@@ -1543,19 +2199,17 @@ mod tests {
             .expect("connect succeeds");
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_bind_then_connect_v4() {
-        test_udp_bind_then_connect::<fnet::Ipv4SocketAddress>().await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_bind_then_connect_v6() {
-        test_udp_bind_then_connect::<fnet::Ipv6SocketAddress>().await;
-    }
+    declare_tests!(
+        bind_then_connect,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 
     /// Tests a simple UDP setup with a client and a server, where the client
     /// can send data to the server and the server receives it.
-    async fn test_udp_hello<A: TestSockAddr>() {
+    // TODO(https://fxbug.dev/47321): this test is incorrect for ICMP sockets. At the time of this
+    // writing it crashes before reaching the wrong parts, but we will need to specialize the body
+    // of this test for ICMP before calling the feature complete.
+    async fn hello<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
         // We create two stacks, Alice (server listening on LOCAL_ADDR:200), and
         // Bob (client, bound on REMOTE_ADDR:300). After setup, Bob connects to
         // Alice and sends a datagram. Finally, we verify that Alice receives
@@ -1575,7 +2229,7 @@ mod tests {
             .await
             .unwrap();
         let alice = t.get(0);
-        let (alice_socket, alice_events) = get_socket_and_event::<A>(alice).await;
+        let (alice_socket, alice_events) = get_socket_and_event::<A>(alice, proto).await;
 
         // Verify that Alice has no local or peer addresses bound
         assert_eq!(
@@ -1626,7 +2280,7 @@ mod tests {
         // Setup Bob as a client, bound to REMOTE_ADDR:300
         println!("Configuring bob...");
         let bob = t.get(1);
-        let (bob_socket, bob_events) = get_socket_and_event::<A>(bob).await;
+        let (bob_socket, bob_events) = get_socket_and_event::<A>(bob, proto).await;
         let () = bob_socket
             .bind(&mut A::create(A::REMOTE_ADDR, 300))
             .await
@@ -1706,26 +2360,20 @@ mod tests {
         assert_eq!(&data[..], body);
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_hello_v4() {
-        test_udp_hello::<fnet::Ipv4SocketAddress>().await;
-    }
+    declare_tests!(
+        hello,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_hello_v6() {
-        test_udp_hello::<fnet::Ipv6SocketAddress>().await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_socket_describe() {
+    async fn socket_describe(
+        domain: fposix_socket::Domain,
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket_provider = test_stack.connect_socket_provider().unwrap();
         let socket = socket_provider
-            .datagram_socket(
-                fposix_socket::Domain::Ipv4,
-                fposix_socket::DatagramSocketProtocol::Udp,
-            )
+            .datagram_socket(domain, proto)
             .await
             .unwrap()
             .expect("Socket call succeeds")
@@ -1741,6 +2389,36 @@ mod tests {
         }
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn udp_v4_socket_describe() {
+        socket_describe(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
+            .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn udp_v6_socket_describe() {
+        socket_describe(fposix_socket::Domain::Ipv6, fposix_socket::DatagramSocketProtocol::Udp)
+            .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn icmp_echo_v4_socket_describe() {
+        socket_describe(
+            fposix_socket::Domain::Ipv4,
+            fposix_socket::DatagramSocketProtocol::IcmpEcho,
+        )
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn icmp_echo_v6_socket_describe() {
+        socket_describe(
+            fposix_socket::Domain::Ipv6,
+            fposix_socket::DatagramSocketProtocol::IcmpEcho,
+        )
+        .await
+    }
+
     async fn socket_clone(
         socket: &fposix_socket::DatagramSocketProxy,
         flags: u32,
@@ -1751,9 +2429,13 @@ mod tests {
         Ok(fposix_socket::DatagramSocketProxy::new(channel))
     }
 
-    async fn test_udp_clone<A: TestSockAddr>()
+    async fn clone<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
     where
-        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+        <A::AddrType as IpAddress>::Version: SocketCollectionIpExt<T>,
+        T: Transport<Ipv4>,
+        T: Transport<Ipv6>,
+        T: Transport<<A::AddrType as IpAddress>::Version>,
+        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
     {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
@@ -1769,7 +2451,7 @@ mod tests {
             .build()
             .await
             .unwrap();
-        let (alice_socket, alice_events) = get_socket_and_event::<A>(t.get(0)).await;
+        let (alice_socket, alice_events) = get_socket_and_event::<A>(t.get(0), proto).await;
         // Test for the OPEN_FLAG_DESCRIBE.
         let alice_cloned =
             socket_clone(&alice_socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE)
@@ -1819,7 +2501,7 @@ mod tests {
             A::create(A::LOCAL_ADDR, 200)
         );
 
-        let (bob_socket, bob_events) = get_socket_and_event::<A>(t.get(1)).await;
+        let (bob_socket, bob_events) = get_socket_and_event::<A>(t.get(1), proto).await;
         let bob_cloned = socket_clone(&bob_socket, fio::CLONE_FLAG_SAME_RIGHTS)
             .await
             .expect("failed to clone socket");
@@ -1984,11 +2666,11 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let udpsocks =
+                    let SocketCollection { binding_data, conns, listeners } =
                         <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
-                    assert_eq!(udpsocks.binding_data.iter().count(), 1);
-                    assert_eq!(udpsocks.listeners.iter().count(), 1);
-                    assert!(udpsocks.conns.is_empty());
+                    matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
+                    matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                    matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], [_]);
                 })
                 .await;
         }
@@ -2010,35 +2692,34 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let udpsocks =
+                    let SocketCollection { binding_data, conns, listeners } =
                         <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
-                    assert!(udpsocks.binding_data.is_empty());
-                    assert!(udpsocks.listeners.is_empty());
-                    assert!(udpsocks.conns.is_empty());
+                    matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                    matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                    matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
                 })
                 .await;
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_clone_v4() {
-        test_udp_clone::<fnet::Ipv4SocketAddress>().await;
-    }
+    declare_tests!(
+        clone,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_clone_v6() {
-        test_udp_clone::<fnet::Ipv6SocketAddress>().await;
-    }
-
-    async fn test_close_twice<A: TestSockAddr>()
+    async fn close_twice<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
     where
-        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+        <A::AddrType as IpAddress>::Version: SocketCollectionIpExt<T>,
+        T: Transport<Ipv4>,
+        T: Transport<Ipv6>,
+        T: Transport<<A::AddrType as IpAddress>::Version>,
+        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
     {
         // Make sure we cannot close twice from the same channel so that we
         // maintain the correct refcount.
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
-        let socket = get_socket::<A>(test_stack).await;
+        let socket = get_socket::<A>(test_stack, proto).await;
         let cloned = socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap();
         let () = socket
             .close()
@@ -2055,8 +2736,11 @@ mod tests {
         // empty
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
-                assert!(!udpsocks.binding_data.is_empty());
+                let SocketCollection { binding_data, conns, listeners } =
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
+                matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
+                matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
         let () = cloned
@@ -2068,30 +2752,29 @@ mod tests {
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
-                assert!(udpsocks.binding_data.is_empty());
+                let SocketCollection { binding_data, conns, listeners } =
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
+                matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_close_twice_v4() {
-        test_close_twice::<fnet::Ipv4SocketAddress>().await;
-    }
+    declare_tests!(close_twice);
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_close_twice_v6() {
-        test_close_twice::<fnet::Ipv6SocketAddress>().await;
-    }
-
-    async fn test_implicit_close<A: TestSockAddr>()
+    async fn implicit_close<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
     where
-        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+        <A::AddrType as IpAddress>::Version: SocketCollectionIpExt<T>,
+        T: Transport<Ipv4>,
+        T: Transport<Ipv6>,
+        T: Transport<<A::AddrType as IpAddress>::Version>,
+        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
     {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let cloned = {
-            let socket = get_socket::<A>(test_stack).await;
+            let socket = get_socket::<A>(test_stack, proto).await;
             socket_clone(&socket, fio::CLONE_FLAG_SAME_RIGHTS).await.unwrap()
             // socket goes out of scope indicating an implicit close.
         };
@@ -2105,21 +2788,16 @@ mod tests {
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
-                assert!(udpsocks.binding_data.is_empty());
+                let SocketCollection { binding_data, conns, listeners } =
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
+                matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_implicit_close_v4() {
-        test_implicit_close::<fnet::Ipv4SocketAddress>().await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_implicit_close_v6() {
-        test_implicit_close::<fnet::Ipv6SocketAddress>().await;
-    }
+    declare_tests!(implicit_close);
 
     async fn expect_clone_invalid_args(socket: &fposix_socket::DatagramSocketProxy, flags: u32) {
         let cloned = socket_clone(&socket, flags).await.unwrap();
@@ -2139,13 +2817,17 @@ mod tests {
         assert!(cloned.into_channel().unwrap().is_closed());
     }
 
-    async fn test_invalid_clone_args<A: TestSockAddr>()
+    async fn invalid_clone_args<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
     where
-        <A::AddrType as IpAddress>::Version: UdpSocketIpExt,
+        <A::AddrType as IpAddress>::Version: SocketCollectionIpExt<T>,
+        T: Transport<Ipv4>,
+        T: Transport<Ipv6>,
+        T: Transport<<A::AddrType as IpAddress>::Version>,
+        crate::bindings::BindingsDispatcher: AsRef<SocketCollectionPair<T>>,
     {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
-        let socket = get_socket::<A>(test_stack).await;
+        let socket = get_socket::<A>(test_stack, proto).await;
         // conflicting flags
         expect_clone_invalid_args(&socket, fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_RIGHT_READABLE)
             .await;
@@ -2167,23 +2849,18 @@ mod tests {
         // make sure we don't leak anything.
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
-                assert!(udpsocks.binding_data.is_empty());
+                let SocketCollection { binding_data, conns, listeners } =
+                    <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
+                matches::assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
+                matches::assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
             .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_invalid_clone_args_v4() {
-        test_invalid_clone_args::<fnet::Ipv4SocketAddress>().await
-    }
+    declare_tests!(invalid_clone_args);
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_invalid_clone_args_v6() {
-        test_invalid_clone_args::<fnet::Ipv6SocketAddress>().await
-    }
-
-    async fn test_udp_shutdown<A: TestSockAddr>() {
+    async fn shutdown<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
             .add_stack(
@@ -2193,7 +2870,7 @@ mod tests {
             .build()
             .await
             .unwrap();
-        let (socket, events) = get_socket_and_event::<A>(t.get(0)).await;
+        let (socket, events) = get_socket_and_event::<A>(t.get(0), proto).await;
         let mut local = A::create(A::LOCAL_ADDR, 200);
         let mut remote = A::create(A::REMOTE_ADDR, 300);
         assert_eq!(
@@ -2296,13 +2973,8 @@ mod tests {
             .expect("failed to shutdown the socket twice");
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_shutdown_v4() {
-        test_udp_shutdown::<fnet::Ipv4SocketAddress>().await;
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_udp_shutdown_v6() {
-        test_udp_shutdown::<fnet::Ipv6SocketAddress>().await;
-    }
+    declare_tests!(
+        shutdown,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
 }
