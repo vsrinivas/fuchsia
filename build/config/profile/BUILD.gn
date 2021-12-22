@@ -81,11 +81,7 @@ variant("coverage-cts") {
 
 variant("profile") {
   common_flags = _coverage_common_flags
-
-  inputs = profile_source_files_list_files
-  foreach(file, profile_source_files_list_files) {
-    common_flags += [ "-fprofile-list=" + rebase_path(file, root_build_dir) ]
-  }
+  inputs = _coverage_inputs
 
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
