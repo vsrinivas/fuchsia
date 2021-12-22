@@ -165,7 +165,7 @@ fn area_cover_for_octant(x0: i32, x1: i32, y0: i32, y1: i32, octant: u8) -> (u8,
 
 #[inline]
 fn segment(
-    layer_id: Option<u32>,
+    layer_id: u32,
     x0: i32,
     x1: i32,
     y0: i32,
@@ -177,16 +177,7 @@ fn segment(
     let (ti, tj, tx, ty) = tiles(border_x, border_y, octant);
     let (double_area_multiplier, cover) = area_cover_for_octant(x0, x1, y0, y1, octant);
 
-    PixelSegment::new(
-        layer_id.is_none(),
-        tj,
-        ti,
-        layer_id.unwrap_or_default(),
-        ty,
-        tx,
-        double_area_multiplier,
-        cover,
-    )
+    PixelSegment::new(false, tj, ti, layer_id, ty, tx, double_area_multiplier, cover)
 }
 
 #[derive(Debug, Default)]

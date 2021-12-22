@@ -28,7 +28,6 @@ rustc_library("surpass") {
     "src/painter/layer_workbench.rs",
     "src/painter/mod.rs",
     "src/painter/style.rs",
-    "src/path.rs",
     "src/point.rs",
     "src/rasterizer/mod.rs",
     "src/rasterizer/pixel_segment.rs",
