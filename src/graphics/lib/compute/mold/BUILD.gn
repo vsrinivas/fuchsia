@@ -26,11 +26,6 @@ rustc_library("mold") {
     "src/composition.rs",
     "src/layer.rs",
     "src/lib.rs",
-    "src/path/mod.rs",
-    "src/path/segments.rs",
-    "src/path/transform.rs",
-    "src/point.rs",
-    "src/segment.rs",
     "src/utils.rs",
   ]
 }

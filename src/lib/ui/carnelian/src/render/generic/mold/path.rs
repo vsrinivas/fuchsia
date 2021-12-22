@@ -2,24 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::rc::Rc;
-
 use crate::{
     render::generic::{mold::Mold, PathBuilder},
     Point,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MoldPath {
-    pub(crate) path: Rc<mold::Path>,
-}
-
-impl Eq for MoldPath {}
-
-impl PartialEq for MoldPath {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.path, &other.path)
-    }
+    pub(crate) path: mold::Path,
 }
 
 fn to_mold_point(point: Point) -> mold::Point<f32> {
@@ -28,64 +18,47 @@ fn to_mold_point(point: Point) -> mold::Point<f32> {
 
 #[derive(Debug)]
 pub struct MoldPathBuilder {
-    path: mold::Path,
-    end_point: mold::Point<f32>,
+    builder: mold::PathBuilder,
 }
 
 impl MoldPathBuilder {
     pub(crate) fn new() -> Self {
-        Self { path: mold::Path::new(), end_point: mold::Point::new(0.0, 0.0) }
+        Self { builder: mold::PathBuilder::new() }
     }
 }
 
 impl PathBuilder<Mold> for MoldPathBuilder {
     fn move_to(&mut self, point: Point) -> &mut Self {
-        self.end_point = to_mold_point(point);
+        self.builder.move_to(to_mold_point(point));
         self
     }
 
     fn line_to(&mut self, point: Point) -> &mut Self {
-        let point = to_mold_point(point);
-        self.path.line(self.end_point, point);
-        self.end_point = point;
+        self.builder.line_to(to_mold_point(point));
         self
     }
 
     fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self {
-        let p1 = to_mold_point(p1);
-        let p2 = to_mold_point(p2);
-        self.path.quad(self.end_point, p1, p2);
-        self.end_point = p2;
+        self.builder.quad_to(to_mold_point(p1), to_mold_point(p2));
         self
     }
 
     fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
-        let p1 = to_mold_point(p1);
-        let p2 = to_mold_point(p2);
-        let p3 = to_mold_point(p3);
-        self.path.cubic(self.end_point, p1, p2, p3);
-        self.end_point = p3;
+        self.builder.cubic_to(to_mold_point(p1), to_mold_point(p2), to_mold_point(p3));
         self
     }
 
     fn rat_quad_to(&mut self, p1: Point, p2: Point, w: f32) -> &mut Self {
-        let p1 = to_mold_point(p1);
-        let p2 = to_mold_point(p2);
-        self.path.rat_quad((self.end_point, 1.0), (p1, w), (p2, 1.0));
-        self.end_point = p2;
+        self.builder.rat_quad_to(to_mold_point(p1), to_mold_point(p2), w);
         self
     }
 
     fn rat_cubic_to(&mut self, p1: Point, p2: Point, p3: Point, w1: f32, w2: f32) -> &mut Self {
-        let p1 = to_mold_point(p1);
-        let p2 = to_mold_point(p2);
-        let p3 = to_mold_point(p3);
-        self.path.rat_cubic((self.end_point, 1.0), (p1, w1), (p2, w2), (p3, 1.0));
-        self.end_point = p3;
+        self.builder.rat_cubic_to(to_mold_point(p1), to_mold_point(p2), to_mold_point(p3), w1, w2);
         self
     }
 
-    fn build(self) -> MoldPath {
-        MoldPath { path: Rc::new(self.path) }
+    fn build(mut self) -> MoldPath {
+        MoldPath { path: self.builder.build() }
     }
 }

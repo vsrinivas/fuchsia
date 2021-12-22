@@ -48,11 +48,7 @@ impl MoldComposition {
                         0.0,
                         1.0,
                     ];
-                    self.composition.insert_in_layer_transformed(
-                        layer_id,
-                        &*print.path,
-                        &transform,
-                    );
+                    self.composition.insert_in_layer(layer_id, &print.path.transform(&transform));
                 }
 
                 (layer_id, raster.translation)
