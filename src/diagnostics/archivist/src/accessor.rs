@@ -49,13 +49,21 @@ fn validate_and_parse_selectors(
     selector_args: Vec<SelectorArgument>,
 ) -> Result<Vec<Selector>, AccessorError> {
     let mut selectors = vec![];
+    let mut errors = vec![];
+
     if selector_args.is_empty() {
         Err(AccessorError::EmptySelectors)?;
     }
 
     for selector_arg in selector_args {
-        let selector = selectors::take_from_argument::<FastError>(selector_arg)?;
-        selectors.push(selector);
+        match selectors::take_from_argument::<FastError>(selector_arg) {
+            Ok(s) => selectors.push(s),
+            Err(e) => errors.push(e),
+        }
+    }
+
+    if !errors.is_empty() {
+        warn!(?errors, "Found errors in selector arguments");
     }
 
     Ok(selectors)
@@ -563,6 +571,46 @@ mod tests {
             )
             .is_ok());
 
+        assert!(batch_iterator.get_next().await.is_ok());
+    }
+
+    #[fuchsia::test]
+    async fn accessor_skips_invalid_selectors() {
+        let (accessor, stream) =
+            fidl::endpoints::create_proxy_and_stream::<ArchiveAccessorMarker>().unwrap();
+        let (snd, _rcv) = mpsc::unbounded();
+        fasync::Task::spawn(async move {
+            let pipeline = Arc::new(RwLock::new(Pipeline::for_test(None, DataRepo::default())));
+            let accessor =
+                ArchiveAccessor::new(pipeline, Arc::new(AccessorStats::new(Node::default())));
+            accessor.spawn_server(stream, snd);
+        })
+        .detach();
+
+        // A selector of the form `component:node/path:property` is rejected.
+        let (batch_iterator, server_end) =
+            fidl::endpoints::create_proxy::<BatchIteratorMarker>().unwrap();
+
+        assert!(accessor
+            .r#stream_diagnostics(
+                StreamParameters {
+                    data_type: Some(DataType::Inspect),
+                    stream_mode: Some(StreamMode::Snapshot),
+                    format: Some(Format::Json),
+                    client_selector_configuration: Some(ClientSelectorConfiguration::Selectors(
+                        vec![
+                            SelectorArgument::RawSelector("invalid".to_string()),
+                            SelectorArgument::RawSelector("valid:root".to_string()),
+                        ]
+                    )),
+                    ..StreamParameters::EMPTY
+                },
+                server_end
+            )
+            .is_ok());
+
+        // The batch iterator proxy should remain valid and providing responses regardless of the
+        // invalid selectors that were given.
         assert!(batch_iterator.get_next().await.is_ok());
     }
 }
