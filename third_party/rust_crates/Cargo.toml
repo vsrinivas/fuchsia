@@ -97,7 +97,7 @@ heck = "0.3.1"
 hex = "0.3.2"
 humansize = "1.1.1"
 http = "0.2.4"
-hyper = { version = "0.13.4", default-features = false, features = ["stream"] }
+hyper = { version = "0.13.10", default-features = false, features = ["stream"] }
 iota = "0.2.2"
 itertools = "0.10"
 itoa = "0.4"
@@ -459,9 +459,6 @@ rustflags = ["--cfg=tuple_ty", "--cfg=allow_clippy", "--cfg=maybe_uninit", "--cf
 
 [gn.package.num-iter."0.1.42"]
 rustflags = ["--cfg=has_i128"]
-
-[gn.package.pin-project-internal."0.4.26"]
-rustflags = ["--cfg=underscore_consts", "--cfg=deprecated_proc_macro"]
 
 [gn.package.proc-macro2."0.4.27"]
 rustflags = ["--cfg=u128", "--cfg=use_proc_macro", "--cfg=wrap_proc_macro"]

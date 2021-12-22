@@ -286,7 +286,11 @@ impl<I, E> Builder<I, E> {
     /// but may also improve performance when an IO transport doesn't
     /// support vectored writes well, such as most TLS implementations.
     ///
-    /// Default is `true`.
+    /// Setting this to true will force hyper to use queued strategy
+    /// which may eliminate unnecessary cloning on some TLS backends
+    ///
+    /// Default is `auto`. In this mode hyper will try to guess which
+    /// mode to use
     pub fn http1_writev(mut self, val: bool) -> Self {
         self.protocol.http1_writev(val);
         self
@@ -339,6 +343,16 @@ impl<I, E> Builder<I, E> {
     /// `http2_initial_connection_window_size`.
     pub fn http2_adaptive_window(mut self, enabled: bool) -> Self {
         self.protocol.http2_adaptive_window(enabled);
+        self
+    }
+
+    /// Sets the maximum frame size to use for HTTP2.
+    ///
+    /// Passing `None` will do nothing.
+    ///
+    /// If not set, hyper will use a default.
+    pub fn http2_max_frame_size(mut self, sz: impl Into<Option<u32>>) -> Self {
+        self.protocol.http2_max_frame_size(sz);
         self
     }
 

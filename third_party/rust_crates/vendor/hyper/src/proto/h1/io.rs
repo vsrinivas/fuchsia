@@ -94,6 +94,13 @@ where
         self.write_buf.set_strategy(WriteStrategy::Flatten);
     }
 
+    pub fn set_write_strategy_queue(&mut self) {
+        // this should always be called only at construction time,
+        // so this assert is here to catch myself
+        debug_assert!(self.write_buf.queue.bufs_cnt() == 0);
+        self.write_buf.set_strategy(WriteStrategy::Queue);
+    }
+
     pub fn read_buf(&self) -> &[u8] {
         self.read_buf.as_ref()
     }
@@ -149,7 +156,7 @@ where
         S: Http1Transaction,
     {
         loop {
-            match S::parse(
+            match super::role::parse_headers::<S>(
                 &mut self.read_buf,
                 ParseContext {
                     cached_headers: parse_ctx.cached_headers,

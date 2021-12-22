@@ -73,6 +73,7 @@ pub(crate) mod dispatch;
 mod pool;
 pub mod service;
 #[cfg(test)]
+#[cfg(feature = "runtime")]
 mod tests;
 
 /// A Client to make outgoing HTTP requests.
@@ -325,7 +326,7 @@ where
             let extra_info = pooled.conn_info.extra.clone();
             let fut = fut.map_ok(move |mut res| {
                 if let Some(extra) = extra_info {
-                    extra.set(&mut res);
+                    extra.set(res.extensions_mut());
                 }
                 res
             });
@@ -562,6 +563,26 @@ where
     }
 }
 
+impl<C, B> tower_service::Service<Request<B>> for &'_ Client<C, B>
+where
+    C: Connect + Clone + Send + Sync + 'static,
+    B: HttpBody + Send + 'static,
+    B::Data: Send,
+    B::Error: Into<Box<dyn StdError + Send + Sync>>,
+{
+    type Response = Response<Body>;
+    type Error = crate::Error;
+    type Future = ResponseFuture;
+
+    fn poll_ready(&mut self, _: &mut task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn call(&mut self, req: Request<B>) -> Self::Future {
+        self.request(req)
+    }
+}
+
 impl<C: Clone, B> Clone for Client<C, B> {
     fn clone(&self) -> Client<C, B> {
         Client {
@@ -773,13 +794,11 @@ fn absolute_form(uri: &mut Uri) {
 }
 
 fn authority_form(uri: &mut Uri) {
-    if log_enabled!(::log::Level::Warn) {
-        if let Some(path) = uri.path_and_query() {
-            // `https://hyper.rs` would parse with `/` path, don't
-            // annoy people about that...
-            if path != "/" {
-                warn!("HTTP/1.1 CONNECT request stripping path: {:?}", path);
-            }
+    if let Some(path) = uri.path_and_query() {
+        // `https://hyper.rs` would parse with `/` path, don't
+        // annoy people about that...
+        if path != "/" {
+            warn!("HTTP/1.1 CONNECT request stripping path: {:?}", path);
         }
     }
     *uri = match uri.authority() {
@@ -946,7 +965,11 @@ impl Builder {
     /// but may also improve performance when an IO transport doesn't
     /// support vectored writes well, such as most TLS implementations.
     ///
-    /// Default is `true`.
+    /// Setting this to true will force hyper to use queued strategy
+    /// which may eliminate unnecessary cloning on some TLS backends
+    ///
+    /// Default is `auto`. In this mode hyper will try to guess which
+    /// mode to use
     pub fn http1_writev(&mut self, val: bool) -> &mut Self {
         self.conn_builder.h1_writev(val);
         self
@@ -1037,6 +1060,16 @@ impl Builder {
     /// `http2_initial_connection_window_size`.
     pub fn http2_adaptive_window(&mut self, enabled: bool) -> &mut Self {
         self.conn_builder.http2_adaptive_window(enabled);
+        self
+    }
+
+    /// Sets the maximum frame size to use for HTTP2.
+    ///
+    /// Passing `None` will do nothing.
+    ///
+    /// If not set, hyper will use a default.
+    pub fn http2_max_frame_size(&mut self, sz: impl Into<Option<u32>>) -> &mut Self {
+        self.conn_builder.http2_max_frame_size(sz);
         self
     }
 

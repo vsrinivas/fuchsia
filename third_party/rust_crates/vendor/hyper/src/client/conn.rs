@@ -17,7 +17,7 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use futures_util::future::{self, Either, FutureExt as _};
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tower_service::Service;
 
@@ -30,7 +30,7 @@ use crate::{Body, Request, Response};
 
 type Http1Dispatcher<T, B, R> = proto::dispatch::Dispatcher<proto::dispatch::Client<B>, B, T, R>;
 
-#[pin_project]
+#[pin_project(project = ProtoClientProj)]
 enum ProtoClient<T, B>
 where
     B: HttpBody,
@@ -75,7 +75,7 @@ where
 #[derive(Clone, Debug)]
 pub struct Builder {
     pub(super) exec: Exec,
-    h1_writev: bool,
+    h1_writev: Option<bool>,
     h1_title_case_headers: bool,
     h1_read_buf_exact_size: Option<usize>,
     h1_max_buf_size: Option<usize>,
@@ -424,7 +424,7 @@ impl Builder {
     pub fn new() -> Builder {
         Builder {
             exec: Exec::Default,
-            h1_writev: true,
+            h1_writev: None,
             h1_read_buf_exact_size: None,
             h1_title_case_headers: false,
             h1_max_buf_size: None,
@@ -443,7 +443,7 @@ impl Builder {
     }
 
     pub(super) fn h1_writev(&mut self, enabled: bool) -> &mut Builder {
-        self.h1_writev = enabled;
+        self.h1_writev = Some(enabled);
         self
     }
 
@@ -609,8 +609,12 @@ impl Builder {
             let (tx, rx) = dispatch::channel();
             let proto = if !opts.http2 {
                 let mut conn = proto::Conn::new(io);
-                if !opts.h1_writev {
-                    conn.set_write_strategy_flatten();
+                if let Some(writev) = opts.h1_writev {
+                    if writev {
+                        conn.set_write_strategy_queue();
+                    } else {
+                        conn.set_write_strategy_flatten();
+                    }
                 }
                 if opts.h1_title_case_headers {
                     conn.set_title_case_headers();
@@ -677,12 +681,10 @@ where
 {
     type Output = crate::Result<proto::Dispatched>;
 
-    #[project]
     fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
-        #[project]
         match self.project() {
-            ProtoClient::H1(c) => c.poll(cx),
-            ProtoClient::H2(c) => c.poll(cx),
+            ProtoClientProj::H1(c) => c.poll(cx),
+            ProtoClientProj::H2(c) => c.poll(cx),
         }
     }
 }

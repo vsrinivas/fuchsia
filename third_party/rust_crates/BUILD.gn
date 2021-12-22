@@ -317,7 +317,7 @@ group("humansize") {
 }
 
 group("hyper") {
-  deps = [ ":hyper-v0_13_6" ]
+  deps = [ ":hyper-v0_13_10" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -4595,6 +4595,27 @@ rust_library("httparse-v1_5_1") {
   ]
 }
 
+rust_library("httpdate-v0_3_2") {
+  crate_name = "httpdate"
+  crate_root = "//third_party/rust_crates/vendor/httpdate/src/lib.rs"
+  output_name = "httpdate-c2452022b5809a33"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=c2452022b5809a33",
+    "-Cextra-filename=-c2452022b5809a33",
+  ]
+}
+
 rust_library("humansize-v1_1_1") {
   crate_name = "humansize"
   crate_root = "//third_party/rust_crates/vendor/humansize/src/lib.rs"
@@ -4616,10 +4637,10 @@ rust_library("humansize-v1_1_1") {
   ]
 }
 
-rust_library("hyper-v0_13_6") {
+rust_library("hyper-v0_13_10") {
   crate_name = "hyper"
   crate_root = "//third_party/rust_crates/vendor/hyper/src/lib.rs"
-  output_name = "hyper-e2c6feeec5315f6c"
+  output_name = "hyper-5f41561e316ec43e"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -4634,12 +4655,12 @@ rust_library("hyper-v0_13_6") {
   deps += [ ":http-v0_2_4" ]
   deps += [ ":http-body-v0_3_1" ]
   deps += [ ":httparse-v1_5_1" ]
+  deps += [ ":httpdate-v0_3_2" ]
   deps += [ ":itoa-v0_4_3" ]
-  deps += [ ":log-v0_4_11" ]
-  deps += [ ":pin-project-v0_4_26" ]
-  deps += [ ":time-v0_1_42" ]
+  deps += [ ":pin-project-v1_0_4" ]
   deps += [ ":tokio-v0_2_21" ]
   deps += [ ":tower-service-v0_3_0" ]
+  deps += [ ":tracing-v0_1_29" ]
   deps += [ ":want-v0_3_0" ]
 
   rustenv = []
@@ -4647,8 +4668,8 @@ rust_library("hyper-v0_13_6") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e2c6feeec5315f6c",
-    "-Cextra-filename=-e2c6feeec5315f6c",
+    "-Cmetadata=5f41561e316ec43e",
+    "-Cextra-filename=-5f41561e316ec43e",
     "--cfg=feature=\"stream\"",
   ]
 }
@@ -4665,7 +4686,7 @@ rust_library("hyper-rustls-v0_20_0") {
   deps = []
   deps += [ ":bytes-v0_5_4" ]
   deps += [ ":futures-util-v0_3_15" ]
-  deps += [ ":hyper-v0_13_6" ]
+  deps += [ ":hyper-v0_13_10" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":rustls-v0_17_0" ]
   deps += [ ":rustls-native-certs-v0_3_0" ]
@@ -6657,28 +6678,6 @@ rust_library("phf_shared-v0_7_24") {
   ]
 }
 
-rust_library("pin-project-v0_4_26") {
-  crate_name = "pin_project"
-  crate_root = "//third_party/rust_crates/vendor/pin-project-0.4.26/src/lib.rs"
-  output_name = "pin_project-a02b7c35a51bd146"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":pin-project-internal-v0_4_26($host_toolchain)" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=a02b7c35a51bd146",
-    "-Cextra-filename=-a02b7c35a51bd146",
-  ]
-}
-
 rust_library("pin-project-v1_0_4") {
   crate_name = "pin_project"
   crate_root = "//third_party/rust_crates/vendor/pin-project/src/lib.rs"
@@ -6698,33 +6697,6 @@ rust_library("pin-project-v1_0_4") {
     "--edition=2018",
     "-Cmetadata=22de70c7a2098ec0",
     "-Cextra-filename=-22de70c7a2098ec0",
-  ]
-}
-
-rust_proc_macro("pin-project-internal-v0_4_26") {
-  crate_name = "pin_project_internal"
-  crate_root =
-      "//third_party/rust_crates/vendor/pin-project-internal-0.4.26/src/lib.rs"
-  output_name = "pin_project_internal-c9d209096f69f67a"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":proc-macro2-v1_0_28" ]
-  deps += [ ":quote-v1_0_7" ]
-  deps += [ ":syn-v1_0_74" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=c9d209096f69f67a",
-    "-Cextra-filename=-c9d209096f69f67a",
-    "--cfg=underscore_consts",
-    "--cfg=deprecated_proc_macro",
   ]
 }
 
@@ -10548,7 +10520,7 @@ rust_library("tuf-v0_3_0-beta3") {
   deps += [ ":futures-io-v0_3_15" ]
   deps += [ ":futures-util-v0_3_15" ]
   deps += [ ":http-v0_2_4" ]
-  deps += [ ":hyper-v0_13_6" ]
+  deps += [ ":hyper-v0_13_10" ]
   deps += [ ":itoa-v0_4_3" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":parking_lot-v0_11_1" ]
@@ -10573,7 +10545,7 @@ rust_library("tuf-v0_3_0-beta3") {
   ]
 
   aliased_deps = {
-    hyper_013 = ":hyper-v0_13_6"
+    hyper_013 = ":hyper-v0_13_10"
   }
 }
 

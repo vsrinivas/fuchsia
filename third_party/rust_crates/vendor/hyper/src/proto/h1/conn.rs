@@ -12,6 +12,7 @@ use super::{Decoder, Encode, EncodedBuf, Encoder, Http1Transaction, ParseContext
 use crate::common::{task, Pin, Poll, Unpin};
 use crate::headers::connection_keep_alive;
 use crate::proto::{BodyLength, DecodedLength, MessageHead};
+use crate::Result;
 
 const H2_PREFACE: &[u8] = b"PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n";
 
@@ -70,6 +71,10 @@ where
 
     pub fn set_write_strategy_flatten(&mut self) {
         self.io.set_write_strategy_flatten();
+    }
+
+    pub fn set_write_strategy_queue(&mut self) {
+        self.io.set_write_strategy_queue();
     }
 
     pub fn set_title_case_headers(&mut self) {
@@ -214,8 +219,8 @@ where
 
         let (reading, ret) = match self.state.reading {
             Reading::Body(ref mut decoder) => {
-                match decoder.decode(cx, &mut self.io) {
-                    Poll::Ready(Ok(slice)) => {
+                match ready!(decoder.decode(cx, &mut self.io)) {
+                    Ok(slice) => {
                         let (reading, chunk) = if decoder.is_eof() {
                             debug!("incoming body completed");
                             (
@@ -237,8 +242,7 @@ where
                         };
                         (reading, Poll::Ready(chunk))
                     }
-                    Poll::Pending => return Poll::Pending,
-                    Poll::Ready(Err(e)) => {
+                    Err(e) => {
                         debug!("incoming body decode error: {}", e);
                         (Reading::Closed, Poll::Ready(Some(Err(e))))
                     }
@@ -475,7 +479,7 @@ where
         self.enforce_version(&mut head);
 
         let buf = self.io.headers_buf();
-        match T::encode(
+        match super::role::encode_headers::<T>(
             Encode {
                 head: &mut head,
                 body,
@@ -585,7 +589,7 @@ where
         self.state.writing = state;
     }
 
-    pub fn end_body(&mut self) {
+    pub fn end_body(&mut self) -> Result<()> {
         debug_assert!(self.can_write_body());
 
         let state = match self.state.writing {
@@ -602,13 +606,18 @@ where
                             Writing::KeepAlive
                         }
                     }
-                    Err(_not_eof) => Writing::Closed,
+                    Err(_not_eof) => {
+                        return Err(crate::Error::new_user_body(
+                            crate::Error::new_body_write_aborted(),
+                        ))
+                    }
                 }
             }
-            _ => return,
+            _ => return Ok(()),
         };
 
         self.state.writing = state;
+        Ok(())
     }
 
     // When we get a parse error, depending on what side we are, we might be able

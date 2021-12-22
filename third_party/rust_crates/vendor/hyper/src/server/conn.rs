@@ -7,6 +7,41 @@
 //!
 //! If you don't have need to manage connections yourself, consider using the
 //! higher-level [Server](super) API.
+//!
+//! ## Example
+//! A simple example that uses the `Http` struct to talk HTTP over a Tokio TCP stream
+//! ```no_run
+//! # #[cfg(feature = "runtime")]
+//! # mod rt {
+//! use http::{Request, Response, StatusCode};
+//! use hyper::{server::conn::Http, service::service_fn, Body};
+//! use std::{net::SocketAddr, convert::Infallible};
+//! use tokio::net::TcpListener;
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+//!     let addr: SocketAddr = ([127, 0, 0, 1], 8080).into();
+//!
+//!     let mut tcp_listener = TcpListener::bind(addr).await?;
+//!     loop {
+//!         let (tcp_stream, _) = tcp_listener.accept().await?;
+//!         tokio::task::spawn(async move {
+//!             if let Err(http_err) = Http::new()
+//!                     .http1_only(true)
+//!                     .keep_alive(true)
+//!                     .serve_connection(tcp_stream, service_fn(hello))
+//!                     .await {
+//!                 eprintln!("Error while serving HTTP connection: {}", http_err);
+//!             }
+//!         });
+//!     }
+//! }
+//!
+//! async fn hello(_req: Request<Body>) -> Result<Response<Body>, Infallible> {
+//!    Ok(Response::new(Body::from("Hello World!")))
+//! }
+//! # }
+//! ```
 
 use std::error::Error as StdError;
 use std::fmt;
@@ -17,7 +52,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use bytes::Bytes;
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use super::Accept;
@@ -49,7 +84,7 @@ pub struct Http<E = Exec> {
     exec: E,
     h1_half_close: bool,
     h1_keep_alive: bool,
-    h1_writev: bool,
+    h1_writev: Option<bool>,
     h2_builder: proto::h2::server::Config,
     mode: ConnectionMode,
     max_buf_size: Option<usize>,
@@ -118,7 +153,7 @@ where
     fallback: Fallback<E>,
 }
 
-#[pin_project]
+#[pin_project(project = ProtoServerProj)]
 pub(super) enum ProtoServer<T, B, S, E = Exec>
 where
     S: HttpService<Body>,
@@ -185,7 +220,7 @@ impl Http {
             exec: Exec::Default,
             h1_half_close: false,
             h1_keep_alive: true,
-            h1_writev: true,
+            h1_writev: None,
             h2_builder: Default::default(),
             mode: ConnectionMode::Fallback,
             max_buf_size: None,
@@ -242,10 +277,14 @@ impl<E> Http<E> {
     /// but may also improve performance when an IO transport doesn't
     /// support vectored writes well, such as most TLS implementations.
     ///
-    /// Default is `true`.
+    /// Setting this to true will force hyper to use queued strategy
+    /// which may eliminate unnecessary cloning on some TLS backends
+    ///
+    /// Default is `auto`. In this mode hyper will try to guess which
+    /// mode to use
     #[inline]
     pub fn http1_writev(&mut self, val: bool) -> &mut Self {
-        self.h1_writev = val;
+        self.h1_writev = Some(val);
         self
     }
 
@@ -455,8 +494,12 @@ impl<E> Http<E> {
                 if self.h1_half_close {
                     conn.set_allow_half_close();
                 }
-                if !self.h1_writev {
-                    conn.set_write_strategy_flatten();
+                if let Some(writev) = self.h1_writev {
+                    if writev {
+                        conn.set_write_strategy_queue();
+                    } else {
+                        conn.set_write_strategy_flatten();
+                    }
                 }
                 conn.set_flush_pipeline(self.pipeline_flush);
                 if let Some(max) = self.max_buf_size {
@@ -836,12 +879,10 @@ where
 {
     type Output = crate::Result<proto::Dispatched>;
 
-    #[project]
     fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
-        #[project]
         match self.project() {
-            ProtoServer::H1(s) => s.poll(cx),
-            ProtoServer::H2(s) => s.poll(cx),
+            ProtoServerProj::H1(s) => s.poll(cx),
+            ProtoServerProj::H2(s) => s.poll(cx),
         }
     }
 }
@@ -855,7 +896,7 @@ pub(crate) mod spawn_all {
     use crate::common::exec::H2Exec;
     use crate::common::{task, Future, Pin, Poll, Unpin};
     use crate::service::HttpService;
-    use pin_project::{pin_project, project};
+    use pin_project::pin_project;
 
     // Used by `SpawnAll` to optionally watch a `Connection` future.
     //
@@ -907,7 +948,7 @@ pub(crate) mod spawn_all {
         state: State<I, N, S, E, W>,
     }
 
-    #[pin_project]
+    #[pin_project(project = StateProj)]
     pub enum State<I, N, S: HttpService<Body>, E, W: Watcher<I, S, E>> {
         Connecting(#[pin] Connecting<I, N, E>, W),
         Connected(#[pin] W::Future),
@@ -934,7 +975,6 @@ pub(crate) mod spawn_all {
     {
         type Output = ();
 
-        #[project]
         fn poll(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Self::Output> {
             // If it weren't for needing to name this type so the `Send` bounds
             // could be projected to the `Serve` executor, this could just be
@@ -943,9 +983,8 @@ pub(crate) mod spawn_all {
             let mut me = self.project();
             loop {
                 let next = {
-                    #[project]
                     match me.state.as_mut().project() {
-                        State::Connecting(connecting, watcher) => {
+                        StateProj::Connecting(connecting, watcher) => {
                             let res = ready!(connecting.poll(cx));
                             let conn = match res {
                                 Ok(conn) => conn,
@@ -958,7 +997,7 @@ pub(crate) mod spawn_all {
                             let connected = watcher.watch(conn.with_upgrades());
                             State::Connected(connected)
                         }
-                        State::Connected(future) => {
+                        StateProj::Connected(future) => {
                             return future.poll(cx).map(|res| {
                                 if let Err(err) = res {
                                     debug!("connection error: {}", err);
