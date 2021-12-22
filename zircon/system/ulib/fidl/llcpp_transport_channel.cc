@@ -199,17 +199,5 @@ const CodingConfig ChannelTransport::EncodingConfiguration = {
     .decode_process_handle = channel_decode_process_handle,
 };
 
-#ifdef __Fuchsia__
-AnyTransport MakeAnyTransport(zx::channel channel) {
-  return AnyTransport::Make<ChannelTransport>(channel.release());
-}
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::channel& channel) {
-  return MakeAnyUnownedTransport(channel.borrow());
-}
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_channel& channel) {
-  return AnyUnownedTransport::Make<ChannelTransport>(channel->get());
-}
-#endif
-
 }  // namespace internal
 }  // namespace fidl

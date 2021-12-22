@@ -90,15 +90,5 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
 
 const CodingConfig SocketTransport::EncodingConfiguration = {};
 
-AnyTransport MakeAnyTransport(zx::socket socket) {
-  return AnyTransport::Make<SocketTransport>(socket.release());
-}
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::socket& socket) {
-  return MakeAnyUnownedTransport(socket.borrow());
-}
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_socket& socket) {
-  return AnyUnownedTransport::Make<SocketTransport>(socket->get());
-}
-
 }  // namespace internal
 }  // namespace fidl

@@ -126,15 +126,5 @@ zx_status_t DriverWaiter::Begin() {
 
 const CodingConfig DriverTransport::EncodingConfiguration = {};
 
-AnyTransport MakeAnyTransport(fdf::Channel channel) {
-  return AnyTransport::Make<DriverTransport>(channel.release());
-}
-AnyUnownedTransport MakeAnyUnownedTransport(const fdf::Channel& channel) {
-  return AnyUnownedTransport::Make<DriverTransport>(channel.get());
-}
-AnyUnownedTransport MakeAnyUnownedTransport(const fdf::UnownedChannel& channel) {
-  return AnyUnownedTransport::Make<DriverTransport>(channel->get());
-}
-
 }  // namespace internal
 }  // namespace fidl

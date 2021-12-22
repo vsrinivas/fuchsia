@@ -314,13 +314,28 @@ class AnyTransport {
   fidl_handle_t handle_;
 };
 
-AnyUnownedTransport MakeAnyUnownedTransport(const AnyTransport& transport);
-
 template <typename TransportObject>
 struct AssociatedTransportImpl;
 
 template <typename TransportObject>
 using AssociatedTransport = typename AssociatedTransportImpl<std::decay_t<TransportObject>>::type;
+
+template <typename T>
+AnyTransport MakeAnyTransport(T transport) {
+  return AnyTransport::Make<AssociatedTransport<T>>(transport.release());
+}
+
+template <typename T>
+AnyUnownedTransport MakeAnyUnownedTransport(const T& transport) {
+  if constexpr (std::is_same_v<T, AnyTransport>) {
+    return transport.borrow();
+  } else if constexpr (std::is_same_v<T, typename AssociatedTransport<T>::OwnedType>) {
+    return AnyUnownedTransport::Make<AssociatedTransport<T>>(transport.get());
+  } else {
+    static_assert(std::is_same_v<T, typename AssociatedTransport<T>::UnownedType>);
+    return AnyUnownedTransport::Make<AssociatedTransport<T>>(transport->get());
+  }
+}
 
 struct DriverTransport;
 struct ChannelTransport;

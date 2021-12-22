@@ -28,10 +28,6 @@ struct ChannelTransport {
 };
 
 #ifdef __Fuchsia__
-AnyTransport MakeAnyTransport(zx::channel channel);
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::channel& channel);
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_channel& channel);
-
 template <>
 struct AssociatedTransportImpl<zx::channel> {
   using type = ChannelTransport;

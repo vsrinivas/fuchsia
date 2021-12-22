@@ -26,10 +26,6 @@ struct DriverTransport {
   static const CodingConfig EncodingConfiguration;
 };
 
-AnyTransport MakeAnyTransport(fdf::Channel channel);
-AnyUnownedTransport MakeAnyUnownedTransport(const fdf::Channel& channel);
-AnyUnownedTransport MakeAnyUnownedTransport(const fdf::UnownedChannel& socket);
-
 template <>
 struct AssociatedTransportImpl<fdf::Channel> {
   using type = DriverTransport;

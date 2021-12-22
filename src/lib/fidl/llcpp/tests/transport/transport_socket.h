@@ -27,10 +27,6 @@ struct SocketTransport {
   static const CodingConfig EncodingConfiguration;
 };
 
-AnyTransport MakeAnyTransport(zx::socket socket);
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::socket& socket);
-AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_socket& socket);
-
 template <>
 struct AssociatedTransportImpl<zx::socket> {
   using type = SocketTransport;
