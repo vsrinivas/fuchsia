@@ -10,7 +10,9 @@
 #include <lib/fit/defer.h>
 #include <net/if.h>
 #include <netdb.h>
+#include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <poll.h>
 #include <sys/ioctl.h>
@@ -5487,24 +5489,133 @@ INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
                          SocketKindToString);
 
 using DomainProtocol = std::tuple<int, int>;
-class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {};
+class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {
+ protected:
+  void SetUp() override {
+#if !defined(__Fuchsia__)
+    if (!IsRoot()) {
+      GTEST_SKIP() << "This test requires root";
+    }
+#endif
+    auto const& [domain, protocol] = GetParam();
+    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(domain, SOCK_DGRAM, protocol))) << strerror(errno);
+  }
+
+  const fbl::unique_fd& fd() const { return fd_; }
+
+ private:
+  fbl::unique_fd fd_;
+};
 
 TEST_P(IcmpSocketTest, GetSockoptSoProtocol) {
-#if !defined(__Fuchsia__)
-  if (!IsRoot()) {
-    GTEST_SKIP() << "This test requires root";
-  }
-#endif
   auto const& [domain, protocol] = GetParam();
-
-  fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(socket(domain, SOCK_DGRAM, protocol))) << strerror(errno);
 
   int opt;
   socklen_t optlen = sizeof(opt);
-  EXPECT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_PROTOCOL, &opt, &optlen), 0) << strerror(errno);
+  ASSERT_EQ(getsockopt(fd().get(), SOL_SOCKET, SO_PROTOCOL, &opt, &optlen), 0) << strerror(errno);
   EXPECT_EQ(optlen, sizeof(opt));
   EXPECT_EQ(opt, protocol);
+}
+
+TEST_P(IcmpSocketTest, PayloadIdentIgnored) {
+  auto const& [domain, protocol] = GetParam();
+
+  constexpr short kBindIdent = 3;
+  constexpr short kDestinationIdent = kBindIdent + 1;
+
+  switch (domain) {
+    case AF_INET: {
+      const sockaddr_in bind_addr = {
+          .sin_family = AF_INET,
+          .sin_port = htons(kBindIdent),
+          .sin_addr =
+              {
+                  .s_addr = htonl(INADDR_LOOPBACK),
+              },
+      };
+      ASSERT_EQ(bind(fd().get(), reinterpret_cast<const sockaddr*>(&bind_addr), sizeof(bind_addr)),
+                0)
+          << strerror(errno);
+      const icmphdr pkt = []() {
+        icmphdr pkt;
+        // Populate with garbage to prove other fields are unused.
+        memset(&pkt, 0x4a, sizeof(pkt));
+        pkt.type = ICMP_ECHO;
+        pkt.code = 0;
+        return pkt;
+      }();
+      const sockaddr_in dst_addr = {
+          .sin_family = bind_addr.sin_family,
+          .sin_port = htons(kDestinationIdent),
+          .sin_addr = bind_addr.sin_addr,
+      };
+      ASSERT_EQ(sendto(fd().get(), &pkt, sizeof(pkt), 0,
+                       reinterpret_cast<const sockaddr*>(&dst_addr), sizeof(dst_addr)),
+                ssize_t(sizeof(pkt)))
+          << strerror(errno);
+
+      struct {
+        std::remove_const<decltype(pkt)>::type hdr;
+        char unused;
+      } hdr_with_extra = {
+          .unused = 0x44,
+      };
+      memset(&hdr_with_extra.hdr, 0x4a, sizeof(hdr_with_extra.hdr));
+      ASSERT_EQ(read(fd().get(), &hdr_with_extra, sizeof(hdr_with_extra)), ssize_t(sizeof(pkt)))
+          << strerror(errno);
+      EXPECT_EQ(hdr_with_extra.unused, 0x44);
+      EXPECT_EQ(hdr_with_extra.hdr.type, 0);
+      EXPECT_EQ(hdr_with_extra.hdr.code, 0);
+      EXPECT_NE(hdr_with_extra.hdr.checksum, 0);
+      EXPECT_EQ(htons(hdr_with_extra.hdr.un.echo.id), kBindIdent);
+      EXPECT_EQ(hdr_with_extra.hdr.un.echo.sequence, pkt.un.echo.sequence);
+    } break;
+    case AF_INET6: {
+      const sockaddr_in6 bind_addr = {
+          .sin6_family = AF_INET6,
+          .sin6_port = htons(kBindIdent),
+          .sin6_addr = IN6ADDR_LOOPBACK_INIT,
+      };
+      ASSERT_EQ(bind(fd().get(), reinterpret_cast<const sockaddr*>(&bind_addr), sizeof(bind_addr)),
+                0)
+          << strerror(errno);
+      const icmp6_hdr pkt = []() {
+        icmp6_hdr pkt;
+        // Populate with garbage to prove other fields are unused.
+        memset(&pkt, 0x4a, sizeof(pkt));
+        pkt.icmp6_type = ICMP6_ECHO_REQUEST;
+        pkt.icmp6_code = 0;
+        return pkt;
+      }();
+      const sockaddr_in6 dst_addr = {
+          .sin6_family = bind_addr.sin6_family,
+          .sin6_port = htons(kDestinationIdent),
+          .sin6_addr = bind_addr.sin6_addr,
+      };
+      ASSERT_EQ(sendto(fd().get(), &pkt, sizeof(pkt), 0,
+                       reinterpret_cast<const sockaddr*>(&dst_addr), sizeof(dst_addr)),
+                ssize_t(sizeof(pkt)))
+          << strerror(errno);
+
+      struct {
+        std::remove_const<decltype(pkt)>::type hdr;
+        char unused;
+      } hdr_with_extra = {
+          .unused = 0x44,
+      };
+      memset(&hdr_with_extra.hdr, 0x4a, sizeof(hdr_with_extra.hdr));
+      ASSERT_EQ(read(fd().get(), &hdr_with_extra, sizeof(hdr_with_extra)), ssize_t(sizeof(pkt)))
+          << strerror(errno);
+      EXPECT_EQ(hdr_with_extra.unused, 0x44);
+      EXPECT_EQ(hdr_with_extra.hdr.icmp6_type, ICMP6_ECHO_REPLY);
+      EXPECT_EQ(hdr_with_extra.hdr.icmp6_code, 0);
+      EXPECT_NE(hdr_with_extra.hdr.icmp6_cksum, 0);
+      EXPECT_EQ(htons(hdr_with_extra.hdr.icmp6_id), kBindIdent);
+      EXPECT_EQ(hdr_with_extra.hdr.icmp6_seq, pkt.icmp6_seq);
+    } break;
+    default:
+      FAIL() << "unknown domain";
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, IcmpSocketTest,
