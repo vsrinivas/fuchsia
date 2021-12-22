@@ -5,20 +5,22 @@
 use {
     anyhow::{format_err, Context as _, Error},
     base64,
-    fidl::endpoints::create_proxy,
+    fidl::client::QueryResponseFut,
+    fidl::endpoints::create_request_stream,
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_le::{
-        AdvertisingData, AdvertisingHandleMarker, AdvertisingHandleProxy, AdvertisingModeHint,
-        AdvertisingParameters, ConnectionOptions, ConnectionProxy, ManufacturerData,
-        PeripheralEvent, PeripheralMarker, PeripheralProxy, ServiceData,
+        AdvertisedPeripheralMarker, AdvertisedPeripheralRequest, AdvertisedPeripheralRequestStream,
+        AdvertisingData, AdvertisingModeHint, AdvertisingParameters, ConnectionOptions,
+        ConnectionProxy, ManufacturerData, PeripheralError, PeripheralMarker, PeripheralProxy,
+        ServiceData,
     },
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync},
     fuchsia_bluetooth::{
         assigned_numbers::find_service_uuid,
         types::{le::Peer, Uuid},
     },
     fuchsia_component::client::connect_to_protocol,
-    futures::{StreamExt, TryStreamExt},
+    futures::{select, StreamExt},
     std::convert::TryFrom,
     structopt::StructOpt,
 };
@@ -163,35 +165,47 @@ fn optionalize<T>(vec: Vec<T>) -> Option<Vec<T>> {
 }
 
 /// Start advertising and print status on success or construct error on failure
-async fn start_advertising(
+/// On success, returns a stream of connection requests and a future representing the advertising request. Error otherwise.
+fn advertise(
     peripheral: &PeripheralProxy,
     parameters: AdvertisingParameters,
     service_names: &[String],
-) -> Result<AdvertisingHandleProxy, Error> {
-    let (proxy, handle_remote) = create_proxy::<AdvertisingHandleMarker>()?;
+) -> Result<(AdvertisedPeripheralRequestStream, QueryResponseFut<Result<(), PeripheralError>>), Error>
+{
+    let (client_end, server_stream) = create_request_stream::<AdvertisedPeripheralMarker>()?;
     let name = match &parameters.data {
         Some(data) => data.name.clone(),
         None => None,
     };
-    let result = peripheral.start_advertising(parameters, handle_remote).await?;
-    if let Err(e) = result {
-        return Err(format_err!("Failed to initiate advertisement: {:?}", e));
-    }
     eprintln!("Advertising with name \"{:?}\" and services: {}", name, service_names.join(", "),);
-    Ok(proxy)
+
+    // advertise() only resolves on advertisement termination, so don't await here.
+    let result_fut = peripheral.advertise(parameters, client_end);
+    Ok((server_stream, result_fut))
 }
 
-async fn await_connection(peripheral: &PeripheralProxy) -> Result<ConnectionProxy, Error> {
-    let mut events = peripheral.take_event_stream();
-    while let Some(evt) = events.try_next().await? {
-        match evt {
-            PeripheralEvent::OnPeerConnected { peer, connection } => {
-                eprintln!("Connected to central: {}", Peer::try_from(peer)?);
-                return connection.into_proxy().map_err(|e| e.into());
-            }
-        }
-    }
-    Err(format_err!("le.Peripheral service disconnected"))
+async fn await_connected(
+    mut adv_peripheral_stream: AdvertisedPeripheralRequestStream,
+    mut adv_result_fut: QueryResponseFut<Result<(), PeripheralError>>,
+) -> Result<ConnectionProxy, Error> {
+    let adv_peripheral_req = select! {
+        item = adv_peripheral_stream.next() => match item {
+            Some(Ok(request)) => request,
+            Some(Err(err)) => return Err(format_err!("AdvertisedPeripheral disconnected with error: {:?}", err)),
+            None => return Err(format_err!("AdvertisedPeripheral disconnected")),
+        },
+        result = adv_result_fut => match result {
+            Ok(Ok(())) => return Err(format_err!("Advertise returned")),
+            result => return Err(format_err!("Advertise returned with error: {:?}", result)),
+        },
+    };
+
+    let AdvertisedPeripheralRequest::OnConnected { peer, connection, responder, .. } =
+        adv_peripheral_req;
+    responder.send()?;
+
+    eprintln!("Connected to central: {}", Peer::try_from(peer)?);
+    Ok(connection.into_proxy()?)
 }
 
 // This functions implements the main behavior of this tool which involves:
@@ -203,10 +217,11 @@ async fn listen(
     parameters: AdvertisingParameters,
     service_names: &[String],
 ) -> Result<(), Error> {
-    let _handle = start_advertising(&peripheral, parameters, &service_names).await?;
+    let (adv_peripheral_stream, adv_result_fut) =
+        advertise(&peripheral, parameters, &service_names)?;
 
-    // Wait for a Central to connect.
-    let connection = await_connection(&peripheral).await?;
+    // Wait for the next connection request or error.
+    let connection = await_connected(adv_peripheral_stream, adv_result_fut).await?;
 
     // Wait until the connection drops.
     let mut conn_events = connection.take_event_stream();
@@ -278,12 +293,13 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
     use {
-        fidl::endpoints::{create_endpoints, create_proxy_and_stream, RequestStream, ServerEnd},
+        fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream, ServerEnd},
         fidl_fuchsia_bluetooth_le::{
-            ConnectionMarker, Peer, PeripheralRequest, PeripheralRequestStream,
+            AdvertisedPeripheralProxy, ConnectionMarker, Peer, PeripheralRequest,
+            PeripheralRequestStream,
         },
         fuchsia_bluetooth::types::le::{ManufacturerData, ServiceData},
-        futures::join,
+        futures::{join, TryStreamExt},
     };
 
     #[test]
@@ -400,7 +416,7 @@ mod tests {
 
     struct MockPeripheral {
         _stream: PeripheralRequestStream,
-        _adv_handle: ServerEnd<AdvertisingHandleMarker>,
+        _adv_peripheral: AdvertisedPeripheralProxy,
         adv_params: Option<AdvertisingParameters>,
     }
 
@@ -409,15 +425,16 @@ mod tests {
     async fn emulate_peripheral(
         mut stream: PeripheralRequestStream,
     ) -> Result<(MockPeripheral, ServerEnd<ConnectionMarker>), Error> {
-        let control_handle = stream.control_handle();
         while let Some(msg) = stream.try_next().await? {
             match msg {
-                PeripheralRequest::StartAdvertising { parameters, handle, responder } => {
-                    {
-                        let mut result = Ok(());
-                        responder.send(&mut result)?;
-                    }
-                    let (conn, conn_server_end) = create_endpoints::<ConnectionMarker>()?;
+                PeripheralRequest::Advertise {
+                    parameters,
+                    advertised_peripheral,
+                    responder,
+                    ..
+                } => {
+                    let (conn_client_end, conn_server_end) =
+                        create_endpoints::<ConnectionMarker>()?;
                     let peer = Peer {
                         id: Some(fidl_fuchsia_bluetooth::PeerId { value: 1 }),
                         connectable: Some(true),
@@ -425,10 +442,15 @@ mod tests {
                         advertising_data: None,
                         ..Peer::EMPTY
                     };
-                    control_handle.send_on_peer_connected(peer, conn)?;
+
+                    let proxy = advertised_peripheral.into_proxy()?;
+                    let _ = proxy.on_connected(peer, conn_client_end).await;
+
+                    responder.send(&mut Ok(()))?;
+
                     let mock = MockPeripheral {
                         _stream: stream,
-                        _adv_handle: handle,
+                        _adv_peripheral: proxy,
                         adv_params: Some(parameters),
                     };
                     return Ok((mock, conn_server_end));
@@ -474,7 +496,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_listen_peripheral_proxy_closes() {
+    async fn test_listen_peripheral_server_closes_immediately() {
         let (proxy, server) =
             create_proxy::<PeripheralMarker>().expect("failed to create Peripheral proxy");
 
