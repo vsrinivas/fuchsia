@@ -285,7 +285,6 @@ constexpr basic_time<kClockId> operator+(duration delta, basic_time<kClockId> ti
 }
 
 using time = basic_time<ZX_CLOCK_MONOTONIC>;
-using time_utc = basic_time<ZX_CLOCK_UTC>;
 
 constexpr inline duration nsec(int64_t n) { return duration(ZX_NSEC(n)); }
 

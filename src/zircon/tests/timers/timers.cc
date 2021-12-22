@@ -13,6 +13,8 @@
 
 namespace {
 
+#define INVALID_CLOCK ((zx_clock_t)1)
+
 void CheckInfo(const zx::timer& timer, uint32_t options, zx_time_t deadline, zx_duration_t slack) {
   zx_info_timer_t info = {};
   ASSERT_OK(timer.get_info(ZX_INFO_TIMER, &info, sizeof(info), nullptr, nullptr));
@@ -124,8 +126,8 @@ TEST(TimersTest, Restart) {
 
 TEST(TimersTest, InvalidCalls) {
   zx::timer timer;
-  ASSERT_EQ(zx::timer::create(0, ZX_CLOCK_UTC, &timer), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(zx::timer::create(ZX_TIMER_SLACK_LATE + 1, ZX_CLOCK_UTC, &timer), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(zx::timer::create(0, INVALID_CLOCK, &timer), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(zx::timer::create(ZX_TIMER_SLACK_LATE + 1, INVALID_CLOCK, &timer), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(TimersTest, EdgeCases) {

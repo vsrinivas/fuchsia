@@ -57,7 +57,6 @@ typedef int32_t zx_status_t;
 // clock ids
 typedef uint32_t zx_clock_t;
 #define ZX_CLOCK_MONOTONIC        ((zx_clock_t)0)
-#define ZX_CLOCK_UTC              ((zx_clock_t)1)
 
 typedef uint32_t zx_signals_t;
 

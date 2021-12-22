@@ -152,7 +152,6 @@ void PrettyPrinter::DisplayChannelOption(uint32_t options) {
 void PrettyPrinter::DisplayClock(zx_clock_t clock) {
   switch (clock) {
     ClockCase(ZX_CLOCK_MONOTONIC);
-    ClockCase(ZX_CLOCK_UTC);
     default:
       *this << Red << clock << ResetColor;
       return;

@@ -34,7 +34,7 @@ std::unique_ptr<SystemCallTest> ZxClockAdjust(int64_t result, std::string_view r
 #define CLOCK_ADJUST_DISPLAY_TEST_CONTENT(result, expected) \
   zx_handle_t handle = 0x12345678;                          \
   PerformDisplayTest("$plt(zx_clock_adjust)",               \
-                     ZxClockAdjust(result, #result, handle, ZX_CLOCK_UTC, 10), expected)
+                     ZxClockAdjust(result, #result, handle, ZX_CLOCK_MONOTONIC, 10), expected)
 
 #define CLOCK_ADJUST_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \
@@ -47,7 +47,7 @@ CLOCK_ADJUST_DISPLAY_TEST(ZxClockAdjust, ZX_OK,
                           "\x1B[32m0.000000\x1B[0m "
                           "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_adjust("
                           "handle: \x1B[32mhandle\x1B[0m = \x1B[31m12345678\x1B[0m, "
-                          "clock_id: \x1B[32mzx.clock\x1B[0m = \x1B[34mZX_CLOCK_UTC\x1B[0m, "
+                          "clock_id: \x1B[32mzx.clock\x1B[0m = \x1B[34mZX_CLOCK_MONOTONIC\x1B[0m, "
                           "offset: \x1B[32mint64\x1B[0m = \x1B[34m10\x1B[0m)\n"
                           "\x1B[32m0.000000\x1B[0m "
                           "  -> \x1B[32mZX_OK\x1B[0m\n")
@@ -64,9 +64,9 @@ std::unique_ptr<SystemCallTest> ZxClockGet(int64_t result, std::string_view resu
   return value;
 }
 
-#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected)                                    \
-  zx_time_t date = 1564175607533042989;                                                    \
-  PerformDisplayTest("$plt(zx_clock_get)", ZxClockGet(errno, #errno, ZX_CLOCK_UTC, &date), \
+#define CLOCK_GET_DISPLAY_TEST_CONTENT(errno, expected)                                          \
+  zx_time_t date = 1564175607533042989;                                                          \
+  PerformDisplayTest("$plt(zx_clock_get)", ZxClockGet(errno, #errno, ZX_CLOCK_MONOTONIC, &date), \
                      expected)
 
 #define CLOCK_GET_DISPLAY_TEST(name, errno, expected)                                            \
@@ -79,7 +79,7 @@ CLOCK_GET_DISPLAY_TEST(
                   "\n"
                   "\x1B[32m0.000000\x1B[0m "
                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_clock_get("
-                  "clock_id: \x1B[32mzx.clock\x1B[0m = \x1B[34mZX_CLOCK_UTC\x1B[0m)\n"
+                  "clock_id: \x1B[32mzx.clock\x1B[0m = \x1B[34mZX_CLOCK_MONOTONIC\x1B[0m)\n"
                   "\x1B[32m0.000000\x1B[0m "
                   "  -> \x1B[32mZX_OK\x1B[0m (out: \x1B[32mzx.time\x1B[0m = "
                   "\x1B[34m%c and 533042989 ns\x1B[0m)\n")
@@ -91,9 +91,8 @@ std::unique_ptr<SystemCallTest> ZxClockGetMonotonic(int64_t result, std::string_
   return std::make_unique<SystemCallTest>("zx_clock_get_monotonic", result, result_name);
 }
 
-#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected)                         \
-  PerformDisplayTest("$plt(zx_clock_get_monotonic)", ZxClockGetMonotonic(result, #result), \
-                     expected)
+#define CLOCK_GET_MONOTONIC_DISPLAY_TEST_CONTENT(result, expected) \
+  PerformDisplayTest("$plt(zx_clock_get_monotonic)", ZxClockGetMonotonic(result, #result), expected)
 
 #define CLOCK_GET_MONOTONIC_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                   \
