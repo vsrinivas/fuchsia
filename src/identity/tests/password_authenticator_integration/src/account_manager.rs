@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::{anyhow, Error},
     fidl::{
         endpoints::{Proxy, ServerEnd},
         HandleBased,
@@ -11,13 +12,20 @@ use {
     fidl_fuchsia_hardware_block_encrypted::{DeviceManagerMarker, DeviceManagerProxy},
     fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
-    fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy, AccountMetadata},
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_identity_account::{
+        AccountManagerMarker, AccountManagerProxy, AccountMetadata, AccountProxy,
+    },
+    fidl_fuchsia_io as fio,
+    fuchsia_async::{
+        self as fasync,
+        futures::{FutureExt as _, StreamExt as _},
+        DurationExt as _, TimeoutExt as _,
+    },
     fuchsia_component_test::{
         ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
-    fuchsia_zircon::{sys::zx_status_t, Status},
+    fuchsia_zircon::{self as zx, sys::zx_status_t, Status},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::{fs, os::raw::c_int, time::Duration},
@@ -38,9 +46,14 @@ const BLOCK_COUNT: u64 = 1024; // 4MB RAM ought to be good enough
 // 1 block for zxcrypt, and minfs needs at least 3 blocks.
 const FVM_SLICE_SIZE: usize = BLOCK_SIZE as usize * 4;
 
-// For whatever reason, using `Duration::MAX` seems to trigger immediate ZX_ERR_TIMED_OUT in the
-// wait_for_device_at calls, so we just set a quite large timeout here.
+// The maximum time to wait for a `wait_for_device_at` call. For whatever reason, using
+// `Duration::MAX` seems to trigger immediate ZX_ERR_TIMED_OUT in the wait_for_device_at calls, so
+// we just set a quite large timeout here.
 const DEVICE_WAIT_TIMEOUT: Duration = Duration::from_secs(20);
+
+// The maximum time to wait for an account channel to close after the account is locked.
+const ACCOUNT_CLOSE_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
+
 const GLOBAL_ACCOUNT_ID: u64 = 1;
 const EMPTY_PASSWORD: &'static str = "";
 
@@ -260,6 +273,18 @@ impl TestEnv {
     }
 }
 
+/// Waits up to ACCOUNT_CLOSE_TIMEOUT for the supplied account to close.
+async fn wait_for_account_close(account: &AccountProxy) -> Result<(), Error> {
+    account
+        .take_event_stream()
+        .for_each(|_| async move {}) // Drain all remaining events
+        .map(|_| Ok(())) // Completing the drain results in ok
+        .on_timeout(ACCOUNT_CLOSE_TIMEOUT.after_now(), || {
+            Err(anyhow!("Account close timeout exceeded"))
+        })
+        .await
+}
+
 #[fuchsia::test]
 async fn get_account_ids_no_partition() {
     let env = TestEnv::build().await;
@@ -468,17 +493,19 @@ async fn locked_account_can_be_unlocked_again() {
         .await
         .expect_err("failed to open file");
 
-    // The account channel should be closed.  We might race with the server and still get
-    // the FIDL request in before the channel shuts down, but if we do, the response should
-    // still come back with an error.
+    // Attempt to call get_data_directory. Its very likely the account channel will have been closed
+    // before we can make this request, but if the request is accepted the response should indicate
+    // a failed precondition now that the account is locked.
     let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
-    let gdd_fidl_result = account_proxy.get_data_directory(server_end).await;
-    match gdd_fidl_result {
-        Err(_) => (), // Channel got closed before we could get the reply in
-        Ok(gdd_result) => assert!(gdd_result.is_err(), "get_data_directory server reply"),
+    match account_proxy.get_data_directory(server_end).await {
+        Err(_) => (), // FIDL error means the channel was already closed
+        Ok(gdd_result) => {
+            gdd_result.expect_err("get_data_directory succeeded after lock");
+            // Verify the account channel does actually close shortly after.
+            wait_for_account_close(&account_proxy).await.unwrap();
+        }
     }
 
-    // TODO(jsankey): determine if this can lose a race against the lock() call from above
     // Unlock the account again.
     let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
@@ -526,22 +553,13 @@ async fn locking_account_terminates_all_clients() {
         .expect("deprecated_get_account FIDL")
         .expect("deprecated_get_account");
 
+    // Calling lock on one account channel should close both.
     account_proxy1.lock().await.expect("lock FIDL").expect("lock");
 
-    // Verify that both proxies are disconnected, or if the channel hasn't closed yet,
-    // at least get_data_directory should return failures.
-    // TODO(jsankey): verify that the channels actually close within some reasonable time
-    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
-    let gdd_fidl_result_1 = account_proxy1.get_data_directory(server_end).await;
-    match gdd_fidl_result_1 {
-        Err(_) => (), // Channel got closed before we could get the reply in
-        Ok(gdd_result) => assert!(gdd_result.is_err(), "get_data_directory server reply 1"),
-    }
-
-    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
-    let gdd_fidl_result_2 = account_proxy2.get_data_directory(server_end).await;
-    match gdd_fidl_result_2 {
-        Err(_) => (),
-        Ok(gdd_result) => assert!(gdd_result.is_err(), "get_data_directory server reply 2"),
-    }
+    // Verify that both account channels are closed.
+    futures::try_join!(
+        wait_for_account_close(&account_proxy1),
+        wait_for_account_close(&account_proxy2),
+    )
+    .expect("waiting for account channels to close");
 }
