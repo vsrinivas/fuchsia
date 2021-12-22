@@ -352,16 +352,7 @@ func (ns *Netstack) UpdateRoutesByInterface(nicid tcpip.NICID, action routes.Act
 }
 
 func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddress, removeRoute bool) zx.Status {
-	_ = syslog.Infof("removing static IP %s from NIC %d, removeRoute=%t", addr.AddressWithPrefix, nic, removeRoute)
-
-	nicInfo, ok := ns.stack.NICInfo()[nic]
-	if !ok {
-		return zx.ErrNotFound
-	}
-
-	if _, foundAddr := findAddress(nicInfo.ProtocolAddresses, addr); !foundAddr {
-		return zx.ErrNotFound
-	}
+	_ = syslog.Infof("removing static IP %+v from NIC %d, removeRoute=%t", addr, nic, removeRoute)
 
 	if removeRoute {
 		route := addressWithPrefixRoute(nic, addr.AddressWithPrefix)
@@ -376,15 +367,20 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 	switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID:
-		panic(fmt.Sprintf("stack.RemoveAddress(_): NIC [%d] not found", nic))
+		_ = syslog.Warnf("stack.RemoveAddress(%d, %+v): NIC not found", nic, addr)
+		return zx.ErrNotFound
 	case *tcpip.ErrBadLocalAddress:
 		return zx.ErrNotFound
 	default:
-		panic(fmt.Sprintf("stack.RemoveAddress(%d, %s) = %s", nic, addr.AddressWithPrefix.Address, err))
+		panic(fmt.Sprintf("stack.RemoveAddress(%d, %+v) = %s", nic, addr, err))
 	}
 
 	ns.onPropertiesChange(nic, nil)
-	nicInfo.Context.(*ifState).addressStateProviders.onAddressRemove(addr.AddressWithPrefix.Address)
+	// If the interface cannot be found, then all address state providers would
+	// have been shut down anyway.
+	if nicInfo, ok := ns.stack.NICInfo()[nic]; ok {
+		nicInfo.Context.(*ifState).addressStateProviders.onAddressRemove(addr.AddressWithPrefix.Address)
+	}
 	return zx.ErrOk
 }
 
@@ -397,20 +393,23 @@ func (ns *Netstack) addInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolAddr
 	_ = syslog.Infof("adding static IP %s to NIC %d, addRoute=%t", addr.AddressWithPrefix, nic, addRoute)
 
 	if info, ok := ns.stack.NICInfo()[nic]; ok {
-		if a, addrFound := findAddress(info.ProtocolAddresses, addr); addrFound {
-			if a.AddressWithPrefix.PrefixLen == addr.AddressWithPrefix.PrefixLen {
-				return zx.ErrAlreadyExists
-			}
-			// Same address but different prefix. Remove the address and re-add it
-			// with the new prefix (below).
-			switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
-			case nil:
-			case *tcpip.ErrUnknownNICID:
-				return zx.ErrNotFound
-			case *tcpip.ErrBadLocalAddress:
-				// We lost a race, the address was already removed.
-			default:
-				panic(fmt.Sprintf("NIC %d: failed to remove address %s: %s", nic, addr.AddressWithPrefix, err))
+		for _, candidate := range info.ProtocolAddresses {
+			if addr.AddressWithPrefix.Address == candidate.AddressWithPrefix.Address {
+				if addr.AddressWithPrefix.PrefixLen == candidate.AddressWithPrefix.PrefixLen {
+					return zx.ErrAlreadyExists
+				}
+				// Same address but different prefix. Remove the address and re-add it
+				// with the new prefix (below).
+				switch err := ns.stack.RemoveAddress(nic, addr.AddressWithPrefix.Address); err.(type) {
+				case nil:
+				case *tcpip.ErrUnknownNICID:
+					return zx.ErrNotFound
+				case *tcpip.ErrBadLocalAddress:
+					// We lost a race, the address was already removed.
+				default:
+					panic(fmt.Sprintf("NIC %d: failed to remove address %s: %s", nic, addr.AddressWithPrefix, err))
+				}
+				break
 			}
 		}
 	}
@@ -1178,20 +1177,6 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 		ifStates[id] = info
 	}
 	return ifStates
-}
-
-func findAddress(addrs []tcpip.ProtocolAddress, addr tcpip.ProtocolAddress) (tcpip.ProtocolAddress, bool) {
-	// Ignore prefix length.
-	addr.AddressWithPrefix.PrefixLen = 0
-	for _, candidate := range addrs {
-		// Copy to avoid mutating the return value.
-		matcher := candidate
-		matcher.AddressWithPrefix.PrefixLen = 0
-		if matcher == addr {
-			return candidate, true
-		}
-	}
-	return tcpip.ProtocolAddress{}, false
 }
 
 func networkProtocolToString(proto tcpip.NetworkProtocolNumber) string {

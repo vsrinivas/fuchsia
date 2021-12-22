@@ -398,6 +398,71 @@ async fn set_remove_interface_address_errors() {
     );
 }
 
+// Regression test which asserts that racing an address removal and interface
+// removal doesn't cause a Netstack panic.
+#[variants_test]
+async fn remove_interface_and_address<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    // NB: A second channel is needed in order for the address removal
+    // requests and the interface removal request to be served concurrently.
+    let stack2 = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+
+    let mut addresses = (0..32)
+        .map(|i| fidl_fuchsia_net::Subnet {
+            addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                addr: [1, 2, 3, i],
+            }),
+            prefix_len: 16,
+        })
+        .collect::<Vec<_>>();
+
+    for i in 0..8 {
+        let ep =
+            sandbox.create_endpoint::<E, _>(format!("ep{}", i)).await.expect("create endpoint");
+        let iface = ep.into_interface_in_realm(&realm).await.expect("add device");
+
+        futures::stream::iter(addresses.iter())
+            .for_each_concurrent(None, |&addr| {
+                iface.add_ip_addr(addr).map(|r| r.expect("add address"))
+            })
+            .await;
+
+        // Removing many addresses increases the chances that address removal
+        // will be handled concurrently with interface removal.
+        let remove_addr_fut =
+            futures::stream::iter(addresses.iter_mut()).for_each_concurrent(None, |addr| {
+                stack.del_interface_address(iface.id(), addr).map(|r| {
+                    match r.expect("call del_interface_address") {
+                        Ok(()) | Err(fidl_fuchsia_net_stack::Error::NotFound) => {}
+                        Err(e) => panic!("delete interface address error: {:?}", e),
+                    }
+                })
+            });
+
+        // NB: The async block is necessary because calls on FIDL proxy
+        // types make the request immediately and return a future which
+        // resolves when the response is returned. Without the async block,
+        // interface removal will be handled by Netstack immediately rather
+        // concurrently with address removal, which is not the desired
+        // behavior.
+        let remove_interface_fut = async {
+            stack2
+                .del_ethernet_interface(iface.id())
+                .await
+                .expect("call del_ethernet_interface")
+                .expect("delete interface")
+        };
+
+        futures::future::join(remove_addr_fut, remove_interface_fut).await;
+    }
+}
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_log_packets() {
     let name = "test_log_packets";
