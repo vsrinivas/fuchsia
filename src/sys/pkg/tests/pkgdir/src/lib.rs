@@ -64,7 +64,7 @@ macro_rules! flag_list {
 // to keep this list up to date. Although if this list gets out of date it's
 // not the end of the world, the debug printer just won't know how to decode
 // them and will hex format the not-decoded flags.
-const OPEN_FLAGS: &[(u32, &'static str)] = &flag_list![
+const OPEN_FLAGS: &[(u32, &str)] = &flag_list![
     OPEN_RIGHT_ADMIN,
     OPEN_RIGHT_EXECUTABLE,
     OPEN_RIGHT_READABLE,
@@ -89,7 +89,7 @@ struct OpenFlags(u32);
 impl Debug for OpenFlags {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut flags = self.0;
-        let flag_strings = OPEN_FLAGS.into_iter().filter_map(|&flag| {
+        let flag_strings = OPEN_FLAGS.iter().filter_map(|&flag| {
             if self.0 & flag.0 == flag.0 {
                 flags &= !flag.0;
                 Some(flag.1)
@@ -124,7 +124,7 @@ impl Debug for OpenFlags {
 // easier to keep this list up to date. Although if this list gets out of date
 // it's not the end of the world, the debug printer just won't know how to
 // decode them and will octal format the not-decoded flags.
-const MODE_TYPES: &[(u32, &'static str)] = &flag_list![
+const MODE_TYPES: &[(u32, &str)] = &flag_list![
     MODE_TYPE_DIRECTORY,
     MODE_TYPE_BLOCK_DEVICE,
     MODE_TYPE_FILE,
@@ -138,7 +138,7 @@ struct Mode(u32);
 impl Debug for Mode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut flags = self.0;
-        let flag_strings = MODE_TYPES.into_iter().filter_map(|&flag| {
+        let flag_strings = MODE_TYPES.iter().filter_map(|&flag| {
             if self.0 & flag.0 == flag.0 {
                 flags &= !flag.0;
                 Some(flag.1)

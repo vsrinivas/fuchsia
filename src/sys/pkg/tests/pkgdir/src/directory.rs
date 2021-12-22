@@ -818,7 +818,7 @@ fn generate_lax_directory_paths(base: &str) -> Vec<String> {
     }
     // "path segment rules are checked"
     paths.extend([format!("./{}", base), format!("{}/.", base)]);
-    if base.contains("/") {
+    if base.contains('/') {
         paths.push(base.replace("/", "//"));
         paths.push(base.replace("/", "/to-be-removed/../"));
         paths.push(base.replace("/", "/./"));
@@ -854,7 +854,6 @@ async fn verify_directory_opened(node: NodeProxy, flag: u32) -> Result<(), Error
     match node.describe().await {
         Ok(NodeInfo::Directory(directory_object)) => {
             assert_eq!(directory_object, fidl_fuchsia_io::DirectoryObject);
-            ()
         }
         Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
         Err(e) => return Err(e).context("failed to call describe"),

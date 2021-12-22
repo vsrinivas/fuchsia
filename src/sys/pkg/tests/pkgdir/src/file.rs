@@ -284,8 +284,7 @@ async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str, expecte
         assert_eq!(bytes, &[]);
 
         let expected_contents = &expected[expected.len() - seek_offset..];
-        let (status, position) =
-            file.seek((seek_offset as i64) * -1, SeekOrigin::End).await.unwrap();
+        let (status, position) = file.seek(-(seek_offset as i64), SeekOrigin::End).await.unwrap();
         let () =
             zx::Status::ok(status).expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
 

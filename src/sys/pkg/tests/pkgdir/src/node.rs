@@ -310,8 +310,8 @@ async fn verify_describe_directory_success(node: NodeProxy) -> Result<(), Error>
             assert_eq!(directory_object, fidl_fuchsia_io::DirectoryObject);
             Ok(())
         }
-        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => return Err(e).context("failed to call describe"),
+        Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
+        Err(e) => Err(e).context("failed to call describe"),
     }
 }
 
@@ -331,20 +331,20 @@ async fn assert_describe_file(package_root: &DirectoryProxy, path: &str) {
 async fn verify_describe_content_file(node: NodeProxy, flag: u32) -> Result<(), Error> {
     if flag & OPEN_FLAG_NODE_REFERENCE != 0 {
         match node.describe().await {
-            Ok(NodeInfo::Service(Service {})) => return Ok(()),
-            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => return Err(e).context("failed to call describe"),
+            Ok(NodeInfo::Service(Service {})) => Ok(()),
+            Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
+            Err(e) => Err(e).context("failed to call describe"),
         }
     } else {
         match node.describe().await {
             Ok(NodeInfo::File(FileObject { event: Some(event), stream: None })) => {
                 match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
-                    Ok(_) => return Ok(()),
-                    Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
+                    Ok(_) => Ok(()),
+                    Err(_) => Err(anyhow!("FILE_SIGNAL_READABLE not set")),
                 }
             }
-            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => return Err(e).context("failed to call describe"),
+            Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
+            Err(e) => Err(e).context("failed to call describe"),
         }
     }
 }
@@ -365,9 +365,9 @@ async fn assert_describe_meta_file(package_root: &DirectoryProxy, path: &str) {
 
 async fn verify_describe_meta_file_success(node: NodeProxy) -> Result<(), Error> {
     match node.describe().await {
-        Ok(NodeInfo::File(_)) => return Ok(()),
-        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => return Err(e).context("failed to call describe"),
+        Ok(NodeInfo::File(_)) => Ok(()),
+        Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
+        Err(e) => Err(e).context("failed to call describe"),
     }
 }
 
@@ -530,11 +530,12 @@ async fn verify_set_attr(node: NodeProxy) -> Result<(), Error> {
                 zx::Status::from_raw(status),
                 zx::Status::NOT_SUPPORTED | zx::Status::BAD_HANDLE
             ) {
-                return Ok(());
+                Ok(())
+            } else {
+                Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)))
             }
-            return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
         }
-        Err(e) => return Err(e).context("failed to call set_attr"),
+        Err(e) => Err(e).context("failed to call set_attr"),
     }
 }
 
@@ -564,13 +565,11 @@ async fn assert_sync(package_root: &DirectoryProxy, path: &str, mode: u32) {
 }
 
 async fn verify_sync(node: NodeProxy) -> Result<(), Error> {
-    match node.sync().await {
-        Ok(status) => {
-            if zx::Status::from_raw(status) == zx::Status::NOT_SUPPORTED {
-                return Ok(());
-            }
-            return Err(anyhow!("wrong status returned: {:?}", zx::Status::from_raw(status)));
-        }
-        Err(e) => return Err(e).context("failed to call sync"),
+    let status = node.sync().await.context("failed to call sync")?;
+    let status = zx::Status::from_raw(status);
+    if status == zx::Status::NOT_SUPPORTED {
+        Ok(())
+    } else {
+        Err(anyhow!("wrong status returned: {:?}", status))
     }
 }
