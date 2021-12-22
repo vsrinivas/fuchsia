@@ -180,7 +180,9 @@ TEST_F(ClientTest, FilePathTooLong) {
 // Tests for connecting to singleton FIDL services (`/svc/MyProtocolName` style).
 //
 
-struct MockProtocol {};
+struct MockProtocol {
+  using Transport = fidl::internal::ChannelTransport;
+};
 
 template <>
 struct ::fidl::internal::ProtocolDetails<MockProtocol> {

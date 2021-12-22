@@ -183,6 +183,38 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 	}
 }
 
+type Transport struct {
+	Name          string
+	Type          string
+	HasEvents     bool
+	HasSyncClient bool
+}
+
+var channelTransport = Transport{
+	Name:          "Channel",
+	Type:          "::fidl::internal::ChannelTransport",
+	HasEvents:     true,
+	HasSyncClient: true,
+}
+
+var driverTransport = Transport{
+	Name:          "Driver",
+	Type:          "::fidl::internal::DriverTransport",
+	HasEvents:     false,
+	HasSyncClient: false,
+}
+
+var transports = map[string]*Transport{
+	"Channel": &channelTransport,
+	"Driver":  &driverTransport,
+
+	// Banjo and Syscall transports are skipped in templates, however they are
+	// defined here to indicate they are known transports so that we can fail
+	// on unknown and unhandled transports.
+	"Banjo":   nil,
+	"Syscall": nil,
+}
+
 // protocolInner contains information about a Protocol that should be
 // filled out by the compiler.
 type protocolInner struct {
@@ -233,6 +265,8 @@ type Protocol struct {
 
 	// Generated struct holding variant-agnostic details about protocol.
 	ProtocolDetails name
+
+	Transport *Transport
 }
 
 func (*Protocol) Kind() declKind {
@@ -444,7 +478,8 @@ type Method struct {
 	ResponderType       string
 	// Protocol is a reference to the containing protocol, for the
 	// convenience of golang templates.
-	Protocol *Protocol
+	Protocol  *Protocol
+	Transport *Transport
 }
 
 func (m Method) WireRequestViewArg() string {
@@ -720,8 +755,21 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		FuzzingName: fuzzingName,
 		TestBase:    protocolName.appendName("_TestBase").appendNamespace("testing"),
 	})
+	var transport *Transport
+	if len(p.Transports()) != 1 {
+		panic("expected exactly one transport")
+	}
+	for t := range p.Transports() {
+		var ok bool
+		transport, ok = transports[t]
+		if !ok {
+			panic("transport not found")
+		}
+	}
+	r.Transport = transport
 	for i := 0; i < len(methods); i++ {
 		methods[i].Protocol = &r
+		methods[i].Transport = r.Transport
 	}
 	return &r
 }

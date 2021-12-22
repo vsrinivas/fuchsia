@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_requestflexibleenvelope {
 
 class Protocol final {
   Protocol() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class RequestStrictResponseFlexible final {
     RequestStrictResponseFlexible() = delete;
 

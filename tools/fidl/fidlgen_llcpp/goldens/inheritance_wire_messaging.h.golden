@@ -251,51 +251,6 @@ class ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> final
  private:
   uint8_t* bytes_;
 };
-
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_inheritance::Super>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Super> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireSyncClientImpl<
-              ::fidl_test_inheritance::Super>> {
- public:
-  // Allocates 24 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
-    return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
-        _client_end(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(_channel());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_inheritance::Super>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_inheritance::Super>> {
- public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
-    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
-        _client_end(), _allocator(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(_channel());
-  }
-};
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_inheritance::Super> {
@@ -346,6 +301,51 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_inheritance::Super>
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext* transport_context) override;
 };
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_inheritance::Super>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Super> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<
+              ::fidl_test_inheritance::Super>> {
+ public:
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
+      ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
+    return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
+        _client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_inheritance::Super>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_inheritance::Super>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> Foo(
+      ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_inheritance::Super::Foo> _request{s};
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
+        _client_end(), _allocator(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Super>(_channel());
+  }
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -394,7 +394,6 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Super;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_inheritance::Super::Foo>;
@@ -635,50 +634,6 @@ class ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> final
  private:
   uint8_t* bytes_;
 };
-
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_inheritance::Sub>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub>> {
- public:
-  // Allocates 24 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
-    return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(_client_end(),
-                                                                 &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(_channel());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_inheritance::Sub>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_inheritance::Sub>> {
- public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
-    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
-        _client_end(), _allocator(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(_channel());
-  }
-};
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_inheritance::Sub> {
@@ -729,6 +684,50 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_inheritance::Sub> final
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext* transport_context) override;
 };
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_inheritance::Sub>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub>> {
+ public:
+  // Allocates 24 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
+      ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
+    return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(_client_end(),
+                                                                 &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_inheritance::Sub>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_inheritance::Sub>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> Foo(
+      ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_inheritance::Sub::Foo> _request{s};
+    return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
+        _client_end(), _allocator(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_inheritance::Sub>(_channel());
+  }
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -777,7 +776,6 @@ class ::fidl::WireServer<::fidl_test_inheritance::Sub>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Sub;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_inheritance::Sub::Foo>;
@@ -925,8 +923,9 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::Super> {
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_inheritance::Super,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_inheritance::Super,
+      typename ::fidl_test_inheritance::Super::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -1011,8 +1010,8 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::Sub> {
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_inheritance::Sub,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<::fidl_test_inheritance::Sub,
+                              typename ::fidl_test_inheritance::Sub::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

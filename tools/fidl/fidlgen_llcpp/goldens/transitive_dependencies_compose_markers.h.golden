@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_transitivedependenciescompose {
 
 class Top final {
   Top() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class GetFoo final {
     GetFoo() = delete;
 

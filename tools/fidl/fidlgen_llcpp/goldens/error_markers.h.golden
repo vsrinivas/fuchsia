@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_error {
 
 class Example final {
   Example() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class Foo final {
     Foo() = delete;
 

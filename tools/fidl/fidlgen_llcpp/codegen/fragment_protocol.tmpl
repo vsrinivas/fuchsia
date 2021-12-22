@@ -64,13 +64,19 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
+  {{- if .Transport.HasSyncClient }}
   {{- template "Method:Result:MessagingHeader" . }}
+  {{- end }}
   {{- template "Method:UnownedResult:MessagingHeader" . }}
 {{- end }}
 
-{{- template "Protocol:Caller:MessagingHeader" . }}
+{{- if .Transport.HasEvents }}
 {{- template "Protocol:EventHandler:MessagingHeader" . }}
+{{- end }}
+{{- if .Transport.HasSyncClient }}
+{{- template "Protocol:Caller:MessagingHeader" . }}
 {{- template "Protocol:SyncClient:MessagingHeader" . }}
+{{- end }}
 {{- template "Protocol:Interface:MessagingHeader" . }}
 {{- EndifFuchsia -}}
 
@@ -139,7 +145,9 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range .ClientMethods -}}
 {{ "" }}
+    {{- if .Transport.HasSyncClient }}
     {{- template "Method:Result:MessagingSource" . }}
+    {{- end }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
     {{- template "Method:UnownedResult:MessagingSource" . }}
@@ -149,7 +157,9 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{ template "Protocol:ClientImpl:MessagingSource" . }}
 
+{{- if .Transport.HasEvents }}
 {{ template "Protocol:EventHandler:MessagingSource" . }}
+{{- end }}
 
 {{- /* Server implementation */}}
 {{ template "Protocol:Dispatcher:MessagingSource" . }}

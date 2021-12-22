@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_bindingsdenylist {
 
 class OnlyLibfuzzerAndDeps final {
   OnlyLibfuzzerAndDeps() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class LibfuzzerNeedsNonemptyProtocol final {
     LibfuzzerNeedsNonemptyProtocol() = delete;
 
@@ -22,5 +25,6 @@ class OnlyCppAndDeps final {
   OnlyCppAndDeps() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
 };
 }  // namespace fidl_test_bindingsdenylist

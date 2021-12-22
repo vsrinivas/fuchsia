@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_doccomments {
 
 /// interface comment #1
@@ -11,6 +13,7 @@ class Interface final {
   Interface() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   /// method comment #1
   ///
   /// method comment #3

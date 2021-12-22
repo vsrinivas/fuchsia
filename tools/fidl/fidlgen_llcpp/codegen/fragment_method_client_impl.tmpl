@@ -9,7 +9,9 @@
     {{- /* two-way method */}}
 
     {{- template "Method:ClientImplAsync:MessagingHeader" . }}
+    {{- if .Transport.HasSyncClient }}
     {{- template "Method:ClientImplSync:MessagingHeader" . }}
+    {{- end }}
 
   {{- else }}
     {{- /* one-way method */}}
@@ -26,7 +28,9 @@
     {{- /* two-way method */}}
 
     {{- template "Method:ClientImplAsync:MessagingSource" . }}
+    {{- if .Transport.HasSyncClient }}
     {{- template "Method:ClientImplSync:MessagingSource" . }}
+    {{- end }}
 
   {{- else }}
     {{- /* one-way method */}}

@@ -12,73 +12,6 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_drivertwoway_TwoWayAddResponseMessageTable;
-#ifdef __Fuchsia__
-}  // namespace fidl_test_drivertwoway
-::fidl::WireResult<::fidl_test_drivertwoway::TwoWay::Add>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_drivertwoway::TwoWay> client,
-    ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>* request) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::fidl_test_drivertwoway::TwoWay::Add>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
-  SetResult(outgoing);
-}
-
-::fidl::WireResult<::fidl_test_drivertwoway::TwoWay::Add>::WireResult(
-    ::fidl::UnownedClientEnd<::fidl_test_drivertwoway::TwoWay> client,
-    ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>* request,
-    zx_time_t deadline) {
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>>
-      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::fidl_test_drivertwoway::TwoWay::Add>>(
-      client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
-      fidl::CallOptions{.deadline = deadline});
-  SetResult(outgoing);
-}
-namespace fidl_test_drivertwoway {
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-}  // namespace fidl_test_drivertwoway
-::fidl::WireUnownedResult<::fidl_test_drivertwoway::TwoWay::Add>::
-    WireUnownedResult(
-        ::fidl::UnownedClientEnd<::fidl_test_drivertwoway::TwoWay> client_end,
-        ::fidl::internal::AnyBufferAllocator& allocator,
-        ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>* request) {
-  constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
-      ::fidl_test_drivertwoway::TwoWay::Add>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
-    return;
-  }
-  constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
-      ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>,
-      ::fidl::MessageDirection::kSending>();
-  uint8_t* request_bytes = buffer;
-  static_assert(buffer_size > request_byte_capacity);
-  uint32_t response_byte_capacity = buffer_size - request_byte_capacity;
-  uint8_t* response_bytes = &buffer[request_byte_capacity];
-
-  ::fidl::UnownedEncodedMessage<
-      ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add>>
-      request_message(request_bytes, request_byte_capacity, request);
-  auto& outgoing = request_message.GetOutgoingMessage();
-  outgoing.Call<::fidl::WireResponse<::fidl_test_drivertwoway::TwoWay::Add>>(
-      client_end.channel(), response_bytes, response_byte_capacity);
-  bytes_ = response_bytes;
-  ::fidl::Result::operator=(outgoing);
-}
-namespace fidl_test_drivertwoway {
-#endif  // __Fuchsia__
 
 }  // namespace fidl_test_drivertwoway
 #ifdef __Fuchsia__
@@ -164,92 +97,6 @@ void fidl::internal::WireClientImpl<::fidl_test_drivertwoway::TwoWay>::Add(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
-::fidl::WireResult<::fidl_test_drivertwoway::TwoWay::Add>
-fidl::internal::WireClientImpl<::fidl_test_drivertwoway::TwoWay>::Add_Sync(
-    uint16_t addend1, uint16_t addend2) {
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add> _request{
-            addend1, addend2};
-        return ::fidl::WireResult<::fidl_test_drivertwoway::TwoWay::Add>(
-            ::fidl::UnownedClientEnd<::fidl_test_drivertwoway::TwoWay>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            &_request);
-      });
-}
-::fidl::WireUnownedResult<::fidl_test_drivertwoway::TwoWay::Add>
-fidl::internal::WireClientImpl<::fidl_test_drivertwoway::TwoWay>::Add_Sync(
-    ::fidl::BufferSpan _buffer_span, uint16_t addend1, uint16_t addend2) {
-  auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
-  return ::fidl::internal::ClientBase::MakeSyncCallWith(
-      [&](std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
-        ::fidl::WireRequest<::fidl_test_drivertwoway::TwoWay::Add> _request{
-            addend1, addend2};
-        return ::fidl::WireUnownedResult<::fidl_test_drivertwoway::TwoWay::Add>(
-            ::fidl::UnownedClientEnd<::fidl_test_drivertwoway::TwoWay>(
-                _transport->get<fidl::internal::ChannelTransport>()),
-            _allocator, &_request);
-      });
-}
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-::fidl::Result
-fidl::WireSyncEventHandler<::fidl_test_drivertwoway::TwoWay>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::fidl_test_drivertwoway::TwoWay> client_end) {
-  zx_status_t status = client_end.channel()->wait_one(
-      ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, ::zx::time::infinite(),
-      nullptr);
-  if (status != ZX_OK) {
-    return ::fidl::Result::TransportError(
-        status, ::fidl::internal::kErrorWaitOneFailed);
-  }
-  constexpr uint32_t kHandleAllocSize = ([]() constexpr {
-    uint32_t x = 0;
-    if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
-      x = ZX_CHANNEL_MAX_MSG_HANDLES;
-    }
-    return x;
-  })();
-  static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
-  ::fidl::internal::InlineMessageBuffer<24> read_storage;
-  std::array<zx_handle_t, kHandleAllocSize> read_handles;
-  // TODO(fxbug.dev/85734) Remove this channel-specific allocation.
-  std::array<fidl_channel_handle_metadata_t, kHandleAllocSize>
-      read_handle_metadata;
-  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
-      zx::unowned_channel(client_end.handle()), read_storage.view(),
-      read_handles.data(), read_handle_metadata.data(), kHandleAllocSize,
-      ReadOptions{.discardable = true});
-  if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
-    // Message size is unexpectedly larger than calculated.
-    // This can only be due to a newer version of the protocol defining a new
-    // event, whose size exceeds the maximum of known events in the current
-    // protocol.
-    return ::fidl::Result::UnexpectedMessage(Unknown());
-  }
-  if (!msg.ok()) {
-    return msg;
-  }
-  fidl_message_header_t* hdr = msg.header();
-  switch (hdr->ordinal) {
-    default: {
-      return ::fidl::Result::UnexpectedMessage(Unknown());
-    }
-  }
-}
-
-std::optional<::fidl::UnbindInfo> fidl::internal::
-    WireEventDispatcher<::fidl_test_drivertwoway::TwoWay>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
-  switch (msg.header()->ordinal) {
-    default:
-      break;
-  }
-  return ::fidl::UnbindInfo::UnknownOrdinal();
-}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -332,7 +179,3 @@ void ::fidl::WireResponse<
     ::fidl_test_drivertwoway::TwoWay::Add>::_InitHeader() {
   fidl_init_txn_header(&_hdr, 0, ::fidl_test_drivertwoway::kTwoWay_Add_Ordinal);
 }
-
-#ifdef __Fuchsia__
-
-#endif  // __Fuchsia__

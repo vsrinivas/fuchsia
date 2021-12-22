@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.inspect/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/inspect/service/cpp/service.h>
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
   }
   auto tree_handler = inspect::MakeTreeHandler(&inspector, loop.dispatcher());
   auto tree_service = fbl::MakeRefCounted<fs::Service>(
-      [tree_handler = std::move(tree_handler)](fidl::ServerEnd<fi::Tree> request) {
+      [tree_handler = std::move(tree_handler)](fidl::ServerEnd<fuchsia_inspect::Tree> request) {
         tree_handler(fidl::InterfaceRequest<fi::Tree>(request.TakeChannel()));
         return ZX_OK;
       });

@@ -25,6 +25,7 @@ class TestProtocol {
  public:
   TestProtocol() = delete;
 
+  using Transport = fidl::internal::ChannelTransport;
   using WeakEventSender = fidl::internal::WireWeakEventSender<fidl_test::TestProtocol>;
   using EventSender = fidl::WireEventSender<fidl_test::TestProtocol>;
 };

@@ -116,7 +116,9 @@ class TestClient : public fidl::internal::ClientBase {
   }
 };
 
-struct ProtocolMarker {};
+struct ProtocolMarker {
+  using Transport = fidl::internal::SocketTransport;
+};
 
 class TestServer : public fidl::internal::IncomingMessageDispatcher {
  public:
@@ -151,14 +153,13 @@ TEST(TransportIntegration, TwoWayAsync) {
   zx::socket s1, s2;
   ASSERT_OK(zx::socket::create(0, &s1, &s2));
 
-  fidl::ServerEnd<ProtocolMarker, fidl::internal::SocketTransport> server_end(std::move(s1));
-  fidl::OnUnboundFn<TestServer> on_unbound =
-      [](TestServer*, fidl::UnbindInfo info,
-         fidl::ServerEnd<ProtocolMarker, fidl::internal::SocketTransport> server_end) {
-        EXPECT_EQ(fidl::Reason::kDispatcherError, info.reason());
-        EXPECT_EQ(ZX_ERR_CANCELED, info.status());
-        EXPECT_TRUE(server_end);
-      };
+  fidl::ServerEnd<ProtocolMarker> server_end(std::move(s1));
+  fidl::OnUnboundFn<TestServer> on_unbound = [](TestServer*, fidl::UnbindInfo info,
+                                                fidl::ServerEnd<ProtocolMarker> server_end) {
+    EXPECT_EQ(fidl::Reason::kDispatcherError, info.reason());
+    EXPECT_EQ(ZX_ERR_CANCELED, info.status());
+    EXPECT_TRUE(server_end);
+  };
   fidl::BindServer(loop.dispatcher(), std::move(server_end), std::make_shared<TestServer>(),
                    std::move(on_unbound));
 

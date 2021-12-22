@@ -49,7 +49,6 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.h
 
   {{- range (call .ProtocolsForTransport "Driver") }}
     {{ template "Protocol:ClientImpl:MessagingHeader" . }}
-    {{ template "Protocol:EventSender:MessagingHeader" . }}
   {{- end }}
 
   {{ EndOfFile }}

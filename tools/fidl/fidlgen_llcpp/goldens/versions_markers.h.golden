@@ -2,18 +2,22 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_versions {
 
 class OtherProtocol final {
   OtherProtocol() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
 };
 
 class Protocol final {
   Protocol() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class Foo final {
     Foo() = delete;
 

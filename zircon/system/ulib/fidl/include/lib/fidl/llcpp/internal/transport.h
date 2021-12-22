@@ -322,6 +322,9 @@ struct AssociatedTransportImpl;
 template <typename TransportObject>
 using AssociatedTransport = typename AssociatedTransportImpl<std::decay_t<TransportObject>>::type;
 
+struct DriverTransport;
+struct ChannelTransport;
+
 }  // namespace internal
 
 }  // namespace fidl

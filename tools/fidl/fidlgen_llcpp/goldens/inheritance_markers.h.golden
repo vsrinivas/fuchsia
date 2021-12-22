@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_inheritance {
 
 class Super final {
   Super() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class Foo final {
     Foo() = delete;
 
@@ -22,6 +25,7 @@ class Sub final {
   Sub() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class Foo final {
     Foo() = delete;
 

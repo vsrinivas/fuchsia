@@ -699,6 +699,57 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocolrequest::Parent> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocolrequest::Parent>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocolrequest::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocolrequest::Parent> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::fidl_test_protocolrequest::Parent>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Parent>|,
@@ -819,57 +870,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocolrequest::Parent> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocolrequest::Parent>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocolrequest::Parent>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocolrequest::Parent> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<::fidl_test_protocolrequest::Parent>
-    final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocolrequest::Parent>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Parent> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocolrequest::Parent> {
@@ -954,7 +954,6 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocolrequest::Parent;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using GetChildCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocolrequest::Parent::GetChild>;
@@ -1025,37 +1024,6 @@ struct ::fidl::internal::WireServerDispatcher<
 
 #ifdef __Fuchsia__
 
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Child>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Child>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_protocolrequest::Child>> {
- public:
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child>(
-        _channel());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_protocolrequest::Child>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_protocolrequest::Child>> {
- public:
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child>(
-        _channel());
-  }
-};
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_protocolrequest::Child> {
@@ -1107,6 +1075,38 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_protocolrequest::Child>
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext* transport_context) override;
 };
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_protocolrequest::Child>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Child>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_protocolrequest::Child>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_protocolrequest::Child>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_protocolrequest::Child>> {
+ public:
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child>(
+        _channel());
+  }
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocolrequest::Child> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -1128,7 +1128,6 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Child>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocolrequest::Child;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
  private:
   void dispatch_message(
@@ -1399,8 +1398,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocolrequest::Parent,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocolrequest::Parent,
+      typename ::fidl_test_protocolrequest::Parent::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -1457,8 +1457,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocolrequest::Child,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocolrequest::Child,
+      typename ::fidl_test_protocolrequest::Child::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

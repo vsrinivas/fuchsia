@@ -469,6 +469,62 @@ class ::fidl::WireUnownedResult<
  private:
   uint8_t* bytes_;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::HandleRightsProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+  virtual void AnEvent(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>* event) {}
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::HandleRightsProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::HandleRightsProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::HandleRightsProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::HandleRightsProtocol>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::fidl_test_protocols::HandleRightsProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -556,62 +612,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::HandleRightsProtocol> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-  virtual void AnEvent(
-      ::fidl::WireResponse<
-          ::fidl_test_protocols::HandleRightsProtocol::AnEvent>* event) {}
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::HandleRightsProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::HandleRightsProtocol> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::HandleRightsProtocol>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::HandleRightsProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::HandleRightsProtocol>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::fidl_test_protocols::HandleRightsProtocol>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocols::HandleRightsProtocol> {
@@ -671,7 +671,6 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::HandleRightsProtocol;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using NoResponseMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>;
@@ -2007,6 +2006,70 @@ class ::fidl::WireUnownedResult<
  private:
   uint8_t* bytes_;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+  virtual void OnEmptyResponse(
+      ::fidl::WireResponse<::fidl_test_protocols::
+                               WithAndWithoutRequestResponse::OnEmptyResponse>*
+          event) {}
+  virtual void OnWithResponse(
+      ::fidl::WireResponse<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
+          event) {}
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::WithAndWithoutRequestResponse>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -2201,70 +2264,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-  virtual void OnEmptyResponse(
-      ::fidl::WireResponse<::fidl_test_protocols::
-                               WithAndWithoutRequestResponse::OnEmptyResponse>*
-          event) {}
-  virtual void OnWithResponse(
-      ::fidl::WireResponse<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>*
-          event) {}
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::WithAndWithoutRequestResponse>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>
     final : public ::fidl::internal::WireSyncClientBase<
@@ -2420,7 +2419,6 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol =
       ::fidl_test_protocols::WithAndWithoutRequestResponse;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using NoRequestNoResponseCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2860,6 +2858,60 @@ class ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::OneWay>
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::Transitional> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+  virtual void Event(
+      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>* event) {
+  }
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::Transitional>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::Transitional> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::fidl_test_protocols::Transitional>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a |fidl::ClientEnd<::fidl_test_protocols::Transitional>|,
@@ -2935,60 +2987,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::Transitional> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-  virtual void Event(
-      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>* event) {
-  }
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::Transitional>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::Transitional> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::Transitional> client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<::fidl_test_protocols::Transitional>
-    final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocols::Transitional> {
@@ -3048,7 +3046,6 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::Transitional;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using RequestCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::Transitional::Request>;
@@ -3191,6 +3188,59 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::MethodWithUnion> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::MethodWithUnion>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::MethodWithUnion>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::MethodWithUnion> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::MethodWithUnion>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::MethodWithUnion>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::MethodWithUnion>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -3248,59 +3298,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::MethodWithUnion> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::MethodWithUnion>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::MethodWithUnion>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::MethodWithUnion>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::MethodWithUnion> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::MethodWithUnion>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::MethodWithUnion>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::MethodWithUnion>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::MethodWithUnion>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::MethodWithUnion> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocols::MethodWithUnion> {
@@ -3321,7 +3318,6 @@ class ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::MethodWithUnion;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using UnionMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::MethodWithUnion::UnionMethod>;
@@ -4144,6 +4140,59 @@ class ::fidl::WireUnownedResult<
  private:
   uint8_t* bytes_;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::WithProtocolEnds> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::WithProtocolEnds>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::WithProtocolEnds> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::WithProtocolEnds>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::WithProtocolEnds>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithProtocolEnds>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -4251,59 +4300,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>(
         _channel());
   }
-};
-template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::WithProtocolEnds> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithProtocolEnds>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::WithProtocolEnds>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithProtocolEnds>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::WithProtocolEnds> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::WithProtocolEnds>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::WithProtocolEnds>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::WithProtocolEnds>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithProtocolEnds>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
 };
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final
@@ -4420,7 +4416,6 @@ class ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::WithProtocolEnds;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using ClientEndsCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>;
@@ -4598,6 +4593,59 @@ class ::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::ManyParameters> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ManyParameters>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::ManyParameters>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ManyParameters>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::ManyParameters> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::ManyParameters>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::ManyParameters>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ManyParameters>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -4659,59 +4707,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::ManyParameters> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ManyParameters>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::ManyParameters>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ManyParameters>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::ManyParameters> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::ManyParameters>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::ManyParameters>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ManyParameters>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::ManyParameters> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocols::ManyParameters> {
@@ -4732,7 +4727,6 @@ class ::fidl::WireServer<::fidl_test_protocols::ManyParameters>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::ManyParameters;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FifteenCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::ManyParameters::Fifteen>;
@@ -5742,6 +5736,59 @@ class ::fidl::WireUnownedResult<
  private:
   uint8_t* bytes_;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::WithErrorSyntax> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::WithErrorSyntax>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::WithErrorSyntax> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::WithErrorSyntax>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::WithErrorSyntax>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -5870,59 +5917,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>(
         _channel());
   }
-};
-template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::WithErrorSyntax> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::WithErrorSyntax>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::WithErrorSyntax> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::WithErrorSyntax>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::WithErrorSyntax>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::WithErrorSyntax>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
 };
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final
@@ -6090,7 +6084,6 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::WithErrorSyntax;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using ResponseAsStructCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
@@ -6246,6 +6239,59 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::DiscoverableProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::DiscoverableProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::DiscoverableProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::DiscoverableProtocol>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::fidl_test_protocols::DiscoverableProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -6303,59 +6349,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::DiscoverableProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::DiscoverableProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::DiscoverableProtocol> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::DiscoverableProtocol>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::DiscoverableProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::DiscoverableProtocol>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::fidl_test_protocols::DiscoverableProtocol>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocols::DiscoverableProtocol> {
@@ -6376,7 +6369,6 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::DiscoverableProtocol;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using MethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::DiscoverableProtocol::Method>;
@@ -7241,6 +7233,62 @@ class ::fidl::WireUnownedResult<
  private:
   uint8_t* bytes_;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::ChannelProtocol> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+  virtual void EventA(
+      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>*
+          event) {}
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::ChannelProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::ChannelProtocol> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_protocols::ChannelProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_protocols::ChannelProtocol>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -7363,62 +7411,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_protocols::ChannelProtocol> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-  virtual void EventA(
-      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>*
-          event) {}
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::ChannelProtocol>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_protocols::ChannelProtocol> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_protocols::ChannelProtocol>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_protocols::ChannelProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_protocols::ChannelProtocol>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>*
-          event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
           ::fidl_test_protocols::ChannelProtocol> {
@@ -7535,7 +7527,6 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::ChannelProtocol;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using MethodACompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::ChannelProtocol::MethodA>;
@@ -8617,8 +8608,9 @@ class ::fidl::internal::WireWeakEventSender<
   fidl::Result AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::HandleRightsProtocol,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::HandleRightsProtocol,
+      typename ::fidl_test_protocols::HandleRightsProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -8867,8 +8859,9 @@ class ::fidl::internal::WireWeakEventSender<
                               ::fidl::StringView ret) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::WithAndWithoutRequestResponse,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse,
+      typename ::fidl_test_protocols::WithAndWithoutRequestResponse::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -8977,8 +8970,9 @@ class ::fidl::internal::WireWeakEventSender<
   fidl::Result Event(::fidl::BufferSpan _buffer, int64_t x) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::Transitional,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::Transitional,
+      typename ::fidl_test_protocols::Transitional::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9042,8 +9036,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::MethodWithUnion,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::MethodWithUnion,
+      typename ::fidl_test_protocols::MethodWithUnion::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9221,8 +9216,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::WithProtocolEnds,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::WithProtocolEnds,
+      typename ::fidl_test_protocols::WithProtocolEnds::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9290,8 +9286,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::ManyParameters,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::ManyParameters,
+      typename ::fidl_test_protocols::ManyParameters::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9481,8 +9478,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::WithErrorSyntax,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::WithErrorSyntax,
+      typename ::fidl_test_protocols::WithErrorSyntax::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9543,8 +9541,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::DiscoverableProtocol,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::DiscoverableProtocol,
+      typename ::fidl_test_protocols::DiscoverableProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9722,8 +9721,9 @@ class ::fidl::internal::WireWeakEventSender<
   fidl::Result EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::ChannelProtocol,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_protocols::ChannelProtocol,
+      typename ::fidl_test_protocols::ChannelProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

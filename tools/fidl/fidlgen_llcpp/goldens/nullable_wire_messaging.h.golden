@@ -261,58 +261,6 @@ class ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> final
  private:
   uint8_t* bytes_;
 };
-
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_nullable::SimpleProtocol>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_nullable::SimpleProtocol>> {
- public:
-  // Allocates 48 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> Add(int32_t a,
-                                                                    int32_t b) {
-    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
-                                                                            b};
-    return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        _client_end(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
-        _channel());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_nullable::SimpleProtocol>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_nullable::SimpleProtocol>> {
- public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> Add(
-      int32_t a, int32_t b) {
-    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
-                                                                            b};
-    return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
-        _client_end(), _allocator(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
-        _channel());
-  }
-};
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
     ::fidl_test_nullable::SimpleProtocol> {
@@ -366,6 +314,58 @@ class ::fidl::internal::WireEventDispatcher<
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext* transport_context) override;
 };
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_nullable::SimpleProtocol>
+    final : public ::fidl::internal::SyncEndpointManagedVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_nullable::SimpleProtocol>> {
+ public:
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add> Add(int32_t a,
+                                                                    int32_t b) {
+    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
+                                                                            b};
+    return ::fidl::WireResult<::fidl_test_nullable::SimpleProtocol::Add>(
+        _client_end(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
+        _channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<
+    ::fidl_test_nullable::SimpleProtocol>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_nullable::SimpleProtocol>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add> Add(
+      int32_t a, int32_t b) {
+    ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add> _request{a,
+                                                                            b};
+    return ::fidl::WireUnownedResult<::fidl_test_nullable::SimpleProtocol::Add>(
+        _client_end(), _allocator(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
+        _channel());
+  }
+};
 template <>
 class ::fidl::WireSyncClient<::fidl_test_nullable::SimpleProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
@@ -415,7 +415,6 @@ class ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_nullable::SimpleProtocol;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using AddCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_nullable::SimpleProtocol::Add>;
@@ -554,8 +553,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_nullable::SimpleProtocol,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_nullable::SimpleProtocol,
+      typename ::fidl_test_nullable::SimpleProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

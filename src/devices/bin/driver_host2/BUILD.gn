@@ -114,6 +114,7 @@ executable("bin") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
     "//sdk/lib/inspect/service/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

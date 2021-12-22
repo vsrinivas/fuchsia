@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_protocolrequest {
 
 class Parent final {
   Parent() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
   class GetChild final {
     GetChild() = delete;
 
@@ -46,5 +49,6 @@ class Child final {
   Child() = delete;
 
  public:
+  using Transport = ::fidl::internal::ChannelTransport;
 };
 }  // namespace fidl_test_protocolrequest

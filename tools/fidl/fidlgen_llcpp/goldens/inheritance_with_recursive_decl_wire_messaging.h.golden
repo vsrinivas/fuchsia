@@ -148,6 +148,61 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_inheritancewithrecursivedecl::Parent> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Parent>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Parent> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_inheritancewithrecursivedecl::Parent>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::fidl_test_inheritancewithrecursivedecl::Parent>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -208,61 +263,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_inheritancewithrecursivedecl::Parent> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Parent>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<
-    ::fidl_test_inheritancewithrecursivedecl::Parent>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Parent> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Parent>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_inheritancewithrecursivedecl::Parent>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_inheritancewithrecursivedecl::Parent>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::fidl_test_inheritancewithrecursivedecl::Parent>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
     final : public ::fidl::internal::WireSyncClientBase<
                 ::fidl_test_inheritancewithrecursivedecl::Parent> {
@@ -283,7 +283,6 @@ class ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritancewithrecursivedecl::Parent;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FirstCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
@@ -518,6 +517,61 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_inheritancewithrecursivedecl::Child> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Child>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<
+    ::fidl_test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_inheritancewithrecursivedecl::Child> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
+          client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<
+    ::fidl_test_inheritancewithrecursivedecl::Child>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<
+                    ::fidl_test_inheritancewithrecursivedecl::Child>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<
+          ::fidl_test_inheritancewithrecursivedecl::Child>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext* transport_context) override;
+};
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
@@ -603,61 +657,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
   }
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_inheritancewithrecursivedecl::Child> {
- public:
-  WireEventHandlerInterface() = default;
-  virtual ~WireEventHandlerInterface() = default;
-};
-
-template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Child>,
-      public ::fidl::internal::AsyncEventHandler {
- public:
-  WireAsyncEventHandler() = default;
-};
-
-template <>
-class ::fidl::WireSyncEventHandler<
-    ::fidl_test_inheritancewithrecursivedecl::Child>
-    : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_inheritancewithrecursivedecl::Child> {
- public:
-  WireSyncEventHandler() = default;
-
-  // Method called when an unknown event is found. This methods gives the status
-  // which, in this case, is returned by HandleOneEvent.
-  virtual zx_status_t Unknown() = 0;
-
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_inheritancewithrecursivedecl::Child>
-          client_end);
-};
-
-template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_inheritancewithrecursivedecl::Child>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_inheritancewithrecursivedecl::Child>> {
- public:
-  explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::fidl_test_inheritancewithrecursivedecl::Child>* event_handler)
-      : IncomingEventDispatcher(event_handler) {}
-
- private:
-  std::optional<::fidl::UnbindInfo> DispatchEvent(
-      ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
     final : public ::fidl::internal::WireSyncClientBase<
                 ::fidl_test_inheritancewithrecursivedecl::Child> {
@@ -678,7 +677,6 @@ class ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritancewithrecursivedecl::Child;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FirstCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_inheritancewithrecursivedecl::Child::First>;
@@ -846,8 +844,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_inheritancewithrecursivedecl::Parent,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_inheritancewithrecursivedecl::Parent,
+      typename ::fidl_test_inheritancewithrecursivedecl::Parent::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -931,8 +930,9 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_inheritancewithrecursivedecl::Child,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<
+      ::fidl_test_inheritancewithrecursivedecl::Child,
+      typename ::fidl_test_inheritancewithrecursivedecl::Child::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

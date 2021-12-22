@@ -244,50 +244,6 @@ class ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> final
  private:
   uint8_t* bytes_;
 };
-
-// Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_error::Example>|,
-// avoiding setting up a client.
-template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
-    : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example>> {
- public:
-  // Allocates 40 bytes of response buffer on the stack. Request is
-  // heap-allocated.
-  ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
-    return ::fidl::WireResult<::fidl_test_error::Example::Foo>(_client_end(),
-                                                               &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_error::Example>(_channel());
-  }
-};
-
-template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_error::Example>
-    final : public ::fidl::internal::SyncEndpointBufferVeneer<
-                ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_error::Example>> {
- public:
-  // Caller provides the backing storage for FIDL message via an argument to
-  // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
-      ::fidl::StringView s) {
-    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
-    return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
-        _client_end(), _allocator(), &_request);
-  }
-
- private:
-  ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_error::Example>(_channel());
-  }
-};
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::fidl_test_error::Example> {
  public:
@@ -335,6 +291,50 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_error::Example> final
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       internal::IncomingTransportContext* transport_context) override;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a |fidl::ClientEnd<::fidl_test_error::Example>|,
+// avoiding setting up a client.
+template <>
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example>> {
+ public:
+  // Allocates 40 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(
+      ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
+    return ::fidl::WireResult<::fidl_test_error::Example::Foo>(_client_end(),
+                                                               &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_error::Example>(_channel());
+  }
+};
+
+template <>
+class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_error::Example>
+    final : public ::fidl::internal::SyncEndpointBufferVeneer<
+                ::fidl::internal::WireSyncBufferClientImpl<
+                    ::fidl_test_error::Example>> {
+ public:
+  // Caller provides the backing storage for FIDL message via an argument to
+  // `.buffer()`.
+  ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> Foo(
+      ::fidl::StringView s) {
+    ::fidl::WireRequest<::fidl_test_error::Example::Foo> _request{s};
+    return ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo>(
+        _client_end(), _allocator(), &_request);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_error::Example> _client_end() const {
+    return ::fidl::UnownedClientEnd<::fidl_test_error::Example>(_channel());
+  }
 };
 template <>
 class ::fidl::WireSyncClient<::fidl_test_error::Example> final
@@ -387,7 +387,6 @@ class ::fidl::WireServer<::fidl_test_error::Example>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_error::Example;
-  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_error::Example::Foo>;
@@ -509,8 +508,8 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_error::Example> {
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_error::Example,
-                          ::fidl::internal::ChannelTransport>;
+  friend ServerBindingRefImpl<::fidl_test_error::Example,
+                              typename ::fidl_test_error::Example::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

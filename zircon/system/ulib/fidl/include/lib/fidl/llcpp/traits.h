@@ -184,11 +184,11 @@ struct ContainsHandle<T, typename std::enable_if<std::is_base_of<zx::object_base
     : std::true_type {};
 #endif
 
-template <typename Protocol, typename Transport = internal::ChannelTransport>
+template <typename Protocol>
 class ClientEnd;
-template <typename Protocol, typename Transport = internal::ChannelTransport>
+template <typename Protocol>
 class UnownedClientEnd;
-template <typename Protocol, typename Transport = internal::ChannelTransport>
+template <typename Protocol>
 class ServerEnd;
 
 template <typename Protocol>

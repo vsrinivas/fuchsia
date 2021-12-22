@@ -70,10 +70,8 @@ class DriverWaiter : public TransportWaiter {
   std::shared_ptr<State> state_;
 };
 
-}  // namespace internal
-
 template <typename Protocol>
-class ServerEnd<Protocol, internal::DriverTransport>
+class ServerEndImpl<Protocol, internal::DriverTransport>
     : public internal::ServerEndBase<Protocol, internal::DriverTransport> {
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::DriverTransport>;
 
@@ -82,7 +80,7 @@ class ServerEnd<Protocol, internal::DriverTransport>
 };
 
 template <typename Protocol>
-class ClientEnd<Protocol, internal::DriverTransport> final
+class ClientEndImpl<Protocol, internal::DriverTransport>
     : public internal::ClientEndBase<Protocol, internal::DriverTransport> {
   using ClientEndBase = internal::ClientEndBase<Protocol, internal::DriverTransport>;
 
@@ -91,7 +89,7 @@ class ClientEnd<Protocol, internal::DriverTransport> final
 };
 
 template <typename Protocol>
-class UnownedClientEnd<Protocol, internal::DriverTransport> final
+class UnownedClientEndImpl<Protocol, internal::DriverTransport>
     : public internal::UnownedClientEndBase<Protocol, internal::DriverTransport> {
   using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, internal::DriverTransport>;
 
@@ -99,6 +97,7 @@ class UnownedClientEnd<Protocol, internal::DriverTransport> final
   using UnownedClientEndBase::UnownedClientEndBase;
 };
 
+}  // namespace internal
 }  // namespace fidl
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_TRANSPORT_H_

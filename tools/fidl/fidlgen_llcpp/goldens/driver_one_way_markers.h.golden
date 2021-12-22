@@ -2,12 +2,15 @@
 
 #pragma once
 
+#include <lib/fidl/llcpp/internal/transport.h>
+
 namespace fidl_test_driveroneway {
 
 class OneWay final {
   OneWay() = delete;
 
  public:
+  using Transport = ::fidl::internal::DriverTransport;
   class Send final {
     Send() = delete;
 

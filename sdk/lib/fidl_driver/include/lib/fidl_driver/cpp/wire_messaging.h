@@ -7,4 +7,8 @@
 
 #include <lib/fidl/llcpp/wire_messaging.h>
 
+#if __Fuchsia__
+#include <lib/fidl_driver/cpp/transport.h>
+#endif
+
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_WIRE_MESSAGING_H_

@@ -18,6 +18,8 @@
 namespace {
 
 class TestProtocol {
+ public:
+  using Transport = fidl::internal::ChannelTransport;
   TestProtocol() = delete;
 };
 

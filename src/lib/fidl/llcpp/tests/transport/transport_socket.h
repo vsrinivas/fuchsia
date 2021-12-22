@@ -79,10 +79,8 @@ class SocketWaiter : private async_wait_t, public TransportWaiter {
   TransportWaitFailureHandler failure_handler_;
 };
 
-}  // namespace internal
-
 template <typename Protocol>
-class ServerEnd<Protocol, internal::SocketTransport>
+class ServerEndImpl<Protocol, internal::SocketTransport>
     : public internal::ServerEndBase<Protocol, internal::SocketTransport> {
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::SocketTransport>;
 
@@ -91,7 +89,7 @@ class ServerEnd<Protocol, internal::SocketTransport>
 };
 
 template <typename Protocol>
-class ClientEnd<Protocol, internal::SocketTransport> final
+class ClientEndImpl<Protocol, internal::SocketTransport> final
     : public internal::ClientEndBase<Protocol, internal::SocketTransport> {
   using ClientEndBase = internal::ClientEndBase<Protocol, internal::SocketTransport>;
 
@@ -100,7 +98,7 @@ class ClientEnd<Protocol, internal::SocketTransport> final
 };
 
 template <typename Protocol>
-class UnownedClientEnd<Protocol, internal::SocketTransport> final
+class UnownedClientEndImpl<Protocol, internal::SocketTransport> final
     : public internal::UnownedClientEndBase<Protocol, internal::SocketTransport> {
   using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, internal::SocketTransport>;
 
@@ -108,6 +106,7 @@ class UnownedClientEnd<Protocol, internal::SocketTransport> final
   using UnownedClientEndBase::UnownedClientEndBase;
 };
 
+}  // namespace internal
 }  // namespace fidl
 
 #endif  // SRC_LIB_FIDL_LLCPP_TESTS_TRANSPORT_TRANSPORT_SOCKET_H_

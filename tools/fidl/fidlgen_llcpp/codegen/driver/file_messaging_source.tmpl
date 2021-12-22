@@ -23,7 +23,6 @@ fidl/{{ .LibraryDots }}/cpp/driver/wire_messaging.cc
 
 {{- range (call .ProtocolsForTransport "Driver") }}
   {{ template "Protocol:MessagingSource" . }}
-  {{ template "Protocol:EventSender:MessagingSource" . }}
 {{ end }}
 {{ "" }}
 

@@ -24,19 +24,11 @@ class ServerEndBase : public TransportEnd<Protocol, Transport> {
   using TransportEnd::TransportEnd;
 };
 
-}  // namespace internal
+template <typename Protocol, typename Transport>
+class ServerEndImpl;
 
-// The server endpoint of a FIDL handle.
-//
-// The remote (client) counterpart of the handle expects this end of the
-// handle to serve the protocol represented by |Protocol|. This type is the
-// dual of |ClientEnd|.
-//
-// |ServerEnd| is thread-compatible: the caller should not use the underlying
-// handle (e.g. sending an event) while the server-end object is being mutated
-// in a different thread.
 template <typename Protocol>
-class ServerEnd<Protocol, internal::ChannelTransport> final
+class ServerEndImpl<Protocol, internal::ChannelTransport>
     : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::ChannelTransport>;
 
@@ -63,6 +55,23 @@ class ServerEnd<Protocol, internal::ChannelTransport> final
     zx::channel channel = TakeChannel();
     return fidl_epitaph_write(channel.get(), epitaph_value);
   }
+};
+
+}  // namespace internal
+
+// The server endpoint of a FIDL handle.
+//
+// The remote (client) counterpart of the handle expects this end of the
+// handle to serve the protocol represented by |Protocol|. This type is the
+// dual of |ClientEnd|.
+//
+// |ServerEnd| is thread-compatible: the caller should not use the underlying
+// handle (e.g. sending an event) while the server-end object is being mutated
+// in a different thread.
+template <typename Protocol>
+class ServerEnd final : public internal::ServerEndImpl<Protocol, typename Protocol::Transport> {
+ public:
+  using internal::ServerEndImpl<Protocol, typename Protocol::Transport>::ServerEndImpl;
 };
 
 }  // namespace fidl

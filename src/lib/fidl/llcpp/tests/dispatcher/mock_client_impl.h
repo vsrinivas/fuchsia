@@ -16,6 +16,8 @@
 namespace fidl_testing {
 
 class TestProtocol {
+ public:
+  using Transport = fidl::internal::ChannelTransport;
   TestProtocol() = delete;
 };
 

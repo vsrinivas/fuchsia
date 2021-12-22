@@ -15,13 +15,18 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
 
   #pragma once
 
+  #include <lib/fidl/llcpp/internal/transport.h>
+
   {{ range .Protocols }}
+  {{- if .Transport }}
     {{- $protocol := . }}
     {{ EnsureNamespace . }}
     {{ .Docs }}
     class {{ .Name }} final {
       {{ .Name }}() = delete;
      public:
+      using Transport = {{ .Transport.Type }};
+
       {{- range .Methods }}
         {{- .Docs }}
         class {{ .Marker.Self }} final {
@@ -33,6 +38,7 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
         };
       {{- end }}
     };
+  {{- end }}
   {{- end }}
   {{ EndOfFile }}
 {{ end }}
