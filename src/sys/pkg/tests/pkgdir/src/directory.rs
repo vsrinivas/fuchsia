@@ -260,7 +260,7 @@ async fn assert_open_success<V, Fut>(
 {
     let parent = open_parent(package_root, parent_path).await;
     for (flag, mode, child_path) in allowed_flags_modes_and_child_paths {
-        let node = open_node(&parent, flag, mode, &child_path);
+        let node = open_node(&parent, flag, mode, child_path);
         if let Err(e) = verifier(node, flag).await {
             panic!(
                 "failed to verify open. parent: {:?}, child: {:?}, flag: {:?}, \
@@ -367,7 +367,7 @@ async fn assert_open_flag_mode_and_child_path_failure<V, Fut>(
 {
     let parent = open_parent(package_root, parent_path).await;
     for (flag, mode, child_path) in disallowed_flags_modes_and_child_paths {
-        let node = open_node(&parent, flag, mode, &child_path);
+        let node = open_node(&parent, flag, mode, child_path);
         if let Err(e) = verifier(node).await {
             panic!(
                 "failed to verify open failed. parent: {:?}, child: {:?}, flag: {:?}, \
@@ -1060,7 +1060,7 @@ async fn clone_per_package_source(source: PackageSource) {
             // test with. So no test is possible here.
         } else {
             assert_clone_directory_overflow(
-                &root_dir,
+                root_dir,
                 "meta",
                 flag,
                 vec![
@@ -1082,7 +1082,7 @@ async fn clone_per_package_source(source: PackageSource) {
             )
             .await;
             assert_clone_directory_no_overflow(
-                &root_dir,
+                root_dir,
                 "meta/dir",
                 flag,
                 vec![

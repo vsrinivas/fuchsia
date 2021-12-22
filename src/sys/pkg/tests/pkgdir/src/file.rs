@@ -55,7 +55,7 @@ async fn assert_read_max_buffer_success(
     path: &str,
     expected_contents: &str,
 ) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
@@ -69,7 +69,7 @@ async fn assert_read_buffer_success(
     for buffer_size in 0..expected_contents.len() {
         let expected_contents = &expected_contents[0..buffer_size];
 
-        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
         let (status, bytes) = file.read(buffer_size.try_into().unwrap()).await.unwrap();
         let () = zx::Status::ok(status).expect(&format!(
             "path: {}, expected_contents: {}, buffer size: {}",
@@ -80,7 +80,7 @@ async fn assert_read_buffer_success(
 }
 
 async fn assert_read_past_end(root_dir: &DirectoryProxy, path: &str, expected_contents: &str) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
@@ -91,7 +91,7 @@ async fn assert_read_past_end(root_dir: &DirectoryProxy, path: &str, expected_co
 }
 
 async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &str) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
     // Read the first MAX_BUF contents.
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
@@ -148,7 +148,7 @@ async fn assert_read_at_max_buffer_success(
     path: &str,
     expected_contents: &str,
 ) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
@@ -164,7 +164,7 @@ async fn assert_read_at_success(
             let end = cmp::min(count + offset, full_expected_contents.len());
             let expected_contents = &full_expected_contents[offset..end];
 
-            let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+            let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
             let (status, bytes) =
                 file.read_at(count.try_into().unwrap(), offset.try_into().unwrap()).await.unwrap();
             let () = zx::Status::ok(status).expect(&format!(
@@ -178,7 +178,7 @@ async fn assert_read_at_success(
 
 async fn assert_read_at_does_not_affect_seek_offset(root_dir: &DirectoryProxy, path: &str) {
     for seek_offset in 0..path.len() as i64 {
-        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
         let (status, position) = file.seek(seek_offset, SeekOrigin::Start).await.unwrap();
         let () =
@@ -199,7 +199,7 @@ async fn assert_read_at_does_not_affect_seek_offset(root_dir: &DirectoryProxy, p
 
 async fn assert_read_at_is_unaffected_by_seek(root_dir: &DirectoryProxy, path: &str) {
     for seek_offset in 0..path.len() as i64 {
-        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
         let (status, first_read_bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
         let () =
@@ -233,7 +233,7 @@ async fn seek_per_package_source(source: PackageSource) {
         if source.is_pkgfs() && path == "meta" {
             // "/meta opened as a file supports Seek()"
             for seek_offset in 0..TEST_PKG_HASH.len() as i64 {
-                let file = open_file(&root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
+                let file = open_file(root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
                 let (status, position) = file.seek(seek_offset, SeekOrigin::Current).await.unwrap();
                 assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
                 assert_eq!(position, 0);
@@ -259,7 +259,7 @@ async fn assert_seek_success(
     seek_origin: SeekOrigin,
 ) {
     for expected_position in 0..expected.len() {
-        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
         let (status, position) =
             file.seek(expected_position.try_into().unwrap(), seek_origin).await.unwrap();
         let () = zx::Status::ok(status).expect(&format!(
@@ -272,7 +272,7 @@ async fn assert_seek_success(
 
 async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str, expected: &str) {
     for seek_offset in 0..expected.len() {
-        let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+        let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
         let (status, bytes) = file.read(MAX_BUF).await.unwrap();
         let () =
             zx::Status::ok(status).expect(&format!("path: {}, seek_offset: {}", path, seek_offset));
@@ -304,7 +304,7 @@ async fn assert_seek_past_end(
     expected: &str,
     seek_origin: SeekOrigin,
 ) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, position) = file.seek(expected.len() as i64 + 1, seek_origin).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(expected.len() as u64 + 1, position);
@@ -317,7 +317,7 @@ async fn assert_seek_past_end(
 // The difference between this test and `assert_seek_past_end` is that the offset is 1
 // so that the position is evaluated to path.len() + 1 like in `assert_seek_past_end`.
 async fn assert_seek_past_end_end_origin(root_dir: &DirectoryProxy, path: &str, expected: &str) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, position) = file.seek(1, SeekOrigin::End).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(expected.len() as u64 + 1, position);
@@ -480,7 +480,7 @@ async fn assert_get_flags(
     status_flags: u32,
     right_flags: u32,
 ) {
-    let file = open_file(&root_dir, path, open_flag).await.unwrap();
+    let file = open_file(root_dir, path, open_flag).await.unwrap();
 
     // The flags returned by GetFlags() do NOT always match the flags the file is opened with
     // because File servers each AND the open flag with some other flags. The `status_flags` and
@@ -522,7 +522,7 @@ async fn assert_get_flags_content_file(root_dir: &DirectoryProxy) {
         OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NOT_DIRECTORY,
     ] {
-        assert_get_flags(&root_dir, "file", open_flag, status_flags, right_flags).await;
+        assert_get_flags(root_dir, "file", open_flag, status_flags, right_flags).await;
     }
 }
 
@@ -545,7 +545,7 @@ async fn assert_get_flags_meta_file(root_dir: &DirectoryProxy, path: &str) {
         OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_FLAG_NOT_DIRECTORY,
     ] {
-        assert_get_flags(&root_dir, path, open_flag, status_flags, right_flags).await;
+        assert_get_flags(root_dir, path, open_flag, status_flags, right_flags).await;
     }
 }
 
@@ -563,7 +563,7 @@ async fn set_flags_per_package_source(source: PackageSource) {
 }
 
 async fn assert_set_flags_meta_file_unsupported(root_dir: &DirectoryProxy, path: &str) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let file = open_file(root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let status = file.set_flags(OPEN_FLAG_APPEND).await.unwrap();
     assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
 }
