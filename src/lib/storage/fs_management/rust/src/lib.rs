@@ -49,8 +49,12 @@ mod error;
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
-    fdio::{spawn_etc, Namespace, SpawnAction, SpawnOptions},
-    fidl_fuchsia_io::{NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN},
+    fdio::{service_connect_at, spawn_etc, Namespace, SpawnAction, SpawnOptions},
+    fidl::endpoints::DiscoverableProtocolMarker,
+    fidl_fuchsia_fs::AdminSynchronousProxy,
+    fidl_fuchsia_io::{
+        DirectorySynchronousProxy, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN,
+    },
     fidl_fuchsia_io_admin::{DirectoryAdminSynchronousProxy, FilesystemInfo},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
@@ -67,6 +71,7 @@ pub use error::{
 struct FSInstance {
     process: zx::Process,
     mount_point: String,
+    export_root: zx::Channel,
 }
 
 impl FSInstance {
@@ -79,13 +84,16 @@ impl FSInstance {
         args: Vec<&CStr>,
         mount_point: &str,
     ) -> Result<Self, Error> {
-        let (node, server_end) =
+        let (export_root, server_end) =
             fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
-        let node = NodeSynchronousProxy::new(node.into_channel());
+        let export_root = DirectorySynchronousProxy::new(export_root.into_channel());
 
         let actions = vec![
-            // root handle is passed in as a PA_USER0 handle at argument 0
-            SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 0), server_end.into()),
+            // export root handle is passed in as a PA_DIRECTORY_REQUEST handle at argument 0
+            SpawnAction::add_handle(
+                HandleInfo::new(HandleType::DirectoryRequest, 0),
+                server_end.into(),
+            ),
             // device handle is passed in as a PA_USER0 handle at argument 1
             SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
         ];
@@ -94,29 +102,46 @@ impl FSInstance {
 
         // Wait until the filesystem is ready to take incoming requests. We want
         // mount errors to show before we bind to the namespace.
+        let (root_dir, server_end) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
+        export_root.open(
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                | fidl_fuchsia_io::OPEN_FLAG_POSIX_EXECUTABLE
+                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_ADMIN,
+            0,
+            "root",
+            server_end.into(),
+        )?;
+        let root_dir = DirectorySynchronousProxy::new(root_dir.into_channel());
         let _: fidl_fuchsia_io::NodeInfo =
-            node.describe(zx::Time::INFINITE).context("failed to mount")?;
+            root_dir.describe(zx::Time::INFINITE).context("failed to mount")?;
 
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
-            .bind(mount_point, node.into_channel())
+            .bind(mount_point, root_dir.into_channel())
             .context("failed to bind client channel into default namespace")?;
 
-        Ok(Self { process, mount_point: mount_point.to_string() })
+        Ok(Self {
+            process,
+            mount_point: mount_point.to_string(),
+            export_root: export_root.into_channel(),
+        })
     }
 
     /// Unmount the filesystem partition. The partition must already be mounted.
     fn unmount(self) -> Result<(), Error> {
         let (client_chan, server_chan) = zx::Channel::create()?;
 
+        service_connect_at(
+            &self.export_root,
+            &format!("svc/{}", fidl_fuchsia_fs::AdminMarker::PROTOCOL_NAME),
+            server_chan,
+        )?;
+        let admin_proxy = AdminSynchronousProxy::new(client_chan);
+        admin_proxy.shutdown(zx::Time::INFINITE)?;
+
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
-        namespace
-            .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
-            .context("failed to connect to filesystem")?;
-
-        let proxy = DirectoryAdminSynchronousProxy::new(client_chan);
-        proxy.unmount(zx::Time::INFINITE).context("failed to unmount")?;
-
         namespace
             .unbind(&self.mount_point)
             .context("failed to unbind filesystem from default namespace")

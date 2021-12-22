@@ -18,6 +18,7 @@ use {
     },
     fidl_fuchsia_io_admin::{DirectoryAdminMarker, FilesystemInfo},
     fuchsia_async::OnSignals,
+    fuchsia_component::client::connect_to_protocol_at_dir_svc,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{Channel, Handle, HandleBased, Process, Signals, Status, Task},
     log::warn,
@@ -111,15 +112,15 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// [`ServeErrorAndFilesystem::into_filesystem()`] to recover this `Filesystem` object.
     pub async fn serve(self) -> Result<ServingFilesystem<FSC>, ServeErrorAndFilesystem<FSC>> {
         match self.do_serve().await {
-            Ok((process, root_dir)) => {
-                Ok(ServingFilesystem { filesystem: Some(self), process, root_dir })
+            Ok((process, export_root, root_dir)) => {
+                Ok(ServingFilesystem { filesystem: Some(self), process, export_root, root_dir })
             }
             Err(serve_error) => Err(ServeErrorAndFilesystem { serve_error, filesystem: self }),
         }
     }
 
-    async fn do_serve(&self) -> Result<(Process, DirectoryProxy), ServeError> {
-        let (root_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+    async fn do_serve(&self) -> Result<(Process, DirectoryProxy, DirectoryProxy), ServeError> {
+        let (export_root, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
 
         // SpawnAction is not Send, so make sure it is dropped before any `await`s.
         let process = {
@@ -127,9 +128,9 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             args.append(&mut self.config.generic_args());
             args.append(&mut self.config.mount_args());
             let actions = vec![
-                // root handle is passed in as a PA_USER0 handle at argument 0
+                // export root handle is passed in as a PA_DIRECTORY_REQUEST handle at argument 0
                 SpawnAction::add_handle(
-                    HandleInfo::new(HandleType::User0, 0),
+                    HandleInfo::new(HandleType::DirectoryRequest, 0),
                     server_end.into_channel().into(),
                 ),
                 // device handle is passed in as a PA_USER0 handle at argument 1
@@ -143,9 +144,19 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         };
 
         // Wait until the filesystem is ready to take incoming requests.
+        let (root_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        export_root.open(
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                | fidl_fuchsia_io::OPEN_FLAG_POSIX_EXECUTABLE
+                | fidl_fuchsia_io::OPEN_FLAG_POSIX_WRITABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_ADMIN,
+            0,
+            "root",
+            server_end.into_channel().into(),
+        )?;
         let _ = root_dir.describe().await?;
 
-        Ok((process, root_dir))
+        Ok((process, export_root, root_dir))
     }
 }
 
@@ -153,6 +164,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 pub struct ServingFilesystem<FSC> {
     filesystem: Option<Filesystem<FSC>>,
     process: Process,
+    export_root: DirectoryProxy,
     root_dir: DirectoryProxy,
 }
 
@@ -196,10 +208,9 @@ impl<FSC: FSConfig> ServingFilesystem<FSC> {
     }
 
     async fn do_shutdown(&mut self) -> Result<(), ShutdownError> {
-        let (admin_proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryAdminMarker>()?;
-        self.root_dir.clone(OPEN_RIGHT_ADMIN, ServerEnd::new(server_end.into_channel()))?;
-
-        Status::ok(admin_proxy.unmount().await?).map_err(ShutdownError::DirectoryAdminUnmount)?;
+        let admin_proxy: fidl_fuchsia_fs::AdminProxy =
+            connect_to_protocol_at_dir_svc::<fidl_fuchsia_fs::AdminMarker>(&self.export_root)?;
+        admin_proxy.shutdown().await?;
 
         let _ = OnSignals::new(&self.process, Signals::PROCESS_TERMINATED)
             .await

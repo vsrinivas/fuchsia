@@ -64,14 +64,14 @@ pub enum BindError {
 }
 
 /// The error type used by the shutdown operation of a serving filesystem.
-#[derive(Clone, Debug, Error)]
+#[derive(Debug, Error)]
 pub enum ShutdownError {
+    /// An error occurred connecting to the Admin service.
+    #[error(transparent)]
+    ConnectToAdminService(#[from] anyhow::Error),
     /// A FIDL error occurred.
     #[error(transparent)]
     Fidl(#[from] fidl::Error),
-    /// A request to gracefully shutdown the filesystem using the DirectoryAdmin protocol failed.
-    #[error("failed to shutdown filesystem with DirectoryAdmin: {0}")]
-    DirectoryAdminUnmount(#[source] Status),
     /// An error occurred waiting for the `ZX_PROCESS_TERMINATED` signal on the filesystem process.
     #[error("failed to wait on ZX_PROCESS_TERMINATED signal: {0}")]
     ProcessTerminatedSignal(#[source] Status),
