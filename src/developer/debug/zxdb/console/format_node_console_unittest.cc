@@ -68,22 +68,25 @@ TEST(FormatNodeConsole, SimpleValue) {
   ConsoleFormatOptions type_options;
   type_options.verbosity = ConsoleFormatOptions::Verbosity::kAllTypes;
   out = FormatNodeForConsole(node, type_options);
-  EXPECT_EQ(R"(kComment "(int) ", kNormal "54")", out.GetDebugString());
+  EXPECT_EQ(R"(kOperatorDim "(", kComment "int", kOperatorDim ") ", kNormal "54")",
+            out.GetDebugString());
 
   // Named value.
   node.set_name("foo");
   out = FormatNodeForConsole(node, options);
-  EXPECT_EQ(R"(kVariable "foo", kNormal " = 54")", out.GetDebugString());
+  EXPECT_EQ(R"(kVariable "foo", kOperatorNormal " = ", kNormal "54")", out.GetDebugString());
 
   // Named value with types forced on.
   out = FormatNodeForConsole(node, type_options);
-  EXPECT_EQ(R"(kComment "(int) ", kVariable "foo", kNormal " = 54")", out.GetDebugString());
+  EXPECT_EQ(
+      R"(kOperatorDim "(", kComment "int", kOperatorDim ") ", kVariable "foo", kOperatorNormal " = ", kNormal "54")",
+      out.GetDebugString());
 
   // Force types on when there is no type shouldn't show anything.
   FormatNode err_node("foo");
   err_node.SetDescribedError(Err("Error."));
   out = FormatNodeForConsole(err_node, type_options);
-  EXPECT_EQ(R"(kVariable "foo", kNormal " = ", kComment "<Error.>")", out.GetDebugString());
+  EXPECT_EQ(R"(kVariable "foo", kOperatorNormal " = ", kComment "<Error.>")", out.GetDebugString());
 }
 
 TEST(FormatNodeConsole, Collection) {

@@ -232,7 +232,7 @@ void AppendItemSuffix(const RecursiveState& state, bool last_item, OutputBuffer*
   if (state.ShouldExpand())
     out->Append("\n");  // Expanded children always end with a newline.
   else if (!last_item)
-    out->Append(", ");  // Get commas for everything but the last.
+    out->Append(Syntax::kOperatorNormal, ", ");  // Get commas for everything but the last.
 }
 
 // Returns true if type information should be displayed before the variable name, as in
@@ -265,8 +265,11 @@ bool ShouldPrependTypeNameBeforeName(const FormatNode* node, const RecursiveStat
 
 // Appends the formatted name and "=" as needed by this node.
 void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, OutputBuffer* out) {
-  if (ShouldPrependTypeNameBeforeName(node, state))
-    out->Append(Syntax::kComment, "(" + node->type() + ") ");
+  if (ShouldPrependTypeNameBeforeName(node, state)) {
+    out->Append(Syntax::kOperatorDim, "(");
+    out->Append(Syntax::kComment, node->type());
+    out->Append(Syntax::kOperatorDim, ") ");
+  }
 
   if (!state.inhibit_one_name && !node->name().empty()) {
     // Node name. Base class names are less important so get dimmed. Especially STL base classes
@@ -281,9 +284,9 @@ void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, 
     // Rust uses colons for most things, while C uses equals. The exception for Rust is local
     // variables which "=" to better match how the variables are declared.
     if (IsRust(node) && node->child_kind() != FormatNode::kVariable)
-      out->Append(": ");
+      out->Append(Syntax::kOperatorNormal, ": ");
     else
-      out->Append(" = ");
+      out->Append(Syntax::kOperatorNormal, " = ");
   }
 }
 
@@ -296,20 +299,20 @@ void AppendNodeNameAndType(const FormatNode* node, const RecursiveState& state, 
 void AppendNodeChildren(const FormatNode* node, const RecursiveState& node_state,
                         const std::string& opening, const std::string& closing,
                         const RecursiveState& child_state, OutputBuffer* out) {
-  out->Append(opening);
+  out->Append(Syntax::kOperatorNormal, opening);
 
   if (child_state.DepthTooDeep()) {
     // Don't print the child names if those children will be elided. Otherwise this prints a
     // whole struct out with no data: "{foo=…, bar=…, baz=…}" which is wasteful of space and not
     // helpful.
     out->Append(Syntax::kComment, "…");
-    out->Append(closing);
+    out->Append(Syntax::kOperatorNormal, closing);
     return;
   }
 
   // Special-case empty ones because we never want wrapping.
   if (node->children().empty()) {
-    out->Append(closing);
+    out->Append(Syntax::kOperatorNormal, closing);
     return;
   }
 
@@ -332,7 +335,7 @@ void AppendNodeChildren(const FormatNode* node, const RecursiveState& node_state
     AppendItemSuffix(node_state, i + 1 == node->children().size(), out);
   }
 
-  out->Append(node_state.GetIndentString() + closing);
+  out->Append(Syntax::kOperatorNormal, node_state.GetIndentString() + closing);
 }
 
 OutputBuffer DoFormatArrayOrTupleNode(const FormatNode* node, const RecursiveState& state) {
@@ -388,7 +391,7 @@ OutputBuffer DoFormatCollectionNode(const FormatNode* node, const RecursiveState
   if (node->children().empty()) {
     // Rust empty structs have no brackets.
     if (!IsRust(node))
-      out.Append("{}");
+      out.Append(Syntax::kOperatorNormal, "{}");
     return out;
   }
 
@@ -402,7 +405,7 @@ OutputBuffer DoFormatPointerNode(const FormatNode* node, const RecursiveState& s
   // When type information is forced on, the type will have already been printed. Otherwise we print
   // a "(*)" to indicate the value is a pointer.
   if (!state.TypeForcedOn())
-    out.Append(Syntax::kComment, "(*)");
+    out.Append(Syntax::kOperatorDim, "(*)");
 
   // Pointers will have a child node that expands to the pointed-to value. If this is in a
   // "described" state with no error, then show the data.
@@ -480,15 +483,16 @@ OutputBuffer DoFormatWrapper(const FormatNode* node, const RecursiveState& state
 
   OutputBuffer out;
   out.Append(node->description());
-  out.Append(node->wrapper_prefix());
+  out.Append(Syntax::kOperatorNormal, node->wrapper_prefix());
   out.Append(DoFormatNodeOneWay(node->children()[0].get(), child_state, 0));
-  out.Append(node->wrapper_suffix());
+  out.Append(Syntax::kOperatorNormal, node->wrapper_suffix());
   return out;
 }
 
 // Appends the description for a normal node (number or whatever).
-OutputBuffer DoFormatStandardNode(const FormatNode* node, const RecursiveState& state) {
-  return OutputBuffer(node->description());
+OutputBuffer DoFormatStandardNode(const FormatNode* node, const RecursiveState& state,
+                                  Syntax syntax = Syntax::kNormal) {
+  return OutputBuffer(syntax, node->description());
 }
 
 // Groups have no heading, they're always just a list of children.
@@ -556,7 +560,7 @@ OutputBuffer DoFormatNodeOneWay(const FormatNode* node, const RecursiveState& st
         // For strings, use the number format to determine if the output should be displayed
         // as the string data or a numeric array.
         if (state.options.num_format == FormatOptions::NumFormat::kDefault) {
-          out.Append(DoFormatStandardNode(node, state));
+          out.Append(DoFormatStandardNode(node, state, Syntax::kStringNormal));
         } else {
           out.Append(DoFormatArrayOrTupleNode(node, state));
         }
