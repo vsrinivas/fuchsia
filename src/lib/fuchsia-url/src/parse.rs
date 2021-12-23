@@ -49,6 +49,12 @@ impl TryFrom<String> for PackageName {
     }
 }
 
+impl From<PackageName> for String {
+    fn from(name: PackageName) -> Self {
+        name.0
+    }
+}
+
 impl std::fmt::Display for PackageName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
@@ -235,6 +241,14 @@ mod test_package_name {
     #[test]
     fn try_from_succeeds() {
         PackageName::try_from("valid-name".to_string()).unwrap();
+    }
+
+    #[test]
+    fn from_succeeds() {
+        assert_eq!(
+            String::from("package-name".parse::<PackageName>().unwrap()),
+            "package-name".to_string()
+        );
     }
 
     #[test]

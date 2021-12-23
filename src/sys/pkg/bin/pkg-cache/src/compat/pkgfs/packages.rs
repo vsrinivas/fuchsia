@@ -16,7 +16,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::{
-        collections::{BTreeSet, HashMap},
+        collections::{BTreeMap, HashMap},
         str::FromStr,
         sync::Arc,
     },
@@ -48,7 +48,7 @@ pub struct PkgfsPackages {
 }
 
 impl PkgfsPackages {
-    // TODO use this
+    // TODO(fxbug.dev/88868) use this
     #[allow(dead_code)]
     pub fn new(
         static_packages: system_image::StaticPackages,
@@ -105,8 +105,12 @@ impl PkgfsPackages {
         self.packages().await.remove(name)
     }
 
-    async fn package_names(&self) -> BTreeSet<PackageName> {
-        self.packages().await.into_iter().map(|(k, _)| k).collect()
+    async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
+        self.packages()
+            .await
+            .into_iter()
+            .map(|(k, _)| (k.into(), super::DirentType::Directory))
+            .collect()
     }
 }
 
@@ -165,56 +169,12 @@ impl Directory for PkgfsPackages {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
-        mut sink: Box<(dyn dirents_sink::Sink + 'static)>,
+        sink: Box<(dyn dirents_sink::Sink + 'static)>,
     ) -> Result<(TraversalPosition, Box<(dyn dirents_sink::Sealed + 'static)>), zx::Status> {
-        use dirents_sink::AppendResult;
-
-        let entries = self.package_names().await;
-
-        let mut remaining = match pos {
-            TraversalPosition::Start => {
-                // Yield "." first. If even that can't fit in the response, return the same
-                // traversal position so we try again next time (where the client hopefully
-                // provides a bigger buffer).
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
-                    AppendResult::Ok(new_sink) => sink = new_sink,
-                    AppendResult::Sealed(sealed) => return Ok((TraversalPosition::Start, sealed)),
-                }
-
-                entries.range::<PackageName, _>(..)
-            }
-            TraversalPosition::Name(next) => {
-                // This function only returns valid package names, so it will always be provided a
-                // valid package name.
-                let next: PackageName = next.parse().unwrap();
-
-                // `next` is the name of the next item that still needs to be provided, so start
-                // there.
-                entries.range(next..)
-            }
-            TraversalPosition::Index(_) => {
-                // This directory uses names for iteration to more gracefully handle concurrent
-                // directory reads while the directory itself may change.  Index-based enumeration
-                // may end up repeating elements (or panic if this allowed deleting directory
-                // entries).  Name-based enumeration may give a temporally inconsistent view of the
-                // directory, so neither approach is ideal.
-                unreachable!()
-            }
-            TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal().into())),
-        };
-
-        while let Some(name) = remaining.next() {
-            let name = name.to_string();
-            match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), &name) {
-                AppendResult::Ok(new_sink) => sink = new_sink,
-                AppendResult::Sealed(sealed) => {
-                    // Ran out of response buffer space. Pick up on this item next time.
-                    return Ok((TraversalPosition::Name(name), sealed));
-                }
-            }
-        }
-
-        Ok((TraversalPosition::End, sink.seal()))
+        // If directory contents changes in between a client making paginated
+        // fuchsia.io/Directory.ReadDirents calls, the client may not see a consistent snapshot
+        // of the directory contents.
+        super::read_dirents(&self.directory_entries().await, pos, sink).await
     }
 
     fn register_watcher(
@@ -399,19 +359,6 @@ mod tests {
             non_static_allow_list(&[]),
         );
 
-        // An empty readdir buffer can't hold any elements, so it returns nothing and indicates we
-        // are still at the start.
-        let (pos, sealed) = Directory::read_dirents(
-            &*pkgfs_packages,
-            &TraversalPosition::Start,
-            Box::new(FakeSink::new(0)),
-        )
-        .await
-        .expect("read_dirents failed");
-
-        assert_eq!(FakeSink::from_sealed(sealed).entries, vec![]);
-        assert_eq!(pos, TraversalPosition::Start);
-
         // Given adequate buffer space, the only entry is itself (".").
         let (pos, sealed) = Directory::read_dirents(
             &*pkgfs_packages,
@@ -465,126 +412,6 @@ mod tests {
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn readdir_one_entry_at_a_time_yields_expected_entries() {
-        let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![
-                (path("allowed", "0"), hash(0)),
-                (path("static", "0"), hash(1)),
-                (path("static", "1"), hash(2)),
-                (path("still", "static"), hash(3)),
-            ]),
-            non_static_allow_list(&["allowed", "missing"]),
-        );
-
-        register_dynamic_package(&package_index, path("allowed", "dynamic-package"), hash(10))
-            .await;
-        register_dynamic_package(&package_index, path("static", "0"), hash(11)).await;
-        register_dynamic_package(&package_index, path("dynamic", "0"), hash(12)).await;
-
-        let expected_entries = vec![
-            (
-                ".".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name("allowed".to_owned()),
-            ),
-            (
-                "allowed".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name("static".to_owned()),
-            ),
-            (
-                "static".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name("still".to_owned()),
-            ),
-            (
-                "still".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::End,
-            ),
-        ];
-
-        let mut pos = TraversalPosition::Start;
-
-        for (name, info, expected_pos) in expected_entries {
-            let (newpos, sealed) =
-                Directory::read_dirents(&*pkgfs_packages, &pos, Box::new(FakeSink::new(1)))
-                    .await
-                    .expect("read_dirents failed");
-
-            assert_eq!(FakeSink::from_sealed(sealed).entries, vec![(name, info)]);
-            assert_eq!(newpos, expected_pos);
-
-            pos = newpos;
-        }
-    }
-
-    struct DirReader {
-        dir: Arc<dyn Directory>,
-        entries: Vec<(String, EntryInfo)>,
-        pos: TraversalPosition,
-    }
-
-    impl DirReader {
-        fn new(dir: Arc<dyn Directory>) -> Self {
-            Self { dir, entries: vec![], pos: TraversalPosition::Start }
-        }
-
-        async fn read(&mut self, n: usize) {
-            let (newpos, sealed) =
-                Directory::read_dirents(&*self.dir, &self.pos, Box::new(FakeSink::new(n)))
-                    .await
-                    .unwrap();
-
-            self.entries.extend(FakeSink::from_sealed(sealed).entries);
-            self.pos = newpos;
-        }
-
-        fn unwrap_done(self) -> Vec<(String, EntryInfo)> {
-            assert_eq!(self.pos, TraversalPosition::End);
-            self.entries
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn readdir_pagination_may_encounter_temporal_anomalies() {
-        let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![
-                (path("b", "0"), hash(0)),
-                (path("d", "0"), hash(1)),
-            ]),
-            non_static_allow_list(&["a", "c", "e"]),
-        );
-
-        // Register packages "a", "c", and "e" in sequence, but carefully interleave a readdir to
-        // observe "e" but not "c".
-
-        let mut reader = DirReader::new(pkgfs_packages);
-
-        register_dynamic_package(&package_index, path("a", "0"), hash(2)).await;
-
-        // Read ".", "a", "b".
-        reader.read(3).await;
-
-        register_dynamic_package(&package_index, path("c", "0"), hash(3)).await;
-        register_dynamic_package(&package_index, path("e", "0"), hash(4)).await;
-
-        // Read "d", "e".
-        reader.read(2).await;
-
-        assert_eq!(
-            reader.unwrap_done(),
-            vec![
-                (".".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("a".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("b".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("d".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-                ("e".to_owned(), EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY)),
-            ]
-        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

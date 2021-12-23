@@ -16,13 +16,12 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    std::{collections::BTreeSet, str::FromStr, sync::Arc},
+    std::{collections::BTreeMap, str::FromStr, sync::Arc},
     system_image::{ExecutabilityRestrictions, NonStaticAllowList},
     vfs::{
         common::send_on_open_with_error,
         directory::{
             connection::{io1::DerivedConnection, util::OpenDirectory},
-            dirents_sink,
             entry::EntryInfo,
             immutable::connection::io1::{ImmutableConnection, ImmutableConnectionClient},
             traversal_position::TraversalPosition,
@@ -48,7 +47,7 @@ enum PackageValidationStatus {
 }
 
 impl PkgfsVersions {
-    // TODO use this
+    // TODO(fxbug.dev/88868) use this
     #[allow(dead_code)]
     pub fn new(
         static_packages: system_image::StaticPackages,
@@ -78,12 +77,13 @@ impl PkgfsVersions {
         }
     }
 
-    async fn package_hashes(&self) -> BTreeSet<Hash> {
+    async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
         let active_packages = self.non_static_packages.lock().await.active_packages();
         self.static_packages
             .contents()
-            .map(|(_path, hash)| hash.clone())
-            .chain(active_packages.into_iter().map(|(_path, hash)| hash))
+            .map(|(_path, hash)| hash.to_string())
+            .chain(active_packages.into_iter().map(|(_path, hash)| hash.to_string()))
+            .map(|hash| (hash, super::DirentType::Directory))
             .collect()
     }
 
@@ -115,59 +115,15 @@ impl vfs::directory::entry_container::Directory for PkgfsVersions {
     async fn read_dirents<'a>(
         &'a self,
         pos: &'a TraversalPosition,
-        mut sink: Box<(dyn vfs::directory::dirents_sink::Sink + 'static)>,
+        sink: Box<(dyn vfs::directory::dirents_sink::Sink + 'static)>,
     ) -> Result<
         (TraversalPosition, Box<(dyn vfs::directory::dirents_sink::Sealed + 'static)>),
         zx::Status,
     > {
-        use dirents_sink::AppendResult;
-
-        let entries = self.package_hashes().await;
-
-        let mut remaining = match pos {
-            TraversalPosition::Start => {
-                // Yield "." first. If even that can't fit in the response, return the same
-                // traversal position so we try again next time (where the client hopefully
-                // provides a bigger buffer).
-                match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), ".") {
-                    AppendResult::Ok(new_sink) => sink = new_sink,
-                    AppendResult::Sealed(sealed) => return Ok((TraversalPosition::Start, sealed)),
-                }
-
-                entries.range::<Hash, _>(..)
-            }
-            TraversalPosition::Name(next) => {
-                // This function only returns valid package hashes, so it will always be provided a
-                // valid package hash.
-                let next: Hash = next.parse().unwrap();
-
-                // `next` is the name of the next item that still needs to be provided, so start
-                // there.
-                entries.range(next..)
-            }
-            TraversalPosition::Index(_) => {
-                // This directory uses names for iteration to more gracefully handle concurrent
-                // directory reads while the directory itself may change.  Index-based enumeration
-                // may end up repeating elements (or panic if this allowed deleting directory
-                // entries).  Name-based enumeration may give a temporally inconsistent view of the
-                // directory, so neither approach is ideal.
-                unreachable!()
-            }
-            TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal().into())),
-        };
-
-        while let Some(next) = remaining.next() {
-            let next = next.to_string();
-            match sink.append(&EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY), &next) {
-                AppendResult::Ok(new_sink) => sink = new_sink,
-                AppendResult::Sealed(sealed) => {
-                    // Ran out of response buffer space. Pick up on this item next time.
-                    return Ok((TraversalPosition::Name(next), sealed));
-                }
-            }
-        }
-
-        Ok((TraversalPosition::End, sink.seal()))
+        // If directory contents changes in between a client making paginated
+        // fuchsia.io/Directory.ReadDirents calls, the client may not see a consistent snapshot
+        // of the directory contents.
+        super::read_dirents(&self.directory_entries().await, pos, sink).await
     }
 
     fn register_watcher(
@@ -279,7 +235,6 @@ mod tests {
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         fuchsia_pkg::{PackagePath, PackageVariant},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
-        maplit::btreeset,
         matches::assert_matches,
         vfs::directory::{entry::EntryInfo, entry_container::Directory},
     };
@@ -336,7 +291,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn unions_static_and_dynamic() {
+    async fn directory_entries_unions_static_and_dynamic() {
         let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
             system_image::StaticPackages::from_entries(vec![(
                 default_package_path("static_package"),
@@ -349,7 +304,13 @@ mod tests {
         register_dynamic_package(&package_index, default_package_path("dynamic_package"), hash(1))
             .await;
 
-        assert_eq!(pkgfs_versions.package_hashes().await, btreeset! {hash(0), hash(1)},);
+        assert_eq!(
+            pkgfs_versions.directory_entries().await,
+            BTreeMap::from([
+                (hash(0).to_string(), super::super::DirentType::Directory),
+                (hash(1).to_string(), super::super::DirentType::Directory),
+            ])
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -359,19 +320,6 @@ mod tests {
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
         );
-
-        // An empty readdir buffer can't hold any elements, so it returns nothing and indicates we
-        // are still at the start.
-        let (pos, sealed) = Directory::read_dirents(
-            &*pkgfs_versions,
-            &TraversalPosition::Start,
-            Box::new(FakeSink::new(0)),
-        )
-        .await
-        .expect("read_dirents failed");
-
-        assert_eq!(FakeSink::from_sealed(sealed).entries, vec![]);
-        assert_eq!(pos, TraversalPosition::Start);
 
         // Given adequate buffer space, the only entry is itself (".").
         let (pos, sealed) = Directory::read_dirents(
@@ -425,70 +373,6 @@ mod tests {
             ]
         );
         assert_eq!(pos, TraversalPosition::End);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn readdir_one_entry_at_a_time_yields_expected_entries() {
-        let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![
-                (default_package_path("allowed"), hash(0)),
-                (default_package_path("static"), hash(1)),
-                (default_package_path("same-hash"), hash(2)),
-            ]),
-            non_static_allow_list(&[]),
-            ExecutabilityRestrictions::Enforce,
-        );
-
-        register_dynamic_package(&package_index, default_package_path("same-hash"), hash(2)).await;
-        register_dynamic_package(&package_index, default_package_path("allowed"), hash(10)).await;
-        register_dynamic_package(&package_index, default_package_path("dynonly"), hash(14)).await;
-
-        let expected_entries = vec![
-            (
-                ".".to_owned(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name(hash(0).to_string()),
-            ),
-            (
-                hash(0).to_string(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name(hash(1).to_string()),
-            ),
-            (
-                hash(1).to_string(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name(hash(2).to_string()),
-            ),
-            (
-                hash(2).to_string(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name(hash(10).to_string()),
-            ),
-            (
-                hash(10).to_string(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::Name(hash(14).to_string()),
-            ),
-            (
-                hash(14).to_string(),
-                EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
-                TraversalPosition::End,
-            ),
-        ];
-
-        let mut pos = TraversalPosition::Start;
-
-        for (name, info, expected_pos) in expected_entries {
-            let (newpos, sealed) =
-                Directory::read_dirents(&*pkgfs_versions, &pos, Box::new(FakeSink::new(1)))
-                    .await
-                    .expect("read_dirents failed");
-
-            assert_eq!(FakeSink::from_sealed(sealed).entries, vec![(name, info)]);
-            assert_eq!(newpos, expected_pos);
-
-            pos = newpos;
-        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
