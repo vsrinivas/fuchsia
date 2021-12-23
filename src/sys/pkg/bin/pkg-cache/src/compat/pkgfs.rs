@@ -10,13 +10,12 @@ use {
 };
 
 mod packages;
+mod validation;
 mod versions;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DirentType {
     Directory,
-    // TODO(fxbug.dev/88866) Use this.
-    #[allow(dead_code)]
     File,
 }
 
@@ -88,7 +87,6 @@ async fn read_dirents<'a>(
 
 #[cfg(test)]
 mod testing {
-
     use {
         super::*,
         std::any::Any,
