@@ -77,12 +77,9 @@ type WlanTxInfoValid = strict enum : uint8 {
     DATA_RATE = 0x1;
     TX_VECTOR_IDX = 0x2;
     PHY = 0x4;
-    //CHAN_WIDTH = 0x4;
-    MCS = 0x8;
-    // Bits 5-31 reserved
+    CHANNEL_BANDWIDTH = 0x8;
+    MCS = 0x10;
 };
-
-const WLAN_TX_INFO_VALID_CHAN_WIDTH uint8 = 0x4;
 
 type WlanTxInfo = struct {
     /// Transmit flags. These represent boolean options as opposed to enums or other value-based

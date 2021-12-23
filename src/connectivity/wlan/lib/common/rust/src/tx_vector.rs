@@ -210,7 +210,7 @@ impl TxVector {
         tx_flags: u32,
         minstrel_enabled: bool,
     ) -> hw_wlan_softmac::WlanTxInfo {
-        let valid_fields = hw_wlan_softmac::WLAN_TX_INFO_VALID_CHAN_WIDTH
+        let valid_fields = hw_wlan_softmac::WlanTxInfoValid::CHANNEL_BANDWIDTH.0
             | hw_wlan_softmac::WlanTxInfoValid::PHY.0
             | hw_wlan_softmac::WlanTxInfoValid::MCS.0
             | if minstrel_enabled { hw_wlan_softmac::WlanTxInfoValid::TX_VECTOR_IDX.0 } else { 0 };
@@ -287,6 +287,30 @@ impl std::fmt::Display for TxVecIdx {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn wlan_tx_info_valid_flags() {
+        let mut valid_flags = 0;
+
+        assert_ne!(0, hw_wlan_softmac::WlanTxInfoValid::DATA_RATE.0);
+        assert_eq!(0, valid_flags & hw_wlan_softmac::WlanTxInfoValid::DATA_RATE.0);
+        valid_flags |= hw_wlan_softmac::WlanTxInfoValid::DATA_RATE.0;
+
+        assert_ne!(0, hw_wlan_softmac::WlanTxInfoValid::TX_VECTOR_IDX.0);
+        assert_eq!(0, valid_flags & hw_wlan_softmac::WlanTxInfoValid::TX_VECTOR_IDX.0);
+        valid_flags |= hw_wlan_softmac::WlanTxInfoValid::TX_VECTOR_IDX.0;
+
+        assert_ne!(0, hw_wlan_softmac::WlanTxInfoValid::PHY.0);
+        assert_eq!(0, valid_flags & hw_wlan_softmac::WlanTxInfoValid::PHY.0);
+        valid_flags |= hw_wlan_softmac::WlanTxInfoValid::PHY.0;
+
+        assert_ne!(0, hw_wlan_softmac::WlanTxInfoValid::CHANNEL_BANDWIDTH.0);
+        assert_eq!(0, valid_flags & hw_wlan_softmac::WlanTxInfoValid::CHANNEL_BANDWIDTH.0);
+        valid_flags |= hw_wlan_softmac::WlanTxInfoValid::CHANNEL_BANDWIDTH.0;
+
+        assert_ne!(0, hw_wlan_softmac::WlanTxInfoValid::MCS.0);
+        assert_eq!(0, valid_flags & hw_wlan_softmac::WlanTxInfoValid::MCS.0);
+    }
 
     #[test]
     fn valid_tx_vector_idxs() {
