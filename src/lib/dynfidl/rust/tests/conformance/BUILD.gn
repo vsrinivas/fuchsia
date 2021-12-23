@@ -15,12 +15,7 @@ rustc_test("dynfidl_conformance") {
   ]
 }
 
-fuchsia_test_component("dynfidl_conformance_test") {
-  manifest = "meta/conformance.cml"
-  deps = [ ":dynfidl_conformance" ]
-}
-
-fuchsia_test_package("conformance") {
+fuchsia_unittest_package("conformance") {
   package_name = "dynfidl_conformance_test"
-  test_components = [ ":dynfidl_conformance_test" ]
+  deps = [ ":dynfidl_conformance" ]
 }
