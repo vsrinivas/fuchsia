@@ -1,4 +1,4 @@
-# Third party Source Management
+# Third party source management
 
 Third party repositories are an important part of Fuchsia. Like any other piece
 of software, our third party dependencies continue to evolve: add or remove
@@ -34,44 +34,60 @@ if the content of `BUILD.gn` doesn't have to change.
 
 ## How to convert existing third party repositories?
 
-### Soft transition
+Your need 4 commits, in the order they are listed below, to perform a soft
+transition for `<name>` third party repository:
 
-Soft transition is less disruptive and does not require a tree closure to land.
-It is the generally preferred approach.
+1.  Add Fuchsia-specific files to `//build/secondary` temporarily.
 
-To perform a soft transition for `<name>` third party repository:
+    1.  Copy `BUILD.gn`, `README.fuchsia`, `OWNERS`, and other Fuchsia-specific
+        files from `//third_party/<name>` to
+        `//build/secondary/third_party/<name>`.
+    2.  If applicable, update `OWNERS` to follow
+        [best practices][owners_best_practices]. Note after the migration,
+        `OWNERS` will only affect files in `//third_party/<name>`, but not
+        `//third_party/<name>/src`.
+    3.  Update `//build/secondary/third_party/<name>/BUILD.gn`, and other files
+        containing source paths like `.gni` files, to use the new source
+        location `//third_party/<name>/src`. This requires updating all sources,
+        include directory paths, etc.
 
-1.  Copy `BUILD.gn`, `README.fuchsia` and other Fuchsia-specific files from
-    `//third_party/<name>` to `//build/secondary/third_party/<name>`.
-2.  Update `//build/secondary/third_party/BUILD.gn` to use the new source
-    location `//third_party/<name>/src`. This requires updating all sources,
-    include directory paths, etc.
-3.  Update the integration manifest replacing the existing forked project at
+    NOTE: CQ can't catch errors in this change (for example typos in paths). To
+    validate before merging, stage commit 2 in your local checkout, run `jiri
+    update -local-manifest`, then verify `fx build` can finish successfully.
+
+    Example: https://fxrev.dev/622785
+
+2.  Update the integration manifest.
+
+    Replace `path` (not `name`) of the existing third party project at
     `//third_party/<name>` with `//third_party/<name>/src`, while keeping
     revision unchanged. There shouldn't be any disruption as the build will now
-    use the `BUILD.gn` file in secondary location.
-4.  Move `BUILD.gn`, `README.fuchsia` and other Fuchsia-specific files from
-    `//build/secondary/third_party/<name>` to `//third_party/<name>`.
-5.  Change revision of `//third_party/<name>/src` to point to upstream.
+    use the `BUILD.gn` file in secondary location from commit 1.
 
-### Hard transition
+    Example: http://tqr/457911
 
-This approach is more disruptive (requires tree closure to land) than the soft
-transition described above. Coordinate with build gardeners if you have to use
-this approach.
+3.  Move Fuchsia-specific files added in commit 1 to `//third_party/<name>`.
 
-To perform a hard transition for `<name>` third party repository:
+    To start this step, wait for commit 2 to merge, then run `jiri update`. Or
+    stage commit 2 in your local checkout, then run `jiri update
+    -local-manifest`.
 
-1.  Prepare a change to copy `BUILD.gn`, `README.fuchsia` and other
-    Fuchsia-specific files from `//third_party/<name>` to `//third_party/<name>`
-    in fuchsia.git. We would also update `BUILD.gn` to refer to the new source
-    location `//third_party/<name>/src` as part of the same change.
-2.  Prepare a change to update the integration manifest replacing the existing
-    forked project at `//third_party/<name>` with `//third_party/<name>/src`,
-    while keeping revision unchanged.
-3.  Submit all of these changes together during tree closure.
-4.  Notify all developers to run `jiri update -gc` twice.
-5.  Change revision of `//third_party/<name>/src` to point to upstream.
+    Move `BUILD.gn`, `README.fuchsia`, `OWNERS`, and other Fuchsia-specific
+    files from `//build/secondary/third_party/<name>` to `//third_party/<name>`.
+    You will likely need to update `.gitignore` to make
+    [fuchsia.git][fuchsia_git] track `//third_party/<name>` but not
+    `//third_party/<name>/src`. See linked example below.
+
+    Example: https://fxrev.dev/622789
+
+4.  Remove Fuchsia-specific files from `//third_party/<name>/src`.
+
+    If possible, change revision of `//third_party/<name>/src` to point to a
+    commit from upstream release. In other cases, merge a change to remove
+    Fuchsia-specific files from this third party repo, then update the revision
+    to include your change.
+
+    Example: http://tqr/427570
 
 ## Background
 
@@ -124,3 +140,4 @@ This page describes a new layout to replace the existing one. This new layout:
 *   Simplifies the process of updating third party repositories.
 
 [fuchsia_git]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main
+[owners_best_practices]: /docs/concepts/source_code/owners.md#best_practices
