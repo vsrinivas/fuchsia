@@ -1,7 +1,5 @@
 # Fuchsia open source licensing policies
 
-## Overview
-
 This document describes open source licenses and related policies in the Fuchsia project.
 
 ## Fuchsia project code
