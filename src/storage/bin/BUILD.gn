@@ -5,6 +5,7 @@
 group("tests") {
   testonly = true
   deps = [
+    "blobfs-component:tests",
     "disk-pave:tests",
     "odu:tests",
   ]

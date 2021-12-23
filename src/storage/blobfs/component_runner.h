@@ -1,0 +1,75 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SRC_STORAGE_BLOBFS_COMPONENT_RUNNER_H_
+#define SRC_STORAGE_BLOBFS_COMPONENT_RUNNER_H_
+
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/status.h>
+
+#include <optional>
+
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
+#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/query_service.h"
+#include "src/storage/blobfs/blobfs.h"
+#include "src/storage/blobfs/health_check_service.h"
+#include "src/storage/blobfs/mount.h"
+#include "src/storage/blobfs/service/startup.h"
+
+namespace blobfs {
+
+// TODO(fxbug.dev/90698): Once everything launches blobfs as a component, delete the old Runner
+// class and rename this just Runner.
+class ComponentRunner : public fs::PagedVfs {
+ public:
+  ComponentRunner(const ComponentRunner&) = delete;
+  ComponentRunner& operator=(const ComponentRunner&) = delete;
+
+  explicit ComponentRunner(async::Loop& loop);
+
+  // fs::PagedVfs interface.
+  void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
+  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+
+  zx::status<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root,
+                         fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
+                         fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin_client,
+                         zx::resource vmex_resource);
+  zx::status<> Configure(std::unique_ptr<BlockDevice> device, const MountOptions& options);
+
+ private:
+  // Tell driver_manager to remove all drivers living in storage. This must be called before
+  // shutting down. `callback` will be called once all drivers living in storage have been
+  // unbound and removed.
+  void RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback);
+
+  async::Loop& loop_;
+
+  zx::resource vmex_resource_;
+
+  // startup service is always initialized
+  fbl::RefPtr<StartupService> startup_svc_;
+
+  // these are only initialized by configure after a call to the startup service
+  std::unique_ptr<Blobfs> blobfs_;
+  fbl::RefPtr<HealthCheckService> health_check_svc_;
+  fbl::RefPtr<fs::QueryService> query_svc_;
+
+  // the basic outgoing directory structure is always initialized. svc is place in the outgoing
+  // directory at `/svc`.
+  fbl::RefPtr<fs::PseudoDir> outgoing_;
+  fbl::RefPtr<fs::PseudoDir> svc_;
+
+  fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
+};
+
+}  // namespace blobfs
+
+#endif  // SRC_STORAGE_BLOBFS_COMPONENT_RUNNER_H_

@@ -204,6 +204,29 @@ wrap_with_decompressor("blobfs-query-service") {
   ]
 }
 
+test("blobfs_component_runner_test") {
+  output_name = "blobfs_component_runner_test"
+  sources = [ "blobfs_component_runner_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp:fake_device",
+    "//src/storage/blobfs",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/id_allocator",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_unittest_component("blobfs-component-runner-test") {
+  deps = [ ":blobfs_component_runner_test" ]
+}
+
 test("blobfs_sync") {
   output_name = "blobfs_sync_test"
 
@@ -459,6 +482,7 @@ fuchsia_test_package("blobfs-integration-package") {
   }
   package_name = "blobfs-integration"
   test_components = [
+    ":blobfs-component-runner-test",
     ":blobfs-integration",
     ":blobfs-mount",
     ":blobfs-query-service",

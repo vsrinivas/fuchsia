@@ -6,6 +6,8 @@
 #define SRC_STORAGE_BLOBFS_MOUNT_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/resource.h>
 
@@ -83,13 +85,29 @@ struct MountOptions {
 // |vmex_resource|, or else the mounted filesystem will not support requesting VMOs for blobs with
 // VMO_FLAG_EXEC.
 //
-// |diagnostics_dir| is the server end of a diagnostics directory made for BlobFS.
-// The inspect tree is served in this directory. This directory will be visible to Archivist.
-//
 // This function blocks until the filesystem terminates.
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
                   fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout,
                   zx::resource vmex_resource);
+
+// Start blobfs as a component. Begin serving requests on the provided |root|. Initially it starts
+// the filesystem in an unconfigured state, only serving the fuchsia.fs.Startup protocol. Once
+// fuchsia.fs.Startup/Start is called with the block device and mount options, the filesystem is
+// started with that configuration and begins serving requests to other protocols, including the
+// actual root of the filesystem at /root.
+//
+// Also expects a lifecycle server end over which to serve fuchsia.process.lifecycle/Lifecycle for
+// shutting down the blobfs component.
+//
+// blobfs relies on the zx_vmo_replace_as_executable syscall to be able to serve executable blobs.
+// The caller must either pass a valid Resource handle of kind ZX_RSRC_KIND_VMEX (or _ROOT) for
+// |vmex_resource|, or else the mounted filesystem will not support requesting VMOs for blobs with
+// VMO_FLAG_EXEC.
+//
+// This function blocks until the filesystem terminates.
+zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+                            fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
+                            zx::resource vmex_resource);
 
 }  // namespace blobfs
 

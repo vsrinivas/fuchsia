@@ -1,0 +1,85 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fs.startup;
+
+using fuchsia.hardware.block;
+using zx;
+
+/// Compression algorithm specifier.
+type CompressionAlgorithm = flexible enum {
+    ZSTD_CHUNKED = 0;
+    UNCOMPRESSED = 1;
+};
+
+/// An optional eviction policy override for pager-backed blobs for blobfs.
+type EvictionPolicyOverride = flexible enum {
+    /// Don't override the default cache policy.
+    NONE = 0;
+    /// Override the default cache policy for pager-backed blobs with kNeverEvict.
+    NEVER_EVICT = 1;
+    /// Override the default cache policy for pager-backed blobs with kEvictImmediately.
+    EVICT_IMMEDIATELY = 2;
+};
+
+/// Options for starting a filesystem.
+type StartOptions = resource struct {
+    /// Start the filesystem in read-only mode.
+    read_only bool = false;
+    /// Enable verbose logging.
+    verbose bool = false;
+    /// Enable metrics collection via Cobalt.
+    collect_metrics bool = false;
+    /// If true, decompression is run in a sandbox component (if the filesystem supports it).
+    sandbox_decompression bool = false;
+
+    /// A compression algorithm specifier for the filesystem to use when storing files (if the
+    /// filesystem supports it). Defaults to ZSTD_CHUNKED.
+    write_compression_algorithm CompressionAlgorithm;
+    /// An optional compression level for the filesystem to use when storing files (if the
+    /// filesystem and the configured |write_compression_algorithm| supports it). Setting to < 0
+    /// indicates no value (the filesystem chooses a default if necessary).
+    write_compression_level int32 = -1;
+
+    /// An optional eviction policy specifier for the filesystem to use for in-memory structures
+    /// (if the filesystem supports it), specifically for pager-backed files.
+    cache_eviction_policy_override EvictionPolicyOverride;
+};
+
+/// Options for how to format filesystems.
+type FormatOptions = resource struct {
+    /// Enable verbose logging.
+    verbose bool = false;
+    /// If true, use the deprecated padded merkle tree blobfs format.
+    deprecated_padded_blobfs_format bool = false;
+    /// The initial number of inodes to allocate space for. If zero, a default is used. Only
+    /// supported for blobfs.
+    num_inodes uint64 = 0;
+};
+
+/// Options for running consistency checks on filesystems.
+type CheckOptions = resource struct {};
+
+// TODO(fxbug.dev/90702): Figure out a more flexible configuration option strategy.
+@discoverable
+protocol Startup {
+    /// Start this filesystem, using the provided block device and Start options. When start is
+    /// called, the filesystem will populate it's outgoing directory and then return.
+    Start(resource struct {
+        device client_end:fuchsia.hardware.block.Block;
+        options StartOptions;
+    }) -> (struct {}) error zx.status;
+
+    /// Format the provided block device with this filesystem.
+    Format(resource struct {
+        device client_end:fuchsia.hardware.block.Block;
+        options FormatOptions;
+    }) -> (struct {}) error zx.status;
+
+    /// Check the provided block device for filesystem consistency.
+    Check(resource struct {
+        device client_end:fuchsia.hardware.block.Block;
+        options CheckOptions;
+    }) -> (struct {}) error zx.status;
+};
