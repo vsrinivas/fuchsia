@@ -316,12 +316,9 @@ impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler
                 context,
                 Box::new(|proxy| {
                     Box::pin(async move {
-                        let controller_result = C::create(proxy).await;
-
-                        match controller_result {
-                            Err(err) => Err(err),
-                            Ok(controller) => Ok(Box::new(controller) as BoxedController),
-                        }
+                        C::create(proxy)
+                            .await
+                            .map(|controller| Box::new(controller) as BoxedController)
                     })
                 }),
             )

@@ -21,3 +21,6 @@ pub(crate) mod setting_handler_factory_impl;
 
 /// This mod implements recording stash write failures to inspect.
 mod stash_inspect_logger;
+
+/// This mod implements a struct for managing storage of the setting_proxies inspect node.
+pub(crate) mod inspect_setting_proxy;

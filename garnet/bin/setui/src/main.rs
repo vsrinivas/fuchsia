@@ -5,7 +5,9 @@
 use anyhow::{Context, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
+use fuchsia_inspect::component;
 use fuchsia_syslog::{self as syslog, fx_log_info};
+use lazy_static::lazy_static;
 use settings::agent::BlueprintHandle as AgentBlueprintHandle;
 use settings::base::get_default_interfaces;
 use settings::config::base::{get_default_agent_types, AgentType};
@@ -15,6 +17,7 @@ use settings::AgentConfiguration;
 use settings::EnabledInterfacesConfiguration;
 use settings::EnabledPoliciesConfiguration;
 use settings::EnvironmentBuilder;
+use settings::InspectSettingProxy;
 use settings::ServiceConfiguration;
 use settings::ServiceFlags;
 use std::collections::HashSet;
@@ -22,6 +25,11 @@ use std::path::Path;
 use std::sync::Arc;
 
 const STASH_IDENTITY: &str = "settings_service";
+
+lazy_static! {
+    static ref INSPECT_SETTING_PROXY: InspectSettingProxy =
+        InspectSettingProxy::new(component::inspector().root());
+}
 
 fn main() -> Result<(), Error> {
     let executor = fasync::LocalExecutor::new()?;
@@ -91,6 +99,7 @@ fn main() -> Result<(), Error> {
     EnvironmentBuilder::new(Arc::new(storage_factory))
         .configuration(configuration)
         .agent_mapping(<AgentBlueprintHandle as From<AgentType>>::from)
+        .setting_proxy_node(INSPECT_SETTING_PROXY.node())
         .spawn(executor)
         .context("Failed to spawn environment for setui")
 }

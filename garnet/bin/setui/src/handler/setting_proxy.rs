@@ -30,6 +30,10 @@ use futures::{FutureExt, StreamExt};
 use std::collections::VecDeque;
 use std::sync::Arc;
 
+/// Maximum number of errors tracked per setting proxy before errors are rolled over.
+// The value was chosen arbitrarily. Feel free to increase if it's too small.
+pub(crate) const MAX_NODE_ERRORS: usize = 10;
+
 /// An enumeration of the different client types that provide requests to
 /// setting handlers.
 #[derive(Clone, Debug)]
@@ -174,6 +178,9 @@ pub(crate) struct SettingProxy {
     request_timeout: Option<Duration>,
     retry_on_timeout: bool,
     teardown_cancellation: Option<futures::channel::oneshot::Sender<()>>,
+    node: fuchsia_inspect::Node,
+    node_errors: VecDeque<fuchsia_inspect::StringProperty>,
+    error_count: usize,
 }
 
 /// Publishes an event to the event_publisher.
@@ -194,6 +201,7 @@ impl SettingProxy {
         teardown_timeout: Duration,
         request_timeout: Option<Duration>,
         retry_on_timeout: bool,
+        node: fuchsia_inspect::Node,
     ) -> Result<service::message::Signature, Error> {
         let (messenger, receptor) = delegate
             .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
@@ -235,6 +243,9 @@ impl SettingProxy {
             request_timeout,
             retry_on_timeout,
             teardown_cancellation: None,
+            node,
+            node_errors: VecDeque::new(),
+            error_count: 0,
         };
 
         // Main task loop for receiving and processing incoming messages.
@@ -380,13 +391,26 @@ impl SettingProxy {
         force_create: bool,
     ) -> Option<service::message::Signature> {
         if force_create || self.client_signature.is_none() {
-            self.client_signature = self
+            self.client_signature = match self
                 .handler_factory
                 .lock()
                 .await
                 .generate(self.setting_type, self.delegate.clone(), self.signature)
                 .await
-                .ok();
+            {
+                Ok(signature) => Some(signature),
+                Err(e) => {
+                    self.node_errors.push_back(
+                        self.node
+                            .create_string(format!("{:020}", self.error_count), format!("{:?}", e)),
+                    );
+                    self.error_count += 1;
+                    if self.node_errors.len() > MAX_NODE_ERRORS {
+                        let _ = self.node_errors.pop_front();
+                    }
+                    None
+                }
+            };
         }
 
         self.client_signature

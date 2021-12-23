@@ -274,8 +274,8 @@ pub enum SettingHandlerFactoryError {
     #[error("MessageHub Messenger for lifecycle messenger could not be created")]
     LifecycleMessengerError,
 
-    #[error("Setting handler for {0:?} failed to startup")]
-    HandlerStartupError(SettingType),
+    #[error("Setting handler for {0:?} failed to startup. cause: {1:?}")]
+    HandlerStartupError(SettingType, Cow<'static, str>),
 }
 
 /// A factory capable of creating a handler for a given setting on-demand. If no
