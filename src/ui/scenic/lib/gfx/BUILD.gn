@@ -12,11 +12,8 @@ declare_args() {
   scenic_display_frame_number = false
 }
 
-config("common_include_dirs") {
-  include_dirs = [
-    "//garnet",
-    "//third_party/glm",
-  ]
+config("include_garnet") {
+  include_dirs = [ "//garnet" ]
 }
 
 config("swapchain") {
@@ -45,12 +42,13 @@ source_set("gfx_always_optimized") {
     # Always optimize regardless of debug or --release.
     "-O3",
   ]
-  public_configs = [ ":common_include_dirs" ]
+  public_configs = [ ":include_garnet" ]
   public_deps = [ "//src/ui/lib/escher" ]
 
   deps = [
     "//sdk/lib/images/cpp",
     "//src/ui/lib/yuv",
+    "//third_party/glm",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -208,7 +206,7 @@ source_set("gfx") {
     "sysmem.h",
   ]
 
-  public_configs = [ ":common_include_dirs" ]
+  public_configs = [ ":include_garnet" ]
 
   configs += [ ":swapchain" ]
 
@@ -264,6 +262,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/utils",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//third_party/glm",
     "//third_party/rapidjson",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",

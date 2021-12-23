@@ -18,12 +18,11 @@ executable("bin") {
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/util",
     "//src/ui/a11y/lib/view",
+    "//third_party/glm",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
-
-  include_dirs = [ "//third_party/glm" ]
 }
 
 l10n_files = [

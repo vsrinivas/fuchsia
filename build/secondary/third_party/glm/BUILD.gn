@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("glm") {
+  public_configs = [ ":headers" ]
+}
+
+config("headers") {
+  include_dirs = [ "//third_party/glm" ]
+}
+
+config("enable_experimental") {
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}
+
+config("force_depth_zero_to_one") {
+  defines = [
+    # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
+    "GLM_FORCE_DEPTH_ZERO_TO_ONE",
+  ]
+}

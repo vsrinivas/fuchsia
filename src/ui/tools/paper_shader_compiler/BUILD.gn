@@ -11,12 +11,12 @@ executable("paper_shader_compiler") {
     # Shader precompiler should always be built with glslang.
     "//src/ui/lib/escher:escher_with_glslang",
     "//src/ui/lib/escher/shaders/util:shader_utils",
+    "//third_party/glm",
     "//third_party/shaderc:libshaderc",
   ]
 
   include_dirs = [
     "//lib",
     "//src/ui/lib/escher",
-    "//third_party/glm",
   ]
 }

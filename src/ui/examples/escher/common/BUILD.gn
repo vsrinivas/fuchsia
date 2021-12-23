@@ -8,6 +8,7 @@ static_library("common") {
     ":demo_base",
     "//src/lib/files",
     "//src/lib/fxl",
+    "//third_party/glm",
     "//third_party/glslang:glslang_default_resource_limits_sources",
     "//third_party/glslang:glslang_sources",
   ]
@@ -16,10 +17,7 @@ static_library("common") {
     "dl",
     "pthread",
   ]
-  include_dirs = [
-    "//lib",
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//lib" ]
 
   if (is_fuchsia) {
     deps += [ ":demo_harness_fuchsia" ]

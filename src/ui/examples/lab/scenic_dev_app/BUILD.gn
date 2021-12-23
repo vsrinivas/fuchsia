@@ -32,7 +32,7 @@ executable("bin") {
     "//lib",
   ]
 
-  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+  configs += [ "//third_party/glm:enable_experimental" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

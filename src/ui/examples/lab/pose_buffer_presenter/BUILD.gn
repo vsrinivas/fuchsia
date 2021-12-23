@@ -29,11 +29,10 @@ executable("bin") {
 
   include_dirs = [
     "//src/ui/lib/escher",
-    "//third_party/glm",
     "//lib",
   ]
 
-  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+  configs += [ "//third_party/glm:enable_experimental" ]
 }
 
 fuchsia_package_with_single_component("pose_buffer_presenter") {

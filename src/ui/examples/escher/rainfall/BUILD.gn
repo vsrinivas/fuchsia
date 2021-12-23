@@ -18,12 +18,12 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
     deps = [
       ":rainfall_demo",
       "//src/ui/examples/escher/common",
+      "//third_party/glm",
     ]
 
     include_dirs = [
       "//lib",
       "//src/ui/lib/escher",
-      "//third_party/glm",
     ]
 
     if (is_fuchsia) {

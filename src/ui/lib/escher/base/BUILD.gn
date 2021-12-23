@@ -14,7 +14,5 @@ static_library("escher_base") {
     "typed_reffable.h",
   ]
 
-  public_configs = [ "//src/ui/lib/escher/geometry:glm_config" ]
-
   public_deps = [ "//src/lib/fxl" ]
 }

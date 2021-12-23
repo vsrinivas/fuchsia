@@ -2,17 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("glm_config") {
-  include_dirs = [ "//third_party/glm" ]
-
-  defines = [
-    "GLM_ENABLE_EXPERIMENTAL",
-
-    # Use Vulkan NDC (normalized depth coordinates): [0..1] instead of [-1..1]
-    "GLM_FORCE_DEPTH_ZERO_TO_ONE",
-  ]
-}
-
 source_set("escher_geometry") {
   public_deps = [
     "//src/ui/lib/escher/util:escher_geometry_utils",
@@ -35,5 +24,8 @@ source_set("escher_geometry") {
     "types.h",
   ]
 
-  public_configs = [ ":glm_config" ]
+  public_configs = [
+    "//third_party/glm:enable_experimental",
+    "//third_party/glm:force_depth_zero_to_one",
+  ]
 }

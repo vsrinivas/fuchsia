@@ -2,12 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("public_glm_dirs") {
-  include_dirs = [ "//third_party/glm" ]
-}
-
 source_set("glm_workaround") {
   sources = [ "glm_workaround.h" ]
-
-  public_configs = [ ":public_glm_dirs" ]
+  public_deps = [ "//third_party/glm" ]
 }

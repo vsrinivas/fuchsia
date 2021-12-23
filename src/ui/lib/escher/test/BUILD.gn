@@ -105,6 +105,7 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "//src/lib/fxl",
       "//src/ui/lib/escher/test/common:gtest_escher",
       "//src/ui/lib/escher/test/common:readback_fixtures",
+      "//third_party/glm",
       "//third_party/googletest:gmock",
     ]
 
@@ -143,7 +144,6 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
     include_dirs = [
       "//lib",
       "//src/ui/lib/escher",
-      "//third_party/glm",
     ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

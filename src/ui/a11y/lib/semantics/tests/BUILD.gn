@@ -112,12 +112,10 @@ executable("semantics_tests") {
     "//src/ui/a11y/lib/screen_reader/util",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//third_party/glm",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]
-
-  # This is a dependency of the semantic tree to perform certain matrix transform operations.
-  include_dirs = [ "//third_party/glm" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

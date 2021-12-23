@@ -2,12 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("glm_config") {
-  include_dirs = [ "//third_party/glm" ]
-
-  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
-}
-
 # Keep the renderer source set separate from the rest of Flatland
 # due to its dependencies on Escher which we do not want exposed.
 source_set("renderer") {
@@ -20,8 +14,6 @@ source_set("renderer") {
     "vk_renderer.h",
   ]
 
-  public_configs = [ ":glm_config" ]
-
   public_deps = [
     "//src/ui/lib/escher/geometry:escher_geometry",
     "//src/ui/lib/glm_workaround",
@@ -29,6 +21,8 @@ source_set("renderer") {
   ]
 
   deps = [ "//src/ui/lib/escher" ]
+
+  configs += [ "//third_party/glm:enable_experimental" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
