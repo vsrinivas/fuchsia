@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/d868c5aa0bb4e72e3e3bcad7a3392c0fddc781d9/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f4699f2f3fe3888559dfaaf4b71146e87ed05082/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/d868c5aa0bb4e72e3e3bcad7a3392c0fddc781d9/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f4699f2f3fe3888559dfaaf4b71146e87ed05082/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -392,7 +392,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:47
+From //src/graphics/lib/magma/gnbuild/magma.gni:45
 
 ### board_name
 Board name used for paving and amber updates.
@@ -632,14 +632,14 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:44
+From //src/graphics/lib/magma/gnbuild/magma.gni:42
 
 ### build_libvulkan_vsi_vip
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:41
+From //src/graphics/lib/magma/gnbuild/magma.gni:39
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -1686,12 +1686,6 @@ use the plasa artifacts, so we set the default to skip the generation.
 
 From //sdk/cts/plasa/config.gni:8
 
-### glm_build_root
-
-**Current value (from the default):** `"//third_party/glm"`
-
-From //src/graphics/lib/magma/gnbuild/magma.gni:17
-
 ### go_vet_enabled
   go_vet_enabled
     [bool] if false, go vet invocations are disabled for all builds.
@@ -1788,7 +1782,7 @@ change test environments so Vulkan tests run on boards with Mali GPUs.
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:36
+From //src/graphics/lib/magma/gnbuild/magma.gni:34
 
 ### host_byteorder
 
@@ -2316,27 +2310,27 @@ Enable this to include fuchsia tracing capability
 
 **Current value (from the default):** `true`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:23
+From //src/graphics/lib/magma/gnbuild/magma.gni:21
 
 ### magma_openvx_include
 The path to OpenVX headers
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:29
+From //src/graphics/lib/magma/gnbuild/magma.gni:27
 
 ### magma_openvx_package
 The path to an OpenVX implementation
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:32
+From //src/graphics/lib/magma/gnbuild/magma.gni:30
 
 ### magma_python_path
 
 **Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/third_party/mako"`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:20
+From //src/graphics/lib/magma/gnbuild/magma.gni:18
 
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
@@ -3151,7 +3145,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:26
+From //src/graphics/lib/magma/gnbuild/magma.gni:24
 
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
@@ -4352,12 +4346,6 @@ From //build/config/fuchsia/BUILD.gn:150
 **Current value (from the default):** `""`
 
 From //build/images/args.gni:92
-
-### zircon_build_root
-
-**Current value (from the default):** `"//zircon"`
-
-From //src/graphics/lib/magma/gnbuild/magma.gni:18
 
 ### zircon_compdb_filter
 Compilation database filter. Gets passed to --export-compile-commands=<filter>.
