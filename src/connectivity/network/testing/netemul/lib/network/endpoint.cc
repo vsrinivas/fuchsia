@@ -288,12 +288,6 @@ class NetworkDeviceImpl : public EndpointImpl,
     callback(fuchsia::device::Controller_ScheduleUnbind_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
 
-  void GetDriverName(GetDriverNameCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED, "");
-  }
-
-  void GetDeviceName(GetDeviceNameCallback callback) override { callback(""); }
-
   // Returns a fake topological path.
   //
   // Network devices in netemul are backed by network-tun, which does not provide
@@ -322,49 +316,13 @@ class NetworkDeviceImpl : public EndpointImpl,
     callback(0);
   }
 
-  void GetDevicePowerCaps(GetDevicePowerCapsCallback callback) override {
-    callback(fuchsia::device::Controller_GetDevicePowerCaps_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
-  }
-
   void GetCurrentPerformanceState(GetCurrentPerformanceStateCallback callback) override {
     callback(0);
-  }
-
-  void GetDevicePerformanceStates(GetDevicePerformanceStatesCallback callback) override {
-    callback(std::array<fuchsia::device::DevicePerformanceStateInfo,
-                        fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES>(),
-             ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void UpdatePowerStateMapping(std::array<fuchsia::device::SystemPowerStateInfo, 7> mapping,
-                               UpdatePowerStateMappingCallback callback) override {
-    callback(
-        fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
-  }
-
-  void GetPowerStateMapping(GetPowerStateMappingCallback callback) override {
-    callback(
-        fuchsia::device::Controller_GetPowerStateMapping_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
-  }
-
-  void Suspend(fuchsia::device::DevicePowerState requested_state,
-               SuspendCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED, fuchsia::device::DevicePowerState());
-  }
-
-  void Resume(ResumeCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED, fuchsia::device::DevicePowerState(), 0);
   }
 
   void SetPerformanceState(uint32_t requested_state,
                            SetPerformanceStateCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED, 0);
-  }
-
-  void ConfigureAutoSuspend(bool enable,
-                            fuchsia::device::DevicePowerState requested_deepest_sleep_state,
-                            ConfigureAutoSuspendCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED);
   }
 
  private:

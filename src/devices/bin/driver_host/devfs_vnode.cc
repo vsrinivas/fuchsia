@@ -123,18 +123,6 @@ void DevfsVnode::Bind(BindRequestView request, BindCompleter::Sync& completer) {
   }
 }
 
-void DevfsVnode::GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
-                                            GetDevicePerformanceStatesCompleter::Sync& completer) {
-  auto& perf_states = dev_->GetPerformanceStates();
-  ZX_DEBUG_ASSERT(perf_states.size() == fuchsia_device::wire::kMaxDevicePerformanceStates);
-
-  ::fidl::Array<fuchsia_device::wire::DevicePerformanceStateInfo, 20> states{};
-  for (size_t i = 0; i < fuchsia_device::wire::kMaxDevicePerformanceStates; i++) {
-    states[i] = perf_states[i];
-  }
-  completer.Reply(states, ZX_OK);
-}
-
 void DevfsVnode::GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
                                             GetCurrentPerformanceStateCompleter::Sync& completer) {
   completer.Reply(dev_->current_performance_state());
@@ -186,24 +174,6 @@ void DevfsVnode::ScheduleUnbind(ScheduleUnbindRequestView request,
   }
 }
 
-void DevfsVnode::GetDriverName(GetDriverNameRequestView request,
-                               GetDriverNameCompleter::Sync& completer) {
-  if (!dev_->driver) {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
-    return;
-  }
-  const char* name = dev_->driver->name();
-  if (name == nullptr) {
-    name = "unknown";
-  }
-  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name));
-}
-
-void DevfsVnode::GetDeviceName(GetDeviceNameRequestView request,
-                               GetDeviceNameCompleter::Sync& completer) {
-  completer.Reply(fidl::StringView::FromExternal(dev_->name()));
-}
-
 void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
                                     GetTopologicalPathCompleter::Sync& completer) {
   char buf[fuchsia_device::wire::kMaxDevicePathLen + 1];
@@ -253,88 +223,12 @@ void DevfsVnode::RunCompatibilityTests(RunCompatibilityTestsRequestView request,
   }
 }
 
-void DevfsVnode::GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
-                                    GetDevicePowerCapsCompleter::Sync& completer) {
-  // For now, the result is always a successful response because the device itself is not added
-  // without power states validation. In future, we may add more checks for validation, and the
-  // error result will be put to use.
-  fuchsia_device::wire::ControllerGetDevicePowerCapsResponse response{};
-  auto& states = dev_->GetPowerStates();
-
-  ZX_DEBUG_ASSERT(states.size() == fuchsia_device::wire::kMaxDevicePowerStates);
-  for (size_t i = 0; i < fuchsia_device::wire::kMaxDevicePowerStates; i++) {
-    response.dpstates[i] = states[i];
-  }
-  completer.Reply(fuchsia_device::wire::ControllerGetDevicePowerCapsResult::WithResponse(
-      fidl::ObjectView<fuchsia_device::wire::ControllerGetDevicePowerCapsResponse>::FromExternal(
-          &response)));
-}
-
 void DevfsVnode::SetPerformanceState(SetPerformanceStateRequestView request,
                                      SetPerformanceStateCompleter::Sync& completer) {
   uint32_t out_state;
   zx_status_t status = dev_->driver_host_context()->DeviceSetPerformanceState(
       dev_, request->requested_state, &out_state);
   completer.Reply(status, out_state);
-}
-
-void DevfsVnode::ConfigureAutoSuspend(ConfigureAutoSuspendRequestView request,
-                                      ConfigureAutoSuspendCompleter::Sync& completer) {
-  zx_status_t status = dev_->driver_host_context()->DeviceConfigureAutoSuspend(
-      dev_, request->enable, request->requested_deepest_sleep_state);
-  completer.Reply(status);
-}
-
-void DevfsVnode::UpdatePowerStateMapping(UpdatePowerStateMappingRequestView request,
-                                         UpdatePowerStateMappingCompleter::Sync& completer) {
-  std::array<fuchsia_device::wire::SystemPowerStateInfo,
-             statecontrol_fidl::wire::kMaxSystemPowerStates>
-      states_mapping;
-
-  for (size_t i = 0; i < statecontrol_fidl::wire::kMaxSystemPowerStates; i++) {
-    states_mapping[i] = request->mapping[i];
-  }
-  zx_status_t status = dev_->SetSystemPowerStateMapping(states_mapping);
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
-    return;
-  }
-
-  fuchsia_device::wire::ControllerUpdatePowerStateMappingResponse response;
-  completer.Reply(
-      fuchsia_device::wire::ControllerUpdatePowerStateMappingResult::WithResponse(response));
-}
-
-void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingRequestView request,
-                                      GetPowerStateMappingCompleter::Sync& completer) {
-  fuchsia_device::wire::ControllerGetPowerStateMappingResponse response;
-
-  auto& mapping = dev_->GetSystemPowerStateMapping();
-  ZX_DEBUG_ASSERT(mapping.size() == statecontrol_fidl::wire::kMaxSystemPowerStates);
-
-  for (size_t i = 0; i < statecontrol_fidl::wire::kMaxSystemPowerStates; i++) {
-    response.mapping[i] = mapping[i];
-  }
-  completer.Reply(fuchsia_device::wire::ControllerGetPowerStateMappingResult::WithResponse(
-      fidl::ObjectView<fuchsia_device::wire::ControllerGetPowerStateMappingResponse>::FromExternal(
-          &response)));
-}
-
-void DevfsVnode::Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) {
-  dev_->suspend_cb = [completer = completer.ToAsync()](zx_status_t status,
-                                                       uint8_t out_state) mutable {
-    completer.Reply(status, static_cast<fuchsia_device::wire::DevicePowerState>(out_state));
-  };
-  dev_->driver_host_context()->DeviceSuspendNew(dev_, request->requested_state);
-}
-
-void DevfsVnode::Resume(ResumeRequestView request, ResumeCompleter::Sync& completer) {
-  dev_->resume_cb = [completer = completer.ToAsync()](zx_status_t status, uint8_t out_power_state,
-                                                      uint32_t out_perf_state) mutable {
-    completer.Reply(status, static_cast<fuchsia_device::wire::DevicePowerState>(out_power_state),
-                    out_perf_state);
-  };
-  dev_->driver_host_context()->DeviceResumeNew(dev_);
 }
 
 namespace {

@@ -36,35 +36,18 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                       UnbindChildrenCompleter::Sync& completer) override;
   void ScheduleUnbind(ScheduleUnbindRequestView request,
                       ScheduleUnbindCompleter::Sync& _completer) override;
-  void GetDriverName(GetDriverNameRequestView request,
-                     GetDriverNameCompleter::Sync& _completer) override;
-  void GetDeviceName(GetDeviceNameRequestView request,
-                     GetDeviceNameCompleter::Sync& _completer) override;
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override;
   void GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
                                GetMinDriverLogSeverityCompleter::Sync& _completer) override;
-  void GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
-                                  GetDevicePerformanceStatesCompleter::Sync& completer) override;
   void GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
                                   GetCurrentPerformanceStateCompleter::Sync& completer) override;
   void SetMinDriverLogSeverity(SetMinDriverLogSeverityRequestView request,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override;
   void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                              RunCompatibilityTestsCompleter::Sync& _completer) override;
-  void GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
-                          GetDevicePowerCapsCompleter::Sync& _completer) override;
   void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void ConfigureAutoSuspend(ConfigureAutoSuspendRequestView request,
-                            ConfigureAutoSuspendCompleter::Sync& _completer) override;
-
-  void UpdatePowerStateMapping(UpdatePowerStateMappingRequestView request,
-                               UpdatePowerStateMappingCompleter::Sync& _completer) override;
-  void GetPowerStateMapping(GetPowerStateMappingRequestView request,
-                            GetPowerStateMappingCompleter::Sync& _completer) override;
-  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& _completer) override;
-  void Resume(ResumeRequestView request, ResumeCompleter::Sync& _complete) override;
 
  private:
   // Vnode protected implementation:

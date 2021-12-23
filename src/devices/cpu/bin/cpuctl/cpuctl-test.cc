@@ -56,8 +56,6 @@ class FakeCpuDevice : TestDeviceType,
   // We only implement the following methods for now
   void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
-  void GetDevicePerformanceStates(GetDevicePerformanceStatesRequestView request,
-                                  GetDevicePerformanceStatesCompleter::Sync& completer) override;
   void GetCurrentPerformanceState(GetCurrentPerformanceStateRequestView request,
                                   GetCurrentPerformanceStateCompleter::Sync& completer) override;
 
@@ -68,10 +66,6 @@ class FakeCpuDevice : TestDeviceType,
                       UnbindChildrenCompleter::Sync& completer) override {}
   void ScheduleUnbind(ScheduleUnbindRequestView request,
                       ScheduleUnbindCompleter::Sync& _completer) override {}
-  void GetDriverName(GetDriverNameRequestView request,
-                     GetDriverNameCompleter::Sync& _completer) override {}
-  void GetDeviceName(GetDeviceNameRequestView request,
-                     GetDeviceNameCompleter::Sync& _completer) override {}
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override {}
   void GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,
@@ -80,16 +74,6 @@ class FakeCpuDevice : TestDeviceType,
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override {}
   void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                              RunCompatibilityTestsCompleter::Sync& _completer) override {}
-  void GetDevicePowerCaps(GetDevicePowerCapsRequestView request,
-                          GetDevicePowerCapsCompleter::Sync& _completer) override {}
-  void ConfigureAutoSuspend(ConfigureAutoSuspendRequestView request,
-                            ConfigureAutoSuspendCompleter::Sync& _completer) override {}
-  void UpdatePowerStateMapping(UpdatePowerStateMappingRequestView request,
-                               UpdatePowerStateMappingCompleter::Sync& _completer) override {}
-  void GetPowerStateMapping(GetPowerStateMappingRequestView request,
-                            GetPowerStateMappingCompleter::Sync& _completer) override {}
-  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& _completer) override {}
-  void Resume(ResumeRequestView request, ResumeCompleter::Sync& _complete) override {}
 
  private:
   virtual void GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
@@ -155,20 +139,6 @@ void FakeCpuDevice::SetPerformanceState(SetPerformanceStateRequestView request,
   pstate_set_count_++;
   current_pstate_ = request->requested_state;
   completer.Reply(ZX_OK, request->requested_state);
-}
-
-void FakeCpuDevice::GetDevicePerformanceStates(
-    GetDevicePerformanceStatesRequestView request,
-    GetDevicePerformanceStatesCompleter::Sync& completer) {
-  ::fidl::Array<fuchsia_device::wire::DevicePerformanceStateInfo,
-                fuchsia_device::wire::kMaxDevicePerformanceStates>
-      states{};
-
-  for (size_t i = 0; i < fuchsia_device::wire::kMaxDevicePerformanceStates; i++) {
-    states[i].is_supported = (i < countof(kTestPstates));
-    states[i].state_id = static_cast<uint32_t>(i);
-  }
-  completer.Reply(states, ZX_OK);
 }
 
 void FakeCpuDevice::GetCurrentPerformanceState(
