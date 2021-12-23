@@ -40,7 +40,13 @@ struct StringOrCharLiteralBegin {
   size_t contents_begin = 0;
 };
 
+// Returns true if the string begins a Rust lifetime literal. This requires some disambiguation
+// because 'a is a lifetime but 'a' is a character.
+bool DoesBeginRustLifetime(std::string_view input);
+
 // Returns true if the given location in the input string starts with a string or character literal.
+// In Rust, this will return nullopt for lifetime annotations like 'foo, so the caller can assume
+// anything starting with ' that this returns false for is a lifetime.
 //
 // Returns a StringOrCharLiteralBegin if the current location starts a string or character. This can
 // be passed into ParseString if so.

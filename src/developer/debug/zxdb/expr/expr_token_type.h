@@ -20,6 +20,7 @@ enum class ExprTokenType : size_t {
   kFloat,            // 0.23e12  1.  2.3f  (never including a leading sign).
   kStringLiteral,    // "foo" (token value will be the 8-bit decoded contents between the quotes).
   kCharLiteral,      // 'a' (8-bit char literal, decoded char will be in Token::value_[0]).
+  kRustLifetime,     // 'foobar
   kCommentBlockEnd,  // */ (emitted only when no opening comment token is found)
   kEquals,           // =
   kEquality,         // ==
@@ -53,6 +54,8 @@ enum class ExprTokenType : size_t {
   kPlusPlus,         // ++
   kSlash,            // /
   kAt,               // @
+  kOctothorpe,       // # Treated as a regular operator by the tokenizer for highlighting
+                     //   (there is no C preprocessor or Rust annotation support).
   kCaret,            // ^
   kPercent,          // %
   kQuestion,         // ?

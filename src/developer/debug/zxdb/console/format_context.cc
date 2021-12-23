@@ -91,9 +91,10 @@ SyntaxVariants SyntaxForTokenType(ExprTokenType type) {
   if (type == ExprTokenType::kComment)
     return SyntaxVariants(Syntax::kComment, Syntax::kComment, Syntax::kComment);
 
-  // Assume everything that's an alphanumeric token is a keyword.
+  // Assume everything that's an alphanumeric token is a keyword. Count Rust lifetimes as keywords
+  // also since they're special language things.
   const ExprTokenRecord& record = RecordForTokenType(type);
-  if (record.is_alphanum)
+  if (record.is_alphanum || type == ExprTokenType::kRustLifetime)
     return SyntaxVariants(Syntax::kKeywordNormal, Syntax::kKeywordDim, Syntax::kKeywordBold);
 
   // Everything else is an operator.
@@ -111,6 +112,15 @@ OutputBuffer FormatSourceLineWithTokens(const FormatSourceOpts& opts, bool is_hi
   // source rather than what the tokenizer interpreted it as (though normally these will be the
   // same).
   OutputBuffer out;
+
+  // Specially handle C preprocessor and Rust attributes. Assume these lines start with a "#" and
+  // ignore everything after it. Since this code is line-based anyway, the lack of multiline support
+  // for these constructs isn't an additional limitation. This just makes the typical uses look
+  // better.
+  if (tokens[0].type() == ExprTokenType::kOctothorpe) {
+    out.Append(Syntax::kComment, line);
+    return out;
+  }
 
   // Construct a list of ranges indicating the syntax type. The last item will reference the end of
   // the list to make end conditions easier to handle.

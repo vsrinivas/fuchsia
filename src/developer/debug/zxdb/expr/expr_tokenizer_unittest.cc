@@ -549,4 +549,35 @@ TEST(ExprTokenizer, Comments) {
   EXPECT_EQ("2", tokens[2].value());
 }
 
+TEST(ExprTokenizer, RustLifetime) {
+  // This example is from a Rust "where" clause.
+  ExprTokenizer where("F: 'static + Fn(usize) -> Fut,", ExprLanguage::kRust);
+  ASSERT_TRUE(where.Tokenize()) << where.err().msg();
+  auto tokens = where.tokens();
+  EXPECT_EQ(11u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kName, tokens[0].type());
+  EXPECT_EQ("F", tokens[0].value());
+  EXPECT_EQ(ExprTokenType::kColon, tokens[1].type());
+  EXPECT_EQ(":", tokens[1].value());
+  EXPECT_EQ(ExprTokenType::kRustLifetime, tokens[2].type());
+  EXPECT_EQ("'static", tokens[2].value());
+  EXPECT_EQ(ExprTokenType::kPlus, tokens[3].type());
+  EXPECT_EQ("+", tokens[3].value());
+  EXPECT_EQ(ExprTokenType::kName, tokens[4].type());
+  EXPECT_EQ("Fn", tokens[4].value());
+  EXPECT_EQ(ExprTokenType::kLeftParen, tokens[5].type());
+  EXPECT_EQ("(", tokens[5].value());
+  EXPECT_EQ(ExprTokenType::kName, tokens[6].type());
+  EXPECT_EQ("usize", tokens[6].value());
+  EXPECT_EQ(ExprTokenType::kRightParen, tokens[7].type());
+  EXPECT_EQ(")", tokens[7].value());
+  EXPECT_EQ(ExprTokenType::kArrow, tokens[8].type());
+  EXPECT_EQ("->", tokens[8].value());
+  EXPECT_EQ(ExprTokenType::kName, tokens[9].type());
+  EXPECT_EQ("Fut", tokens[9].value());
+  EXPECT_EQ(ExprTokenType::kComma, tokens[10].type());
+  EXPECT_EQ(",", tokens[10].value());
+}
+
 }  // namespace zxdb

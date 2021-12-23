@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <stdlib.h>
 
+#include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+
 namespace zxdb {
 
 namespace {
@@ -236,6 +238,20 @@ Err HandleEscaped(std::string_view input, const StringOrCharLiteralBegin& info, 
 
 }  // namespace
 
+// See lifetime_or_char() in in the Rust compiler file rustc_lexer/src/lib.rs for how Rust
+// implements this. Basically the rule is a ' followed by a sequence of name characters followed by
+// a non-' is a lifetime.
+bool DoesBeginRustLifetime(std::string_view input) {
+  if (input.size() < 2 || input[0] != '\'')
+    return false;
+
+  std::string_view following_input = input.substr(1);  // After the '.
+  size_t name_len = ExprTokenizer::GetNameTokenLength(ExprLanguage::kRust, following_input);
+  if (following_input.size() > name_len && following_input[name_len] == '\'')
+    return false;  // Terminated with a ', must be a character.
+  return name_len > 0;
+}
+
 std::optional<StringOrCharLiteralBegin> DoesBeginStringOrCharLiteral(ExprLanguage lang,
                                                                      std::string_view input,
                                                                      size_t cur) {
@@ -251,6 +267,10 @@ std::optional<StringOrCharLiteralBegin> DoesBeginStringOrCharLiteral(ExprLanguag
     info.string_begin = cur;
     info.contents_begin = cur + 1;
     return info;
+  }
+  if (lang == ExprLanguage::kRust && DoesBeginRustLifetime(input.substr(cur))) {
+    // Filter out rust 'lifetimes before checking for characters since they begin the same.
+    return std::nullopt;
   }
   if (input[cur] == '\'') {
     // Regular literal character.

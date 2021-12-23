@@ -102,6 +102,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFloat
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kStringLiteral
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kCharLiteral
+    {nullptr,                        nullptr,                      -1},                             // kRustLifetime
     {&ExprParser::BadToken,          nullptr,                      -1},                             // kCommentBlockEnd
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kEquals
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kEquality
@@ -135,6 +136,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                        nullptr,                      -1},                             // kPlusPlus (unsupported)
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kSlash
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceUnary},               // kAt
+    {nullptr,                        nullptr,   -1},                                                // kOctothorpe
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseXor},          // kCaret
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kPercent
     {nullptr,                        &ExprParser::QuestionInfix,   kPrecedenceAssignment},          // kQuestion

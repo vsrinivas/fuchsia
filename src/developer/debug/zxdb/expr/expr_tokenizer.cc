@@ -86,6 +86,22 @@ bool ExprTokenizer::Tokenize() {
 
       tokens_.emplace_back(string_info->token_type, result.value(), string_info->string_begin);
       continue;
+    } else if (language_ == ExprLanguage::kRust && cur_char() == '\'') {
+      // Any non-char literals in Rust that start with ' are lifetimes. The "+ 1" clauses in this
+      // code are to account for the ' character.
+      size_t lifetime_name_len =
+          GetNameTokenLength(ExprLanguage::kRust, std::string_view(input_).substr(cur_ + 1));
+      if (lifetime_name_len) {
+        tokens_.emplace_back(ExprTokenType::kRustLifetime,
+                             input_.substr(cur_, lifetime_name_len + 1), cur_);
+        cur_ += lifetime_name_len + 1;
+        continue;
+      } else {
+        // Empty lifetime.
+        error_location_ = cur_;
+        err_ = Err("Empty lifetime.\n" + GetErrorContext(input_, cur_));
+        break;
+      }
     }
 
     // Special escaped identifiers.
@@ -128,28 +144,32 @@ bool ExprTokenizer::Tokenize() {
 }
 
 // static
-bool ExprTokenizer::IsNameToken(ExprLanguage lang, std::string_view input) {
+size_t ExprTokenizer::GetNameTokenLength(ExprLanguage lang, std::string_view input) {
   if (input.empty())
-    return false;
+    return 0;
 
   // Check the first character.
   size_t i;  // Index to start subsequent checking at.
   if (lang == ExprLanguage::kC && input.size() >= 2 && input[0] == '~') {
     // See the comment about tilde handling in C in ClassifyCurrent().
     if (!IsNameFirstChar(input[1]))
-      return false;
+      return 0;
     i = 2;
   } else {
     if (!IsNameFirstChar(input[0]))
-      return false;
+      return 0;
     i = 1;
   }
 
   for (; i < input.size(); i++) {
     if (!IsNameContinuingChar(input[i]))
-      return false;
+      return i;
   }
-  return true;
+  return input.size();
+}
+
+bool ExprTokenizer::IsNameToken(ExprLanguage lang, std::string_view input) {
+  return !input.empty() && GetNameTokenLength(lang, input) == input.size();
 }
 
 // static

@@ -271,6 +271,20 @@ TEST(ParseString, RawRust) {
   EXPECT_EQ("#\"#", result.value());
 }
 
+// Tests that Rust lifetimes are not counted as characters.
+TEST(ParseString, RustLifetime) {
+  EXPECT_TRUE(DoesBeginRustLifetime("'foo"));
+  EXPECT_TRUE(DoesBeginRustLifetime("'bar "));
+  EXPECT_TRUE(DoesBeginRustLifetime("'bar, 'something"));
+  EXPECT_TRUE(DoesBeginRustLifetime("'A"));
+  EXPECT_FALSE(DoesBeginRustLifetime("'A'"));
+  EXPECT_FALSE(DoesBeginRustLifetime("'bar'"));
+  EXPECT_FALSE(DoesBeginRustLifetime("'\\u1234'"));
+
+  EXPECT_EQ(std::nullopt, DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "'foo", 0));
+  EXPECT_NE(std::nullopt, DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "'foo' ", 0));
+}
+
 TEST(ParseString, Char) {
   // Normal character begin.
   std::optional<StringOrCharLiteralBegin> info =

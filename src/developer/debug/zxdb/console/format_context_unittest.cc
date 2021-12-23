@@ -427,4 +427,17 @@ TEST(FormatContext, FormatSourceLineRust) {
       out.GetDebugString());
 }
 
+// C preprocessor and Rust attributes.
+TEST(FormatContext, Octothorpe) {
+  FormatSourceOpts rust_opts;
+  rust_opts.language = ExprLanguage::kRust;
+  OutputBuffer out = FormatSourceLine(rust_opts, false, "  #[cfg(target_os = \"fuchsia\")]");
+  EXPECT_EQ("kComment \"  #[cfg(target_os = \"fuchsia\")]\"", out.GetDebugString());
+
+  FormatSourceOpts c_opts;
+  c_opts.language = ExprLanguage::kC;
+  out = FormatSourceLine(c_opts, false, "#include <stdio.h>");
+  EXPECT_EQ("kComment \"#include <stdio.h>\"", out.GetDebugString());
+}
+
 }  // namespace zxdb

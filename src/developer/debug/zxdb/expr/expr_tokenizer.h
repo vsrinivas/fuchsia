@@ -41,6 +41,10 @@ class ExprTokenizer {
 
   std::vector<ExprToken> TakeTokens() { return std::move(tokens_); }
 
+  // Returns the number of bytes that start at the given input that are valid name tokens.
+  // If the input does not begin with a name token, this will return 0.
+  static size_t GetNameTokenLength(ExprLanguage lang, std::string_view input);
+
   // Returns whether the input is a valid unescaped name token. This does no trimming of whitespace
   // and does not accept "$" escaping. An empty string is not a valid name token.
   static bool IsNameToken(ExprLanguage lang, std::string_view input);
