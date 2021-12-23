@@ -106,6 +106,8 @@ tables_generator_tests_*.txt
 /third_party/pyyaml/src
 !/third_party/jinja2/
 /third_party/jinja2/src
+!/third_party/nlassert/
+/third_party/nlassert/src
 
 /tmp/
 /topaz/
