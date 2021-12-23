@@ -5,6 +5,7 @@ library fuchsia.test.internal;
 
 using fuchsia.url;
 using fuchsia.component;
+using fuchsia.test.manager;
 using zx;
 
 /// Introspection API to get information about a test.
@@ -23,4 +24,50 @@ protocol Info {
     }) -> (struct {
         url fuchsia.url.Url;
     }) error zx.status;
+};
+
+/// `DebugDataController` is an internal fidl protocol exposed by the debug_data component.
+/// It allows defining sets of test realms for which debug data is collected. Test Manager uses
+/// this protocol to define isolated sets of debug data per test run, although in the future, it
+/// may define finer grained sets (such as per test suite).
+///
+/// `DebugDataController` operates in conjunction with events passed from Component Manager.
+/// Specifically, DebugData consumes CapabilityRequested, Started, and Stopped events. These
+/// events allow it to route a fuchsia.debugdata.DebugData connection to a specific component
+/// within a test. DebugData can then attribute that component to a specific test and test run
+/// using information it is passed through `DebugDataController` and `DebugDataSetController`.
+@discoverable
+protocol DebugDataController {
+    /// Create a new set of realms for which to collect debug data.
+    /// `iter` is used to report produced debug data.
+    /// `controller` is used to add realms to the set.
+    NewSet(resource struct {
+        iter server_end:fuchsia.test.manager.DebugDataIterator;
+        controller server_end:DebugDataSetController;
+    });
+};
+
+/// A set is a collection of any number of test realms for which to collect DebugData.
+protocol DebugDataSetController {
+    /// Add a test realm for which debug data is reported. This must be called before
+    /// components in the realm specified in this call connect to the DebugData protocol.
+    /// In practice, this means the realm should not be started until after this call completes.
+    /// Returns an error if the realm has already been added to a set.
+    AddRealm(struct {
+        realm_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        url fuchsia.url.Url;
+    }) -> (struct {}) error zx.status;
+
+    /// An event that signals that debug data has been produced for this set.
+    /// Test Manager may use the presence or absence of this event to pass the
+    /// iterator channel back to the test executor only on runs that produce
+    /// debug data.
+    -> OnDebugDataProduced();
+
+    /// Signal that no more realms are expected as part of this set.
+    /// The server completes processing debug data for all previously registered
+    /// realms, and drains collected debug data through the corresponding
+    /// |DebugDataIterator| channel. After all debug data has been processed, the server
+    /// closes this channel.
+    Finish();
 };

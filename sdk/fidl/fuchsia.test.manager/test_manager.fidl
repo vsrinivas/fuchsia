@@ -187,6 +187,8 @@ type RunEventPayload = flexible resource union {
     1: run_started RunStarted;
     /// The test run stopped executing.
     2: run_stopped RunStopped;
+    /// The test run produced an artifact.
+    3: artifact Artifact;
 };
 
 type RunStarted = struct {};
@@ -338,6 +340,7 @@ type Artifact = flexible resource union {
     2: stderr zx.handle:SOCKET;
     3: log Syslog;
     4: custom CustomArtifact;
+    5: debug_data client_end:DebugDataIterator;
 };
 
 type Stdout = resource struct {
@@ -382,4 +385,21 @@ type CaseArtifact = resource struct {
 
 type SuiteArtifact = resource struct {
     artifact Artifact;
+};
+
+/// An iterator protocol over which a client may retrieve debug data information.
+protocol DebugDataIterator {
+    /// Retrieve the next batch of debug data. This is a hanging get; if no data is
+    /// immediately available, the call hangs until data is available. After all data has
+    /// been returned, the call returns an empty vector.
+    GetNext() -> (resource struct {
+        data vector<DebugData>:MAX;
+    });
+};
+
+type DebugData = resource table {
+    /// Name of the file. Must be unique per DebugDataIterator.
+    1: name string:512;
+    /// Read-only channel over which the file may be accessed.
+    2: file client_end:fuchsia.io.File;
 };

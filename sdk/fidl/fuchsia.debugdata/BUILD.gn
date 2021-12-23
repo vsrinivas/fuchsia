@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.debugdata") {
+  sdk_category = "internal"
+
   sources = [ "debugdata.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
