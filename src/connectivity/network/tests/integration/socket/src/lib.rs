@@ -15,6 +15,7 @@ use futures::{
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netstack_testing_common::{
+    ping,
     realms::{Netstack2, TestSandboxExt as _},
     Result,
 };
@@ -690,4 +691,44 @@ async fn test_ip_endpoint_packets() {
         .await,
         Ok(None)
     );
+}
+
+#[variants_test]
+async fn ping<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
+
+    let create_realm = |suffix, addr| {
+        let sandbox = &sandbox;
+        let net = &net;
+        async move {
+            let realm = sandbox
+                .create_netstack_realm::<Netstack2, _>(format!("{}_{}", name, suffix))
+                .expect("failed to create realm");
+            let interface = realm
+                .join_network::<E, _>(
+                    &net,
+                    format!("ep_{}", suffix),
+                    &netemul::InterfaceConfig::StaticIp(addr),
+                )
+                .await
+                .expect("failed to join network in realm");
+            (realm, interface)
+        }
+    };
+
+    let (realm_a, if_a) = create_realm("a", fidl_subnet!("192.168.1.1/16")).await;
+    let (realm_b, if_b) = create_realm("b", fidl_subnet!("192.168.1.2/16")).await;
+
+    let node_a = ping::Node::new_with_v4_and_v6_link_local(&realm_a, &if_a)
+        .await
+        .expect("failed to construct node A");
+    let node_b = ping::Node::new_with_v4_and_v6_link_local(&realm_b, &if_b)
+        .await
+        .expect("failed to construct node B");
+
+    node_a
+        .ping_pairwise(std::slice::from_ref(&node_b))
+        .await
+        .expect("failed to ping between nodes");
 }
