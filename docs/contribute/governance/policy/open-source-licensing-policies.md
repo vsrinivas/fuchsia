@@ -1,10 +1,14 @@
-# Fuchsia Open Source Licensing Policies
+# Fuchsia open source licensing policies
 
-## Fuchsia Project code
+## Overview
 
-All Fuchsia Project code is hosted on
+This document describes open source licenses and related policies in the Fuchsia project.
+
+## Fuchsia project code
+
+All Fuchsia project code is hosted on
 [https://fuchsia.googlesource.com/](https://fuchsia.googlesource.com/). Fuchsia
-Project file headers will list `Copyright <year> The Fuchsia Authors`.
+project file headers will list `Copyright <year> The Fuchsia Authors`.
 
 ## Licenses
 
@@ -85,7 +89,7 @@ modifications, if any, were made to port to Fuchsia. The short description of
 the license should be a
 [Software Package Data Exchange (SPDX) license identifier](https://spdx.org/licenses/){:.external}
 that matches the license but there can be more text in cases where more
-elaboration on the license is required. Fuchsia Project Code, that is, code that
+elaboration on the license is required. Fuchsia project code, that is, code that
 The Fuchsia Authors hold copyright for and code that is released under the
 Fuchsia project’s standard license - does not require this file.
 
