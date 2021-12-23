@@ -111,7 +111,7 @@ source_set("entry_test") {
 source_set("interrupt") {
   sources = [ "zircon_platform_interrupt.h" ]
 
-  public_deps = [ "$zircon_build_root/system/ulib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 source_set("device") {
@@ -138,11 +138,11 @@ source_set("device") {
     ":handle",
     ":interrupt",
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/zx",
     "..:device_header",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -159,11 +159,11 @@ source_set("connection_client") {
     ":status",
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/zx",
     "..:connection_client_header",
     "..:trace",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # Fidl bindings should not introduce a dep on libasync-default.so
@@ -187,12 +187,12 @@ source_set("connection") {
     ":status",
     "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
-    "$zircon_build_root/system/ulib/fidl-async:fidl-async-cpp",
-    "$zircon_build_root/system/ulib/zx",
     "..:connection_header",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/stdcompat",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # Fidl bindings should not introduce a dep on libasync-default.so
@@ -267,8 +267,8 @@ source_set("event") {
 
   deps = [
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/zx",
     "..:event_header",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -283,8 +283,8 @@ source_set("handle") {
   public_deps = [
     ":port",
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/zx",
     "..:handle_header",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -308,9 +308,9 @@ source_set("logger") {
 
   deps = [
     ":handle",
-    "$zircon_build_root/system/ulib/syslog:syslog-static",
-    "$zircon_build_root/system/ulib/zx",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+    "//zircon/system/ulib/syslog:syslog-static",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -349,9 +349,9 @@ source_set("semaphore") {
 
   public_deps = [
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/zx",
     "..:semaphore_header",
     "..:trace",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -373,7 +373,7 @@ source_set("port") {
     "..:port_header",
   ]
 
-  deps = [ "$zircon_build_root/system/ulib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 source_set("trace") {
@@ -400,13 +400,13 @@ source_set("trace_provider") {
 
   deps = [
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/system/ulib/async:async-cpp",
     "..:trace_provider_header",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 
   public_deps = [
-    "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
     "//sdk/lib/fit",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
   ]
 
