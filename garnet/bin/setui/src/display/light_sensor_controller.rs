@@ -48,19 +48,23 @@ impl controller::Create for LightSensorController {
             service_context.connect_named::<InputDeviceMarker>(LIGHT_SENSOR_SERVICE_NAME).await;
 
         let sensor = if let Ok(proxy) = sensor_proxy_result {
-            Sensor::new(&proxy, &service_context)
-                .await
-                .map_err(|_| ControllerError::InitFailure("Could not connect to proxy".into()))?
+            Sensor::new(&proxy, &service_context).await.map_err(|e| {
+                ControllerError::InitFailure(format!("Could not connect to proxy: {:?}", e).into())
+            })?
         } else {
-            let file = File::open(LIGHT_SENSOR_CONFIG_PATH).map_err(|_| {
-                ControllerError::InitFailure("Could not open sensor configuration file".into())
+            let file = File::open(LIGHT_SENSOR_CONFIG_PATH).map_err(|e| {
+                ControllerError::InitFailure(
+                    format!("Could not open sensor configuration file: {:?}", e).into(),
+                )
             })?;
-            let config = serde_json::from_reader(file).map_err(|_| {
-                ControllerError::InitFailure("Could not read sensor configuration file".into())
+            let config = serde_json::from_reader(file).map_err(|e| {
+                ControllerError::InitFailure(
+                    format!("Could not read sensor configuration file: {:?}", e).into(),
+                )
             })?;
-            open_sensor(service_context, config)
-                .await
-                .map_err(|_| ControllerError::InitFailure("Could not connect to proxy".into()))?
+            open_sensor(service_context, config).await.map_err(|e| {
+                ControllerError::InitFailure(format!("Could not connect to proxy: {:?}", e).into())
+            })?
         };
 
         let current_data = Arc::new(Mutex::new(get_sensor_data(&sensor).await));

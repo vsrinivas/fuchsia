@@ -79,6 +79,7 @@ pub mod task;
 pub use audio::policy::AudioPolicyConfig;
 pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
+pub use handler::inspect_setting_proxy::InspectSettingProxy;
 pub use input::input_device_configuration::InputConfiguration;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
 pub use service::{Address, Payload, Role};
@@ -263,6 +264,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     settings: Vec<SettingType>,
     handlers: HashMap<SettingType, GenerateHandler>,
     resource_monitors: Vec<monitor_base::monitor::Generate>,
+    setting_proxy_node: Option<&'static fuchsia_inspect::Node>,
 }
 
 impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
@@ -278,6 +280,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             registrants: vec![],
             settings: vec![],
             resource_monitors: vec![],
+            setting_proxy_node: None,
         }
     }
 
@@ -381,6 +384,14 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         subscribers: &[event::subscriber::BlueprintHandle],
     ) -> EnvironmentBuilder<T> {
         self.event_subscriber_blueprints.append(&mut subscribers.to_vec());
+        self
+    }
+
+    pub fn setting_proxy_node(
+        mut self,
+        setting_proxy_node: &'static fuchsia_inspect::Node,
+    ) -> EnvironmentBuilder<T> {
+        self.setting_proxy_node = Some(setting_proxy_node);
         self
     }
 
@@ -505,6 +516,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             Arc::new(Mutex::new(handler_factory)),
             Arc::new(Mutex::new(policy_handler_factory)),
             self.storage_factory,
+            self.setting_proxy_node.unwrap_or_else(|| component::inspector().root()),
         )
         .await
         .context("Could not create environment")?;
@@ -684,6 +696,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
     storage_factory: Arc<T>,
+    setting_proxies_node: &'static fuchsia_inspect::Node,
 ) -> Result<HashSet<Entity>, Error> {
     for blueprint in event_subscriber_blueprints {
         blueprint.create(delegate.clone()).await;
@@ -708,6 +721,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             DEFAULT_TEARDOWN_TIMEOUT,
             Some(DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS.millis()),
             true,
+            setting_proxies_node.create_child(format!("{:?}", setting_type)),
         )
         .await?;
 

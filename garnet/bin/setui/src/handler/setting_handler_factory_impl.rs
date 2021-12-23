@@ -11,7 +11,6 @@ use crate::service;
 use crate::service::message::{Delegate, Signature};
 use crate::service_context::ServiceContext;
 use async_trait::async_trait;
-use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -60,7 +59,12 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
             self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         ))
         .await
-        .map_err(|_| SettingHandlerFactoryError::HandlerStartupError(setting_type))?;
+        .map_err(|e| {
+            SettingHandlerFactoryError::HandlerStartupError(
+                setting_type,
+                format!("Failed to generate setting handler: {:?}", e).into(),
+            )
+        })?;
 
         let (controller_messenger, _) = delegate
             .create(MessengerType::Unbound)
@@ -84,17 +88,18 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
                     // Startup phase is complete. If it had no errors the proxy can assume it
                     // has an active controller with create() and startup() already run on it
                     // before handling its request.
-                    return result.map(|_| signature).map_err(|_| {
-                        SettingHandlerFactoryError::HandlerStartupError(setting_type)
+                    return result.map(|_| signature).map_err(|e| {
+                        SettingHandlerFactoryError::HandlerStartupError(
+                            setting_type,
+                            format!("Got bad startup response: {:?}", e).into(),
+                        )
                     });
                 }
-                _ => {
-                    fx_log_err!(
-                        "Unexpected message response {:?} for {:?} controller startup request",
-                        message_event,
-                        setting_type
-                    );
-                    return Err(SettingHandlerFactoryError::HandlerStartupError(setting_type));
+                e => {
+                    return Err(SettingHandlerFactoryError::HandlerStartupError(
+                        setting_type,
+                        format!("Unexpected startup response: {:?}", e).into(),
+                    ));
                 }
             }
         }

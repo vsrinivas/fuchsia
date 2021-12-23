@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::task::Poll;
 
 use fuchsia_async as fasync;
+use fuchsia_inspect::{assert_data_tree, Inspector};
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
@@ -18,7 +19,6 @@ use async_trait::async_trait;
 use matches::assert_matches;
 
 use crate::base::{SettingType, UnknownInfo};
-use crate::event;
 use crate::handler::base::{
     Error as HandlerError, Payload as HandlerPayload, Request, Response, SettingHandlerFactory,
     SettingHandlerFactoryError,
@@ -26,10 +26,11 @@ use crate::handler::base::{
 use crate::handler::setting_handler::{
     self, Command, ControllerError, Event, ExitResult, SettingHandlerResult, State,
 };
-use crate::handler::setting_proxy::SettingProxy;
+use crate::handler::setting_proxy::{SettingProxy, MAX_NODE_ERRORS};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::MessageHubUtil;
 use crate::service::{self, message, TryFromWithClient};
+use crate::{event, Payload};
 
 const TEARDOWN_TIMEOUT: Duration = Duration::from_seconds(5);
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
@@ -231,6 +232,7 @@ impl TestEnvironmentBuilder {
 
         let handler_factory = Arc::new(Mutex::new(FakeFactory::new(delegate.clone())));
 
+        let inspector = Inspector::new();
         let proxy_handler_signature = SettingProxy::create(
             self.setting_type,
             handler_factory.clone(),
@@ -239,6 +241,7 @@ impl TestEnvironmentBuilder {
             TEARDOWN_TIMEOUT,
             self.timeout.map(|(duration, _)| duration),
             self.timeout.map_or(true, |(_, retry)| retry),
+            inspector.root().create_child("test"),
         )
         .await
         .expect("proxy creation should succeed");
@@ -466,6 +469,117 @@ async fn test_request_order() {
             complete => break,
         }
     }
+}
+
+struct ErrorFactory;
+
+#[async_trait]
+impl SettingHandlerFactory for ErrorFactory {
+    async fn generate(
+        &mut self,
+        setting_type: SettingType,
+        _delegate: message::Delegate,
+        _notifier_signature: message::Signature,
+    ) -> Result<message::Signature, SettingHandlerFactoryError> {
+        Err(SettingHandlerFactoryError::HandlerStartupError(setting_type, "test error".into()))
+    }
+}
+
+#[fasync::run_until_stalled(test)]
+async fn inspect_catches_errors() {
+    const SETTING_TYPE: SettingType = SettingType::Unknown;
+
+    let delegate = service::MessageHub::create_hub();
+    let (service_client, _) = delegate.create(MessengerType::Unbound).await.unwrap();
+    let handler_factory = Arc::new(Mutex::new(ErrorFactory));
+    let inspector = Inspector::new();
+    let _proxy_handler_signature = SettingProxy::create(
+        SETTING_TYPE,
+        handler_factory,
+        delegate,
+        SETTING_PROXY_MAX_ATTEMPTS,
+        TEARDOWN_TIMEOUT,
+        None,
+        false,
+        inspector.root().create_child("test"),
+    )
+    .await
+    .expect("proxy creation should succeed");
+
+    let mut receptor = service_client
+        .message(
+            HandlerPayload::Request(Request::Get).into(),
+            Audience::Address(service::Address::Handler(SETTING_TYPE)),
+        )
+        .send();
+
+    let (payload, _) = receptor.next_payload().await.expect("should get payload");
+    matches::assert_matches!(
+        payload,
+        Payload::Setting(HandlerPayload::Response(Err(HandlerError::UnhandledType(
+            SettingType::Unknown,
+        ))))
+    );
+
+    assert_data_tree!(inspector, root: {
+        test: {
+            "00000000000000000000": "HandlerStartupError(Unknown, \"test error\")"
+        }
+    });
+}
+
+#[fasync::run_until_stalled(test)]
+async fn inspect_errors_roll_after_limit() {
+    const SETTING_TYPE: SettingType = SettingType::Unknown;
+
+    let delegate = service::MessageHub::create_hub();
+    let (service_client, _) = delegate.create(MessengerType::Unbound).await.unwrap();
+    let handler_factory = Arc::new(Mutex::new(ErrorFactory));
+    let inspector = Inspector::new();
+    let _proxy_handler_signature = SettingProxy::create(
+        SETTING_TYPE,
+        handler_factory,
+        delegate,
+        SETTING_PROXY_MAX_ATTEMPTS,
+        TEARDOWN_TIMEOUT,
+        None,
+        false,
+        inspector.root().create_child("test"),
+    )
+    .await
+    .expect("proxy creation should succeed");
+
+    for _ in 0..(MAX_NODE_ERRORS + 1) {
+        let mut receptor = service_client
+            .message(
+                HandlerPayload::Request(Request::Get).into(),
+                Audience::Address(service::Address::Handler(SETTING_TYPE)),
+            )
+            .send();
+
+        let (payload, _) = receptor.next_payload().await.expect("should get payload");
+        matches::assert_matches!(
+            payload,
+            Payload::Setting(HandlerPayload::Response(Err(HandlerError::UnhandledType(
+                SettingType::Unknown,
+            ))))
+        );
+    }
+
+    assert_data_tree!(inspector, root: {
+        test: {
+            "00000000000000000001": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000002": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000003": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000004": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000005": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000006": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000007": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000008": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000009": "HandlerStartupError(Unknown, \"test error\")",
+            "00000000000000000010": "HandlerStartupError(Unknown, \"test error\")",
+        }
+    });
 }
 
 #[test]
