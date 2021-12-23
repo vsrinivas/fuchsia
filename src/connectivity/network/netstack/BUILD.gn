@@ -50,6 +50,17 @@ fuchsia_package("netstack") {
   deps = [ ":component-legacy" ]
 }
 
+grand_unified_binary("bin_with_tracing") {
+  output_name = "netstack"
+  source_name = "grand_unified_binary_with_tracing"
+}
+
+fuchsia_component("component-with-tracing") {
+  component_name = "netstack"
+  manifest = "meta/netstack_with_tracing.cml"
+  deps = [ ":bin_with_tracing" ]
+}
+
 generated_go("gen/netstack/link/eth") {
   definitions = [
     {
@@ -105,6 +116,7 @@ go_library("lib") {
     "link/netdevice",
     "routes",
     "time",
+    "tracing",
     "util",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",

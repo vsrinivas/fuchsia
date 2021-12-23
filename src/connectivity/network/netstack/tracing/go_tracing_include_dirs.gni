@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# `go_tracing_include_dirs` lists the directories where the C headers
+# the tracing library includes locate.
+# Any go_binary or go_test which depends on the tracing library needs to
+# set it in `include_dirs`.
+#
+# For example,
+#
+# go_binary("foo_with_tracing") {
+#   ...
+#   include_dirs = go_tracing_include_dirs
+# }
+#
+# TODO(https://fxbug.dev/90500): public_configs doesn't work with go_library.
+
+go_tracing_include_dirs = [
+  rebase_path("//zircon/system/ulib/trace-provider/include"),
+  rebase_path("//zircon/system/ulib/trace-engine/include"),
+  rebase_path("//zircon/system/ulib/async/include"),
+]

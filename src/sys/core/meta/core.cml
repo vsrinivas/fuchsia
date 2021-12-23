@@ -287,6 +287,12 @@
             ],
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "self",
+            to: [ "#network" ],
+            dependency: "weak_for_migration",
+        },
+        {
             protocol: [ "fuchsia.net.http.Loader" ],
             from: "#network",
             to: [

@@ -52,6 +52,13 @@
             ],
         },
         {
+            // TODO(https://fxbug.dev/85450): Only add this offer on the tracing
+            // variant of the network component.
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+        {
             protocol: [ "fuchsia.net.dhcp.Server" ],
             from: "#dhcpd",
             to: [ "#netcfg" ],

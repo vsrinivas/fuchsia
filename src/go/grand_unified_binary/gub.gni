@@ -19,12 +19,21 @@ import("//build/dist/renamed_binary.gni")
 #     Type: string
 #     Default: target_name
 #
+#   source_name (optional)
+#     The source binary's name.
+#     Type: string
+#     Default: "grand_unified_binary"
+#
 #   testonly
 #   visibility
 template("grand_unified_binary") {
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
+  }
+  source_name = "grand_unified_binary"
+  if (defined(invoker.source_name)) {
+    source_name = invoker.source_name
   }
 
   renamed_binary(target_name) {
@@ -33,8 +42,8 @@ template("grand_unified_binary") {
                              "testonly",
                              "visibility",
                            ])
-    source_deps = [ "//src/go/grand_unified_binary" ]
-    source = "$root_out_dir/grand_unified_binary"
+    source_deps = [ "//src/go/grand_unified_binary:$source_name" ]
+    source = "$root_out_dir/$source_name"
     dest = "bin/$output_name"
   }
 }

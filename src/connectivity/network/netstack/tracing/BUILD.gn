@@ -6,6 +6,7 @@ import("//build/components/fuchsia_unittest_package.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
+import("go_tracing_include_dirs.gni")
 
 go_library("tracing") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/..."
@@ -43,11 +44,7 @@ go_test("provider_test") {
     "//src/lib/component",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
-  include_dirs = [
-    rebase_path("//zircon/system/ulib/trace-provider/include"),
-    rebase_path("//zircon/system/ulib/trace-engine/include"),
-    rebase_path("//zircon/system/ulib/async/include"),
-  ]
+  include_dirs = go_tracing_include_dirs
 }
 
 fuchsia_unittest_package("provider-test") {
@@ -63,11 +60,7 @@ go_test("trace_test") {
     ":tracing",
     "//third_party/golibs:github.com/google/go-cmp",
   ]
-  include_dirs = [
-    rebase_path("//zircon/system/ulib/trace-provider/include"),
-    rebase_path("//zircon/system/ulib/trace-engine/include"),
-    rebase_path("//zircon/system/ulib/async/include"),
-  ]
+  include_dirs = go_tracing_include_dirs
 }
 
 fuchsia_unittest_package("trace-test") {

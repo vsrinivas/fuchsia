@@ -35,6 +35,21 @@ fuchsia_component("component-basic") {
   ]
 }
 
+# TODO(https://fxbug.dev/85450): use subassembly-based product assembly to
+# create this variant.
+fuchsia_component("component-with-tracing") {
+  component_name = "network"
+  manifest = "meta/network-default.cml"
+  deps = [
+    "dhcp:component",
+    "dhcpv6/client:component",
+    "dns:component",
+    "http-client:component",
+    "netcfg:component-advanced",
+    "netstack:component-with-tracing",
+  ]
+}
+
 fuchsia_package("network") {
   deps = [ ":component" ]
 }
@@ -42,6 +57,11 @@ fuchsia_package("network") {
 fuchsia_package("network-basic") {
   package_name = "network"
   deps = [ ":component-basic" ]
+}
+
+fuchsia_package("network-with-tracing") {
+  package_name = "network"
+  deps = [ ":component-with-tracing" ]
 }
 
 core_shard("virtualization-core-shard") {
