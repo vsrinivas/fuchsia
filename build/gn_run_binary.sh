@@ -33,4 +33,7 @@ export TSAN_OPTIONS="$TSAN_OPTIONS external_symbolizer_path=$symbolizer"
 # It can thus find the unstripped binary for the stripped binary being run.
 export LLVM_SYMBOLIZER_OPTS=--debug-file-directory=.
 
+# Ensure that Rust compiled_actions() print backtraces.
+export RUST_BACKTRACE=1
+
 exec "$binary" ${1+"$@"}
