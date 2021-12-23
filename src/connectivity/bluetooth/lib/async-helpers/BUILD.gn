@@ -22,6 +22,7 @@ rustc_library("async-helpers") {
     "src/hanging_get/async_server.rs",
     "src/hanging_get/mod.rs",
     "src/lib.rs",
+    "src/maybe_stream.rs",
     "src/responding_channel.rs",
   ]
 

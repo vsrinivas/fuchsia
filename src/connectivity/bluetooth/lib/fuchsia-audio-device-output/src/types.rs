@@ -5,11 +5,7 @@
 use {
     fidl_fuchsia_hardware_audio::{PcmFormat, SampleFormat},
     fuchsia_zircon as zx,
-    futures::{
-        stream::{FusedStream, Stream},
-        task::{Context, Poll},
-    },
-    std::{pin::Pin, result},
+    std::result,
     thiserror::Error,
 };
 
@@ -140,91 +136,5 @@ impl AudioSampleFormat {
             | AudioSampleFormat::Float { .. } => 4,
         };
         Ok(channels * bytes_per_channel)
-    }
-}
-
-pub(crate) struct MaybeStream<T: Stream>(Option<T>);
-
-impl<T: Stream + Unpin> MaybeStream<T> {
-    pub(crate) fn set(&mut self, stream: T) {
-        self.0 = Some(stream)
-    }
-
-    fn poll_next(&mut self, cx: &mut Context<'_>) -> Poll<Option<T::Item>> {
-        Pin::new(self.0.as_mut().unwrap()).poll_next(cx)
-    }
-}
-
-impl<T: Stream> Default for MaybeStream<T> {
-    fn default() -> Self {
-        MaybeStream(None)
-    }
-}
-
-impl<T: Stream + Unpin> Stream for MaybeStream<T> {
-    type Item = T::Item;
-
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.0.is_none() {
-            return Poll::Pending;
-        }
-        self.get_mut().poll_next(cx)
-    }
-}
-
-impl<T: FusedStream + Stream + Unpin> FusedStream for MaybeStream<T> {
-    fn is_terminated(&self) -> bool {
-        if self.0.is_none() {
-            false
-        } else {
-            self.0.as_ref().unwrap().is_terminated()
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fuchsia_async::TestExecutor;
-    use futures::stream::StreamExt;
-
-    struct CountStream {
-        count: usize,
-    }
-
-    impl CountStream {
-        fn new() -> CountStream {
-            CountStream { count: 0 }
-        }
-    }
-
-    impl Stream for CountStream {
-        type Item = usize;
-
-        fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-            self.count += 1;
-            Poll::Ready(Some(self.count))
-        }
-    }
-
-    #[test]
-    fn maybestream() {
-        let mut exec = TestExecutor::new().unwrap();
-
-        let mut s = MaybeStream::default();
-
-        let mut next_fut = s.next();
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut next_fut));
-        next_fut = s.next();
-        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut next_fut));
-
-        s.set(CountStream::new());
-
-        next_fut = s.next();
-        assert_eq!(Poll::Ready(Some(1)), exec.run_until_stalled(&mut next_fut));
-
-        next_fut = s.next();
-        assert_eq!(Poll::Ready(Some(2)), exec.run_until_stalled(&mut next_fut));
     }
 }

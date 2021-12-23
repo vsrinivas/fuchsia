@@ -4,6 +4,7 @@
 
 use {
     anyhow::format_err,
+    async_helpers::maybe_stream::MaybeStream,
     fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_hardware_audio::*,
     fidl_fuchsia_media, fuchsia_async as fasync,
@@ -20,7 +21,7 @@ use {
 };
 
 use crate::frame_vmo;
-use crate::types::{AudioSampleFormat, Error, MaybeStream, Result};
+use crate::types::{AudioSampleFormat, Error, Result};
 
 /// A Stream that produces audio frames.
 /// Usually acquired via SoftPcmOutput::take_frame_stream().
