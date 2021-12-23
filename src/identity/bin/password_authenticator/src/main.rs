@@ -44,7 +44,13 @@ async fn main() -> Result<(), Error> {
         "/data/accounts",
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE,
     )?;
-    let account_metadata_store = DataDirAccountMetadataStore::new(metadata_root);
+    let mut account_metadata_store = DataDirAccountMetadataStore::new(metadata_root);
+    // Clean up any not-committed files laying around in the account metadata directory.
+    let cleanup_res = account_metadata_store.cleanup_stale_files().await;
+    // If any cleanup fails, ignore it -- we can still perform our primary function with
+    // stale files laying around.
+    // TODO(zarvox): someday, make an inspect entry for this failure mode
+    drop(cleanup_res);
     // This will be replaced with a proper key derivation implementation.
     let key_derivation = NullKeyDerivation;
     let account_manager = AccountManager::new(disk_manager, key_derivation, account_metadata_store);

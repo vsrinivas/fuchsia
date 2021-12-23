@@ -11,6 +11,8 @@ use {
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_zircon as zx,
+    log::warn,
+    rand::{thread_rng, Rng},
     serde::{Deserialize, Serialize},
     std::str::FromStr,
 };
@@ -40,6 +42,9 @@ pub enum AccountMetadataStoreError {
 
     #[error("Failed to read account metadata from backing storage: {0}")]
     ReadError(#[from] io_util::file::ReadError),
+
+    #[error("Failed to rename account metadata temp file to target: {0}")]
+    RenameError(#[from] io_util::node::RenameError),
 
     #[error("Failed to flush account metadata to disk: {0}")]
     FlushError(#[source] zx::Status),
@@ -150,14 +155,46 @@ impl DataDirAccountMetadataStore {
     pub fn new(accounts_dir: DirectoryProxy) -> DataDirAccountMetadataStore {
         DataDirAccountMetadataStore { accounts_dir }
     }
+
+    pub async fn cleanup_stale_files(&mut self) -> Result<(), Vec<AccountMetadataStoreError>> {
+        let dirents_res = files_async::readdir(&self.accounts_dir).await;
+        let dirents =
+            dirents_res.map_err(|err| vec![AccountMetadataStoreError::ReaddirError(err.into())])?;
+        let mut failures = Vec::new();
+
+        for d in dirents.iter() {
+            let name = &d.name;
+            // We aim to delete files that don't look like an AccountId (which is a u64),
+            // as well as files that are not the canonical representation of that number.
+            if parse_account_id(&name).is_none() {
+                // Not a valid account id.  Try to remove it.
+                warn!("Removing unexpected file '{}' from account metadata directory", &name);
+                let fidl_res = self.accounts_dir.unlink(&name, UnlinkOptions::EMPTY).await;
+                match fidl_res {
+                    Err(x) => failures.push(AccountMetadataStoreError::FidlError(x.into())),
+                    Ok(unlink_res) => {
+                        if let Err(unlink_err) = unlink_res {
+                            failures.push(AccountMetadataStoreError::UnlinkError(
+                                zx::Status::from_raw(unlink_err),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+
+        if failures.len() == 0 {
+            Ok(())
+        } else {
+            Err(failures)
+        }
+    }
 }
 
 fn format_account_id(account_id: &AccountId) -> String {
     format!("{}", account_id)
 }
 
-#[allow(dead_code)]
-#[allow(unused)]
 fn parse_account_id(text: &str) -> Option<AccountId> {
     let parse_result = u64::from_str(text);
     match parse_result {
@@ -173,6 +210,26 @@ fn parse_account_id(text: &str) -> Option<AccountId> {
     }
 }
 
+// I'd rather have used the tempfile crate here, but it lacks any ability to open things
+// without making use of paths and namespaces, and we're specifically trying to use a
+// directory handle
+const TEMPFILE_RANDOM_LENGTH: usize = 8usize;
+fn generate_tempfile_name(account_id: &AccountId) -> String {
+    // Generate a tempfile with name "temp-{accountid}-{random}"
+    let id = format_account_id(&account_id);
+    let mut buf = String::with_capacity(TEMPFILE_RANDOM_LENGTH + id.len() + 6);
+    buf.push_str("temp-");
+    buf.push_str(&id);
+    buf.push('-');
+    let mut rng = thread_rng();
+    std::iter::repeat(())
+        .map(|()| rng.sample(rand::distributions::Alphanumeric))
+        .map(char::from)
+        .take(TEMPFILE_RANDOM_LENGTH)
+        .for_each(|c| buf.push(c));
+    return buf;
+}
+
 #[async_trait]
 impl AccountMetadataStore for DataDirAccountMetadataStore {
     async fn save(
@@ -183,17 +240,23 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         let metadata_filename = format_account_id(&account_id);
         let flags =
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_CREATE | OPEN_FLAG_TRUNCATE;
-        let file =
-            io_util::directory::open_file(&self.accounts_dir, &metadata_filename, flags).await?;
+        let temp_filename = generate_tempfile_name(&account_id);
+        let file = io_util::directory::open_file(&self.accounts_dir, &temp_filename, flags).await?;
         let serialized = serde_json::to_vec(&metadata)
             .map_err(|err| AccountMetadataStoreError::SerdeWriteError(err))?;
 
-        // TODO(zarvox): make this atomic via tempfile open, write, sync, close, rename, and add
-        // a cleanup method to DataDirAccountMetadataStore to call on startup
+        // Do the usual atomic commit via tempfile open, write, sync, close, and rename-to-target.
+        // Stale files left by a crash will be cleaned up by calling cleanup_stale_files on the
+        // next startup.
         io_util::file::write(&file, &serialized).await?;
         zx::Status::ok(file.sync().await?).map_err(|s| AccountMetadataStoreError::FlushError(s))?;
         zx::Status::ok(file.close().await?)
             .map_err(|s| AccountMetadataStoreError::CloseError(s))?;
+
+        // Commit
+        io_util::directory::rename(&self.accounts_dir, &temp_filename, &metadata_filename)
+            .await
+            .map_err(|s| AccountMetadataStoreError::RenameError(s))?;
 
         Ok(())
     }
@@ -244,6 +307,19 @@ mod test {
     // We'll check that we fail to load it.
     const INVALID_METADATA: &[u8] = br#"{"name": "Display Name"}"#;
 
+    async fn write_test_file_in_dir(dir: &DirectoryProxy, path: &std::path::Path, data: &[u8]) {
+        let file = io_util::open_file(
+            &dir,
+            path,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                | fidl_fuchsia_io::OPEN_FLAG_CREATE,
+        )
+        .expect(&format!("create file {}", path.display()));
+        file.write(data).await.expect(&format!("write file {}", path.display()));
+        file.close().await.expect(&format!("close file {}", path.display()));
+    }
+
     #[fuchsia::test]
     fn test_account_id_format() {
         let cases = [
@@ -283,6 +359,18 @@ mod test {
             let parsed = parse_account_id(&s);
             assert_eq!(parsed, expected_parse_result);
         }
+    }
+
+    #[fuchsia::test]
+    fn test_generate_tempfile_name() {
+        let name1 = generate_tempfile_name(&1);
+        let name2 = generate_tempfile_name(&1);
+        let prefix = "temp-1-";
+        assert!(name1.starts_with(prefix));
+        assert!(name2.starts_with(prefix));
+        assert_eq!(name1.len(), prefix.len() + TEMPFILE_RANDOM_LENGTH);
+        assert_eq!(name2.len(), prefix.len() + TEMPFILE_RANDOM_LENGTH);
+        assert_ne!(name1, name2);
     }
 
     #[fuchsia::test]
@@ -387,29 +475,8 @@ mod test {
         .expect("could not open temp dir");
 
         // Prepare tmp_dir with two files, one with valid data and one with invalid data.
-        {
-            let valid_file = io_util::open_file(
-                &dir,
-                std::path::Path::new("1"),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
-            )
-            .expect("create file 1 (valid data)");
-            valid_file.write(SCRYPT_KEY_AND_NAME_DATA).await.expect("write valid file");
-            valid_file.close().await.expect("close valid file");
-
-            let corrupted_file = io_util::open_file(
-                &dir,
-                std::path::Path::new("2"),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
-            )
-            .expect("create file 2 (corrupted data)");
-            corrupted_file.write(INVALID_METADATA).await.expect("write corrupted file");
-            corrupted_file.close().await.expect("close corrupted file");
-        }
+        write_test_file_in_dir(&dir, std::path::Path::new("1"), SCRYPT_KEY_AND_NAME_DATA).await;
+        write_test_file_in_dir(&dir, std::path::Path::new("2"), INVALID_METADATA).await;
 
         let metadata_store = DataDirAccountMetadataStore::new(dir);
 
@@ -458,18 +525,7 @@ mod test {
             .expect("open second connection to temp dir");
 
         // Prepare tmp_dir with an account for ID 1
-        {
-            let valid_file = io_util::open_file(
-                &dir,
-                std::path::Path::new("1"),
-                fidl_fuchsia_io::OPEN_RIGHT_READABLE
-                    | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
-                    | fidl_fuchsia_io::OPEN_FLAG_CREATE,
-            )
-            .expect("create file 1 (valid data)");
-            valid_file.write(NULL_KEY_AND_NAME_DATA).await.expect("write file 1 setup");
-            valid_file.close().await.expect("close file 1 setup");
-        }
+        write_test_file_in_dir(&dir, std::path::Path::new("1"), NULL_KEY_AND_NAME_DATA).await;
 
         let mut metadata_store = DataDirAccountMetadataStore::new(dir);
 
@@ -494,5 +550,40 @@ mod test {
         // Try removing ID 2 and expect failure.
         let remove_nonexistent_result = metadata_store.remove(&2).await;
         assert!(remove_nonexistent_result.is_err());
+    }
+
+    #[fuchsia::test]
+    async fn test_cleanup_stale_files() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dir = io_util::open_directory_in_namespace(
+            tmp_dir.path().to_str().unwrap(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        )
+        .expect("could not open temp dir");
+
+        let (dir2, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        dir.clone(0, fidl::endpoints::ServerEnd::new(server_end.into_channel()))
+            .expect("open second connection to temp dir");
+
+        // Prepare tmp_dir with an account for ID 1
+        // and a tempfile (representing an uncommitted file)
+        let temp_filename = ".Yv8VrVzrCk";
+        write_test_file_in_dir(&dir, std::path::Path::new("1"), NULL_KEY_AND_NAME_DATA).await;
+        write_test_file_in_dir(&dir, std::path::Path::new(temp_filename), NULL_KEY_AND_NAME_DATA)
+            .await;
+
+        // Expect cleanup to remove the uncommitted file but retain the "1"
+        let mut metadata_store = DataDirAccountMetadataStore::new(dir);
+
+        let dirents = files_async::readdir(&dir2).await.expect("readdir");
+        assert_eq!(dirents.len(), 2);
+        assert_eq!(dirents[0].name, temp_filename);
+        assert_eq!(dirents[1].name, "1");
+
+        metadata_store.cleanup_stale_files().await.expect("cleanup_stale_files");
+
+        let dirents = files_async::readdir(&dir2).await.expect("readdir 2");
+        assert_eq!(dirents.len(), 1);
+        assert_eq!(dirents[0].name, "1");
     }
 }
