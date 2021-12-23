@@ -51,8 +51,6 @@ const std::vector<std::pair<const char*, const char*>> GetInjectedServices() {
   std::vector<std::pair<const char*, const char*>> injected_services = {{
       {"fuchsia.accessibility.semantics.SemanticsManager",
        "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"},
-      {"fuchsia.deprecatedtimezone.Timezone",
-       "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx"},
       {"fuchsia.fonts.Provider", "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"},
       {"fuchsia.hardware.display.Provider",
        "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"},

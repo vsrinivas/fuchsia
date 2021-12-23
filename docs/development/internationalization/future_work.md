@@ -55,8 +55,6 @@ For information about the future work related to localization, see
 
 ## Time zones
 
--   Finish removing `fuchsia.deprecatedtimezone.Timezone`.
-
 -   Implement a FIDL service that provides a listing of time zone IDs and
     localized display names. This will initially be used in the workstation
     product's settings UI.

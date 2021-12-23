@@ -11,15 +11,9 @@ use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;
-use anyhow::format_err;
-use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl::Error::ClientChannelClosed;
 use fidl_fuchsia_settings::*;
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
 use fuchsia_zircon::Status;
-use futures::future::BoxFuture;
-use futures::prelude::*;
 use matches::assert_matches;
 use std::sync::Arc;
 
@@ -29,47 +23,7 @@ const ENV_NAME: &str = "settings_service_intl_test_environment";
 const INITIAL_LOCALE: &str = "en-US-x-fxdef";
 
 async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> IntlProxy {
-    let service_gen = Box::new(
-        |service_name: &str,
-         channel: zx::Channel|
-         -> BoxFuture<'static, Result<(), anyhow::Error>> {
-            if service_name != fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME {
-                return Box::pin(async { Err(format_err!("unsupported!")) });
-            }
-
-            let timezone_stream_result =
-                ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
-                    .into_stream();
-
-            if timezone_stream_result.is_err() {
-                return Box::pin(async { Err(format_err!("could not open stream")) });
-            }
-
-            let mut timezone_stream = timezone_stream_result.unwrap();
-
-            fasync::Task::spawn(async move {
-                while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        fidl_fuchsia_deprecatedtimezone::TimezoneRequest::SetTimezone {
-                            timezone_id: _,
-                            responder,
-                        } => {
-                            responder.send(true).unwrap();
-                        }
-                        _ => {
-                            panic!("unexpected call: {:?}", &req);
-                        }
-                    }
-                }
-            })
-            .detach();
-            Box::pin(async { Ok(()) })
-        },
-    );
-
     let env = EnvironmentBuilder::new(storage_factory)
-        .service(Box::new(service_gen))
         .fidl_interfaces(&[Interface::Intl])
         .spawn_and_get_nested_environment(ENV_NAME)
         .await

@@ -30,7 +30,6 @@
         {
             protocol: [
                 "fuchsia.camera3.DeviceWatcher",
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.sessions2.Discovery",

@@ -7,7 +7,6 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 
 timekeeper_deps = [
-  "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc-rustc",
   "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
   "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",

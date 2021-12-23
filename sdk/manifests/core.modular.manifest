@@ -35,7 +35,6 @@ sdk://fidl/fuchsia.component.runner
 sdk://fidl/fuchsia.component.test
 sdk://fidl/fuchsia.component.types
 sdk://fidl/fuchsia.data
-sdk://fidl/fuchsia.deprecatedtimezone
 sdk://fidl/fuchsia.developer.tiles
 sdk://fidl/fuchsia.diagnostics
 sdk://fidl/fuchsia.diagnostics.types

@@ -23,7 +23,6 @@ group("bin") {
     "sshd-host",
     "sysmgr",
     "time",
-    "timezone",
     "trace",
     "trace2json",
     "trace_manager",

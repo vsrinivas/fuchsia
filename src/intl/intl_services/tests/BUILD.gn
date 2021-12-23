@@ -36,7 +36,6 @@ fuchsia_unittest_package("pkg") {
     ":intl_services_test",
     "..:pkg",
     "//garnet/bin/setui",
-    "//garnet/bin/timezone",
     "//src/sys/device_settings:device_settings_manager",
     "//src/sys/stash",
   ]

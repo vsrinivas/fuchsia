@@ -12,7 +12,7 @@ use crate::tests::fakes::brightness_service::BrightnessService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use crate::EnvironmentBuilder;
-use anyhow::format_err;
+use anyhow::{anyhow, Result};
 use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl::Error::ClientChannelClosed;
 use fidl_fuchsia_settings::{
@@ -20,11 +20,9 @@ use fidl_fuchsia_settings::{
     LowLightMode as FidlLowLightMode, Theme as FidlTheme, ThemeMode as FidlThemeMode,
     ThemeType as FidlThemeType,
 };
-use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Status};
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
-use futures::prelude::*;
 use matches::assert_matches;
 use std::sync::Arc;
 
@@ -567,48 +565,25 @@ async fn validate_restore_with_brightness_controller(
 // Makes sure that a failing display stream doesn't cause a failure for a different interface.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_display_failure() {
-    let service_gen = |service_name: &str,
-                       channel: zx::Channel|
-     -> BoxFuture<'static, Result<(), anyhow::Error>> {
-        match service_name {
-            fidl_fuchsia_ui_brightness::ControlMarker::NAME => {
-                // This stream is closed immediately
-                let manager_stream_result =
-                    ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel)
-                        .into_stream();
+    let service_gen =
+        |service_name: &str, channel: zx::Channel| -> BoxFuture<'static, Result<()>> {
+            match service_name {
+                fidl_fuchsia_ui_brightness::ControlMarker::NAME => {
+                    // This stream is closed immediately
+                    let manager_stream_result =
+                        ServerEnd::<fidl_fuchsia_ui_brightness::ControlMarker>::new(channel)
+                            .into_stream();
 
-                if manager_stream_result.is_err() {
-                    Box::pin(async {
-                        Err(format_err!("could not move brightness channel into stream"))
-                    })
-                } else {
-                    Box::pin(async { Ok(()) })
-                }
-            }
-            fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME => {
-                let timezone_stream_result =
-                    ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
-                        .into_stream();
-
-                if timezone_stream_result.is_err() {
-                    return Box::pin(async {
-                        Err(format_err!("could not move timezone channel into stream"))
-                    });
-                }
-                let mut timezone_stream = timezone_stream_result.unwrap();
-                fasync::Task::spawn(async move {
-                    while let Some(req) = timezone_stream.try_next().await.unwrap() {
-                        // TODO(fxbug.dev/8859): Remove completely once deprecatedtimezone is
-                        // removed.
-                        panic!("unexpected call: {:?}", &req);
+                    if manager_stream_result.is_err() {
+                        return Box::pin(async {
+                            Err(anyhow!("could not move brightness channel into stream"))
+                        });
                     }
-                })
-                .detach();
-                Box::pin(async { Ok(()) })
+                    return Box::pin(async { Ok(()) });
+                }
+                _ => Box::pin(async { Err(anyhow!("unsupported")) }),
             }
-            _ => Box::pin(async { Err(format_err!("unsupported")) }),
-        }
-    };
+        };
 
     let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
         .service(Box::new(service_gen))

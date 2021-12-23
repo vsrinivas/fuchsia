@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use crate::base::{Merge, SettingInfo, SettingType};
-use crate::call_async;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
@@ -12,11 +11,9 @@ use crate::handler::setting_handler::{
 };
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
-use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use rust_icu_uenum as uenum;
 use std::collections::HashSet;
-use std::sync::Arc;
 
 impl DeviceStorageCompatible for IntlInfo {
     const KEY: &'static str = "intl_info";
@@ -78,6 +75,7 @@ impl IntlController {
     /// Loads the set of valid time zones from resources.
     fn load_time_zones() -> std::collections::HashSet<String> {
         let _icu_data_loader = icu_data::Loader::new().expect("icu data loaded");
+
         let time_zone_list = match uenum::open_time_zones() {
             Ok(time_zones) => time_zones,
             Err(err) => {
@@ -91,8 +89,6 @@ impl IntlController {
 
     async fn set(&self, info: IntlInfo) -> SettingHandlerResult {
         self.validate_intl_info(info.clone())?;
-
-        self.write_intl_info_to_service(info.clone()).await;
 
         let nonce = fuchsia_trace::generate_nonce();
         let current = self.client.read_setting::<IntlInfo>(nonce).await;
@@ -113,35 +109,5 @@ impl IntlController {
         }
 
         Ok(())
-    }
-
-    /// Writes the time zone setting to the timezone service.
-    ///
-    /// Errors are only logged as this is an intermediate step in a migration.
-    /// TODO(fxbug.dev/41639): remove this
-    async fn write_intl_info_to_service(&self, info: IntlInfo) {
-        let service_context = Arc::clone(&self.client.get_service_context());
-        fasync::Task::spawn(async move {
-            let service_result =
-                service_context.connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>().await;
-
-            let proxy = match service_result {
-                Ok(proxy) => proxy,
-                Err(_) => {
-                    fx_log_err!("Failed to connect to fuchsia.timezone");
-                    return;
-                }
-            };
-
-            let time_zone_id = match info.time_zone_id {
-                Some(id) => id,
-                None => return,
-            };
-
-            if let Err(e) = call_async!(proxy => set_timezone(time_zone_id.as_str())).await {
-                fx_log_err!("Failed to write timezone to fuchsia.timezone: {:?}", e);
-            }
-        })
-        .detach();
     }
 }

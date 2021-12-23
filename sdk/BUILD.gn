@@ -219,7 +219,6 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.component.types:fuchsia.component.types_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.data:fuchsia.data_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_sdk($fidl_toolchain)",

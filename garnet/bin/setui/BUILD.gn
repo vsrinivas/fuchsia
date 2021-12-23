@@ -24,7 +24,6 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
-    "//sdk/fidl/fuchsia.deprecatedtimezone:fuchsia.deprecatedtimezone-rustc",
     "//sdk/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
