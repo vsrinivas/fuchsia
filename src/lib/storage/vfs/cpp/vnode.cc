@@ -19,7 +19,6 @@
 #include <fidl/fuchsia.io2/cpp/wire.h>
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
-#include "src/lib/storage/vfs/cpp/mount_channel.h"
 
 namespace fio = fuchsia_io;
 namespace fio2 = fuchsia_io2;
@@ -315,7 +314,9 @@ zx_status_t Vnode::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) 
 
 zx::status<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
-zx_status_t Vnode::AttachRemote(MountChannel h) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Vnode::AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 fidl::ClientEnd<fuchsia_io::Directory> Vnode::DetachRemote() {
   return fidl::ClientEnd<fuchsia_io::Directory>();

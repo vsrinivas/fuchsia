@@ -15,6 +15,7 @@
 
 #include <fbl/vector.h>
 #include <fs-management/admin.h>
+#include <fs-management/mount.h>
 
 #include "path.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
@@ -73,20 +74,14 @@ zx::status<fidl::ClientEnd<DirectoryAdmin>> InitNativeFs(const char* binary, zx:
   argv.push_back(nullptr);
   int argc = static_cast<int>(argv.size() - 1);
 
-  auto cleanup = fit::defer([&outgoing_directory_or, &options]() {
-    auto root_or = FsRootHandle(outgoing_directory_or->client);
-    if (root_or.is_error()) {
-      // Ignore errors.
-      return;
-    }
-    fs::FuchsiaVfs::UnmountHandle(*std::move(root_or),
-                                  options.wait_until_ready ? zx::time::infinite() : zx::time(0));
-  });
-
   if ((status = options.callback(argc, argv.data(), handles.data(), ids.data(),
                                  handles[2] == ZX_HANDLE_INVALID ? 2 : 3)) != ZX_OK) {
     return zx::error(status);
   }
+
+  auto cleanup = fit::defer([&outgoing_directory_or]() {
+    [[maybe_unused]] auto result = Shutdown(outgoing_directory_or->client);
+  });
 
   if (options.wait_until_ready) {
     // Wait until the filesystem is ready to take incoming requests
@@ -100,6 +95,7 @@ zx::status<fidl::ClientEnd<DirectoryAdmin>> InitNativeFs(const char* binary, zx:
         return zx::error(result.status());
     }
   }
+
   cleanup.cancel();
   return zx::ok(std::move(outgoing_directory_or->client));
 }

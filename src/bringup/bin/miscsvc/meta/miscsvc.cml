@@ -26,16 +26,6 @@
             rights: [ "rw*" ],
             path: "/dev",
         },
-
-        // TODO: Paver should create its own memfs instead, so this can eventually be removed.
-        {
-            directory: "volume",
-            rights: [
-                "admin",
-                "rw*",
-            ],
-            path: "/volume",
-        },
         {
             protocol: [
                 // Services from bootsvc

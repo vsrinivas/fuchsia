@@ -11,8 +11,11 @@
 
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
+#include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
+
+#include "src/storage/testing/ram_disk.h"
 
 namespace fs_management {
 namespace {
@@ -38,6 +41,7 @@ class OutgoingDirectoryFixture : public testing::Test {
       : format_(format), options_(options) {}
 
   void SetUp() override {
+    ASSERT_EQ(storage::WaitForRamctl().status_value(), ZX_OK);
     zx_status_t status;
     ASSERT_EQ(status = ramdisk_create(512, 1 << 16, &ramdisk_), ZX_OK)
         << zx_status_get_string(status);
@@ -95,9 +99,10 @@ class OutgoingDirectoryFixture : public testing::Test {
     if (state_ != kStarted) {
       return;
     }
-    auto resp = DataRoot()->Unmount();
-    ASSERT_TRUE(resp.ok()) << resp.status_string();
-    ASSERT_EQ(resp.value().s, ZX_OK) << zx_status_get_string(resp.value().s);
+    ASSERT_EQ(fs_management::Shutdown(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                          export_client_.client_end()))
+                  .status_value(),
+              ZX_OK);
 
     state_ = kFormatted;
   }

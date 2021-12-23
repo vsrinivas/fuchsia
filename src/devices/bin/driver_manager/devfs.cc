@@ -128,19 +128,6 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
   }
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override;
-  void Mount(MountRequestView request, MountCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-  void MountAndCreate(MountAndCreateRequestView request,
-                      MountAndCreateCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
-  void UnmountNode(UnmountNodeRequestView request, UnmountNodeCompleter::Sync& completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, fidl::ClientEnd<fio::Directory>());
-  }
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) override;
   void GetDevicePath(GetDevicePathRequestView request,

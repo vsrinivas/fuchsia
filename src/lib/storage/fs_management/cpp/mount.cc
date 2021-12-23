@@ -23,6 +23,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
+#include <iostream>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -37,47 +38,9 @@
 namespace fs_management {
 namespace {
 
-namespace fblock = fuchsia_hardware_block;
 namespace fio = fuchsia_io;
 
-using fuchsia_io_admin::DirectoryAdmin;
-
-zx_status_t MakeDirAndRemoteMount(const char* path, fidl::ClientEnd<DirectoryAdmin> root) {
-  // Open the parent path as O_ADMIN, and sent the mkdir+mount command
-  // to that directory.
-  char parent_path[PATH_MAX];
-  const char* name;
-  strcpy(parent_path, path);
-  char* last_slash = strrchr(parent_path, '/');
-  if (last_slash == NULL) {
-    strcpy(parent_path, ".");
-    name = path;
-  } else {
-    *last_slash = '\0';
-    name = last_slash + 1;
-    if (*name == '\0') {
-      return ZX_ERR_INVALID_ARGS;
-    }
-  }
-
-  zx_status_t status;
-  zx::channel parent, parent_server;
-  if ((status = zx::channel::create(0, &parent, &parent_server)) != ZX_OK) {
-    return status;
-  }
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                   fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightAdmin;
-  if ((status = fdio_open(parent_path, flags, parent_server.release())) != ZX_OK) {
-    return status;
-  }
-  fidl::WireSyncClient<DirectoryAdmin> parent_client(std::move(parent));
-  auto resp =
-      parent_client->MountAndCreate(root.TakeChannel(), fidl::StringView::FromExternal(name), 0);
-  if (!resp.ok()) {
-    return resp.status();
-  }
-  return resp.value().s;
-}
+using DirectoryAdmin = fuchsia_io_admin::DirectoryAdmin;
 
 zx::status<std::pair<fidl::ClientEnd<DirectoryAdmin>, fidl::ClientEnd<DirectoryAdmin>>>
 StartFilesystem(fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options,
@@ -124,59 +87,59 @@ StartFilesystem(fbl::unique_fd device_fd, DiskFormat df, const MountOptions& opt
   return zx::ok(std::make_pair(*std::move(export_root_or), *std::move(root_or)));
 }
 
+std::string StripTrailingSlash(const std::string& in) {
+  if (!in.empty() && in.back() == '/') {
+    return in.substr(0, in.length() - 1);
+  } else {
+    return in;
+  }
+}
+
 }  // namespace
 
+MountedFilesystem::~MountedFilesystem() {
+  if (export_root_.is_valid()) [[maybe_unused]]
+    auto result = UnmountImpl();
+}
+
+zx::status<> MountedFilesystem::UnmountImpl() {
+  zx_status_t status = ZX_OK;
+  if (!mount_path_.empty()) {
+    // Ignore errors unbinding, since we still want to continue and try and shut down the
+    // filesystem.
+    fdio_ns_t* ns;
+    status = fdio_ns_get_installed(&ns);
+    if (status == ZX_OK)
+      status = fdio_ns_unbind(ns, StripTrailingSlash(mount_path_).c_str());
+  }
+  auto result = Shutdown(export_root_);
+  return status != ZX_OK ? zx::error(status) : result;
+}
+
 __EXPORT
-zx::status<fidl::ClientEnd<DirectoryAdmin>> Mount(fbl::unique_fd device_fd, int mount_fd,
-                                                  DiskFormat df, const MountOptions& options,
-                                                  LaunchCallback cb) {
-  zx::channel crypt_client(options.crypt_client);
-  if (options.bind_to_namespace) {
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
+zx::status<> Shutdown(fidl::UnownedClientEnd<DirectoryAdmin> export_root) {
+  auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
+  if (admin_or.is_error())
+    return admin_or.take_error();
+
+  if (zx_status_t status =
+          fdio_service_connect_at(export_root.channel()->get(),
+                                  fidl::DiscoverableProtocolDefaultPath<fuchsia_fs::Admin> + 1,
+                                  admin_or->server.TakeChannel().release());
+      status != ZX_OK) {
+    return zx::error(status);
   }
 
-  auto result = StartFilesystem(std::move(device_fd), df, options, cb, std::move(crypt_client));
-  if (result.is_error())
-    return result.take_error();
-  auto [export_root, data_root] = *std::move(result);
-
-  fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fidl::WireCall<DirectoryAdmin>(caller.channel())
-                  ->Mount(fidl::ClientEnd<fio::Directory>(data_root.TakeChannel()));
-  caller.release().release();
-  if (!resp.ok())
+  auto resp = fidl::WireCall(admin_or->client)->Shutdown();
+  if (resp.status() != ZX_OK)
     return zx::error(resp.status());
-  if (resp.value().s != ZX_OK)
-    return zx::error(resp.value().s);
 
-  return zx::ok(std::move(export_root));
+  return zx::ok();
 }
 
 __EXPORT
-zx_status_t MountRootHandle(fidl::ClientEnd<DirectoryAdmin> root, const char* mount_path) {
-  zx_status_t status;
-  zx::channel mount_point, mount_point_server;
-  if ((status = zx::channel::create(0, &mount_point, &mount_point_server)) != ZX_OK) {
-    return status;
-  }
-  if ((status = fdio_open(mount_path, O_RDONLY | O_DIRECTORY | O_ADMIN,
-                          mount_point_server.release())) != ZX_OK) {
-    return status;
-  }
-  fidl::WireSyncClient<DirectoryAdmin> mount_client(std::move(mount_point));
-  auto resp = mount_client->Mount(root.TakeChannel());
-  if (!resp.ok()) {
-    return resp.status();
-  }
-  return resp.value().s;
-}
-
-__EXPORT
-zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_fd device_fd,
-                                                                    const char* mount_path,
-                                                                    DiskFormat df,
-                                                                    const MountOptions& options,
-                                                                    LaunchCallback cb) {
+zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_path, DiskFormat df,
+                                    const MountOptions& options, LaunchCallback cb) {
   zx::channel crypt_client(options.crypt_client);
 
   auto result = StartFilesystem(std::move(device_fd), df, options, cb, std::move(crypt_client));
@@ -184,62 +147,16 @@ zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_
     return result.take_error();
   auto [export_root, data_root] = *std::move(result);
 
-  // If no mount point is provided, just return success; the caller can get whatever they want from
-  // the export root.
   if (mount_path) {
-    if (options.bind_to_namespace) {
-      fdio_ns_t* ns;
-      if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK)
-        return zx::error(status);
-      if (zx_status_t status = fdio_ns_bind(ns, mount_path, data_root.TakeChannel().release());
-          status != ZX_OK)
-        return zx::error(status);
-    } else {
-      // mount the channel in the requested location
-      if (options.create_mountpoint) {
-        if (zx_status_t status = MakeDirAndRemoteMount(mount_path, std::move(data_root));
-            status != ZX_OK) {
-          return zx::error(status);
-        }
-      } else {
-        if (zx_status_t status = MountRootHandle(std::move(data_root), mount_path); status != ZX_OK)
-          return zx::error(status);
-      }
-    }
+    fdio_ns_t* ns;
+    if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK)
+      return zx::error(status);
+    if (zx_status_t status = fdio_ns_bind(ns, mount_path, data_root.TakeChannel().release());
+        status != ZX_OK)
+      return zx::error(status);
   }
 
-  return zx::ok(std::move(export_root));
-}
-
-__EXPORT
-zx_status_t Unmount(int mount_fd) {
-  fdio_cpp::UnownedFdioCaller caller(mount_fd);
-  auto resp = fidl::WireCall<DirectoryAdmin>(caller.channel())->UnmountNode();
-  if (!resp.ok()) {
-    return resp.status();
-  }
-  if (resp.value().s != ZX_OK) {
-    return resp.value().s;
-  }
-  // Note: we are unsafely converting from a client end of the
-  // |fuchsia.io/Directory| protocol into a client end of the
-  // |fuchsia.io/DirectoryAdmin| protocol.
-  // This method will only work if |mount_fd| is backed by a connection
-  // that actually speaks the |DirectoryAdmin| protocol.
-  fidl::ClientEnd<DirectoryAdmin> directory_admin_client(std::move(resp.value().remote.channel()));
-  return fs::FuchsiaVfs::UnmountHandle(std::move(directory_admin_client), zx::time::infinite());
-}
-
-__EXPORT
-zx_status_t Unmount(const char* mount_path) {
-  fprintf(stderr, "Unmounting %s\n", mount_path);
-  fbl::unique_fd fd(open(mount_path, O_DIRECTORY | O_NOREMOTE | O_ADMIN));
-  if (!fd) {
-    fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
-    return ZX_ERR_BAD_STATE;
-  }
-  zx_status_t status = Unmount(fd.get());
-  return status;
+  return zx::ok(MountedFilesystem(std::move(export_root), mount_path ? mount_path : ""));
 }
 
 }  // namespace fs_management

@@ -40,18 +40,6 @@
             ],
             path: "/fs/tmp",
         },
-
-        // TODO: this volume directory is only used by the paver lib in netsvc under
-        // devcoordinator. The paver lib could create its own memfs instead, so
-        // this should eventually be removed.
-        {
-            directory: "volume",
-            rights: [
-                "admin",
-                "rw*",
-            ],
-            path: "/fs/volume",
-        },
         {
             protocol: [
                 "fuchsia.fshost.Admin",
@@ -117,10 +105,6 @@
         },
         {
             directory: "tmp",
-            from: "self",
-        },
-        {
-            directory: "volume",
             from: "self",
         },
         {

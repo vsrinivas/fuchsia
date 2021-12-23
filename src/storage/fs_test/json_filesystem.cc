@@ -45,8 +45,7 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
           .supports_watch_event_deleted =
               ConfigGetOrDefault<bool>(config, "supports_watch_event_deleted", true),
       },
-      format, ConfigGetOrDefault<bool>(config, "use_directory_admin_to_unmount", false),
-      sectors_per_cluster));
+      format, sectors_per_cluster));
 }
 
 class JsonInstance : public FilesystemInstance {
@@ -64,23 +63,7 @@ class JsonInstance : public FilesystemInstance {
 
   zx::status<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
-    fs_management::MountOptions new_options = options;
-    new_options.admin = filesystem_.use_directory_admin_to_unmount();
-    return FsMount(device_path_, mount_path, filesystem_.format(), new_options,
-                   &outgoing_directory_);
-  }
-
-  zx::status<> Unmount(const std::string& mount_path) override {
-    if (filesystem_.use_directory_admin_to_unmount()) {
-      return FilesystemInstance::Unmount(mount_path);
-    } else {
-      zx::status<> status = FsAdminUnmount(mount_path, outgoing_directory_);
-      if (status.is_error()) {
-        return status;
-      }
-      outgoing_directory_.reset();
-      return zx::ok();
-    }
+    return FsMount(device_path_, mount_path, filesystem_.format(), options, &outgoing_directory_);
   }
 
   zx::status<> Fsck() override {

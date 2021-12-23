@@ -6,8 +6,6 @@ library fuchsia.io.admin;
 using fuchsia.io;
 using zx;
 
-const MOUNT_CREATE_FLAG_REPLACE uint32 = 0x00000001;
-
 const MAX_FS_NAME_BUFFER uint64 = 32;
 
 type FilesystemInfo = struct {
@@ -56,39 +54,6 @@ type FilesystemInfo = struct {
 /// administrator tasks within the filesystem.
 protocol DirectoryAdmin {
     compose fuchsia.io.Directory;
-
-    /// Mount a channel representing a remote filesystem onto this directory.
-    /// All future requests to this node will be forwarded to the remote filesystem.
-    /// To re-open a node without forwarding to the remote target, the node
-    /// should be opened with `OPEN_FLAG_NO_REMOTE`.
-    Mount(resource struct {
-        remote client_end:fuchsia.io.Directory;
-    }) -> (struct {
-        s zx.status;
-    });
-
-    /// Atomically create a directory with a provided path, and mount the
-    /// remote handle to the newly created directory.
-    MountAndCreate(resource struct {
-        remote client_end:fuchsia.io.Directory;
-        name string:fuchsia.io.MAX_FILENAME;
-        flags uint32;
-    }) -> (struct {
-        s zx.status;
-    });
-
-    /// Unmount this filesystem. After this function returns successfully,
-    /// all connections to the filesystem will be terminated.
-    Unmount() -> (struct {
-        s zx.status;
-    });
-
-    /// Detach a node which was previously attached to this directory
-    /// with Mount.
-    UnmountNode() -> (resource struct {
-        s zx.status;
-        remote client_end:<fuchsia.io.Directory, optional>;
-    });
 
     /// Query the filesystem for filesystem-specific information.
     QueryFilesystem() -> (struct {

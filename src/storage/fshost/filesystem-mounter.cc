@@ -36,10 +36,10 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
                          fs_flags);
 }
 
-zx::status<zx::channel> FilesystemMounter::MountFilesystem(
-    FsManager::MountPoint point, const char* binary, const fs_management::MountOptions& options,
-    zx::channel block_device_client, uint32_t fs_flags,
-    fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
+zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, const char* binary,
+                                                const fs_management::MountOptions& options,
+                                                zx::channel block_device_client, uint32_t fs_flags,
+                                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
   zx::status create_endpoints = fidl::CreateEndpoints<fio::Node>();
   if (create_endpoints.is_error()) {
     return create_endpoints.take_error();
@@ -102,11 +102,7 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(
     return zx::error(resp.status());
   }
 
-  if (zx_status_t status = InstallFs(point, std::move(root_client)); status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  return zx::ok(export_root.TakeChannel());
+  return InstallFs(point, export_root.TakeChannel(), std::move(root_client));
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device,
@@ -128,21 +124,16 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
   if (crypt_client_or.is_error())
     return crypt_client_or.error_value();
 
-  zx::status<zx::channel> export_root =
-      MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), data_options,
-                      std::move(block_device), FS_SVC, std::move(crypt_client_or).value());
-  if (export_root.is_error()) {
-    return export_root.error_value();
+  if (auto result =
+          MountFilesystem(FsManager::MountPoint::kData, binary_path.c_str(), data_options,
+                          std::move(block_device), FS_SVC, std::move(crypt_client_or).value());
+      result.is_error()) {
+    return result.error_value();
   }
 
-  zx_status_t status =
-      fshost_.SetFsExportRoot(FsManager::MountPoint::kData, std::move(export_root.value()));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kData, "minfs");
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kData, "minfs");
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to add diagnostic directory for minfs: "
                    << zx_status_get_string(status);
   }
@@ -157,10 +148,10 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kInstall, "/pkg/bin/minfs", options,
-                                   std::move(block_device), FS_SVC);
-  if (ret.is_error()) {
-    return ret.error_value();
+  if (auto result = MountFilesystem(FsManager::MountPoint::kInstall, "/pkg/bin/minfs", options,
+                                    std::move(block_device), FS_SVC);
+      result.is_error()) {
+    return result.error_value();
   }
 
   install_mounted_ = true;
@@ -173,10 +164,10 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kFactory, "/pkg/bin/factoryfs", options,
-                                   std::move(block_device), FS_SVC);
-  if (ret.is_error()) {
-    return ret.error_value();
+  if (auto result = MountFilesystem(FsManager::MountPoint::kFactory, "/pkg/bin/factoryfs", options,
+                                    std::move(block_device), FS_SVC);
+      result.is_error()) {
+    return result.error_value();
   }
 
   factory_mounted_ = true;
@@ -189,10 +180,10 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kDurable, "/pkg/bin/minfs", options,
-                                   std::move(block_device), FS_SVC);
-  if (ret.is_error()) {
-    return ret.error_value();
+  if (auto result = MountFilesystem(FsManager::MountPoint::kDurable, "/pkg/bin/minfs", options,
+                                    std::move(block_device), FS_SVC);
+      result.is_error()) {
+    return result.error_value();
   }
 
   durable_mounted_ = true;
@@ -205,28 +196,22 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status<zx::channel> export_root =
-      MountFilesystem(FsManager::MountPoint::kBlob, "/pkg/bin/blobfs", options,
-                      std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
-  if (export_root.is_error()) {
-    return export_root.error_value();
+  if (auto result = MountFilesystem(FsManager::MountPoint::kBlob, "/pkg/bin/blobfs", options,
+                                    std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
+      result.is_error()) {
+    return result.error_value();
   }
 
-  zx_status_t status =
-      fshost_.SetFsExportRoot(FsManager::MountPoint::kBlob, std::move(export_root.value()));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  status = fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kBlob, "blobfs");
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kBlob, "blobfs");
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to add diagnostic directory for blobfs: "
                    << zx_status_get_string(status);
   }
-  status = fshost_.ForwardFsService(
-      FsManager::MountPoint::kBlob,
-      fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>);
-  if (status != ZX_OK) {
+  if (zx_status_t status = fshost_.ForwardFsService(
+          FsManager::MountPoint::kBlob,
+          fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>);
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to forward BlobfsVerifier service for blobfs: "
                    << zx_status_get_string(status);
   }

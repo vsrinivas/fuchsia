@@ -520,19 +520,6 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
 
   client->GetDevicePath(UnsupportedErrorMatcher());
   {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ASSERT_OK(endpoints.status_value());
-    client->Mount(std::move(endpoints->client), UnsupportedErrorMatcher());
-  }
-  {
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ASSERT_OK(endpoints.status_value());
-    client->MountAndCreate(std::move(endpoints->client), "", 0, UnsupportedErrorMatcher());
-  }
-  client->Unmount(UnsupportedErrorMatcher());
-  client->UnmountNode(UnsupportedErrorMatcher());
-  client->GetDevicePath(UnsupportedErrorMatcher());
-  {
     zx::channel s, c;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &s, &c));
     client->Link("", std::move(s), "", UnsupportedErrorMatcher());

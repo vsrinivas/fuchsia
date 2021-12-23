@@ -60,42 +60,6 @@ TEST(SynchronousVfs, CanOnlySetDispatcherOnce) {
   ASSERT_DEATH([&]() { vfs.SetDispatcher(loop.dispatcher()); });
 }
 
-TEST(SynchronousVfs, UnmountAndShutdown) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fs::SynchronousVfs vfs(loop.dispatcher());
-  loop.StartThread();
-
-  zx::status root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
-  ASSERT_EQ(ZX_OK, root.status_value());
-
-  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  ASSERT_OK(vfs.ServeDirectory(std::move(dir),
-                               fidl::ServerEnd<fuchsia_io::Directory>(root->server.TakeChannel())));
-
-  auto result = fidl::WireCall(root->client)->Unmount();
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->s);
-  ASSERT_TRUE(vfs.IsTerminating());
-}
-
-TEST(ManagedVfs, UnmountAndShutdown) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fs::ManagedVfs vfs(loop.dispatcher());
-  loop.StartThread();
-
-  zx::status root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
-  ASSERT_EQ(ZX_OK, root.status_value());
-
-  auto dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  ASSERT_OK(vfs.ServeDirectory(std::move(dir),
-                               fidl::ServerEnd<fuchsia_io::Directory>(root->server.TakeChannel())));
-
-  auto result = fidl::WireCall(root->client)->Unmount();
-  ASSERT_OK(result.status());
-  ASSERT_OK(result->s);
-  ASSERT_TRUE(vfs.IsTerminating());
-}
-
 static void CheckClosesConnection(fs::FuchsiaVfs* vfs, async::TestLoop* loop) {
   zx::status a = fidl::CreateEndpoints<fuchsia_io::Directory>();
   zx::status b = fidl::CreateEndpoints<fuchsia_io::Directory>();

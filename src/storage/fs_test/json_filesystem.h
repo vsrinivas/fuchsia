@@ -24,16 +24,11 @@ class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
   static zx::status<std::unique_ptr<JsonFilesystem>> NewFilesystem(
       const rapidjson::Document& config);
 
-  JsonFilesystem(Traits traits, fs_management::DiskFormat format,
-                 bool use_directory_admin_to_unmount, int sectors_per_cluster)
-      : traits_(std::move(traits)),
-        format_(format),
-        use_directory_admin_to_unmount_(use_directory_admin_to_unmount),
-        sectors_per_cluster_(sectors_per_cluster) {}
+  JsonFilesystem(Traits traits, fs_management::DiskFormat format, int sectors_per_cluster)
+      : traits_(std::move(traits)), format_(format), sectors_per_cluster_(sectors_per_cluster) {}
   virtual ~JsonFilesystem() = default;
 
   fs_management::DiskFormat format() const { return format_; }
-  bool use_directory_admin_to_unmount() const { return use_directory_admin_to_unmount_; }
   int sectors_per_cluster() const { return sectors_per_cluster_; }
 
   const Traits& GetTraits() const override { return traits_; }
@@ -47,7 +42,6 @@ class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
  private:
   const Traits traits_;
   const fs_management::DiskFormat format_;
-  const bool use_directory_admin_to_unmount_ = false;
   const int sectors_per_cluster_ = 0;
 };
 

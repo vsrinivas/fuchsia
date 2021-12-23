@@ -78,18 +78,19 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
   std::thread thread([name = std::move(name), completer = completer.ToAsync(),
                       options = std::move(options), fd = std::move(fd), df = std::move(df),
                       fs_manager = fs_manager_, dispatcher]() mutable {
-    auto export_root_or =
+    auto mounted_filesystem_or =
         fs_management::Mount(std::move(fd), nullptr, df, options, launch_logs_async);
-    if (export_root_or.is_error()) {
-      FX_LOGS(WARNING) << "Mount failed: " << export_root_or.status_string();
-      completer.ReplyError(export_root_or.error_value());
+    if (mounted_filesystem_or.is_error()) {
+      FX_LOGS(WARNING) << "Mount failed: " << mounted_filesystem_or.status_string();
+      completer.ReplyError(mounted_filesystem_or.error_value());
       return;
     }
 
     // fs_manager isn't thread-safe, so we have to post back on to the async loop to attach the
     // mount.
-    async::PostTask(dispatcher, [export_root = *std::move(export_root_or), name = std::move(name),
-                                 fs_manager, completer = std::move(completer)]() mutable {
+    async::PostTask(dispatcher, [export_root = std::move(*mounted_filesystem_or).TakeExportRoot(),
+                                 name = std::move(name), fs_manager,
+                                 completer = std::move(completer)]() mutable {
       if (zx_status_t status = fs_manager->AttachMount(std::move(export_root), name);
           status != ZX_OK) {
         FX_LOGS(WARNING) << "Failed to attach mount: " << zx_status_get_string(status);

@@ -176,7 +176,6 @@ test("fvm-integration") {
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/blobfs",
     "//src/storage/fvm",
-    "//src/storage/memfs",
     "//src/storage/minfs",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

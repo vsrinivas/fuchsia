@@ -10,8 +10,9 @@ use {
     anyhow::{format_err, Context as _, Error},
     fdio::{SpawnAction, SpawnOptions},
     fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl_fuchsia_fs::AdminMarker,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, NodeProxy},
-    fidl_fuchsia_io_admin::{DirectoryAdminMarker, DirectoryAdminProxy},
+    fuchsia_component::client::connect_to_protocol_at_dir_svc,
     fuchsia_component::server::ServiceFs,
     fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_runtime::{HandleInfo, HandleType},
@@ -80,11 +81,12 @@ impl BlobfsRamdiskBuilder {
 
         // Spawn blobfs on top of the ramdisk.
         let block_device_handle_id = HandleInfo::new(HandleType::User0, 1);
-        let fs_root_handle_id = HandleInfo::new(HandleType::User0, 0);
+        let export_root_handle_id = HandleInfo::new(HandleType::DirectoryRequest, 0);
 
         let block_handle = ramdisk.clone_channel().context("cloning ramdisk channel")?;
 
-        let (proxy, blobfs_server_end) = fidl::endpoints::create_proxy::<DirectoryAdminMarker>()?;
+        let (export_root_proxy, blobfs_server_end) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>()?;
         let process = scoped_task::spawn_etc(
             scoped_task::job_default(),
             SpawnOptions::CLONE_ALL,
@@ -93,13 +95,23 @@ impl BlobfsRamdiskBuilder {
             None,
             &mut [
                 SpawnAction::add_handle(block_device_handle_id, block_handle.into()),
-                SpawnAction::add_handle(fs_root_handle_id, blobfs_server_end.into()),
+                SpawnAction::add_handle(export_root_handle_id, blobfs_server_end.into()),
             ],
         )
         .map_err(|(status, _)| status)
         .context("spawning 'blobfs mount'")?;
 
-        let blobfs = BlobfsRamdisk { backing_ramdisk: ramdisk, process, proxy };
+        let (root_proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        export_root_proxy.open(
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE
+                | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+            0,
+            "root",
+            server.into_channel().into(),
+        )?;
+        let blobfs =
+            BlobfsRamdisk { backing_ramdisk: ramdisk, process, export_root_proxy, root_proxy };
 
         // Write all the requested missing blobs to the mounted filesystem.
         if !self.blobs.is_empty() {
@@ -124,7 +136,8 @@ impl BlobfsRamdiskBuilder {
 pub struct BlobfsRamdisk {
     backing_ramdisk: FormattedRamdisk,
     process: Scoped<fuchsia_zircon::Process>,
-    proxy: DirectoryAdminProxy,
+    export_root_proxy: DirectoryProxy,
+    root_proxy: DirectoryProxy,
 }
 
 impl BlobfsRamdisk {
@@ -150,7 +163,7 @@ impl BlobfsRamdisk {
     /// Returns a new connection to blobfs's root directory as a raw zircon channel.
     pub fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error> {
         let (root_clone, server_end) = zx::Channel::create()?;
-        self.proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
+        self.root_proxy.clone(fidl_fuchsia_io::CLONE_FLAG_SAME_RIGHTS, server_end.into())?;
         Ok(root_clone.into())
     }
 
@@ -173,8 +186,10 @@ impl BlobfsRamdisk {
 
     /// Signals blobfs to unmount and waits for it to exit cleanly, returning the backing Ramdisk.
     pub async fn unmount(self) -> Result<FormattedRamdisk, Error> {
-        zx::Status::ok(self.proxy.unmount().await.context("sending blobfs unmount")?)
-            .context("unmounting blobfs")?;
+        connect_to_protocol_at_dir_svc::<AdminMarker>(&self.export_root_proxy)?
+            .shutdown()
+            .await
+            .context("sending blobfs shutdown")?;
 
         self.process
             .wait_handle(

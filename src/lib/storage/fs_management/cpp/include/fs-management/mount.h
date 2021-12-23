@@ -23,10 +23,6 @@ struct MountOptions {
   // Ensures that requests to the mountpoint will be propagated to the underlying FS
   bool wait_until_ready = true;
 
-  // Create the mountpoint directory if it doesn't already exist.
-  // Must be false if passed to "fmount".
-  bool create_mountpoint = false;
-
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
   const char* write_compression_algorithm = nullptr;
@@ -42,9 +38,6 @@ struct MountOptions {
   // protocol.
   bool admin = true;
 
-  // If true, bind to the namespace rather than using a remote-mount.
-  bool bind_to_namespace = false;
-
   // If true, puts decompression in a sandboxed process.
   bool sandbox_decompression = false;
 
@@ -52,44 +45,46 @@ struct MountOptions {
   zx_handle_t crypt_client = ZX_HANDLE_INVALID;
 };
 
-// Given the following:
-//  - A device containing a filesystem image of a known format
-//  - A path on which to mount the filesystem
-//  - Some configuration options for launching the filesystem, and
-//  - A callback which can be used to 'launch' an fs server,
-//
-// Prepare the argv arguments to the filesystem process, mount a handle on the
-// expected mount_path, and call the 'launch' callback (if the filesystem is
-// recognized).
-//
-// device_fd is always consumed. If the callback is reached, then the 'device_fd'
-// is transferred via handles to the callback arguments.
-zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_fd device_fd,
-                                                                    const char* mount_path,
-                                                                    DiskFormat df,
-                                                                    const MountOptions& options,
-                                                                    LaunchCallback cb);
+class __EXPORT MountedFilesystem {
+ public:
+  MountedFilesystem(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+                    std::string_view mount_path)
+      : export_root_(std::move(export_root)), mount_path_(mount_path) {}
+  MountedFilesystem(MountedFilesystem&&) = default;
 
-// 'mount_fd' is used in lieu of the mount_path. It is not consumed (i.e.,
-// it will still be open after this function completes, regardless of
-// success or failure).
-zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_fd device_fd,
-                                                                    int mount_fd, DiskFormat df,
-                                                                    const MountOptions& options,
-                                                                    LaunchCallback cb);
+  ~MountedFilesystem();
 
-// Mounts the filesystem being served via root_handle.
-zx_status_t MountRootHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root,
-                            const char* mount_path);
+  const fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>& export_root() const {
+    return export_root_;
+  }
+  const std::string& mount_path() const { return mount_path_; }
 
-// Umount the filesystem process.
+  zx::status<> Unmount() && { return UnmountImpl(); }
+  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> TakeExportRoot() && {
+    return std::move(export_root_);
+  }
+
+ private:
+  zx::status<> UnmountImpl();
+
+  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root_;
+  std::string mount_path_;
+};
+
+// Mounts a filesystem.
 //
-// Returns ZX_ERR_BAD_STATE if mount_path could not be opened.
-// Returns ZX_ERR_NOT_FOUND if there is no mounted filesystem on mount_path.
-// Other errors may also be returned if problems occur while unmounting.
-zx_status_t Unmount(const char* mount_path);
-// 'mount_fd' is used in lieu of the mount_path. It is not consumed.
-zx_status_t Unmount(int mount_fd);
+//   device_fd  : the device containing the filesystem.
+//   mount_path : an optional path where the root will be bound into the local namespace.
+//   df         : the format of the filesystem.
+//   options    : mount options.
+//   cb         : a callback used to actually launch the binary. This can be one of the
+//                functions declared in launch.h.
+zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_path, DiskFormat df,
+                                    const MountOptions& options, LaunchCallback cb);
+
+// Shuts down a filesystem (using fuchsia.fs/Admin).
+__EXPORT
+zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root);
 
 }  // namespace fs_management
 

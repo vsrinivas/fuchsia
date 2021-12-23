@@ -7,12 +7,14 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 
 #include <fs-management/admin.h>
+#include <fs-management/mount.h>
 
 #include "src/storage/blobfs/mkfs.h"
 
@@ -65,9 +67,9 @@ void FdioTest::TearDown() {
   zx::channel root_client;
   ASSERT_EQ(fdio_fd_transfer(root_fd_.release(), root_client.reset_and_get_address()), ZX_OK);
   ASSERT_EQ(
-      fidl::WireCall(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>(std::move(root_client)))
-          ->Unmount()
-          .status(),
+      fs_management::Shutdown(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
+                                  fdio_cpp::UnownedFdioCaller(export_root_fd_.get()).channel()))
+          .status_value(),
       ZX_OK);
 }
 

@@ -20,7 +20,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/unsafe.h>
-#include <lib/memfs/memfs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
@@ -76,8 +75,7 @@ namespace fio = fuchsia_io;
 
 using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
 
-constexpr char kTmpfsPath[] = "/fvm-tmp";
-constexpr char kMountPath[] = "/fvm-tmp/minfs_test_mountpath";
+constexpr char kMountPath[] = "/test/minfs_test_mountpath";
 constexpr char kTestDevPath[] = "/fake/dev";
 
 // Returns the number of usable slices for a standard layout on a given-sized device.
@@ -104,17 +102,11 @@ class FvmTest : public zxtest::Test {
                                  zx::duration::infinite().get()));
 
     ASSERT_OK(loop_.StartThread());
-    zx::channel memfs_root;
-    ASSERT_OK(
-        memfs_create_filesystem(loop_.dispatcher(), &memfs_, memfs_root.reset_and_get_address()));
 
     fdio_ns_t* name_space;
     ASSERT_OK(fdio_ns_get_installed(&name_space));
 
-    ASSERT_OK(fdio_ns_bind(name_space, kTmpfsPath, memfs_root.release()));
     ASSERT_OK(fdio_ns_bind_fd(name_space, kTestDevPath, devmgr_.devfs_root().get()));
-
-    ASSERT_EQ(mkdir(kMountPath, 0666), 0);
   }
 
   const fbl::unique_fd& devfs_root() const { return devmgr_.devfs_root(); }
@@ -123,12 +115,7 @@ class FvmTest : public zxtest::Test {
     fdio_ns_t* name_space;
     ASSERT_OK(fdio_ns_get_installed(&name_space));
     ASSERT_OK(fdio_ns_unbind(name_space, kTestDevPath));
-    ASSERT_OK(fdio_ns_unbind(name_space, kTmpfsPath));
-
-    sync_completion_t unmounted;
-    memfs_free_filesystem(memfs_, &unmounted);
     ASSERT_OK(ramdisk_destroy(ramdisk_));
-    ASSERT_OK(sync_completion_wait(&unmounted, zx::duration::infinite().get()));
   }
 
   fbl::unique_fd fvm_device() const { return fbl::unique_fd(open(fvm_driver_path_, O_RDWR)); }
@@ -150,7 +137,6 @@ class FvmTest : public zxtest::Test {
  protected:
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   IsolatedDevmgr devmgr_;
-  memfs_filesystem_t* memfs_ = nullptr;
   ramdisk_client_t* ramdisk_ = nullptr;
   fs_management::MountOptions mounting_options_;
   char ramdisk_path_[PATH_MAX] = {};
@@ -1934,7 +1920,6 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
                                  launch_stdio_async)
                 .status_value(),
             ZX_OK);
-  ASSERT_EQ(fs_management::Unmount(kMountPath), ZX_OK);
 
   matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
   vp_fd.reset(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
@@ -2005,7 +1990,6 @@ TEST_F(FvmTest, TestCorruptMount) {
                      fs_management::kDiskFormatBlobfs, query_request);
 
   // Clean up
-  ASSERT_EQ(rmdir(kMountPath), 0);
   ASSERT_EQ(close(fd.release()), 0);
 }
 
@@ -2191,10 +2175,10 @@ TEST_F(FvmTest, TestMounting) {
             ZX_OK);
 
   // Mount the VPart
-  ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                                 mounting_options_, launch_stdio_async)
-                .status_value(),
-            ZX_OK);
+  auto mounted_filesystem_or =
+      fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
+                           mounting_options_, launch_stdio_async);
+  ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
 
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -2213,8 +2197,6 @@ TEST_F(FvmTest, TestMounting) {
   ASSERT_LE(result.value().info->total_bytes, kSliceSize * request.slice_count);
 
   // Clean up.
-  ASSERT_EQ(fs_management::Unmount(kMountPath), ZX_OK);
-  ASSERT_EQ(rmdir(kMountPath), 0);
   ASSERT_EQ(close(fd.release()), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
 }
@@ -2266,11 +2248,11 @@ TEST_F(FvmTest, TestMkfs) {
             ZX_OK);
   vp_fd.reset(open(partition_path, O_RDWR));
   ASSERT_TRUE(vp_fd);
+
   ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatBlobfs,
                                  mounting_options_, launch_stdio_async)
                 .status_value(),
             ZX_OK);
-  ASSERT_EQ(fs_management::Unmount(kMountPath), ZX_OK);
 
   // ... and reformat back to MinFS again.
   ASSERT_EQ(fs_management::Mkfs(partition_path, fs_management::kDiskFormatMinfs, launch_stdio_sync,
@@ -2280,10 +2262,10 @@ TEST_F(FvmTest, TestMkfs) {
   // Mount the VPart.
   vp_fd.reset(open(partition_path, O_RDWR));
   ASSERT_TRUE(vp_fd);
-  ASSERT_EQ(fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
-                                 mounting_options_, launch_stdio_async)
-                .status_value(),
-            ZX_OK);
+  auto mounted_filesystem_or =
+      fs_management::Mount(std::move(vp_fd), kMountPath, fs_management::kDiskFormatMinfs,
+                           mounting_options_, launch_stdio_async);
+  ASSERT_EQ(mounted_filesystem_or.status_value(), ZX_OK);
 
   // Verify that the mount was successful.
   fbl::unique_fd rootfd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -2302,8 +2284,6 @@ TEST_F(FvmTest, TestMkfs) {
   ASSERT_LE(result.value().info->total_bytes, kSliceSize * request.slice_count);
 
   // Clean up.
-  ASSERT_EQ(fs_management::Unmount(kMountPath), ZX_OK);
-  ASSERT_EQ(rmdir(kMountPath), 0);
   FVMCheckSliceSize(fvm_device(), kSliceSize);
 }
 

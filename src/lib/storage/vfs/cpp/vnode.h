@@ -42,7 +42,6 @@
 #include <lib/zx/stream.h>
 #include <zircon/device/vfs.h>
 
-#include "src/lib/storage/vfs/cpp/mount_channel.h"
 namespace fio2 = fuchsia_io2;
 #endif  // __Fuchsia__
 
@@ -387,7 +386,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual zx::status<std::string> GetDevicePath() const;
 
   // Attaches a handle to the vnode, if possible. Otherwise, returns an error.
-  virtual zx_status_t AttachRemote(MountChannel h);
+  virtual zx_status_t AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h);
 
   // The following methods are required to mount sub-filesystems. The logic (and storage) necessary
   // to implement these functions exists within the "RemoteContainer" class, which may be composed

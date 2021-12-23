@@ -21,7 +21,6 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/storage/vfs/cpp/mount_channel.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
 namespace fs {
@@ -136,13 +135,12 @@ class FuchsiaVfs : public Vfs {
                                            CloseAllConnectionsForVnodeCallback callback) = 0;
 
   // Pins/unpin a handle to a remote filesystem onto a vnode, if possible.
-  zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_EXCLUDES(vfs_lock_);
+  zx_status_t InstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory> h)
+      __TA_EXCLUDES(vfs_lock_);
+  // The caller is responsible for shutting down a remote filesystem; this just removes the remote
+  // connection from this filesystem.
   zx_status_t UninstallRemote(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory>* h)
       __TA_EXCLUDES(vfs_lock_);
-
-  // Create and mount a directory with a provided name
-  zx_status_t MountMkdir(fbl::RefPtr<Vnode> vn, std::string_view name, MountChannel h,
-                         uint32_t flags) __TA_EXCLUDES(vfs_lock_);
 
   // Forwards an open request to a remote handle. If the remote handle is closed (handing off
   // returns ZX_ERR_PEER_CLOSED), it is automatically unmounted.
@@ -150,15 +148,9 @@ class FuchsiaVfs : public Vfs {
                                 std::string_view path, VnodeConnectionOptions options,
                                 uint32_t mode) __TA_EXCLUDES(vfs_lock_);
 
-  // Unpins all remote filesystems in the current filesystem, and waits for the response of each one
-  // with the provided deadline.
+  // Unpins all remote filesystems in the current filesystem. The caller is responsible for shutting
+  // down remote filesystems.
   zx_status_t UninstallAll(zx::time deadline) __TA_EXCLUDES(vfs_lock_);
-
-  // Shuts down a remote filesystem, by sending a |fuchsia.io/DirectoryAdmin.Unmount| request to the
-  // filesystem serving |handle| and awaits a response. |deadline| is the deadline for waiting for
-  // response.
-  static zx_status_t UnmountHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> handle,
-                                   zx::time deadline);
 
   bool IsTokenAssociatedWithVnode(zx::event token) __TA_EXCLUDES(vfs_lock_);
 
@@ -182,7 +174,8 @@ class FuchsiaVfs : public Vfs {
 
  private:
   zx_status_t TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) __TA_REQUIRES(vfs_lock_);
-  zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) __TA_REQUIRES(vfs_lock_);
+  zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, fidl::ClientEnd<fuchsia_io::Directory> h)
+      __TA_REQUIRES(vfs_lock_);
   zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
                                     fidl::ClientEnd<fuchsia_io::Directory>* h)
       __TA_REQUIRES(vfs_lock_);

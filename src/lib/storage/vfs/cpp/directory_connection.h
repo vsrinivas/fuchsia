@@ -66,11 +66,6 @@ class DirectoryConnection final : public Connection,
   // |fuchsia.io/DirectoryAdmin| operations.
   //
 
-  void Mount(MountRequestView request, MountCompleter::Sync& completer) final;
-  void MountAndCreate(MountAndCreateRequestView request,
-                      MountAndCreateCompleter::Sync& completer) final;
-  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) final;
-  void UnmountNode(UnmountNodeRequestView request, UnmountNodeCompleter::Sync& completer) final;
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;
   void GetDevicePath(GetDevicePathRequestView request,

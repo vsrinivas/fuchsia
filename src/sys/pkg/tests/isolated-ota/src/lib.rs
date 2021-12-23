@@ -590,18 +590,6 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::Watch { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing watch")?
             }
-            DirectoryAdminRequest::Mount { responder, .. } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing mount")?
-            }
-            DirectoryAdminRequest::MountAndCreate { responder, .. } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing mountandcreate")?
-            }
-            DirectoryAdminRequest::Unmount { responder, .. } => {
-                responder.send(zx::Status::IO.into_raw()).context("failing umount")?
-            }
-            DirectoryAdminRequest::UnmountNode { responder, .. } => {
-                responder.send(zx::Status::IO.into_raw(), None).context("failing unmountnode")?
-            }
             DirectoryAdminRequest::QueryFilesystem { responder, .. } => responder
                 .send(zx::Status::IO.into_raw(), None)
                 .context("failing queryfilesystem")?,

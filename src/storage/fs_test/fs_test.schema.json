@@ -158,11 +158,6 @@
             "description": "Timestamp granularity in nanoseconds",
             "exclusiveMinimum": 0,
             "type": "integer"
-        },
-        "use_directory_admin_to_unmount": {
-            "default": false,
-            "description": "True if the DirectoryAdmin protocol (legacy) should be used to unmount",
-            "type": "boolean"
         }
     },
     "type": "object"

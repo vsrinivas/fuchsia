@@ -153,20 +153,20 @@ class MockDirectoryAdminOpener : public fuchsia_io_admin::testing::DirectoryAdmi
   }
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
-    saved_open_flags = request->flags;
-    saved_open_count += 1;
-    saved_path = request->path.get();
+    saved_open_flags_ = request->flags;
+    saved_open_count_ += 1;
+    saved_path_ = request->path.get();
   }
 
-  void Unmount(UnmountRequestView _request, UnmountCompleter::Sync& completer) override {
-    completer.Reply(unmount_status_);
-  }
+  uint32_t saved_open_flags() const { return saved_open_flags_; }
+  uint32_t saved_open_count() const { return saved_open_count_; }
+  const std::string saved_path() const { return saved_path_; }
 
-  zx_status_t unmount_status_ = ZX_OK;
+ private:
   // Test fields used for validation.
-  uint32_t saved_open_flags = 0;
-  uint32_t saved_open_count = 0;
-  std::string saved_path;
+  uint32_t saved_open_flags_ = 0;
+  uint32_t saved_open_count_ = 0;
+  std::string saved_path_;
 };
 
 // Test that asking FshostFsProvider for blobexec opens /fs/blob from the
@@ -198,11 +198,11 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   int fd;
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, fdio_fd_create(blobexec.release(), &fd));
 
-  EXPECT_EQ(server->saved_open_count, 1u);
+  EXPECT_EQ(server->saved_open_count(), 1u);
   uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
                             ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
-  EXPECT_EQ(expected_flags, server->saved_open_flags);
-  EXPECT_EQ("blob", server->saved_path);
+  EXPECT_EQ(expected_flags, server->saved_open_flags());
+  EXPECT_EQ("blob", server->saved_path());
 
   // Tear down.
   ASSERT_EQ(fdio_ns_unbind(ns, "/fs"), ZX_OK);
@@ -228,13 +228,22 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
 
-  auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
-  ASSERT_EQ(admin.status_value(), ZX_OK);
+  auto export_root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_EQ(export_root.status_value(), ZX_OK);
 
-  auto server = std::make_shared<MockDirectoryAdminOpener>();
-  fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
+  auto export_root_server = std::make_shared<MockDirectoryAdminOpener>();
+  fidl::BindServer(loop.dispatcher(), std::move(export_root->server), export_root_server);
 
-  EXPECT_EQ(manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel()),
+  auto root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_EQ(root.status_value(), ZX_OK);
+
+  auto root_server = std::make_shared<MockDirectoryAdminOpener>();
+  fidl::BindServer(loop.dispatcher(), std::move(root->server), root_server);
+
+  EXPECT_EQ(manager
+                .InstallFs(FsManager::MountPoint::kData, export_root->client.TakeChannel(),
+                           root->client.TakeChannel())
+                .status_value(),
             ZX_ERR_BAD_STATE);
 }
 
@@ -255,19 +264,34 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
                                std::move(admin_endpoints->client), nullptr, watcher),
             ZX_OK);
 
+  auto export_root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_EQ(export_root.status_value(), ZX_OK);
+
+  auto export_root_server = std::make_shared<MockDirectoryAdminOpener>();
+  fidl::BindServer(loop.dispatcher(), std::move(export_root->server), export_root_server);
+
+  auto root = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_EQ(root.status_value(), ZX_OK);
+
+  auto root_server = std::make_shared<MockDirectoryAdminOpener>();
+  fidl::BindServer(loop.dispatcher(), std::move(root->server), root_server);
+
   auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
   ASSERT_EQ(admin.status_value(), ZX_OK);
-  auto server = std::make_shared<MockDirectoryAdminOpener>();
-  server->unmount_status_ = ZX_ERR_ACCESS_DENIED;
-  fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
 
-  manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel());
+  EXPECT_EQ(manager
+                .InstallFs(FsManager::MountPoint::kData, export_root->client.TakeChannel(),
+                           root->client.TakeChannel())
+                .status_value(),
+            ZX_OK);
 
   zx_status_t shutdown_status = ZX_OK;
   manager.Shutdown([&shutdown_status](zx_status_t status) { shutdown_status = status; });
   manager.WaitForShutdown();
 
-  ASSERT_EQ(shutdown_status, ZX_ERR_ACCESS_DENIED);
+  // MockDirectoryAdminOpener doesn't handle the attempt to open the admin service (which is used to
+  // shut down the filesystem) which should result in the channel being closed.
+  ASSERT_EQ(shutdown_status, ZX_ERR_PEER_CLOSED);
 }
 
 }  // namespace

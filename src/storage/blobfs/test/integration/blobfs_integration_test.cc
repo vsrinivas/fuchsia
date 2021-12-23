@@ -966,20 +966,6 @@ TEST_P(BlobfsIntegrationTest, InvalidOperations) {
   ASSERT_LT(truncate(info->path, 0), 0);
   ASSERT_LT(utime(info->path, nullptr), 0);
 
-  // Test that a file cannot unmount the entire blobfs.
-  // Instead, the file channel will be forcibly closed as we attempt to call an unknown FIDL method.
-  // Hence we clone the fd into a |canary_channel| which we know will have its peer closed.
-  zx::channel canary_channel;
-  ASSERT_EQ(fdio_fd_clone(fd.get(), canary_channel.reset_and_get_address()), ZX_OK);
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
-            fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
-                               zx::unowned_channel(canary_channel)))
-                ->Unmount()
-                .status());
-  zx_signals_t pending;
-  EXPECT_EQ(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending),
-            ZX_OK);
-
   // Access the file once more, after these operations.
   ASSERT_NO_FATAL_FAILURE(VerifyContents(fd.get(), info->data.get(), info->size_data));
 }
@@ -1115,7 +1101,7 @@ TEST_P(BlobfsIntegrationTest, ReadOnly) {
   blob_fd.reset();
 
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
-  fs_management::MountOptions options;
+  fs_management::MountOptions options = fs().DefaultMountOptions();
   options.readonly = true;
   EXPECT_EQ(fs().Mount(options).status_value(), ZX_OK);
 
@@ -1261,7 +1247,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
   ASSERT_TRUE(fd);
 
   ASSERT_NE(fs_management::Mount(std::move(fd), fs().mount_path().c_str(),
-                                 fs_management::kDiskFormatBlobfs, fs_management::MountOptions(),
+                                 fs_management::kDiskFormatBlobfs, fs().DefaultMountOptions(),
                                  launch_stdio_async)
                 .status_value(),
             ZX_OK);

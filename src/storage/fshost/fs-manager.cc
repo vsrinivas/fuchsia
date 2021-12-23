@@ -64,22 +64,12 @@ const char* ReportReasonStr(const FsManager::ReportReason& reason) {
   }
 }
 
-zx_status_t Unmount(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> root) {
-  // TODO(fxbug.dev/89869): For now, just use DirectoryAdmin to unmount. This should change to use
-  // fuchsia.fs/Admin when all filesystems support it.
-  auto resp = fidl::WireCall(root)->Unmount();
-  if (!resp.ok()) {
-    return resp.status();
-  }
-  return resp.value().s;
-}
-
 }  // namespace
 
 FsManager::MountedFilesystem::~MountedFilesystem() {
-  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root(node_->DetachRemote().TakeChannel());
-  if (zx_status_t status = Unmount(root); status != ZX_OK)
-    FX_LOGS(WARNING) << "Unmount error: " << zx_status_get_string(status);
+  node_->DetachRemote();
+  if (auto status = fs_management::Shutdown(export_root_); status.is_error())
+    FX_LOGS(WARNING) << "Unmount error: " << status.status_string();
 }
 
 FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
@@ -240,33 +230,27 @@ zx_status_t FsManager::Initialize(
 
 void FsManager::FlushMetrics() { mutable_metrics()->Flush(); }
 
-zx_status_t FsManager::InstallFs(MountPoint point, zx::channel root_directory) {
+zx::status<> FsManager::InstallFs(MountPoint point, zx::channel export_root_directory,
+                                  zx::channel root_directory) {
   // Hold the shutdown lock for the entire duration of the install to avoid racing with shutdown on
   // adding/removing the remote mount.
   std::lock_guard guard(lock_);
   if (shutdown_called_) {
     FX_LOGS(INFO) << "Not installing " << MountPointPath(point) << " after shutdown";
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  if (mount_nodes_.find(point) == mount_nodes_.end()) {
+  auto node = mount_nodes_.find(point);
+  if (node == mount_nodes_.end()) {
     // The map should have been fully initialized.
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  if (zx_status_t status = root_vfs_->InstallRemote(mount_nodes_[point].root_directory,
-                                                    fs::MountChannel(std::move(root_directory)));
+  node->second.export_root = std::move(export_root_directory);
+  if (zx_status_t status =
+          root_vfs_->InstallRemote(node->second.root_directory, std::move(root_directory));
       status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
-  return ZX_OK;
-}
-
-zx_status_t FsManager::SetFsExportRoot(MountPoint point, zx::channel export_root_directory) {
-  if (mount_nodes_.find(point) == mount_nodes_.end()) {
-    // The map should have been fully initialized.
-    return ZX_ERR_BAD_STATE;
-  }
-  mount_nodes_[point].root_export_dir = std::move(export_root_directory);
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx_status_t FsManager::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server) {
@@ -324,19 +308,65 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "RemoveSystemDrivers failed: " << zx_status_get_string(status);
     }
-    outgoing_vfs_.Shutdown([this, callback = std::move(callback)](zx_status_t status) mutable {
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "outgoing_vfs shutdown failed: " << zx_status_get_string(status);
-      }
-      root_vfs_->Shutdown([this, callback = std::move(callback)](zx_status_t status) {
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "root_vfs shutdown failed: " << zx_status_get_string(status);
+
+    std::vector<std::pair<MountPoint, zx::channel>> filesystems_to_shut_down;
+    for (auto& [point, node] : mount_nodes_) {
+      if (node.export_root)
+        filesystems_to_shut_down.push_back(std::make_pair(point, std::move(node.export_root)));
+    }
+
+    // fs_management::Shutdown is synchronous, so we spawn a thread to shut down
+    // the mounted filesystems.
+    std::thread shutdown_thread([this, callback = std::move(callback),
+                                 filesystems_to_shutdown =
+                                     std::move(filesystems_to_shut_down)]() mutable {
+      auto merge_status = [first_status = ZX_OK](zx_status_t status) mutable {
+        if (first_status == ZX_OK)
+          first_status = status;
+        return first_status;
+      };
+
+      for (auto& [point, fs] : filesystems_to_shutdown) {
+        FX_LOGS(INFO) << "Shutting down " << MountPointPath(point);
+        if (auto result = fs_management::Shutdown({fs.borrow()}); result.is_error()) {
+          FX_LOGS(WARNING) << "Failed to shut down " << MountPointPath(point) << ": "
+                           << result.status_string();
+          merge_status(result.error_value());
         }
-        callback(status);
-        sync_completion_signal(&shutdown_);
-        // after this signal, FsManager can be destroyed.
-      });
+      }
+
+      // Continue on the async loop...
+      zx_status_t status = async::PostTask(
+          global_loop_->dispatcher(),
+          [this, callback = std::move(callback), merge_status = std::move(merge_status)]() mutable {
+            outgoing_vfs_.Shutdown([this, callback = std::move(callback),
+                                    merge_status =
+                                        std::move(merge_status)](zx_status_t status) mutable {
+              if (status != ZX_OK) {
+                FX_LOGS(ERROR) << "outgoing_vfs shutdown failed: " << zx_status_get_string(status);
+                merge_status(status);
+              }
+              root_vfs_->Shutdown([this, callback = std::move(callback),
+                                   merge_status =
+                                       std::move(merge_status)](zx_status_t status) mutable {
+                if (status != ZX_OK) {
+                  FX_LOGS(ERROR) << "root_vfs shutdown failed: " << zx_status_get_string(status);
+                  merge_status(status);
+                }
+                callback(merge_status(ZX_OK));
+                sync_completion_signal(&shutdown_);
+                // after this signal, FsManager can be destroyed.
+              });
+            });
+          });
+      if (status != ZX_OK) {
+        FX_LOGS(ERROR) << "Unable to finish shut down: " << zx_status_get_string(status);
+        // We can't call the callback here because we moved it, but we don't expect posting the task
+        // to fail, so let's not worry about it.
+      }
     });
+
+    shutdown_thread.detach();
   });
 }
 
@@ -380,7 +410,7 @@ zx_status_t FsManager::ForwardFsDiagnosticsDirectory(MountPoint point,
   if (point == MountPoint::kUnknown) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!mount_nodes_[point].root_export_dir) {
+  if (!mount_nodes_[point].export_root) {
     FX_LOGS(ERROR) << "Can't forward diagnostics dir for " << MountPointPath(point)
                    << ", export root directory was not set";
     return ZX_ERR_BAD_STATE;
@@ -388,7 +418,7 @@ zx_status_t FsManager::ForwardFsDiagnosticsDirectory(MountPoint point,
 
   auto inspect_node = fbl::MakeRefCounted<fs::Service>([this, point](zx::channel request) {
     std::string name = std::string("diagnostics/") + fuchsia::inspect::Tree::Name_;
-    return fdio_service_connect_at(mount_nodes_[point].root_export_dir.get(), name.c_str(),
+    return fdio_service_connect_at(mount_nodes_[point].export_root.get(), name.c_str(),
                                    request.release());
   });
   auto fs_diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -407,7 +437,7 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
   if (point == MountPoint::kUnknown) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!mount_nodes_[point].root_export_dir) {
+  if (!mount_nodes_[point].export_root) {
     FX_LOGS(ERROR) << "Can't forward service for " << MountPointPath(point)
                    << ", export root directory was not set";
     return ZX_ERR_BAD_STATE;
@@ -416,7 +446,7 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
   auto service_node =
       fbl::MakeRefCounted<fs::Service>([this, point, service_name](zx::channel request) {
         std::string name = std::string("svc/") + service_name;
-        return fdio_service_connect_at(mount_nodes_[point].root_export_dir.get(), name.c_str(),
+        return fdio_service_connect_at(mount_nodes_[point].export_root.get(), name.c_str(),
                                        request.release());
       });
   return svc_dir_->AddEntry(service_name, std::move(service_node));
@@ -470,7 +500,7 @@ zx_status_t FsManager::AttachMount(fidl::ClientEnd<fuchsia_io_admin::DirectoryAd
   const auto& node = mount_nodes_[MountPoint::kMnt];
   fbl::RefPtr<fs::Vnode> vnode;
   if (zx_status_t status = node.root_directory->Create(name, S_IFDIR, &vnode); status != ZX_OK) {
-    Unmount(export_root);
+    [[maybe_unused]] auto result = fs_management::Shutdown(export_root);
     return status;
   }
 

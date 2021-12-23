@@ -182,28 +182,6 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
 }
 
-zx::status<> FsDirectoryAdminUnmount(const std::string& mount_path) {
-  // O_ADMIN is not part of the SDK.  Eventually, this should switch to using fs.Admin.
-  constexpr int kAdmin = 0x0000'0004;
-  int fd = open(mount_path.c_str(), O_DIRECTORY | kAdmin);
-  if (fd < 0) {
-    std::cout << "Unable to open mount point: " << strerror(errno) << std::endl;
-    return zx::error(ZX_ERR_INTERNAL);
-  }
-  zx_handle_t handle;
-  if (auto status = zx::make_status(fdio_get_service_handle(fd, &handle)); status.is_error()) {
-    std::cout << "Unable to get service handle: " << status.status_string() << std::endl;
-    return status;
-  }
-  if (auto status =
-          zx::make_status(fs::FuchsiaVfs::UnmountHandle(zx::channel(handle), zx::time::infinite()));
-      status.is_error()) {
-    std::cout << "Unable to unmount: " << status.status_string() << std::endl;
-    return status;
-  }
-  return zx::ok();
-}
-
 }  // namespace
 
 std::string StripTrailingSlash(const std::string& in) {
@@ -311,7 +289,6 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
   }
 
   fs_management::MountOptions options = mount_options;
-  options.bind_to_namespace = true;
 
   // Uncomment the following line to force an fsck at the end of every transaction (where
   // supported).
@@ -325,31 +302,9 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
               << " file system: " << result.status_string() << std::endl;
     return result.take_error();
   }
+  auto export_root = std::move(*result).TakeExportRoot();
   if (outgoing_directory)
-    *outgoing_directory = result->TakeChannel();
-  return zx::ok();
-}
-
-zx::status<> FsAdminUnmount(const std::string& mount_path, const zx::channel& outgoing_directory) {
-  // Detach from the namespace.
-  if (auto status = FsUnbind(mount_path); status.is_error()) {
-    return status;
-  }
-
-  // Now shut down the filesystem.
-  fidl::SynchronousInterfacePtr<fuchsia::fs::Admin> admin;
-  std::string service_name = std::string("svc/") + fuchsia::fs::Admin::Name_;
-  auto status = zx::make_status(fdio_service_connect_at(
-      outgoing_directory.get(), service_name.c_str(), admin.NewRequest().TakeChannel().get()));
-  if (status.is_error()) {
-    std::cout << "Unable to connect to admin service: " << status.status_string() << std::endl;
-    return status;
-  }
-  status = zx::make_status(admin->Shutdown());
-  if (status.is_error()) {
-    std::cout << "Shut down failed: " << status.status_string() << std::endl;
-    return status;
-  }
+    *outgoing_directory = export_root.TakeChannel();
   return zx::ok();
 }
 
@@ -421,15 +376,6 @@ TestFilesystemOptions TestFilesystemOptions::BlobfsWithoutFvm() {
   blobfs_with_no_fvm.use_fvm = false;
   blobfs_with_no_fvm.num_inodes = 2048;
   return blobfs_with_no_fvm;
-}
-
-fs_management::MountOptions TestFilesystemOptions::AsMountOptions() const {
-  fs_management::MountOptions options;
-  if (blob_compression_algorithm) {
-    options.write_compression_algorithm =
-        blobfs::CompressionAlgorithmToString(*blob_compression_algorithm);
-  }
-  return options;
 }
 
 std::ostream& operator<<(std::ostream& out, const TestFilesystemOptions& options) {
@@ -510,10 +456,17 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
 
 // Default implementation
 zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
-  if (auto status = FsDirectoryAdminUnmount(mount_path); status.is_error()) {
+  // Detach from the namespace.
+  if (auto status = FsUnbind(mount_path); status.is_error()) {
     return status;
   }
-  return FsUnbind(mount_path);
+
+  auto status = fs_management::Shutdown(GetOutgoingDirectory());
+  if (status.is_error()) {
+    std::cout << "Shut down failed: " << status.status_string() << std::endl;
+    return status;
+  }
+  return zx::ok();
 }
 
 // -- Blobfs --
@@ -535,11 +488,6 @@ class BlobfsInstance : public FilesystemInstance {
                      const fs_management::MountOptions& options) override {
     return FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options,
                    &outgoing_directory_);
-  }
-
-  zx::status<> Unmount(const std::string& mount_path) override {
-    outgoing_directory_.reset();
-    return FilesystemInstance::Unmount(mount_path);
   }
 
   zx::status<> Fsck() override {
@@ -588,7 +536,7 @@ zx::status<TestFilesystem> TestFilesystem::FromInstance(
   static uint32_t mount_index;
   TestFilesystem filesystem(options, std::move(instance),
                             std::string("/fs_test." + std::to_string(mount_index++) + "/"));
-  auto status = filesystem.Mount(options.AsMountOptions());
+  auto status = filesystem.Mount();
   if (status.is_error()) {
     return status.take_error();
   }

@@ -29,7 +29,6 @@
 #include "src/lib/storage/vfs/cpp/advisory_lock.h"
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
-#include "src/lib/storage/vfs/cpp/mount_channel.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -419,66 +418,6 @@ void DirectoryConnection::Watch(WatchRequestView request, WatchCompleter::Sync& 
   zx_status_t status =
       vnode()->WatchDir(vfs(), request->mask, request->options, std::move(request->watcher));
   completer.Reply(status);
-}
-
-void DirectoryConnection::Mount(MountRequestView request, MountCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMount] our options: ", options());
-
-  if (!options().rights.admin) {
-    // Note: this is best-effort, and would fail if the remote endpoint does not speak the
-    // |fuchsia.io/DirectoryAdmin| protocol.
-    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
-    FuchsiaVfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
-    completer.Reply(ZX_ERR_ACCESS_DENIED);
-    return;
-  }
-  MountChannel c = MountChannel(std::move(request->remote));
-  zx_status_t status = vfs()->InstallRemote(vnode(), std::move(c));
-  completer.Reply(status);
-}
-
-void DirectoryConnection::MountAndCreate(MountAndCreateRequestView request,
-                                         MountAndCreateCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryAdminMountAndCreate] our options: ", options());
-
-  if (!options().rights.admin) {
-    // Note: this is best-effort, and would fail if the remote endpoint does not speak the
-    // |fuchsia.io/DirectoryAdmin| protocol.
-    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> remote_admin(request->remote.TakeChannel());
-    FuchsiaVfs::UnmountHandle(std::move(remote_admin), zx::time::infinite());
-    completer.Reply(ZX_ERR_ACCESS_DENIED);
-    return;
-  }
-  zx_status_t status =
-      vfs()->MountMkdir(vnode(), std::string_view(request->name.data(), request->name.size()),
-                        MountChannel(std::move(request->remote)), request->flags);
-  completer.Reply(status);
-}
-
-void DirectoryConnection::Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmount] our options: ", options());
-
-  if (!options().rights.admin) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED);
-    return;
-  }
-  Connection::UnmountAndShutdown(
-      [completer = completer.ToAsync()](zx_status_t unmount_status) mutable {
-        completer.Reply(unmount_status);
-      });
-}
-
-void DirectoryConnection::UnmountNode(UnmountNodeRequestView request,
-                                      UnmountNodeCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryAdminUnmountNode] our options: ", options());
-
-  fidl::ClientEnd<fuchsia_io::Directory> c;
-  if (!options().rights.admin) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, std::move(c));
-    return;
-  }
-  zx_status_t status = vfs()->UninstallRemote(vnode(), &c);
-  completer.Reply(status, std::move(c));
 }
 
 void DirectoryConnection::QueryFilesystem(QueryFilesystemRequestView request,

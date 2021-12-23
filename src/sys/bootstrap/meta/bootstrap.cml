@@ -534,11 +534,6 @@
             to: "#driver_manager",
             dependency: "weak_for_migration",
         },
-        {
-            directory: "volume",
-            from: "#fshost",
-            to: "#miscsvc",
-        },
 
         // Offer the log services to the console
         {

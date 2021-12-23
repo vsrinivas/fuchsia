@@ -212,7 +212,9 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   }
 
   fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root_dir_client(std::move(root_dir_handle));
-  auto unmount = fit::defer([&root_dir_client] { fidl::WireCall(root_dir_client)->Unmount(); });
+  auto unmount = fit::defer([&export_root_or] {
+    [[maybe_unused]] auto ignore_failure = fs_management::Shutdown(export_root_or->client);
+  });
 
   if (auto copier_or = Copier::Read(std::move(fd)); copier_or.is_error()) {
     FX_LOGS(ERROR) << "Copier::Read: " << copier_or.status_string();

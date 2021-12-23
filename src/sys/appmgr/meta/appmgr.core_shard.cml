@@ -374,7 +374,6 @@
                 "mnt",
                 "system",
                 "tmp",
-                "volume",
             ],
             from: "parent",
             to: "#appmgr",

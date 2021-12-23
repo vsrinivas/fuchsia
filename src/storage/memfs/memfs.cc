@@ -143,13 +143,13 @@ void VnodeMemfs::Sync(SyncCallback closure) {
   closure(ZX_OK);
 }
 
-zx_status_t VnodeMemfs::AttachRemote(fs::MountChannel h) {
+zx_status_t VnodeMemfs::AttachRemote(fidl::ClientEnd<fuchsia_io::Directory> h) {
   if (!IsDirectory()) {
     return ZX_ERR_NOT_DIR;
   } else if (IsRemote()) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  SetRemote(std::move(h.client_end()));
+  SetRemote(std::move(h));
   return ZX_OK;
 }
 

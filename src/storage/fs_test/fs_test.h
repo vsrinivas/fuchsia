@@ -40,8 +40,6 @@ struct TestFilesystemOptions {
   static TestFilesystemOptions DefaultBlobfs();
   static TestFilesystemOptions BlobfsWithoutFvm();
 
-  fs_management::MountOptions AsMountOptions() const;
-
   std::string description;
   bool use_ram_nand = false;
   // If set specifies a VMO to be used to back the device.  If used for ram-nand, Its size must
@@ -136,6 +134,7 @@ class Filesystem {
     bool is_journaled = true;
     bool supports_fs_query = true;
     bool supports_watch_event_deleted = true;
+    bool use_admin = false;
   };
 
   virtual ~Filesystem() = default;
@@ -189,9 +188,6 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
                      fs_management::DiskFormat format,
                      const fs_management::MountOptions& mount_options,
                      zx::channel* outgoing_directory = nullptr);
-
-// Unmounts using fs/Admin.Shutdown.
-zx::status<> FsAdminUnmount(const std::string& mount_path, const zx::channel& outgoing_directory);
 
 zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options);
 

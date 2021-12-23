@@ -79,11 +79,8 @@ class FsManager {
   // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an
   // installed filesystem).
   // |root_directory| should be a connection to a Directory, but this is not verified.
-  zx_status_t InstallFs(MountPoint mount_point, zx::channel root_directory);
-
-  // Stores |export_root_directory| for the filesystem installed at |mount_point|.
-  // This must be called before any services are forwarded (e.g. |ForwardFsService()|).
-  zx_status_t SetFsExportRoot(MountPoint mount_point, zx::channel export_root_directory);
+  zx::status<> InstallFs(MountPoint mount_point, zx::channel export_root_directory,
+                         zx::channel root_directory);
 
   // Serves connection to the root directory ("/") on |server|.
   zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server);
@@ -174,10 +171,10 @@ class FsManager {
 
   struct MountNode {
     // Set by |InstallFs()|.
-    zx::channel root_export_dir;
+    zx::channel export_root;
     fbl::RefPtr<fs::Vnode> root_directory;
 
-    bool Installed() const { return root_export_dir.is_valid(); }
+    bool Installed() const { return export_root.is_valid(); }
   };
   std::map<MountPoint, MountNode> mount_nodes_;
 

@@ -92,6 +92,7 @@ test("fs-management-test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/digest",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",

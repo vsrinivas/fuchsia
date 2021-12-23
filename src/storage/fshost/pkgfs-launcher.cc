@@ -45,22 +45,25 @@ zx::status<> FinishPkgfsLaunch(FilesystemMounter* filesystems, zx::channel pkgfs
                         bin_req.release());
   if (status != ZX_OK) {
     // non-fatal.
-    FX_LOGS(ERROR) << "failed to install /bin (could not open shell-commands)";
+    FX_LOGS(WARNING) << "failed to install /bin (could not open shell-commands)";
   }
-  status = filesystems->InstallFs(FsManager::MountPoint::kPkgfs, std::move(pkgfs_root));
-  if (status != ZX_OK) {
+  if (auto result =
+          filesystems->InstallFs(FsManager::MountPoint::kPkgfs, {}, std::move(pkgfs_root));
+      result.is_error()) {
     FX_LOGS(ERROR) << "failed to install /pkgfs";
-    return zx::error(status);
+    return result;
   }
-  status = filesystems->InstallFs(FsManager::MountPoint::kSystem, std::move(system_channel));
-  if (status != ZX_OK) {
+  if (auto result =
+          filesystems->InstallFs(FsManager::MountPoint::kSystem, {}, std::move(system_channel));
+      result.is_error()) {
     FX_LOGS(ERROR) << "failed to install /system";
-    return zx::error(status);
+    return result;
   }
   // as above, failure of /bin export is non-fatal.
-  status = filesystems->InstallFs(FsManager::MountPoint::kBin, std::move(bin_chan));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to install /bin";
+  if (auto result = filesystems->InstallFs(FsManager::MountPoint::kBin, {}, std::move(bin_chan));
+      result.is_error()) {
+    // non-fatal
+    FX_LOGS(WARNING) << "failed to install /bin";
   }
   // start the delayed vfs
   filesystems->FuchsiaStart();

@@ -271,16 +271,6 @@ where
                     Ok(mut info) => responder.send(0, Some(&mut info))?,
                 }
             }
-            DirectoryAdminRequest::Mount { responder, .. } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?
-            }
-            DirectoryAdminRequest::MountAndCreate { responder, .. } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?
-            }
-            DirectoryAdminRequest::Unmount { responder } => responder.send(ZX_ERR_NOT_SUPPORTED)?,
-            DirectoryAdminRequest::UnmountNode { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, None)?
-            }
             DirectoryAdminRequest::GetDevicePath { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?
             }

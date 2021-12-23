@@ -9,9 +9,7 @@ package rpc
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"os"
 	"sync"
 	"syscall"
 	"syscall/zx"
@@ -400,30 +398,6 @@ func (d *directoryWrapper) Link(_ fidl.Context, src string, token zx.Handle, dst
 func (d *directoryWrapper) Watch(_ fidl.Context, mask uint32, options uint32, watcher zx.Channel) (int32, error) {
 	watcher.Close()
 	return int32(zx.ErrNotSupported), nil
-}
-
-func (d *directoryWrapper) Mount(_ fidl.Context, remote io.DirectoryWithCtxInterfaceRequest) (int32, error) {
-	remote.Close()
-	return int32(zx.ErrNotSupported), nil
-}
-
-func (d *directoryWrapper) MountAndCreate(_ fidl.Context, remote io.DirectoryWithCtxInterfaceRequest, name string, flags uint32) (int32, error) {
-	remote.Close()
-	return int32(zx.ErrNotSupported), nil
-}
-
-func (d *directoryWrapper) Unmount(fidl.Context) (int32, error) {
-	// Shut down filesystem
-	err := d.vfs.fs.Close()
-	if err != nil {
-		fmt.Printf("error unmounting filesystem: %#v\n", err)
-	}
-	os.Exit(0)
-	return int32(zx.ErrOk), nil
-}
-
-func (d *directoryWrapper) UnmountNode(fidl.Context) (int32, io.DirectoryWithCtxInterfaceRequest, error) {
-	return int32(zx.ErrNotSupported), io.DirectoryWithCtxInterfaceRequest(fidl.InterfaceRequest{Channel: zx.Channel(zx.HandleInvalid)}), nil
 }
 
 func (d *directoryWrapper) QueryFilesystem(fidl.Context) (int32, *admin.FilesystemInfo, error) {
