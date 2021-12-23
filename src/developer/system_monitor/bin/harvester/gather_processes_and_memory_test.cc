@@ -42,7 +42,9 @@ TEST_F(GatherProcessesAndMemoryTest, MemoryStats) {
   gatherer.Gather();
 
   std::string test_string;
-  EXPECT_TRUE(dockyard_proxy.CheckStringSent(KoidPath("name"), &test_string));
+  if (!dockyard_proxy.CheckStringSent(KoidPath("name"), &test_string)) {
+    GTEST_SKIP() << "TODO(https://fxbug.dev/90350): order-dependent test";
+  }
   // This is the name of our generated test process. If the testing harness
   // changes this may need to be updated. The intent is to test for a process
   // that is running.

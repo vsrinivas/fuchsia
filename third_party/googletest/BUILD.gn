@@ -100,7 +100,6 @@ static_library("gtest_main") {
   visibility = [
     ":*",
     "//src/developer/forensics/feedback/tests:feedback_integration_test_exe",
-    "//src/developer/system_monitor/bin/harvester:system_monitor_harvester_test",
     "//third_party/protobuf:*",
   ]
   testonly = true
