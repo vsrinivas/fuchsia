@@ -9,8 +9,9 @@
 //! [RFC 768]: https://datatracker.ietf.org/doc/html/rfc768
 
 use core::convert::TryInto;
+use core::fmt::Debug;
 #[cfg(test)]
-use core::fmt::{self, Debug, Formatter};
+use core::fmt::{self, Formatter};
 use core::num::NonZeroU16;
 use core::ops::Range;
 
@@ -198,7 +199,7 @@ impl<B: ByteSlice> UdpPacket<B> {
         self,
         src_ip: A,
         dst_ip: A,
-    ) -> impl Serializer<Buffer = EmptyBuf> + 'a
+    ) -> impl Serializer<Buffer = EmptyBuf> + Debug + 'a
     where
         B: 'a,
     {

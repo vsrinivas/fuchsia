@@ -6,6 +6,7 @@
 
 use std::cmp;
 use std::convert::Infallible as Never;
+use std::fmt::{self, Debug, Formatter};
 use std::ops::{Range, RangeBounds};
 
 use arrayvec::ArrayVec;
@@ -1099,6 +1100,12 @@ impl<B: ByteSlice> InnerPacketBuilder for ByteSliceInnerPacketBuilder<B> {
     }
     fn serialize(&self, buffer: &mut [u8]) {
         self.0.deref().serialize(buffer)
+    }
+}
+
+impl<B: ByteSlice> Debug for ByteSliceInnerPacketBuilder<B> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "ByteSliceInnerPacketBuilder({:?})", self.0.as_ref())
     }
 }
 

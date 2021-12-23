@@ -432,7 +432,7 @@ impl<B: ByteSlice> TcpSegment<B> {
         self,
         src_ip: A,
         dst_ip: A,
-    ) -> impl Serializer<Buffer = EmptyBuf> + 'a
+    ) -> impl Serializer<Buffer = EmptyBuf> + Debug + 'a
     where
         B: 'a,
     {
