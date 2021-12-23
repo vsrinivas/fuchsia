@@ -482,7 +482,8 @@ TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
   fake_device.DdkRelease();
 }
 
-TEST(UsbAudioTest, RingBufferStartBeforeGetVmo) {
+// TODO(fxbug.dev/85160): Disabled until flakes are fixed.
+TEST(UsbAudioTest, DISABLED_RingBufferStartBeforeGetVmo) {
   Binder tester;
   FakeDevice fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
@@ -512,7 +513,8 @@ TEST(UsbAudioTest, RingBufferStartBeforeGetVmo) {
   fake_device.DdkRelease();
 }
 
-TEST(UsbAudioTest, RingBufferStartWhileStarted) {
+// TODO(fxbug.dev/85160): Disabled until flakes are fixed.
+TEST(UsbAudioTest, DISABLED_RingBufferStartWhileStarted) {
   Binder tester;
   FakeDevice fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
@@ -564,7 +566,8 @@ TEST(UsbAudioTest, RingBufferStartWhileStarted) {
   fake_device.DdkRelease();
 }
 
-TEST(UsbAudioTest, RingBufferStopBeforeGetVmo) {
+// TODO(fxbug.dev/85160): Disabled until flakes are fixed.
+TEST(UsbAudioTest, DISABLED_RingBufferStopBeforeGetVmo) {
   Binder tester;
   FakeDevice fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
