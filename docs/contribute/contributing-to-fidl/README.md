@@ -20,6 +20,7 @@ The [FIDL][fidl-readme] toolchain is composed of roughly three parts:
 ### Code location
 
 #### Compiler front-end
+
 The front-end lives at [//tools/fidl/fidlc/][fidlc-source],
 with tests in [//zircon/system/utest/fidl-compiler/][fidlc-compiler-tests].
 
@@ -31,14 +32,15 @@ C | [/tools/fidl/fidlc/lib/c_generator.cc] | [/zircon/system/ulib/fidl] | [/src/
 Coding Tables | [/tools/fidl/fidlc/lib/tables_generator.cc] | - | [/src/lib/fidl/c]
 HLCPP | [/tools/fidl/fidlgen_hlcpp] | [/sdk/lib/fidl/cpp] | *(located alongside runtime libraries)*
 LLCPP | [/tools/fidl/fidlgen_llcpp] | [/zircon/system/ulib/fidl] | [/src/lib/fidl/llcpp]
+Unified C++ | [/tools/fidl/fidlgen_cpp] | [/src/lib/fidl/cpp] | *(located alongside runtime libraries)*
 Go | [/tools/fidl/fidlgen_go] | [/third_party/go/src/syscall/zx/fidl](https://fuchsia.googlesource.com/third_party/go/+/main/src/syscall/zx/fidl) | *(located alongside runtime libraries)*
 Rust | [/tools/fidl/fidlgen_rust] | [/src/lib/fidl/rust] | *(located alongside runtime libraries)*
 Dart | [/tools/fidl/fidlgen_dart] | [/sdk/dart/fidl] | [/src/tests/fidl/dart_bindings_test]
 
-Note: The tests column refers to hand-written tests that exercise both the generated code and
-the runtime libraries. There are also other tests, like unit tests for the
-codegen itself and GIDL generated tests, refer to the [tests section](#all-tests)
-for details.
+Note: The tests column refers to hand-written tests that exercise both the
+generated code and the runtime libraries. There are also other tests, like unit
+tests for the codegen itself and GIDL generated tests. Refer to the [tests
+section](#all-tests) for details.
 
 Supporting code for the target specific backends is located in
 [/tools/fidl/lib/fidlgen].
@@ -90,9 +92,10 @@ Dangerous identifier tests are found in
 Some other FIDL related areas are:
 
 Path | Contents
--------|-----
+-----|---------
 [/tools/fidl/fidlgen_*](/tools/fidl/) | Various other compiler back-ends.
-[/tools/fidl/fidlc/{linter,compiler}](/tools/fidl/fidlc) | FIDL linter/formatter.
+[/tools/fidl/fidlc/formatter] | FIDL formatter.
+[/tools/fidl/fidlc/linter] | FIDL linter.
 [/tools/fidl/fidldoc] | Generate documentation for FIDL.
 [/tools/fidl/fidlmerge] | Tool for generating code from FIDL JSON.
 [/tools/fidl/measure-tape] | Tool to [max out pagination][pagination].
@@ -129,7 +132,7 @@ use for working on the FIDL codebase.
 
 #### IDEs
 
-Most of the FIDL team uses VSCode for development. Some useful plugins and workflows:
+Most of the FIDL team uses VS Code for development. Some useful plugins and workflows:
 
 * The [remote ssh](https://code.visualstudio.com/docs/remote/ssh) feature works
 really well for doing remote work from your laptop.
@@ -169,7 +172,7 @@ further remove ambiguity around the application or interpretation of guidelines.
 Comments must respect 80 columns line size limit, unlike code, which can extend
 to 100 lines size limit.
 
-##### Lambda captures
+#### Lambda captures
 
 * If a lambda escapes the current scope, capture all variables explicitly.
 * If the lambda is local (does not escape the current scope), prefer using a default capture by
@@ -194,13 +197,15 @@ auto add_dependency = [&](const flat::Library* dep_library) {
 
 Read the [Fuchsia Getting Started][getting_started] guide first.
 
-### fx set
+### `fx set`
 
 If you are working on the FIDL toolchain, use:
 
 ```sh
-fx set core.x64 --with //bundles/fidl:tests
+fx set core.x64 --with //bundles/fidl:tests --with-base //src/dart:dart_jit_runner
 ```
+
+The `--with-base` flag is necessary to run Dart tests and benchmarks.
 
 If you are working on an LSC:
 
@@ -236,8 +241,7 @@ alias fidldev=$FIDLMISC_DIR/fidldev/fidldev.py
 # optional; builds fidlc for the host with ASan <https://github.com/google/sanitizers/wiki/AddressSanitizer>
 fx set core.x64 --variant=host_asan
 
-# build fidlc
-fx ninja -C $(cat .fx-build-dir) host_x64/fidlc
+fx build host_x64/fidlc
 ```
 
 If you're doing extensive edit-compile-test cycles on `fidlc`, building with
@@ -293,29 +297,6 @@ fx_build_dir=$(cat .fx-build-dir) \
     fx ninja -C $fx_build_dir $fidlc_tests_target && ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'EnumsTests.*'
 ```
 
-<!-- TODO(fxbug.dev/70247): update post migration -->
-During the migration for FTP-050, the `fidl-compiler` test exercises test cases
-for both the old and new syntax. This temporary state contains a number of
-different "flavors" of tests:
-
-* (1) Success tests that can run in either syntax: these tests are specified
-  using the old syntax, but use `ASSERT_COMPILED_AND_CONVERT` to compile and
-  check the result. This method will also convert into the new syntax and check
-  that the IR from the new syntax matches the IR from the old syntax.
-* (2) Success or failure tests that only run in one syntax: these are unchanged
-  from before. Tests that somehow only apply to one syntax or the other fall in
-  this category.
-* (3) Success tests that include dependent libraries must be duplicated, so that
-  two scenarios may be tested: the case in which the dependent library has been
-  converted to the old syntax, and the case in which it has not. For the latter,
-  the second test must be defined using a name identical to the first's with
-  `WithOldDep` appended. For example, the companion to `FooTest.UsingLibrary`
-  would be `FooTest.UsingLibraryWithOldDep`.
-* (4) Failure tests that run in either syntax: unfortunately, two copies must be
-  made in this scenario, for example `FooTest.SomeErrorOld` for the old syntax
-  and `FooTest.SomeError` for the corresponding new syntax test. These should
-  ideally be located next to each other in the same file.
-
 #### `fidlc` debugging
 
 To easily run tests in a debug build, set your environment slightly differently:
@@ -328,14 +309,14 @@ export ASAN_SYMBOLIZER_PATH="$(find `pwd` -name llvm-symbolizer | grep clang | h
 Once properly set up, you can run tests using the commands listed previously,
 with or without filtering.
 
-To step through a test, you can use [`gdb`](#gdb):
+To step through a test, you can use [GDB](#gdb):
 
 ```sh
 fx_build_dir=$(cat .fx-build-dir) \
     fidlc_tests_target=$(fx ninja -C $fx_build_dir -t targets all | grep -e 'unstripped.*fidl-compiler:' | awk -F : '{ print $1; }') \
-    fx ninja -C $fx_build_dir $fidlc_tests_target && gdb --args ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'AliasTests.invalid_recursive_alias'
+    fx ninja -C $fx_build_dir $fidlc_tests_target && fx gdb --args ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'AliasTests.invalid_recursive_alias'
 ```
-  
+
 #### `fidlc` test style guide
 
 All `fidlc` compiler tests written in C++ must conform to the following rules:
@@ -343,6 +324,7 @@ All `fidlc` compiler tests written in C++ must conform to the following rules:
 *   Tests written using the `TEST` macro must have an UpperCamelCased group name
     of the format `<CATEGORY>Tests`. and an UpperCamelCased test case name.
     For example: `TEST(BitsTests, GoodValidBits) {...`.
+*   Test case names should not begin or end with "Test" since it's redundant.
 *   Test case names that test parsing and/or compilation must be prefixed with
     one of the following:
     *    `Good`: when the test case is expected to pass. Ex: `GoodValidMethod`.
@@ -368,7 +350,7 @@ These "golden" files are examples of what kind of JSON IR `fidlc` produces and
 are used to track changes. It is required to regenerate the golden files each
 time the JSON IR is changed in any way, otherwise the `json_generator_tests` fails.
 
-### fidlgen (LLCPP, HLCPP, Rust, Go)
+### fidlgen (LLCPP, HLCPP, Rust, Go, Dart)
 
 Build:
 
@@ -379,7 +361,7 @@ fx build tools/fidl
 Run:
 
 ```sh
-$FUCHSIA_DIR/out/default/host_x64/fidlgen_{llcpp, hlcpp, rust, go}
+$FUCHSIA_DIR/out/default/host_x64/fidlgen_{llcpp,hlcpp,rust,go,dart}
 ```
 
 Some example tests you can run:
@@ -387,6 +369,7 @@ Some example tests you can run:
 ```sh
 fx test fidlgen_hlcpp_golden_tests
 fx test fidlgen_golang_lib_tests
+fx test dart-bindings-test
 fidldev test --no-regen fidlgen
 ```
 
@@ -396,44 +379,18 @@ To regenerate the goldens:
 fidldev regen fidlgen
 ```
 
-### fidlgen_dart
-
-Build:
-
-```sh
-fx ninja -C out/default host_x64/fidlgen_dart
-```
-
-Run:
-
-```sh
-$FUCHSIA_DIR/out/default/host_x64/fidlgen_dart
-```
-
-Some example tests you can run:
-
-```sh
-fidldev test --no-regen fidlgen_dart
-```
-
-To regenerate the goldens:
-
-```sh
-fidldev regen fidlgen_dart
-```
-
 ### fidlgen_banjo
 
 Build:
 
 ```sh
-fx ninja -C out/default host_x64/fidlgen_banjo
+fx build host_x64/fidlgen_banjo
 ```
 
 Run tests:
 
 ```sh
-fx ninja -C out/default host_x64/fidlgen_banjo_unittests
+fx build host_x64/fidlgen_banjo_unittests
 ./out/default/host_x64/fidlgen_banjo_unittests
 ```
 
@@ -444,7 +401,7 @@ run on device and require having Fuchsia running in an emulator. Here are the
 steps:
 
 ```sh
-Tab 1> fx build && fx serve-updates
+Tab 1> fx build && fx serve
 
 Tab 2> fx qemu -kN
 ```
@@ -485,7 +442,6 @@ emulator:
 Tab 1> fx build && fx serve
 
 Tab 2> fx qemu -kN
-
 ```
 
 To run the compatibility tests:
@@ -512,6 +468,9 @@ fx build
 
 ### All tests {#all-tests}
 
+This section gives the full `fx test` commands to run all FIDL-related tests.
+Use these instead of `fidldev test` if you want to run a specific test.
+
 #### Bindings tests {#bindings-tests}
 
 On device tests generally have greater coverage than host tests, due to support
@@ -527,11 +486,12 @@ useful for debugging issues that prevent boot of the device.
 | walker tests w/ handle closing checks | `fx test fidl-handle-closing-tests` | //zircon/system/ulib/fidl
 | hlcpp bindings tests including conformance tests     | `fx test fidl_hlcpp_unit_test_package fidl_hlcpp_conformance_test_package`                | //sdk/lib/fidl                                                             |
 | llcpp bindings tests     | `fx test //src/lib/fidl/llcpp`      | //zircon/system/ulib/fidl/include/lib/fidl/llcpp
+| unified C++ bindings tests | `fx test //src/lib/fidl/cpp` | //src/lib/fidl/cpp
 | go bindings tests        | `fx test go-fidl-tests`             | //third_party/go/syscall/zx/fidl //third_party/go/syscall/zx/fidl/fidl_test //src/tests/fidl/go_bindings_test |
 | dart bindings tests      | `fx test dart-bindings-test`<br>(_see note below_) | //sdk/dart/fidl                                                  |
 | rust bindings tests      | `fx test //src/lib/fidl/rust`           | //src/lib/fidl/rust |
 
-Note: `fx test dart-bindings-test` needs `--with //src/dart:dart_jit_runner` or it will fail.
+Note: `fx test dart-bindings-test` needs `--with-base //src/dart:dart_jit_runner` or it will fail.
 While `fx test dart-bindings-test` prints test names as they run, it does not show stack traces
 for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 
@@ -549,7 +509,7 @@ for test failures. To see those, look at the `fx qemu` or `ffx log` output.
 | go fidl tests (extended) | `fx test --host go_extended_fidl_test`          | //third_party/go/syscall/zx/fidl
 | go unsafevalue test      | `fx test --host go_unsafevalue_test`            | //third_party/go/syscall/zx/fidl/internal/unsafevalue
 
-#### Fidlgen tests
+#### fidlgen tests
 
 | Name                       | Test Command                                       | Coverage
 |----------------------------|----------------------------------------------------|---------
@@ -619,11 +579,16 @@ fx test --e2e fidl_microbenchmarks_test
 
 ### All regen commands
 
+This section gives the `fx regen-goldens` commands to regnerate all FIDL-related
+golden files. This is what `fidldev regen` uses under the hood.
+
 | Name            | Regen commands                                 | Input                     |  Output
 |-----------------|------------------------------------------------|---------------------------|------------
+| (all goldens)   | fx regen-goldens |  |
 | fidlc goldens   | fx regen-goldens fidlc                         | tools/fidl/fidlc/testdata | tools/fidl/fidlc/goldens
 | fidlgen goldens | fx regen-goldens $TOOL                         | tools/fidl/fidlc/testdata | tools/fidl/$TOOL/goldens
 | fidldoc goldens | fx regen-goldens fidldoc                       | tools/fidl/fidlc/testdata | tools/fidl/fidldoc/goldens
+| gidl goldens    | fx regen-goldens gidl | src/tests/fidl/conformance_suite/golden{.gidl,.test.fidl} | tools/fidl/gidl/goldens
 | third party go  | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl |                           |
 
 ### Compiling with `ninja`
@@ -646,29 +611,38 @@ fx ninja -C out/default host_x64/fidlgen_dart
 ## Debugging (host)
 
 There are several ways of debugging issues in host binaries. This section gives
-instructions for the example case where `fidlc --files test.fidl` is crashing:
+instructions for the case where `fidlc --files test.fidl` is crashing:
 
-- [`gdb`](#gdb)
-- [Asan](#ASan)
-- [Valgrind](#Valgrind)
+- [GDB](#gdb)
+- [ASan](#asan)
+- [Valgrind](#valgrind)
 
 Note: Even with all optimizations turned off, the binaries in
 `out/default/host_x64` are stripped. For debugging, you should use the binaries
 in the `exe.unstripped` subdirectory, such as `out/default/host_x64/exe.unstripped/fidlc`.
 
-### `gdb` {#gdb}
+### GDB {#gdb}
 
-Start `gdb`:
+First, `cd` to the build directory. You can also stay in `$FUCHSIA_DIR`, but
+then you need to run `dir out/default` in GDB for it to find source files.
 
 ```sh
-gdb --args out/default/host_x64/exe.unstripped/fidlc --files test.fidl
+cd $FUCHSIA_DIR/out/default
 ```
 
-Then, enter "r" to start the program. For additionl uses, and a convenient quick
-reference we've found this [GDB Cheat
+Next, start GDB. The copy on your system might work, but the prebuilt `fx gdb`
+is more likely to work with build artifacts in the Fuchsia project. See
+`fx gnu --help` for the full list of prebuilt GNU tools.
+
+```sh
+fx gdb --args host_x64/exe.unstripped/fidlc --files test.fidl
+```
+
+Then, enter "r" to start the program. For additional uses, and a convenient
+quick reference we've found this [GDB Cheat
 Sheet](https://darkdust.net/files/GDB%20Cheat%20Sheet.pdf) very useful.
 
-### ASan {#ASan}
+### ASan {#asan}
 
 Ensure you are compiling with ASan enabled:
 
@@ -680,12 +654,12 @@ fx build host_x64/fidlc
 Then run `out/default/host_x64/fidlc --files test.fidl`. That binary should be
 the same as `out/default/host_x64-asan/fidlc`.
 
-### Valgrind {#Valgrind}
+### Valgrind {#valgrind}
 
 On Google Linux machines, you may need to install a standard version of Valgrind
 instead of using the pre-installed binary:
 
-```
+```sh
 sudo apt-get install valgrind
 ```
 
@@ -703,18 +677,15 @@ To update all the saved `fidlgen` files, run the following command,
 which automatically searches for and generates the necessary go files:
 
 ```sh
-fx exec third_party/go/regen-fidl
+fx exec $FUCHSIA_DIR/third_party/go/regen-fidl
 ```
 
 ## FAQs
 
 ### Why is the C back-end different than all other back-ends?
 
-TBD
-
-### Why is fidlc in the zircon repo?
-
-TBD
+The current C bindings are deprecated. See <https://fxbug.dev/79003> for more
+information on the future of using FIDL in C.
 
 ### Why aren't all back-ends in one tool?
 
@@ -754,6 +725,8 @@ fidl fmt --library my_library.fidl -i
 [pagination]: /docs/development/languages/fidl/guides/max-out-pagination.md
 [commit-message]: /docs/contribute/commit-message-style-guide.md
 
+[/tools/fidl/fidlc/formatter]: /tools/fidl/fidlc/formatter
+[/tools/fidl/fidlc/linter]: /tools/fidl/fidlc/linter
 [/tools/fidl/fidlc/lib/c_generator.cc]: /tools/fidl/fidlc/lib/c_generator.cc
 [/tools/fidl/fidlc/lib/tables_generator.cc]: /tools/fidl/fidlc/lib/tables_generator.cc
 [/tools/fidl/fidlgen_hlcpp]: /tools/fidl/fidlgen_hlcpp
