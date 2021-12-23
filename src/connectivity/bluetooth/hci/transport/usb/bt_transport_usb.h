@@ -150,10 +150,7 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   // Whether or not we are being unbound.
   bool unbound_ __TA_GUARDED(pending_request_lock_) = false;
 
-  // pending_request_lock may be held whether or not mutex is held.
-  // If mutex is held, this must be acquired AFTER mutex is locked.
-  // Should never be acquired before mutex.
-  mtx_t pending_request_lock_;
+  mtx_t pending_request_lock_ __TA_ACQUIRED_AFTER(mutex_);
   cnd_t pending_requests_completed_;
 };
 
