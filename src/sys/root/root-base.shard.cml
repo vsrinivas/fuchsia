@@ -133,6 +133,7 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.thermal.Controller",
                 "fuchsia.tpm.cr50.Cr50",
+                "fuchsia.tpm.cr50.PinWeaver",
                 "fuchsia.tracing.kernel.Controller",
                 "fuchsia.tracing.kernel.Reader",
                 "fuchsia.update.verify.BlobfsVerifier",

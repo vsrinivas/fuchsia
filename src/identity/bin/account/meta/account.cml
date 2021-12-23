@@ -29,6 +29,11 @@
             to: "#password_authenticator",
         },
         {
+            protocol: [ "fuchsia.tpm.cr50.PinWeaver" ],
+            from: "parent",
+            to: "#credential_manager",
+        },
+        {
             protocol: [ "fuchsia.identity.credential.CredentialManager" ],
             from: "#credential_manager",
             to: "#password_authenticator",

@@ -926,7 +926,10 @@
             from: "#virtual_console",
         },
         {
-            protocol: [ "fuchsia.tpm.cr50.Cr50" ],
+            protocol: [
+                "fuchsia.tpm.cr50.Cr50",
+                "fuchsia.tpm.cr50.PinWeaver",
+            ],
             from: "#cr50_agent",
         },
         {

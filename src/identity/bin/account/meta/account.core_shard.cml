@@ -15,6 +15,7 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
+                "fuchsia.tpm.cr50.PinWeaver",
             ],
             from: "parent",
             to: "#account",
