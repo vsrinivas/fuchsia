@@ -113,7 +113,7 @@ build_angle() {
     is_debug=false \
     target_cpu=\"${arch}\" \
     target_os=\"linux\" \
-    use_x11=true \
+    ozone_platform_x11=true \
     use_ozone=true \
     angle_enable_trace=false \
     angle_enable_d3d9=false \
