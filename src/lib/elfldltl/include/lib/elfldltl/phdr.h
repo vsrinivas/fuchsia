@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_PHDR_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_PHDR_H_
 
+#include <lib/stdcompat/bit.h>
 #include <lib/stdcompat/span.h>
 
 #include <optional>
@@ -72,19 +73,42 @@ constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
   constexpr auto kKnownFlags = Phdr::kRead | Phdr::kWrite | Phdr::kExecute;
 
   bool ok = true;
-  auto check_flags = [&](std::string_view warning) {
+  auto check_header = [&](auto error) {
+    using Error = decltype(error);
+
     if ((phdr.flags() & ~kKnownFlags) != 0) {
-      ok = diag.FormatWarning(warning);
+      if (ok = diag.FormatWarning(Error::kUnknownFlags); !ok) {
+        return false;
+      }
     }
-    return ok;
+
+    // An `align` of 0 signifies no alignment constraints, which in practice
+    // means an alignment of 1.
+    auto align = phdr.align() > 0 ? phdr.align() : 1;
+    if (!cpp20::has_single_bit(align)) {
+      if (ok = diag.FormatError(Error::kBadAlignment); !ok) {
+        return false;
+      }
+    }
+    if (phdr.vaddr() % align != 0) {
+      if (ok = diag.FormatError(Error::kUnalignedVaddr); !ok) {
+        return false;
+      }
+    }
+    if (phdr.offset() % align != phdr.vaddr() % align) {
+      if (ok = diag.FormatError(Error::kOffsetNotEquivVaddr); !ok) {
+        return false;
+      }
+    }
+
+    return true;
   };
   auto call_observer = [&](auto type) {
     ok = static_cast<Observer&>(observer).Observe(diag, type, phdr);
     return ok;
   };
 
-  ((phdr.type == Type &&                                      //
-    check_flags(internal::PhdrError<Type>::kUnknownFlags) &&  //
+  ((phdr.type == Type && check_header(internal::PhdrError<Type>{}) &&
     call_observer(PhdrTypeMatch<Type>{})) ||
    ...);
   return ok;

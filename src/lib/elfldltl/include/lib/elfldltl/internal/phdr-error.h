@@ -44,6 +44,15 @@ struct PhdrError {
 
   static constexpr auto kUnknownFlags =  //
       kPhdrTypeName<Type> + " header has unrecognized flags (other than PF_R, PF_W, PF_X)";
+
+  static constexpr auto kBadAlignment =  //
+      kPhdrTypeName<Type> + " header has `p_align` that is not zero or a power of two";
+
+  static constexpr auto kUnalignedVaddr =  //
+      kPhdrTypeName<Type> + " header has `p_vaddr % p_align != 0`";
+
+  static constexpr auto kOffsetNotEquivVaddr =  //
+      kPhdrTypeName<Type> + " header has incongruent `p_offset` and `p_vaddr` modulo `p_align`";
 };
 
 }  // namespace elfldltl::internal

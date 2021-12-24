@@ -26,6 +26,8 @@ constexpr elfldltl::DiagnosticsFlags kFlags = {
     .extra_checking = true,
 };
 
+constexpr size_t kAlign = 0x1000;  // Example alignment.
+
 constexpr std::string_view kNullWarning = "PT_NULL header encountered";
 
 template <class Phdr>
@@ -230,6 +232,154 @@ constexpr auto UnknownFlagsTest = [](auto&& elf) {
 };
 
 TEST(ElfldltlPhdrTests, UnknownFlags) { TestAllFormats(UnknownFlagsTest); }
+
+constexpr auto BadAlignmentTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {
+      {.type = ElfPhdrType::kLoad, .align = 0},          // OK
+      {.type = ElfPhdrType::kDynamic, .align = kAlign},  // OK
+      {.type = ElfPhdrType::kInterp, .align = 3},
+      {.type = ElfPhdrType::kNote, .align = kAlign - 1},
+      {.type = ElfPhdrType::kRelro, .align = kAlign + 1},
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+  std::optional<Phdr> load, dynamic, interp, note, relro;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),  //
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kLoad>(load),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kDynamic>(dynamic),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kInterp>(interp),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kNote>(note),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kRelro>(relro)));
+
+  EXPECT_EQ(3, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+
+  ASSERT_EQ(errors.size(), 3);
+  EXPECT_STR_EQ(errors[0], "PT_INTERP header has `p_align` that is not zero or a power of two");
+  EXPECT_STR_EQ(errors[1], "PT_NOTE header has `p_align` that is not zero or a power of two");
+  EXPECT_STR_EQ(errors[2], "PT_GNU_RELRO header has `p_align` that is not zero or a power of two");
+};
+
+TEST(ElfldltlPhdrTests, BadAlignment) { TestAllFormats(BadAlignmentTest); }
+
+constexpr auto UnalignedVaddrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {
+      // OK
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kAlign,
+          .vaddr = kAlign,
+          .align = kAlign,
+      },
+      // OK
+      {
+          .type = ElfPhdrType::kDynamic,
+          .vaddr = 0x123abc,
+          .align = 0,
+      },
+      {
+          .type = ElfPhdrType::kInterp,
+          .offset = kAlign - 1,
+          .vaddr = kAlign - 1,
+          .align = kAlign,
+      },
+      {
+          .type = ElfPhdrType::kNote,
+          .offset = kAlign + 1,
+          .vaddr = kAlign + 1,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+  std::optional<Phdr> load, dynamic, interp, note;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),  //
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kLoad>(load),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kDynamic>(dynamic),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kInterp>(interp),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kNote>(note)));
+
+  EXPECT_EQ(2, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+
+  ASSERT_EQ(errors.size(), 2);
+  EXPECT_STR_EQ(errors[0], "PT_INTERP header has `p_vaddr % p_align != 0`");
+  EXPECT_STR_EQ(errors[1], "PT_NOTE header has `p_vaddr % p_align != 0`");
+};
+
+TEST(ElfldltlPhdrTests, UnalignedVaddr) { TestAllFormats(UnalignedVaddrTest); }
+
+constexpr auto OffsetNotEquivVaddrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {
+      // OK
+      {
+          .type = ElfPhdrType::kLoad,
+          .offset = kAlign,
+          .vaddr = kAlign,
+          .align = kAlign,
+      },
+      // OK
+      {
+          .type = ElfPhdrType::kDynamic,
+          .offset = 17 * kAlign,
+          .vaddr = kAlign,
+          .align = kAlign,
+      },
+      // OK
+      {
+          .type = ElfPhdrType::kInterp,
+          .offset = 100,
+          .vaddr = 101,
+          .align = 0,
+      },
+      {
+          .type = ElfPhdrType::kNote,
+          .offset = kAlign - 1,
+          .vaddr = kAlign,
+          .align = kAlign,
+      },
+      {
+          .type = ElfPhdrType::kRelro,
+          .offset = kAlign + 1,
+          .vaddr = kAlign,
+          .align = kAlign,
+      }};
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+  std::optional<Phdr> load, dynamic, interp, note, relro;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),  //
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kLoad>(load),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kDynamic>(dynamic),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kInterp>(interp),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kNote>(note),
+                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kRelro>(relro)));
+
+  EXPECT_EQ(2, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+
+  ASSERT_EQ(2, errors.size());
+  EXPECT_STR_EQ(errors[0],
+                "PT_NOTE header has incongruent `p_offset` and `p_vaddr` modulo `p_align`");
+  EXPECT_STR_EQ(errors[1],
+                "PT_GNU_RELRO header has incongruent `p_offset` and `p_vaddr` modulo `p_align`");
+};
+
+TEST(ElfldltlPhdrTests, OffsetNotEquivVaddrVaddr) { TestAllFormats(OffsetNotEquivVaddrTest); }
 
 // Executable stack permitted; non-zero memsz.
 constexpr auto StackObserverExecOkPhdrNonzeroSizeTest = [](auto&& elf) {
