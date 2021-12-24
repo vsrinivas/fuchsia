@@ -5,42 +5,144 @@ library fuchsia.bluetooth.gatt2;
 
 using fuchsia.bluetooth as bt;
 
-/// Errors that are returned by bluetooth.gatt2 methods.
+/// Errors that are returned by bluetooth.gatt2.* methods.
+///
+/// The values correspond with those in Bluetooth 5.2 Vol. 3 Part G Table 3.4,
+/// and Supplement to the Bluetooth Core Specification v9 Part B Table 1.1,
+/// but this is for ease of reference only.  Clients should *not* rely on these
+/// values remaining constant.  Omitted values from the spec are handled
+/// internally and will not be returned to clients.
+///
+/// Only certain errors can be returned by LocalService methods.  Those are noted
+/// in comments.
 type Error = strict enum {
-    /// A general error occurred that can not be classified as one of the more
-    /// specific errors.
-    FAILURE = 1;
+    // ATT Errors
+
+    /// The attribute indicated by the handle is invalid. It may have been removed.
+    ///
+    /// This may be returned by a LocalService method.
+    INVALID_HANDLE = 0x1;
+
+    /// This attribute is not readable.
+    READ_NOT_PERMITTED = 0x2;
+
+    /// This attribute is not writable.
+    WRITE_NOT_PERMITTED = 0x3;
 
     /// Indicates that the response received from the server was invalid.
-    INVALID_RESPONSE = 2;
+    INVALID_PDU = 0x4;
+
+    /// This attribute requires authentication, but the client is not authenticated.
+    INSUFFICIENT_AUTHENTICATION = 0x5;
+
+    /// Indicates that the offset used in a read or write request exceeds the
+    /// bounds of the value.
+    ///
+    /// This may be returned by a LocalService method.
+    INVALID_OFFSET = 0x7;
+
+    /// This attribute requires authorization, but the client is not authorized.
+    INSUFFICIENT_AUTHORIZATION = 0x8;
+
+    /// This attribute requires a connection encrypted by a larger encryption key.
+    INSUFFICIENT_ENCRYPTION_KEY_SIZE = 0xC;
+
+    /// Indicates that the value given in a write request would exceed the maximum
+    /// length allowed for the destionation characteristic or descriptor.
+    ///
+    /// This may be returned by a LocalService method.
+    INVALID_ATTRIBUTE_VALUE_LENGTH = 0xD;
+
+    /// A general error occurred that can not be classified as one of the more
+    /// specific errors.
+    ///
+    /// This may be returned by a LocalService method.
+    UNLIKELY_ERROR = 0xE;
+
+    /// This attribute requires encryption, but the connection is not encrypted.
+    INSUFFICIENT_ENCRYPTION = 0xF;
+
+    /// The server had insufficient resources to complete the task.
+    ///
+    /// This may be returned by a LocalService method.
+    INSUFFICIENT_RESOURCES = 0x11;
+
+    /// The value was not allowed.
+    ///
+    /// This may be returned by a LocalService method.
+    VALUE_NOT_ALLOWED = 0x13;
+
+    // Application Errors
+
+    /// Application Errors.  The uses of these are specified at the application
+    /// level.
+    ///
+    /// These may all be returned by a LocalService method.
+    APPLICATION_ERROR_80 = 0x80;
+    APPLICATION_ERROR_81 = 0x81;
+    APPLICATION_ERROR_82 = 0x82;
+    APPLICATION_ERROR_83 = 0x83;
+    APPLICATION_ERROR_84 = 0x84;
+    APPLICATION_ERROR_85 = 0x85;
+    APPLICATION_ERROR_86 = 0x86;
+    APPLICATION_ERROR_87 = 0x87;
+    APPLICATION_ERROR_88 = 0x88;
+    APPLICATION_ERROR_89 = 0x89;
+    APPLICATION_ERROR_8A = 0x8A;
+    APPLICATION_ERROR_8B = 0x8B;
+    APPLICATION_ERROR_8C = 0x8C;
+    APPLICATION_ERROR_8D = 0x8D;
+    APPLICATION_ERROR_8E = 0x8E;
+    APPLICATION_ERROR_8F = 0x8F;
+    APPLICATION_ERROR_90 = 0x90;
+    APPLICATION_ERROR_91 = 0x91;
+    APPLICATION_ERROR_92 = 0x92;
+    APPLICATION_ERROR_93 = 0x93;
+    APPLICATION_ERROR_94 = 0x94;
+    APPLICATION_ERROR_95 = 0x95;
+    APPLICATION_ERROR_96 = 0x96;
+    APPLICATION_ERROR_97 = 0x97;
+    APPLICATION_ERROR_98 = 0x98;
+    APPLICATION_ERROR_99 = 0x99;
+    APPLICATION_ERROR_9A = 0x9A;
+    APPLICATION_ERROR_9B = 0x9B;
+    APPLICATION_ERROR_9C = 0x9C;
+    APPLICATION_ERROR_9D = 0x9D;
+    APPLICATION_ERROR_9E = 0x9E;
+    APPLICATION_ERROR_9F = 0x9F;
+
+    // Common Profile and Service Error Codes
+
+    /// Write request was rejected at the profile or service level.
+    WRITE_REQUEST_REJECTED = 0xFC;
+
+    /// The Client Characteristic Configuration Descriptor was improperly
+    /// configured.
+    CCC_DESCRIPTOR_IMPROPERLY_CONFIGURED = 0xFD;
+
+    /// Profile or service procedure already in progress.
+    PROCEDURE_ALREADY_IN_PROGRESS = 0xFE;
+
+    /// A value was out of range at the profile or service level.
+    OUT_OF_RANGE = 0xFF;
+
+    // Errors not specified by Bluetooth.
+
+    /// One or more of the FIDL call parameters are invalid. See the parameter
+    /// documentation.
+    INVALID_PARAMETERS = 0x101;
 
     /// Indicates that more results were read than can fit in a FIDL response.
     /// Consider reading attributes individually.
-    TOO_MANY_RESULTS = 3;
+    TOO_MANY_RESULTS = 0x102;
+};
 
-    /// This attribute requires authorization, but the client is not authorized.
-    INSUFFICIENT_AUTHORIZATION = 4;
-
-    /// This attribute requires authentication, but the client is not authenticated.
-    INSUFFICIENT_AUTHENTICATION = 5;
-
-    /// This attribute requires a connection encrypted by a larger encryption key.
-    INSUFFICIENT_ENCRYPTION_KEY_SIZE = 6;
-
-    /// This attribute requires encryption, but the connection is not encrypted.
-    INSUFFICIENT_ENCRYPTION = 7;
-
-    /// This attribute is not readable.
-    READ_NOT_PERMITTED = 8;
-
-    /// This attribute is not writable.
-    WRITE_NOT_PERMITTED = 9;
-
-    /// One or more of the parameters are invalid. See the parameter documentation.
-    INVALID_PARAMETERS = 10;
-
-    /// The attribute indicated by the handle is invalid. It may have been removed.
-    INVALID_HANDLE = 11;
+/// Errors that can occur during service publication.
+type PublishServiceError = flexible enum {
+    /// The provided LocalService client_end was not a valid instance of the protocol.
+    INVALID_LOCAL_SERVICE = 1;
+    /// Invalid service UUID provided.
+    INVALID_UUID = 2;
 };
 
 // A Handle uniquely identifies a service, characteristic, or descriptor.

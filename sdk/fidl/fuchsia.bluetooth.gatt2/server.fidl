@@ -1,0 +1,167 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.bluetooth.gatt2;
+
+using fuchsia.bluetooth as bt;
+using zx;
+
+/// Parameters for the LocalService.WriteValue method
+type WriteValueParameters = table {
+    /// The PeerId of the GATT client making the write request.
+    /// Always present.
+    1: peer_id bt.PeerId;
+    /// The handle of the requested descriptor/characteristic.
+    /// Always present.
+    2: handle Handle;
+    /// The offset at which to start writing the requested value. If the offset is 0, any existing
+    /// value should be overwritten by the new value. Otherwise, the existing value between
+    /// offset:(offset + len(value)) should be changed to `value`.
+    /// Always present.
+    3: offset uint32;
+    /// The new value for the descriptor/characteristic.
+    /// Always present. May be the empty string.
+    4: value bytes:MAX_VALUE_LENGTH;
+};
+
+/// The parameters used to signal a characteristic value change from a LocalService to a peer.
+type ValueChangedParameters = table {
+    /// The PeerIds of the peers to signal. The LocalService should respect the Characteristic
+    /// Configuration associated with a peer+handle when deciding whether to signal it.
+    /// If empty/not present, all peers are signalled.
+    1: peer_ids vector<bt.PeerId>:MAX;
+    /// The handle of the characteristic value being signalled.
+    /// Mandatory.
+    2: handle Handle;
+    /// The updated value of the characteristic.
+    /// Mandatory.
+    3: value bytes:MAX_VALUE_LENGTH;
+};
+
+/// Interface for serving a local GATT service.
+protocol LocalService {
+    /// This notifies the current configuration of a particular characteristic/descriptor for a
+    /// particular peer. It will be called when the peer GATT client changes the configuration.
+    ///
+    /// The Bluetooth stack maintains the state of each peer's configuration across reconnections.
+    /// As such, this method will also be called when a peer connects for each characteristic with
+    /// the initial, persisted state of the newly-connected peer's configuration. However, clients
+    /// should not rely on this state being persisted indefinitely by the Bluetooth stack.
+    ///
+    /// + request `peer_id` The PeerId of the GATT client associated with this particular CCC.
+    /// + request `handle` The handle of the characteristic associated with the `notify` and
+    ///  `indicate` parameters.
+    /// + request `notify` True if the client has enabled notifications, false otherwise.
+    /// + request `indicate` True if the client has enabled indications, false otherwise.
+    /// - response empty Returns nothing to acknowledge the characteristic configuration.
+    CharacteristicConfiguration(struct {
+        peer_id bt.PeerId;
+        handle Handle;
+        notify bool;
+        indicate bool;
+    }) -> ();
+
+    /// Called when a peer requests to read the value of a characteristic or descriptor. It is
+    /// guaranteed that the peer satisfies the permssions associated with this attribute.
+    ///
+    /// + request `peer_id` The PeerId of the GATT client making the read request.
+    /// + request `handle` The handle of the requested descriptor/characteristic.
+    /// + request `offset` The offset at which to start reading the requested value.
+    /// - response `value` The value of the characteristic.
+    /// * error See `gatt2.Error` documentation for possible errors.
+    ReadValue(struct {
+        peer_id bt.PeerId;
+        handle Handle;
+        offset int32;
+    }) -> (struct {
+        value bytes:MAX_VALUE_LENGTH;
+    }) error Error;
+
+    /// Called when a peer issues a request to write the value of a characteristic or descriptor. It
+    /// is guaranteed that the peer satisfies the permissions associated with this attribute.
+    ///
+    /// + request `params` The parameters of the write.
+    /// - response  The implementation must send an empty response once the value has been updated
+    ///   as confirmation.
+    /// * error See `gatt2.Error` documentation for possible errors.
+    // TODO(fxbug.dev/76349): Once table payloads are available, consider whether we could use an
+    // anonymous table here instead of a table within a struct.
+    WriteValue(struct {
+        params WriteValueParameters;
+    }) -> (struct {}) error Error;
+
+    /// After this event, new peers will no longer be able to discover the service, although open
+    /// connections to existing peer GATT clients will not be closed. This should be sent once per
+    /// service lifetime; sending more than once will close the protocol.
+    -> OnSupressDiscovery();
+
+    /// This event is used to send a notification to a peer. Notifications should be used instead of
+    /// indications when the service does *not* require peer confirmation of the update.
+    ///
+    /// Notifications should not be sent to peers which have not enabled notifications on a
+    /// particular characteristic - if they are sent, they will not be propagated. The Bluetooth
+    /// stack will track this configuration for the lifetime of the service.
+    ///
+    /// LocalServices must keep track of available credit provided by the `ValueChangedCredit`
+    /// method and send at most that many `OnNotifyValue` and `OnIndicateValue` events. If more
+    /// events are sent than available credits, the protocol will be closed.
+    // TODO(fxbug.dev/76349): Once named payload layouts and table payloads are available, consider
+    // whether this can be simply -> OnNotifyValue(ValueChangedParameters)
+    -> OnNotifyValue(struct {
+        update ValueChangedParameters;
+    });
+
+    /// This event is used to send an indication to a peer. Indications should be used instead of
+    /// notifications when the service *does* require peer confirmation of the update.
+    ///
+    /// Indications should not be sent to peers which have not enabled indications on a particular
+    /// characteristic - if they are sent, they will not be propagated. The Bluetooth stack will
+    /// track this configuration for the lifetime of the service.
+    ///
+    /// LocalServices must keep track of available credit provided by the `ValueChangedCredit`
+    /// method and send at most that many `OnNotifyValue` and `OnIndicateValue` events. If more
+    /// events are sent than available credits, the protocol will be closed.
+    ///
+    /// If any of the peers in `update.peer_ids` fails to confirm the indication within the ATT
+    /// transaction timeout (30 seconds per Bluetooth 5.2 Vol. 4 Part G 3.3.3), the link between
+    /// the peer and the local adapter will be closed.
+    ///
+    /// + request `update` The parameters associated with the changed characteristic.
+    /// + request `confirmation` When all the peers listed in `update.peer_ids` have confirmed
+    ///   the indication, `confirmation` is signalled with ZX_USER_SIGNAL_0. If the implementation
+    ///   wishes to receive indication confirmations on a per-peer basis, they should send this
+    ///   event with a single PeerId in `update.peer_ids`.
+    // `confirmation` is an EventPair instead of an Event because the language bindings for Events
+    // treat them as resources/move-only, but the LocalService will need to retain a handle to the
+    // `confirmation` kernel object in order to wait on the signal from the other side.
+    -> OnIndicateValue(resource struct {
+        update ValueChangedParameters;
+        confirmation zx.handle:EVENTPAIR;
+    });
+
+    /// Add credit for sending indications and notifications.  Implementors must keep track of the
+    /// available credit they have.  For each credit the implementor can send exactly one
+    /// OnNotifyValue or OnIndicateValue event.
+    ValueChangedCredit(struct {
+        additional_credit uint8;
+    });
+};
+
+@discoverable
+protocol Server {
+    /// Publishes the given `service` so that it is available to all remote peers.
+    ///
+    /// The caller must assign distinct handles to the characteristics and descriptors listed in
+    /// `info`. These identifiers will be used in requests sent to `service`.
+    ///
+    /// + request `info` Defines the structure of the GATT service, including characteristics and
+    ///   descriptors that will be made available to peers.
+    /// + request `service` Provides the implementation of the service per the documented behavior
+    ///   of a `LocalService`.
+    /// - response empty Returns nothing upon successful service publication.
+    /// * error See `gatt2.PublishServiceError` for possible failure modes.
+    PublishService(resource struct {
+        info ServiceInfo;
+        service client_end:LocalService;
+    }) -> (struct {}) error PublishServiceError;
+};
