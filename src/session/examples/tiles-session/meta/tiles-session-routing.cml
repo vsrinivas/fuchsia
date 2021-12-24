@@ -102,7 +102,6 @@
         },
         {
             protocol: [
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",

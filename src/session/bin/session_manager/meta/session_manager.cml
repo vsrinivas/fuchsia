@@ -49,7 +49,6 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.fonts.Provider",

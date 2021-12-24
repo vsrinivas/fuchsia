@@ -26,7 +26,6 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.bluetooth.snoop.Snoop",
                 "fuchsia.camera3.DeviceWatcher",
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.factory.MiscFactoryStoreProvider",
                 "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.feedback.ComponentDataRegister",

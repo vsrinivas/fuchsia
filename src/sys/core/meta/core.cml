@@ -201,7 +201,6 @@
         {
             protocol: [
                 "fuchsia.camera3.DeviceWatcher",
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.UsageReporter",
@@ -777,7 +776,6 @@
         },
         {
             protocol: [
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.intl.TimeZones",
