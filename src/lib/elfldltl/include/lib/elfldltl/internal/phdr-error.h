@@ -53,6 +53,15 @@ struct PhdrError {
 
   static constexpr auto kOffsetNotEquivVaddr =  //
       kPhdrTypeName<Type> + " header has incongruent `p_offset` and `p_vaddr` modulo `p_align`";
+
+  static constexpr auto kFileszNotEqMemsz =  //
+      kPhdrTypeName<Type> + " header has `p_filesz != p_memsz`";
+
+  static constexpr auto kIncompatibleEntrySize =  //
+      kPhdrTypeName<Type> + " segment size is not a multiple of entry size";
+
+  static constexpr auto kIncompatibleEntryAlignment =  //
+      kPhdrTypeName<Type> + " segment alignment is not a multiple of entry alignment";
 };
 
 }  // namespace elfldltl::internal

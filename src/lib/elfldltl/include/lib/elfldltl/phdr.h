@@ -232,6 +232,54 @@ class PhdrStackObserver : public PhdrSingletonObserver<Elf, ElfPhdrType::kStack>
   [[no_unique_address]] std::conditional_t<CanBeExecutable, bool&, Empty> executable_;
 };
 
+// A generic metadata, singleton observer that validates constraints around
+// sizes, offset, address, and segment entry type.
+template <class Elf, ElfPhdrType Type, typename EntryType = std::byte>
+class PhdrMetadataObserver : public PhdrSingletonObserver<Elf, Type> {
+ private:
+  using Base = PhdrSingletonObserver<Elf, Type>;
+  using Phdr = typename Elf::Phdr;
+
+ public:
+  using Base::Base;
+
+  template <class Diag>
+  constexpr bool Finish(Diag& diag) {
+    using PhdrError = internal::PhdrError<Type>;
+
+    const std::optional<Phdr>& phdr = this->phdr();
+    if (!phdr) {
+      return true;
+    }
+
+    if (alignof(EntryType) > phdr->align() &&  //
+        !diag.FormatError(PhdrError::kIncompatibleEntryAlignment)) {
+      return false;
+    }
+
+    if (phdr->memsz != phdr->filesz &&  //
+        !diag.FormatError(PhdrError::kFileszNotEqMemsz)) {
+      return false;
+    }
+
+    if (phdr->filesz() % sizeof(EntryType) != 0 &&  //
+        !diag.FormatError(PhdrError::kIncompatibleEntrySize)) {
+      return false;
+    }
+
+    return true;
+  }
+};
+
+template <class Elf>
+using PhdrDynamicObserver = PhdrMetadataObserver<Elf, ElfPhdrType::kDynamic, typename Elf::Dyn>;
+
+template <class Elf>
+using PhdrInterpObserver = PhdrMetadataObserver<Elf, ElfPhdrType::kInterp>;
+
+template <class Elf>
+using PhdrEhFrameHdrObserver = PhdrMetadataObserver<Elf, ElfPhdrType::kEhFrameHdr>;
+
 }  // namespace elfldltl
 
 #endif  // SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_PHDR_H_

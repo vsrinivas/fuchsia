@@ -718,4 +718,119 @@ constexpr auto StackObserverNonWritableTest = [](auto&& elf) {
 
 TEST(ElfldltlPhdrTests, StackObserverNonWritable) { TestAllFormats(StackObserverNonWritableTest); }
 
+constexpr auto MetadataObserverNoPhdrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<Phdr> phdr;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span<const Phdr>{},
+                            elfldltl::PhdrMetadataObserver<Elf, ElfPhdrType::kInterp>(phdr)));
+
+  EXPECT_FALSE(phdr);
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+};
+
+TEST(ElfldltlPhdrTests, MetadataObserverNoPhdr) { TestAllFormats(MetadataObserverNoPhdrTest); }
+
+constexpr auto MetadataObserverFileszNotEqMemszTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kInterp,
+          .filesz = kAlign,
+          .memsz = kAlign + 1,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<Phdr> phdr;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs), elfldltl::PhdrMetadataObserver<Elf, ElfPhdrType::kInterp>(phdr)));
+
+  EXPECT_TRUE(phdr);
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STR_EQ("PT_INTERP header has `p_filesz != p_memsz`", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, MetadataObserverFileszNotEqMemsz) {
+  TestAllFormats(MetadataObserverFileszNotEqMemszTest);
+}
+
+constexpr auto MetadataObserverIncompatibleEntrySizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using Dyn = typename Elf::Dyn;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kDynamic,
+          .filesz = sizeof(Dyn) + 1,
+          .memsz = sizeof(Dyn) + 1,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<Phdr> phdr;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                            elfldltl::PhdrMetadataObserver<Elf, ElfPhdrType::kDynamic, Dyn>(phdr)));
+
+  EXPECT_TRUE(phdr);
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STR_EQ("PT_DYNAMIC segment size is not a multiple of entry size", errors.front());
+};
+
+TEST(ElfldltlPhdrTests, MetadataObserverIncompatibleEntrySize) {
+  TestAllFormats(MetadataObserverIncompatibleEntrySizeTest);
+}
+
+constexpr auto MetadataObserverIncompatibleEntryAlignmentTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+  using Dyn = typename Elf::Dyn;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kDynamic,
+          .align = alignof(Dyn) / 2,  // Too small.
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  std::optional<Phdr> phdr;
+  EXPECT_TRUE(
+      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),
+                            elfldltl::PhdrMetadataObserver<Elf, ElfPhdrType::kDynamic, Dyn>(phdr)));
+
+  EXPECT_TRUE(phdr);
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_STR_EQ("PT_DYNAMIC segment alignment is not a multiple of entry alignment",
+                errors.front());
+};
+
+TEST(ElfldltlPhdrTests, MetadataObserverIncompatibleAlignmentSize) {
+  TestAllFormats(MetadataObserverIncompatibleEntryAlignmentTest);
+}
+
 }  // namespace
