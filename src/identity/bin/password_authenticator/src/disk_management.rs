@@ -535,7 +535,7 @@ pub mod test {
         super::*,
         crate::{
             constants::{ACCOUNT_LABEL, FUCHSIA_DATA_GUID},
-            prototype::GLOBAL_ZXCRYPT_KEY,
+            prototype::INSECURE_EMPTY_KEY,
         },
         fidl_fuchsia_hardware_block::{BlockInfo, MAX_TRANSFER_UNBOUNDED},
         fidl_fuchsia_hardware_block_encrypted::{DeviceManagerRequest, DeviceManagerRequestStream},
@@ -655,7 +655,7 @@ pub mod test {
                                         vfs::service::host(move |stream| {
                                             let zxcrypt_dir = zxcrypt_dir.clone();
                                             async move {
-                                                Arc::new(MockZxcryptBlock(zxcrypt_dir))
+                                                Arc::new(MockZxcryptBlock::new(zxcrypt_dir))
                                                     .handle_requests_for_stream(stream)
                                                     .await
                                             }
@@ -722,9 +722,15 @@ pub mod test {
     /// A mock zxcrypt block device, serving a stream of [`DeviceManagerRequest`].
     /// The block device takes a pseudo-directory in which it populates the "unsealed" entry
     /// when the device is unsealed.
-    struct MockZxcryptBlock(Arc<simple::Simple>);
+    struct MockZxcryptBlock {
+        unsealed_contents: Arc<simple::Simple>,
+    }
 
     impl MockZxcryptBlock {
+        fn new(unsealed_contents: Arc<simple::Simple>) -> MockZxcryptBlock {
+            MockZxcryptBlock { unsealed_contents }
+        }
+
         async fn handle_requests_for_stream(
             self: Arc<Self>,
             mut stream: DeviceManagerRequestStream,
@@ -733,23 +739,25 @@ pub mod test {
                 stream.try_next().await.expect("failed to read DeviceManager request")
             {
                 match request {
-                    DeviceManagerRequest::Format { key, slot, responder } => {
-                        assert_eq!(key, &GLOBAL_ZXCRYPT_KEY, "key must be null key");
+                    DeviceManagerRequest::Format { key: _, slot, responder } => {
                         assert_eq!(slot, 0, "key slot must be 0");
-                        responder.send(0).expect("failed to send DeviceManager.Format response");
+                        responder
+                            .send(zx::Status::OK.into_raw())
+                            .expect("failed to send DeviceManager.Format response");
                     }
 
-                    DeviceManagerRequest::Unseal { key, slot, responder } => {
-                        assert_eq!(key, &GLOBAL_ZXCRYPT_KEY, "key must be null key");
+                    DeviceManagerRequest::Unseal { key: _, slot, responder } => {
                         assert_eq!(slot, 0, "key slot must be 0");
 
                         let unsealed_dir = pseudo_directory! {
                             "block" => pseudo_directory! {},
                         };
-                        self.0
+                        self.unsealed_contents
                             .add_entry("unsealed", unsealed_dir)
                             .expect("failed to add unsealed dir");
-                        responder.send(0).expect("failed to send DeviceManager.Unseal response");
+                        responder
+                            .send(zx::Status::OK.into_raw())
+                            .expect("failed to send DeviceManager.Unseal response");
                     }
                     req => {
                         error!("{:?} is not implemented for this mock", req);
@@ -897,7 +905,6 @@ pub mod test {
                         label: Ok(ACCOUNT_LABEL.to_string()),
                         first_block: Err(zx::Status::NOT_FOUND.into_raw()),
                         block_dir: simple::simple(),
-
                     }),
                 }
             }
@@ -1002,7 +1009,7 @@ pub mod test {
                 vfs::service::host(move |stream| {
                     let zxcrypt_dir = zxcrypt_dir.clone();
                     async move {
-                        Arc::new(MockZxcryptBlock(zxcrypt_dir))
+                        Arc::new(MockZxcryptBlock::new(zxcrypt_dir))
                             .handle_requests_for_stream(stream).await
                     }
                 })
@@ -1011,7 +1018,7 @@ pub mod test {
 
         // Build a zxcrypt block device that points to our mock zxcrypt driver node, emulating
         // bind_to_encrypted_block.
-        let key = Box::new(GLOBAL_ZXCRYPT_KEY.clone());
+        let key = Box::new(INSECURE_EMPTY_KEY.clone());
         let encrypted_block_device =
             EncryptedDevBlockDevice(serve_mock_devfs(&scope, mock_encrypted_block_dir));
         encrypted_block_device.format(&key).await.expect("format");

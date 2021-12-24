@@ -25,5 +25,10 @@
             from: "#account",
             to: "#session-manager",
         },
+        {
+            storage: "data",
+            from: "self",
+            to: "#account",
+        },
     ],
 }

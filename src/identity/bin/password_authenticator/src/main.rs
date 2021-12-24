@@ -26,7 +26,6 @@ use log::info;
 use crate::account_manager::AccountManager;
 use crate::account_metadata::DataDirAccountMetadataStore;
 use crate::disk_management::DevDiskManager;
-use crate::prototype::NullKeyDerivation;
 
 enum Services {
     AccountManager(AccountManagerRequestStream),
@@ -51,9 +50,8 @@ async fn main() -> Result<(), Error> {
     // stale files laying around.
     // TODO(zarvox): someday, make an inspect entry for this failure mode
     drop(cleanup_res);
-    // This will be replaced with a proper key derivation implementation.
-    let key_derivation = NullKeyDerivation;
-    let account_manager = AccountManager::new(disk_manager, key_derivation, account_metadata_store);
+
+    let account_manager = AccountManager::new(disk_manager, account_metadata_store);
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::AccountManager);

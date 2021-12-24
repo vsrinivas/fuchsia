@@ -56,6 +56,7 @@ const ACCOUNT_CLOSE_TIMEOUT: zx::Duration = zx::Duration::from_seconds(5);
 
 const GLOBAL_ACCOUNT_ID: u64 = 1;
 const EMPTY_PASSWORD: &'static str = "";
+const REAL_PASSWORD: &'static str = "a real passphrase!";
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -286,58 +287,14 @@ async fn wait_for_account_close(account: &AccountProxy) -> Result<(), Error> {
 }
 
 #[fuchsia::test]
-async fn get_account_ids_no_partition() {
+async fn get_account_ids_unprovisioned() {
     let env = TestEnv::build().await;
     let account_ids = env.account_manager().get_account_ids().await.expect("get account ids");
     assert_eq!(account_ids, vec![]);
 }
 
 #[fuchsia::test]
-async fn get_account_ids_partition_wrong_guid() {
-    let env = TestEnv::build().await;
-    let unrelated_guid: Guid = Guid {
-        value: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf],
-    };
-    let _ramdisk = env.setup_ramdisk(unrelated_guid, ACCOUNT_LABEL).await;
-    let account_manager = env.account_manager();
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
-}
-
-#[fuchsia::test]
-async fn get_account_ids_partition_wrong_label() {
-    let env = TestEnv::build().await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, "wrong-label").await;
-    let account_manager = env.account_manager();
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
-}
-
-#[fuchsia::test]
-async fn get_account_ids_partition_no_zxcrypt() {
-    let env = TestEnv::build().await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
-    let account_manager = env.account_manager();
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![]);
-}
-
-#[fuchsia::test]
-async fn get_account_ids_with_zxcrypt_header() {
-    let env = TestEnv::build().await;
-    let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
-    env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
-    let account_manager = env.account_manager();
-
-    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![1]);
-}
-
-#[fuchsia::test]
-async fn deprecated_provision_new_account_on_unformatted_partition() {
+async fn deprecated_provision_new_null_password_account_on_unformatted_partition() {
     let env = TestEnv::build().await;
     let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
@@ -361,19 +318,89 @@ async fn deprecated_provision_new_account_on_unformatted_partition() {
 }
 
 #[fuchsia::test]
-async fn deprecated_provision_new_account_on_formatted_partition() {
+async fn deprecated_provision_new_real_password_account_on_unformatted_partition() {
+    let env = TestEnv::build().await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![]);
+
+    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            REAL_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+}
+
+#[fuchsia::test]
+async fn deprecated_provision_new_real_password_account_on_formatted_partition() {
+    // We expect account_manager to ignore the data in the zxcrypt volume, because the account
+    // metadata store is the canonical "does this account exist" indicator, and it has no existing
+    // accounts.
+
+    let env = TestEnv::build().await;
+    let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    // Provision the account.
+    let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            REAL_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+}
+
+#[fuchsia::test]
+async fn deprecated_provision_new_account_over_existing_account_fails() {
     let env = TestEnv::build().await;
     let ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     env.format_zxcrypt(&ramdisk, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
     let account_ids = account_manager.get_account_ids().await.expect("get account ids");
-    assert_eq!(account_ids, vec![1]);
+    assert_eq!(account_ids, Vec::<u64>::new());
 
+    // Provision the account.
+    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            REAL_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let account_ids = account_manager.get_account_ids().await.expect("get account ids");
+    assert_eq!(account_ids, vec![1]);
+    account_proxy.lock().await.expect("lock FIDL").expect("locked");
+    drop(account_proxy);
+
+    // A second attempt to provision the same user over the existing account should fail, since
+    // the account for the global account ID has already been provisioned.
     let (_account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
         .deprecated_provision_new_account(
-            EMPTY_PASSWORD,
+            REAL_PASSWORD,
             AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
             server_end,
         )
@@ -396,7 +423,7 @@ async fn deprecated_provision_new_account_formats_directory() {
         let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager
             .deprecated_provision_new_account(
-                EMPTY_PASSWORD,
+                REAL_PASSWORD,
                 AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
                 server_end,
             )
@@ -425,7 +452,7 @@ async fn deprecated_provision_new_account_formats_directory() {
 
     let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
-        .deprecated_get_account(GLOBAL_ACCOUNT_ID, EMPTY_PASSWORD, server_end)
+        .deprecated_get_account(GLOBAL_ACCOUNT_ID, REAL_PASSWORD, server_end)
         .await
         .expect("deprecated_get_account FIDL")
         .expect("deprecated_get_account");
@@ -455,7 +482,7 @@ async fn locked_account_can_be_unlocked_again() {
     let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
         .deprecated_provision_new_account(
-            EMPTY_PASSWORD,
+            REAL_PASSWORD,
             AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
             server_end,
         )
@@ -509,7 +536,7 @@ async fn locked_account_can_be_unlocked_again() {
     // Unlock the account again.
     let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
-        .deprecated_get_account(GLOBAL_ACCOUNT_ID, EMPTY_PASSWORD, server_end)
+        .deprecated_get_account(GLOBAL_ACCOUNT_ID, REAL_PASSWORD, server_end)
         .await
         .expect("deprecated_get_account FIDL")
         .expect("deprecated_get_account");
@@ -538,7 +565,7 @@ async fn locking_account_terminates_all_clients() {
     let (account_proxy1, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
         .deprecated_provision_new_account(
-            EMPTY_PASSWORD,
+            REAL_PASSWORD,
             AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
             server_end,
         )
@@ -548,7 +575,7 @@ async fn locking_account_terminates_all_clients() {
 
     let (account_proxy2, server_end) = fidl::endpoints::create_proxy().unwrap();
     account_manager
-        .deprecated_get_account(GLOBAL_ACCOUNT_ID, EMPTY_PASSWORD, server_end)
+        .deprecated_get_account(GLOBAL_ACCOUNT_ID, REAL_PASSWORD, server_end)
         .await
         .expect("deprecated_get_account FIDL")
         .expect("deprecated_get_account");

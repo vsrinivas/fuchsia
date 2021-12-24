@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::account_manager::AccountId,
+    crate::{
+        account_manager::AccountId,
+        keys::{Key, KeyDerivation, KeyError},
+        prototype::NullKeyDerivation,
+    },
     async_trait::async_trait,
+    fidl_fuchsia_identity_account as faccount,
     fidl_fuchsia_io::{
         DirectoryProxy, OPEN_FLAG_CREATE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
@@ -17,9 +22,6 @@ use {
     std::str::FromStr,
 };
 
-// Some things will be unused until future patchsets make use of them.
-#[allow(dead_code)]
-#[allow(unused)]
 #[derive(thiserror::Error, Debug)]
 pub enum AccountMetadataStoreError {
     #[error("Failed to open: {0}")]
@@ -56,6 +58,24 @@ pub enum AccountMetadataStoreError {
     UnlinkError(#[source] zx::Status),
 }
 
+impl From<AccountMetadataStoreError> for faccount::Error {
+    fn from(e: AccountMetadataStoreError) -> Self {
+        match e {
+            AccountMetadataStoreError::OpenError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::ReaddirError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::FidlError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::SerdeWriteError(_) => faccount::Error::Internal,
+            AccountMetadataStoreError::SerdeReadError(_) => faccount::Error::Internal,
+            AccountMetadataStoreError::WriteError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::ReadError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::RenameError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::FlushError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::CloseError(_) => faccount::Error::Resource,
+            AccountMetadataStoreError::UnlinkError(_) => faccount::Error::Resource,
+        }
+    }
+}
+
 /// The null key authenticator stores no additional metadata.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NullAuthMetadata {}
@@ -77,10 +97,21 @@ pub struct ScryptParams {
     p: u32,
 }
 
+#[async_trait]
+impl KeyDerivation for ScryptParams {
+    async fn derive_key(&self, password: &str) -> Result<Key, KeyError> {
+        let mut output = [0u8; 32];
+        let params = scrypt::Params::new(self.log_n, self.r, self.p).map_err(|_| KeyError)?;
+        scrypt::scrypt(password.as_bytes(), &self.salt, &params, &mut output)
+            .map_err(|_| KeyError)?;
+        Ok(output)
+    }
+}
+
 /// An enumeration of all supported authenticator metadata types.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum AuthenticatorMetadata {
+pub enum AuthenticatorMetadata {
     NullKey(NullAuthMetadata),
     ScryptOnly(ScryptOnlyMetadata),
 }
@@ -98,14 +129,12 @@ pub struct AccountMetadata {
 
 impl AccountMetadata {
     /// Create a new AccountMetadata for the null key scheme
-    #[allow(dead_code)]
     pub fn new_null(name: String) -> AccountMetadata {
         let meta = AuthenticatorMetadata::NullKey(NullAuthMetadata {});
         AccountMetadata { name, authenticator_metadata: meta }
     }
 
     /// Generate a new AccountMetadata for the scrypt key scheme, including generating a new salt
-    #[allow(dead_code)]
     pub fn new_scrypt(name: String) -> AccountMetadata {
         // Generate a new random salt
         let mut salt = [0u8; 16];
@@ -117,9 +146,23 @@ impl AccountMetadata {
     }
 }
 
+#[async_trait]
+impl KeyDerivation for AccountMetadata {
+    async fn derive_key(&self, password: &str) -> Result<Key, KeyError> {
+        match &self.authenticator_metadata {
+            AuthenticatorMetadata::NullKey(_) => NullKeyDerivation.derive_key(&password),
+            AuthenticatorMetadata::ScryptOnly(s_meta) => s_meta.scrypt_params.derive_key(&password),
+        }
+        .await
+    }
+}
+
 /// A trait which abstracts over account metadata I/O.
 #[async_trait]
 pub trait AccountMetadataStore {
+    /// List the ids of all known accounts with metadata stored in this AccountMetadataStore.
+    async fn account_ids(&self) -> Result<Vec<AccountId>, AccountMetadataStoreError>;
+
     /// Serialize and durably record the `metadata` for the specified `account_id`, replacing
     /// any previous data that may have existed.  Returns success if the account was successfully
     /// saved, and error otherwise.
@@ -232,6 +275,19 @@ fn generate_tempfile_name(account_id: &AccountId) -> String {
 
 #[async_trait]
 impl AccountMetadataStore for DataDirAccountMetadataStore {
+    async fn account_ids(&self) -> Result<Vec<AccountId>, AccountMetadataStoreError> {
+        let dirents = files_async::readdir(&self.accounts_dir).await?;
+        let ids = dirents
+            .iter()
+            .flat_map(|d| {
+                let name = &d.name;
+                // Only include files that parse as valid `AccountId`s.
+                parse_account_id(name)
+            })
+            .collect();
+        Ok(ids)
+    }
+
     async fn save(
         &mut self,
         account_id: &AccountId,
@@ -295,8 +351,32 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 }
 
 #[cfg(test)]
-mod test {
-    use {super::*, fidl_fuchsia_io::DirectoryMarker, matches::assert_matches, tempfile::TempDir};
+pub mod test {
+    use {
+        super::*, fidl_fuchsia_io::DirectoryMarker, lazy_static::lazy_static,
+        matches::assert_matches, tempfile::TempDir,
+    };
+
+    impl AccountMetadata {
+        /// Create a new ScryptOnly AccountMetadata using standard scrypt parameters and the
+        /// supplied salt.  Useful for ensuring that (combined with a known password), a
+        /// deterministic key can be produced for tests.
+        pub fn test_new_weak_scrypt_with_salt(name: String, salt: [u8; 16]) -> AccountMetadata {
+            AccountMetadata {
+                name,
+                authenticator_metadata: AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
+                    scrypt_params: ScryptParams {
+                        salt,
+                        // We use a very low log_n hardness here to avoid tests burning CPU time
+                        // needlessly during unit tests.
+                        log_n: 8,
+                        r: 8,
+                        p: 1,
+                    },
+                }),
+            }
+        }
+    }
 
     // These are both valid golden metadata we expect to be able to load.
     const NULL_KEY_AND_NAME_DATA: &[u8] =
@@ -403,6 +483,55 @@ mod test {
         let reserialized = serde_json::to_vec::<AccountMetadata>(&deserialized)
             .expect("Reserialize password-only auth metadata");
         assert_eq!(reserialized, SCRYPT_KEY_AND_NAME_DATA);
+    }
+
+    // A well-known salt & key for test
+    pub const TEST_SCRYPT_SALT: [u8; 16] =
+        [202, 26, 165, 102, 212, 113, 114, 60, 106, 121, 183, 133, 36, 166, 127, 146];
+    pub const TEST_SCRYPT_PASSWORD: &str = "test password";
+    fn test_scrypt_metadata() -> AccountMetadata {
+        AccountMetadata::test_new_weak_scrypt_with_salt(
+            "Test Display Name".into(),
+            TEST_SCRYPT_SALT,
+        )
+    }
+    lazy_static! {
+        pub static ref TEST_SCRYPT_METADATA: AccountMetadata = test_scrypt_metadata();
+    }
+    // We have precomputed the key produced by the above fixed salt so that each test that wants to
+    // use one doesn't need to perform an additional key derivation every single time.  A test
+    // ensures that we do the work at least once to make sure our constant is correct.
+    pub const TEST_SCRYPT_KEY: [u8; 32] = [
+        88, 91, 129, 123, 173, 34, 21, 1, 23, 147, 87, 189, 56, 149, 89, 132, 210, 235, 150, 102,
+        129, 93, 202, 53, 115, 170, 162, 217, 254, 115, 216, 181,
+    ];
+
+    #[fuchsia::test]
+    async fn test_scrypt_key_derivation_weak_for_tests() {
+        let key = TEST_SCRYPT_METADATA.derive_key(TEST_SCRYPT_PASSWORD).await.expect("derive_key");
+        assert_eq!(key, TEST_SCRYPT_KEY);
+    }
+
+    #[fuchsia::test]
+    async fn test_scrypt_key_derivation_full_strength() {
+        // Tests the full-strength key derivation against separately-verified constants.
+        const GOLDEN_SCRYPT_SALT: [u8; 16] =
+            [198, 228, 57, 32, 90, 251, 238, 12, 194, 62, 68, 106, 218, 187, 24, 246];
+
+        const GOLDEN_SCRYPT_PASSWORD: &str = "test password";
+        const GOLDEN_SCRYPT_KEY: [u8; 32] = [
+            27, 250, 228, 96, 145, 67, 194, 114, 144, 240, 92, 150, 43, 136, 128, 51, 223, 120, 56,
+            118, 124, 122, 106, 185, 159, 111, 178, 50, 86, 243, 227, 175,
+        ];
+
+        let meta = AccountMetadata {
+            name: "Test Display Name".into(),
+            authenticator_metadata: AuthenticatorMetadata::ScryptOnly(ScryptOnlyMetadata {
+                scrypt_params: ScryptParams { salt: GOLDEN_SCRYPT_SALT, log_n: 15, r: 8, p: 1 },
+            }),
+        };
+        let key = meta.derive_key(GOLDEN_SCRYPT_PASSWORD).await.expect("derive_key");
+        assert_eq!(key, GOLDEN_SCRYPT_KEY);
     }
 
     #[fuchsia::test]
@@ -550,6 +679,32 @@ mod test {
         // Try removing ID 2 and expect failure.
         let remove_nonexistent_result = metadata_store.remove(&2).await;
         assert!(remove_nonexistent_result.is_err());
+    }
+
+    #[fuchsia::test]
+    async fn test_account_metadata_store_account_ids() {
+        let tmp_dir = TempDir::new().unwrap();
+        let dir = io_util::open_directory_in_namespace(
+            tmp_dir.path().to_str().unwrap(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+        )
+        .expect("could not open temp dir");
+        let mut metadata_store = DataDirAccountMetadataStore::new(dir);
+
+        // Store starts empty
+        let ids = metadata_store.account_ids().await.expect("account_ids");
+        assert_eq!(ids, Vec::<u64>::new());
+
+        // After saving a new account, the store enumerates the account
+        let scrypt_meta = AccountMetadata::new_scrypt("Display Name".into());
+        metadata_store.save(&1, &scrypt_meta).await.expect("save");
+        let ids = metadata_store.account_ids().await.expect("account_ids");
+        assert_eq!(ids, vec![1u64]);
+
+        // After removing the account, the store does not enumerate the account id
+        metadata_store.remove(&1).await.expect("remove");
+        let ids = metadata_store.account_ids().await.expect("account_ids");
+        assert_eq!(ids, Vec::<u64>::new());
     }
 
     #[fuchsia::test]
