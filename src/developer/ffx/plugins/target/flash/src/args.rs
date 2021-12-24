@@ -90,8 +90,8 @@ impl Into<ManifestParams> for FlashCommand {
             manifest: self.manifest,
             product: self.product,
             product_bundle: self.product_bundle,
+            oem_stage: self.oem_stage,
             skip_verify: self.skip_verify,
-            ssh_key: self.ssh_key,
             no_bootloader_reboot: self.no_bootloader_reboot,
             op: Command::Flash,
             ..Default::default()
@@ -136,5 +136,27 @@ mod test {
     fn test_oem_staged_file_from_str_fails_with_empty_string() {
         let test_staged_file = "".parse::<OemFile>();
         assert!(test_staged_file.is_err());
+    }
+
+    #[test]
+    fn test_oem_staged_files_are_in_manifest_params() -> Result<()> {
+        let test_oem_cmd = "test-oem-cmd";
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        let test_staged_file = format!("{},{}", test_oem_cmd, tmp_file_name).parse::<OemFile>()?;
+        let cmd = FlashCommand {
+            manifest: None,
+            product: "fuchsia".to_string(),
+            product_bundle: None,
+            ssh_key: None,
+            no_bootloader_reboot: false,
+            skip_verify: false,
+            oem_stage: vec![test_staged_file],
+        };
+
+        let params: ManifestParams = cmd.into();
+        assert_eq!(params.oem_stage[0].file(), tmp_file_name);
+        assert_eq!(params.oem_stage[0].command(), test_oem_cmd);
+        Ok(())
     }
 }
