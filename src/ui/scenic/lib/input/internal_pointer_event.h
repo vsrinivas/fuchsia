@@ -11,7 +11,7 @@
 #include <array>
 #include <optional>
 
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include <glm/glm.hpp>
 
 namespace scenic_impl::input {
 

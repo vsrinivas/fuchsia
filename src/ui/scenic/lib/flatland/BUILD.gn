@@ -40,11 +40,11 @@ source_set("flatland") {
     # since it is currently only used for escher::FenceQueue.
     "//sdk/lib/fit",
     "//src/ui/lib/escher",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/flatland/buffers",
     "//src/ui/scenic/lib/utils",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
+    "//third_party/glm",
     "//zircon/system/ulib/async-default",
   ]
 

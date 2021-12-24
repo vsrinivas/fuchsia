@@ -7,10 +7,7 @@
 
 #include "src/ui/lib/escher/vk/buffer.h"
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
+#include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 

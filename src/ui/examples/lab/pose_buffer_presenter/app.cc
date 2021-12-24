@@ -17,10 +17,7 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/clock.h>
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
+#include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 #pragma GCC diagnostic push

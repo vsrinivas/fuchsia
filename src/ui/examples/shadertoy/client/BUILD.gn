@@ -28,7 +28,7 @@ executable("bin") {
     "//src/lib/ui/base_view",
     "//src/ui/examples/shadertoy/service",
     "//src/ui/examples/shadertoy/service/services",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",

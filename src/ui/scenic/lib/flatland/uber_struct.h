@@ -11,14 +11,12 @@
 #include <string>
 #include <unordered_map>
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include <glm/mat3x3.hpp>
-// clang-format on
-
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
+
+#include <glm/glm.hpp>
+#include <glm/mat3x3.hpp>
 
 namespace flatland {
 

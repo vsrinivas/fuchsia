@@ -48,5 +48,5 @@ source_set("clip_space_transform") {
 
   sources = [ "clip_space_transform.cc" ]
 
-  public_deps = [ "//src/ui/lib/glm_workaround" ]
+  public_deps = [ "//third_party/glm" ]
 }

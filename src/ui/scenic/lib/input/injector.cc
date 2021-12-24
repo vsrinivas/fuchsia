@@ -11,9 +11,10 @@
 
 #include "lib/async/cpp/time.h"
 #include "lib/async/default.h"
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/input/constants.h"
 #include "src/ui/scenic/lib/utils/math.h"
+
+#include <glm/glm.hpp>
 
 namespace scenic_impl::input {
 

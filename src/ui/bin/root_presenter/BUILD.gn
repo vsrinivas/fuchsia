@@ -129,8 +129,8 @@ source_set("lib") {
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
     "//src/lib/ui/input",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/lib/input_report_reader",
+    "//third_party/glm",
     "//zircon/system/ulib/trace",
   ]
 

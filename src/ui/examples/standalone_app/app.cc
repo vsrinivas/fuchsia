@@ -4,22 +4,21 @@
 
 #include "src/ui/examples/standalone_app/app.h"
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
 #include <fuchsia/ui/gfx/cpp/fidl.h>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/quaternion.hpp>
 #include <lib/async/cpp/task.h>
-
-#include <lib/ui/scenic/cpp/commands.h>
-#include <src/lib/ui/scenic/cpp/host_memory.h>
-#include <lib/zx/time.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/commands.h>
+#include <lib/zx/time.h>
+
 #include <string>
 
+#include <src/lib/ui/scenic/cpp/host_memory.h>
+
 #include "src/ui/lib/escher/util/image_utils.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 using namespace scenic;
 

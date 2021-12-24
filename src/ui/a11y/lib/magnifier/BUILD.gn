@@ -22,7 +22,7 @@ source_set("magnifier") {
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/gesture_util",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]

@@ -20,7 +20,7 @@ source_set("formatting") {
   sources = [ "formatting.cc" ]
 
   public_deps = [
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -35,7 +35,7 @@ source_set("input") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }
 

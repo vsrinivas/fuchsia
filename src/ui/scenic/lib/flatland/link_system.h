@@ -9,11 +9,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include <glm/mat3x3.hpp>
-// clang-format on
-
 #include <functional>
 #include <optional>
 #include <unordered_map>
@@ -28,6 +23,9 @@
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
+
+#include <glm/glm.hpp>
+#include <glm/mat3x3.hpp>
 
 namespace flatland {
 

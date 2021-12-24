@@ -16,10 +16,10 @@ source_set("util") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
+    "//third_party/glm",
     "//zircon/system/ulib/inspect",
   ]
 }

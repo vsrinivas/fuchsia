@@ -26,7 +26,7 @@ executable("gesture_recognizers_tests") {
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
     "//src/ui/a11y/lib/gesture_manager/recognizers",
     "//src/ui/a11y/lib/testing:input",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//third_party/googletest:gtest",
   ]
 

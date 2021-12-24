@@ -13,7 +13,6 @@
 #include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/constants.h"
@@ -21,6 +20,8 @@
 #include "src/ui/scenic/lib/input/mouse_source.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
+
+#include <glm/glm.hpp>
 
 namespace scenic_impl::input {
 

@@ -5,16 +5,13 @@
 #ifndef SRC_UI_LIB_ESCHER_GEOMETRY_TYPES_H_
 #define SRC_UI_LIB_ESCHER_GEOMETRY_TYPES_H_
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
 #include <lib/syslog/cpp/macros.h>
 
 #include <array>
 
 #include "src/ui/lib/escher/util/debug_print.h"
 
+#include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>

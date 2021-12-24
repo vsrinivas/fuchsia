@@ -26,7 +26,7 @@ source_set("utils") {
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/ui/lib/glm_workaround:glm_workaround",
+    "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]

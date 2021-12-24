@@ -10,17 +10,15 @@
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
 
+#include <cmath>
+
 #include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 
+#include "src/ui/bin/root_presenter/displays/display_configuration.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-#include <cmath>
-
-#include "src/ui/bin/root_presenter/displays/display_configuration.h"
+#include <glm/glm.hpp>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wextra-semi"

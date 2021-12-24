@@ -56,7 +56,6 @@ source_set("testing_deps") {
     "//src/ui/bin/root_presenter:safe_presenter",
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test/common:gtest_escher",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/gfx",
     "//src/ui/scenic/lib/gfx:ids",
@@ -65,6 +64,7 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/utils",
+    "//third_party/glm",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
@@ -132,9 +132,9 @@ source_set("scenic_pixeltests") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/ui/lib/escher",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/lib/yuv",
     "//src/ui/testing/views",
+    "//third_party/glm",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
   ]
@@ -191,10 +191,10 @@ executable("unittests") {
     "//sdk/lib/stdcompat",
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fsl",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/scheduling:id",
+    "//third_party/glm",
     "//third_party/googletest:gmock",
   ]
 
@@ -257,8 +257,8 @@ executable("viewstate_apptests") {
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
     "//src/lib/ui/base_view",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/testing/views",
+    "//third_party/glm",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -277,7 +277,7 @@ executable("mock_pose_buffer_provider_cc") {
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

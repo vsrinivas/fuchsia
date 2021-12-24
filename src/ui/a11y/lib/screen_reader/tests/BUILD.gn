@@ -56,7 +56,7 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/lib/util/tests/mocks",
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

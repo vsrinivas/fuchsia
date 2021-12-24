@@ -15,7 +15,8 @@
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
 #include "src/ui/a11y/lib/magnifier/magnifier_util.h"
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
+
+#include <glm/glm.hpp>
 
 namespace a11y {
 

@@ -4,16 +4,14 @@
 
 #include "src/ui/examples/shadertoy/client/view.h"
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
-#include <glm/gtc/type_ptr.hpp>
 #include <lib/async/default.h>
-#include <lib/ui/scenic/cpp/commands.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
 #include "src/ui/examples/shadertoy/client/glsl_strings.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 namespace shadertoy_client {
 

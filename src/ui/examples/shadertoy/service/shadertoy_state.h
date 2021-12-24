@@ -5,19 +5,17 @@
 #ifndef SRC_UI_EXAMPLES_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 #define SRC_UI_EXAMPLES_SHADERTOY_SERVICE_SHADERTOY_STATE_H_
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
 #include <fuchsia/examples/shadertoy/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
+
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/resources/resource.h"
 #include "src/ui/lib/escher/util/stopwatch.h"
+
+#include <glm/glm.hpp>
 
 namespace shadertoy {
 

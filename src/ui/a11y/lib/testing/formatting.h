@@ -9,7 +9,7 @@
 
 #include <ostream>
 
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include <glm/glm.hpp>
 
 namespace std {
 

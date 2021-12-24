@@ -16,8 +16,9 @@
 #include <unordered_set>
 #include <vector>
 
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+
+#include <glm/glm.hpp>
 
 namespace view_tree {
 

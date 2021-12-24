@@ -21,9 +21,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/integration_tests/utils.h"
 
+#include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>

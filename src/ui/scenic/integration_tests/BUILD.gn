@@ -56,7 +56,7 @@ executable("gfx_legacy_coordinate_transform_test_bin") {
   sources = [ "gfx_legacy_coordinate_transform_test.cc" ]
   deps = [
     ":common_deps",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }
 
@@ -72,7 +72,7 @@ executable("gfx_legacy_coordinate_transform_test2_bin") {
   deps = [
     ":common_deps",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }
 
@@ -104,7 +104,7 @@ executable("gfx_touch_integration_test_bin") {
     ":common_deps",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }
 
@@ -121,7 +121,7 @@ executable("gfx_mouse_integration_test_bin") {
     ":common_deps",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }
 
@@ -154,7 +154,7 @@ executable("flatland_touch_integration_test_bin") {
     "//sdk//fidl/fuchsia.ui.composition",
     "//sdk//fidl/fuchsia.ui.pointer",
     "//sdk//fidl/fuchsia.ui.pointerinjector",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }
 

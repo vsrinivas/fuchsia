@@ -11,6 +11,6 @@ source_set("escher_types") {
 
   public_deps = [
     "//src/lib/fxl",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
   ]
 }

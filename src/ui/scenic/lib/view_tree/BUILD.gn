@@ -27,9 +27,9 @@ source_set("view_tree_snapshot") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.views",
     "//src/lib/fxl",
-    "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
     "//src/ui/scenic/lib/utils",
+    "//third_party/glm",
     "//zircon/system/public",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

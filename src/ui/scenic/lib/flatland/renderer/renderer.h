@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_RENDERER_RENDERER_H_
 
 #include <lib/zx/event.h>
+#include <zircon/pixelformat.h>
 
 #include <optional>
 
@@ -13,12 +14,7 @@
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-// clang-format on
-
-#include <zircon/pixelformat.h>
-
+#include <glm/glm.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>

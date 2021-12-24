@@ -14,7 +14,8 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 #include "src/ui/a11y/lib/testing/input.h"
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
+
+#include <glm/glm.hpp>
 
 namespace accessibility_test {
 namespace {

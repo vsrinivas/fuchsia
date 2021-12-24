@@ -17,8 +17,8 @@
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_magnification_handler.h"
 #include "src/ui/a11y/lib/testing/formatting.h"
 #include "src/ui/a11y/lib/testing/input.h"
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
 
+#include <glm/glm.hpp>
 #include <glm/gtc/epsilon.hpp>
 
 namespace accessibility_test {

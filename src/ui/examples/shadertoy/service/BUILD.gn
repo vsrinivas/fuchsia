@@ -41,7 +41,7 @@ executable("bin") {
     # Shadertoy service should always use glslang.
     "//sdk/lib/fit",
     "//src/ui/lib/escher:escher_with_glslang",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//third_party/shaderc:libshaderc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

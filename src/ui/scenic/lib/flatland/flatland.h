@@ -18,12 +18,6 @@
 #include <unordered_set>
 #include <vector>
 
-// clang-format off
-#include "src/ui/lib/glm_workaround/glm_workaround.h"
-#include <glm/vec2.hpp>
-#include <glm/mat3x3.hpp>
-// clang-format on
-
 #include "src/ui/lib/escher/flib/fence_queue.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
@@ -37,6 +31,7 @@
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
+#include <glm/glm.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/vec2.hpp>
 

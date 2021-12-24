@@ -26,7 +26,7 @@ executable("magnifier_tests") {
     "//src/ui/a11y/lib/magnifier",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnification_handler",
     "//src/ui/a11y/lib/testing",
-    "//src/ui/lib/glm_workaround",
+    "//third_party/glm",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
