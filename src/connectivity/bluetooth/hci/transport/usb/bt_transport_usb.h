@@ -9,6 +9,8 @@
 #include <lib/sync/completion.h>
 #include <threads.h>
 
+#include <thread>
+
 #include <ddktl/device.h>
 #include <usb/usb.h>
 
@@ -151,7 +153,15 @@ class Device final : public DeviceType, public ddk::BtHciProtocol<Device> {
   bool unbound_ __TA_GUARDED(pending_request_lock_) = false;
 
   mtx_t pending_request_lock_ __TA_ACQUIRED_AFTER(mutex_);
-  cnd_t pending_requests_completed_;
+
+  // Set during Bind() and never modified.
+  std::optional<uint8_t> bulk_in_addr_;
+  std::optional<uint8_t> bulk_out_addr_;
+  std::optional<uint8_t> intr_addr_;
+
+  // Thread to clean up requests on when the driver is unbound. This avoids blocking the main
+  // thread.
+  std::thread unbind_thread_;
 };
 
 }  // namespace bt_transport_usb

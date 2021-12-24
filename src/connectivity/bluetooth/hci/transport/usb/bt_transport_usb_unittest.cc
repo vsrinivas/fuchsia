@@ -81,25 +81,16 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
   void Unplug() {
     ZX_ASSERT(thread_checker_.is_thread_valid());
 
-    UnownedRequestQueue requests;
-
     sync_mutex_lock(&mutex_);
 
     unplugged_ = true;
 
-    // Complete all requests so that bt-transport-usb unbinds & releases successfully.
-    while (!bulk_out_requests_.is_empty()) {
-      requests.push(bulk_out_requests_.pop().value());
-    }
-    while (!bulk_in_requests_.is_empty()) {
-      requests.push(bulk_in_requests_.pop().value());
-    }
-    while (!interrupt_requests_.is_empty()) {
-      requests.push(interrupt_requests_.pop().value());
-    }
+    // All requests should have completed or been canceled before unplugging the USB device.
+    ZX_ASSERT(bulk_out_requests_.is_empty());
+    ZX_ASSERT(bulk_in_requests_.is_empty());
+    ZX_ASSERT(interrupt_requests_.is_empty());
 
     sync_mutex_unlock(&mutex_);
-    requests.CompleteAll(ZX_ERR_IO_NOT_PRESENT, 0);
   }
 
   usb_protocol_t proto() const {
@@ -258,7 +249,29 @@ class FakeUsbDevice : public ddk::UsbProtocol<FakeUsbDevice> {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t UsbCancelAll(uint8_t ep_address) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t UsbCancelAll(uint8_t ep_address) {
+    sync_mutex_lock(&mutex_);
+    if (bulk_in_addr_ && ep_address == *bulk_in_addr_) {
+      auto requests = std::move(bulk_in_requests_);
+      sync_mutex_unlock(&mutex_);
+      requests.CompleteAll(ZX_ERR_CANCELED, 0);
+      return ZX_OK;
+    }
+    if (bulk_out_addr_ && ep_address == *bulk_out_addr_) {
+      auto requests = std::move(bulk_out_requests_);
+      sync_mutex_unlock(&mutex_);
+      requests.CompleteAll(ZX_ERR_CANCELED, 0);
+      return ZX_OK;
+    }
+    if (interrupt_addr_ && ep_address == *interrupt_addr_) {
+      auto requests = std::move(interrupt_requests_);
+      sync_mutex_unlock(&mutex_);
+      requests.CompleteAll(ZX_ERR_CANCELED, 0);
+      return ZX_OK;
+    }
+    sync_mutex_unlock(&mutex_);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   uint64_t UsbGetCurrentFrame() { return 0; }
 
@@ -368,15 +381,11 @@ class BtTransportUsbTest : public ::gtest::TestLoopFixture {
   }
 
   void TearDown() override {
-    // Complete USB requests with error status. This must be done before releasing DUT so that
-    // release doesn't block on request completion.
-    fake_usb_device_.Unplug();
-    // DUT should call device_async_remove() in response to failed USB requests.
-    EXPECT_EQ(dut()->WaitUntilAsyncRemoveCalled(), ZX_OK);
-
     dut()->UnbindOp();
-    EXPECT_TRUE(dut()->UnbindReplyCalled());
+    EXPECT_EQ(dut()->WaitUntilUnbindReplyCalled(), ZX_OK);
     dut()->ReleaseOp();
+
+    fake_usb_device_.Unplug();
   }
 
   // The root device that bt-transport-usb binds to.

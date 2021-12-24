@@ -94,22 +94,19 @@ zx_status_t Device::Bind() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uint8_t bulk_in_addr = 0;
-  uint8_t bulk_out_addr = 0;
-  uint8_t intr_addr = 0;
   uint16_t intr_max_packet = 0;
 
   usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
   while (endp) {
     if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_out_addr = endp->b_endpoint_address;
+        bulk_out_addr_ = endp->b_endpoint_address;
       }
     } else {
       if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
-        bulk_in_addr = endp->b_endpoint_address;
+        bulk_in_addr_ = endp->b_endpoint_address;
       } else if (usb_ep_type(endp) == USB_ENDPOINT_INTERRUPT) {
-        intr_addr = endp->b_endpoint_address;
+        intr_addr_ = endp->b_endpoint_address;
         intr_max_packet = usb_ep_max_packet(endp);
       }
     }
@@ -117,7 +114,7 @@ zx_status_t Device::Bind() {
   }
   usb_desc_iter_release(&iter);
 
-  if (!bulk_in_addr || !bulk_out_addr || !intr_addr) {
+  if (!bulk_in_addr_ || !bulk_out_addr_ || !intr_addr_) {
     zxlogf(ERROR, "bt-transport-usb: bind could not find endpoints");
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -136,26 +133,25 @@ zx_status_t Device::Bind() {
 
   mtx_init(&mutex_, mtx_plain);
   mtx_init(&pending_request_lock_, mtx_plain);
-  cnd_init(&pending_requests_completed_);
 
   memcpy(&usb_, &usb, sizeof(usb));
 
   parent_req_size_ = usb_get_request_size(&usb);
   size_t req_size = parent_req_size_ + sizeof(usb_req_internal_t) + sizeof(void*);
-  status =
-      AllocBtUsbPackets(EVENT_REQ_COUNT, intr_max_packet, intr_addr, req_size, &free_event_reqs_);
+  status = AllocBtUsbPackets(EVENT_REQ_COUNT, intr_max_packet, intr_addr_.value(), req_size,
+                             &free_event_reqs_);
   if (status != ZX_OK) {
     OnBindFailure(status, "event USB request allocation failure");
     return status;
   }
-  status = AllocBtUsbPackets(ACL_READ_REQ_COUNT, ACL_MAX_FRAME_SIZE, bulk_in_addr, req_size,
-                             &free_acl_read_reqs_);
+  status = AllocBtUsbPackets(ACL_READ_REQ_COUNT, ACL_MAX_FRAME_SIZE, bulk_in_addr_.value(),
+                             req_size, &free_acl_read_reqs_);
   if (status != ZX_OK) {
     OnBindFailure(status, "ACL read USB request allocation failure");
     return status;
   }
-  status = AllocBtUsbPackets(ACL_WRITE_REQ_COUNT, ACL_MAX_FRAME_SIZE, bulk_out_addr, req_size,
-                             &free_acl_write_reqs_);
+  status = AllocBtUsbPackets(ACL_WRITE_REQ_COUNT, ACL_MAX_FRAME_SIZE, bulk_out_addr_.value(),
+                             req_size, &free_acl_write_reqs_);
   if (status != ZX_OK) {
     OnBindFailure(status, "ACL write USB request allocation failure");
     return status;
@@ -209,47 +205,62 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 void Device::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(DEBUG, "%s", __FUNCTION__);
 
-  // Copy the thread so it can be used without the mutex.
-  thrd_t read_thread;
+  // Spawn a thread to avoid blocking the main thread.
+  unbind_thread_ = std::thread([this, unbind_txn = std::move(txn)]() mutable {
+    // Copy the thread so it can be used without the mutex.
+    thrd_t read_thread;
 
-  // Close the transport channels so that the host stack is notified of device removal.
-  mtx_lock(&mutex_);
-  mtx_lock(&pending_request_lock_);
+    // Close the transport channels so that the host stack is notified of device removal.
+    mtx_lock(&mutex_);
+    mtx_lock(&pending_request_lock_);
 
-  read_thread = read_thread_;
-  unbound_ = true;
+    read_thread = read_thread_;
+    unbound_ = true;
 
-  mtx_unlock(&pending_request_lock_);
+    mtx_unlock(&pending_request_lock_);
 
-  ChannelCleanupLocked(&cmd_channel_);
-  ChannelCleanupLocked(&acl_channel_);
-  ChannelCleanupLocked(&snoop_channel_);
+    ChannelCleanupLocked(&cmd_channel_);
+    ChannelCleanupLocked(&acl_channel_);
+    ChannelCleanupLocked(&snoop_channel_);
 
-  mtx_unlock(&mutex_);
+    mtx_unlock(&mutex_);
 
-  // Wait for all pending USB requests to complete (the USB driver should fail them).
-  zxlogf(DEBUG, "waiting for all requests to complete before unbinding");
-  mtx_lock(&pending_request_lock_);
-  while (atomic_load(&pending_request_count_)) {
-    cnd_wait(&pending_requests_completed_, &pending_request_lock_);
-  }
-  mtx_unlock(&pending_request_lock_);
-  zxlogf(DEBUG, "all pending requests completed");
+    zxlogf(DEBUG, "DdkUnbind: canceling all requests");
+    // usb_cancel_all synchronously cancels all requests.
+    zx_status_t status = usb_cancel_all(&usb_, bulk_out_addr_.value());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "canceling bulk out requests failed with status: %s",
+             zx_status_get_string(status));
+    }
+    status = usb_cancel_all(&usb_, bulk_in_addr_.value());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "canceling bulk in requests failed with status: %s",
+             zx_status_get_string(status));
+    }
+    status = usb_cancel_all(&usb_, intr_addr_.value());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "canceling interrupt requests failed with status: %s",
+             zx_status_get_string(status));
+    }
 
-  zxlogf(DEBUG, "%s: waiting for read thread to complete", __FUNCTION__);
-  // Signal and wait for the read thread to complete (this is necessary to prevent use-after-free of
-  // member variables in the read thread).
-  zx_object_signal(/*handle=*/unbind_evt_, /*clear_mask=*/0,
-                   /*set_mask=*/ZX_EVENT_SIGNALED);
-  int join_res = 0;
-  thrd_join(read_thread, &join_res);
-  zxlogf(DEBUG, "read thread completed with status %d", join_res);
+    zxlogf(DEBUG, "DdkUnbind: waiting for read thread to complete");
+    // Signal and wait for the read thread to complete (this is necessary to prevent use-after-free
+    // of member variables in the read thread).
+    zx_object_signal(/*handle=*/unbind_evt_, /*clear_mask=*/0,
+                     /*set_mask=*/ZX_EVENT_SIGNALED);
+    int join_res = 0;
+    thrd_join(read_thread, &join_res);
+    zxlogf(DEBUG, "read thread completed with status %d", join_res);
 
-  txn.Reply();
+    unbind_txn.Reply();
+  });
 }
 
 void Device::DdkRelease() {
   zxlogf(DEBUG, "%s", __FUNCTION__);
+
+  unbind_thread_.join();
+
   mtx_lock(&mutex_);
 
   usb_request_t* req;
@@ -270,6 +281,7 @@ void Device::DdkRelease() {
   // so this is guaranteed to complete.
   zxlogf(DEBUG, "%s: waiting for all requests to be freed before releasing", __FUNCTION__);
   sync_completion_wait(&requests_freed_completion_, ZX_TIME_INFINITE);
+  zxlogf(DEBUG, "%s: all requests freed", __FUNCTION__);
 
   // Driver manager is given a raw pointer to this dynamically allocated object in Bind(), so when
   // DdkRelease() is called we need to free the allocated memory.
@@ -326,11 +338,6 @@ void Device::UsbRequestCallback(usb_request_t* req) {
   }
   size_t pending_request_count = std::atomic_fetch_sub(&pending_request_count_, 1);
   zxlogf(TRACE, "%s: pending requests: %zu", __FUNCTION__, pending_request_count - 1);
-  // Since atomic_fetch_add returns the value that was in pending_request_count prior to
-  // decrementing, there are no pending requests when the value returned is 1.
-  if (pending_request_count == 1) {
-    cnd_signal(&pending_requests_completed_);
-  }
   mtx_unlock(&pending_request_lock_);
 }
 
@@ -675,6 +682,7 @@ void Device::HciHandleAclReadEvents(zx_wait_item_t* acl_item) {
 }
 
 int Device::HciReadThread(void* void_dev) {
+  zxlogf(DEBUG, "read thread started");
   Device* dev = static_cast<Device*>(void_dev);
 
   while (true) {
