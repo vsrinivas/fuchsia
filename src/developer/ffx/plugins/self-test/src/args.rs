@@ -25,6 +25,9 @@ pub struct SelftestCommand {
     #[argh(option, default = "true", description = "include target interaction tests")]
     pub include_target: bool,
 
+    #[argh(option, description = "filter test cases")]
+    pub filter: Option<String>,
+
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }

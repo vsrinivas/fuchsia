@@ -97,10 +97,7 @@ ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory
   });
 
   // EOF (ctrl-d) should exit gracefully.
-  line_input_.SetEofCallback([this]() {
-    line_input_.Hide();
-    debug::MessageLoop::Current()->QuitNow();
-  });
+  line_input_.SetEofCallback([this]() { Quit(); });
 
   // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
@@ -118,7 +115,10 @@ void ConsoleImpl::Init() {
 
   stdio_watch_ =
       debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead, STDIN_FILENO,
-                                             [this](int fd, bool readable, bool, bool) {
+                                             [this](int fd, bool readable, bool, bool error) {
+                                               if (error)  // EOF
+                                                 Quit();
+
                                                if (!readable)
                                                  return;
 

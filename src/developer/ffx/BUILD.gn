@@ -5,6 +5,7 @@
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
 import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
 import("./build/ffx.gni")
 
 group("ffx") {
@@ -96,9 +97,16 @@ if (is_host) {
 
   host_test("ffx-e2e-with-target") {
     binary_path = "$root_out_dir/ffx"
-    args = [ "self-test" ]
+    args = [
+      "--config",
+      "sdk.root=.,sdk.type=in-tree",
+      "self-test",
+    ]
 
-    deps = [ ":ffx_bin" ]
+    deps = [
+      ":ffx-e2e-test-data",
+      ":ffx_bin",
+    ]
 
     # TODO(fxbug.dev/60683): split additional dimensions such as multi-device
     # mac + device, etc.
@@ -106,6 +114,13 @@ if (is_host) {
       # XXX(fxbug.dev/64897): support arm64 HTI tests
       # emu_env,
       nuc_env,
+    ]
+  }
+
+  host_test_data("ffx-e2e-test-data") {
+    sources = [
+      "$root_out_dir/gen/src/developer/debug/zxdb/zxdb_sdk.meta.json",
+      "$root_out_dir/zxdb",
     ]
   }
 }

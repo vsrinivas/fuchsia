@@ -15,6 +15,7 @@ ffx_plugin("ffx_selftest") {
     "src/component.rs",
     "src/config.rs",
     "src/daemon.rs",
+    "src/debug.rs",
     "src/experiment.rs",
     "src/lib.rs",
     "src/target.rs",

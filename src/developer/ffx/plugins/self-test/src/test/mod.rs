@@ -177,7 +177,7 @@ impl Isolate {
         Ok(child)
     }
 
-    pub async fn ffx(&self, args: &[&str]) -> Result<CommandOutput> {
+    pub async fn ffx_cmd_with_ssh_key(&self, args: &[&str]) -> Result<Command> {
         let mut cmd = self.ffx_cmd(args);
 
         // On developer systems, FUCHSIA_SSH_KEY is normally not set, and so ffx
@@ -187,6 +187,11 @@ impl Isolate {
         // then passing that expanded path along explicitly is sufficient to
         // ensure that the isolate has a viable key path.
         cmd.env("FUCHSIA_SSH_KEY", ffx_config::get::<String, _>("ssh.priv").await?);
+        Ok(cmd)
+    }
+
+    pub async fn ffx(&self, args: &[&str]) -> Result<CommandOutput> {
+        let mut cmd = self.ffx_cmd_with_ssh_key(args).await?;
 
         fuchsia_async::unblock(move || {
             let out = cmd.output().context("failed to execute")?;
@@ -365,7 +370,7 @@ macro_rules! tests {
 pub type TestFn = fn() -> Pin<Box<dyn Future<Output = Result<()>>>>;
 
 pub struct TestCase {
-    name: &'static str,
+    pub name: &'static str,
     f: TestFn,
 }
 

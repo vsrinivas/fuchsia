@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 
+#include <cstdio>
 #include <map>
 #include <string_view>
 
@@ -315,6 +316,8 @@ void OutputBuffer::WriteToStdout() const {
 
   if (!ended_in_newline)
     FwriteStringView("\n");
+
+  std::fflush(stdout);
 }
 
 std::string OutputBuffer::AsString() const {

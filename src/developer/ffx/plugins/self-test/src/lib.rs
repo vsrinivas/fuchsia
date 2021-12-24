@@ -10,6 +10,7 @@ use {
 mod component;
 mod config;
 mod daemon;
+mod debug;
 mod experiment;
 mod target;
 mod test;
@@ -34,6 +35,7 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
 
     let mut target_tests = tests![
         component::include_target::test_list,
+        debug::include_target::test_debug_run_crasher,
         target::include_target::test_list,
         target::include_target::test_get_ssh_address_includes_port
     ];
@@ -41,6 +43,9 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
     let mut tests = default_tests;
     if cmd.include_target {
         tests.append(&mut target_tests);
+    }
+    if let Some(filter) = cmd.filter {
+        tests.retain(|test| test.name.contains(&filter));
     }
 
     run(tests, Duration::from_secs(cmd.timeout), Duration::from_secs(cmd.case_timeout)).await
