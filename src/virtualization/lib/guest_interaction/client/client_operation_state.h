@@ -67,7 +67,66 @@ class GetCallData final : public CallData {
         fd_(fd),
         exit_status_(OperationStatus::OK) {}
 
-  void Proceed(bool ok) override;
+  // Proceed is called when the completion queue signals that the most recent
+  // Read operation has completed and there is new data that can be processed.
+  //
+  // From the gRPC documentation for a client Read operation:
+  // `ok` indicates whether there is a valid message that got read. If not, you
+  // know that there are certainly no more messages that can ever be read from
+  // this stream. For the client-side operations, this only happens because the
+  // call is dead.
+  //
+  // The client attempts to write incoming data into the open file until gRPC
+  // indicates that the call is dead at which point it queries for final status
+  // and reports the transfer status back to the caller through the callback.
+  void Proceed(bool ok) override {
+    switch (status_) {
+      case CallStatus::CREATE:
+        if (!ok) {
+          reader_->Finish(&termination_status_, this);
+          exit_status_ = OperationStatus::GRPC_FAILURE;
+          status_ = CallStatus::FINISH;
+          return;
+        }
+        reader_->Read(&response_, this);
+        status_ = CallStatus::TRANSFER;
+        return;
+      case CallStatus::TRANSFER:
+        if (!ok) {
+          reader_->Finish(&termination_status_, this);
+          status_ = CallStatus::FINISH;
+          return;
+        }
+
+        if (response_.status() != OperationStatus::OK) {
+          exit_status_ = response_.status();
+          reader_->Finish(&termination_status_, this);
+          status_ = CallStatus::FINISH;
+          return;
+        }
+
+        if (platform_interface_.WriteFile(fd_, response_.data().c_str(), response_.data().size()) <
+            0) {
+          exit_status_ = OperationStatus::CLIENT_FILE_WRITE_FAILURE;
+          reader_->Finish(&termination_status_, this);
+          status_ = CallStatus::FINISH;
+          return;
+        }
+
+        reader_->Read(&response_, this);
+        status_ = CallStatus::TRANSFER;
+        return;
+      case CallStatus::FINISH:
+        platform_interface_.CloseFile(fd_);
+        if (ok || exit_status_ != OperationStatus::OK) {
+          callback_(translate_rpc_status(exit_status_));
+        } else {
+          callback_(translate_rpc_status(OperationStatus::GRPC_FAILURE));
+        }
+        delete this;
+        return;
+    }
+  }
 
   grpc::ClientContext ctx_;
   std::unique_ptr<grpc::ClientAsyncReaderInterface<GetResponse>> reader_;
@@ -84,68 +143,6 @@ class GetCallData final : public CallData {
   grpc::Status termination_status_;
   OperationStatus exit_status_;
 };
-
-// Proceed is called when the completion queue signals that the most recent
-// Read operation has completed and there is new data that can be processed.
-//
-// From the gRPC documentation for a client Read operation:
-// `ok` indicates whether there is a valid message that got read. If not, you
-// know that there are certainly no more messages that can ever be read from
-// this stream. For the client-side operations, this only happens because the
-// call is dead.
-//
-// The client attempts to write incoming data into the open file until gRPC
-// indicates that the call is dead at which point it queries for final status
-// and reports the transfer status back to the caller through the callback.
-template <class T>
-void GetCallData<T>::Proceed(bool ok) {
-  switch (status_) {
-    case CallStatus::CREATE:
-      if (!ok) {
-        reader_->Finish(&termination_status_, this);
-        exit_status_ = OperationStatus::GRPC_FAILURE;
-        status_ = CallStatus::FINISH;
-        return;
-      }
-      reader_->Read(&response_, this);
-      status_ = CallStatus::TRANSFER;
-      return;
-    case CallStatus::TRANSFER:
-      if (!ok) {
-        reader_->Finish(&termination_status_, this);
-        status_ = CallStatus::FINISH;
-        return;
-      }
-
-      if (response_.status() != OperationStatus::OK) {
-        exit_status_ = response_.status();
-        reader_->Finish(&termination_status_, this);
-        status_ = CallStatus::FINISH;
-        return;
-      }
-
-      if (platform_interface_.WriteFile(fd_, response_.data().c_str(), response_.data().size()) <
-          0) {
-        exit_status_ = OperationStatus::CLIENT_FILE_WRITE_FAILURE;
-        reader_->Finish(&termination_status_, this);
-        status_ = CallStatus::FINISH;
-        return;
-      }
-
-      reader_->Read(&response_, this);
-      status_ = CallStatus::TRANSFER;
-      return;
-    case CallStatus::FINISH:
-      platform_interface_.CloseFile(fd_);
-      if (ok || exit_status_ != OperationStatus::OK) {
-        callback_(translate_rpc_status(exit_status_));
-      } else {
-        callback_(translate_rpc_status(OperationStatus::GRPC_FAILURE));
-      }
-      delete this;
-      return;
-  }
-}
 
 template <class T>
 class PutCallData final : public CallData {
@@ -235,8 +232,9 @@ class PutCallData final : public CallData {
 
 class ListenerInterface : fuchsia::netemul::guest::CommandListener {
  public:
-  explicit ListenerInterface(fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req)
-      : binding_(this, std::move(req)) {}
+  ListenerInterface(fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req,
+                    async_dispatcher_t* dispatcher)
+      : binding_(this, std::move(req), dispatcher) {}
 
   void OnStarted(zx_status_t status) { binding_.events().OnStarted(status); }
 

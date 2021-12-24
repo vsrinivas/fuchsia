@@ -95,7 +95,8 @@ class ClientImpl {
 
   void Exec(const std::string& command, const std::map<std::string, std::string>& env_vars,
             zx::socket std_in, zx::socket std_out, zx::socket std_err,
-            fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req) {
+            fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req,
+            async_dispatcher_t* dispatcher) {
     // Convert the provided zx::sockets into FDs.
     auto convert = [](zx::socket socket) {
       fbl::unique_fd fd;
@@ -118,7 +119,7 @@ class ClientImpl {
     fbl::unique_fd stderr_fd = convert(std::move(std_err));
 
     std::unique_ptr<ListenerInterface> listener =
-        std::make_unique<ListenerInterface>(std::move(req));
+        std::make_unique<ListenerInterface>(std::move(req), dispatcher);
 
     ExecCallData<T>* call_data =
         new ExecCallData<T>(command, env_vars, stdin_fd.release(), stdout_fd.release(),

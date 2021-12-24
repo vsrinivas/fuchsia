@@ -144,7 +144,7 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   };
 
   client.Exec(command, env_vars, std::move(stdin_reader), std::move(stdout_writer),
-              std::move(stderr_writer), listener.NewRequest());
+              std::move(stderr_writer), listener.NewRequest(), dispatcher());
 
   // Ensure that the process started cleanly.
   thrd_t client_run_thread;

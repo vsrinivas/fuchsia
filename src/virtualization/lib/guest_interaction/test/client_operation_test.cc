@@ -565,7 +565,7 @@ TEST_F(AsyncEndToEndTest, Client_Exec_ImmediateFailure) {
     termination_status_done = true;
   };
   std::unique_ptr<ListenerInterface> listener_interface =
-      std::make_unique<ListenerInterface>(listener.NewRequest());
+      std::make_unique<ListenerInterface>(listener.NewRequest(), loop_.dispatcher());
 
   // Create components required to perform a client Exec request.
   std::string test_argv = "echo hello";
@@ -661,7 +661,7 @@ TEST_F(AsyncEndToEndTest, Client_ExecRead_Test) {
     EXPECT_EQ(ret_code, kReturnCode);
   };
   std::unique_ptr<ListenerInterface> listener_interface =
-      std::make_unique<ListenerInterface>(listener.NewRequest());
+      std::make_unique<ListenerInterface>(listener.NewRequest(), loop_.dispatcher());
 
   grpc::ServerContext srv_ctx;
   std::shared_ptr<grpc::ClientContext> cli_ctx = std::make_shared<grpc::ClientContext>();

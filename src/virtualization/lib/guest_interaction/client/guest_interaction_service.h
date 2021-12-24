@@ -5,31 +5,19 @@
 #ifndef SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_GUEST_INTERACTION_SERVICE_H_
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_GUEST_INTERACTION_SERVICE_H_
 
-#include <fuchsia/io/cpp/fidl.h>
-#include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/async/default.h>
+#include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fpromise/bridge.h>
-#include <lib/fpromise/promise.h>
-#include <lib/fpromise/scope.h>
-#include <lib/sys/cpp/component_context.h>
 #include <threads.h>
-#include <zircon/status.h>
 
-#include <vector>
-
-#include "fuchsia/netemul/guest/cpp/fidl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"
 #include "src/virtualization/lib/guest_interaction/platform_interface/platform_interface.h"
-#include "src/virtualization/lib/guest_interaction/proto/guest_interaction.grpc.pb.h"
 
 class FuchsiaGuestInteractionService final : public fuchsia::netemul::guest::GuestInteraction {
  public:
-  explicit FuchsiaGuestInteractionService(zx::socket socket);
-  ~FuchsiaGuestInteractionService();
+  FuchsiaGuestInteractionService(zx::socket socket, async_dispatcher_t* dispatcher);
+  ~FuchsiaGuestInteractionService() override;
   void PutFile(fidl::InterfaceHandle<fuchsia::io::File> local_file, std::string remote_path,
                fit::function<void(zx_status_t)> callback) override;
   void GetFile(std::string remote_path, fidl::InterfaceHandle<fuchsia::io::File> local_file,
@@ -43,16 +31,9 @@ class FuchsiaGuestInteractionService final : public fuchsia::netemul::guest::Gue
   void Stop();
 
  private:
-  int32_t GetVsockFd(std::string vm_label);
-  fpromise::promise<zx_status_t> InitiatePut(fidl::InterfaceHandle<fuchsia::io::File> local_file,
-                                             const std::string& remote_path);
-  fpromise::promise<zx_status_t> InitiateGet(const std::string& remote_path,
-                                             fidl::InterfaceHandle<fuchsia::io::File> local_file);
-
-  std::unique_ptr<ClientImpl<PosixPlatform>> client_;
+  ClientImpl<PosixPlatform> client_;
+  async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fuchsia::netemul::guest::GuestInteraction> bindings_;
-  async::Executor executor_;
-  fpromise::scope scope_;
   thrd_t guest_interaction_service_thread_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FuchsiaGuestInteractionService);

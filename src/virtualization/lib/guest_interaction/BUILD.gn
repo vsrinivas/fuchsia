@@ -73,10 +73,7 @@ source_set("server_lib") {
     "platform_interface/platform_interface.h",
     "server/server_operation_state.h",
   ]
-  deps = [
-    ":common",
-    "//src/lib/fxl",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("operation_test_lib") {

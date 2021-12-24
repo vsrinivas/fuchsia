@@ -2,94 +2,112 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "guest_discovery_service.h"
+#include "src/virtualization/lib/guest_interaction/client/guest_discovery_service.h"
 
-static bool find_guest_ids(const std::string& realm_name, const std::string& guest_name,
-                           const std::vector<fuchsia::virtualization::EnvironmentInfo>& realm_infos,
-                           GuestInfo* guest_info) {
-  for (const auto& realm_info : realm_infos) {
-    if (realm_info.label == realm_name) {
-      for (const auto& instance_info : realm_info.instances) {
-        if (instance_info.label == guest_name) {
-          guest_info->realm_id = realm_info.id;
-          guest_info->guest_cid = instance_info.cid;
-          return true;
-        }
-      }
+GuestDiscoveryServiceImpl::GuestDiscoveryServiceImpl(async_dispatcher_t* dispatcher)
+    : context_(sys::ServiceDirectory::CreateFromNamespace(), dispatcher), executor_(dispatcher) {
+  context_.svc()->Connect(manager_.NewRequest(dispatcher));
+  manager_.set_error_handler([this](zx_status_t status) {
+    std::lock_guard lock(lock_);
+    for (auto& completer : manager_completers_) {
+      completer->complete_error(status);
     }
-  }
-  return false;
-}
-
-GuestDiscoveryServiceImpl::GuestDiscoveryServiceImpl()
-    : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-      executor_(async_get_default_dispatcher()) {
-  context_->svc()->Connect(manager_.NewRequest());
-  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  });
+  context_.outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher));
+  context_.outgoing()->ServeFromStartupInfo(dispatcher);
 }
 
 void GuestDiscoveryServiceImpl::GetGuest(
     fidl::StringPtr realm_name, std::string guest_name,
     fidl::InterfaceRequest<fuchsia::netemul::guest::GuestInteraction> request) {
-  executor_.schedule_task(
-      fpromise::make_promise(
-          [this, realm_name = std::move(realm_name), guest_name]() -> fpromise::promise<GuestInfo> {
-            // Find the realm ID and guest instance ID associated with the caller's labels.
-            fpromise::bridge<GuestInfo, void> bridge;
-            manager_->List(
-                [completer = std::move(bridge.completer), realm_name = std::move(realm_name),
-                 guest_name](
-                    std::vector<fuchsia::virtualization::EnvironmentInfo> realm_infos) mutable {
-                  GuestInfo guest_info;
-                  if (!find_guest_ids(realm_name.value_or(fuchsia::netemul::guest::DEFAULT_REALM),
-                                      guest_name, realm_infos, &guest_info)) {
-                    completer.complete_error();
-                    return;
-                  }
-                  completer.complete_ok(guest_info);
-                });
-            return bridge.consumer.promise();
+  // Find the realm ID and guest instance ID associated with the caller's labels.
+  fpromise::bridge<GuestInfo, zx_status_t> bridge;
+  std::shared_ptr completer =
+      std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
+  {
+    std::lock_guard lock(lock_);
+    manager_completers_.insert(completer);
+  }
+  manager_->List([completer,
+                  realm_name = realm_name.value_or(fuchsia::netemul::guest::DEFAULT_REALM),
+                  guest_name = std::move(guest_name)](
+                     const std::vector<fuchsia::virtualization::EnvironmentInfo>& realm_infos) {
+    for (const auto& realm_info : realm_infos) {
+      if (realm_info.label == realm_name) {
+        for (const auto& instance_info : realm_info.instances) {
+          if (instance_info.label == guest_name) {
+            completer->complete_ok({
+                .realm_id = realm_info.id,
+                .guest_cid = instance_info.cid,
+            });
+            return;
+          }
+        }
+      }
+    }
+    completer->complete_error(ZX_ERR_NOT_FOUND);
+  });
+  fpromise::promise<> task =
+      bridge.consumer.promise()
+          .inspect([this, completer](const fpromise::result<GuestInfo, zx_status_t>&) {
+            std::lock_guard lock(lock_);
+            manager_completers_.erase(completer);
           })
-          .and_then([this, request = std::move(request)](
-                        const GuestInfo& guest_info) mutable -> fpromise::promise<void> {
+          .and_then([this, request = std::move(request)](const GuestInfo& guest_info) mutable
+                    -> fpromise::promise<void, zx_status_t> {
             // If this is not the first time this guest has been requested, add a binding to the
             // existing interaction service.
-            auto gis = guests_.find(guest_info);
-            if (gis != guests_.end()) {
-              gis->second->AddBinding(std::move(request));
-              return fpromise::make_ok_promise();
+            {
+              auto gis = guests_.find(guest_info);
+              if (gis != guests_.end()) {
+                gis->second.AddBinding(std::move(request));
+                return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+              }
+            }
+
+            zx::socket socket, remote_socket;
+            zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+            if (status != ZX_OK) {
+              return fpromise::make_error_promise(status);
             }
 
             // If this is the first time that the requested guest has been discovered, connect to
             // the guest's vsock and start a new GuestInteractionService for it.
-            fuchsia::virtualization::RealmPtr realm;
+            fuchsia::virtualization::RealmSyncPtr realm;
             manager_->Connect(guest_info.realm_id, realm.NewRequest());
 
+            fpromise::bridge<void, zx_status_t> bridge;
+            std::shared_ptr completer =
+                std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
+
             fuchsia::virtualization::HostVsockEndpointPtr ep;
-            realm->GetHostVsockEndpoint(ep.NewRequest());
+            ep.set_error_handler(
+                [completer](zx_status_t status) { completer->complete_error(status); });
+            realm->GetHostVsockEndpoint(ep.NewRequest(executor_.dispatcher()));
 
-            zx::socket socket, remote_socket;
-            zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
-
-            if (status != ZX_OK) {
-              return fpromise::make_error_promise();
-            }
-
-            fpromise::bridge<void> bridge;
             ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
                         [this, socket = std::move(socket), guest_info, request = std::move(request),
-                         completer = std::move(bridge.completer),
-                         ep = std::move(ep)](zx_status_t status) mutable {
+                         completer](zx_status_t status) mutable {
                           if (status != ZX_OK) {
-                            completer.complete_error();
+                            completer->complete_error(status);
                             return;
                           }
-                          guests_.emplace(
-                              guest_info,
-                              std::make_unique<FuchsiaGuestInteractionService>(std::move(socket)));
-                          guests_[guest_info]->AddBinding(std::move(request));
-                          completer.complete_ok();
+                          auto [gis, emplaced] = guests_.emplace(
+                              std::piecewise_construct, std::forward_as_tuple(guest_info),
+                              std::forward_as_tuple(std::move(socket), executor_.dispatcher()));
+                          if (!emplaced) {
+                            completer->complete_error(ZX_ERR_ALREADY_EXISTS);
+                            return;
+                          }
+                          gis->second.AddBinding(std::move(request));
+                          completer->complete_ok();
                         });
-            return bridge.consumer.promise();
-          }));
+            return bridge.consumer.promise().inspect(
+                [ep = std::move(ep)](const fpromise::result<void, zx_status_t>&) {});
+          })
+          .or_else([](const zx_status_t& status) {
+            FX_PLOGS(ERROR, status) << "Guest connection failed";
+          })
+          .wrap_with(scope_);
+  executor_.schedule_task(std::move(task));
 }
