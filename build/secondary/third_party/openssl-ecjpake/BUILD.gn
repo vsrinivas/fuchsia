@@ -1,0 +1,51 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("openssl-ecjpake") {
+  sources = [
+    "src/ecjpake.c",
+    "src/ecjpake_err.c",
+  ]
+  public = [ "openssl/ecjpake.h" ]
+  public_configs = [ ":openssl-ecjpake_config" ]
+  deps = [ "//third_party/boringssl" ]
+
+  # Suppress warnings in upstream code that are triggered by Fuchsia compilation flags.
+}
+
+config("openssl-ecjpake_config") {
+  include_dirs = [
+    "src",
+    "src/openssl",
+  ]
+  cflags = [ "-Wno-conversion" ]
+  visibility = [ ":*" ]
+}
+
+executable("openssl-ecjpake_test") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [ "ecjpaketest.c" ]
+  configs += [ ":openssl-ecjpake_test_config" ]
+  deps = [
+    ":openssl-ecjpake",
+    "//third_party/boringssl",
+  ]
+}
+
+config("openssl-ecjpake_test_config") {
+  configs = [ ":openssl-ecjpake_config" ]
+
+  # Suppress warnings in upstream code that are triggered by Fuchsia compilation flags.
+  cflags = [
+    "-Wno-error=sign-compare",
+    "-Wno-conversion",
+  ]
+}
+
+fuchsia_unittest_package("openssl-ecjpake_tests") {
+  deps = [ ":openssl-ecjpake_test" ]
+}
