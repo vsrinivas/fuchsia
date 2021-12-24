@@ -7,7 +7,9 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 // This header defines the public types used in the zxio and zxio_ops interface.
 
@@ -325,6 +327,20 @@ typedef struct advisory_lock_req {
   enum advisory_lock_type type;
   bool wait;
 } zxio_advisory_lock_req_t;
+
+// Directory watching
+
+typedef uint32_t zxio_watch_directory_event_t;
+
+// clang-format: off
+#define ZXIO_WATCH_EVENT_ADD_FILE ((zxio_watch_directory_event_t)1)
+#define ZXIO_WATCH_EVENT_REMOVE_FILE ((zxio_watch_directory_event_t)2)
+
+#define ZXIO_WATCH_EVENT_WAITING ((zxio_watch_directory_event_t)3)
+// clang-format: on
+
+typedef zx_status_t (*zxio_watch_directory_cb)(zxio_watch_directory_event_t event, const char* name,
+                                               void* context) ZX_AVAILABLE_SINCE(7);
 
 __END_CDECLS
 

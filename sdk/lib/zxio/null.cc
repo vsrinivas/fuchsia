@@ -151,6 +151,11 @@ zx_status_t zxio_default_set_window_size(zxio_t* io, uint32_t width, uint32_t he
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t zxio_default_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, zx_time_t deadline,
+                                         void* context) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t zxio_default_init(zxio_t* io) {
   zxio_init(io, &zxio_default_ops);
   return ZX_OK;

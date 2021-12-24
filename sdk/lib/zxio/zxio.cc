@@ -5,6 +5,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/watcher.h>
 #include <lib/zxio/zxio.h>
 #include <string.h>
 #include <zircon/syscalls.h>
@@ -53,6 +54,9 @@ const zxio_internal_t* to_internal(const zxio_t* io) {
 }  // namespace
 
 bool zxio_is_valid(const zxio_t* io) {
+  if (io == nullptr) {
+    return false;
+  }
   const zxio_internal_t* zio = to_internal(io);
   return zio->ops != nullptr;
 }
@@ -432,4 +436,13 @@ zx_status_t zxio_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
   }
   zxio_internal_t* zio = to_internal(io);
   return zio->ops->set_window_size(io, width, height);
+}
+
+zx_status_t zxio_watch_directory(zxio_t* directory, zxio_watch_directory_cb cb, zx_time_t deadline,
+                                 void* context) {
+  if (!zxio_is_valid(directory)) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  zxio_internal_t* zio = to_internal(directory);
+  return zio->ops->watch_directory(directory, cb, deadline, context);
 }

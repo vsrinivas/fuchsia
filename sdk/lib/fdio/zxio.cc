@@ -9,6 +9,7 @@
 #include <lib/fdio/io.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/null.h>
+#include <lib/zxio/watcher.h>
 #include <lib/zxio/zxio.h>
 #include <poll.h>
 #include <stdarg.h>
@@ -202,6 +203,10 @@ zx_status_t zxio::dirent_iterator_next(zxio_dirent_iterator_t* iterator,
 
 void zxio::dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {
   return zxio_dirent_iterator_destroy(iterator);
+}
+
+zx_status_t zxio::watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline, void* context) {
+  return zxio_watch_directory(&zxio_storage().io, cb, deadline, context);
 }
 
 zx_status_t zxio::unlink(const char* name, size_t len, int flags) {

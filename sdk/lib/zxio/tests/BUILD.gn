@@ -41,6 +41,7 @@ test("zxio") {
     "tty-test.cc",
     "vmo-test.cc",
     "vmofile-test.cc",
+    "watcher-test.cc",
     "zxio-test.cc",
   ]
   deps = [

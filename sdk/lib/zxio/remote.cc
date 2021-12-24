@@ -1041,6 +1041,90 @@ zx_status_t zxio_remote_advisory_lock(zxio_t* io, advisory_lock_req* req) {
   return zxio_common_advisory_lock(rio.control(), req);
 }
 
+zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, zx_time_t deadline,
+                                        void* context) {
+  if (cb == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  Remote rio(io);
+  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
+                    ->Watch(fio::wire::kWatchMaskAll, 0, endpoints->client.TakeChannel());
+
+  if (zx_status_t status = result.status(); status != ZX_OK) {
+    return status;
+  }
+  if (zx_status_t status = result->s; status != ZX_OK) {
+    return status;
+  }
+
+  for (;;) {
+    uint8_t bytes[fio::wire::kMaxBuf + 1];  // Extra byte for temporary null terminator.
+    uint32_t num_bytes;
+    zx_status_t status = endpoints->server.channel().read_etc(0, &bytes, nullptr, sizeof(bytes), 0,
+                                                              &num_bytes, nullptr);
+    if (status != ZX_OK) {
+      if (status == ZX_ERR_SHOULD_WAIT) {
+        status = endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                                      zx::time(deadline), nullptr);
+        if (status != ZX_OK) {
+          return status;
+        }
+        continue;
+      }
+      return status;
+    }
+
+    // Message Format: { OP, LEN, DATA[LEN] }
+    cpp20::span span(bytes, num_bytes);
+    auto it = span.begin();
+    for (;;) {
+      if (std::distance(it, span.end()) < 2) {
+        break;
+      }
+
+      uint8_t wire_event = *it++;
+      uint8_t len = *it++;
+      uint8_t* name = it;
+
+      if (std::distance(it, span.end()) < len) {
+        break;
+      }
+      it += len;
+
+      zxio_watch_directory_event_t event;
+      switch (wire_event) {
+        case fio::wire::kWatchEventAdded:
+        case fio::wire::kWatchEventExisting:
+          event = ZXIO_WATCH_EVENT_ADD_FILE;
+          break;
+        case fio::wire::kWatchEventRemoved:
+          event = ZXIO_WATCH_EVENT_REMOVE_FILE;
+          break;
+        case fio::wire::kWatchEventIdle:
+          event = ZXIO_WATCH_EVENT_WAITING;
+          break;
+        default:
+          // unsupported event
+          continue;
+      }
+
+      // The callback expects a null-terminated string.
+      uint8_t tmp = *it;
+      *it = 0;
+      status = cb(event, reinterpret_cast<const char*>(name), context);
+      *it = tmp;
+      if (status != ZX_OK) {
+        return status;
+      }
+    }
+  }
+}
+
 }  // namespace
 
 static constexpr zxio_ops_t zxio_dir_ops = []() {
@@ -1068,6 +1152,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.dirent_iterator_next = zxio_remote_dirent_iterator_next;
   ops.dirent_iterator_destroy = zxio_remote_dirent_iterator_destroy;
   ops.advisory_lock = zxio_remote_advisory_lock;
+  ops.watch_directory = zxio_remote_watch_directory;
   return ops;
 }();
 

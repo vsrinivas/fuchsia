@@ -48,6 +48,10 @@ zx_status_t fdio::dirent_iterator_next(zxio_dirent_iterator_t* iterator,
 
 void fdio::dirent_iterator_destroy(zxio_dirent_iterator_t* iterator) {}
 
+zx_status_t fdio::watch_directory(zxio_watch_directory_cb cb, zx_time_t deadline, void* context) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t fdio::unlink(const char* name, size_t len, int flags) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t fdio::truncate(uint64_t off) { return ZX_ERR_NOT_SUPPORTED; }
