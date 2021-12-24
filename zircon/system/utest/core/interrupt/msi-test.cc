@@ -153,7 +153,7 @@ TEST_F(MsiTest, CreateSyscallArgs) {
   };
   // clang-format on
 
-  for (size_t i = 0; i < countof(kTests); i++) {
+  for (size_t i = 0; i < std::size(kTests); i++) {
     auto& test = kTests[i];
     zx::interrupt interrupt;
     EXPECT_EQ(test.status,
@@ -232,7 +232,7 @@ TEST_F(MsiTest, Msix) {
       { .msi = msi.get(), .opt = ZX_MSI_MODE_MSI_X, .id = 2, .vmo = vmo.get(), .off = SizeNeededForMsi(vmo_size, 2), .status = ZX_OK },
   };
   // clang-format on
-  for (size_t i = 0; i < countof(kTests); i++) {
+  for (size_t i = 0; i < std::size(kTests); i++) {
     auto& test = kTests[i];
     zx::interrupt interrupt;
     EXPECT_EQ(test.status,

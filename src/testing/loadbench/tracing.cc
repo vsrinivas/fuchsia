@@ -54,7 +54,7 @@ std::optional<KTraceRecord> KTraceRecord::ParseRecord(uint8_t* data_buf, size_t 
   } else {
     kr.event_ = KTRACE_EVENT(record->tag);
 
-    if (kr.event_ >= countof(kTags)) {
+    if (kr.event_ >= std::size(kTags)) {
       kr.has_unexpected_event_ = true;
       return kr;
     }

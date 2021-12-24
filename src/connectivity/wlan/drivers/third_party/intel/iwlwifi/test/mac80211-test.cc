@@ -53,8 +53,8 @@ class Mac80211Test : public SingleApTest {
     mvmvif_.phy_ctxt = &mvm_->phy_ctxts[phy_ctxt_id];
 
     // Assign the AP sta info.
-    ASSERT_EQ(IEEE80211_TIDS_MAX + 1, ARRAY_SIZE(ap_sta_.txq));
-    for (size_t i = 0; i < ARRAY_SIZE(ap_sta_.txq); i++) {
+    ASSERT_EQ(IEEE80211_TIDS_MAX + 1, std::size(ap_sta_.txq));
+    for (size_t i = 0; i < std::size(ap_sta_.txq); i++) {
       ap_sta_.txq[i] = &txqs_[i];
     }
     ASSERT_EQ(ZX_OK, iwl_mvm_mac_sta_state(&mvmvif_, &ap_sta_, IWL_STA_NOTEXIST, IWL_STA_NONE));
@@ -112,7 +112,7 @@ TEST_F(Mac80211Test, MultipleAddsRemoves) {
       },
   };
 
-  size_t mvmvif_count = ARRAY_SIZE(mvmvif);
+  size_t mvmvif_count = std::size(mvmvif);
   for (size_t i = 0; i < mvmvif_count; ++i) {
     ASSERT_OK(iwl_mvm_mac_add_interface(&mvmvif[i]));
 

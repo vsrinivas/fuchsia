@@ -41,11 +41,11 @@ static const pbus_dev_t ramctl_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_RAM_CTL;
   dev.mmio_list = astro_ram_ctl_mmios;
-  dev.mmio_count = countof(astro_ram_ctl_mmios);
+  dev.mmio_count = std::size(astro_ram_ctl_mmios);
   dev.bti_list = astro_ram_ctl_btis;
-  dev.bti_count = countof(astro_ram_ctl_btis);
+  dev.bti_count = std::size(astro_ram_ctl_btis);
   dev.irq_list = astro_ram_ctl_irqs;
-  dev.irq_count = countof(astro_ram_ctl_irqs);
+  dev.irq_count = std::size(astro_ram_ctl_irqs);
   return dev;
 }();
 

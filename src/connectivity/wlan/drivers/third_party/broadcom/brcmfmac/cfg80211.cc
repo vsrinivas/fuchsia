@@ -101,7 +101,7 @@ static uint16_t __wl_rates[] = {
 };
 
 #define wl_g_rates (__wl_rates + 0)
-#define wl_g_rates_size countof(__wl_rates)
+#define wl_g_rates_size std::size(__wl_rates)
 #define wl_a_rates (__wl_rates + 4)
 #define wl_a_rates_size ((size_t)(wl_g_rates_size - 4))
 
@@ -3020,7 +3020,7 @@ zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif) {
                         BRCMF_VNDR_IE_BEACON_FLAG};
   int i;
 
-  for (i = 0; i < (int)countof(pktflags); i++) {
+  for (i = 0; i < (int)std::size(pktflags); i++) {
     brcmf_vif_set_mgmt_ie(vif, pktflags[i], nullptr, 0);
   }
 
@@ -4028,9 +4028,9 @@ static void brcmf_dump_80211_ht_caps(ieee80211_ht_capabilities_t* caps) {
   BRCMF_DBG_UNFILTERED("     ht_capability_info: %#x", caps->ht_capability_info);
   BRCMF_DBG_UNFILTERED("     ampdu_params: %#x", caps->ampdu_params);
 
-  char mcs_set_str[countof(caps->supported_mcs_set.bytes) * 5 + 1];
+  char mcs_set_str[std::size(caps->supported_mcs_set.bytes) * 5 + 1];
   char* str = mcs_set_str;
-  for (unsigned i = 0; i < countof(caps->supported_mcs_set.bytes); i++) {
+  for (unsigned i = 0; i < std::size(caps->supported_mcs_set.bytes); i++) {
     str += sprintf(str, "%s0x%02hhx", i > 0 ? " " : "", caps->supported_mcs_set.bytes[i]);
   }
 
@@ -4163,8 +4163,8 @@ void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info) {
 
   /* first entry in bandlist is number of bands */
   info->num_bands = bandlist[0];
-  for (unsigned i = 1; i <= info->num_bands && i < countof(bandlist); i++) {
-    if (i > countof(info->bands)) {
+  for (unsigned i = 1; i <= info->num_bands && i < std::size(bandlist); i++) {
+    if (i > std::size(info->bands)) {
       BRCMF_ERR("insufficient space in query response for all bands, truncating");
       continue;
     }

@@ -97,7 +97,7 @@ TEST(FlowRingTest, NetbufTransmission) {
       "<eth hdr size>\0"s,
       "<eth hdr size> "s,
   };
-  for (size_t i = 0; i < countof(kPreOpenTestData); ++i) {
+  for (size_t i = 0; i < std::size(kPreOpenTestData); ++i) {
     const auto& test_data = kPreOpenTestData[i];
     ring_and_deps.fake_interfaces->AddFlowRingCallback(
         ring_and_deps.flow_ring_index, [&](const void* buffer, size_t size) {
@@ -132,7 +132,7 @@ TEST(FlowRingTest, NetbufTransmission) {
       "<eth hdr size>\0"s,
       "<eth hdr size>"s,
   };
-  for (size_t i = 0; i < countof(kPostOpenTestData); ++i) {
+  for (size_t i = 0; i < std::size(kPostOpenTestData); ++i) {
     const auto& test_data = kPreOpenTestData[i];
     ring_and_deps.fake_interfaces->AddFlowRingCallback(
         ring_and_deps.flow_ring_index, [&, i](const void* buffer, size_t size) {
@@ -148,7 +148,7 @@ TEST(FlowRingTest, NetbufTransmission) {
                     ring_and_deps.fake_interfaces->GetDmaBufferAddress(tx_request->data_buf_addr)),
                 tx_request->data_len}}));
 
-          if (i == (countof(kPostOpenTestData) - 1)) {
+          if (i == (std::size(kPostOpenTestData) - 1)) {
             sync_completion_signal(&transmission_completed);
           }
         });
@@ -161,7 +161,7 @@ TEST(FlowRingTest, NetbufTransmission) {
   // Note: we don't have buffer recycling set up in this test, so `tx_buffer_pool` must contain
   // enough buffers for all the test buffers we send.
   ASSERT_GE(static_cast<size_t>(ring_and_deps.tx_buffer_pool->buffer_count()),
-            countof(kPreOpenTestData) + countof(kPostOpenTestData));
+            std::size(kPreOpenTestData) + std::size(kPostOpenTestData));
   static constexpr size_t kMaxSubmissionsPerIteration = 3;
   static constexpr int kMaxIterations = 1024;
   size_t submit_count = 0;
@@ -170,16 +170,17 @@ TEST(FlowRingTest, NetbufTransmission) {
     EXPECT_EQ(ZX_OK, flow_ring.Submit(ring_and_deps.tx_buffer_pool.get(),
                                       kMaxSubmissionsPerIteration, &iteration_submit_count));
     submit_count += iteration_submit_count;
-    if (submit_count == (countof(kPreOpenTestData) + countof(kPostOpenTestData))) {
+    if (submit_count == (std::size(kPreOpenTestData) + std::size(kPostOpenTestData))) {
       break;
     }
     zx::nanosleep(zx::deadline_after(kTestIterationSleep));
   }
 
-  EXPECT_EQ(ZX_OK,
-            sync_completion_wait(
-                &transmission_completed,
-                (kTestTimeout * (countof(kPreOpenTestData) + countof(kPostOpenTestData))).get()));
+  EXPECT_EQ(
+      ZX_OK,
+      sync_completion_wait(
+          &transmission_completed,
+          (kTestTimeout * (std::size(kPreOpenTestData) + std::size(kPostOpenTestData))).get()));
   EXPECT_EQ(ZX_OK, flow_ring.Close());
   EXPECT_EQ(ZX_OK, flow_ring.NotifyClosed());
 }

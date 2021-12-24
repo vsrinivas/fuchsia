@@ -121,7 +121,7 @@ TEST_F(UtilsTest, IterateActiveInterfaces) {
           .associated = true,
       },
   };
-  uint8_t vif_count = ARRAY_SIZE(mvmvifs);
+  uint8_t vif_count = std::size(mvmvifs);
   ZX_ASSERT(vif_count <= MAX_NUM_MVMVIF);
 
   // Initialize the 'mvm' structure (and its 'mvmvif').

@@ -43,7 +43,7 @@ static const zx_bind_inst_t sysmem_fragment_match[] = {
 };
 
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_fragment_match), sysmem_fragment_match},
+    {std::size(sysmem_fragment_match), sysmem_fragment_match},
 };
 
 zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, bool uses_acpi) {
@@ -80,7 +80,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
   };
 
   const device_fragment_part_t pci_fragment[] = {
-      {countof(pci_fragment_match), pci_fragment_match},
+      {std::size(pci_fragment_match), pci_fragment_match},
   };
 
   const zx_bind_inst_t acpi_fragment_match[] = {
@@ -90,13 +90,13 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
   };
 
   const device_fragment_part_t acpi_fragment[] = {
-      {countof(acpi_fragment_match), acpi_fragment_match},
+      {std::size(acpi_fragment_match), acpi_fragment_match},
   };
 
   const device_fragment_t fragments[] = {
-      {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-      {"pci", countof(pci_fragment), pci_fragment},
-      {"acpi", countof(acpi_fragment), acpi_fragment},
+      {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
+      {"pci", std::size(pci_fragment), pci_fragment},
+      {"acpi", std::size(acpi_fragment), acpi_fragment},
   };
   zx_device_prop_t composite_props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_PCI},
@@ -111,9 +111,9 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
 
   composite_device_desc_t composite_desc = {
       .props = composite_props,
-      .props_count = countof(composite_props),
+      .props_count = std::size(composite_props),
       .fragments = fragments,
-      .fragments_count = uses_acpi ? countof(fragments) : countof(fragments) - 1,
+      .fragments_count = uses_acpi ? std::size(fragments) : std::size(fragments) - 1,
       .primary_fragment = "pci",
       .spawn_colocated = false,
   };

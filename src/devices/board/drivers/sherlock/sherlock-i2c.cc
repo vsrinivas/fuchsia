@@ -236,19 +236,19 @@ zx_status_t Sherlock::I2cInit() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_I2C;
   dev.mmio_list = i2c_mmios;
-  dev.mmio_count = countof(i2c_mmios);
+  dev.mmio_count = std::size(i2c_mmios);
   dev.irq_list = i2c_irqs;
-  dev.irq_count = countof(i2c_irqs);
+  dev.irq_count = std::size(i2c_irqs);
 
   const i2c_channel_t* channels;
   size_t channel_count;
   std::vector<pbus_metadata_t> metadata;
   if (pid_ == PDEV_PID_SHERLOCK) {
     channels = sherlock_i2c_channels;
-    channel_count = countof(sherlock_i2c_channels);
+    channel_count = std::size(sherlock_i2c_channels);
   } else {
     channels = luis_ernie_i2c_channels;
-    channel_count = countof(luis_ernie_i2c_channels);
+    channel_count = std::size(luis_ernie_i2c_channels);
     metadata.emplace_back(pbus_metadata_t{
         .type = DEVICE_METADATA_PRIVATE,
         .data_buffer = reinterpret_cast<const uint8_t*>(&luis_i2c_clock_delays),

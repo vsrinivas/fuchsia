@@ -10,7 +10,7 @@
 #include "spinel/spinel_opcodes.h"
 #include "tests/common/spinel/spinel_test_utils.h"
 #include "tests/common/svg/scoped_svg.h"
-#include "tests/common/utils.h"  // For ARRAY_SIZE() macro.
+#include "tests/common/utils.h"
 #include "tests/mock_spinel/mock_spinel_test_utils.h"
 
 namespace {

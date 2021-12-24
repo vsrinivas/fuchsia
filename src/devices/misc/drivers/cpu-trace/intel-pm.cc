@@ -97,7 +97,7 @@ static unsigned PmuFixedCounterNumber(EventId id) {
 }
 
 static void PmuInitMiscEventTable() {
-  qsort(misc_event_table_contents, countof(misc_event_table_contents),
+  qsort(misc_event_table_contents, std::size(misc_event_table_contents),
         sizeof(misc_event_table_contents[0]), ComparePerfmonEventId);
 }
 
@@ -105,9 +105,9 @@ static void PmuInitMiscEventTable() {
 // 0 ... IPM_NUM_MISC_EVENTS - 1).
 // Returns -1 if |id| is unknown.
 static int PmuLookupMiscEvent(EventId id) {
-  auto p =
-      reinterpret_cast<EventId*>(bsearch(&id, misc_event_table, countof(misc_event_table_contents),
-                                         sizeof(id), ComparePerfmonEventId));
+  auto p = reinterpret_cast<EventId*>(bsearch(&id, misc_event_table,
+                                              std::size(misc_event_table_contents), sizeof(id),
+                                              ComparePerfmonEventId));
   if (!p) {
     return -1;
   }
@@ -123,12 +123,13 @@ static zx_status_t InitializeEventMaps() {
   PmuInitMiscEventTable();
 
   zx_status_t status =
-      BuildEventMap(kArchEvents, countof(kArchEvents), &kArchEventMap, &kArchEventMapSize);
+      BuildEventMap(kArchEvents, std::size(kArchEvents), &kArchEventMap, &kArchEventMapSize);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = BuildEventMap(kModelEvents, countof(kModelEvents), &kModelEventMap, &kModelEventMapSize);
+  status =
+      BuildEventMap(kModelEvents, std::size(kModelEvents), &kModelEventMap, &kModelEventMapSize);
   if (status != ZX_OK) {
     return status;
   }
@@ -173,7 +174,7 @@ zx_status_t PerfmonDevice::StageFixedConfig(const FidlPerfmonConfig* icfg, Stagi
   FidlPerfmonEventConfigFlags flags = icfg->events[ii].flags;
   bool uses_timebase = ocfg->timebase_event != kEventIdNone && rate == 0;
 
-  if (counter == IPM_MAX_FIXED_COUNTERS || counter >= countof(ocfg->fixed_events) ||
+  if (counter == IPM_MAX_FIXED_COUNTERS || counter >= std::size(ocfg->fixed_events) ||
       counter >= ss->max_num_fixed) {
     zxlogf(ERROR, "%s: Invalid fixed event [%u]", __func__, ii);
     return ZX_ERR_INVALID_ARGS;

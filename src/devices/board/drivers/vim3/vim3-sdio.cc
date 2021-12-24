@@ -64,13 +64,13 @@ zx_status_t Vim3::SdioInit() {
   sdio_dev.pid = PDEV_PID_GENERIC;
   sdio_dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
   sdio_dev.mmio_list = sdio_mmios;
-  sdio_dev.mmio_count = countof(sdio_mmios);
+  sdio_dev.mmio_count = std::size(sdio_mmios);
   sdio_dev.irq_list = sdio_irqs;
-  sdio_dev.irq_count = countof(sdio_irqs);
+  sdio_dev.irq_count = std::size(sdio_irqs);
   sdio_dev.bti_list = sdio_btis;
-  sdio_dev.bti_count = countof(sdio_btis);
+  sdio_dev.bti_count = std::size(sdio_btis);
   sdio_dev.metadata_list = sdio_metadata;
-  sdio_dev.metadata_count = countof(sdio_metadata);
+  sdio_dev.metadata_count = std::size(sdio_metadata);
 
   gpio_impl_.SetAltFunction(A311D_SDIO_D0, A311D_GPIOX_0_SDIO_D0_FN);
   gpio_impl_.SetAltFunction(A311D_SDIO_D1, A311D_GPIOX_1_SDIO_D1_FN);
@@ -80,7 +80,7 @@ zx_status_t Vim3::SdioInit() {
   gpio_impl_.SetAltFunction(A311D_SDIO_CMD, A311D_GPIOX_5_SDIO_CMD_FN);
 
   if ((status = pbus_.AddComposite(&sdio_dev, reinterpret_cast<uint64_t>(vim3_sdio_fragments),
-                                   countof(vim3_sdio_fragments), "pdev")) != ZX_OK) {
+                                   std::size(vim3_sdio_fragments), "pdev")) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sdio_dev: %d", status);
     return status;
   }

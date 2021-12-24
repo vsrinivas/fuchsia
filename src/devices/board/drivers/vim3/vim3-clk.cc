@@ -57,9 +57,9 @@ static pbus_dev_t clk_dev = []() {
   dev.vid = PDEV_VID_AMLOGIC;
   dev.did = PDEV_DID_AMLOGIC_G12B_CLK;
   dev.mmio_list = clk_mmios;
-  dev.mmio_count = countof(clk_mmios);
+  dev.mmio_count = std::size(clk_mmios);
   dev.metadata_list = clock_metadata;
-  dev.metadata_count = countof(clock_metadata);
+  dev.metadata_count = std::size(clock_metadata);
   return dev;
 }();
 

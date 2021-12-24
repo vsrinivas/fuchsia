@@ -82,7 +82,7 @@ zx_status_t Ssd1306::FlushScreen() {
 
     uint8_t v[kDisplayWidth + 1];
     v[0] = kI2cFbAddress;
-    for (size_t j = 1; j < countof(v); j++) {
+    for (size_t j = 1; j < std::size(v); j++) {
       v[j] = frame_buffer_[i][j - 1];
     }
     status = i2c_.WriteSync(v, sizeof(v));
@@ -95,7 +95,7 @@ zx_status_t Ssd1306::FlushScreen() {
 
 zx_status_t Ssd1306::EnableScreen() {
   zx_status_t status;
-  for (size_t i = 0; i < countof(kPowerOnSequence); i++) {
+  for (size_t i = 0; i < std::size(kPowerOnSequence); i++) {
     status = WriteCommand(i2c_, 0x00, kPowerOnSequence[i]);
     if (status != ZX_OK) {
       return status;

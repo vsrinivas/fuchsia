@@ -177,7 +177,7 @@ zx_status_t Tas5782::WriteReg(uint8_t reg, uint8_t value) {
 #else
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
-  auto ret = i2c_.WriteSyncRetries(write_buf, countof(write_buf), kNumberOfRetries, kRetryDelay);
+  auto ret = i2c_.WriteSyncRetries(write_buf, std::size(write_buf), kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
     zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }

@@ -733,8 +733,8 @@ zx_status_t IntelI2cController::DeviceSpecificInit(const uint16_t device_id) {
       },
   };
 
-  for (unsigned int i = 0; i < countof(dev_props); ++i) {
-    const unsigned int num_dev_ids = countof(dev_props[0].device_ids);
+  for (unsigned int i = 0; i < std::size(dev_props); ++i) {
+    const unsigned int num_dev_ids = std::size(dev_props[0].device_ids);
     for (unsigned int dev_idx = 0; dev_idx < num_dev_ids; ++dev_idx) {
       if (!dev_props[i].device_ids[dev_idx]) {
         break;

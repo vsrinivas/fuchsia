@@ -25,7 +25,7 @@ static const uint32_t lpf1m1[] = {
     0xffd212, 0xffdca8, 0xffeece, 0x000000, 0x000ae3, 0x000e21, 0x000b86, 0x000645, 0x000147,
     0xfffe32, 0xfffd45, 0xfffdce, 0xfffed9, 0xffffb2, 0x000014,
 };
-constexpr uint32_t kLpf1m1Len = static_cast<uint32_t>(countof(lpf1m1));
+constexpr uint32_t kLpf1m1Len = static_cast<uint32_t>(std::size(lpf1m1));
 
 // mode 1 lpf3
 static const uint32_t lpf3m1[] = {
@@ -43,7 +43,7 @@ static const uint32_t lpf3m1[] = {
     0x001a1c, 0x000000, 0xffed1e, 0x000000, 0x000d4e, 0x000000, 0xfff6eb, 0x000000, 0x0005f7,
     0x000000, 0xfffc46, 0x000000, 0x00022d, 0x000000, 0xfffedb, 0x000000, 0x000081, 0x000000,
 };
-constexpr uint32_t kLpf3m1Len = static_cast<uint32_t>(countof(lpf3m1));
+constexpr uint32_t kLpf3m1Len = static_cast<uint32_t>(std::size(lpf3m1));
 
 // osr64 lpf2
 static const uint32_t lpf2osr64[] = {
@@ -52,7 +52,7 @@ static const uint32_t lpf2osr64[] = {
     0xf478a0, 0x000000, 0x055f81, 0xfc63f8, 0xff5c0e, 0x028f41, 0xfebd93, 0xff5223, 0x010aef,
     0xffc87d, 0xffa818, 0x003c12, 0x0002c1, 0xfff004, 0x00050a,
 };
-constexpr uint32_t kLpf2osr64Len = static_cast<uint32_t>(countof(lpf2osr64));
+constexpr uint32_t kLpf2osr64Len = static_cast<uint32_t>(std::size(lpf2osr64));
 
 // static
 std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(
@@ -191,13 +191,13 @@ void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
   // Write coefficients to coefficient memory
   //  --these appear to be packed with the filter length in each filter
   //    control register being the mechanism that helps reference them
-  for (uint32_t i = 0; i < countof(lpf1m1); i++) {
+  for (uint32_t i = 0; i < std::size(lpf1m1); i++) {
     pdm_mmio_.Write32(lpf1m1[i], PDM_COEFF_DATA);
   }
-  for (uint32_t i = 0; i < countof(lpf2osr64); i++) {
+  for (uint32_t i = 0; i < std::size(lpf2osr64); i++) {
     pdm_mmio_.Write32(lpf2osr64[i], PDM_COEFF_DATA);
   }
-  for (uint32_t i = 0; i < countof(lpf3m1); i++) {
+  for (uint32_t i = 0; i < std::size(lpf3m1); i++) {
     pdm_mmio_.Write32(lpf3m1[i], PDM_COEFF_DATA);
   }
 

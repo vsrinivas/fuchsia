@@ -191,7 +191,7 @@ TEST_F(AcpiManagerTest, TestDeviceWithDeviceTreeHid) {
                                               .Pointer = const_cast<char*>("google,cr50")},
                                }};
   device->AddDsd(kDevicePropertiesUuid, ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
-                                                                .Count = countof(compatible),
+                                                                .Count = std::size(compatible),
                                                                 .Elements = compatible}});
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::move(device)));
   ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());
@@ -221,7 +221,7 @@ TEST_F(AcpiManagerTest, TestDeviceWithDeviceTreeCid) {
                                               .Pointer = const_cast<char*>("google,cr50")},
                                }};
   device->AddDsd(kDevicePropertiesUuid, ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
-                                                                .Count = countof(compatible),
+                                                                .Count = std::size(compatible),
                                                                 .Elements = compatible}});
   ASSERT_NO_FATAL_FAILURES(InsertDeviceBelow("\\_SB_", std::move(device)));
   ASSERT_NO_FATAL_FAILURES(DiscoverConfigurePublish());

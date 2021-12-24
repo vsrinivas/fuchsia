@@ -25,7 +25,7 @@ zx_status_t QemuArm64::RtcInit() {
   pl031_dev.pid = PDEV_PID_GENERIC;
   pl031_dev.did = PDEV_DID_RTC_PL031;
   pl031_dev.mmio_list = kPl031Mmios;
-  pl031_dev.mmio_count = countof(kPl031Mmios);
+  pl031_dev.mmio_count = std::size(kPl031Mmios);
 
   auto status = pbus_.DeviceAdd(&pl031_dev);
   if (status != ZX_OK) {

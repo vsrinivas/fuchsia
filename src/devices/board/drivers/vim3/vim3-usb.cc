@@ -80,13 +80,13 @@ static const pbus_dev_t usb_phy_dev = []() {
   dev.vid = PDEV_VID_AMLOGIC;
   dev.did = PDEV_DID_AML_USB_PHY_V2;
   dev.mmio_list = usb_phy_mmios;
-  dev.mmio_count = countof(usb_phy_mmios);
+  dev.mmio_count = std::size(usb_phy_mmios);
   dev.irq_list = usb_phy_irqs;
-  dev.irq_count = countof(usb_phy_irqs);
+  dev.irq_count = std::size(usb_phy_irqs);
   dev.bti_list = usb_btis;
-  dev.bti_count = countof(usb_btis);
+  dev.bti_count = std::size(usb_btis);
   dev.metadata_list = usb_phy_metadata;
-  dev.metadata_count = countof(usb_phy_metadata);
+  dev.metadata_count = std::size(usb_phy_metadata);
   return dev;
 }();
 
@@ -160,15 +160,15 @@ static const pbus_dev_t dwc2_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_USB_DWC2;
   dev.mmio_list = dwc2_mmios;
-  dev.mmio_count = countof(dwc2_mmios);
+  dev.mmio_count = std::size(dwc2_mmios);
   dev.irq_list = dwc2_irqs;
-  dev.irq_count = countof(dwc2_irqs);
+  dev.irq_count = std::size(dwc2_irqs);
   dev.bti_list = dwc2_btis;
-  dev.bti_count = countof(dwc2_btis);
+  dev.bti_count = std::size(dwc2_btis);
   dev.metadata_list = usb_metadata;
-  dev.metadata_count = countof(usb_metadata);
+  dev.metadata_count = std::size(usb_metadata);
   dev.boot_metadata_list = usb_boot_metadata;
-  dev.boot_metadata_count = countof(usb_boot_metadata);
+  dev.boot_metadata_count = std::size(usb_boot_metadata);
   return dev;
 }();
 
@@ -177,10 +177,10 @@ static const zx_bind_inst_t reset_register_match[] = {
     BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_USB_PHY_V2_RESET),
 };
 static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
+    {std::size(reset_register_match), reset_register_match},
 };
 static const device_fragment_t usb_phy_fragments[] = {
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
+    {"register-reset", std::size(reset_register_fragment), reset_register_fragment},
 };
 static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
@@ -189,10 +189,10 @@ static const zx_bind_inst_t dwc2_phy_match[] = {
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_DWC2),
 };
 static const device_fragment_part_t dwc2_phy_fragment[] = {
-    {countof(dwc2_phy_match), dwc2_phy_match},
+    {std::size(dwc2_phy_match), dwc2_phy_match},
 };
 static const device_fragment_t dwc2_fragments[] = {
-    {"dwc2-phy", countof(dwc2_phy_fragment), dwc2_phy_fragment},
+    {"dwc2-phy", std::size(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
 zx_status_t Vim3::UsbInit() {
@@ -210,7 +210,7 @@ zx_status_t Vim3::UsbInit() {
 
   // Create USB Phy Device
   status = pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
-                                    countof(usb_phy_fragments), nullptr);
+                                    std::size(usb_phy_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "DeviceAdd(usb_phy) failed %s", zx_status_get_string(status));
     return status;
@@ -239,7 +239,7 @@ zx_status_t Vim3::UsbInit() {
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                                    countof(dwc2_fragments), "dwc2-phy");
+                                    std::size(dwc2_fragments), "dwc2-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
     return status;

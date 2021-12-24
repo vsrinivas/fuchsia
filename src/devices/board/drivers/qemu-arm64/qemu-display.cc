@@ -16,10 +16,10 @@ static const zx_bind_inst_t sysmem_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
 };
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
+    {std::size(sysmem_match), sysmem_match},
 };
 static const device_fragment_t fragments[] = {
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
+    {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
 };
 zx_status_t QemuArm64::DisplayInit() {
   pbus_dev_t display_dev = {};
@@ -28,7 +28,7 @@ zx_status_t QemuArm64::DisplayInit() {
   display_dev.pid = PDEV_PID_GENERIC;
   display_dev.did = PDEV_DID_FAKE_DISPLAY;
   auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), nullptr);
+                                         std::size(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
     return status;

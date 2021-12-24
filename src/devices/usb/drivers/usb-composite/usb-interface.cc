@@ -223,7 +223,7 @@ zx_status_t UsbInterface::ConfigureEndpoints(uint8_t interface_id, uint8_t alt_s
 
   // update to new set of endpoints
   // FIXME - how do we recover if we fail half way through processing the endpoints?
-  for (size_t i = 0; i < countof(new_endpoints); i++) {
+  for (size_t i = 0; i < std::size(new_endpoints); i++) {
     if (interface_endpoints[i]) {
       auto* old_ep = active_endpoints_[i];
       auto* new_ep = new_endpoints[i];

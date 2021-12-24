@@ -110,7 +110,7 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
 //
 void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t* bands,
                      size_t bands_count, wlan_info_band_info_t* band_infos) {
-  ZX_ASSERT(bands_count <= ARRAY_SIZE(nvm_data->bands));
+  ZX_ASSERT(bands_count <= std::size(nvm_data->bands));
 
   for (size_t band_idx = 0; band_idx < bands_count; ++band_idx) {
     wlan_info_band_t band_id = bands[band_idx];
@@ -127,7 +127,7 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
     // TODO(36683): band_info->ht_caps->supported_mcs_set =
     // TODO(36684): band_info->vht_caps =
 
-    ZX_ASSERT(sband->n_bitrates <= (int)ARRAY_SIZE(band_info->rates));
+    ZX_ASSERT(sband->n_bitrates <= (int)std::size(band_info->rates));
     for (int rate_idx = 0; rate_idx < sband->n_bitrates; ++rate_idx) {
       band_info->rates[rate_idx] = cfg_rates_to_80211(sband->bitrates[rate_idx]);
     }
@@ -145,7 +145,7 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
         ZX_ASSERT(0);  // Unknown band ID.
         break;
     }
-    ZX_ASSERT(sband->n_channels <= (int)ARRAY_SIZE(ch_list->channels));
+    ZX_ASSERT(sband->n_channels <= (int)std::size(ch_list->channels));
     for (int ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
       ch_list->channels[ch_idx] = sband->channels[ch_idx].ch_num;
     }
@@ -158,7 +158,7 @@ static struct iwl_mvm_sta* alloc_ap_mvm_sta(const uint8_t bssid[]) {
     return NULL;
   }
 
-  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+  for (size_t i = 0; i < std::size(mvm_sta->txq); i++) {
     mvm_sta->txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
   }
   memcpy(mvm_sta->addr, bssid, ETH_ALEN);
@@ -173,7 +173,7 @@ static void free_ap_mvm_sta(void* data) {
     return;
   }
 
-  for (size_t i = 0; i < ARRAY_SIZE(mvm_sta->txq); i++) {
+  for (size_t i = 0; i < std::size(mvm_sta->txq); i++) {
     free(mvm_sta->txq[i]);
   }
   if (mvm_sta->key_conf) {
@@ -278,7 +278,7 @@ void mac_stop(void* ctx) {
   }
 
   // Clean up other sta info.
-  for (size_t i = 0; i < ARRAY_SIZE(mvmvif->mvm->fw_id_to_mac_id); i++) {
+  for (size_t i = 0; i < std::size(mvmvif->mvm->fw_id_to_mac_id); i++) {
     // TODO(fxbug.dev/86715): this RCU-unprotected access is safe as deletions from the map are
     // RCU-synchronized below.
     struct iwl_mvm_sta* mvm_sta = mvmvif->mvm->fw_id_to_mac_id[i];

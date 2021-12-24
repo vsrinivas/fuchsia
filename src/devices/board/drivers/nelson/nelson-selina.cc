@@ -22,9 +22,9 @@ static constexpr zx_device_prop_t props[] = {
 static composite_device_desc_t composite_dev = []() {
   composite_device_desc_t desc = {};
   desc.props = props;
-  desc.props_count = countof(props);
+  desc.props_count = std::size(props);
   desc.fragments = selina_fragments;
-  desc.fragments_count = countof(selina_fragments);
+  desc.fragments_count = std::size(selina_fragments);
   desc.primary_fragment = "spi";
   desc.spawn_colocated = false;
   return desc;

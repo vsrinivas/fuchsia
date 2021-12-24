@@ -150,9 +150,9 @@ zx_status_t Sherlock::RegistersInit() {
       .pid = PDEV_PID_GENERIC,
       .did = PDEV_DID_REGISTERS,
       .mmio_list = registers_mmios,
-      .mmio_count = countof(registers_mmios),
+      .mmio_count = std::size(registers_mmios),
       .metadata_list = registers_metadata,
-      .metadata_count = countof(registers_metadata),
+      .metadata_count = std::size(registers_metadata),
   };
 
   zx_status_t status = pbus_.DeviceAdd(&registers_dev);

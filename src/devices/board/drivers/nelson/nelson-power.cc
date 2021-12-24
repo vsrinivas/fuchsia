@@ -68,24 +68,24 @@ constexpr zx_device_prop_t props[] = {
 
 constexpr composite_device_desc_t mlb_power_sensor_dev = {
     .props = props,
-    .props_count = countof(props),
+    .props_count = std::size(props),
     .fragments = ti_ina231_mlb_fragments,
-    .fragments_count = countof(ti_ina231_mlb_fragments),
+    .fragments_count = std::size(ti_ina231_mlb_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = true,
     .metadata_list = kMlbMetadata,
-    .metadata_count = countof(kMlbMetadata),
+    .metadata_count = std::size(kMlbMetadata),
 };
 
 constexpr composite_device_desc_t speakers_power_sensor_dev = {
     .props = props,
-    .props_count = countof(props),
+    .props_count = std::size(props),
     .fragments = ti_ina231_speakers_fragments,
-    .fragments_count = countof(ti_ina231_speakers_fragments),
+    .fragments_count = std::size(ti_ina231_speakers_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = true,
     .metadata_list = kAudioMetadata,
-    .metadata_count = countof(kAudioMetadata),
+    .metadata_count = std::size(kAudioMetadata),
 };
 
 constexpr zx_device_prop_t brownout_protection_props[] = {
@@ -96,9 +96,9 @@ constexpr zx_device_prop_t brownout_protection_props[] = {
 
 constexpr composite_device_desc_t brownout_protection_dev = {
     .props = brownout_protection_props,
-    .props_count = countof(brownout_protection_props),
+    .props_count = std::size(brownout_protection_props),
     .fragments = brownout_protection_fragments,
-    .fragments_count = countof(brownout_protection_fragments),
+    .fragments_count = std::size(brownout_protection_fragments),
     .primary_fragment = "codec",  // ???
     .spawn_colocated = false,
 };

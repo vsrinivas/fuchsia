@@ -380,16 +380,16 @@ TEST(FutexTest, Requeue) {
   ASSERT_OK(zx_futex_requeue(&futex_value1, 3, 100, &futex_value2, 2, ZX_HANDLE_INVALID));
 
   // 3 of the threads should have been woken.
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, countof(threads), 3));
+  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 3));
 
   // Since 2 of the threads should have been requeued, waking all the
   // threads on futex_value2 should wake 2 more threads.
   ASSERT_OK(zx_futex_wake(&futex_value2, kThreadWakeAllCount));
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, countof(threads), 5));
+  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 5));
 
   // Clean up: Wake the remaining thread so that it can exit.
   ASSERT_OK(zx_futex_wake(&futex_value1, 1));
-  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, countof(threads), countof(threads)));
+  ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
 
   for (auto& t : threads) {
     ASSERT_NO_FATAL_FAILURES(t.Shutdown());

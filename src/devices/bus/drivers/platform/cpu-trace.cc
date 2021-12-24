@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <array>
+
 typedef struct cpu_trace_dev {
   zx_device_t* zxdev;
   zx_handle_t bti;
@@ -86,7 +88,7 @@ zx_status_t publish_cpu_trace(zx_handle_t bti, zx_device_t* sys_root) {
   args.ctx = dev;
   args.ops = &cpu_trace_dev_proto;
   args.props = props;
-  args.prop_count = countof(props);
+  args.prop_count = std::size(props);
   args.proto_id = ZX_PROTOCOL_PDEV;
   args.proto_ops = &cpu_trace_proto_ops;
   args.proxy_args = NULL;

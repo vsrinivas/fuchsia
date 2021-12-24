@@ -324,7 +324,7 @@ zx_status_t PlatformBus::PBusCompositeDeviceAdd(
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_INSTANCE_ID, pdev->instance_id),
   };
   const device_fragment_part_t pdev_fragment[] = {
-      {countof(pdev_match), pdev_match},
+      {std::size(pdev_match), pdev_match},
   };
 
   fragments[0].name = "pdev";
@@ -367,7 +367,7 @@ zx_status_t PlatformBus::PBusAddComposite(const pbus_dev_t* dev,
   const bool is_primary_pdev = strcmp(primary_fragment, "pdev") == 0;
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragment_count,
       .primary_fragment = primary_fragment,

@@ -131,7 +131,7 @@ void EthDev::RecvLocked(const void* data, size_t len, uint32_t extra) {
 
   if (receive_fifo_entry_count_ == 0) {
     status = receive_fifo_.read(sizeof(receive_fifo_entries_[0]), receive_fifo_entries_,
-                                countof(receive_fifo_entries_), &count);
+                                std::size(receive_fifo_entries_), &count);
     if (status != ZX_OK) {
       if (status == ZX_ERR_SHOULD_WAIT) {
         fail_receive_read_ += 1;
@@ -370,7 +370,8 @@ int EthDev::TransmitThread() {
   size_t count;
 
   for (;;) {
-    if ((status = transmit_fifo_.read(sizeof(entries[0]), entries, countof(entries), &count)) < 0) {
+    if ((status = transmit_fifo_.read(sizeof(entries[0]), entries, std::size(entries), &count)) <
+        0) {
       if (status == ZX_ERR_SHOULD_WAIT) {
         zx_signals_t observed;
         if ((status = transmit_fifo_.wait_one(

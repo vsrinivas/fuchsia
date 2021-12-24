@@ -773,7 +773,8 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
     uint8_t kSendData[] = {1, 2, 3};
     tun::wire::Frame frame(alloc_);
     frame.set_frame_type(netdev::wire::FrameType::kEthernet);
-    frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(kSendData, countof(kSendData)));
+    frame.set_data(alloc_,
+                   fidl::VectorView<uint8_t>::FromExternal(kSendData, std::size(kSendData)));
     frame.set_port(kPortId);
     tun_device->WriteFrame(std::move(frame),
                            [](fidl::WireResponse<tun::Device::WriteFrame>* response) {
@@ -792,7 +793,7 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
     tx.data().SetPortId(port_id);
-    ASSERT_EQ(tx.data().Write(kSendData, countof(kSendData)), countof(kSendData));
+    ASSERT_EQ(tx.data().Write(kSendData, std::size(kSendData)), std::size(kSendData));
     ASSERT_OK(tx.Send());
   }
 

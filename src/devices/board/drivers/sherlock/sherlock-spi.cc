@@ -59,7 +59,7 @@ static pbus_dev_t spi_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_SPI;
   dev.mmio_list = spi_mmios;
-  dev.mmio_count = countof(spi_mmios);
+  dev.mmio_count = std::size(spi_mmios);
   return dev;
 }();
 

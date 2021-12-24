@@ -28,7 +28,7 @@ zx_status_t QemuStream::DisableConverterLocked(bool force_all) {
       SET_CONVERTER_STREAM_CHAN(IHDA_INVALID_STREAM_TAG, 0),
   };
 
-  return RunCmdListLocked(DISABLE_CONVERTER_VERBS, countof(DISABLE_CONVERTER_VERBS), force_all);
+  return RunCmdListLocked(DISABLE_CONVERTER_VERBS, std::size(DISABLE_CONVERTER_VERBS), force_all);
 }
 
 zx_status_t QemuStream::RunCmdListLocked(const CodecVerb* list, size_t count, bool force_all) {
@@ -83,7 +83,7 @@ zx_status_t QemuStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) {
       SET_AMPLIFIER_GAIN_MUTE(false, UNITY_GAIN, is_input(), !is_input()),
   };
 
-  return RunCmdListLocked(ENABLE_CONVERTER_VERBS, countof(ENABLE_CONVERTER_VERBS));
+  return RunCmdListLocked(ENABLE_CONVERTER_VERBS, std::size(ENABLE_CONVERTER_VERBS));
 }
 
 void QemuStream::OnGetStringLocked(const audio_proto::GetStringReq& req,

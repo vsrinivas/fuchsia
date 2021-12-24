@@ -5,9 +5,9 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/pwm.h>
 #include <soc/aml-a311d/a311d-pwm.h>
 
@@ -59,9 +59,9 @@ static pbus_dev_t pwm_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_PWM;
   dev.mmio_list = pwm_mmios;
-  dev.mmio_count = countof(pwm_mmios);
+  dev.mmio_count = std::size(pwm_mmios);
   dev.metadata_list = pwm_metadata;
-  dev.metadata_count = countof(pwm_metadata);
+  dev.metadata_count = std::size(pwm_metadata);
   return dev;
 }();
 

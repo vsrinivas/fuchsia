@@ -104,8 +104,7 @@ template <typename F>
 zx_status_t CompleteFifo(zx::fifo& fifo, uint32_t depth, F process_entry) {
   eth_fifo_entry_t entries[depth];
   size_t count;
-  if (zx_status_t status = fifo.read(sizeof(entries[0]), entries, countof(entries), &count);
-      status != ZX_OK) {
+  if (zx_status_t status = fifo.read(sizeof(*entries), entries, depth, &count); status != ZX_OK) {
     if (status == ZX_ERR_SHOULD_WAIT) {
       return ZX_OK;
     }

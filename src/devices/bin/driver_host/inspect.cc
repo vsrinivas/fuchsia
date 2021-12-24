@@ -37,7 +37,7 @@ zx_status_t DriverHostInspect::Serve(zx::channel remote, async_dispatcher_t* dis
 
 void DriverHostInspect::SetDeviceDefaultPowerStates(inspect::Node& parent) {
   auto power_states = parent.CreateChild("default_power_states");
-  for (uint8_t i = 0; i < countof(internal::kDeviceDefaultPowerStates); i++) {
+  for (uint8_t i = 0; i < std::size(internal::kDeviceDefaultPowerStates); i++) {
     const auto& info = internal::kDeviceDefaultPowerStates[i];
     auto& state = power_states_[i];
     state.emplace(power_states, info.state_id);
@@ -51,7 +51,7 @@ void DriverHostInspect::SetDeviceDefaultPowerStates(inspect::Node& parent) {
 
 void DriverHostInspect::SetDeviceDefaultPerfStates(inspect::Node& parent) {
   auto perf_states = parent.CreateChild("default_performance_states");
-  for (uint8_t i = 0; i < countof(internal::kDeviceDefaultPerfStates); i++) {
+  for (uint8_t i = 0; i < std::size(internal::kDeviceDefaultPerfStates); i++) {
     const auto& info = internal::kDeviceDefaultPerfStates[i];
     auto& state = performance_states_[i];
     state.emplace(perf_states, info.state_id);

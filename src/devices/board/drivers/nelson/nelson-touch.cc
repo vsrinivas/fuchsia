@@ -55,11 +55,11 @@ zx_status_t Nelson::TouchInit() {
       .vid = PDEV_VID_GOODIX,
       .did = PDEV_DID_GOODIX_GT6853,
       .boot_metadata_list = touch_boot_metadata,
-      .boot_metadata_count = countof(touch_boot_metadata),
+      .boot_metadata_count = std::size(touch_boot_metadata),
   };
   zx_status_t status =
       pbus_.AddComposite(&touch_dev, reinterpret_cast<uint64_t>(gt6853_touch_fragments),
-                         countof(gt6853_touch_fragments), "pdev");
+                         std::size(gt6853_touch_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "nelson_touch_init(gt6853): composite_device_add failed: %d", status);
     return status;
@@ -85,9 +85,9 @@ zx_status_t Nelson::TouchInitP1() {
 
     const composite_device_desc_t gt_comp_desc = {
         .props = props,
-        .props_count = countof(props),
+        .props_count = std::size(props),
         .fragments = gtx8x_touch_fragments,
-        .fragments_count = countof(gtx8x_touch_fragments),
+        .fragments_count = std::size(gtx8x_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = nullptr,
@@ -107,9 +107,9 @@ zx_status_t Nelson::TouchInitP1() {
 
     const composite_device_desc_t ft_comp_desc = {
         .props = props,
-        .props_count = countof(props),
+        .props_count = std::size(props),
         .fragments = ft3x27_touch_fragments,
-        .fragments_count = countof(ft3x27_touch_fragments),
+        .fragments_count = std::size(ft3x27_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = ft3x27_touch_metadata,

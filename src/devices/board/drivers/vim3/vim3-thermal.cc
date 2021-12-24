@@ -129,11 +129,11 @@ static constexpr pbus_dev_t thermal_dev_pll = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
   dev.mmio_list = thermal_mmios_pll;
-  dev.mmio_count = countof(thermal_mmios_pll);
+  dev.mmio_count = std::size(thermal_mmios_pll);
   dev.irq_list = thermal_irqs_pll;
-  dev.irq_count = countof(thermal_irqs_pll);
+  dev.irq_count = std::size(thermal_irqs_pll);
   dev.metadata_list = thermal_metadata_pll;
-  dev.metadata_count = countof(thermal_metadata_pll);
+  dev.metadata_count = std::size(thermal_metadata_pll);
   return dev;
 }();
 
@@ -144,11 +144,11 @@ static constexpr pbus_dev_t thermal_dev_ddr = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_THERMAL_DDR;
   dev.mmio_list = thermal_mmios_ddr;
-  dev.mmio_count = countof(thermal_mmios_ddr);
+  dev.mmio_count = std::size(thermal_mmios_ddr);
   dev.irq_list = thermal_irqs_ddr;
-  dev.irq_count = countof(thermal_irqs_ddr);
+  dev.irq_count = std::size(thermal_irqs_ddr);
   dev.metadata_list = thermal_metadata_ddr;
-  dev.metadata_count = countof(thermal_metadata_ddr);
+  dev.metadata_count = std::size(thermal_metadata_ddr);
   return dev;
 }();
 

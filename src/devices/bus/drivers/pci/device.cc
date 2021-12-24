@@ -43,7 +43,7 @@ static const zx_bind_inst_t sysmem_match[] = {
 };
 
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
+    {std::size(sysmem_match), sysmem_match},
 };
 
 namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
@@ -183,7 +183,7 @@ zx_status_t Device::CreateCompositeDevice() {
   };
 
   const device_fragment_part_t pci_fragment[] = {
-      {countof(pci_fragment_match), pci_fragment_match},
+      {std::size(pci_fragment_match), pci_fragment_match},
   };
 
   const zx_bind_inst_t acpi_fragment_match[] = {
@@ -193,22 +193,22 @@ zx_status_t Device::CreateCompositeDevice() {
   };
 
   const device_fragment_part_t acpi_fragment[] = {
-      {countof(acpi_fragment_match), acpi_fragment_match},
+      {std::size(acpi_fragment_match), acpi_fragment_match},
   };
 
   // These are laid out so that ACPI can be optionally included via the number
   // of fragments specified.
   const device_fragment_t fragments[] = {
-      {"pci", countof(pci_fragment), pci_fragment},
-      {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-      {"acpi", countof(acpi_fragment), acpi_fragment},
+      {"pci", std::size(pci_fragment), pci_fragment},
+      {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
+      {"acpi", std::size(acpi_fragment), acpi_fragment},
   };
 
   composite_device_desc_t composite_desc = {
       .props = pci_device_props,
-      .props_count = countof(pci_device_props),
+      .props_count = std::size(pci_device_props),
       .fragments = fragments,
-      .fragments_count = (has_acpi_) ? countof(fragments) : countof(fragments) - 1,
+      .fragments_count = (has_acpi_) ? std::size(fragments) : std::size(fragments) - 1,
       .primary_fragment = "pci",
       .spawn_colocated = false,
   };

@@ -35,9 +35,9 @@ static const pbus_dev_t canvas_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_CANVAS;
   dev.mmio_list = nelson_canvas_mmios;
-  dev.mmio_count = countof(nelson_canvas_mmios);
+  dev.mmio_count = std::size(nelson_canvas_mmios);
   dev.bti_list = nelson_canvas_btis;
-  dev.bti_count = countof(nelson_canvas_btis);
+  dev.bti_count = std::size(nelson_canvas_btis);
   return dev;
 }();
 

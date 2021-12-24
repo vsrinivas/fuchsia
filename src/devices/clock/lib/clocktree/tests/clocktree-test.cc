@@ -361,7 +361,7 @@ TEST(ClockMuxTest, TestReparentTrivial) {
   constexpr uint32_t kClkCount = 3;
 
   constexpr uint32_t parents[] = {kClkFirstParent, kClkSecondParent};
-  TestMuxClockTrivial t("trivial mux", kClkChild, parents, countof(parents));
+  TestMuxClockTrivial t("trivial mux", kClkChild, parents, std::size(parents));
   TestNullClock p1("parent 1", kClkFirstParent, kClkNoParent);
   TestNullClock p2("parent 2", kClkSecondParent, kClkNoParent);
 
@@ -407,7 +407,7 @@ TEST(ClockMuxTest, TestReparentEnableDisable) {
   constexpr uint32_t kClkCount = 3;
 
   constexpr uint32_t parents[] = {kClkFirstParent, kClkSecondParent};
-  TestMuxClockTrivial t("mux under test", kClkChild, parents, countof(parents));
+  TestMuxClockTrivial t("mux under test", kClkChild, parents, std::size(parents));
   TestGateClock p1("parent 1", kClkFirstParent, kClkNoParent);
   TestGateClock p2("parent 2", kClkSecondParent, kClkNoParent);
 
@@ -464,7 +464,7 @@ TEST(ClockMuxTest, TestReparentFail) {
   constexpr uint32_t kClkCount = 3;
 
   constexpr uint32_t parents[] = {kClkP1, kClkP2};
-  TestMuxClockFail child("child", kClkChild, parents, countof(parents));
+  TestMuxClockFail child("child", kClkChild, parents, std::size(parents));
   TestGateClock p1("first parent", kClkP1, kClkNoParent);
   TestGateClock p2("second parent", kClkP2, kClkNoParent);
 
@@ -512,7 +512,7 @@ TEST(ClockMuxTest, TestReparentMultiRef) {
   TestGateClock g2("g2", kClkG2, kClkNoParent);
   TestGateClock g3("g3", kClkG3, kClkG1);
   constexpr uint32_t parents[] = {kClkG1, kClkG2};
-  TestMuxClockTrivial m1("m1", kClkM1, parents, countof(parents));
+  TestMuxClockTrivial m1("m1", kClkM1, parents, std::size(parents));
 
   BaseClock* clocks[] = {&g1, &g2, &g3, &m1};
   BaseClock* leaves[] = {&m1, &g3};

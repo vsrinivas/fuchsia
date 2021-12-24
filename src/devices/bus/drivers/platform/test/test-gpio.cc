@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 
 #include "test.h"
@@ -37,7 +37,7 @@ zx_status_t TestBoard::GpioInit() {
   gpio_dev.pid = PDEV_PID_PBUS_TEST;
   gpio_dev.did = PDEV_DID_TEST_GPIO;
   gpio_dev.metadata_list = gpio_metadata;
-  gpio_dev.metadata_count = countof(gpio_metadata);
+  gpio_dev.metadata_count = std::size(gpio_metadata);
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {

@@ -98,15 +98,15 @@ static pbus_dev_t emmc_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
   dev.mmio_list = emmc_mmios;
-  dev.mmio_count = countof(emmc_mmios);
+  dev.mmio_count = std::size(emmc_mmios);
   dev.irq_list = emmc_irqs;
-  dev.irq_count = countof(emmc_irqs);
+  dev.irq_count = std::size(emmc_irqs);
   dev.bti_list = emmc_btis;
-  dev.bti_count = countof(emmc_btis);
+  dev.bti_count = std::size(emmc_btis);
   dev.metadata_list = emmc_metadata;
-  dev.metadata_count = countof(emmc_metadata);
+  dev.metadata_count = std::size(emmc_metadata);
   dev.boot_metadata_list = emmc_boot_metadata;
-  dev.boot_metadata_count = countof(emmc_boot_metadata);
+  dev.boot_metadata_count = std::size(emmc_boot_metadata);
   return dev;
 }();
 
@@ -128,7 +128,7 @@ zx_status_t Nelson::EmmcInit() {
   gpio_impl_.SetAltFunction(S905D3_EMMC_DS, S905D3_EMMC_DS_FN);
 
   auto status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(nelson_emmc_fragments),
-                                   countof(nelson_emmc_fragments), "pdev");
+                                   std::size(nelson_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d", __func__, status);
     return status;

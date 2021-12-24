@@ -88,7 +88,7 @@ zx_status_t acpi_osc_call(ACPI_HANDLE dev_obj, const char* uuid_str, uint64_t re
   objs[3].Buffer.Pointer = (uint8_t*)dwords_in;
 
   ACPI_OBJECT_LIST params = {};
-  params.Count = countof(objs);
+  params.Count = std::size(objs);
   params.Pointer = objs;
 
   // Have ACPI allocate the return buffer for us.

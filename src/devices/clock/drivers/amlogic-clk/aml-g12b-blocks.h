@@ -61,7 +61,7 @@ static constexpr meson_clk_gate_t g12b_clk_gates[] = {
     {.reg = kG12bHhiXtalDivnCntl, .bit = 12},  // G12B_CLK_25M
 };
 
-static_assert(g12b_clk::CLK_G12B_COUNT == countof(g12b_clk_gates),
+static_assert(g12b_clk::CLK_G12B_COUNT == std::size(g12b_clk_gates),
               "g12b_clk_gates[] and g12b_clk_gate_idx_t count mismatch");
 
 static meson_clk_msr_t g12b_clk_msr = {

@@ -21,14 +21,14 @@ static const zx_bind_inst_t power_impl_driver_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
 };
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(power_impl_driver_match), power_impl_driver_match},
+    {std::size(power_impl_driver_match), power_impl_driver_match},
 };
 zx_device_prop_t props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
 };
 
 constexpr device_fragment_t power_domain_1_fragments[] = {
-    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
+    {"power-impl", std::size(power_impl_fragment), power_impl_fragment},
 };
 static const power_domain_t power_domain_1[] = {
     {1},
@@ -41,13 +41,13 @@ static const device_metadata_t power_metadata_1[] = {{
 }};
 const composite_device_desc_t power_domain_1_desc = {
     .props = props,
-    .props_count = countof(props),
+    .props_count = std::size(props),
     .fragments = power_domain_1_fragments,
-    .fragments_count = countof(power_domain_1_fragments),
+    .fragments_count = std::size(power_domain_1_fragments),
     .primary_fragment = "power-impl",
     .spawn_colocated = true,
     .metadata_list = power_metadata_1,
-    .metadata_count = countof(power_metadata_1),
+    .metadata_count = std::size(power_metadata_1),
 };
 
 // Composite binding rules for power domain 3
@@ -56,12 +56,12 @@ static const zx_bind_inst_t parent_domain_match[] = {
     BI_MATCH_IF(EQ, BIND_POWER_DOMAIN, 1),
 };
 constexpr device_fragment_part_t parent_domain_fragment[] = {
-    {countof(parent_domain_match), parent_domain_match},
+    {std::size(parent_domain_match), parent_domain_match},
 };
 
 constexpr device_fragment_t power_domain_3_fragments[] = {
-    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
-    {"power-domain", countof(parent_domain_fragment), parent_domain_fragment},
+    {"power-impl", std::size(power_impl_fragment), power_impl_fragment},
+    {"power-domain", std::size(parent_domain_fragment), parent_domain_fragment},
 };
 static const power_domain_t power_domain_3[] = {
     {3},
@@ -74,13 +74,13 @@ static const device_metadata_t power_metadata_3[] = {{
 }};
 const composite_device_desc_t power_domain_3_desc = {
     .props = props,
-    .props_count = countof(props),
+    .props_count = std::size(props),
     .fragments = power_domain_3_fragments,
-    .fragments_count = countof(power_domain_3_fragments),
+    .fragments_count = std::size(power_domain_3_fragments),
     .primary_fragment = "power-impl",
     .spawn_colocated = true,
     .metadata_list = power_metadata_3,
-    .metadata_count = countof(power_metadata_3),
+    .metadata_count = std::size(power_metadata_3),
 };
 
 }  // namespace

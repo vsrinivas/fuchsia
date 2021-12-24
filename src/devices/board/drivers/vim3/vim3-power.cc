@@ -41,17 +41,17 @@ constexpr zx_bind_inst_t pwm_a_match[] = {
 };
 
 constexpr device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(pwm_ao_d_match), pwm_ao_d_match},
+    {std::size(pwm_ao_d_match), pwm_ao_d_match},
 };
 
 constexpr device_fragment_part_t pwm_a_fragment[] = {
-    {countof(pwm_a_match), pwm_a_match},
+    {std::size(pwm_a_match), pwm_a_match},
 };
 #define PWM_ID(x) #x
 #define PWM_FRAGMENT_NAME(x) ("pwm-" PWM_ID(x))
 constexpr device_fragment_t vreg_fragments[] = {
-    {PWM_FRAGMENT_NAME(A311D_PWM_AO_D), countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
-    {PWM_FRAGMENT_NAME(A311D_PWM_A), countof(pwm_a_fragment), pwm_a_fragment},
+    {PWM_FRAGMENT_NAME(A311D_PWM_AO_D), std::size(pwm_ao_d_fragment), pwm_ao_d_fragment},
+    {PWM_FRAGMENT_NAME(A311D_PWM_A), std::size(pwm_a_fragment), pwm_a_fragment},
 };
 #undef PWM_FRAGMENT_NAME
 #undef PWM_ID
@@ -81,16 +81,16 @@ constexpr zx_bind_inst_t vreg_pwm_a_match[] = {
 };
 
 constexpr device_fragment_part_t vreg_pwm_ao_d_fragment[] = {
-    {countof(vreg_pwm_ao_d_match), vreg_pwm_ao_d_match},
+    {std::size(vreg_pwm_ao_d_match), vreg_pwm_ao_d_match},
 };
 
 constexpr device_fragment_part_t vreg_pwm_a_fragment[] = {
-    {countof(vreg_pwm_a_match), vreg_pwm_a_match},
+    {std::size(vreg_pwm_a_match), vreg_pwm_a_match},
 };
 
 constexpr device_fragment_t power_impl_fragments[] = {
-    {"vreg-pwm-ao-d", countof(vreg_pwm_ao_d_fragment), vreg_pwm_ao_d_fragment},
-    {"vreg-pwm-a", countof(vreg_pwm_a_fragment), vreg_pwm_a_fragment},
+    {"vreg-pwm-ao-d", std::size(vreg_pwm_ao_d_fragment), vreg_pwm_ao_d_fragment},
+    {"vreg-pwm-a", std::size(vreg_pwm_a_fragment), vreg_pwm_a_fragment},
 };
 
 constexpr zx_bind_inst_t power_impl_driver_match[] = {
@@ -98,7 +98,7 @@ constexpr zx_bind_inst_t power_impl_driver_match[] = {
 };
 
 constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(power_impl_driver_match), power_impl_driver_match},
+    {std::size(power_impl_driver_match), power_impl_driver_match},
 };
 
 static const pbus_dev_t power_dev = []() {
@@ -115,7 +115,7 @@ zx_device_prop_t power_domain_arm_core_props[] = {
 };
 
 constexpr device_fragment_t power_domain_arm_core_fragments[] = {
-    {"power-impl", countof(power_impl_fragment), power_impl_fragment},
+    {"power-impl", std::size(power_impl_fragment), power_impl_fragment},
 };
 
 constexpr power_domain_t big_domain[] = {
@@ -132,13 +132,13 @@ constexpr device_metadata_t power_domain_big_core_metadata[] = {
 
 constexpr composite_device_desc_t power_domain_big_core_desc = {
     .props = power_domain_arm_core_props,
-    .props_count = countof(power_domain_arm_core_props),
+    .props_count = std::size(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
-    .fragments_count = countof(power_domain_arm_core_fragments),
+    .fragments_count = std::size(power_domain_arm_core_fragments),
     .primary_fragment = "power-impl",
     .spawn_colocated = true,
     .metadata_list = power_domain_big_core_metadata,
-    .metadata_count = countof(power_domain_big_core_metadata),
+    .metadata_count = std::size(power_domain_big_core_metadata),
 };
 
 constexpr power_domain_t little_domain[] = {
@@ -155,13 +155,13 @@ constexpr device_metadata_t power_domain_little_core_metadata[] = {
 
 constexpr composite_device_desc_t power_domain_little_core_desc = {
     .props = power_domain_arm_core_props,
-    .props_count = countof(power_domain_arm_core_props),
+    .props_count = std::size(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
-    .fragments_count = countof(power_domain_arm_core_fragments),
+    .fragments_count = std::size(power_domain_arm_core_fragments),
     .primary_fragment = "power-impl",
     .spawn_colocated = true,
     .metadata_list = power_domain_little_core_metadata,
-    .metadata_count = countof(power_domain_little_core_metadata),
+    .metadata_count = std::size(power_domain_little_core_metadata),
 };
 
 zx_device_prop_t fusb302_props[] = {
@@ -182,23 +182,23 @@ constexpr zx_bind_inst_t gpio_match[] = {
 };
 
 constexpr device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
+    {std::size(i2c_match), i2c_match},
 };
 
 constexpr device_fragment_part_t gpio_fragment[] = {
-    {countof(gpio_match), gpio_match},
+    {std::size(gpio_match), gpio_match},
 };
 
 constexpr device_fragment_t fusb302_fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"gpio", countof(gpio_fragment), gpio_fragment},
+    {"i2c", std::size(i2c_fragment), i2c_fragment},
+    {"gpio", std::size(gpio_fragment), gpio_fragment},
 };
 
 constexpr composite_device_desc_t fusb302_desc = {
     .props = fusb302_props,
-    .props_count = countof(fusb302_props),
+    .props_count = std::size(fusb302_props),
     .fragments = fusb302_fragments,
-    .fragments_count = countof(fusb302_fragments),
+    .fragments_count = std::size(fusb302_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = true,
 };
@@ -264,13 +264,13 @@ zx_status_t Vim3::PowerInit() {
   static composite_device_desc_t vreg_desc = []() {
     composite_device_desc_t dev = {};
     dev.props = vreg_props;
-    dev.props_count = countof(vreg_props);
+    dev.props_count = std::size(vreg_props);
     dev.fragments = vreg_fragments;
-    dev.fragments_count = countof(vreg_fragments);
+    dev.fragments_count = std::size(vreg_fragments);
     dev.primary_fragment = vreg_fragments[0].name;  // ???
     dev.spawn_colocated = true;
     dev.metadata_list = vreg_metadata;
-    dev.metadata_count = countof(vreg_metadata);
+    dev.metadata_count = std::size(vreg_metadata);
     return dev;
   }();
 
@@ -281,7 +281,7 @@ zx_status_t Vim3::PowerInit() {
   }
 
   st = pbus_.CompositeDeviceAdd(&power_dev, reinterpret_cast<uint64_t>(power_impl_fragments),
-                                countof(power_impl_fragments), nullptr);
+                                std::size(power_impl_fragments), nullptr);
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;

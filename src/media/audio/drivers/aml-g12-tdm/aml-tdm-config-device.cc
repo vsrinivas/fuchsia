@@ -118,7 +118,7 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
     ZX_ASSERT(!(metadata.mClockDivFactor % 2));  // mClock div factor must be divisable by 2.
     ZX_ASSERT(frame_rate == 8'000 || frame_rate == 16'000 || frame_rate == 32'000 ||
               frame_rate == 48'000 || frame_rate == 96'000);
-    static_assert(countof(AmlTdmConfigDevice::kSupportedFrameRates) == 5);
+    static_assert(std::size(AmlTdmConfigDevice::kSupportedFrameRates) == 5);
     ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[0] == 8'000);
     ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[1] == 16'000);
     ZX_ASSERT(AmlTdmConfigDevice::kSupportedFrameRates[2] == 32'000);

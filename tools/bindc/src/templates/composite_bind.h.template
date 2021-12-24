@@ -4,6 +4,11 @@
 
 #include <lib/ddk/binding_priv.h>
 
+#if !defined(countof) && defined(__cplusplus)
+#include <array>
+#define countof(x) std::size(x)
+#endif
+
 {fragment_definition}
 constexpr device_fragment_t {device_name}_fragments[] {{
   {fragment_list}

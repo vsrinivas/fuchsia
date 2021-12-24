@@ -69,13 +69,13 @@ constexpr device_metadata_t power_domain_big_core[] = {
 
 constexpr composite_device_desc_t power_domain_big_core_desc = {
     .props = power_domain_arm_core_props,
-    .props_count = countof(power_domain_arm_core_props),
+    .props_count = std::size(power_domain_arm_core_props),
     .fragments = luis_power_domain_fragments,
-    .fragments_count = countof(luis_power_domain_fragments),
+    .fragments_count = std::size(luis_power_domain_fragments),
     .primary_fragment = "power",
     .spawn_colocated = true,
     .metadata_list = power_domain_big_core,
-    .metadata_count = countof(power_domain_big_core),
+    .metadata_count = std::size(power_domain_big_core),
 };
 
 constexpr power_domain_t little_domain[] = {
@@ -92,13 +92,13 @@ constexpr device_metadata_t power_domain_little_core[] = {
 
 constexpr composite_device_desc_t power_domain_little_core_desc = {
     .props = power_domain_arm_core_props,
-    .props_count = countof(power_domain_arm_core_props),
+    .props_count = std::size(power_domain_arm_core_props),
     .fragments = luis_power_domain_fragments,
-    .fragments_count = countof(luis_power_domain_fragments),
+    .fragments_count = std::size(luis_power_domain_fragments),
     .primary_fragment = "power",
     .spawn_colocated = true,
     .metadata_list = power_domain_little_core,
-    .metadata_count = countof(power_domain_little_core),
+    .metadata_count = std::size(power_domain_little_core),
 };
 
 }  // namespace
@@ -110,7 +110,7 @@ static const pbus_dev_t power_dev = []() {
   dev.pid = PDEV_PID_LUIS;
   dev.did = PDEV_DID_AMLOGIC_POWER;
   dev.metadata_list = power_impl_metadata;
-  dev.metadata_count = countof(power_impl_metadata);
+  dev.metadata_count = std::size(power_impl_metadata);
   return dev;
 }();
 
@@ -145,13 +145,13 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = fragments,
       .fragments_count = fragments_count,
       .primary_fragment = "i2c",
       .spawn_colocated = true,
       .metadata_list = metadata,
-      .metadata_count = countof(metadata),
+      .metadata_count = std::size(metadata),
   };
 
   return DdkAddComposite(name, &comp_desc);
@@ -171,21 +171,21 @@ zx_status_t Sherlock::LuisPowerInit() {
   }
 
   st = LuisPowerPublishBuck("0p8_ee_buck", SHERLOCK_I2C_A0_0, 0x60, ee_buck_fragments,
-                            countof(ee_buck_fragments));
+                            std::size(ee_buck_fragments));
   if (st != ZX_OK) {
     zxlogf(ERROR, "Failed to publish sy8827 0P8_EE_BUCK device, st = %d", st);
     return st;
   }
 
   st = LuisPowerPublishBuck("cpu_a_buck", SHERLOCK_I2C_3, 0x60, cpu_a_buck_fragments,
-                            countof(cpu_a_buck_fragments));
+                            std::size(cpu_a_buck_fragments));
   if (st != ZX_OK) {
     zxlogf(ERROR, "Failed to publish sy8827 CPU_A_BUCK device, st = %d", st);
     return st;
   }
 
   st = pbus_.AddComposite(&power_dev, reinterpret_cast<uint64_t>(luis_power_impl_fragments),
-                          countof(luis_power_impl_fragments), "pdev");
+                          std::size(luis_power_impl_fragments), "pdev");
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;

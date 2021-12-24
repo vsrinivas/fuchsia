@@ -28,7 +28,7 @@ class AcpiClientTest : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_OK(loop_.StartThread("acpi-client-test-thread"));
-    ASSERT_BYTES_EQ(kNhltUuid.bytes, kNhltUuidRaw, countof(kNhltUuidRaw));
+    ASSERT_BYTES_EQ(kNhltUuid.bytes, kNhltUuidRaw, std::size(kNhltUuidRaw));
 
     server_.SetEvaluateObject([this](MockAcpiDevice::EvaluateObjectRequestView request,
                                      MockAcpiDevice::EvaluateObjectCompleter::Sync &sync) {
@@ -38,7 +38,7 @@ class AcpiClientTest : public zxtest::Test {
       auto &params = request->parameters;
 
       ASSERT_TRUE(params[0].is_buffer_val());
-      ASSERT_BYTES_EQ(params[0].buffer_val().data(), kNhltUuidRaw, countof(kNhltUuidRaw));
+      ASSERT_BYTES_EQ(params[0].buffer_val().data(), kNhltUuidRaw, std::size(kNhltUuidRaw));
 
       ASSERT_TRUE(params[1].is_integer_val());
       ASSERT_EQ(params[1].integer_val(), 1);

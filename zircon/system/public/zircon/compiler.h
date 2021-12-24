@@ -282,7 +282,7 @@
 // Return the number of elements in the given C-style array.
 //
 // TODO: add type check
-#if !defined(countof)
+#if !defined(countof) && !defined(__cplusplus)
 #define countof(a) (sizeof(a) / sizeof((a)[0]))
 #endif
 

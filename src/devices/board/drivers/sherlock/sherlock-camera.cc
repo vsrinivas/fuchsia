@@ -61,11 +61,11 @@ static pbus_dev_t ge2d_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_GE2D;
   dev.mmio_list = ge2d_mmios;
-  dev.mmio_count = countof(ge2d_mmios);
+  dev.mmio_count = std::size(ge2d_mmios);
   dev.bti_list = ge2d_btis;
-  dev.bti_count = countof(ge2d_btis);
+  dev.bti_count = std::size(ge2d_btis);
   dev.irq_list = ge2d_irqs;
-  dev.irq_count = countof(ge2d_irqs);
+  dev.irq_count = std::size(ge2d_irqs);
   return dev;
 }();
 
@@ -105,11 +105,11 @@ static pbus_dev_t gdc_dev = []() {
   dev.pid = PDEV_PID_GDC;
   dev.did = PDEV_DID_ARM_MALI_IV010;
   dev.mmio_list = gdc_mmios;
-  dev.mmio_count = countof(gdc_mmios);
+  dev.mmio_count = std::size(gdc_mmios);
   dev.bti_list = gdc_btis;
-  dev.bti_count = countof(gdc_btis);
+  dev.bti_count = std::size(gdc_btis);
   dev.irq_list = gdc_irqs;
-  dev.irq_count = countof(gdc_irqs);
+  dev.irq_count = std::size(gdc_irqs);
   return dev;
 }();
 
@@ -159,11 +159,11 @@ static pbus_dev_t isp_dev = []() {
   dev.pid = PDEV_PID_ARM_ISP;
   dev.did = PDEV_DID_ARM_MALI_IV009;
   dev.mmio_list = isp_mmios;
-  dev.mmio_count = countof(isp_mmios);
+  dev.mmio_count = std::size(isp_mmios);
   dev.bti_list = isp_btis;
-  dev.bti_count = countof(isp_btis);
+  dev.bti_count = std::size(isp_btis);
   dev.irq_list = isp_irqs;
-  dev.irq_count = countof(isp_irqs);
+  dev.irq_count = std::size(isp_irqs);
   return dev;
 }();
 
@@ -218,11 +218,11 @@ static const pbus_dev_t mipi_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_MIPI_CSI;
   dev.mmio_list = mipi_mmios;
-  dev.mmio_count = countof(mipi_mmios);
+  dev.mmio_count = std::size(mipi_mmios);
   dev.bti_list = mipi_btis;
-  dev.bti_count = countof(mipi_btis);
+  dev.bti_count = std::size(mipi_btis);
   dev.irq_list = mipi_irqs;
-  dev.irq_count = countof(mipi_irqs);
+  dev.irq_count = std::size(mipi_irqs);
   return dev;
 }();
 
@@ -253,21 +253,21 @@ zx_status_t Sherlock::CameraInit() {
 
   status =
       pbus_.AddComposite(&sensor_dev_sherlock, reinterpret_cast<uint64_t>(imx227_sensor_fragments),
-                         countof(imx227_sensor_fragments), "mipicsi");
+                         std::size(imx227_sensor_fragments), "mipicsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.AddComposite(&gdc_dev, reinterpret_cast<uint64_t>(gdc_fragments),
-                              countof(gdc_fragments), "camera-sensor");
+                              std::size(gdc_fragments), "camera-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   status = pbus_.AddComposite(&ge2d_dev, reinterpret_cast<uint64_t>(ge2d_fragments),
-                              countof(ge2d_fragments), "camera-sensor");
+                              std::size(ge2d_fragments), "camera-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d", __func__, status);
     return status;
@@ -275,7 +275,7 @@ zx_status_t Sherlock::CameraInit() {
 
   // Add a composite device for ARM ISP
   status = pbus_.AddComposite(&isp_dev, reinterpret_cast<uint64_t>(isp_fragments),
-                              countof(isp_fragments), "camera-sensor");
+                              std::size(isp_fragments), "camera-sensor");
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d", __func__, status);
@@ -288,9 +288,9 @@ zx_status_t Sherlock::CameraInit() {
 
   const composite_device_desc_t camera_comp_desc = {
       .props = camera_controller_props,
-      .props_count = countof(camera_controller_props),
+      .props_count = std::size(camera_controller_props),
       .fragments = camera_controller_fragments,
-      .fragments_count = countof(camera_controller_fragments),
+      .fragments_count = std::size(camera_controller_fragments),
       .primary_fragment = "isp",
       .spawn_colocated = true,
       .metadata_list = nullptr,

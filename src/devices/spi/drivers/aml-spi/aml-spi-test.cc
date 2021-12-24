@@ -110,7 +110,7 @@ class FakeDdkSpi : public fake_ddk::Bind {
         .unbind_op = args->ops->unbind,
     });
 
-    if (children_.size() == countof(kSpiConfig)) {
+    if (children_.size() == std::size(kSpiConfig)) {
       add_called_ = true;
     }
 

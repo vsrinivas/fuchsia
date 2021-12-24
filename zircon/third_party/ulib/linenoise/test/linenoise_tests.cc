@@ -112,7 +112,7 @@ std::string ReadString(MultiprocessInfo* child) {
   char buf[4096];
   ssize_t bytes_read = read(child->stdout_read.get(), buf, sizeof(buf));
   ZX_ASSERT(bytes_read > 0);
-  ZX_ASSERT(bytes_read < static_cast<ssize_t>(countof(buf) - 1));
+  ZX_ASSERT(bytes_read < static_cast<ssize_t>(std::size(buf) - 1));
   buf[bytes_read] = 0;
   return std::string(buf);
 }

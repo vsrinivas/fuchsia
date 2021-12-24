@@ -56,13 +56,13 @@ zx_status_t Nelson::ButtonsInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = nelson_buttons_fragments,
-      .fragments_count = countof(nelson_buttons_fragments),
+      .fragments_count = std::size(nelson_buttons_fragments),
       .primary_fragment = "volume-up",  // ???
       .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,
-      .metadata_count = countof(available_buttons_metadata),
+      .metadata_count = std::size(available_buttons_metadata),
   };
 
   zx_status_t status = DdkAddComposite("nelson-buttons", &comp_desc);

@@ -27,7 +27,7 @@ inline constexpr const char* kWatcherPaths[] = {
     "/dev/class/nand",
 };
 
-static_assert(countof(kWatcherPaths) == WatcherType::kWatcherTypeMax,
+static_assert(std::size(kWatcherPaths) == WatcherType::kWatcherTypeMax,
               "Each watcher type must have a path");
 
 class Watcher {

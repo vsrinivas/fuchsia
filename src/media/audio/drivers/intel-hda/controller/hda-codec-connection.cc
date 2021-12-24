@@ -22,11 +22,11 @@
 namespace audio {
 namespace intel_hda {
 
-#define SET_DEVICE_PROP(_prop, _value)                                               \
-  do {                                                                               \
-    static_assert(PROP_##_prop < countof(dev_props_), "Invalid Device Property ID"); \
-    dev_props_[PROP_##_prop].id = BIND_IHDA_CODEC_##_prop;                           \
-    dev_props_[PROP_##_prop].value = (_value);                                       \
+#define SET_DEVICE_PROP(_prop, _value)                                                             \
+  do {                                                                                             \
+    static_assert(PROP_##_prop < std::size(decltype(dev_props_){}), "Invalid Device Property ID"); \
+    dev_props_[PROP_##_prop].id = BIND_IHDA_CODEC_##_prop;                                         \
+    dev_props_[PROP_##_prop].value = (_value);                                                     \
   } while (false)
 
 HdaCodecConnection::ProbeCommandListEntry HdaCodecConnection::PROBE_COMMANDS[] = {
@@ -91,7 +91,7 @@ fbl::RefPtr<HdaCodecConnection> HdaCodecConnection::Create(IntelHDAController& c
 zx_status_t HdaCodecConnection::Startup() {
   ZX_DEBUG_ASSERT(state_ == State::PROBING);
 
-  for (size_t i = 0; i < countof(PROBE_COMMANDS); ++i) {
+  for (size_t i = 0; i < std::size(PROBE_COMMANDS); ++i) {
     CodecCommand cmd(id(), 0u, PROBE_COMMANDS[i].verb);
     auto job = CodecCmdJobAllocator::New(cmd);
 
@@ -132,7 +132,7 @@ void HdaCodecConnection::ProcessSolicitedResponse(const CodecResponse& resp,
     // Are we still in the PROBING stage of things?  If so, this job should
     // have no response channel assigned to it, and we should still be
     // waiting for responses from the codec to complete the initial probe.
-    ZX_DEBUG_ASSERT(probe_rx_ndx_ < countof(PROBE_COMMANDS));
+    ZX_DEBUG_ASSERT(probe_rx_ndx_ < std::size(PROBE_COMMANDS));
 
     const auto& cmd = PROBE_COMMANDS[probe_rx_ndx_];
 
@@ -215,7 +215,7 @@ zx_status_t HdaCodecConnection::PublishDevice() {
   args.proto_id = ZX_PROTOCOL_IHDA_CODEC;
   args.proto_ops = &CODEC_PROTO_THUNKS;
   args.props = dev_props_;
-  args.prop_count = countof(dev_props_);
+  args.prop_count = std::size(dev_props_);
 
   // Publish the device.
   zx_status_t res = device_add(controller_.dev_node(), &args, &dev_node_);

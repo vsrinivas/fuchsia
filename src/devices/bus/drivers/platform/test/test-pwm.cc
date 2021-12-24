@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/pwm.h>
 #include <soc/aml-t931/t931-pwm.h>
 
@@ -36,7 +36,7 @@ zx_status_t TestBoard::PwmInit() {
   pwm_dev.pid = PDEV_PID_PBUS_TEST;
   pwm_dev.did = PDEV_DID_TEST_PWM;
   pwm_dev.metadata_list = pwm_metadata;
-  pwm_dev.metadata_count = countof(pwm_metadata);
+  pwm_dev.metadata_count = std::size(pwm_metadata);
 
   zx_status_t status = pbus_.DeviceAdd(&pwm_dev);
   if (status != ZX_OK) {

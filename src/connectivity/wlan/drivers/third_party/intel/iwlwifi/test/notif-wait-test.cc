@@ -49,7 +49,7 @@ class NotifWaitTest : public ::zxtest::Test {
 static void helper_create_fake_cmd(struct iwl_notif_wait_data* wait_data,
                                    struct iwl_notification_wait* wait_entry, uint16_t fake_cmd) {
   uint16_t cmds[] = {fake_cmd};
-  iwl_init_notification_wait(wait_data, wait_entry, cmds, countof(cmds), nullptr, nullptr);
+  iwl_init_notification_wait(wait_data, wait_entry, cmds, std::size(cmds), nullptr, nullptr);
 }
 
 // Helper function for test case init. This would create a wait_entry for fake cmd 1.
@@ -220,7 +220,7 @@ static void helper_create_fn(struct iwl_notif_wait_data* wait_data,
   iwl_notification_wait_init(wait_data);
 
   uint16_t cmds[] = {FAKE_CMD_1};
-  iwl_init_notification_wait(wait_data, wait_entry, cmds, countof(cmds), fn, fn_data);
+  iwl_init_notification_wait(wait_data, wait_entry, cmds, std::size(cmds), fn, fn_data);
 }
 
 TEST_F(NotifWaitTest, FnReturnsTrue) {

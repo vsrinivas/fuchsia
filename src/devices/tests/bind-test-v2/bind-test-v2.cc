@@ -97,7 +97,7 @@ TEST_F(BindCompilerV2Test, ValidDriver) {
       0x01, 0x01, 0x01, 0x0,  0x0,  0x0, 0x01, 0x50, 0x0, 0x0, 0x0,  // Device protocol condition
   };
 
-  ASSERT_EQ(countof(expected_bytecode), bytecode.size());
+  ASSERT_EQ(std::size(expected_bytecode), bytecode.size());
   for (size_t i = 0; i < bytecode.size(); i++) {
     ASSERT_EQ(expected_bytecode[i], bytecode[i]);
   }
@@ -129,7 +129,7 @@ TEST_F(BindCompilerV2Test, ValidDevice) {
       {BIND_PCI_DID, 0, 1234},
   };
 
-  ASSERT_EQ(props.size(), countof(expected_props));
+  ASSERT_EQ(props.size(), std::size(expected_props));
   for (size_t i = 0; i < props.size(); i++) {
     ASSERT_EQ(props[i].id, expected_props[i].id);
     ASSERT_EQ(props[i].reserved, expected_props[i].reserved);

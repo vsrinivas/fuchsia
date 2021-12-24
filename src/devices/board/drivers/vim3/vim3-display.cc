@@ -67,11 +67,11 @@ static pbus_dev_t display_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_DISPLAY;
   dev.mmio_list = display_mmios;
-  dev.mmio_count = countof(display_mmios);
+  dev.mmio_count = std::size(display_mmios);
   dev.irq_list = display_irqs;
-  dev.irq_count = countof(display_irqs);
+  dev.irq_count = std::size(display_irqs);
   dev.bti_list = display_btis;
-  dev.bti_count = countof(display_btis);
+  dev.bti_count = std::size(display_btis);
   return dev;
 }();
 
@@ -95,31 +95,31 @@ static const zx_bind_inst_t hdmi_match[] = {
 };
 
 static const device_fragment_part_t hpd_gpio_fragment[] = {
-    {countof(hpd_gpio_match), hpd_gpio_match},
+    {std::size(hpd_gpio_match), hpd_gpio_match},
 };
 
 static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
+    {std::size(sysmem_match), sysmem_match},
 };
 
 static const device_fragment_part_t canvas_fragment[] = {
-    {countof(canvas_match), canvas_match},
+    {std::size(canvas_match), canvas_match},
 };
 
 static const device_fragment_part_t hdmi_fragment[] = {
-    {countof(hdmi_match), hdmi_match},
+    {std::size(hdmi_match), hdmi_match},
 };
 
 static const device_fragment_t fragments[] = {
-    {"gpio", countof(hpd_gpio_fragment), hpd_gpio_fragment},
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-    {"canvas", countof(canvas_fragment), canvas_fragment},
-    {"hdmi", countof(hdmi_fragment), hdmi_fragment},
+    {"gpio", std::size(hpd_gpio_fragment), hpd_gpio_fragment},
+    {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
+    {"canvas", std::size(canvas_fragment), canvas_fragment},
+    {"hdmi", std::size(hdmi_fragment), hdmi_fragment},
 };
 
 zx_status_t Vim3::DisplayInit() {
   auto status = pbus_.CompositeDeviceAdd(&display_dev, reinterpret_cast<uint64_t>(fragments),
-                                         countof(fragments), nullptr);
+                                         std::size(fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

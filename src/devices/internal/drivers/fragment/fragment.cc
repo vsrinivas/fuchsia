@@ -469,7 +469,7 @@ zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       i2c_op_t i2c_ops[I2C_MAX_RW_OPS];
       auto* rpc_ops = reinterpret_cast<const I2cProxyOp*>(&req[1]);
       auto op_count = req->op_count;
-      if (op_count > countof(i2c_ops)) {
+      if (op_count > std::size(i2c_ops)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
       }
       auto* write_buf = reinterpret_cast<const uint8_t*>(&rpc_ops[op_count]);

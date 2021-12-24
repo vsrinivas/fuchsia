@@ -23,7 +23,7 @@
 class SpiFlashTest : public zxtest::Test {
  public:
   SpiFlashTest()
-      : region_(registers_, 4, countof(registers_)), fake_parent_(MockDevice::FakeRootParent()) {}
+      : region_(registers_, 4, std::size(registers_)), fake_parent_(MockDevice::FakeRootParent()) {}
   void SetUp() override {
     cmd_handler_thread_ = std::thread(&SpiFlashTest::CmdThread, this);
 
@@ -302,7 +302,7 @@ TEST_F(SpiFlashTest, TestWriteBytesEndsOn3Bytes) {
 TEST_F(SpiFlashTest, TestWriteBytesMultiBurst) {
   ddk::NandProtocolClient nand(device_);
   uint8_t to_write[67] = {0};
-  memset(to_write, 0x17, countof(to_write));
+  memset(to_write, 0x17, std::size(to_write));
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(sizeof(to_write), 0, &vmo));
   vmo.write(to_write, 0, sizeof(to_write));
@@ -322,8 +322,8 @@ TEST_F(SpiFlashTest, TestWriteBytesMultiBurst) {
       ASSERT_BYTES_EQ(data, to_write, 64);
       first = false;
     } else {
-      ASSERT_EQ(ctrl.fdbc() + 1, countof(to_write) - 64);
-      ASSERT_BYTES_EQ(data, &to_write, countof(to_write) - 64);
+      ASSERT_EQ(ctrl.fdbc() + 1, std::size(to_write) - 64);
+      ASSERT_BYTES_EQ(data, &to_write, std::size(to_write) - 64);
     }
 
     ctrl.set_h_scip(0).set_fdone(1);

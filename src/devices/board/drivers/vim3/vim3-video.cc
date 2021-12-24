@@ -72,16 +72,16 @@ zx_status_t Vim3::VideoInit() {
   video_dev.pid = PDEV_PID_AMLOGIC_A311D;
   video_dev.did = PDEV_DID_AMLOGIC_VIDEO;
   video_dev.mmio_list = vim_video_mmios;
-  video_dev.mmio_count = countof(vim_video_mmios);
+  video_dev.mmio_count = std::size(vim_video_mmios);
   video_dev.irq_list = vim_video_irqs;
-  video_dev.irq_count = countof(vim_video_irqs);
+  video_dev.irq_count = std::size(vim_video_irqs);
   video_dev.bti_list = vim_video_btis;
-  video_dev.bti_count = countof(vim_video_btis);
+  video_dev.bti_count = std::size(vim_video_btis);
 
   zx_status_t status;
 
   if ((status = pbus_.AddComposite(&video_dev, reinterpret_cast<uint64_t>(vim3_video_fragments),
-                                   countof(vim3_video_fragments), "pdev")) != ZX_OK) {
+                                   std::size(vim3_video_fragments), "pdev")) != ZX_OK) {
     zxlogf(ERROR, "VideoInit: CompositeDeviceAdd() failed for video: %d", status);
     return status;
   }

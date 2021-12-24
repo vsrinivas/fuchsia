@@ -59,7 +59,7 @@ const FirmwareEntry kFirmwareEntries[] = {
     },
 };
 
-const size_t kNumFirmwareEntries = countof(kFirmwareEntries);
+const size_t kNumFirmwareEntries = std::size(kFirmwareEntries);
 
 class FakeFtDevice : public fake_i2c::FakeI2c {
  public:

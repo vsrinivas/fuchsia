@@ -77,7 +77,7 @@ TEST_F(ChromiumosEcCoreTest, TestBuildInfoInspect) {
         char response[] = "Build info for the EC";
         completer.ReplySuccess(EcStatus::kSuccess,
                                fidl::VectorView<uint8_t>::FromExternal(
-                                   reinterpret_cast<uint8_t*>(response), countof(response) - 1));
+                                   reinterpret_cast<uint8_t*>(response), std::size(response) - 1));
       });
 
   InitDevice();

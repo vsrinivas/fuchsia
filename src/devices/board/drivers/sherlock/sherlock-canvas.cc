@@ -35,9 +35,9 @@ constexpr pbus_dev_t canvas_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_CANVAS;
   dev.mmio_list = sherlock_canvas_mmios;
-  dev.mmio_count = countof(sherlock_canvas_mmios);
+  dev.mmio_count = std::size(sherlock_canvas_mmios);
   dev.bti_list = sherlock_canvas_btis;
-  dev.bti_count = countof(sherlock_canvas_btis);
+  dev.bti_count = std::size(sherlock_canvas_btis);
   return dev;
 }();
 

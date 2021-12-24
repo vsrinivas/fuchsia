@@ -172,10 +172,10 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
       out->sharable = irq->Shareable;
       out->wake_capable = irq->WakeCapable;
       out->pin_count = irq->InterruptCount;
-      if (irq->InterruptCount > countof(out->pins)) {
+      if (irq->InterruptCount > std::size(out->pins)) {
         return ZX_ERR_OUT_OF_RANGE;
       }
-      for (uint8_t i = 0; (i < irq->InterruptCount) && (i < countof(out->pins)); i++) {
+      for (uint8_t i = 0; (i < irq->InterruptCount) && (i < std::size(out->pins)); i++) {
         out->pins[i] = irq->Interrupts[i];
       }
       break;
@@ -187,10 +187,10 @@ zx_status_t resource_parse_irq(ACPI_RESOURCE* res, resource_irq_t* out) {
       out->sharable = irq->Shareable;
       out->wake_capable = irq->WakeCapable;
       out->pin_count = irq->InterruptCount;
-      if (irq->InterruptCount > countof(out->pins)) {
+      if (irq->InterruptCount > std::size(out->pins)) {
         return ZX_ERR_OUT_OF_RANGE;
       }
-      for (uint8_t i = 0; (i < irq->InterruptCount) && (i < countof(out->pins)); i++) {
+      for (uint8_t i = 0; (i < irq->InterruptCount) && (i < std::size(out->pins)); i++) {
         out->pins[i] = irq->Interrupts[i];
       }
       break;

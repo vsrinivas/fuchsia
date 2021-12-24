@@ -93,9 +93,9 @@ static pbus_dev_t eth_board_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_ETH;
   dev.mmio_list = eth_board_mmios;
-  dev.mmio_count = countof(eth_board_mmios);
+  dev.mmio_count = std::size(eth_board_mmios);
   dev.metadata_list = eth_board_metadata;
-  dev.metadata_count = countof(eth_board_metadata);
+  dev.metadata_count = std::size(eth_board_metadata);
   return dev;
 }();
 
@@ -105,15 +105,15 @@ static pbus_dev_t dwmac_dev = []() {
   dev.vid = PDEV_VID_DESIGNWARE;
   dev.did = PDEV_DID_DESIGNWARE_ETH_MAC;
   dev.mmio_list = eth_mac_mmios;
-  dev.mmio_count = countof(eth_mac_mmios);
+  dev.mmio_count = std::size(eth_mac_mmios);
   dev.irq_list = eth_mac_irqs;
-  dev.irq_count = countof(eth_mac_irqs);
+  dev.irq_count = std::size(eth_mac_irqs);
   dev.bti_list = eth_mac_btis;
-  dev.bti_count = countof(eth_mac_btis);
+  dev.bti_count = std::size(eth_mac_btis);
   dev.metadata_list = eth_mac_device_metadata;
-  dev.metadata_count = countof(eth_mac_device_metadata);
+  dev.metadata_count = std::size(eth_mac_device_metadata);
   dev.boot_metadata_list = eth_mac_metadata;
-  dev.boot_metadata_count = countof(eth_mac_metadata);
+  dev.boot_metadata_count = std::size(eth_mac_metadata);
   return dev;
 }();
 
@@ -129,15 +129,15 @@ static const zx_bind_inst_t gpio_int_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, VIM3_ETH_MAC_INTR),
 };
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
+    {std::size(i2c_match), i2c_match},
 };
 
 static const device_fragment_part_t gpio_int_fragment[] = {
-    {countof(gpio_int_match), gpio_int_match},
+    {std::size(gpio_int_match), gpio_int_match},
 };
 static const device_fragment_t eth_fragments[] = {
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"gpio-int", countof(gpio_int_fragment), gpio_int_fragment},
+    {"i2c", std::size(i2c_fragment), i2c_fragment},
+    {"gpio-int", std::size(gpio_int_fragment), gpio_int_fragment},
 };
 
 // Composite binding rules for dwmac.

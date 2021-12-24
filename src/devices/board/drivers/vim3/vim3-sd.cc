@@ -62,13 +62,13 @@ zx_status_t Vim3::SdInit() {
   sd_dev.pid = PDEV_PID_GENERIC;
   sd_dev.did = PDEV_DID_AMLOGIC_SDMMC_B;
   sd_dev.mmio_list = sd_mmios;
-  sd_dev.mmio_count = countof(sd_mmios);
+  sd_dev.mmio_count = std::size(sd_mmios);
   sd_dev.irq_list = sd_irqs;
-  sd_dev.irq_count = countof(sd_irqs);
+  sd_dev.irq_count = std::size(sd_irqs);
   sd_dev.bti_list = sd_btis;
-  sd_dev.bti_count = countof(sd_btis);
+  sd_dev.bti_count = std::size(sd_btis);
   sd_dev.metadata_list = sd_metadata;
-  sd_dev.metadata_count = countof(sd_metadata);
+  sd_dev.metadata_count = std::size(sd_metadata);
 
   gpio_impl_.SetAltFunction(A311D_GPIOC(0), A311D_GPIOC_0_SDCARD_D0_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOC(1), A311D_GPIOC_1_SDCARD_D1_FN);

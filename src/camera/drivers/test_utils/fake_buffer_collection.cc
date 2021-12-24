@@ -82,7 +82,7 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
     buffer.vmo = ZX_HANDLE_INVALID;
   }
 
-  if (bti_handle == ZX_HANDLE_INVALID || num_buffers >= countof(buffer_collection.buffers)) {
+  if (bti_handle == ZX_HANDLE_INVALID || num_buffers >= std::size(buffer_collection.buffers)) {
     return ZX_ERR_INVALID_ARGS;
   }
   fuchsia_sysmem_ImageFormat_2 temp_image_format;

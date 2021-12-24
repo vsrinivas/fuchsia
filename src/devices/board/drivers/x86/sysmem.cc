@@ -44,9 +44,9 @@ static const pbus_dev_t sysmem_dev = [] {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_SYSMEM;
   dev.bti_list = sysmem_btis;
-  dev.bti_count = countof(sysmem_btis);
+  dev.bti_count = std::size(sysmem_btis);
   dev.metadata_list = sysmem_metadata_list;
-  dev.metadata_count = countof(sysmem_metadata_list);
+  dev.metadata_count = std::size(sysmem_metadata_list);
   return dev;
 }();
 

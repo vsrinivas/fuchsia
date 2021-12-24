@@ -111,9 +111,9 @@ zx_status_t Astro::RegistersInit() {
     dev.pid = PDEV_PID_GENERIC;
     dev.did = PDEV_DID_REGISTERS;
     dev.mmio_list = registers_mmios;
-    dev.mmio_count = countof(registers_mmios);
+    dev.mmio_count = std::size(registers_mmios);
     dev.metadata_list = registers_metadata;
-    dev.metadata_count = countof(registers_metadata);
+    dev.metadata_count = std::size(registers_metadata);
     return dev;
   }();
 

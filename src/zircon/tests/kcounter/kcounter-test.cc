@@ -111,7 +111,7 @@ TEST(Counters, CmdlineNormalSuccess) {
 
   KcounterCmdline cmdline;
   ASSERT_TRUE(
-      kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, /*err=*/nullptr, &cmdline));
+      kcounter_parse_cmdline(static_cast<int>(std::size(argv)), argv, /*err=*/nullptr, &cmdline));
   EXPECT_FALSE(cmdline.help);
   EXPECT_FALSE(cmdline.list);
   EXPECT_FALSE(cmdline.terse);
@@ -127,7 +127,7 @@ TEST(Counters, CmdlineFailListAndTerse) {
   char errbuf[2048];
   FILE* err = fmemopen(errbuf, sizeof(errbuf), "w");
   ASSERT_TRUE(err);
-  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, err, &cmdline));
+  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(std::size(argv)), argv, err, &cmdline));
   fclose(err);
   ASSERT_TRUE(strstr(errbuf, "--list, --terse"));
   ASSERT_TRUE(strstr(errbuf, "Usage: self.exe"));
@@ -140,7 +140,7 @@ TEST(Counters, CmdlineFailTerseAndVerbose) {
   char errbuf[2048];
   FILE* err = fmemopen(errbuf, sizeof(errbuf), "w");
   ASSERT_TRUE(err);
-  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, err, &cmdline));
+  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(std::size(argv)), argv, err, &cmdline));
   fclose(err);
   ASSERT_TRUE(strstr(errbuf, "--terse, and --verbose are mutually exclusive"));
 }
@@ -152,7 +152,7 @@ TEST(Counters, CmdlineFailListAndWatch) {
   char errbuf[2048];
   FILE* err = fmemopen(errbuf, sizeof(errbuf), "w");
   ASSERT_TRUE(err);
-  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(countof(argv)), argv, err, &cmdline));
+  ASSERT_FALSE(kcounter_parse_cmdline(static_cast<int>(std::size(argv)), argv, err, &cmdline));
   fclose(err);
   ASSERT_TRUE(strstr(errbuf, "--list and --watch are mutually exclusive"));
 }

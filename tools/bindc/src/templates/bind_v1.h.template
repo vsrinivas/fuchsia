@@ -4,6 +4,11 @@
 
 #include <lib/ddk/binding_priv.h>
 
+#if !defined(countof) && defined(__cplusplus)
+#include <array>
+#define countof(x) std::size(x)
+#endif
+
 // clang-format off
 #define ZIRCON_DRIVER(Driver, Ops, VendorName, Version) \
   ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, {bind_count}) {binding} \

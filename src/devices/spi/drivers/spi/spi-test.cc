@@ -203,7 +203,7 @@ class SpiDeviceTest : public zxtest::Test {
 
     parent_->AddProtocol(ZX_PROTOCOL_SPI_IMPL, spi_impl_.ops(), &spi_impl_);
 
-    SetSpiChannelMetadata(kSpiChannels, countof(kSpiChannels));
+    SetSpiChannelMetadata(kSpiChannels, std::size(kSpiChannels));
     parent_->SetMetadata(DEVICE_METADATA_PRIVATE, &kTestBusId, sizeof(kTestBusId));
   }
 
@@ -418,7 +418,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
     auto result = cs1_client->ReceiveVector_Sync(sizeof(test_data));
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
-    ASSERT_EQ(result->data.count(), countof(test_data));
+    ASSERT_EQ(result->data.count(), std::size(test_data));
     EXPECT_BYTES_EQ(result->data.data(), test_data, sizeof(test_data));
   }
 
@@ -429,7 +429,7 @@ TEST_F(SpiDeviceTest, SpiFidlVectorTest) {
     auto result = cs0_client->ExchangeVector_Sync(tx_buffer);
     ASSERT_OK(result.status());
     EXPECT_OK(result->status);
-    ASSERT_EQ(result->rxdata.count(), countof(test_data));
+    ASSERT_EQ(result->rxdata.count(), std::size(test_data));
     EXPECT_BYTES_EQ(result->rxdata.data(), test_data, sizeof(test_data));
   }
 

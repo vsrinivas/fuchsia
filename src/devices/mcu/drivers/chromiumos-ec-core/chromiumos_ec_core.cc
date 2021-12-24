@@ -139,7 +139,7 @@ void ChromiumosEcCore::DdkInit(ddk::InitTxn txn) {
 
             features_ = *features;
             std::string feature_str;
-            for (size_t i = 0; i < countof(kEcFeatureNames); i++) {
+            for (size_t i = 0; i < std::size(kEcFeatureNames); i++) {
               if (HasFeature(i)) {
                 if (!feature_str.empty()) {
                   feature_str += ", ";

@@ -241,8 +241,8 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
 
 TEST(HidButtonsTest, DirectButtonBind) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_direct, countof(gpios_direct), buttons_direct,
-                            countof(buttons_direct)));
+  EXPECT_OK(device.BindTest(gpios_direct, std::size(gpios_direct), buttons_direct,
+                            std::size(buttons_direct)));
 
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
@@ -250,8 +250,8 @@ TEST(HidButtonsTest, DirectButtonBind) {
 
 TEST(HidButtonsTest, DirectButtonPush) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_direct, countof(gpios_direct), buttons_direct,
-                            countof(buttons_direct)));
+  EXPECT_OK(device.BindTest(gpios_direct, std::size(gpios_direct), buttons_direct,
+                            std::size(buttons_direct)));
 
   // Reconfigure Polarity due to interrupt.
   device.GetGpio(0)
@@ -268,8 +268,8 @@ TEST(HidButtonsTest, DirectButtonPush) {
 
 TEST(HidButtonsTest, DirectButtonUnpushedReport) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_direct, countof(gpios_direct), buttons_direct,
-                            countof(buttons_direct)));
+  EXPECT_OK(device.BindTest(gpios_direct, std::size(gpios_direct), buttons_direct,
+                            std::size(buttons_direct)));
 
   // Reconfigure Polarity due to interrupt.
   device.GetGpio(0)
@@ -298,8 +298,8 @@ TEST(HidButtonsTest, DirectButtonUnpushedReport) {
 
 TEST(HidButtonsTest, DirectButtonPushedReport) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_direct, countof(gpios_direct), buttons_direct,
-                            countof(buttons_direct)));
+  EXPECT_OK(device.BindTest(gpios_direct, std::size(gpios_direct), buttons_direct,
+                            std::size(buttons_direct)));
 
   // Reconfigure Polarity due to interrupt.
   device.GetGpio(0)
@@ -328,8 +328,8 @@ TEST(HidButtonsTest, DirectButtonPushedReport) {
 
 TEST(HidButtonsTest, DirectButtonPushUnpushPush) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_direct, countof(gpios_direct), buttons_direct,
-                            countof(buttons_direct)));
+  EXPECT_OK(device.BindTest(gpios_direct, std::size(gpios_direct), buttons_direct,
+                            std::size(buttons_direct)));
 
   // Reconfigure Polarity due to interrupt.
   device.GetGpio(0)
@@ -364,8 +364,8 @@ TEST(HidButtonsTest, DirectButtonPushUnpushPush) {
 
 TEST(HidButtonsTest, DirectButtonFlaky) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_direct, countof(gpios_direct), buttons_direct,
-                            countof(buttons_direct)));
+  EXPECT_OK(device.BindTest(gpios_direct, std::size(gpios_direct), buttons_direct,
+                            std::size(buttons_direct)));
 
   // Reconfigure Polarity due to interrupt and keep checking until correct.
   device.GetGpio(0)
@@ -391,8 +391,8 @@ TEST(HidButtonsTest, DirectButtonFlaky) {
 
 TEST(HidButtonsTest, MatrixButtonBind) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_matrix, countof(gpios_matrix), buttons_matrix,
-                            countof(buttons_matrix)));
+  EXPECT_OK(device.BindTest(gpios_matrix, std::size(gpios_matrix), buttons_matrix,
+                            std::size(buttons_matrix)));
 
   device.ShutDownTest();
   ASSERT_NO_FATAL_FAILURES(device.VerifyAndClearGpios());
@@ -400,8 +400,8 @@ TEST(HidButtonsTest, MatrixButtonBind) {
 
 TEST(HidButtonsTest, MatrixButtonPush) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_matrix, countof(gpios_matrix), buttons_matrix,
-                            countof(buttons_matrix)));
+  EXPECT_OK(device.BindTest(gpios_matrix, std::size(gpios_matrix), buttons_matrix,
+                            std::size(buttons_matrix)));
 
   // Reconfigure Polarity due to interrupt.
   device.GetGpio(0)
@@ -450,8 +450,8 @@ TEST(HidButtonsTest, MatrixButtonPush) {
 
 TEST(HidButtonsTest, DuplicateReports) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_duplicate, countof(gpios_duplicate), buttons_duplicate,
-                            countof(buttons_duplicate)));
+  EXPECT_OK(device.BindTest(gpios_duplicate, std::size(gpios_duplicate), buttons_duplicate,
+                            std::size(buttons_duplicate)));
 
   // Holding FDR (VOL_UP and VOL_DOWN), then release VOL_UP, should only get one report.
   // Reconfigure Polarity due to interrupt.
@@ -511,8 +511,8 @@ TEST(HidButtonsTest, DuplicateReports) {
 
 TEST(HidButtonsTest, CamMute) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_multiple, countof(gpios_multiple), buttons_multiple,
-                            countof(buttons_multiple)));
+  EXPECT_OK(device.BindTest(gpios_multiple, std::size(gpios_multiple), buttons_multiple,
+                            std::size(buttons_multiple)));
 
   hidbus_ifc_protocol_ops_t ops = {};
   ops.io_queue = [](void* ctx, const uint8_t* buffer, size_t size, zx_time_t time) {
@@ -564,8 +564,8 @@ TEST(HidButtonsTest, CamMute) {
 
 TEST(HidButtonsTest, PollOneButton) {
   HidButtonsDeviceTest device;
-  EXPECT_OK(device.BindTest(gpios_multiple_one_polled, countof(gpios_multiple_one_polled),
-                            buttons_multiple, countof(buttons_multiple)));
+  EXPECT_OK(device.BindTest(gpios_multiple_one_polled, std::size(gpios_multiple_one_polled),
+                            buttons_multiple, std::size(buttons_multiple)));
 
   // All GPIOs must have a default read value if polling is being used, as they are all ready
   // every poll period.

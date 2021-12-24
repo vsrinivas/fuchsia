@@ -295,7 +295,7 @@ zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret =
-      i2c_.WriteSyncRetries(write_buffer, countof(write_buffer), kNumberOfRetries, kRetryDelay);
+      i2c_.WriteSyncRetries(write_buffer, std::size(write_buffer), kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
     zxlogf(ERROR, "tas5720: I2C write reg 0x%02X error %d, %d retries", reg, ret.status,
            ret.retries);

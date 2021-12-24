@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#if !defined(countof)
-#define countof(a) (sizeof(a) / sizeof((a)[0]))
-#endif
+#ifndef LIB_ZIRCON_INTERNAL_MACROS_H_
+#define LIB_ZIRCON_INTERNAL_MACROS_H_
 
 #define KB (1024UL)
 #define MB (1024UL * KB)
@@ -21,3 +18,5 @@
 // TODO(maniscalco): Consider stripping the path off the filename component
 // (think basename).
 #define SOURCE_TAG __FILE__ ":" STRINGIFY(__LINE__)
+
+#endif  // LIB_ZIRCON_INTERNAL_MACROS_H_

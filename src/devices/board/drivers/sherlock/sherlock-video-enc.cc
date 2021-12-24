@@ -56,11 +56,11 @@ static pbus_dev_t video_enc_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_VIDEO_ENC;
   dev.mmio_list = sherlock_video_enc_mmios;
-  dev.mmio_count = countof(sherlock_video_enc_mmios);
+  dev.mmio_count = std::size(sherlock_video_enc_mmios);
   dev.bti_list = sherlock_video_enc_btis;
-  dev.bti_count = countof(sherlock_video_enc_btis);
+  dev.bti_count = std::size(sherlock_video_enc_btis);
   dev.irq_list = sherlock_video_enc_irqs;
-  dev.irq_count = countof(sherlock_video_enc_irqs);
+  dev.irq_count = std::size(sherlock_video_enc_irqs);
   return dev;
 }();
 
@@ -69,7 +69,7 @@ zx_status_t Sherlock::VideoEncInit() {
 
   zx_status_t status =
       pbus_.AddComposite(&video_enc_dev, reinterpret_cast<uint64_t>(aml_video_enc_fragments),
-                         countof(aml_video_enc_fragments), "pdev");
+                         std::size(aml_video_enc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::VideoEncInit: AddComposite() failed for video: %d", status);
     return status;

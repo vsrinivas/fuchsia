@@ -49,16 +49,16 @@ static const zx_bind_inst_t p2_out_codec_match[] = {
 };
 
 static const device_fragment_part_t ref_out_i2c_fragment[] = {
-    {countof(ref_out_i2c_match), ref_out_i2c_match},
+    {std::size(ref_out_i2c_match), ref_out_i2c_match},
 };
 static const device_fragment_part_t p2_out_i2c_fragment[] = {
-    {countof(p2_out_i2c_match), p2_out_i2c_match},
+    {std::size(p2_out_i2c_match), p2_out_i2c_match},
 };
 static const device_fragment_part_t ref_out_codec_fragment[] = {
-    {countof(ref_out_codec_match), ref_out_codec_match},
+    {std::size(ref_out_codec_match), ref_out_codec_match},
 };
 static const device_fragment_part_t p2_out_codec_fragment[] = {
-    {countof(p2_out_codec_match), p2_out_codec_match},
+    {std::size(p2_out_codec_match), p2_out_codec_match},
 };
 
 static const zx_bind_inst_t ref_out_enable_gpio_match[] = {
@@ -70,27 +70,27 @@ static const zx_bind_inst_t ref_out_fault_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_AUDIO_SOC_FAULT_L),
 };
 static const device_fragment_part_t ref_out_enable_gpio_fragment[] = {
-    {countof(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
+    {std::size(ref_out_enable_gpio_match), ref_out_enable_gpio_match},
 };
 static const device_fragment_part_t ref_out_fault_gpio_fragment[] = {
-    {countof(ref_out_fault_gpio_match), ref_out_fault_gpio_match},
+    {std::size(ref_out_fault_gpio_match), ref_out_fault_gpio_match},
 };
 
 static const device_fragment_t ref_codec_fragments[] = {
-    {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-    {"gpio-fault", countof(ref_out_fault_gpio_fragment), ref_out_fault_gpio_fragment},
+    {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"gpio-fault", std::size(ref_out_fault_gpio_fragment), ref_out_fault_gpio_fragment},
 };
 static const device_fragment_t p2_codec_fragments[] = {
-    {"i2c", countof(p2_out_i2c_fragment), p2_out_i2c_fragment},
+    {"i2c", std::size(p2_out_i2c_fragment), p2_out_i2c_fragment},
 };
 static const device_fragment_t ref_controller_fragments[] = {
-    {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-    {"codec-01", countof(ref_out_codec_fragment), ref_out_codec_fragment},
+    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"codec-01", std::size(ref_out_codec_fragment), ref_out_codec_fragment},
 };
 static const device_fragment_t p2_controller_fragments[] = {
-    {"gpio-enable", countof(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
-    {"codec-01", countof(p2_out_codec_fragment), p2_out_codec_fragment},
+    {"gpio-enable", std::size(ref_out_enable_gpio_fragment), ref_out_enable_gpio_fragment},
+    {"codec-01", std::size(p2_out_codec_fragment), p2_out_codec_fragment},
 };
 
 zx_status_t Nelson::AudioInit() {
@@ -230,13 +230,13 @@ zx_status_t Nelson::AudioInit() {
   controller_out.pid = PDEV_PID_AMLOGIC_S905D3;
   controller_out.did = PDEV_DID_AMLOGIC_TDM;
   controller_out.mmio_list = audio_mmios;
-  controller_out.mmio_count = countof(audio_mmios);
+  controller_out.mmio_count = std::size(audio_mmios);
   controller_out.bti_list = btis_out;
-  controller_out.bti_count = countof(btis_out);
+  controller_out.bti_count = std::size(btis_out);
   controller_out.irq_list = frddr_b_irqs;
-  controller_out.irq_count = countof(frddr_b_irqs);
+  controller_out.irq_count = std::size(frddr_b_irqs);
   controller_out.metadata_list = tdm_metadata;
-  controller_out.metadata_count = countof(tdm_metadata);
+  controller_out.metadata_count = std::size(tdm_metadata);
 
   if (board_info.board_revision < BOARD_REV_P2) {
     // CODEC pin assignments.
@@ -247,10 +247,10 @@ zx_status_t Nelson::AudioInit() {
                                           {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_MAXIM_MAX98373}};
     composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
-    codec_desc.props_count = countof(props);
+    codec_desc.props_count = std::size(props);
     codec_desc.spawn_colocated = false;
     codec_desc.fragments = ref_codec_fragments;
-    codec_desc.fragments_count = countof(ref_codec_fragments);
+    codec_desc.fragments_count = std::size(ref_codec_fragments);
     codec_desc.primary_fragment = "i2c";
     status = DdkAddComposite("audio-max98373", &codec_desc);
     if (status != ZX_OK) {
@@ -259,7 +259,7 @@ zx_status_t Nelson::AudioInit() {
     }
     status = pbus_.CompositeDeviceAdd(&controller_out,
                                       reinterpret_cast<uint64_t>(ref_controller_fragments),
-                                      countof(ref_controller_fragments), nullptr);
+                                      std::size(ref_controller_fragments), nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
@@ -310,13 +310,13 @@ zx_status_t Nelson::AudioInit() {
     };
     composite_device_desc_t codec_desc = {};
     codec_desc.props = props;
-    codec_desc.props_count = countof(props);
+    codec_desc.props_count = std::size(props);
     codec_desc.spawn_colocated = false;
     codec_desc.fragments = p2_codec_fragments;
-    codec_desc.fragments_count = countof(p2_codec_fragments);
+    codec_desc.fragments_count = std::size(p2_codec_fragments);
     codec_desc.primary_fragment = "i2c";
     codec_desc.metadata_list = codec_metadata;
-    codec_desc.metadata_count = countof(codec_metadata);
+    codec_desc.metadata_count = std::size(codec_metadata);
     status = DdkAddComposite("audio-tas58xx", &codec_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
@@ -324,7 +324,7 @@ zx_status_t Nelson::AudioInit() {
     }
     status = pbus_.CompositeDeviceAdd(&controller_out,
                                       reinterpret_cast<uint64_t>(p2_controller_fragments),
-                                      countof(p2_controller_fragments), nullptr);
+                                      std::size(p2_controller_fragments), nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s adding audio controller out device failed %d", __FILE__, status);
       return status;
@@ -372,11 +372,11 @@ zx_status_t Nelson::AudioInit() {
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D3;
     tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = pcm_out_btis;
-    tdm_dev.bti_count = countof(pcm_out_btis);
+    tdm_dev.bti_count = std::size(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
     status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {
       zxlogf(ERROR, "PCM CompositeDeviceAdd failed %s", zx_status_get_string(status));
@@ -426,11 +426,11 @@ zx_status_t Nelson::AudioInit() {
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D3;
     tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = pcm_in_btis;
-    tdm_dev.bti_count = countof(pcm_in_btis);
+    tdm_dev.bti_count = std::size(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
     status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {
       zxlogf(ERROR, "PCM CompositeDeviceAdd failed %s", zx_status_get_string(status));
@@ -462,13 +462,13 @@ zx_status_t Nelson::AudioInit() {
     dev_in.pid = PDEV_PID_AMLOGIC_S905D3;
     dev_in.did = PDEV_DID_AMLOGIC_PDM;
     dev_in.mmio_list = pdm_mmios;
-    dev_in.mmio_count = countof(pdm_mmios);
+    dev_in.mmio_count = std::size(pdm_mmios);
     dev_in.bti_list = btis_in;
-    dev_in.bti_count = countof(btis_in);
+    dev_in.bti_count = std::size(btis_in);
     dev_in.irq_list = toddr_b_irqs;
-    dev_in.irq_count = countof(toddr_b_irqs);
+    dev_in.irq_count = std::size(toddr_b_irqs);
     dev_in.metadata_list = pdm_metadata;
-    dev_in.metadata_count = countof(pdm_metadata);
+    dev_in.metadata_count = std::size(pdm_metadata);
 
     status = pbus_.DeviceAdd(&dev_in);
     if (status != ZX_OK) {

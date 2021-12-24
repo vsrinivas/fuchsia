@@ -102,9 +102,9 @@ zx_status_t Vim3::I2cInit() {
   i2c_dev.pid = PDEV_PID_GENERIC;
   i2c_dev.did = PDEV_DID_AMLOGIC_I2C;
   i2c_dev.mmio_list = i2c_mmios;
-  i2c_dev.mmio_count = countof(i2c_mmios);
+  i2c_dev.mmio_count = std::size(i2c_mmios);
   i2c_dev.irq_list = i2c_irqs;
-  i2c_dev.irq_count = countof(i2c_irqs);
+  i2c_dev.irq_count = std::size(i2c_irqs);
 
   auto i2c_status = fidl_metadata::i2c::I2CChannelsToFidl(i2c_channels);
   if (i2c_status.is_error()) {

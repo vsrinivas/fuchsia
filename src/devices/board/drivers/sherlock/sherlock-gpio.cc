@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -171,16 +171,16 @@ static pbus_dev_t gpio_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_T931;
   dev.did = PDEV_DID_AMLOGIC_GPIO;
   dev.mmio_list = gpio_mmios;
-  dev.mmio_count = countof(gpio_mmios);
+  dev.mmio_count = std::size(gpio_mmios);
   dev.irq_list = gpio_irqs;
-  dev.irq_count = countof(gpio_irqs);
+  dev.irq_count = std::size(gpio_irqs);
   dev.metadata_list = gpio_metadata;
-  dev.metadata_count = countof(gpio_metadata);
+  dev.metadata_count = std::size(gpio_metadata);
   return dev;
 }();
 
 zx_status_t Sherlock::GpioInit() {
-  static_assert(countof(gpio_pins) == GPIO_PIN_COUNT, "Incorrect pin count.");
+  static_assert(std::size(gpio_pins) == GPIO_PIN_COUNT, "Incorrect pin count.");
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
@@ -206,7 +206,7 @@ zx_status_t Sherlock::GpioInit() {
   gpio_test_dev.pid = PDEV_PID_GENERIC;
   gpio_test_dev.did = PDEV_DID_GPIO_TEST;
   gpio_test_dev.gpio_list = gpio_test_gpios;
-  gpio_test_dev.gpio_count = countof(gpio_test_gpios);
+  gpio_test_dev.gpio_count = std::size(gpio_test_gpios);
   if ((status = pbus_.DeviceAdd(&gpio_test_dev)) != ZX_OK) {
     zxlogf(ERROR, "%s: Could not add gpio_test_dev %d", __FUNCTION__, status);
     return status;

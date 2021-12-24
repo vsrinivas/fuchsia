@@ -368,7 +368,7 @@ int pcap_activate_fuchsia(pcap_t *handle) {
           },
       };
 
-      int n = poll(pfds, countof(pfds), handlep->poll_timeout);
+      int n = poll(pfds, std::size(pfds), handlep->poll_timeout);
       if (n == 0) {
         // We timed-out.
         break;

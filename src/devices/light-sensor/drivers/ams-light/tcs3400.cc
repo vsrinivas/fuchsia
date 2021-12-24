@@ -645,7 +645,7 @@ zx_status_t Tcs3400Device::ReadReg(uint8_t reg, uint8_t& output_value) {
   uint8_t write_buffer[] = {reg};
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
-  auto ret = i2c_.WriteReadSyncRetries(write_buffer, countof(write_buffer), &output_value,
+  auto ret = i2c_.WriteReadSyncRetries(write_buffer, std::size(write_buffer), &output_value,
                                        sizeof(uint8_t), kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
     zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
@@ -658,7 +658,7 @@ zx_status_t Tcs3400Device::WriteReg(uint8_t reg, uint8_t value) {
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret =
-      i2c_.WriteSyncRetries(write_buffer, countof(write_buffer), kNumberOfRetries, kRetryDelay);
+      i2c_.WriteSyncRetries(write_buffer, std::size(write_buffer), kNumberOfRetries, kRetryDelay);
   if (ret.status != ZX_OK) {
     zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }

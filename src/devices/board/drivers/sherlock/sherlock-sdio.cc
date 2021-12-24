@@ -140,15 +140,15 @@ const pbus_dev_t sdio_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_SDMMC_A;
   dev.mmio_list = sd_emmc_mmios;
-  dev.mmio_count = countof(sd_emmc_mmios);
+  dev.mmio_count = std::size(sd_emmc_mmios);
   dev.bti_list = sd_emmc_btis;
-  dev.bti_count = countof(sd_emmc_btis);
+  dev.bti_count = std::size(sd_emmc_btis);
   dev.irq_list = sd_emmc_irqs;
-  dev.irq_count = countof(sd_emmc_irqs);
+  dev.irq_count = std::size(sd_emmc_irqs);
   dev.metadata_list = sd_emmc_metadata;
-  dev.metadata_count = countof(sd_emmc_metadata);
+  dev.metadata_count = std::size(sd_emmc_metadata);
   dev.boot_metadata_list = wifi_boot_metadata;
-  dev.boot_metadata_count = countof(wifi_boot_metadata);
+  dev.boot_metadata_count = std::size(wifi_boot_metadata);
   return dev;
 }();
 
@@ -213,9 +213,9 @@ zx_status_t Sherlock::SdioInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = wifi_fragments,
-      .fragments_count = countof(wifi_fragments),
+      .fragments_count = std::size(wifi_fragments),
       .primary_fragment = "sdio-function-1",  // ???
       .spawn_colocated = true,
       .metadata_list = nullptr,

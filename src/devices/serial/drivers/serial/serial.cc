@@ -102,7 +102,7 @@ zx_status_t SerialDevice::WorkerThread() {
       items[WAIT_ITEM_EVENT].waitfor |= kEventWritableSignal;
     }
 
-    zx_status_t status = zx::handle::wait_many(items, countof(items), zx::time::infinite());
+    zx_status_t status = zx::handle::wait_many(items, std::size(items), zx::time::infinite());
     if (status != ZX_OK) {
       zxlogf(ERROR, "platform_serial_thread: zx_object_wait_many returned %s",
              zx_status_get_string(status));

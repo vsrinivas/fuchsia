@@ -240,7 +240,7 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
             .status = ZX_ERR_UNAVAILABLE,
         };
       }
-      netdevice_.CompleteTx(results, countof(results));
+      netdevice_.CompleteTx(results, buffers.size());
       return;
     }
     for (const tx_buffer_t& buffer : buffers) {

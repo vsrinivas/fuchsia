@@ -417,7 +417,7 @@ typedef struct unitest_testcase_registration {
       .name = _name,                                                                          \
       .desc = _desc,                                                                          \
       .tests = __unittest_table_##_global_id,                                                 \
-      .test_cnt = countof(__unittest_table_##_global_id),                                     \
+      .test_cnt = std::size(__unittest_table_##_global_id),                                   \
   };
 
 #endif  // LK_DEBUGLEVEL == 0

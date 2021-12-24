@@ -1242,10 +1242,10 @@ void H264MultiDecoder::HandleSliceHeadDone() {
         sps->sar_width = params_.data[HardwareRenderParams::kAspectRatioSarWidth];
         sps->sar_height = params_.data[HardwareRenderParams::kAspectRatioSarHeight];
       } else {
-        if (aspect_ratio_idc >= countof(kTableSarWidth)) {
+        if (aspect_ratio_idc >= std::size(kTableSarWidth)) {
           LogEvent(media_metrics::
                        StreamProcessorEvents2MetricDimensionEvent_AspectRatioIdcTooLargeError);
-          LOG(ERROR, "aspect_ratio_idc >= countof(kTableSarWidth)");
+          LOG(ERROR, "aspect_ratio_idc >= std::size(kTableSarWidth)");
           OnFatalError();
           return;
         }

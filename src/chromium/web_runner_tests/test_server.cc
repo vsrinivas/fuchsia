@@ -76,7 +76,7 @@ bool TestServer::Accept() {
           .events = POLLIN,
       },
   };
-  int n = poll(pfd, countof(pfd), -1);
+  int n = poll(pfd, std::size(pfd), -1);
   if (n < 0) {
     fprintf(stderr, "poll() failed: %d %s\n", errno, strerror(errno));
     return false;

@@ -198,7 +198,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
     gpt_partition_t* part = nullptr;
     uint16_t name_utf16[sizeof(part->name) / sizeof(uint16_t)];
     memset(name_utf16, 0, sizeof(name_utf16));
-    cstring_to_utf16(name_utf16, name, countof(name_utf16));
+    cstring_to_utf16(name_utf16, name, std::size(name_utf16));
     for (uint32_t i = 0; i < gpt->EntryCount(); i++) {
       auto ret = gpt->GetPartition(i);
       if (ret.is_error()) {

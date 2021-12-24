@@ -232,7 +232,7 @@ static constexpr meson_clk_gate_t g12a_clk_gates[] = {
      .mask = 0x3ff},  // CLK_DOS_GCLK_VDEC
 };
 
-static_assert(g12a_clk::CLK_G12A_COUNT == countof(g12a_clk_gates),
+static_assert(g12a_clk::CLK_G12A_COUNT == std::size(g12a_clk_gates),
               "g12a_clk_gates[] and CLK_G12A_COUNT count mismatch");
 
 static constexpr meson_clk_msr_t g12a_clk_msr = {

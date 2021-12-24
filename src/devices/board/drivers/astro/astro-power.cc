@@ -64,13 +64,13 @@ constexpr device_metadata_t power_domain_arm_core_metadata[] = {
 
 constexpr composite_device_desc_t power_domain_arm_core_desc = {
     .props = power_domain_arm_core_props,
-    .props_count = countof(power_domain_arm_core_props),
+    .props_count = std::size(power_domain_arm_core_props),
     .fragments = power_domain_arm_core_fragments,
-    .fragments_count = countof(power_domain_arm_core_fragments),
+    .fragments_count = std::size(power_domain_arm_core_fragments),
     .primary_fragment = "power-impl",
     .spawn_colocated = true,
     .metadata_list = power_domain_arm_core_metadata,
-    .metadata_count = countof(power_domain_arm_core_metadata),
+    .metadata_count = std::size(power_domain_arm_core_metadata),
 };
 
 }  // namespace
@@ -82,7 +82,7 @@ static const pbus_dev_t power_dev = []() {
   dev.pid = PDEV_PID_ASTRO;
   dev.did = PDEV_DID_AMLOGIC_POWER;
   dev.metadata_list = power_impl_metadata;
-  dev.metadata_count = countof(power_impl_metadata);
+  dev.metadata_count = std::size(power_impl_metadata);
   return dev;
 }();
 
@@ -90,7 +90,7 @@ zx_status_t Astro::PowerInit() {
   zx_status_t st;
 
   st = pbus_.AddComposite(&power_dev, reinterpret_cast<uint64_t>(aml_power_impl_fragments),
-                          countof(aml_power_impl_fragments), "pdev");
+                          std::size(aml_power_impl_fragments), "pdev");
   if (st != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;

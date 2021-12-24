@@ -82,7 +82,7 @@ zx_status_t QemuArm64::PciAdd() {
   pci_dev.pid = PDEV_PID_GENERIC;
   pci_dev.did = PDEV_DID_KPCI;
   pci_dev.bti_list = kPciBtis;
-  pci_dev.bti_count = countof(kPciBtis);
+  pci_dev.bti_count = std::size(kPciBtis);
 
   auto status = pbus_.DeviceAdd(&pci_dev);
   if (status != ZX_OK) {

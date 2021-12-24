@@ -42,9 +42,9 @@ zx_status_t QemuArm64::SysmemInit() {
   sysmem_dev.pid = PDEV_PID_GENERIC;
   sysmem_dev.did = PDEV_DID_SYSMEM;
   sysmem_dev.bti_list = kSysmemBtis;
-  sysmem_dev.bti_count = countof(kSysmemBtis);
+  sysmem_dev.bti_count = std::size(kSysmemBtis);
   sysmem_dev.metadata_list = kSysmemMetadataList;
-  sysmem_dev.metadata_count = countof(kSysmemMetadataList);
+  sysmem_dev.metadata_count = std::size(kSysmemMetadataList);
 
   zx_status_t status = pbus_.DeviceAdd(&sysmem_dev);
   if (status != ZX_OK) {

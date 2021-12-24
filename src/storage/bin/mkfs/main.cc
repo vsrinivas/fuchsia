@@ -43,7 +43,7 @@ int usage(void) {
           "                               the filesystem will have at least SLICES slices\n"
           "                               allocated for data.\n");
   fprintf(stderr, " values for 'filesystem' include:\n");
-  for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
+  for (size_t i = 0; i < std::size(FILESYSTEMS); i++) {
     fprintf(stderr, "  '%s'\n", FILESYSTEMS[i].name);
   }
   return -1;
@@ -90,7 +90,7 @@ int parse_args(int argc, char** argv, fs_management::MkfsOptions* options,
     return usage();
   }
 
-  for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
+  for (size_t i = 0; i < std::size(FILESYSTEMS); i++) {
     if (!strcmp(FILESYSTEMS[i].name, argv[argc - 1])) {
       *df = FILESYSTEMS[i].df;
       break;

@@ -911,7 +911,7 @@ void CompositeMetadataTestCase::AddCompositeDevice(AddLocation add) {
   auto do_add = [&]() {
     ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
         platform_bus()->device, protocol_id, std::size(protocol_id), nullptr /* props */, 0,
-        kCompositeDevName, ZX_OK, metadata, countof(metadata)));
+        kCompositeDevName, ZX_OK, metadata, std::size(metadata)));
   };
 
   if (add == AddLocation::BEFORE) {
@@ -1023,7 +1023,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
   const char* kCompositeDevName = "composite-dev";
   ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
       platform_bus()->device, protocol_id, std::size(protocol_id), nullptr /* props */, 0,
-      kCompositeDevName, ZX_OK, metadata, countof(metadata)));
+      kCompositeDevName, ZX_OK, metadata, std::size(metadata)));
 
   // Add the devices to construct the composite out of.
   for (size_t i = 0; i < std::size(device_indexes); ++i) {

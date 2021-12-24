@@ -55,13 +55,13 @@ zx_status_t Astro::ButtonsInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = astro_buttons_fragments,
-      .fragments_count = countof(astro_buttons_fragments),
+      .fragments_count = std::size(astro_buttons_fragments),
       .primary_fragment = "volume-up",  // ???
       .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,
-      .metadata_count = countof(available_buttons_metadata),
+      .metadata_count = std::size(available_buttons_metadata),
   };
 
   zx_status_t status = DdkAddComposite("astro-buttons", &comp_desc);

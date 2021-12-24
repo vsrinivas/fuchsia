@@ -165,24 +165,24 @@ zx_status_t Sherlock::EmmcInit() {
   emmc_dev.pid = PDEV_PID_GENERIC;
   emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
   emmc_dev.mmio_list = emmc_mmios;
-  emmc_dev.mmio_count = countof(emmc_mmios);
+  emmc_dev.mmio_count = std::size(emmc_mmios);
   emmc_dev.irq_list = emmc_irqs;
-  emmc_dev.irq_count = countof(emmc_irqs);
+  emmc_dev.irq_count = std::size(emmc_irqs);
   emmc_dev.bti_list = emmc_btis;
-  emmc_dev.bti_count = countof(emmc_btis);
+  emmc_dev.bti_count = std::size(emmc_btis);
   emmc_dev.metadata_list = sherlock_emmc_metadata;
-  emmc_dev.metadata_count = countof(sherlock_emmc_metadata);
+  emmc_dev.metadata_count = std::size(sherlock_emmc_metadata);
   emmc_dev.boot_metadata_list = emmc_boot_metadata;
-  emmc_dev.boot_metadata_count = countof(emmc_boot_metadata);
+  emmc_dev.boot_metadata_count = std::size(emmc_boot_metadata);
 
   if (pid_ == PDEV_PID_LUIS) {
     emmc_dev.metadata_list = luis_emmc_metadata;
-    emmc_dev.metadata_count = countof(luis_emmc_metadata);
+    emmc_dev.metadata_count = std::size(luis_emmc_metadata);
   }
 
   zx_status_t status =
       pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(sherlock_emmc_fragments),
-                         countof(sherlock_emmc_fragments), "pdev");
+                         std::size(sherlock_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
     return status;

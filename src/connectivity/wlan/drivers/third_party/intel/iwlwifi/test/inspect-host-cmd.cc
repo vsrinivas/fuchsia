@@ -52,13 +52,13 @@ static std::string inspect_host_cmd_str(struct iwl_host_cmd* cmd) {
   constexpr size_t kMaxStrBufSize = 1024;
   char strbuf[kMaxStrBufSize];
   std::snprintf(strbuf, kMaxStrBufSize, "host_cmd id[0x%02x] flags[0x%x:%s]\n", cmd->id, cmd->flags,
-                join_bitmap_string(flags_defs, ARRAY_SIZE(flags_defs), cmd->flags).c_str());
+                join_bitmap_string(flags_defs, std::size(flags_defs), cmd->flags).c_str());
   std::string out(strbuf);
 
-  for (size_t i = 0; i < ARRAY_SIZE(cmd->len); i++) {
+  for (size_t i = 0; i < std::size(cmd->len); i++) {
     std::snprintf(
         strbuf, kMaxStrBufSize, "  [%zu] dataflags[0x%x:%s] len[%d]\n", i, cmd->dataflags[i],
-        join_bitmap_string(dataflags_defs, ARRAY_SIZE(dataflags_defs), cmd->dataflags[i]).c_str(),
+        join_bitmap_string(dataflags_defs, std::size(dataflags_defs), cmd->dataflags[i]).c_str(),
         cmd->len[i]);
     out += std::string(strbuf);
   }

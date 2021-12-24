@@ -67,7 +67,7 @@ TEST(ChannelWriteEtcTest, MultipleHandlesSomeInvalidResultsReportedCorrectly) {
 
   EXPECT_EQ(ZX_ERR_WRONG_TYPE,
             channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                    countof(send_handle_list)));
+                                    std::size(send_handle_list)));
 
   EXPECT_EQ(ZX_ERR_WRONG_TYPE, send_handle_list[0].result);
   EXPECT_EQ(ZX_OK, send_handle_list[1].result);
@@ -90,7 +90,7 @@ TEST(ChannelWriteEtcTest, ImproperlyInitalizedResultsArgReportedBackAsOriginally
       {ZX_HANDLE_OP_MOVE, event_handle, ZX_OBJ_TYPE_NONE, ZX_RIGHT_SAME_RIGHTS, ZX_ERR_WRONG_TYPE}};
 
   EXPECT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                    countof(send_handle_list)));
+                                    std::size(send_handle_list)));
 
   EXPECT_EQ(ZX_ERR_WRONG_TYPE, send_handle_list[0].result);
 }
@@ -109,7 +109,7 @@ TEST(ChannelWriteEtcTest, FailureDoesNotResultInReceivedPacket) {
 
   EXPECT_EQ(ZX_ERR_WRONG_TYPE,
             channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                    countof(send_handle_list)));
+                                    std::size(send_handle_list)));
   uint32_t incoming_bytes;
   zx_handle_t incoming_handle;
   ASSERT_EQ(ZX_ERR_SHOULD_WAIT, channel_remote.read(0, &incoming_bytes, &incoming_handle,
@@ -133,7 +133,7 @@ TEST(ChannelWriteEtcTest, SentHandleReferrsToSameObject) {
     GetBasicInfo(event_handle, &event_info);
 
     ASSERT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
     ASSERT_EQ(expected_close_result, zx_handle_close(event_handle), "%s",
               test_case_str[op].c_str());
@@ -171,7 +171,7 @@ TEST(ChannelWriteEtcTest, InvalidOpArgShouldFail) {
 
     EXPECT_EQ(ZX_ERR_INVALID_ARGS,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", op_str.c_str());
 
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s", op_str.c_str());
@@ -194,7 +194,7 @@ TEST(ChannelWriteEtcTest, HandleArgNotAChannelHandleShouldFail) {
 
     ASSERT_EQ(ZX_ERR_WRONG_TYPE,
               zx_channel_write_etc(socket_local_handle, 0, &kChannelData, sizeof(kChannelData),
-                                   send_handle_list, countof(send_handle_list)));
+                                   send_handle_list, std::size(send_handle_list)));
 
     ASSERT_OK(zx_handle_close(socket_local_handle));
     ASSERT_EQ(expected_close_result, zx_handle_close(socket_remote_handle), "%s",
@@ -223,7 +223,7 @@ TEST(ChannelWriteEtcTest, ChannelHandleNotValidShouldFail) {
 #ifndef __clang_analyzer__
     EXPECT_EQ(ZX_ERR_BAD_HANDLE,
               zx_channel_write_etc(channel_local_handle, 0, &kChannelData, sizeof(kChannelData),
-                                   send_handle_list, countof(send_handle_list)));
+                                   send_handle_list, std::size(send_handle_list)));
 #endif
 
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
@@ -283,7 +283,7 @@ TEST(ChannelWriteEtcTest, HandleWithoutTransferRightShouldFail) {
 
     ASSERT_EQ(ZX_ERR_ACCESS_DENIED,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)));
+                                      std::size(send_handle_list)));
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_no_transfer_handle), "%s",
               test_case_str[op].c_str());
   };
@@ -301,7 +301,7 @@ TEST(ChannelWriteEtcTest, InvalidHandleInTransferredHandlesShouldFail) {
 
     EXPECT_EQ(ZX_ERR_BAD_HANDLE,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "test case: %s", testcase.c_str());
   };
 
@@ -334,7 +334,7 @@ TEST(ChannelWriteEtcTest, RepeatedHandlesWithOpMoveHandlesShouldFail) {
 
     EXPECT_EQ(ZX_ERR_BAD_HANDLE,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
 
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
@@ -360,7 +360,7 @@ TEST(ChannelWriteEtcTest, DuplicateHandlesInTransferredHandlesShouldSucceed) {
         {op, socket_local_duplicate_handle, ZX_OBJ_TYPE_NONE, ZX_RIGHT_SAME_RIGHTS, ZX_OK}};
 
     EXPECT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
               test_case_str[op].c_str());
@@ -387,7 +387,7 @@ TEST(ChannelWriteEtcTest, HandleDoesNotMatchTypeShouldFail) {
 
     EXPECT_EQ(ZX_ERR_WRONG_TYPE,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "test case: obj_type: %u op: %d", obj_type, op);
 
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_handle),
@@ -417,7 +417,7 @@ TEST(ChannelWriteEtcTest, OptionsArgNonZeroShouldFail) {
 
     ASSERT_EQ(ZX_ERR_INVALID_ARGS,
               channel_local.write_etc(1, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)));
+                                      std::size(send_handle_list)));
 
     ASSERT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
               test_case_str[op].c_str());
@@ -437,7 +437,7 @@ TEST(ChannelWriteEtcTest, ChannelHandleInTransferredHandlesShouldFail) {
 
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
               zx_channel_write_etc(channel_local, 0, &kChannelData, sizeof(kChannelData),
-                                   send_handle_list, countof(send_handle_list)));
+                                   send_handle_list, std::size(send_handle_list)));
 
     ASSERT_EQ(expected_close_result, zx_handle_close(channel_local), "%s",
               test_case_str[op].c_str());
@@ -463,7 +463,7 @@ TEST(ChannelWriteEtcTest, OppositeChannelEndClosedShouldFail) {
 
     ASSERT_EQ(ZX_ERR_PEER_CLOSED,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)));
+                                      std::size(send_handle_list)));
 
     ASSERT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
               test_case_str[op].c_str());
@@ -527,7 +527,7 @@ TEST(ChannelWriteEtcTest, MaximumNumberHandlesWithZeroCountArrayArgShouldSucceed
 
     zx_handle_disposition_t send_handle_list[ZX_CHANNEL_MAX_MSG_HANDLES];
 
-    for (uint32_t i = 0; i < countof(send_handle_list); ++i) {
+    for (uint32_t i = 0; i < std::size(send_handle_list); ++i) {
       ASSERT_OK(zx::event::create(0, &event[i]));
       event_handle[i] = event[i].release();
       send_handle_list[i] = {op, event_handle[i], ZX_OBJ_TYPE_NONE, ZX_RIGHT_SAME_RIGHTS, ZX_OK};
@@ -535,7 +535,7 @@ TEST(ChannelWriteEtcTest, MaximumNumberHandlesWithZeroCountArrayArgShouldSucceed
 
     ASSERT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list, 0));
 
-    for (uint32_t i = 0; i < countof(event_handle); ++i) {
+    for (uint32_t i = 0; i < std::size(event_handle); ++i) {
       ASSERT_EQ(expected_close_result, zx_handle_close(event_handle[i]), "%d: %s", i,
                 test_case_str[op].c_str());
     }
@@ -592,7 +592,7 @@ TEST(ChannelWriteEtcTest, RemoveAllHandleRightsShouldSucceed) {
         {op, socket_local_handle, ZX_OBJ_TYPE_NONE, ZX_RIGHT_NONE, ZX_OK}};
 
     ASSERT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
 
     ASSERT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
@@ -631,7 +631,7 @@ TEST(ChannelWriteEtcTest, RemovingSomeHandleRightsShouldSucceed) {
         {op, socket_local_handle, ZX_OBJ_TYPE_NONE, info_before.rights & ~ZX_RIGHT_WRITE, ZX_OK}};
 
     ASSERT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
 
     uint32_t incoming_bytes;
@@ -678,7 +678,7 @@ TEST(ChannelWriteEtcTest, SameHandleRightsBitsShouldSucceed) {
         {op, socket_local_handle, ZX_OBJ_TYPE_NONE, info_before.rights, ZX_OK}};
 
     ASSERT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
 
     ASSERT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
@@ -717,7 +717,7 @@ TEST(ChannelWriteEtcTest, SameHandleRightsFlagShouldSucceed) {
         {op, socket_local_handle, ZX_OBJ_TYPE_NONE, ZX_RIGHT_SAME_RIGHTS, ZX_OK}};
 
     ASSERT_OK(channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s", test_case_str[op].c_str());
 
     ASSERT_EQ(expected_close_result, zx_handle_close(socket_local_handle), "%s",
@@ -761,7 +761,7 @@ TEST(ChannelWriteEtcTest, HandleWithoutDuplicateRightsMoveOpSucceedsDuplicateOpF
 
     EXPECT_EQ(expected_write_result,
               channel_local.write_etc(0, &kChannelData, sizeof(kChannelData), send_handle_list,
-                                      countof(send_handle_list)),
+                                      std::size(send_handle_list)),
               "%s rights: 0x%x", test_case_str[op].c_str(), info.rights & ~ZX_RIGHT_DUPLICATE);
 
     EXPECT_EQ(expected_close_result, zx_handle_close(socket_local_no_duplicate_handle), "%s",

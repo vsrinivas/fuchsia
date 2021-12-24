@@ -184,7 +184,7 @@ void Vout::PopulateAddedDisplayArgs(added_display_args_t* args, uint64_t display
       args->panel.params.width = dsi_.width;
       args->panel.params.refresh_rate_e2 = 6000;  // Just guess that it's 60fps
       args->pixel_format_list = kDsiSupportedPixelFormats;
-      args->pixel_format_count = countof(kDsiSupportedPixelFormats);
+      args->pixel_format_count = std::size(kDsiSupportedPixelFormats);
       args->cursor_info_count = 0;
       break;
     case VoutType::kHdmi:
@@ -192,7 +192,7 @@ void Vout::PopulateAddedDisplayArgs(added_display_args_t* args, uint64_t display
       args->edid_present = true;
       args->panel.i2c_bus_id = 0;
       args->pixel_format_list = kHdmiSupportedPixelFormats;
-      args->pixel_format_count = countof(kHdmiSupportedPixelFormats);
+      args->pixel_format_count = std::size(kHdmiSupportedPixelFormats);
       args->cursor_info_count = 0;
       break;
     default:

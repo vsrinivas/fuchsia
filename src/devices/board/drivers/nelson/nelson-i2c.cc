@@ -117,9 +117,9 @@ static pbus_dev_t i2c_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_I2C;
   dev.mmio_list = i2c_mmios;
-  dev.mmio_count = countof(i2c_mmios);
+  dev.mmio_count = std::size(i2c_mmios);
   dev.irq_list = i2c_irqs;
-  dev.irq_count = countof(i2c_irqs);
+  dev.irq_count = std::size(i2c_irqs);
   return dev;
 }();
 
@@ -158,7 +158,7 @@ zx_status_t Nelson::I2cInit() {
       },
   };
   i2c_dev.metadata_list = i2c_metadata;
-  i2c_dev.metadata_count = countof(i2c_metadata);
+  i2c_dev.metadata_count = std::size(i2c_metadata);
 
   zx_status_t status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {

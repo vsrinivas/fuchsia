@@ -140,7 +140,7 @@ TEST_F(I2cChildTest, Read3BytesOnce) {
             {&reply1, 1, true, false},
             {&reply2, 1, true, false},
         };
-        callback(cookie, ZX_OK, replies, countof(replies));
+        callback(cookie, ZX_OK, replies, std::size(replies));
       }));
   // Allocate using new as the mock DDK takes ownership of the child.
   auto server = new I2cTestChild(fake_root_.get(), std::move(bus), 0);
@@ -196,7 +196,7 @@ TEST_F(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
             {&reply1, 1, true, false},
             {&reply2, 1, true, false},
         };
-        callback(cookie, ZX_OK, replies, countof(replies));
+        callback(cookie, ZX_OK, replies, std::size(replies));
       }));
 
   // Allocate using new as the mock DDK takes ownership of the child.
@@ -263,7 +263,7 @@ TEST_F(I2cChildTest, BadTransfers) {
 
   {
     bool is_write[] = {true};  // 1 write segment, inconsistent with segments below.
-    auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write, countof(is_write));
+    auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write, std::size(is_write));
 
     // 1 byte in 2 write segments.
     size_t n_write_bytes = 1;
@@ -283,7 +283,7 @@ TEST_F(I2cChildTest, BadTransfers) {
 
   {
     bool is_write[] = {false};  // 1 read segment, inconsistent with segments below.
-    auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write, countof(is_write));
+    auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write, std::size(is_write));
 
     // 2 read segments expecting 2 bytes each.
     constexpr size_t n_reads = 2;

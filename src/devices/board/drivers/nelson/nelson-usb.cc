@@ -99,15 +99,15 @@ static const pbus_dev_t dwc2_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_USB_DWC2;
   dev.mmio_list = dwc2_mmios;
-  dev.mmio_count = countof(dwc2_mmios);
+  dev.mmio_count = std::size(dwc2_mmios);
   dev.irq_list = dwc2_irqs;
-  dev.irq_count = countof(dwc2_irqs);
+  dev.irq_count = std::size(dwc2_irqs);
   dev.bti_list = dwc2_btis;
-  dev.bti_count = countof(dwc2_btis);
+  dev.bti_count = std::size(dwc2_btis);
   dev.metadata_list = usb_metadata;
-  dev.metadata_count = countof(usb_metadata);
+  dev.metadata_count = std::size(usb_metadata);
   dev.boot_metadata_list = usb_boot_metadata;
-  dev.boot_metadata_count = countof(usb_boot_metadata);
+  dev.boot_metadata_count = std::size(usb_boot_metadata);
   return dev;
 }();
 
@@ -139,11 +139,11 @@ static const pbus_dev_t xhci_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_USB_XHCI_COMPOSITE;
   dev.mmio_list = xhci_mmios;
-  dev.mmio_count = countof(xhci_mmios);
+  dev.mmio_count = std::size(xhci_mmios);
   dev.irq_list = xhci_irqs;
-  dev.irq_count = countof(xhci_irqs);
+  dev.irq_count = std::size(xhci_irqs);
   dev.bti_list = usb_btis;
-  dev.bti_count = countof(usb_btis);
+  dev.bti_count = std::size(usb_btis);
   return dev;
 }();
 
@@ -201,13 +201,13 @@ static const pbus_dev_t usb_phy_dev = []() {
   dev.pid = PDEV_PID_NELSON;
   dev.did = PDEV_DID_NELSON_USB_PHY;
   dev.mmio_list = usb_phy_mmios;
-  dev.mmio_count = countof(usb_phy_mmios);
+  dev.mmio_count = std::size(usb_phy_mmios);
   dev.irq_list = usb_phy_irqs;
-  dev.irq_count = countof(usb_phy_irqs);
+  dev.irq_count = std::size(usb_phy_irqs);
   dev.bti_list = usb_btis;
-  dev.bti_count = countof(usb_btis);
+  dev.bti_count = std::size(usb_btis);
   dev.metadata_list = usb_phy_metadata;
-  dev.metadata_count = countof(usb_phy_metadata);
+  dev.metadata_count = std::size(usb_phy_metadata);
   return dev;
 }();
 
@@ -220,7 +220,7 @@ zx_status_t Nelson::UsbInit() {
 
   // Add XHCI and DWC2 to the same devhost as the aml-usb-phy.
   status = pbus_.AddComposite(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
-                              countof(xhci_fragments), "xhci-phy");
+                              std::size(xhci_fragments), "xhci-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
@@ -248,7 +248,7 @@ zx_status_t Nelson::UsbInit() {
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 
   status = pbus_.AddComposite(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
-                              countof(dwc2_fragments), "dwc2-phy");
+                              std::size(dwc2_fragments), "dwc2-phy");
   free(config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);

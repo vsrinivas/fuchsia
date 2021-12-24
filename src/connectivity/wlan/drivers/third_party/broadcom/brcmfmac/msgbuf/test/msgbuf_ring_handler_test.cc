@@ -138,7 +138,7 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
 
   // Set up the expectations for the control submit ring.
   for (int i = 0; i < kTestIterationCount; ++i) {
-    const IoctlTestData& datum = test_data[i % countof(test_data)];
+    const IoctlTestData& datum = test_data[i % std::size(test_data)];
 
     // The operations we perform here should not require explicit synchronization with the Ioctl()
     // call itself, since the Ioctl() call should block on a zx::event until the response is
@@ -187,7 +187,7 @@ TEST(MsgbufRingHandlerTest, Ioctl) {
   // the responses we set up above.
   for (int i = 0; i < kTestIterationCount; ++i) {
     // Send the ioctl.
-    const IoctlTestData& datum = test_data[i % countof(test_data)];
+    const IoctlTestData& datum = test_data[i % std::size(test_data)];
     DmaPool::Buffer tx_buffer;
     void* tx_buffer_data = nullptr;
     EXPECT_EQ(ZX_OK, ring_handler->GetTxBuffer(&tx_buffer));

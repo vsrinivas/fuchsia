@@ -398,7 +398,7 @@ static void log_spinner(fuchsia::virtualization::ContainerStatus container_statu
         std::cout << ".";
       }
       // Write the current spinner character.
-      std::cout << kSpinner[ticks % countof(kSpinner)] << " ";
+      std::cout << kSpinner[ticks % std::size(kSpinner)] << " ";
       break;
     case fuchsia::virtualization::ContainerStatus::TRANSIENT:
     case fuchsia::virtualization::ContainerStatus::DOWNLOADING:

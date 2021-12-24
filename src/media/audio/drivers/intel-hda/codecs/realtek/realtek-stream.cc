@@ -38,7 +38,7 @@ zx_status_t RealtekStream::DisableConverterLocked(bool force_all) {
       {props_.pc_nid, SET_POWER_STATE(HDA_PS_D3HOT)},
   };
 
-  return RunCmdListLocked(DISABLE_CONVERTER_VERBS, countof(DISABLE_CONVERTER_VERBS), force_all);
+  return RunCmdListLocked(DISABLE_CONVERTER_VERBS, std::size(DISABLE_CONVERTER_VERBS), force_all);
 }
 
 zx_status_t RealtekStream::UpdateConverterGainLocked(float target_gain) {
@@ -237,7 +237,7 @@ zx_status_t RealtekStream::FinishChangeStreamFormatLocked(uint16_t encoded_fmt) 
        SET_ANALOG_PIN_WIDGET_CTRL(!is_input(), is_input(), pc_.pin_caps.can_drive_headphones())},
   };
 
-  res = RunCmdListLocked(ENABLE_CONVERTER_VERBS, countof(ENABLE_CONVERTER_VERBS));
+  res = RunCmdListLocked(ENABLE_CONVERTER_VERBS, std::size(ENABLE_CONVERTER_VERBS));
   if (res != ZX_OK)
     return res;
 
@@ -453,7 +453,7 @@ void RealtekStream::DumpStreamPublishedLocked() {
   LOG("Channels          : %u", conv_.widget_caps.ch_count());
 
   LOG("Sample rates      :");
-  for (size_t i = 0; i < countof(RATE_LUT); ++i) {
+  for (size_t i = 0; i < std::size(RATE_LUT); ++i) {
     const auto& entry = RATE_LUT[i];
     if (conv_.sample_caps.pcm_size_rate_ & entry.flag)
       printf(" %u", entry.rate);
@@ -461,7 +461,7 @@ void RealtekStream::DumpStreamPublishedLocked() {
   printf("\n");
 
   LOG("Sample bits       :");
-  for (size_t i = 0; i < countof(BITS_LUT); ++i) {
+  for (size_t i = 0; i < std::size(BITS_LUT); ++i) {
     const auto& entry = BITS_LUT[i];
     if (conv_.sample_caps.pcm_size_rate_ & entry.flag)
       printf(" %u", entry.bits);
@@ -509,7 +509,7 @@ zx_status_t RealtekStream::OnActivateLocked() {
       {props_.conv_nid, GET_PARAM(CodecParam::AW_CAPS), THUNK(ProcessConverterWidgetCaps)},
   };
 
-  return RunCmdListLocked(SETUP, countof(SETUP));
+  return RunCmdListLocked(SETUP, std::size(SETUP));
 }
 
 zx_status_t RealtekStream::ProcessPinWidgetCaps(const Command& cmd, const CodecResponse& resp) {
@@ -634,7 +634,7 @@ zx_status_t RealtekStream::ProcessConverterWidgetCaps(const Command& cmd,
       {nid, GET_PARAM(CodecParam::SUPPORTED_STREAM_FORMATS), THUNK(ProcessConverterSampleFormats)},
   };
 
-  res = RunCmdListLocked(FETCH_FORMATS, countof(FETCH_FORMATS));
+  res = RunCmdListLocked(FETCH_FORMATS, std::size(FETCH_FORMATS));
   if (res != ZX_OK)
     return res;
 

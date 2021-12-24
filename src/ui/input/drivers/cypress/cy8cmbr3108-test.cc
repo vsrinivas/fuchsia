@@ -7,10 +7,10 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <lib/ddk/metadata.h>
 #include <hid/visalia-touch.h>
 #include <zxtest/zxtest.h>
 
@@ -56,7 +56,7 @@ class Cy8cmbr3108Test : public Cy8cmbr3108 {
     auto i2c_proto = ddk::I2cProtocolClient(mock_i2c_.GetProto());
     i2c_ = std::move(i2c_proto);
 
-    const size_t n_buttons = countof(touch_buttons);
+    const size_t n_buttons = std::size(touch_buttons);
     buttons_ = fbl::Array(new touch_button_config_t[n_buttons], n_buttons);
     for (uint32_t i = 0; i < n_buttons; i++) {
       buttons_[i] = touch_buttons[i];

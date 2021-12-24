@@ -71,15 +71,15 @@ zx_status_t Nelson::TeeInit() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_OPTEE;
   dev.mmio_list = nelson_tee_mmios;
-  dev.mmio_count = countof(nelson_tee_mmios);
+  dev.mmio_count = std::size(nelson_tee_mmios);
   dev.bti_list = nelson_tee_btis;
-  dev.bti_count = countof(nelson_tee_btis);
+  dev.bti_count = std::size(nelson_tee_btis);
   dev.smc_list = nelson_tee_smcs;
-  dev.smc_count = countof(nelson_tee_smcs);
+  dev.smc_count = std::size(nelson_tee_smcs);
 
   auto optee_status = fidl_metadata::tee::TeeMetadataToFidl(
       NELSON_OPTEE_DEFAULT_THREAD_COUNT,
-      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, countof(tee_thread_cfg)));
+      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, std::size(tee_thread_cfg)));
   if (optee_status.is_error()) {
     zxlogf(ERROR, "%s: failed to fidl encode optee thread config: %d", __func__,
            optee_status.error_value());
@@ -98,7 +98,7 @@ zx_status_t Nelson::TeeInit() {
   dev.metadata_list = metadata.data();
 
   zx_status_t status = pbus_.AddComposite(&dev, reinterpret_cast<uint64_t>(tee_fragments),
-                                          countof(tee_fragments), "pdev");
+                                          std::size(tee_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

@@ -246,16 +246,16 @@ TEST(FifoTest, NonPowerOfTwoCountSupported) {
   // Write to, then drain, the FIFO.
   // Intentionally write one element less than the FIFO can hold, so the next write will wrap.
   ASSERT_OK(
-      fifo_a.write(kElementSize, &expected_elements, countof(expected_elements), &actual_count));
+      fifo_a.write(kElementSize, &expected_elements, std::size(expected_elements), &actual_count));
   ASSERT_EQ(actual_count, 9u);
-  ASSERT_OK(fifo_b.read(kElementSize, actual_elements, countof(actual_elements), &actual_count));
+  ASSERT_OK(fifo_b.read(kElementSize, actual_elements, std::size(actual_elements), &actual_count));
   ASSERT_EQ(actual_count, 9u);
 
   // Repeat the process. This write spans the buffer wrap.
   ASSERT_OK(
-      fifo_a.write(kElementSize, &expected_elements, countof(expected_elements), &actual_count));
+      fifo_a.write(kElementSize, &expected_elements, std::size(expected_elements), &actual_count));
   ASSERT_EQ(actual_count, 9u);
-  ASSERT_OK(fifo_b.read(kElementSize, actual_elements, countof(actual_elements), &actual_count));
+  ASSERT_OK(fifo_b.read(kElementSize, actual_elements, std::size(actual_elements), &actual_count));
   ASSERT_EQ(actual_count, 9u);
 }
 

@@ -243,7 +243,7 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
 
   // Parse the partitions out of the MBR.
   fbl::AllocChecker ac;
-  for (unsigned i = 0; i < countof(mbr.partitions); ++i) {
+  for (unsigned i = 0; i < std::size(mbr.partitions); ++i) {
     const auto& entry = mbr.partitions[i];
     if (entry.type == kPartitionTypeNone) {
       // This partition entry is empty and does not refer to a partition, skip it.

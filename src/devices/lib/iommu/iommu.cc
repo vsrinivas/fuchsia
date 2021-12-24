@@ -129,7 +129,7 @@ zx_status_t acpi_scope_to_desc(const ACPI_DMAR_DEVICE_SCOPE* acpi_scope,
   }
 
   desc_scope->num_hops = static_cast<uint8_t>(hops.size());
-  if (countof(desc_scope->dev_func) < desc_scope->num_hops) {
+  if (std::size(desc_scope->dev_func) < desc_scope->num_hops) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   // TODO(teisenbe): We need to be aware of the mapping between

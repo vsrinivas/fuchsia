@@ -128,15 +128,15 @@ static void brcmf_feat_firmware_capabilities(struct brcmf_if* ifp) {
 
   err = brcmf_fil_iovar_data_get(ifp, "cap", caps, sizeof(caps), &fw_err);
   if (err != ZX_OK) {
-    BRCMF_ERR("Failed to determine firmware capabilities: %s, fw err %s",
-              zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
+    BRCMF_ERR("Failed to determine firmware capabilities: %s, fw err %s", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
     return;
   }
 
   caps[sizeof(caps) - 1] = 0;
   BRCMF_DBG(FEAT, "cap string: [ %s]", caps);
 
-  for (i = 0; i < (int)countof(brcmf_fwcap_map); i++) {
+  for (i = 0; i < (int)std::size(brcmf_fwcap_map); i++) {
     if (strstr(caps, brcmf_fwcap_map[i].fwcap_id)) {
       id = brcmf_fwcap_map[i].feature;
       BRCMF_DBG(FEAT, "enabling driver feature: %s", brcmf_feat_names[id]);

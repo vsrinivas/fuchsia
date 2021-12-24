@@ -1421,7 +1421,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char* pLayerName,
                                    uint32_t* pCount, VkExtensionProperties* pProperties) {
   if (pLayerName && !strcmp(pLayerName, compact_image_layer.layerName)) {
-    return util_GetExtensionProperties(ARRAY_SIZE(device_extensions), device_extensions, pCount,
+    return util_GetExtensionProperties(std::size(device_extensions), device_extensions, pCount,
                                        pProperties);
   }
 

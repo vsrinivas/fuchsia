@@ -6,13 +6,13 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/ddk/io-buffer.h>
-#include <lib/ddk/platform-defs.h>
 #include <lib/ddk/hw/reg.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/metadata.h>
+#include <lib/ddk/platform-defs.h>
 #include <unistd.h>
 #include <zircon/hw/gpt.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/nand.h>
 #include <soc/aml-common/aml-guid.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
@@ -103,15 +103,15 @@ static const pbus_dev_t raw_nand_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_RAW_NAND;
   dev.mmio_list = raw_nand_mmios;
-  dev.mmio_count = countof(raw_nand_mmios);
+  dev.mmio_count = std::size(raw_nand_mmios);
   dev.irq_list = raw_nand_irqs;
-  dev.irq_count = countof(raw_nand_irqs);
+  dev.irq_count = std::size(raw_nand_irqs);
   dev.bti_list = raw_nand_btis;
-  dev.bti_count = countof(raw_nand_btis);
+  dev.bti_count = std::size(raw_nand_btis);
   dev.metadata_list = raw_nand_metadata;
-  dev.metadata_count = countof(raw_nand_metadata);
+  dev.metadata_count = std::size(raw_nand_metadata);
   dev.boot_metadata_list = raw_nand_boot_metadata;
-  dev.boot_metadata_count = countof(raw_nand_boot_metadata);
+  dev.boot_metadata_count = std::size(raw_nand_boot_metadata);
   return dev;
 }();
 

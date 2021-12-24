@@ -35,7 +35,7 @@ int usage(void) {
   fprintf(stderr, "usage: fsck [ <option>* ] devicepath filesystem\n");
   fprintf(stderr, " -v  : Verbose mode\n");
   fprintf(stderr, " values for 'filesystem' include:\n");
-  for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
+  for (size_t i = 0; i < std::size(FILESYSTEMS); i++) {
     fprintf(stderr, "  '%s'\n", FILESYSTEMS[i].name);
   }
   return -1;
@@ -58,7 +58,7 @@ int parse_args(int argc, char** argv, fs_management::FsckOptions* options,
   }
 
   *devicepath = argv[1];
-  for (size_t i = 0; i < countof(FILESYSTEMS); i++) {
+  for (size_t i = 0; i < std::size(FILESYSTEMS); i++) {
     if (!strcmp(FILESYSTEMS[i].name, argv[2])) {
       *df = FILESYSTEMS[i].df;
       break;

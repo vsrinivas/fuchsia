@@ -236,7 +236,7 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
       ZX_ASSERT(function->configuration() < configurations_.size());
       auto configuration = configurations_[function->configuration()];
       auto& interface_map = configuration->interface_map;
-      if (desc->b_interface_number >= countof(interface_map) ||
+      if (desc->b_interface_number >= std::size(interface_map) ||
           interface_map[desc->b_interface_number] != function) {
         zxlogf(ERROR, "usb_func_set_interface: bInterfaceNumber %u", desc->b_interface_number);
         return ZX_ERR_INVALID_ARGS;
@@ -250,7 +250,7 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
     } else if (header->b_descriptor_type == USB_DT_ENDPOINT) {
       auto* desc = reinterpret_cast<const usb_endpoint_descriptor_t*>(header);
       auto index = EpAddressToIndex(desc->b_endpoint_address);
-      if (index == 0 || index >= countof(endpoint_map_) || endpoint_map_[index] != function) {
+      if (index == 0 || index >= std::size(endpoint_map_) || endpoint_map_[index] != function) {
         zxlogf(ERROR, "usb_func_set_interface: bad endpoint address 0x%X",
                desc->b_endpoint_address);
         return ZX_ERR_INVALID_ARGS;
@@ -361,7 +361,7 @@ zx_status_t UsbPeripheral::AllocInterface(fbl::RefPtr<UsbFunction> function,
   ZX_ASSERT(function->configuration() < configurations_.size());
   auto configuration = configurations_[function->configuration()];
   auto& interface_map = configuration->interface_map;
-  for (uint8_t i = 0; i < countof(interface_map); i++) {
+  for (uint8_t i = 0; i < std::size(interface_map); i++) {
     if (interface_map[i] == nullptr) {
       interface_map[i] = function;
       *out_intf_num = i;
@@ -500,7 +500,7 @@ zx_status_t UsbPeripheral::SetConfiguration(uint8_t configuration) {
 
 zx_status_t UsbPeripheral::SetInterface(uint8_t interface, uint8_t alt_setting) {
   auto configuration = configurations_[configuration_ - 1];
-  if (interface >= countof(configuration->interface_map)) {
+  if (interface >= std::size(configuration->interface_map)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -605,7 +605,7 @@ void UsbPeripheral::ClearFunctionsComplete() {
   functions_registered_ = false;
   function_devs_added_ = false;
   configurations_.reset();
-  for (size_t i = 0; i < countof(endpoint_map_); i++) {
+  for (size_t i = 0; i < std::size(endpoint_map_); i++) {
     endpoint_map_[i].reset();
   }
   strings_.reset();
@@ -750,7 +750,7 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
         ZX_ASSERT(configuration_ <= configurations_.size());
         auto configuration = configurations_[configuration_ - 1];
         auto& interface_map = configuration->interface_map;
-        for (size_t i = 0; i < countof(interface_map); i++) {
+        for (size_t i = 0; i < std::size(interface_map); i++) {
           auto function = interface_map[i];
           if (function != nullptr) {
             auto status = function->Control(setup, write_buffer, write_size, read_buffer, read_size,
@@ -769,7 +769,7 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
       } else {
         auto configuration = configurations_[configuration_ - 1];
         auto& interface_map = configuration->interface_map;
-        if (index >= countof(interface_map)) {
+        if (index >= std::size(interface_map)) {
           return ZX_ERR_OUT_OF_RANGE;
         }
         // delegate to the function driver for the interface
@@ -787,7 +787,7 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
       if (index == 0 || index >= USB_MAX_EPS) {
         return ZX_ERR_INVALID_ARGS;
       }
-      if (index >= countof(endpoint_map_)) {
+      if (index >= std::size(endpoint_map_)) {
         return ZX_ERR_OUT_OF_RANGE;
       }
       auto function = endpoint_map_[index];

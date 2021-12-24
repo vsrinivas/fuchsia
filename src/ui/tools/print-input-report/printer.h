@@ -109,7 +109,7 @@ class Printer {
   // recognize, the string "NONE" will be returned and printed.
   static const char* UnitTypeToString(fuchsia_input_report::wire::Unit unit) {
     uint32_t unit_index = static_cast<uint32_t>(unit.type);
-    if (unit_index >= countof(kUnitStrings)) {
+    if (unit_index >= std::size(kUnitStrings)) {
       return kUnitStrings[0];
     }
     return kUnitStrings[unit_index];
@@ -119,7 +119,7 @@ class Printer {
   // recognize, the string "ERROR" will be returned and printed.
   static const char* SensorTypeToString(fuchsia_input_report::wire::SensorType type) {
     uint32_t unit_index = static_cast<uint32_t>(type);
-    if (unit_index >= countof(kSensorTypeStrings)) {
+    if (unit_index >= std::size(kSensorTypeStrings)) {
       return kSensorTypeStrings[0];
     }
     return kSensorTypeStrings[unit_index];
@@ -127,7 +127,7 @@ class Printer {
 
   static const char* TouchTypeToString(fuchsia_input_report::wire::TouchType type) {
     uint32_t unit_index = static_cast<uint32_t>(type);
-    if (unit_index >= countof(kTouchTypeStrings)) {
+    if (unit_index >= std::size(kTouchTypeStrings)) {
       return kTouchTypeStrings[0];
     }
     return kTouchTypeStrings[unit_index];
@@ -135,7 +135,7 @@ class Printer {
 
   static const char* LedTypeToString(fuchsia_input_report::wire::LedType type) {
     uint32_t unit_index = static_cast<uint32_t>(type);
-    if (unit_index >= countof(kLedTypeStrings)) {
+    if (unit_index >= std::size(kLedTypeStrings)) {
       return kLedTypeStrings[0];
     }
     return kLedTypeStrings[unit_index];
@@ -144,7 +144,7 @@ class Printer {
   static const char* ConsumerControlButtonToString(
       fuchsia_input_report::wire::ConsumerControlButton type) {
     uint32_t unit_index = static_cast<uint32_t>(type);
-    if (unit_index >= countof(kConsumerControlButtonStrings)) {
+    if (unit_index >= std::size(kConsumerControlButtonStrings)) {
       return kConsumerControlButtonStrings[0];
     }
     return kConsumerControlButtonStrings[unit_index];

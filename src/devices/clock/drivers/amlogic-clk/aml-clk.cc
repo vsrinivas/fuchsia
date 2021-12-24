@@ -367,13 +367,13 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
     case PDEV_DID_AMLOGIC_AXG_CLK: {
       // Gauss
       gates_ = axg_clk_gates;
-      gate_count_ = countof(axg_clk_gates);
+      gate_count_ = std::size(axg_clk_gates);
       meson_gate_enable_count_.resize(gate_count_);
       break;
     }
     case PDEV_DID_AMLOGIC_GXL_CLK: {
       gates_ = gxl_clk_gates;
-      gate_count_ = countof(gxl_clk_gates);
+      gate_count_ = std::size(gxl_clk_gates);
       meson_gate_enable_count_.resize(gate_count_);
       break;
     }
@@ -382,15 +382,15 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
       clk_msr_offsets_ = g12a_clk_msr;
 
       clk_table_ = static_cast<const char* const*>(g12a_clk_table);
-      clk_table_count_ = countof(g12a_clk_table);
+      clk_table_count_ = std::size(g12a_clk_table);
 
       gates_ = g12a_clk_gates;
-      gate_count_ = countof(g12a_clk_gates);
+      gate_count_ = std::size(g12a_clk_gates);
       meson_gate_enable_count_.resize(gate_count_);
 
       InitHiu();
 
-      constexpr size_t cpu_clk_count = countof(g12a_cpu_clks);
+      constexpr size_t cpu_clk_count = std::size(g12a_cpu_clks);
       cpu_clks_.reserve(cpu_clk_count);
       for (size_t i = 0; i < cpu_clk_count; i++) {
         cpu_clks_.emplace_back(&hiu_mmio_, g12a_cpu_clks[i].reg, &*pllclk_[g12a_cpu_clks[i].pll],
@@ -404,15 +404,15 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
       clk_msr_offsets_ = g12b_clk_msr;
 
       clk_table_ = static_cast<const char* const*>(g12b_clk_table);
-      clk_table_count_ = countof(g12b_clk_table);
+      clk_table_count_ = std::size(g12b_clk_table);
 
       gates_ = g12b_clk_gates;
-      gate_count_ = countof(g12b_clk_gates);
+      gate_count_ = std::size(g12b_clk_gates);
       meson_gate_enable_count_.resize(gate_count_);
 
       InitHiu();
 
-      constexpr size_t cpu_clk_count = countof(g12b_cpu_clks);
+      constexpr size_t cpu_clk_count = std::size(g12b_cpu_clks);
       cpu_clks_.reserve(cpu_clk_count);
       for (size_t i = 0; i < cpu_clk_count; i++) {
         cpu_clks_.emplace_back(&hiu_mmio_, g12b_cpu_clks[i].reg, &*pllclk_[g12b_cpu_clks[i].pll],
@@ -424,11 +424,11 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffe
     case PDEV_DID_AMLOGIC_SM1_CLK: {
       // Nelson
       gates_ = sm1_clk_gates;
-      gate_count_ = countof(sm1_clk_gates);
+      gate_count_ = std::size(sm1_clk_gates);
       meson_gate_enable_count_.resize(gate_count_);
 
       muxes_ = sm1_muxes;
-      mux_count_ = countof(sm1_muxes);
+      mux_count_ = std::size(sm1_muxes);
 
       InitHiu();
 

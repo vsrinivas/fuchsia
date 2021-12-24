@@ -90,7 +90,7 @@ zx_status_t HdmiCodec::Setup() {
       },
   };
 
-  res = CreateAndStartStreams(STREAMS, countof(STREAMS));
+  res = CreateAndStartStreams(STREAMS, std::size(STREAMS));
   if (res != ZX_OK) {
     zxlogf(ERROR, "Failed to create and publish HDMI streams (res %d)", res);
     return res;

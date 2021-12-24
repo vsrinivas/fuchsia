@@ -25,7 +25,7 @@ TEST(ConsoleArgsTestCase, BootArgsPrecedence) {
   mock_args.CreateClient(loop.dispatcher(), &args_client);
 
   Options opts;
-  ASSERT_OK(ParseArgs(countof(args), args, args_client, &opts));
+  ASSERT_OK(ParseArgs(std::size(args), args, args_client, &opts));
 
   const std::vector<std::string> kAllowedExpected{"qux", "foo", "bar"};
   ASSERT_EQ(opts.allowed_log_tags, kAllowedExpected);

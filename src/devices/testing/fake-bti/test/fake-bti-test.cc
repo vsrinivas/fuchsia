@@ -212,12 +212,12 @@ TEST(FakeBti, GetMultiplePinnedVmos) {
 
 TEST(FakeBti, PinVmoWithPaddrGenerator) {
   zx_paddr_t expected_addrs[kPageCount + 1];
-  for (size_t i = 0; i < countof(expected_addrs); i++) {
+  for (size_t i = 0; i < std::size(expected_addrs); i++) {
     expected_addrs[i] = FAKE_BTI_PHYS_ADDR * (i + 1);
   }
 
   zx_handle_t bti = ZX_HANDLE_INVALID;
-  EXPECT_OK(fake_bti_create_with_paddrs(expected_addrs, countof(expected_addrs), &bti));
+  EXPECT_OK(fake_bti_create_with_paddrs(expected_addrs, std::size(expected_addrs), &bti));
   EXPECT_NE(bti, ZX_HANDLE_INVALID);
 
   zx_handle_t vmo_handle, pmt_handle;

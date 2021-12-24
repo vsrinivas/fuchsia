@@ -28,7 +28,7 @@ static constexpr pbus_dev_t hdmi_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_HDMI;
   dev.mmio_list = hdmi_mmios;
-  dev.mmio_count = countof(hdmi_mmios);
+  dev.mmio_count = std::size(hdmi_mmios);
   return dev;
 }();
 

@@ -6,6 +6,7 @@
 
 #include <zircon/assert.h>
 
+#include <array>
 #include <cstdint>
 
 namespace {
@@ -89,7 +90,7 @@ uint64_t ExtendBitsGeneral(uint64_t nearby_extended, uint64_t to_extend,
 
   uint64_t best_case_index_so_far = -1ull;
   uint64_t min_diff_so_far = -1ull;
-  for (uint32_t case_index = 0; case_index < countof(result_vs_nearby_cases); ++case_index) {
+  for (uint32_t case_index = 0; case_index < std::size(result_vs_nearby_cases); ++case_index) {
     const auto& a_case = result_vs_nearby_cases[case_index];
     if (a_case.relative_epoch_index < min_relative_epoch_index ||
         a_case.relative_epoch_index > max_relative_epoch_index) {

@@ -1773,16 +1773,16 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   // Loop over all combinations of supported image types and pixel formats, adding
   // an image format constraints for each unless the config is asking for a specific
   // format or type.
-  static_assert(countof(image_types) * countof(pixel_format_types) <=
-                countof(constraints.image_format_constraints));
-  for (unsigned i = 0; i < countof(image_types); ++i) {
+  static_assert(std::size(image_types) * std::size(pixel_format_types) <=
+                std::size(constraints.image_format_constraints));
+  for (unsigned i = 0; i < std::size(image_types); ++i) {
     // Skip if image type was specified and different from current type. This
     // makes it possible for a different participant to select preferred
     // modifiers.
     if (config->type && config->type != image_types[i]) {
       continue;
     }
-    for (unsigned j = 0; j < countof(pixel_format_types); ++j) {
+    for (unsigned j = 0; j < std::size(pixel_format_types); ++j) {
       // Skip if pixel format was specified and different from current format.
       // This makes it possible for a different participant to select preferred
       // format.

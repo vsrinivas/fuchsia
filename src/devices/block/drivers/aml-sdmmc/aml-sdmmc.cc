@@ -793,7 +793,7 @@ zx::status<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t
   while (remaining > 0) {
     size_t region_count = 0;
     zx_status_t status = vmo.GetPinnedRegions(offset + vmo.meta().offset, buffer.size, regions,
-                                              countof(regions), &region_count);
+                                              std::size(regions), &region_count);
     if (status != ZX_OK && status != ZX_ERR_BUFFER_TOO_SMALL) {
       AML_SDMMC_ERROR("failed to get pinned regions: %d", status);
       return zx::error(status);
@@ -1361,7 +1361,7 @@ zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformOldTuning(
 
 zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
                                        uint64_t offset, uint64_t size, uint32_t vmo_rights) {
-  if (client_id >= countof(registered_vmos_)) {
+  if (client_id >= std::size(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (vmo_rights == 0) {
@@ -1386,7 +1386,7 @@ zx_status_t AmlSdmmc::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::v
 }
 
 zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo) {
-  if (client_id >= countof(registered_vmos_)) {
+  if (client_id >= std::size(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -1404,7 +1404,7 @@ zx_status_t AmlSdmmc::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx:
 }
 
 zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
-  if (req->client_id >= countof(registered_vmos_)) {
+  if (req->client_id >= std::size(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 

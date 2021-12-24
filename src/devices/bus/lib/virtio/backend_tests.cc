@@ -141,12 +141,12 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   }
 
   void SetUpModernCapabilities() {
-    for (uint32_t i = 0; i < countof(kCapabilities); i++) {
+    for (uint32_t i = 0; i < std::size(kCapabilities); i++) {
       fake_pci_.AddVendorCapability(kCapabilityOffsets[i], kCapabilities[i].cap_len);
     }
 
     auto config = fake_pci().GetConfigVmo();
-    for (uint32_t i = 0; i < countof(kCapabilities); i++) {
+    for (uint32_t i = 0; i < std::size(kCapabilities); i++) {
       config->write(&kCapabilities[i], kCapabilityOffsets[i], sizeof(virtio_pci_cap_t));
     }
   }

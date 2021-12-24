@@ -64,13 +64,13 @@ static pbus_dev_t bt_uart_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_UART;
   dev.mmio_list = bt_uart_mmios;
-  dev.mmio_count = countof(bt_uart_mmios);
+  dev.mmio_count = std::size(bt_uart_mmios);
   dev.irq_list = bt_uart_irqs;
-  dev.irq_count = countof(bt_uart_irqs);
+  dev.irq_count = std::size(bt_uart_irqs);
   dev.metadata_list = bt_uart_metadata;
-  dev.metadata_count = countof(bt_uart_metadata);
+  dev.metadata_count = std::size(bt_uart_metadata);
   dev.boot_metadata_list = bt_uart_boot_metadata;
-  dev.boot_metadata_count = countof(bt_uart_boot_metadata);
+  dev.boot_metadata_count = std::size(bt_uart_boot_metadata);
   return dev;
 }();
 
@@ -100,7 +100,7 @@ zx_status_t Astro::BluetoothInit() {
 
   // Bind UART for Bluetooth HCI
   status = pbus_.AddComposite(&bt_uart_dev, reinterpret_cast<uint64_t>(bt_uart_fragments),
-                              countof(bt_uart_fragments), "pdev");
+                              std::size(bt_uart_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

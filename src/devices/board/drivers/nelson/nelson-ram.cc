@@ -34,9 +34,9 @@ static const pbus_dev_t ramctl_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_RAM_CTL;
   dev.mmio_list = sherlock_ram_ctl_mmios;
-  dev.mmio_count = countof(sherlock_ram_ctl_mmios);
+  dev.mmio_count = std::size(sherlock_ram_ctl_mmios);
   dev.irq_list = sherlock_ram_ctl_irqs;
-  dev.irq_count = countof(sherlock_ram_ctl_irqs);
+  dev.irq_count = std::size(sherlock_ram_ctl_irqs);
   return dev;
 }();
 

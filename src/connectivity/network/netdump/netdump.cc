@@ -432,7 +432,7 @@ void handle_rx(const zx::fifo& rx_fifo, char* iobuf, unsigned count, const Netdu
   for (; packets_remaining > 0;) {
     size_t n;
     zx_status_t status;
-    if ((status = rx_fifo.read(sizeof(entries[0]), entries, countof(entries), &n)) < 0) {
+    if ((status = rx_fifo.read(sizeof(*entries), entries, count, &n)) < 0) {
       if (status == ZX_ERR_SHOULD_WAIT) {
         rx_fifo.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED, options.timeout_deadline, nullptr);
         if (zx::clock::get_monotonic() >= options.timeout_deadline) {

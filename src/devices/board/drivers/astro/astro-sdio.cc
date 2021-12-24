@@ -132,15 +132,15 @@ static const pbus_dev_t sd_emmc_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_AMLOGIC_SDMMC_B;
   dev.mmio_list = sd_emmc_mmios;
-  dev.mmio_count = countof(sd_emmc_mmios);
+  dev.mmio_count = std::size(sd_emmc_mmios);
   dev.irq_list = sd_emmc_irqs;
-  dev.irq_count = countof(sd_emmc_irqs);
+  dev.irq_count = std::size(sd_emmc_irqs);
   dev.bti_list = sd_emmc_btis;
-  dev.bti_count = countof(sd_emmc_btis);
+  dev.bti_count = std::size(sd_emmc_btis);
   dev.metadata_list = sd_emmc_metadata;
-  dev.metadata_count = countof(sd_emmc_metadata);
+  dev.metadata_count = std::size(sd_emmc_metadata);
   dev.boot_metadata_list = wifi_boot_metadata;
-  dev.boot_metadata_count = countof(wifi_boot_metadata);
+  dev.boot_metadata_count = std::size(wifi_boot_metadata);
   return dev;
 }();
 
@@ -225,7 +225,7 @@ zx_status_t Astro::SdioInit() {
   SdEmmcConfigurePortB();
 
   status = pbus_.AddComposite(&sd_emmc_dev, reinterpret_cast<uint64_t>(aml_sdio_fragments),
-                              countof(aml_sdio_fragments), "pdev");
+                              std::size(aml_sdio_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite sd_emmc failed: %d", __func__, status);
     return status;
@@ -240,9 +240,9 @@ zx_status_t Astro::SdioInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = wifi_fragments,
-      .fragments_count = countof(wifi_fragments),
+      .fragments_count = std::size(wifi_fragments),
       .primary_fragment = "sdio-function-1",  // ???
       .spawn_colocated = true,
       .metadata_list = nullptr,

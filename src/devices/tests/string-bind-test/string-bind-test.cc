@@ -66,7 +66,7 @@ TEST_F(StringBindTest, DriverBytecode) {
       0x01, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x0a, 0x00, 0x00, 0x00,
   };
 
-  ASSERT_EQ(countof(kExpectedBytecode), bytecode.size());
+  ASSERT_EQ(std::size(kExpectedBytecode), bytecode.size());
   for (size_t i = 0; i < bytecode.size(); i++) {
     ASSERT_EQ(kExpectedBytecode[i], bytecode[i]);
   }
@@ -87,7 +87,7 @@ TEST_F(StringBindTest, DeviceProperties) {
 
   ASSERT_EQ(devices.size(), 1u);
   auto props = devices[0].property_list().props;
-  ASSERT_EQ(props.size(), countof(kExpectedProps));
+  ASSERT_EQ(props.size(), std::size(kExpectedProps));
   for (size_t i = 0; i < props.size(); i++) {
     ASSERT_EQ(props[i].id, kExpectedProps[i].id);
     ASSERT_EQ(props[i].reserved, kExpectedProps[i].reserved);

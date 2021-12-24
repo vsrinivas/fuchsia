@@ -53,9 +53,9 @@ zx_status_t Astro::TouchInit() {
 
     const composite_device_desc_t comp_desc = {
         .props = props,
-        .props_count = countof(props),
+        .props_count = std::size(props),
         .fragments = gt92xx_touch_fragments,
-        .fragments_count = countof(gt92xx_touch_fragments),
+        .fragments_count = std::size(gt92xx_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = nullptr,
@@ -76,9 +76,9 @@ zx_status_t Astro::TouchInit() {
 
     const composite_device_desc_t comp_desc = {
         .props = props,
-        .props_count = countof(props),
+        .props_count = std::size(props),
         .fragments = ft3x27_touch_fragments,
-        .fragments_count = countof(ft3x27_touch_fragments),
+        .fragments_count = std::size(ft3x27_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = ft3x27_touch_metadata,

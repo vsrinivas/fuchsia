@@ -51,7 +51,7 @@ static size_t kArchEventMapSize;
 
 static zx_status_t InitializeEventMaps() {
   zx_status_t status =
-      BuildEventMap(kArchEvents, countof(kArchEvents), &kArchEventMap, &kArchEventMapSize);
+      BuildEventMap(kArchEvents, std::size(kArchEvents), &kArchEventMap, &kArchEventMapSize);
   if (status != ZX_OK) {
     return status;
   }

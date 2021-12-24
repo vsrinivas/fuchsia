@@ -34,7 +34,7 @@ class IntelRtcTest : public zxtest::Test {
 
   void CreateDevice(size_t banks) {
     ASSERT_GT(banks, 0);
-    ASSERT_LE(banks, countof(registers_) / intel_rtc::kRtcBankSize);
+    ASSERT_LE(banks, std::size(registers_) / intel_rtc::kRtcBankSize);
     device_ = std::make_unique<intel_rtc::RtcDevice>(fake_root_.get(), zx::resource(), kPortBase,
                                                      2 * banks);
   }
@@ -115,12 +115,12 @@ class IntelRtcTest : public zxtest::Test {
   }
 
   void Set(size_t index, uint8_t val) {
-    ASSERT_LT(index, countof(registers_));
+    ASSERT_LT(index, std::size(registers_));
     registers_[index] = val;
   }
 
   uint8_t Get(size_t index) {
-    ZX_ASSERT(index < countof(registers_));
+    ZX_ASSERT(index < std::size(registers_));
     if (index == Registers::kRegA && update_in_progress_count_ > 0) {
       update_in_progress_count_--;
       return intel_rtc::kRegAUpdateInProgressBit;

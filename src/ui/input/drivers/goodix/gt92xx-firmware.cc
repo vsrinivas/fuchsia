@@ -68,7 +68,7 @@ void Gt92xxDevice::LogFirmwareStatus() {
       [kFirmwareUpdated] = "Succeeded",
   };
 #pragma GCC diagnostic pop
-  static_assert(countof(kFirmwareStatusStrings) == kFirmwareStatusCount);
+  static_assert(std::size(kFirmwareStatusStrings) == kFirmwareStatusCount);
 
   node_ = inspector_.GetRoot().CreateChild("Chip info");
 

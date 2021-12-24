@@ -60,9 +60,9 @@ static pbus_dev_t pwm_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_PWM;
   dev.mmio_list = pwm_mmios;
-  dev.mmio_count = countof(pwm_mmios);
+  dev.mmio_count = std::size(pwm_mmios);
   dev.metadata_list = pwm_metadata;
-  dev.metadata_count = countof(pwm_metadata);
+  dev.metadata_count = std::size(pwm_metadata);
   return dev;
 }();
 
@@ -84,9 +84,9 @@ zx_status_t Nelson::PwmInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = pwm_init_fragments,
-      .fragments_count = countof(pwm_init_fragments),
+      .fragments_count = std::size(pwm_init_fragments),
       .primary_fragment = "pwm",
       .spawn_colocated = false,
       .metadata_list = nullptr,

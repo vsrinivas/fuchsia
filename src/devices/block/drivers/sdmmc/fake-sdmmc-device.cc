@@ -154,7 +154,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRegisterInBandInterrupt(
 
 zx_status_t FakeSdmmcDevice::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo,
                                               uint64_t offset, uint64_t size, uint32_t vmo_rights) {
-  if (client_id >= countof(registered_vmos_)) {
+  if (client_id >= std::size(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -164,7 +164,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id
 
 zx_status_t FakeSdmmcDevice::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id,
                                                 zx::vmo* out_vmo) {
-  if (client_id >= countof(registered_vmos_)) {
+  if (client_id >= std::size(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -182,7 +182,7 @@ zx_status_t FakeSdmmcDevice::SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_
 }
 
 zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]) {
-  if (req->client_id >= countof(registered_vmos_)) {
+  if (req->client_id >= std::size(registered_vmos_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 

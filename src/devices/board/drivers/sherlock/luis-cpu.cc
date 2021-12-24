@@ -87,9 +87,9 @@ constexpr pbus_dev_t cpu_dev = []() {
   result.pid = PDEV_PID_LUIS;
   result.did = PDEV_DID_GOOGLE_AMLOGIC_CPU;
   result.metadata_list = cpu_metadata;
-  result.metadata_count = countof(cpu_metadata);
+  result.metadata_count = std::size(cpu_metadata);
   result.mmio_list = cpu_mmios;
-  result.mmio_count = countof(cpu_mmios);
+  result.mmio_count = std::size(cpu_mmios);
   return result;
 }();
 
@@ -99,7 +99,7 @@ namespace sherlock {
 
 zx_status_t Sherlock::LuisCpuInit() {
   zx_status_t result = pbus_.AddComposite(&cpu_dev, reinterpret_cast<uint64_t>(aml_cpu_fragments),
-                                          countof(aml_cpu_fragments), "power-01");
+                                          std::size(aml_cpu_fragments), "power-01");
 
   if (result != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add CPU composite device, st = %d\n", __func__, result);

@@ -246,7 +246,7 @@ TEST_F(HighSpeedWrapperTest, TestInterfaceRangeIterationNotSkippingAlt) {
   unsigned int count = 0;
 
   for (auto& interface : *ilist) {
-    EXPECT_TRUE(count < countof(wants));
+    EXPECT_TRUE(count < std::size(wants));
     EXPECT_INTERFACE_EQ(wants[count++], *interface.descriptor());
   }
 }
@@ -264,7 +264,7 @@ TEST_F(HighSpeedWrapperTest, TestEndpointRangeIteration) {
   unsigned int count = 0;
   for (auto& interface : *ilist) {
     for (auto ep : interface.GetEndpointList()) {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       EXPECT_ENDPOINT_EQ(wants[count++], ep.descriptor);
       EXPECT_FALSE(ep.has_companion);
     }
@@ -310,7 +310,7 @@ TEST_F(HighSpeedWrapperTest, TestEndpointAccessOps) {
   for (auto& interface : *ilist) {
     auto ep_itr = interface.GetEndpointList().begin();
     do {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       auto& want = wants[count++];
 
       // operator->()
@@ -354,7 +354,7 @@ TEST_F(HighSpeedWrapperTest, TestInterfaceIterationNotSkippingAlt) {
   auto itr = ilist->begin();
   unsigned int count = 0;
   do {
-    EXPECT_TRUE(count < countof(wants));
+    EXPECT_TRUE(count < std::size(wants));
     EXPECT_INTERFACE_EQ(wants[count++], *itr->descriptor());
   } while (++itr != ilist->end());
 }
@@ -373,7 +373,7 @@ TEST_F(HighSpeedWrapperTest, TestEndpointIteration) {
   for (auto& interface : *ilist) {
     auto ep_itr = interface.GetEndpointList().begin();
     do {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       EXPECT_ENDPOINT_EQ(wants[count++], ep_itr->descriptor);
       EXPECT_FALSE(ep_itr->has_companion);
     } while (++ep_itr != interface.GetEndpointList().end());
@@ -406,7 +406,7 @@ TEST_F(HighSpeedWrapperTest, TestInterfaceConstIterationNotSkippingAlt) {
   auto itr = ilist->cbegin();
   unsigned int count = 0;
   do {
-    EXPECT_TRUE(count < countof(wants));
+    EXPECT_TRUE(count < std::size(wants));
     EXPECT_INTERFACE_EQ(wants[count++], *itr->descriptor());
   } while (++itr != ilist->cend());
 }
@@ -425,7 +425,7 @@ TEST_F(HighSpeedWrapperTest, TestEndpointConstIteration) {
   for (auto& interface : *ilist) {
     auto ep_itr = interface.GetEndpointList().cbegin();
     do {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       EXPECT_ENDPOINT_EQ(wants[count++], ep_itr->descriptor);
       EXPECT_FALSE(ep_itr->has_companion);
     } while (++ep_itr != interface.GetEndpointList().cend());
@@ -490,7 +490,7 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointRangeIteration) {
   for (auto& interface : *ilist) {
     auto ep = interface.GetEndpointList().cbegin();
     do {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep->descriptor);
       EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep->ss_companion);
       EXPECT_TRUE(ep->has_companion);
@@ -512,7 +512,7 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointIteration) {
   for (auto& interface : *ilist) {
     auto ep_itr = interface.GetEndpointList().cbegin();
     do {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep_itr->descriptor);
       EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep_itr->ss_companion);
       EXPECT_TRUE(ep_itr->has_companion);
@@ -534,7 +534,7 @@ TEST_F(SuperSpeedWrapperTest, TestEndpointConstIteration) {
   for (auto& interface : *ilist) {
     auto ep_itr = interface.GetEndpointList().cbegin();
     do {
-      EXPECT_TRUE(count < countof(wants));
+      EXPECT_TRUE(count < std::size(wants));
       EXPECT_ENDPOINT_EQ(wants[count].descriptor, ep_itr->descriptor);
       EXPECT_SS_EP_COMP_EQ(wants[count++].ss_companion, ep_itr->ss_companion);
       EXPECT_TRUE(ep_itr->has_companion);

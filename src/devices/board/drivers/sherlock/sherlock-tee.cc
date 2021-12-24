@@ -78,7 +78,7 @@ zx_status_t Sherlock::TeeInit() {
 
   auto optee_status = fidl_metadata::tee::TeeMetadataToFidl(
       SHERLOCK_OPTEE_DEFAULT_THREAD_COUNT,
-      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, countof(tee_thread_cfg)));
+      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, std::size(tee_thread_cfg)));
   if (optee_status.is_error()) {
     zxlogf(ERROR, "%s: failed to fidl encode optee thread config: %d", __func__,
            optee_status.error_value());
@@ -97,7 +97,7 @@ zx_status_t Sherlock::TeeInit() {
   tee_dev.metadata_list = metadata.data();
 
   zx_status_t status = pbus_.AddComposite(&tee_dev, reinterpret_cast<uint64_t>(tee_fragments),
-                                          countof(tee_fragments), "pdev");
+                                          std::size(tee_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
     return status;

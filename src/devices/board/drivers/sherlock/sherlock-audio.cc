@@ -141,50 +141,50 @@ zx_status_t Sherlock::AudioInit() {
   };
 
   const device_fragment_part_t enable_gpio_fragment[] = {
-      {countof(enable_gpio_match), enable_gpio_match},
+      {std::size(enable_gpio_match), enable_gpio_match},
   };
   const device_fragment_part_t luis_codec_i2c_fragment[] = {
-      {countof(luis_codec_i2c_match), luis_codec_i2c_match},
+      {std::size(luis_codec_i2c_match), luis_codec_i2c_match},
   };
 
   // Fragment to be used by the controller, pointing to the codecs.
   const device_fragment_part_t codec_woofer_fragment[] = {
-      {countof(codec_woofer_match), codec_woofer_match},
+      {std::size(codec_woofer_match), codec_woofer_match},
   };
   const device_fragment_part_t codec_tweeter_left_fragment[] = {
-      {countof(codec_tweeter_left_match), codec_tweeter_left_match},
+      {std::size(codec_tweeter_left_match), codec_tweeter_left_match},
   };
   const device_fragment_part_t codec_tweeter_right_fragment[] = {
-      {countof(codec_tweeter_right_match), codec_tweeter_right_match},
+      {std::size(codec_tweeter_right_match), codec_tweeter_right_match},
   };
   const device_fragment_part_t luis_codec_fragment[] = {
-      {countof(luis_codec_match), luis_codec_match},
+      {std::size(luis_codec_match), luis_codec_match},
   };
   const device_fragment_part_t ernie_codec_woofer_fragment[] = {
-      {countof(ernie_codec_woofer_match), ernie_codec_woofer_match},
+      {std::size(ernie_codec_woofer_match), ernie_codec_woofer_match},
   };
   const device_fragment_part_t ernie_codec_tweeter_fragment[] = {
-      {countof(ernie_codec_tweeter_match), ernie_codec_tweeter_match},
+      {std::size(ernie_codec_tweeter_match), ernie_codec_tweeter_match},
   };
 
   const device_fragment_t luis_codec_fragments[] = {
-      {"i2c", countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
+      {"i2c", std::size(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
   };
 
   const device_fragment_t sherlock_tdm_i2s_fragments[] = {
-      {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-      {"codec-01", countof(codec_woofer_fragment), codec_woofer_fragment},
-      {"codec-02", countof(codec_tweeter_left_fragment), codec_tweeter_left_fragment},
-      {"codec-03", countof(codec_tweeter_right_fragment), codec_tweeter_right_fragment},
+      {"gpio-enable", std::size(enable_gpio_fragment), enable_gpio_fragment},
+      {"codec-01", std::size(codec_woofer_fragment), codec_woofer_fragment},
+      {"codec-02", std::size(codec_tweeter_left_fragment), codec_tweeter_left_fragment},
+      {"codec-03", std::size(codec_tweeter_right_fragment), codec_tweeter_right_fragment},
   };
   const device_fragment_t luis_tdm_i2s_fragments[] = {
-      {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-      {"codec-01", countof(luis_codec_fragment), luis_codec_fragment},
+      {"gpio-enable", std::size(enable_gpio_fragment), enable_gpio_fragment},
+      {"codec-01", std::size(luis_codec_fragment), luis_codec_fragment},
   };
   const device_fragment_t ernie_tdm_i2s_fragments[] = {
-      {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-      {"codec-01", countof(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
-      {"codec-02", countof(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
+      {"gpio-enable", std::size(enable_gpio_fragment), enable_gpio_fragment},
+      {"codec-01", std::size(ernie_codec_woofer_fragment), ernie_codec_woofer_fragment},
+      {"codec-02", std::size(ernie_codec_tweeter_fragment), ernie_codec_tweeter_fragment},
   };
 
   status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
@@ -258,13 +258,13 @@ zx_status_t Sherlock::AudioInit() {
 
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
-    comp_desc.props_count = countof(props);
+    comp_desc.props_count = std::size(props);
     comp_desc.spawn_colocated = false;
     comp_desc.fragments = audio_tas5720_woofer_fragments;
-    comp_desc.fragments_count = countof(audio_tas5720_woofer_fragments);
+    comp_desc.fragments_count = std::size(audio_tas5720_woofer_fragments);
     comp_desc.primary_fragment = "i2c";
     comp_desc.metadata_list = codec_metadata;
-    comp_desc.metadata_count = countof(codec_metadata);
+    comp_desc.metadata_count = std::size(codec_metadata);
     status = DdkAddComposite("audio-tas5720-woofer", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite woofer failed %d", __FILE__, status);
@@ -274,7 +274,7 @@ zx_status_t Sherlock::AudioInit() {
     instance_count = 2;
     props[2].value = 2;
     comp_desc.fragments = audio_tas5720_tweeter_left_fragments;
-    comp_desc.fragments_count = countof(audio_tas5720_tweeter_left_fragments);
+    comp_desc.fragments_count = std::size(audio_tas5720_tweeter_left_fragments);
     status = DdkAddComposite("audio-tas5720-left-tweeter", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite left tweeter failed %d", __FILE__, status);
@@ -284,7 +284,7 @@ zx_status_t Sherlock::AudioInit() {
     instance_count = 3;
     props[2].value = 3;
     comp_desc.fragments = audio_tas5720_tweeter_right_fragments;
-    comp_desc.fragments_count = countof(audio_tas5720_tweeter_right_fragments);
+    comp_desc.fragments_count = std::size(audio_tas5720_tweeter_right_fragments);
     status = DdkAddComposite("audio-tas5720-right-tweeter", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite right tweeter failed %d", __FILE__, status);
@@ -325,13 +325,13 @@ zx_status_t Sherlock::AudioInit() {
 
       composite_device_desc_t comp_desc = {};
       comp_desc.props = props;
-      comp_desc.props_count = countof(props);
+      comp_desc.props_count = std::size(props);
       comp_desc.spawn_colocated = false;
       comp_desc.fragments = ernie_woofer_fragments;
-      comp_desc.fragments_count = countof(ernie_woofer_fragments);
+      comp_desc.fragments_count = std::size(ernie_woofer_fragments);
       comp_desc.primary_fragment = "i2c";
       comp_desc.metadata_list = codec_metadata;
-      comp_desc.metadata_count = countof(codec_metadata);
+      comp_desc.metadata_count = std::size(codec_metadata);
       status = DdkAddComposite("audio-tas58xx-woofer", &comp_desc);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAddComposite woofer failed %d", __FILE__, status);
@@ -341,7 +341,7 @@ zx_status_t Sherlock::AudioInit() {
       metadata.instance_count = 2;
       props[2].value = 2;
       comp_desc.fragments = ernie_tweeter_fragments;
-      comp_desc.fragments_count = countof(ernie_tweeter_fragments);
+      comp_desc.fragments_count = std::size(ernie_tweeter_fragments);
       status = DdkAddComposite("audio-tas58xx-tweeter", &comp_desc);
       if (status != ZX_OK) {
         zxlogf(ERROR, "%s DdkAddComposite left tweeter failed %d", __FILE__, status);
@@ -352,10 +352,10 @@ zx_status_t Sherlock::AudioInit() {
                                   {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS58xx}};
       composite_device_desc_t comp_desc = {};
       comp_desc.props = props;
-      comp_desc.props_count = countof(props);
+      comp_desc.props_count = std::size(props);
       comp_desc.spawn_colocated = false;
       comp_desc.fragments = luis_codec_fragments;
-      comp_desc.fragments_count = countof(luis_codec_fragments);
+      comp_desc.fragments_count = std::size(luis_codec_fragments);
       comp_desc.primary_fragment = "i2c";
       status = DdkAddComposite("audio-tas58xx", &comp_desc);
       if (status != ZX_OK) {
@@ -460,26 +460,26 @@ zx_status_t Sherlock::AudioInit() {
   tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
   tdm_dev.instance_id = tdm_instance_id++;
   tdm_dev.mmio_list = audio_mmios;
-  tdm_dev.mmio_count = countof(audio_mmios);
+  tdm_dev.mmio_count = std::size(audio_mmios);
   tdm_dev.bti_list = tdm_btis;
-  tdm_dev.bti_count = countof(tdm_btis);
+  tdm_dev.bti_count = std::size(tdm_btis);
   tdm_dev.irq_list = frddr_b_irqs;
-  tdm_dev.irq_count = countof(frddr_b_irqs);
+  tdm_dev.irq_count = std::size(frddr_b_irqs);
   tdm_dev.metadata_list = tdm_metadata;
-  tdm_dev.metadata_count = countof(tdm_metadata);
+  tdm_dev.metadata_count = std::size(tdm_metadata);
   if (is_sherlock) {
     status =
         pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(sherlock_tdm_i2s_fragments),
-                                 countof(sherlock_tdm_i2s_fragments), nullptr);
+                                 std::size(sherlock_tdm_i2s_fragments), nullptr);
   } else {
     if (is_ernie) {
       status =
           pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(ernie_tdm_i2s_fragments),
-                                   countof(ernie_tdm_i2s_fragments), nullptr);
+                                   std::size(ernie_tdm_i2s_fragments), nullptr);
     } else {
       status =
           pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(luis_tdm_i2s_fragments),
-                                   countof(luis_tdm_i2s_fragments), nullptr);
+                                   std::size(luis_tdm_i2s_fragments), nullptr);
     }
   }
   if (status != ZX_OK) {
@@ -531,11 +531,11 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = pcm_out_btis;
-    tdm_dev.bti_count = countof(pcm_out_btis);
+    tdm_dev.bti_count = std::size(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
     status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -556,13 +556,13 @@ zx_status_t Sherlock::AudioInit() {
                                 {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
-    comp_desc.props_count = countof(props);
+    comp_desc.props_count = std::size(props);
     comp_desc.spawn_colocated = false;
     comp_desc.fragments = sherlock_dai_test_out_fragments;
-    comp_desc.fragments_count = countof(sherlock_dai_test_out_fragments);
+    comp_desc.fragments_count = std::size(sherlock_dai_test_out_fragments);
     comp_desc.primary_fragment = "dai-out";
     comp_desc.metadata_list = test_metadata;
-    comp_desc.metadata_count = countof(test_metadata);
+    comp_desc.metadata_count = std::size(test_metadata);
     status = DdkAddComposite("sherlock-dai-test-out", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -609,13 +609,13 @@ zx_status_t Sherlock::AudioInit() {
     dev_in.pid = PDEV_PID_AMLOGIC_T931;
     dev_in.did = PDEV_DID_AMLOGIC_PDM;
     dev_in.mmio_list = pdm_mmios;
-    dev_in.mmio_count = countof(pdm_mmios);
+    dev_in.mmio_count = std::size(pdm_mmios);
     dev_in.bti_list = pdm_btis;
-    dev_in.bti_count = countof(pdm_btis);
+    dev_in.bti_count = std::size(pdm_btis);
     dev_in.irq_list = toddr_b_irqs;
-    dev_in.irq_count = countof(toddr_b_irqs);
+    dev_in.irq_count = std::size(toddr_b_irqs);
     dev_in.metadata_list = pdm_metadata;
-    dev_in.metadata_count = countof(pdm_metadata);
+    dev_in.metadata_count = std::size(pdm_metadata);
 
     status = pbus_.DeviceAdd(&dev_in);
     if (status != ZX_OK) {
@@ -668,11 +668,11 @@ zx_status_t Sherlock::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = pcm_in_btis;
-    tdm_dev.bti_count = countof(pcm_in_btis);
+    tdm_dev.bti_count = std::size(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
     status = pbus_.DeviceAdd(&tdm_dev);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -693,13 +693,13 @@ zx_status_t Sherlock::AudioInit() {
                               {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
   composite_device_desc_t comp_desc = {};
   comp_desc.props = props;
-  comp_desc.props_count = countof(props);
+  comp_desc.props_count = std::size(props);
   comp_desc.spawn_colocated = false;
   comp_desc.fragments = sherlock_dai_test_in_fragments;
-  comp_desc.fragments_count = countof(sherlock_dai_test_in_fragments);
+  comp_desc.fragments_count = std::size(sherlock_dai_test_in_fragments);
   comp_desc.primary_fragment = "dai-in";
   comp_desc.metadata_list = test_metadata;
-  comp_desc.metadata_count = countof(test_metadata);
+  comp_desc.metadata_count = std::size(test_metadata);
   status = DdkAddComposite("sherlock-dai-test-in", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);

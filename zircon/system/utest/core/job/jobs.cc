@@ -438,13 +438,13 @@ TEST(JobTest, KillJobChain) {
                                   {jobs[2], 0, 0},
                                   {jobs[3], 0, 0},
                                   {jobs[4], 0, 0}};
-  ASSERT_OK(zx_object_wait_many(wait_items, countof(wait_items), ZX_TIME_INFINITE));
+  ASSERT_OK(zx_object_wait_many(wait_items, std::size(wait_items), ZX_TIME_INFINITE));
   for (const zx_wait_item_t& wait_item : wait_items) {
     EXPECT_EQ(wait_item.pending,
               ZX_TASK_TERMINATED | ZX_JOB_NO_PROCESSES | ZX_JOB_NO_JOBS | ZX_JOB_NO_CHILDREN);
   }
 
-  ASSERT_OK(zx_handle_close_many(jobs, countof(jobs)));
+  ASSERT_OK(zx_handle_close_many(jobs, std::size(jobs)));
 }
 
 TEST(JobTest, OneCriticalProcessKillsOneJob) {

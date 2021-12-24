@@ -410,14 +410,14 @@ TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplQueueRxSpace) {
   };
   // An unstarted netdevice will immediately return queued buffers.
   EXPECT_CALL(MockNetworkDevice(), NetworkDeviceIfcCompleteRx(testing::_, 1))
-      .Times(countof(spaces));
-  Device().NetworkDeviceImplQueueRxSpace(spaces, countof(spaces));
+      .Times(std::size(spaces));
+  Device().NetworkDeviceImplQueueRxSpace(spaces, std::size(spaces));
   ASSERT_NO_FATAL_FAILURE(NetdevImplStart(ZX_OK));
   netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
   helper.WithRxSpaces<void>([](auto& rx_spaces) { EXPECT_TRUE(rx_spaces.empty()); });
-  Device().NetworkDeviceImplQueueRxSpace(spaces, countof(spaces));
+  Device().NetworkDeviceImplQueueRxSpace(spaces, std::size(spaces));
   helper.WithRxSpaces<void>([&spaces](auto& rx_spaces) {
-    ASSERT_EQ(rx_spaces.size(), countof(spaces));
+    ASSERT_EQ(rx_spaces.size(), std::size(spaces));
     for (const rx_space_buffer_t& space : spaces) {
       EXPECT_EQ(rx_spaces.front().region.offset, space.region.offset);
       EXPECT_EQ(rx_spaces.front().region.length, space.region.length);
@@ -445,7 +445,7 @@ TEST_P(QueueRxSpaceFailedPreconditionTest, RemovesDriver) {
   ASSERT_OK(device->DeviceAdd());
   ASSERT_EQ(Parent().child_count(), 1u);
   // CompleteRx will not be called so set no call expectations.
-  device->NetworkDeviceImplQueueRxSpace(spaces, countof(spaces));
+  device->NetworkDeviceImplQueueRxSpace(spaces, std::size(spaces));
   ASSERT_TRUE(Parent().GetLatestChild()->AsyncRemoveCalled());
   ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(&Parent()));
   ASSERT_EQ(Parent().child_count(), 0u);
@@ -479,22 +479,23 @@ TEST_F(NetdeviceMigrationDefaultSetupTest, EthernetIfcRecv) {
               },
       },
   };
-  Device().NetworkDeviceImplQueueRxSpace(spaces, countof(spaces));
+  Device().NetworkDeviceImplQueueRxSpace(spaces, std::size(spaces));
   constexpr uint8_t rcvd[] = {0, 1, 2, 3, 4, 5, 6, 7};
-  EXPECT_CALL(MockNetworkDevice(), NetworkDeviceIfcCompleteRx(
-                                       testing::Pointee(testing::FieldsAre(
-                                           testing::A<buffer_metadata_t>(),
-                                           testing::Pointee(testing::FieldsAre(
-                                               kSpaceId, 0, static_cast<uint32_t>(countof(rcvd)))),
-                                           countof(spaces))),
-                                       countof(spaces)));
+  EXPECT_CALL(
+      MockNetworkDevice(),
+      NetworkDeviceIfcCompleteRx(testing::Pointee(testing::FieldsAre(
+                                     testing::A<buffer_metadata_t>(),
+                                     testing::Pointee(testing::FieldsAre(
+                                         kSpaceId, 0, static_cast<uint32_t>(std::size(rcvd)))),
+                                     std::size(spaces))),
+                                 std::size(spaces)));
   Device().EthernetIfcRecv(rcvd, sizeof(rcvd), 0);
   netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
   helper.WithVmoStore<void>([&rcvd](auto& vmo_store) {
     auto* vmo = vmo_store.GetVmo(kVmoId);
     cpp20::span<uint8_t> data = vmo->data();
-    data = data.subspan(0, countof(rcvd));
-    for (size_t i = 0; i < countof(rcvd); ++i) {
+    data = data.subspan(0, std::size(rcvd));
+    for (size_t i = 0; i < std::size(rcvd); ++i) {
       EXPECT_EQ(data[i], rcvd[i]);
     }
   });
@@ -534,13 +535,13 @@ TEST_P(RecvFailedPreconditionTest, RemovesDriver) {
               },
       },
   };
-  Device().NetworkDeviceImplQueueRxSpace(spaces, countof(spaces));
+  Device().NetworkDeviceImplQueueRxSpace(spaces, std::size(spaces));
   uint8_t bytes[input.buf_len];
   auto* device = TakeDevice();
   ASSERT_OK(device->DeviceAdd());
   ASSERT_EQ(Parent().child_count(), 1u);
   // CompleteRx will not be called so do not set mock expectation.
-  device->EthernetIfcRecv(bytes, countof(bytes), 0);
+  device->EthernetIfcRecv(bytes, input.buf_len, 0);
   ASSERT_TRUE(Parent().GetLatestChild()->AsyncRemoveCalled());
   ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(&Parent()));
   ASSERT_EQ(Parent().child_count(), 0u);
@@ -601,7 +602,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
   for (uint32_t call = 0; call < input.tx_queue_calls; ++call) {
     tx_buffer_t buffers[input.buffer_count];
     buffer_region_t region = {.vmo = kVmoId, .length = ETH_MTU_SIZE};
-    for (uint32_t buf_id = 0; buf_id < countof(buffers); ++buf_id) {
+    for (uint32_t buf_id = 0; buf_id < input.buffer_count; ++buf_id) {
       tx_buffer_t buf = {.id = ((input.buffer_count * call) + buf_id) % kFifoDepth,
                          .data_list = &region,
                          .data_count = 1};
@@ -632,7 +633,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
             callback(cookie, ZX_OK, netbuf);
           }
         });
-    for (uint32_t buf_id = 0; buf_id < countof(buffers); ++buf_id) {
+    for (uint32_t buf_id = 0; buf_id < input.buffer_count; ++buf_id) {
       EXPECT_CALL(MockNetworkDevice(),
                   NetworkDeviceIfcCompleteTx(
                       testing::Pointee(testing::FieldsAre(
@@ -640,7 +641,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
                       1))
           .Times(1);
     }
-    Device().NetworkDeviceImplQueueTx(buffers, countof(buffers));
+    Device().NetworkDeviceImplQueueTx(buffers, input.buffer_count);
     if (ool.enabled) {
       for (CallbackRecord& callback : callbacks) {
         callback.cb(callback.cookie, ZX_OK, &callback.netbuf);

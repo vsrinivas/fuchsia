@@ -5,7 +5,7 @@
 #include "src/ui/examples/lab/pose_buffer_presenter/app.h"
 
 // This header is intentionally out of order because it contains a workaround
-// for both glm and zircon defining countof(), and must be included before
+// for both glm and zircon defining std::size(), and must be included before
 // the glm headers to work.
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>

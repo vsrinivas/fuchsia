@@ -96,7 +96,7 @@ struct rte_console {
   char cbuf[CBUF_LEN];
 };
 
-#endif // BRCMF_CONSOLE_LOG
+#endif  // BRCMF_CONSOLE_LOG
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
@@ -361,7 +361,7 @@ struct sdpcm_shared {
   uint32_t assert_line;
 #ifdef BRCMF_CONSOLE_LOG
   uint32_t console_addr; /* Address of struct rte_console */
-#endif // BRCMF_CONSOLE_LOG
+#endif                   // BRCMF_CONSOLE_LOG
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
@@ -375,7 +375,7 @@ struct sdpcm_shared_le {
   uint32_t assert_line;
 #ifdef BRCMF_CONSOLE_LOG
   uint32_t console_addr; /* Address of struct rte_console */
-#endif // BRCMF_CONSOLE_LOG
+#endif                   // BRCMF_CONSOLE_LOG
   uint32_t msgtrace_addr;
   uint8_t tag[32];
   uint32_t brpt_addr;
@@ -844,9 +844,9 @@ static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {
     bus->console_addr = sh.console_addr;
   }
 }
-#else // BRCMF_CONSOLE_LOG
+#else   // BRCMF_CONSOLE_LOG
 static void brcmf_sdio_get_console_addr(struct brcmf_sdio* bus) {}
-#endif // BRCMF_CONSOLE_LOG
+#endif  // BRCMF_CONSOLE_LOG
 
 static uint32_t brcmf_sdio_hostmail(struct brcmf_sdio* bus) {
   struct brcmf_sdio_dev* sdiod = bus->sdiodev;
@@ -2572,7 +2572,7 @@ break2:
 
   return ZX_OK;
 }
-#endif // BRCMF_CONSOLE_LOG
+#endif  // BRCMF_CONSOLE_LOG
 
 zx_status_t brcmf_sdio_bus_txctl(brcmf_bus* bus_if, unsigned char* msg, uint msglen) {
   struct brcmf_sdio_dev* sdiodev = bus_if->bus_priv.sdio;
@@ -3059,7 +3059,7 @@ static void brcmf_sdio_bus_watchdog(struct brcmf_sdio* bus) {
       sdio_release_host(bus->sdiodev->func1);
     }
   }
-#endif // BRCMF_CONSOLE_LOG
+#endif  // BRCMF_CONSOLE_LOG
 
 // TODO(cphoenix): Turn "idle" back on once things are working, and see if anything breaks.
 #ifdef TEMP_DISABLE_DO_IDLE
@@ -3287,7 +3287,7 @@ static void brcmf_sdio_drivestrengthinit(struct brcmf_sdio_dev* sdiodev, struct 
       break;
     case SDIOD_DRVSTR_KEY(BRCM_CC_43143_CHIP_ID, 17):
       /* note: 43143 does not support tristate */
-      i = countof(sdiod_drvstr_tab2_3v3) - 1;
+      i = std::size(sdiod_drvstr_tab2_3v3) - 1;
       if (drivestrength >= sdiod_drvstr_tab2_3v3[i].strength) {
         str_tab = sdiod_drvstr_tab2_3v3;
         str_mask = 0x00000007;
@@ -3617,7 +3617,7 @@ static zx_status_t brcmf_sdio_probe_attach(struct brcmf_sdio* bus) {
   if (BRCMF_IS_ON(FWCON)) {
     bus->console_interval = BRCMF_CONSOLE_INTERVAL;
   }
-#endif // BRCMF_CONSOLE_LOG
+#endif  // BRCMF_CONSOLE_LOG
   return err;
 
 fail:
@@ -3800,7 +3800,7 @@ zx_status_t brcmf_sdio_firmware_callback(brcmf_pub* drvr, const void* firmware,
   BRCMF_DBG(TEMP, "console_addr 0x%x", bus->console_addr);
   brcmf_sdio_readconsole(bus);
   BRCMF_DBG(TEMP, "Should have seen readconsole output");
-#endif // BRCMF_CONSOLE_LOG
+#endif  // BRCMF_CONSOLE_LOG
 
   if (err == ZX_OK) {
     /* Allow full data communication using DPC from now on. */

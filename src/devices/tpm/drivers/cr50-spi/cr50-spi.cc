@@ -172,14 +172,14 @@ void Cr50SpiDevice::LogFirmwareVersion() {
       return;
     }
 
-    for (size_t j = 0; j < countof(chunk); j++) {
+    for (size_t j = 0; j < std::size(chunk); j++) {
       fw_version[i] = chunk[j];
       i++;
       non_null_bytes++;
-      if (chunk[j] == 0 || i >= countof(fw_version))
+      if (chunk[j] == 0 || i >= std::size(fw_version))
         break;
     }
-  } while (non_null_bytes == countof(chunk) && i < countof(fw_version));
+  } while (non_null_bytes == std::size(chunk) && i < std::size(fw_version));
 
   zxlogf(INFO, "TPM firmware version: %s", fw_version);
   // Add an inspect node with the firmware version.

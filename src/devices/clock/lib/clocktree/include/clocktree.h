@@ -32,7 +32,7 @@ class BaseClock;
 //
 //   // Add these clocks to an array of clocks and instantiate a clk::Tree.
 //   BaseClock* clocks[] = { &gateClock, &muxClock };
-//   clk::Tree tree(clocks, countof(clocks));
+//   clk::Tree tree(clocks, std::size(clocks));
 //
 //   // Now the Clock tree can be manupulated via calls to the Tree class as follows:
 //   zx_status_t st = tree.Enable(kClk0);

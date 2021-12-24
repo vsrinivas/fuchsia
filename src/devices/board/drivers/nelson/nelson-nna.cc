@@ -59,17 +59,17 @@ static pbus_dev_t nna_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_NNA;
   dev.mmio_list = nna_mmios;
-  dev.mmio_count = countof(nna_mmios);
+  dev.mmio_count = std::size(nna_mmios);
   dev.bti_list = nna_btis;
-  dev.bti_count = countof(nna_btis);
+  dev.bti_count = std::size(nna_btis);
   dev.irq_list = nna_irqs;
-  dev.irq_count = countof(nna_irqs);
+  dev.irq_count = std::size(nna_irqs);
   return dev;
 }();
 
 zx_status_t Nelson::NnaInit() {
   zx_status_t status = pbus_.AddComposite(&nna_dev, reinterpret_cast<uint64_t>(aml_nna_fragments),
-                                          countof(aml_nna_fragments), "pdev");
+                                          std::size(aml_nna_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Nelson::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

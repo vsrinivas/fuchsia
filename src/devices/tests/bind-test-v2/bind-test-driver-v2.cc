@@ -5,6 +5,8 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 
+#include <array>
+
 #include "src/devices/tests/bind-test-v2/bind-test-v2-bind.h"
 
 static zx_device_t* dev = NULL;
@@ -30,7 +32,7 @@ static zx_status_t bind(void* ctx, zx_device_t* parent) {
       {BIND_PCI_DID, 0, 1234},
   };
   args.props = props;
-  args.prop_count = countof(props);
+  args.prop_count = std::size(props);
 
   zx_status_t status = device_add(parent, &args, &dev);
   return status;

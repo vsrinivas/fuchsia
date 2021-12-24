@@ -272,7 +272,7 @@ void AmlG12TdmDai::GetRingBufferFormats(GetRingBufferFormatsCallback callback) {
   pcm_formats.mutable_bytes_per_sample()->push_back(metadata_.ring_buffer.bytes_per_sample);
   pcm_formats.mutable_valid_bits_per_sample()->push_back(metadata_.ring_buffer.bytes_per_sample *
                                                          8);
-  for (size_t i = 0; i < countof(AmlTdmConfigDevice::kSupportedFrameRates); ++i) {
+  for (size_t i = 0; i < std::size(AmlTdmConfigDevice::kSupportedFrameRates); ++i) {
     pcm_formats.mutable_frame_rates()->push_back(AmlTdmConfigDevice::kSupportedFrameRates[i]);
   }
   ::fuchsia::hardware::audio::SupportedFormats formats;
@@ -306,7 +306,7 @@ void AmlG12TdmDai::GetDaiFormats(GetDaiFormatsCallback callback) {
       ZX_ASSERT(0);  // Not supported.
   }
   formats.frame_formats.push_back(std::move(frame_format));
-  for (size_t i = 0; i < countof(AmlTdmConfigDevice::kSupportedFrameRates); ++i) {
+  for (size_t i = 0; i < std::size(AmlTdmConfigDevice::kSupportedFrameRates); ++i) {
     formats.frame_rates.push_back(AmlTdmConfigDevice::kSupportedFrameRates[i]);
   }
   formats.bits_per_slot.push_back(metadata_.dai.bits_per_slot);

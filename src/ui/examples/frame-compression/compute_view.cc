@@ -785,7 +785,7 @@ void ComputeView::RenderFrameFromColorOffset(const Image& image, uint32_t color_
       write_descriptor_sets[1].descriptorCount = 1;
       write_descriptor_sets[1].descriptorType = vk::DescriptorType::eStorageBuffer;
       write_descriptor_sets[1].pBufferInfo = &buffer_info;
-      vk_device.updateDescriptorSets(countof(write_descriptor_sets), write_descriptor_sets, 0,
+      vk_device.updateDescriptorSets(std::size(write_descriptor_sets), write_descriptor_sets, 0,
                                      nullptr);
     } break;
     case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR: {
@@ -796,7 +796,7 @@ void ComputeView::RenderFrameFromColorOffset(const Image& image, uint32_t color_
       write_descriptor_sets[0].descriptorCount = 1;
       write_descriptor_sets[0].descriptorType = vk::DescriptorType::eStorageImage;
       write_descriptor_sets[0].pImageInfo = &image_info;
-      vk_device.updateDescriptorSets(countof(write_descriptor_sets), write_descriptor_sets, 0,
+      vk_device.updateDescriptorSets(std::size(write_descriptor_sets), write_descriptor_sets, 0,
                                      nullptr);
     } break;
     default:

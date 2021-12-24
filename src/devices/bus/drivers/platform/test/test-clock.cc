@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 
 #include "test.h"
@@ -38,7 +38,7 @@ zx_status_t TestBoard::ClockInit() {
   clock_dev.pid = PDEV_PID_PBUS_TEST;
   clock_dev.did = PDEV_DID_TEST_CLOCK;
   clock_dev.metadata_list = clock_metadata;
-  clock_dev.metadata_count = countof(clock_metadata);
+  clock_dev.metadata_count = std::size(clock_metadata);
 
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_CLOCK_IMPL, &clock_dev);
   if (status != ZX_OK) {

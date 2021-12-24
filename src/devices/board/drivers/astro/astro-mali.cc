@@ -57,11 +57,11 @@ zx_status_t Astro::MaliInit() {
   mali_dev.pid = PDEV_PID_AMLOGIC_S905D2;
   mali_dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
   mali_dev.mmio_list = mali_mmios;
-  mali_dev.mmio_count = countof(mali_mmios);
+  mali_dev.mmio_count = std::size(mali_mmios);
   mali_dev.irq_list = mali_irqs;
-  mali_dev.irq_count = countof(mali_irqs);
+  mali_dev.irq_count = std::size(mali_irqs);
   mali_dev.bti_list = mali_btis;
-  mali_dev.bti_count = countof(mali_btis);
+  mali_dev.bti_count = std::size(mali_btis);
   using fuchsia_hardware_gpu_amlogic::wire::Metadata;
   fidl::Arena allocator;
   Metadata metadata(allocator);
@@ -81,13 +81,13 @@ zx_status_t Astro::MaliInit() {
       },
   };
   mali_dev.metadata_list = mali_metadata_list;
-  mali_dev.metadata_count = countof(mali_metadata_list);
+  mali_dev.metadata_count = std::size(mali_metadata_list);
   // Populate the BTI information
   mali_btis[0].iommu_index = 0;
   mali_btis[0].bti_id = BTI_MALI;
 
   zx_status_t status = pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(mali_fragments),
-                                          countof(mali_fragments), "pdev");
+                                          std::size(mali_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

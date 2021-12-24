@@ -37,7 +37,7 @@ Importer::Importer(trace_context_t* context, const TraceConfig* trace_config,
       rate_name_ref_(MAKE_STRING("rate")),
       aspace_name_ref_(MAKE_STRING("aspace")),
       pc_name_ref_(MAKE_STRING("pc")) {
-  for (unsigned cpu = 0; cpu < countof(cpu_thread_refs_); ++cpu) {
+  for (unsigned cpu = 0; cpu < std::size(cpu_thread_refs_); ++cpu) {
     // +1 because index thread refs start at 1
     trace_thread_index_t index = cpu + 1;
     cpu_thread_refs_[cpu] = trace_make_indexed_thread_ref(index);
@@ -362,19 +362,19 @@ void Importer::EmitTallyRecord(trace_cpu_number_t cpu, perfmon::EventId event_id
     trace_string_ref_t name_ref{
         trace_context_make_registered_string_literal(context_, details->name)};
     trace_context_write_counter_event_record(context_, time, &thread_ref, &cpuperf_category_ref_,
-                                             &name_ref, event_id, &args[0], countof(args));
+                                             &name_ref, event_id, &args[0], std::size(args));
   } else {
     FX_LOGS(WARNING) << "Invalid event id: " << event_id;
   }
 }
 
 trace_string_ref_t Importer::GetCpuNameRef(trace_cpu_number_t cpu) {
-  FX_DCHECK(cpu < countof(cpu_name_refs_));
+  FX_DCHECK(cpu < std::size(cpu_name_refs_));
   return cpu_name_refs_[cpu + 1];
 }
 
 trace_thread_ref_t Importer::GetCpuThreadRef(trace_cpu_number_t cpu, perfmon::EventId id) {
-  FX_DCHECK(cpu < countof(cpu_thread_refs_));
+  FX_DCHECK(cpu < std::size(cpu_thread_refs_));
   // TODO(dje): Misc events are currently all system-wide, not attached
   // to any specific cpu. That won't always be the case.
   if (perfmon::GetEventIdGroup(id) == perfmon::kGroupMisc)

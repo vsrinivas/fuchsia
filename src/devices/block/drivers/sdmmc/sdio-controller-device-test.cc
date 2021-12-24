@@ -990,7 +990,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherByteMode) {
       .incr = true,
       .write = true,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
@@ -1027,14 +1027,14 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockMode) {
   buffers[1] = MakeBufferRegion(vmo2_, 4, 3);
   buffers[2] = MakeBufferRegion(3, 10, 5);
 
-  sdmmc_.Write(0x5000, cpp20::span(kTestData1, countof(kTestData1)), 3);
+  sdmmc_.Write(0x5000, cpp20::span(kTestData1, std::size(kTestData1)), 3);
 
   sdio_rw_txn_new_t txn = {
       .addr = 0x5000,
       .incr = false,
       .write = false,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
@@ -1078,7 +1078,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeNoMultiBlock) {
       .incr = true,
       .write = true,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(5, &txn));
 
@@ -1126,7 +1126,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeNoMultiBlock) {
 TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeMultipleFinalBuffers) {
   Init(1, true);
 
-  sdmmc_.Write(0x3000, cpp20::span(kTestData1, countof(kTestData1)), 1);
+  sdmmc_.Write(0x3000, cpp20::span(kTestData1, std::size(kTestData1)), 1);
 
   sdmmc_buffer_region_t buffers[4];
   buffers[0] = MakeBufferRegion(1, 8, 7);
@@ -1139,7 +1139,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeMultipleFinalBuffers) {
       .incr = true,
       .write = false,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(1, &txn));
 
@@ -1184,7 +1184,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeLastAligned) {
       .incr = true,
       .write = true,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
@@ -1230,7 +1230,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherOnlyFullBlocks) {
       .incr = true,
       .write = true,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
@@ -1268,7 +1268,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherOverMaxTransferSize) {
       .incr = true,
       .write = true,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 

@@ -51,14 +51,14 @@ class FakeAmlAxgGpio : public AmlAxgGpio {
     switch (info.pid) {
       case PDEV_PID_AMLOGIC_A113:
         gpio_blocks = a113_gpio_blocks;
-        block_count = countof(a113_gpio_blocks);
+        block_count = std::size(a113_gpio_blocks);
         gpio_interrupt = &a113_interrupt_block;
         break;
       case PDEV_PID_AMLOGIC_S905D2:
       case PDEV_PID_AMLOGIC_T931:
         // S905D2 and T931 are identical.
         gpio_blocks = s905d2_gpio_blocks;
-        block_count = countof(s905d2_gpio_blocks);
+        block_count = std::size(s905d2_gpio_blocks);
         gpio_interrupt = &s905d2_interrupt_block;
         break;
       default:

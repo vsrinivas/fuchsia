@@ -322,7 +322,7 @@ static int ping_cmd() {
     dev_path /= std::filesystem::path(de->d_name);
     const char* argv[] = {"i2cutil_ping", "r", dev_path.c_str(), "0x00"};
     char** argv_main = (char**)(&argv);
-    auto status = device_cmd(countof(argv), argv_main, false);
+    auto status = device_cmd(std::size(argv), argv_main, false);
     printf("%s: %s\n", dev_path.c_str(), status == ZX_OK ? "OK" : "ERROR");
   }
   return 0;

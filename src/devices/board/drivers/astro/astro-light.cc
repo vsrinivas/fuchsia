@@ -43,13 +43,13 @@ zx_status_t Astro::LightInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = tcs3400_light_fragments,
-      .fragments_count = countof(tcs3400_light_fragments),
+      .fragments_count = std::size(tcs3400_light_fragments),
       .primary_fragment = "i2c",
       .spawn_colocated = false,
       .metadata_list = metadata,
-      .metadata_count = countof(metadata),
+      .metadata_count = std::size(metadata),
   };
 
   zx_status_t status = DdkAddComposite("tcs3400-light", &comp_desc);
@@ -89,7 +89,7 @@ zx_status_t Astro::LightInit() {
     dev.pid = PDEV_PID_GENERIC;
     dev.did = PDEV_DID_GPIO_LIGHT;
     dev.metadata_list = light_metadata;
-    dev.metadata_count = countof(light_metadata);
+    dev.metadata_count = std::size(light_metadata);
     return dev;
   }();
 
@@ -107,7 +107,7 @@ zx_status_t Astro::LightInit() {
   }
 
   status = pbus_.AddComposite(&light_dev, reinterpret_cast<uint64_t>(gpio_light_fragments),
-                              countof(gpio_light_fragments), "pdev");
+                              std::size(gpio_light_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite failed: %d", __func__, status);
     return status;

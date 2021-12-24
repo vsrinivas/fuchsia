@@ -146,7 +146,7 @@ static ACPI_STATUS handle_prt(ACPI_HANDLE object, zx_pci_init_arg_t* arg, uint8_
       break;
     }
     if (!found_irq) {
-      assert(arg->num_irqs < countof(arg->irqs));
+      assert(arg->num_irqs < std::size(arg->irqs));
       arg->irqs[arg->num_irqs].global_irq = global_irq;
       arg->irqs[arg->num_irqs].active_high = active_high;
       arg->irqs[arg->num_irqs].level_triggered = level_triggered;

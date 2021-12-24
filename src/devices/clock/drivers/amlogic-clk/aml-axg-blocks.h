@@ -83,7 +83,7 @@ static constexpr meson_clk_gate_t axg_clk_gates[] = {
     {.reg = AXG_HHI_GCLK_MPEG0, .bit = 1},  // CLK_AXG_DOS
 };
 
-static_assert(axg_clk::CLK_AXG_COUNT == countof(axg_clk_gates),
+static_assert(axg_clk::CLK_AXG_COUNT == std::size(axg_clk_gates),
               "axg_clk_gates[] and axg_clk_gate_idx count mismatch");
 
 #endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_AXG_BLOCKS_H_

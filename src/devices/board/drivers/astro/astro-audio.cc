@@ -100,15 +100,15 @@ static const zx_bind_inst_t codec_match[] = {
 };
 
 static const device_fragment_part_t enable_gpio_fragment[] = {
-    {countof(enable_gpio_match), enable_gpio_match},
+    {std::size(enable_gpio_match), enable_gpio_match},
 };
 static const device_fragment_part_t codec_fragment[] = {
-    {countof(codec_match), codec_match},
+    {std::size(codec_match), codec_match},
 };
 
 static const device_fragment_t tdm_i2s_fragments[] = {
-    {"gpio-enable", countof(enable_gpio_fragment), enable_gpio_fragment},
-    {"codec-01", countof(codec_fragment), codec_fragment},
+    {"gpio-enable", std::size(enable_gpio_fragment), enable_gpio_fragment},
+    {"codec-01", std::size(codec_fragment), codec_fragment},
 };
 
 zx_status_t Astro::AudioInit() {
@@ -203,11 +203,11 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = pcm_out_btis;
-    tdm_dev.bti_count = countof(pcm_out_btis);
+    tdm_dev.bti_count = std::size(pcm_out_btis);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
 #ifdef ENABLE_DAI_MODE
     tdm_dev.name = "astro-pcm-dai-out";
     tdm_dev.did = PDEV_DID_AMLOGIC_DAI_OUT;
@@ -217,12 +217,12 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.irq_list = frddr_a_irqs;
-    tdm_dev.irq_count = countof(frddr_a_irqs);
+    tdm_dev.irq_count = std::size(frddr_a_irqs);
 
     // TODO(fxb/84194): Migrate to the composite bind rules once dynamic bind rules are
     // available.
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      countof(tdm_pcm_fragments), nullptr);
+                                      std::size(tdm_pcm_fragments), nullptr);
 #endif
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: Add DAI/controller driver failed: %d", __FILE__, status);
@@ -244,12 +244,12 @@ zx_status_t Astro::AudioInit() {
                                 {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
-    comp_desc.props_count = countof(props);
+    comp_desc.props_count = std::size(props);
     comp_desc.spawn_colocated = false;
     comp_desc.fragments = astro_dai_test_out_fragments;
-    comp_desc.fragments_count = countof(astro_dai_test_out_fragments);
+    comp_desc.fragments_count = std::size(astro_dai_test_out_fragments);
     comp_desc.primary_fragment = "dai-out", comp_desc.metadata_list = test_metadata;
-    comp_desc.metadata_count = countof(test_metadata);
+    comp_desc.metadata_count = std::size(test_metadata);
     status = DdkAddComposite("astro-dai-test-out", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -287,13 +287,13 @@ zx_status_t Astro::AudioInit() {
 
     composite_device_desc_t comp_desc = {};
     comp_desc.props = props;
-    comp_desc.props_count = countof(props);
+    comp_desc.props_count = std::size(props);
     comp_desc.spawn_colocated = false;
     comp_desc.fragments = audio_codec_tas27xx_fragments;
-    comp_desc.fragments_count = countof(audio_codec_tas27xx_fragments);
+    comp_desc.fragments_count = std::size(audio_codec_tas27xx_fragments);
     comp_desc.primary_fragment = "i2c";
     comp_desc.metadata_list = codec_metadata;
-    comp_desc.metadata_count = countof(codec_metadata);
+    comp_desc.metadata_count = std::size(codec_metadata);
     status = DdkAddComposite("audio-codec-tas27xx", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
@@ -351,15 +351,15 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = tdm_btis;
-    tdm_dev.bti_count = countof(tdm_btis);
+    tdm_dev.bti_count = std::size(tdm_btis);
     tdm_dev.irq_list = frddr_b_irqs;
-    tdm_dev.irq_count = countof(frddr_b_irqs);
+    tdm_dev.irq_count = std::size(frddr_b_irqs);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_i2s_fragments),
-                                      countof(tdm_i2s_fragments), nullptr);
+                                      std::size(tdm_i2s_fragments), nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
@@ -406,11 +406,11 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.vid = PDEV_VID_AMLOGIC;
     tdm_dev.pid = PDEV_PID_AMLOGIC_S905D2;
     tdm_dev.mmio_list = audio_mmios;
-    tdm_dev.mmio_count = countof(audio_mmios);
+    tdm_dev.mmio_count = std::size(audio_mmios);
     tdm_dev.bti_list = pcm_in_btis;
-    tdm_dev.bti_count = countof(pcm_in_btis);
+    tdm_dev.bti_count = std::size(pcm_in_btis);
     tdm_dev.metadata_list = tdm_metadata;
-    tdm_dev.metadata_count = countof(tdm_metadata);
+    tdm_dev.metadata_count = std::size(tdm_metadata);
 #ifdef ENABLE_DAI_MODE
     tdm_dev.name = "astro-pcm-dai-in";
     tdm_dev.did = PDEV_DID_AMLOGIC_DAI_IN;
@@ -420,9 +420,9 @@ zx_status_t Astro::AudioInit() {
     tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
     tdm_dev.instance_id = tdm_instance_id++;
     tdm_dev.irq_list = toddr_a_irqs;
-    tdm_dev.irq_count = countof(toddr_a_irqs);
+    tdm_dev.irq_count = std::size(toddr_a_irqs);
     status = pbus_.CompositeDeviceAdd(&tdm_dev, reinterpret_cast<uint64_t>(tdm_pcm_fragments),
-                                      countof(tdm_pcm_fragments), nullptr);
+                                      std::size(tdm_pcm_fragments), nullptr);
 #endif
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -445,13 +445,13 @@ zx_status_t Astro::AudioInit() {
                               {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
   composite_device_desc_t comp_desc = {};
   comp_desc.props = props;
-  comp_desc.props_count = countof(props);
+  comp_desc.props_count = std::size(props);
   comp_desc.spawn_colocated = false;
   comp_desc.fragments = astro_dai_test_in_fragments;
-  comp_desc.fragments_count = countof(astro_dai_test_in_fragments);
+  comp_desc.fragments_count = std::size(astro_dai_test_in_fragments);
   comp_desc.primary_fragment = "dai-in";
   comp_desc.metadata_list = test_metadata;
-  comp_desc.metadata_count = countof(test_metadata);
+  comp_desc.metadata_count = std::size(test_metadata);
   status = DdkAddComposite("astro-dai-test-in", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
@@ -496,13 +496,13 @@ zx_status_t Astro::AudioInit() {
     dev_in.pid = PDEV_PID_AMLOGIC_S905D2;
     dev_in.did = PDEV_DID_AMLOGIC_PDM;
     dev_in.mmio_list = pdm_mmios;
-    dev_in.mmio_count = countof(pdm_mmios);
+    dev_in.mmio_count = std::size(pdm_mmios);
     dev_in.bti_list = pdm_btis;
-    dev_in.bti_count = countof(pdm_btis);
+    dev_in.bti_count = std::size(pdm_btis);
     dev_in.irq_list = toddr_b_irqs;
-    dev_in.irq_count = countof(toddr_b_irqs);
+    dev_in.irq_count = std::size(toddr_b_irqs);
     dev_in.metadata_list = pdm_metadata;
-    dev_in.metadata_count = countof(pdm_metadata);
+    dev_in.metadata_count = std::size(pdm_metadata);
 
     status = pbus_.DeviceAdd(&dev_in);
     if (status != ZX_OK) {

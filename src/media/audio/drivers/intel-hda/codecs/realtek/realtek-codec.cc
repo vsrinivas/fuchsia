@@ -167,7 +167,7 @@ zx_status_t RealtekCodec::SetupCommon() {
       {33u, SET_EAPD_BTL_ENABLE(0)},
   };
 
-  zx_status_t res = RunCommandList(START_CMDS, countof(START_CMDS));
+  zx_status_t res = RunCommandList(START_CMDS, std::size(START_CMDS));
 
   if (res != ZX_OK)
     LOG("Failed to send common startup commands (res %d)", res);
@@ -213,7 +213,7 @@ zx_status_t RealtekCodec::SetupAcer12() {
       {1u, SET_POWER_STATE(HDA_PS_D0)},
   };
 
-  res = RunCommandList(START_CMDS, countof(START_CMDS));
+  res = RunCommandList(START_CMDS, std::size(START_CMDS));
   if (res != ZX_OK) {
     LOG("Failed to send startup command for Acer12 (res %d)", res);
     return res;
@@ -264,7 +264,7 @@ zx_status_t RealtekCodec::SetupAcer12() {
       },
   };
 
-  res = CreateAndStartStreams(STREAMS, countof(STREAMS));
+  res = CreateAndStartStreams(STREAMS, std::size(STREAMS));
   if (res != ZX_OK) {
     LOG("Failed to create and publish streams for Acer12 (res %d)", res);
     return res;
@@ -306,7 +306,7 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
       {1u, SET_POWER_STATE(HDA_PS_D0)},
   };
 
-  res = RunCommandList(START_CMDS, countof(START_CMDS));
+  res = RunCommandList(START_CMDS, std::size(START_CMDS));
   if (res != ZX_OK) {
     LOG("Failed to send startup command for Intel NUC (res %d)", res);
     return res;
@@ -343,7 +343,7 @@ zx_status_t RealtekCodec::SetupIntelNUC() {
       },
   };
 
-  res = CreateAndStartStreams(STREAMS, countof(STREAMS));
+  res = CreateAndStartStreams(STREAMS, std::size(STREAMS));
   if (res != ZX_OK) {
     LOG("Failed to create and publish streams for Intel NUC (res %d)", res);
     return res;

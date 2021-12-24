@@ -25,7 +25,7 @@ class IntelGspiTest : public zxtest::Test {
  public:
   IntelGspiTest()
       : loop_(&kAsyncLoopConfigNeverAttachToThread),
-        region_(ddk_fake::FakeMmioRegRegion(registers_, 4, countof(registers_))),
+        region_(ddk_fake::FakeMmioRegRegion(registers_, 4, std::size(registers_))),
         parent_(MockDevice::FakeRootParent()) {}
 
   void CreateDevice(bool with_interrupt) {
@@ -161,7 +161,7 @@ TEST_F(IntelGspiTest, TestRx) {
   ddk::SpiImplProtocolClient client(gspi_);
   uint8_t data[4];
   size_t actual;
-  ASSERT_OK(client.Exchange(0, nullptr, 0, data, countof(data), &actual));
+  ASSERT_OK(client.Exchange(0, nullptr, 0, data, std::size(data), &actual));
   ASSERT_EQ(actual, 4);
   ASSERT_BYTES_EQ(data, kTestData.data(), kTestData.size());
 }
@@ -188,7 +188,7 @@ TEST_F(IntelGspiTest, TestBigTransaction) {
   ddk::SpiImplProtocolClient client(gspi_);
   uint8_t data[128];
   size_t actual;
-  ASSERT_OK(client.Exchange(0, kTestData.data(), kTestData.size(), data, countof(data), &actual));
+  ASSERT_OK(client.Exchange(0, kTestData.data(), kTestData.size(), data, std::size(data), &actual));
   ASSERT_EQ(actual, 128);
   ASSERT_BYTES_EQ(data, kTestData.data(), kTestData.size());
   ASSERT_BYTES_EQ(tx_data_.data(), kTestData.data(), kTestData.size());

@@ -785,7 +785,7 @@ VKAPI_ATTR VkResult VKAPI_CALL EnumerateDeviceLayerProperties(VkPhysicalDevice p
 VKAPI_ATTR VkResult VKAPI_CALL EnumerateInstanceExtensionProperties(
     const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties) {
   if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
-    return util_GetExtensionProperties(ARRAY_SIZE(instance_extensions), instance_extensions, pCount,
+    return util_GetExtensionProperties(std::size(instance_extensions), instance_extensions, pCount,
                                        pProperties);
 
   return VK_ERROR_LAYER_NOT_PRESENT;
@@ -795,7 +795,7 @@ VKAPI_ATTR VkResult VKAPI_CALL
 EnumerateDeviceExtensionProperties(VkPhysicalDevice physicalDevice, const char* pLayerName,
                                    uint32_t* pCount, VkExtensionProperties* pProperties) {
   if (pLayerName && !strcmp(pLayerName, swapchain_layer.layerName))
-    return util_GetExtensionProperties(ARRAY_SIZE(device_extensions), device_extensions, pCount,
+    return util_GetExtensionProperties(std::size(device_extensions), device_extensions, pCount,
                                        pProperties);
 
   assert(physicalDevice);

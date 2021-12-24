@@ -320,7 +320,7 @@ void Tas58xx::SetGainState(GainState gain_state) {
     sync_completion_reset(&completion);
 
     i2c_.Transact(
-        ops, countof(ops),
+        ops, std::size(ops),
         [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
           sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
         },
@@ -353,7 +353,7 @@ zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
 #endif
-  return WriteRegs(write_buf, countof(write_buf));
+  return WriteRegs(write_buf, std::size(write_buf));
 }
 
 zx_status_t Tas58xx::WriteRegs(uint8_t* regs, size_t count) {

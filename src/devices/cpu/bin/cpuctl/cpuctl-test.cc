@@ -109,7 +109,7 @@ void FakeCpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn)
 
 void FakeCpuDevice::GetPerformanceStateInfo(GetPerformanceStateInfoRequestView request,
                                             GetPerformanceStateInfoCompleter::Sync& completer) {
-  if (request->state >= countof(kTestPstates)) {
+  if (request->state >= std::size(kTestPstates)) {
     completer.ReplyError(ZX_ERR_OUT_OF_RANGE);
   } else {
     completer.ReplySuccess(kTestPstates[request->state]);
@@ -123,7 +123,7 @@ void FakeCpuDevice::GetNumLogicalCores(GetNumLogicalCoresRequestView request,
 
 void FakeCpuDevice::GetLogicalCoreId(GetLogicalCoreIdRequestView request,
                                      GetLogicalCoreIdCompleter::Sync& completer) {
-  if (request->index >= countof(kLogicalCoreIds)) {
+  if (request->index >= std::size(kLogicalCoreIds)) {
     completer.Reply(UINT64_MAX);
   }
   completer.Reply(kLogicalCoreIds[request->index]);
@@ -131,7 +131,7 @@ void FakeCpuDevice::GetLogicalCoreId(GetLogicalCoreIdRequestView request,
 
 void FakeCpuDevice::SetPerformanceState(SetPerformanceStateRequestView request,
                                         SetPerformanceStateCompleter::Sync& completer) {
-  if (request->requested_state > countof(kTestPstates)) {
+  if (request->requested_state > std::size(kTestPstates)) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, request->requested_state);
     return;
   }
@@ -196,7 +196,7 @@ TEST_F(PerformanceDomainTest, TestGetCurrentPerformanceState) {
 TEST_F(PerformanceDomainTest, TestGetPerformanceStates) {
   const auto pstates = pd_->GetPerformanceStates();
 
-  ASSERT_EQ(pstates.size(), countof(kTestPstates));
+  ASSERT_EQ(pstates.size(), std::size(kTestPstates));
 
   for (size_t i = 0; i < pstates.size(); i++) {
     EXPECT_EQ(pstates[i].voltage_uv, kTestPstates[i].voltage_uv);
@@ -206,8 +206,8 @@ TEST_F(PerformanceDomainTest, TestGetPerformanceStates) {
 
 TEST_F(PerformanceDomainTest, TestSetPerformanceState) {
   // Just move to the next sequential pstate with wraparound.
-  const uint32_t test_pstate = (kInitialPstate + 1) % countof(kTestPstates);
-  const uint32_t invalid_pstate = countof(kTestPstates) + 1;
+  const uint32_t test_pstate = (kInitialPstate + 1) % std::size(kTestPstates);
+  const uint32_t invalid_pstate = std::size(kTestPstates) + 1;
   zx_status_t st = pd_->SetPerformanceState(test_pstate);
 
   EXPECT_OK(st);

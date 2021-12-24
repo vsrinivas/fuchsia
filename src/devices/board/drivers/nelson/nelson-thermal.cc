@@ -224,13 +224,13 @@ static const pbus_dev_t thermal_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D3;
   dev.did = PDEV_DID_AMLOGIC_THERMAL_PLL;
   dev.mmio_list = thermal_mmios;
-  dev.mmio_count = countof(thermal_mmios);
+  dev.mmio_count = std::size(thermal_mmios);
   dev.irq_list = thermal_irqs;
-  dev.irq_count = countof(thermal_irqs);
+  dev.irq_count = std::size(thermal_irqs);
   dev.metadata_list = thermal_metadata;
-  dev.metadata_count = countof(thermal_metadata);
+  dev.metadata_count = std::size(thermal_metadata);
   dev.smc_list = thermal_smcs;
-  dev.smc_count = countof(thermal_smcs);
+  dev.smc_count = std::size(thermal_smcs);
   return dev;
 }();
 
@@ -250,7 +250,7 @@ zx_status_t Nelson::ThermalInit() {
   }
 
   status = pbus_.AddComposite(&thermal_dev, reinterpret_cast<uint64_t>(aml_thermal_pll_fragments),
-                              countof(aml_thermal_pll_fragments), "pdev");
+                              std::size(aml_thermal_pll_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed: %d", __func__, status);
     return status;

@@ -32,7 +32,7 @@ pbus_dev_t dsi_dev = []() {
   dev.pid = PDEV_PID_GENERIC;
   dev.did = PDEV_DID_DW_DSI;
   dev.mmio_list = dsi_mmios;
-  dev.mmio_count = countof(dsi_mmios);
+  dev.mmio_count = std::size(dsi_mmios);
   return dev;
 }();
 

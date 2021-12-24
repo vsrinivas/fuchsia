@@ -36,9 +36,9 @@ static const zx_device_prop_t luis_touch_props[] = {
 
 static const composite_device_desc_t luis_comp_desc = {
     .props = luis_touch_props,
-    .props_count = countof(luis_touch_props),
+    .props_count = std::size(luis_touch_props),
     .fragments = ft8201_touch_fragments,
-    .fragments_count = countof(ft8201_touch_fragments),
+    .fragments_count = std::size(ft8201_touch_fragments),
     .primary_fragment = "i2c",
     .spawn_colocated = false,
 };
@@ -59,9 +59,9 @@ zx_status_t Sherlock::TouchInit() {
     };
     static const composite_device_desc_t sherlock_comp_desc = {
         .props = sherlock_touch_props,
-        .props_count = countof(sherlock_touch_props),
+        .props_count = std::size(sherlock_touch_props),
         .fragments = ft5726_touch_fragments,
-        .fragments_count = countof(ft5726_touch_fragments),
+        .fragments_count = std::size(ft5726_touch_fragments),
         .primary_fragment = "i2c",
         .spawn_colocated = false,
         .metadata_list = ft5726_touch_metadata,

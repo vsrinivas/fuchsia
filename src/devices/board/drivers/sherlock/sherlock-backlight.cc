@@ -66,15 +66,15 @@ constexpr pbus_dev_t backlight_dev = []() {
   dev.pid = PDEV_PID_TI_LP8556;
   dev.did = PDEV_DID_TI_BACKLIGHT;
   dev.metadata_list = backlight_metadata;
-  dev.metadata_count = countof(backlight_metadata);
+  dev.metadata_count = std::size(backlight_metadata);
   dev.mmio_list = backlight_mmios;
-  dev.mmio_count = countof(backlight_mmios);
+  dev.mmio_count = std::size(backlight_mmios);
   return dev;
 }();
 
 zx_status_t Sherlock::BacklightInit() {
   auto status = pbus_.AddComposite(&backlight_dev, reinterpret_cast<uint64_t>(backlight_fragments),
-                                   countof(backlight_fragments), "i2c");
+                                   std::size(backlight_fragments), "i2c");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

@@ -63,7 +63,7 @@ zx_status_t GetCpuAffinityProfileSimple(void* ctx, const fuchsia_scheduler_CpuSe
   info.flags = ZX_PROFILE_INFO_FLAG_CPU_MASK;
 
   static_assert(sizeof(info.cpu_affinity_mask.mask) == sizeof(cpu_mask->mask));
-  static_assert(countof(info.cpu_affinity_mask.mask) == countof(cpu_mask->mask));
+  static_assert(std::size(info.cpu_affinity_mask.mask) == std::size(decltype(cpu_mask->mask){}));
   memcpy(info.cpu_affinity_mask.mask, cpu_mask->mask, sizeof(cpu_mask->mask));
 
   zx::profile profile;

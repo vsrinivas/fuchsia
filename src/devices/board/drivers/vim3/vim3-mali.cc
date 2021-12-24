@@ -54,18 +54,18 @@ static pbus_dev_t mali_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
   dev.mmio_list = mali_mmios;
-  dev.mmio_count = countof(mali_mmios);
+  dev.mmio_count = std::size(mali_mmios);
   dev.irq_list = mali_irqs;
-  dev.irq_count = countof(mali_irqs);
+  dev.irq_count = std::size(mali_irqs);
   dev.bti_list = mali_btis;
-  dev.bti_count = countof(mali_btis);
+  dev.bti_count = std::size(mali_btis);
   return dev;
 }();
 
 zx_status_t Vim3::MaliInit() {
   zx_status_t status =
       pbus_.AddComposite(&mali_dev, reinterpret_cast<uint64_t>(vim3_mali_fragments),
-                         countof(vim3_mali_fragments), "pdev");
+                         std::size(vim3_mali_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Sherlock::MaliInit: CompositeDeviceAdd failed: %d", status);
     return status;

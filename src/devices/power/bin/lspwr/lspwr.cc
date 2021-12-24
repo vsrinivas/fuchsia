@@ -54,7 +54,7 @@ static const char* state_to_string[] = {"online", "discharging", "charging", "cr
 static const char* state_offline = "offline/not present";
 const char* get_state_string(uint32_t state, fbl::StringBuffer<256>* buf) {
   buf->Clear();
-  for (size_t i = 0; i < countof(state_to_string); i++) {
+  for (size_t i = 0; i < std::size(state_to_string); i++) {
     if (state & (1 << i)) {
       if (buf->length()) {
         buf->Append(", ");

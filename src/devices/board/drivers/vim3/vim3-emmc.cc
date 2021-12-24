@@ -73,15 +73,15 @@ zx_status_t Vim3::EmmcInit() {
   emmc_dev.pid = PDEV_PID_GENERIC;
   emmc_dev.did = PDEV_DID_AMLOGIC_SDMMC_C;
   emmc_dev.mmio_list = emmc_mmios;
-  emmc_dev.mmio_count = countof(emmc_mmios);
+  emmc_dev.mmio_count = std::size(emmc_mmios);
   emmc_dev.irq_list = emmc_irqs;
-  emmc_dev.irq_count = countof(emmc_irqs);
+  emmc_dev.irq_count = std::size(emmc_irqs);
   emmc_dev.bti_list = emmc_btis;
-  emmc_dev.bti_count = countof(emmc_btis);
+  emmc_dev.bti_count = std::size(emmc_btis);
   emmc_dev.metadata_list = emmc_metadata;
-  emmc_dev.metadata_count = countof(emmc_metadata);
+  emmc_dev.metadata_count = std::size(emmc_metadata);
   emmc_dev.boot_metadata_list = emmc_boot_metadata;
-  emmc_dev.boot_metadata_count = countof(emmc_boot_metadata);
+  emmc_dev.boot_metadata_count = std::size(emmc_boot_metadata);
 
   // set alternate functions to enable EMMC
   gpio_impl_.SetAltFunction(A311D_GPIOBOOT(0), A311D_GPIOBOOT_0_EMMC_D0_FN);
@@ -100,7 +100,7 @@ zx_status_t Vim3::EmmcInit() {
   gpio_impl_.ConfigOut(A311D_GPIOBOOT(14), 1);
 
   status = pbus_.AddComposite(&emmc_dev, reinterpret_cast<uint64_t>(vim3_emmc_fragments),
-                              countof(vim3_emmc_fragments), "pdev");
+                              std::size(vim3_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "SdEmmcInit could not add emmc_dev: %d\n", status);
     return status;

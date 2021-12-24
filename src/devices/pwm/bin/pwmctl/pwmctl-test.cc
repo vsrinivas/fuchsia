@@ -78,7 +78,7 @@ TEST(PwmCtlTest, Enable) {
 
   char const* args[] = {kBinaryName, kDevPath, "enable"};
 
-  EXPECT_OK(run(countof(args), args, fake_pwm.GetPwmClient()));
+  EXPECT_OK(run(std::size(args), args, fake_pwm.GetPwmClient()));
 
   EXPECT_EQ(fake_pwm.EnableCount(), 1);
   EXPECT_EQ(fake_pwm.DisableCount(), 0);
@@ -91,7 +91,7 @@ TEST(PwmCtlTest, Disable) {
 
   char const* args[] = {kBinaryName, kDevPath, "disable"};
 
-  EXPECT_OK(run(countof(args), args, fake_pwm.GetPwmClient()));
+  EXPECT_OK(run(std::size(args), args, fake_pwm.GetPwmClient()));
 
   EXPECT_EQ(fake_pwm.EnableCount(), 0);
   EXPECT_EQ(fake_pwm.DisableCount(), 1);
@@ -105,7 +105,7 @@ TEST(PwmCtlTest, SetConfig) {
   const std::string set_config = "config";
   char const* args[] = {kBinaryName, kDevPath, "config", "1", "1234", "45.0"};
 
-  EXPECT_OK(run(countof(args), args, fake_pwm.GetPwmClient()));
+  EXPECT_OK(run(std::size(args), args, fake_pwm.GetPwmClient()));
 
   EXPECT_EQ(fake_pwm.EnableCount(), 0);
   EXPECT_EQ(fake_pwm.DisableCount(), 0);
@@ -123,7 +123,7 @@ TEST(PwmCtlTest, InvalidCommand) {
 
   char const* args[] = {kBinaryName, kDevPath, "bad-argument"};
 
-  EXPECT_NOT_OK(run(countof(args), args, fake_pwm.GetPwmClient()));
+  EXPECT_NOT_OK(run(std::size(args), args, fake_pwm.GetPwmClient()));
 
   EXPECT_EQ(fake_pwm.EnableCount(), 0);
   EXPECT_EQ(fake_pwm.DisableCount(), 0);
@@ -135,16 +135,16 @@ TEST(PwmCtlTest, SetConfigArgs) {
   FakePwmDevice fake_pwm;
 
   char const* bad_polarity[] = {kBinaryName, kDevPath, "config", "2", "1234", "45.0"};
-  EXPECT_NOT_OK(run(countof(bad_polarity), bad_polarity, fake_pwm.GetPwmClient()));
+  EXPECT_NOT_OK(run(std::size(bad_polarity), bad_polarity, fake_pwm.GetPwmClient()));
 
   char const* negative_period[] = {kBinaryName, kDevPath, "config", "1", "-12", "45.0"};
-  EXPECT_NOT_OK(run(countof(negative_period), negative_period, fake_pwm.GetPwmClient()));
+  EXPECT_NOT_OK(run(std::size(negative_period), negative_period, fake_pwm.GetPwmClient()));
 
   char const* bad_duty_cycle[] = {kBinaryName, kDevPath, "config", "1", "1234", "101.0"};
-  EXPECT_NOT_OK(run(countof(bad_duty_cycle), bad_duty_cycle, fake_pwm.GetPwmClient()));
+  EXPECT_NOT_OK(run(std::size(bad_duty_cycle), bad_duty_cycle, fake_pwm.GetPwmClient()));
 
   char const* negative_duty_cycle[] = {kBinaryName, kDevPath, "config", "1", "1234", "-10.0"};
-  EXPECT_NOT_OK(run(countof(negative_duty_cycle), negative_duty_cycle, fake_pwm.GetPwmClient()));
+  EXPECT_NOT_OK(run(std::size(negative_duty_cycle), negative_duty_cycle, fake_pwm.GetPwmClient()));
 
   EXPECT_EQ(fake_pwm.EnableCount(), 0);
   EXPECT_EQ(fake_pwm.DisableCount(), 0);

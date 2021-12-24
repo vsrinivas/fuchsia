@@ -128,7 +128,7 @@ class AmlSdmmcTest : public zxtest::Test {
     bti_paddrs_[0] = zx_system_get_page_size();
 
     zx::bti bti;
-    ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, countof(bti_paddrs_),
+    ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, std::size(bti_paddrs_),
                                           bti.reset_and_get_address()));
 
     dut_ = new TestAmlSdmmc(mmio_buffer, std::move(bti));
@@ -1177,7 +1177,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(vmos); i++) {
+  for (uint32_t i = 0; i < std::size(vmos); i++) {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
     buffers[i] = {
         .buffer =
@@ -1198,7 +1198,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
@@ -1222,9 +1222,9 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
   EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
-  for (uint32_t i = 1; i < countof(vmos); i++) {
+  for (uint32_t i = 1; i < std::size(vmos); i++) {
     expected_desc_cfg.set_len(i + 2).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
-    if (i == countof(vmos) - 1) {
+    if (i == std::size(vmos) - 1) {
       expected_desc_cfg.set_end_of_chain(1);
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
@@ -1241,7 +1241,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(vmos); i++) {
+  for (uint32_t i = 0; i < std::size(vmos); i++) {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
     buffers[i] = {
         .buffer =
@@ -1264,7 +1264,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
@@ -1277,7 +1277,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(vmos); i++) {
+  for (uint32_t i = 0; i < std::size(vmos); i++) {
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmos[i]));
     buffers[i] = {
         .buffer =
@@ -1298,7 +1298,7 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
@@ -1321,9 +1321,9 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
   EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
-  for (uint32_t i = 1; i < countof(vmos); i++) {
+  for (uint32_t i = 1; i < std::size(vmos); i++) {
     expected_desc_cfg.set_len(50).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
-    if (i == countof(vmos) - 1) {
+    if (i == std::size(vmos) - 1) {
       expected_desc_cfg.set_end_of_chain(1);
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
@@ -1590,7 +1590,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
   InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(buffers); i++) {
+  for (uint32_t i = 0; i < std::size(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
@@ -1616,7 +1616,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
@@ -1640,9 +1640,9 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
   EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
-  for (uint32_t i = 1; i < countof(buffers); i++) {
+  for (uint32_t i = 1; i < std::size(buffers); i++) {
     expected_desc_cfg.set_len(i + 2).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
-    if (i == countof(buffers) - 1) {
+    if (i == std::size(buffers) - 1) {
       expected_desc_cfg.set_end_of_chain(1);
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
@@ -1667,7 +1667,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
   InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(buffers); i++) {
+  for (uint32_t i = 0; i < std::size(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
@@ -1692,7 +1692,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
@@ -1704,7 +1704,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
   InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(buffers); i++) {
+  for (uint32_t i = 0; i < std::size(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     EXPECT_OK(dut_->SdmmcRegisterVmo(i, 0, std::move(vmo), i * 64, 512, SDMMC_VMO_RIGHT_WRITE));
@@ -1727,7 +1727,7 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
@@ -1750,9 +1750,9 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
   EXPECT_EQ(descs[0].data_addr, zx_system_get_page_size());
   EXPECT_EQ(descs[0].resp_addr, 0);
 
-  for (uint32_t i = 1; i < countof(buffers); i++) {
+  for (uint32_t i = 1; i < std::size(buffers); i++) {
     expected_desc_cfg.set_len(50).set_no_resp(1).set_no_cmd(1).set_resp_num(0).set_cmd_idx(0);
-    if (i == countof(buffers) - 1) {
+    if (i == std::size(buffers) - 1) {
       expected_desc_cfg.set_end_of_chain(1);
     }
     EXPECT_EQ(descs[i].cmd_info, expected_desc_cfg.reg_value());
@@ -2177,7 +2177,7 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   AmlSdmmcCmdResp::Get().FromValue(0xfedc9876).WriteTo(&mmio_);
@@ -2328,7 +2328,7 @@ TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
   InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(buffers); i++) {
+  for (uint32_t i = 0; i < std::size(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     const uint32_t vmo_rights = SDMMC_VMO_RIGHT_READ | (i == 5 ? 0 : SDMMC_VMO_RIGHT_WRITE);
@@ -2352,7 +2352,7 @@ TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
@@ -2364,7 +2364,7 @@ TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
   InitializeContiguousPaddrs(10);
 
   sdmmc_buffer_region_t buffers[10];
-  for (uint32_t i = 0; i < countof(buffers); i++) {
+  for (uint32_t i = 0; i < std::size(buffers); i++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
     const uint32_t vmo_rights = SDMMC_VMO_RIGHT_WRITE | (i == 5 ? 0 : SDMMC_VMO_RIGHT_READ);
@@ -2388,7 +2388,7 @@ TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
       .suppress_error_messages = false,
       .client_id = 0,
       .buffers_list = buffers,
-      .buffers_count = countof(buffers),
+      .buffers_count = std::size(buffers),
   };
   uint32_t response[4] = {};
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));

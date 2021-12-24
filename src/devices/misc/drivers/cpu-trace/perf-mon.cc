@@ -268,7 +268,7 @@ zx_status_t PerfmonDevice::PmuGetBufferHandle(uint32_t descriptor, zx_handle_t* 
 // and see if there's a timebase event.
 static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConfig* ocfg) {
   unsigned ii;  // ii: input index
-  for (ii = 0; ii < countof(icfg->events); ++ii) {
+  for (ii = 0; ii < std::size(icfg->events); ++ii) {
     EventId id = icfg->events[ii].event;
     if (id == kEventIdNone) {
       break;
@@ -306,7 +306,7 @@ static zx_status_t VerifyAndCheckTimebase(const FidlPerfmonConfig* icfg, PmuConf
   }
 
   // Ensure there are no holes.
-  for (; ii < countof(icfg->events); ++ii) {
+  for (; ii < std::size(icfg->events); ++ii) {
     if (icfg->events[ii].event != kEventIdNone) {
       zxlogf(ERROR, "%s: Hole at event [%u]", __func__, ii);
       return ZX_ERR_INVALID_ARGS;

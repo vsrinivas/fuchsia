@@ -51,7 +51,6 @@
 #include <udis86.h>
 #endif
 
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
 #define container_of(ptr, type, member) ((type*)((char*)(ptr)-offsetof(type, member)))
 
 namespace simple_pt {

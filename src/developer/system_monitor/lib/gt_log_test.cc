@@ -96,18 +96,17 @@ TEST_F(GtLogTest, BadInput) {
 }
 
 TEST_F(GtLogTest, SetUpLogging) {
-#define ARRAY_SIZE(a) (sizeof(a) / sizeof(*(a)))
   {
     EXPECT_EQ(gt::g_log_level, GuiToolsLogLevel::INFO);
     const char* args[] = {"log_test", "foo", "bar"};
-    EXPECT_TRUE(SetUpLogging(ARRAY_SIZE(args), args));
+    EXPECT_TRUE(SetUpLogging(std::size(args), args));
     // No log setting was changed.
     EXPECT_EQ(gt::g_log_level, GuiToolsLogLevel::INFO);
   }
   {
     EXPECT_EQ(gt::g_log_level, GuiToolsLogLevel::INFO);
     const char* args[] = {"log_test", "--verbose"};
-    EXPECT_TRUE(SetUpLogging(ARRAY_SIZE(args), args));
+    EXPECT_TRUE(SetUpLogging(std::size(args), args));
     EXPECT_EQ(gt::g_log_level, GuiToolsLogLevel::DEBUG);
     gt::g_log_level = GuiToolsLogLevel::INFO;
   }
@@ -115,11 +114,10 @@ TEST_F(GtLogTest, SetUpLogging) {
     EXPECT_EQ(gt::g_log_level, GuiToolsLogLevel::INFO);
     // Values compound.
     const char* args[] = {"log_test", "--quiet", "--quiet"};
-    EXPECT_TRUE(SetUpLogging(ARRAY_SIZE(args), args));
+    EXPECT_TRUE(SetUpLogging(std::size(args), args));
     EXPECT_EQ(gt::g_log_level, GuiToolsLogLevel::ERROR);
     gt::g_log_level = GuiToolsLogLevel::INFO;
   }
-#undef ARRAY_SIZE
 }
 
 }  // namespace

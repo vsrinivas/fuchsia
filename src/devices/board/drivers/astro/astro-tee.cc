@@ -72,15 +72,15 @@ zx_status_t Astro::TeeInit() {
   tee_dev.pid = PDEV_PID_GENERIC;
   tee_dev.did = PDEV_DID_OPTEE;
   tee_dev.mmio_list = astro_tee_mmios;
-  tee_dev.mmio_count = countof(astro_tee_mmios);
+  tee_dev.mmio_count = std::size(astro_tee_mmios);
   tee_dev.bti_list = astro_tee_btis;
-  tee_dev.bti_count = countof(astro_tee_btis);
+  tee_dev.bti_count = std::size(astro_tee_btis);
   tee_dev.smc_list = astro_tee_smcs;
-  tee_dev.smc_count = countof(astro_tee_smcs);
+  tee_dev.smc_count = std::size(astro_tee_smcs);
 
   auto optee_status = fidl_metadata::tee::TeeMetadataToFidl(
       ASTRO_OPTEE_DEFAULT_THREAD_COUNT,
-      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, countof(tee_thread_cfg)));
+      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, std::size(tee_thread_cfg)));
   if (optee_status.is_error()) {
     zxlogf(ERROR, "%s: failed to fidl encode optee thread config: %d", __func__,
            optee_status.error_value());
@@ -99,7 +99,7 @@ zx_status_t Astro::TeeInit() {
   tee_dev.metadata_list = metadata.data();
 
   zx_status_t status = pbus_.AddComposite(&tee_dev, reinterpret_cast<uint64_t>(tee_fragments),
-                                          countof(tee_fragments), "pdev");
+                                          std::size(tee_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

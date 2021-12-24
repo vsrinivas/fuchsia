@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/clock.h>
 #include <soc/aml-meson/g12a-clk.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -58,9 +58,9 @@ static const pbus_dev_t clk_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_G12A_CLK;
   dev.mmio_list = clk_mmios;
-  dev.mmio_count = countof(clk_mmios);
+  dev.mmio_count = std::size(clk_mmios);
   dev.metadata_list = clock_metadata;
-  dev.metadata_count = countof(clock_metadata);
+  dev.metadata_count = std::size(clock_metadata);
   return dev;
 }();
 

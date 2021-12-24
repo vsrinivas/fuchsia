@@ -116,14 +116,14 @@ zx_status_t Sysdev::MakeComposite() {
       BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
   };
   const device_fragment_part_t fragment1[] = {
-      {countof(fragment1_match), fragment1_match},
+      {std::size(fragment1_match), fragment1_match},
   };
   const device_fragment_part_t fragment2[] = {
-      {countof(fragment2_match), fragment2_match},
+      {std::size(fragment2_match), fragment2_match},
   };
   const device_fragment_t fragments[] = {
-      {"fragment-1", countof(fragment1), fragment1},
-      {"fragment-2", countof(fragment2), fragment2},
+      {"fragment-1", std::size(fragment1), fragment1},
+      {"fragment-2", std::size(fragment2), fragment2},
   };
 
   const zx_device_prop_t props[] = {
@@ -134,9 +134,9 @@ zx_status_t Sysdev::MakeComposite() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments_count = std::size(fragments),
       .primary_fragment = "fragment-1",
       .spawn_colocated = false,
       .metadata_list = nullptr,

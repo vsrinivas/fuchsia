@@ -5,9 +5,9 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
@@ -124,11 +124,11 @@ static pbus_dev_t gpio_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_GPIO;
   dev.mmio_list = gpio_mmios;
-  dev.mmio_count = countof(gpio_mmios);
+  dev.mmio_count = std::size(gpio_mmios);
   dev.irq_list = gpio_irqs;
-  dev.irq_count = countof(gpio_irqs);
+  dev.irq_count = std::size(gpio_irqs);
   dev.metadata_list = gpio_metadata;
-  dev.metadata_count = countof(gpio_metadata);
+  dev.metadata_count = std::size(gpio_metadata);
   return dev;
 }();
 
@@ -168,7 +168,7 @@ zx_status_t Nelson::GpioInit() {
     dev.pid = PDEV_PID_GENERIC;
     dev.did = PDEV_DID_GPIO_TEST;
     dev.gpio_list = gpio_test_gpios;
-    dev.gpio_count = countof(gpio_test_gpios);
+    dev.gpio_count = std::size(gpio_test_gpios);
     return dev;
   }();
 

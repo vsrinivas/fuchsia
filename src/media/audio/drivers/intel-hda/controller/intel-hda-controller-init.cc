@@ -280,12 +280,12 @@ zx_status_t IntelHDAController::SetupStreamDescriptors() {
   total_stream_cnt = input_stream_cnt + output_stream_cnt + bidir_stream_cnt;
 
   using RegType = decltype(IntelHDAController::regs());
-  static_assert(MAX_STREAMS_PER_CONTROLLER == countof(RegType()->stream_desc),
+  static_assert(MAX_STREAMS_PER_CONTROLLER == std::size(RegType()->stream_desc),
                 "Max stream count mismatch!");
 
-  if (!total_stream_cnt || (total_stream_cnt > countof(RegType()->stream_desc))) {
+  if (!total_stream_cnt || (total_stream_cnt > std::size(RegType()->stream_desc))) {
     LOG(ERROR, "Invalid stream counts in GCAP register (In %u Out %u Bidir %u; Max %zu)",
-        input_stream_cnt, output_stream_cnt, bidir_stream_cnt, countof(RegType()->stream_desc));
+        input_stream_cnt, output_stream_cnt, bidir_stream_cnt, std::size(RegType()->stream_desc));
     return ZX_ERR_INTERNAL;
   }
 
@@ -640,7 +640,7 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
   // Compute the set of interrupts we may be interested in during
   // operation, then enable those interrupts.
   uint32_t interesting_irqs = HDA_REG_INTCTL_GIE | HDA_REG_INTCTL_CIE;
-  for (uint32_t i = 0; i < countof(all_streams_); ++i) {
+  for (uint32_t i = 0; i < std::size(all_streams_); ++i) {
     if (all_streams_[i] != nullptr)
       interesting_irqs |= HDA_REG_INTCTL_SIE(i);
   }

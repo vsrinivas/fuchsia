@@ -23,7 +23,7 @@ namespace audio {
 namespace intel_hda {
 
 fbl::RefPtr<HdaCodecConnection> IntelHDAController::GetCodec(uint id) {
-  ZX_DEBUG_ASSERT(id < countof(codecs_));
+  ZX_DEBUG_ASSERT(id < std::size(codecs_));
   fbl::AutoLock codec_lock(&codec_lock_);
   return codecs_[id];
 }
@@ -109,7 +109,7 @@ void IntelHDAController::ProcessRIRB() {
     uint32_t caddr = resp.caddr();
 
     /* Sanity checks */
-    if (caddr >= countof(codecs_)) {
+    if (caddr >= std::size(codecs_)) {
       LOG(ERROR,
           "Received %ssolicited response with illegal codec address (%u) "
           "[0x%08x, 0x%08x]",
@@ -297,7 +297,7 @@ void IntelHDAController::CommitCORBLocked() {
 void IntelHDAController::ProcessStreamIRQ(uint32_t intsts) {
   for (uint32_t i = 0; intsts; i++, intsts >>= 1) {
     if (intsts & 0x1) {
-      ZX_DEBUG_ASSERT(i < countof(all_streams_));
+      ZX_DEBUG_ASSERT(i < std::size(all_streams_));
       ZX_DEBUG_ASSERT(all_streams_[i] != nullptr);
       all_streams_[i]->ProcessStreamIRQ();
     }
@@ -310,7 +310,7 @@ void IntelHDAController::ProcessControllerIRQ() {
   if (statests) {
     REG_WR(&regs()->statests, statests);
     uint32_t tmp = statests;
-    for (uint8_t i = 0u; statests && (i < countof(codecs_)); ++i, tmp >>= 1) {
+    for (uint8_t i = 0u; statests && (i < std::size(codecs_)); ++i, tmp >>= 1) {
       if (!(tmp & 1u))
         continue;
 

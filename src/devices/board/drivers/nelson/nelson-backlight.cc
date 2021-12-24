@@ -52,13 +52,13 @@ zx_status_t Nelson::BacklightInit() {
       .pid = PDEV_PID_TI_LP8556,
       .did = PDEV_DID_TI_BACKLIGHT,
       .mmio_list = backlight_mmios,
-      .mmio_count = countof(backlight_mmios),
+      .mmio_count = std::size(backlight_mmios),
       .metadata_list = backlight_metadata,
-      .metadata_count = countof(backlight_metadata),
+      .metadata_count = std::size(backlight_metadata),
   };
 
   auto status = pbus_.AddComposite(&backlight_dev, reinterpret_cast<uint64_t>(backlight_fragments),
-                                   countof(backlight_fragments), "i2c");
+                                   std::size(backlight_fragments), "i2c");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d", __FUNCTION__, status);
   }

@@ -114,7 +114,7 @@ static constexpr meson_clk_gate_t sm1_clk_gates[] = {
     {.reg = kHhiGclkMpeg2, .bit = 29},  // CLK_CSI_PHY
 };
 
-static_assert(sm1_clk::CLK_SM1_GATE_COUNT == countof(sm1_clk_gates),
+static_assert(sm1_clk::CLK_SM1_GATE_COUNT == std::size(sm1_clk_gates),
               "sm1_clk_gates[] and CLK_SM1_COUNT count mismatch");
 
 static constexpr uint32_t kGenClkSelInputs[] = {0, 5, 6, 7, 20, 21, 22, 23, 24, 25, 26, 27, 28};
@@ -172,7 +172,7 @@ static constexpr meson_clk_mux_t sm1_muxes[] = {
      .inputs = kClk81Inputs},  // CLK_MPEG_CLK_SEL
 };
 
-static_assert(sm1_clk::CLK_SM1_MUX_COUNT == countof(sm1_muxes),
+static_assert(sm1_clk::CLK_SM1_MUX_COUNT == std::size(sm1_muxes),
               "sm1_clk_muxes and CLK_SM1_MUX_COUNT count mismatch");
 
 // clang-format off

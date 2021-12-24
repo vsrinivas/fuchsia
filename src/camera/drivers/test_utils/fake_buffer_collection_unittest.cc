@@ -37,7 +37,7 @@ TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
   EXPECT_EQ(buffer_collection.buffer_count, kNumberOfBuffers);
   EXPECT_EQ(image_format.coded_width, kWidth);
   EXPECT_EQ(image_format.coded_height, kHeight);
-  for (uint32_t i = 0; i < countof(buffer_collection.buffers); ++i) {
+  for (uint32_t i = 0; i < std::size(buffer_collection.buffers); ++i) {
     if (i < kNumberOfBuffers) {
       EXPECT_FALSE(buffer_collection.buffers[i].vmo == ZX_HANDLE_INVALID);
     } else {

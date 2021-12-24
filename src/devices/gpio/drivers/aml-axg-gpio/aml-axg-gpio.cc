@@ -91,7 +91,7 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
   switch (info.pid) {
     case PDEV_PID_AMLOGIC_A113:
       gpio_blocks = a113_gpio_blocks;
-      block_count = countof(a113_gpio_blocks);
+      block_count = std::size(a113_gpio_blocks);
       gpio_interrupt = &a113_interrupt_block;
       break;
     case PDEV_PID_AMLOGIC_S905D2:
@@ -99,7 +99,7 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
     case PDEV_PID_AMLOGIC_A311D:
       // S905D2, T931, A311D are identical.
       gpio_blocks = s905d2_gpio_blocks;
-      block_count = countof(s905d2_gpio_blocks);
+      block_count = std::size(s905d2_gpio_blocks);
       gpio_interrupt = &s905d2_interrupt_block;
       break;
     default:

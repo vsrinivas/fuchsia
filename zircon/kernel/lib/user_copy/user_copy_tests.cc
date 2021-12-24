@@ -167,11 +167,11 @@ bool test_out_of_user_range(bool capture_faults) {
       user_in_ptr<const uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
       if (capture_faults) {
-        auto ret = user.copy_array_from_user_capture_faults(test_buffer, countof(test_buffer), 0);
+        auto ret = user.copy_array_from_user_capture_faults(test_buffer, std::size(test_buffer), 0);
         ASSERT_FALSE(ret.fault_info.has_value(), "");
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
       } else {
-        auto ret = user.copy_array_from_user(test_buffer, countof(test_buffer));
+        auto ret = user.copy_array_from_user(test_buffer, std::size(test_buffer));
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret);
       }
     }
@@ -180,11 +180,11 @@ bool test_out_of_user_range(bool capture_faults) {
       user_out_ptr<uint8_t> user{reinterpret_cast<uint8_t*>(test_addr)};
 
       if (capture_faults) {
-        auto ret = user.copy_array_to_user_capture_faults(test_buffer, countof(test_buffer), 0);
+        auto ret = user.copy_array_to_user_capture_faults(test_buffer, std::size(test_buffer), 0);
         ASSERT_FALSE(ret.fault_info.has_value(), "");
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret.status);
       } else {
-        auto ret = user.copy_array_to_user(test_buffer, countof(test_buffer));
+        auto ret = user.copy_array_to_user(test_buffer, std::size(test_buffer));
         EXPECT_EQ(ZX_ERR_INVALID_ARGS, ret);
       }
     }

@@ -408,7 +408,7 @@ TEST(ClkTestAml, TestCpuClkSetRate) {
   AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
 
   zx_status_t st;
-  for (size_t i = 0; i < countof(kCpuClkSupportedFrequencies); i++) {
+  for (size_t i = 0; i < std::size(kCpuClkSupportedFrequencies); i++) {
     st = clk.ClockImplSetRate(kTestCpuClk, kCpuClkSupportedFrequencies[i]);
     EXPECT_OK(st);
 

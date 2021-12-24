@@ -80,9 +80,9 @@ zx_status_t Sherlock::ThermistorInit() {
   thermistor.vid = PDEV_VID_GOOGLE;
   thermistor.did = PDEV_DID_AMLOGIC_THERMISTOR;
   thermistor.mmio_list = saradc_mmios;
-  thermistor.mmio_count = countof(saradc_mmios);
+  thermistor.mmio_count = std::size(saradc_mmios);
   thermistor.irq_list = saradc_irqs;
-  thermistor.irq_count = countof(saradc_irqs);
+  thermistor.irq_count = std::size(saradc_irqs);
 
   if (pid_ == PDEV_PID_LUIS) {
     thermal::NtcChannel ntc_channels_luis[] = {
@@ -106,7 +106,7 @@ zx_status_t Sherlock::ThermistorInit() {
 
     thermistor.pid = PDEV_PID_LUIS;
     thermistor.metadata_list = therm_metadata_luis;
-    thermistor.metadata_count = countof(therm_metadata_luis);
+    thermistor.metadata_count = std::size(therm_metadata_luis);
     zx_status_t status = pbus_.DeviceAdd(&thermistor);
     if (status != ZX_OK) {
       zxlogf(ERROR, "DeviceAdd for Luis failed: %s", zx_status_get_string(status));
@@ -134,7 +134,7 @@ zx_status_t Sherlock::ThermistorInit() {
 
     thermistor.pid = PDEV_PID_SHERLOCK;
     thermistor.metadata_list = therm_metadata_sherlock;
-    thermistor.metadata_count = countof(therm_metadata_sherlock);
+    thermistor.metadata_count = std::size(therm_metadata_sherlock);
     zx_status_t status = pbus_.DeviceAdd(&thermistor);
     if (status != ZX_OK) {
       zxlogf(ERROR, "DeviceAdd for Sherlock failed: %s", zx_status_get_string(status));

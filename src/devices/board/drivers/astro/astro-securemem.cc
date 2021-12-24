@@ -29,14 +29,14 @@ static const pbus_dev_t secure_mem_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_SECURE_MEM;
   dev.bti_list = astro_secure_mem_btis;
-  dev.bti_count = countof(astro_secure_mem_btis);
+  dev.bti_count = std::size(astro_secure_mem_btis);
   return dev;
 }();
 
 zx_status_t Astro::SecureMemInit() {
   zx_status_t status =
       pbus_.AddComposite(&secure_mem_dev, reinterpret_cast<uint64_t>(aml_secure_mem_fragments),
-                         countof(aml_secure_mem_fragments), "pdev");
+                         std::size(aml_secure_mem_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d", __func__, status);
     return status;

@@ -90,13 +90,13 @@ static pbus_dev_t display_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_DISPLAY;
   dev.metadata_list = display_panel_metadata;
-  dev.metadata_count = countof(display_panel_metadata);
+  dev.metadata_count = std::size(display_panel_metadata);
   dev.mmio_list = display_mmios;
-  dev.mmio_count = countof(display_mmios);
+  dev.mmio_count = std::size(display_mmios);
   dev.irq_list = display_irqs;
-  dev.irq_count = countof(display_irqs);
+  dev.irq_count = std::size(display_irqs);
   dev.bti_list = display_btis;
-  dev.bti_count = countof(display_btis);
+  dev.bti_count = std::size(display_btis);
   return dev;
 }();
 
@@ -132,7 +132,7 @@ zx_status_t Nelson::DisplayInit() {
   display_panel_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(&display_panel_info);
 
   auto status = pbus_.AddComposite(&display_dev, reinterpret_cast<uint64_t>(display_fragments),
-                                   countof(display_fragments), "dsi");
+                                   std::size(display_fragments), "dsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd display failed: %d", __func__, status);
     return status;

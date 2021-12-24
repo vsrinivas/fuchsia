@@ -74,19 +74,19 @@ static pbus_dev_t nna_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_NNA;
   dev.mmio_list = vim3_nna_mmios;
-  dev.mmio_count = countof(vim3_nna_mmios);
+  dev.mmio_count = std::size(vim3_nna_mmios);
   dev.bti_list = nna_btis;
-  dev.bti_count = countof(nna_btis);
+  dev.bti_count = std::size(nna_btis);
   dev.irq_list = nna_irqs;
-  dev.irq_count = countof(nna_irqs);
+  dev.irq_count = std::size(nna_irqs);
   dev.metadata_list = nna_metadata;
-  dev.metadata_count = countof(nna_metadata);
+  dev.metadata_count = std::size(nna_metadata);
   return dev;
 }();
 
 zx_status_t Vim3::NnaInit() {
   zx_status_t status = pbus_.AddComposite(&nna_dev, reinterpret_cast<uint64_t>(vim3_nna_fragments),
-                                          countof(vim3_nna_fragments), "pdev");
+                                          std::size(vim3_nna_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "Vim3::NnaInit: pbus_device_add() failed for nna: %d", status);
     return status;

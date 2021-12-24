@@ -4,24 +4,23 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <lib/zx/event.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <lib/zx/process.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
-#include <test-utils/test-utils.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
+
+#include <test-utils/test-utils.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -119,19 +118,19 @@ TEST(ChannelFatalTestCase, BadChannelCallContractViolation) {
       "child",
   };
   zx_handle_t handles[] = {
-    remote.release(),
-    event_copy.release(),
+      remote.release(),
+      event_copy.release(),
   };
   uint32_t handle_ids[] = {
-    PA_HND(PA_USER0, 0),
-    PA_HND(PA_USER0, 1),
+      PA_HND(PA_USER0, 0),
+      PA_HND(PA_USER0, 1),
   };
   int environ_count = 0;
   for (char** i = environ; *i; i++) {
     environ_count++;
   }
   zx::process proc(tu_launch_process(zx_job_default(), NULL, 2, args, environ_count, environ,
-                                     countof(handles), handles, handle_ids));
+                                     std::size(handles), handles, handle_ids));
 
   uint32_t act_bytes = UINT32_MAX;
   uint32_t act_handles = UINT32_MAX;

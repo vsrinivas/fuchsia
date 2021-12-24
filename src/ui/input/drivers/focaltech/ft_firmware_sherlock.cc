@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/compiler.h>
+#include <array>
 
 #include "ft_firmware.h"
 
@@ -51,6 +51,6 @@ const FirmwareEntry kFirmwareEntries[] = {
     },
 };
 
-const size_t kNumFirmwareEntries = countof(kFirmwareEntries);
+const size_t kNumFirmwareEntries = std::size(kFirmwareEntries);
 
 }  // namespace ft

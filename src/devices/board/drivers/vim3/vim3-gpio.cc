@@ -89,11 +89,11 @@ static pbus_dev_t gpio_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_A311D;
   dev.did = PDEV_DID_AMLOGIC_GPIO;
   dev.mmio_list = gpio_mmios;
-  dev.mmio_count = countof(gpio_mmios);
+  dev.mmio_count = std::size(gpio_mmios);
   dev.irq_list = gpio_irqs;
-  dev.irq_count = countof(gpio_irqs);
+  dev.irq_count = std::size(gpio_irqs);
   dev.metadata_list = gpio_metadata;
-  dev.metadata_count = countof(gpio_metadata);
+  dev.metadata_count = std::size(gpio_metadata);
   return dev;
 }();
 
@@ -109,11 +109,11 @@ constexpr zx_bind_inst_t gpio_expander_i2c_match[] = {
 };
 
 constexpr device_fragment_part_t gpio_expander_i2c_fragment[] = {
-    {countof(gpio_expander_i2c_match), gpio_expander_i2c_match},
+    {std::size(gpio_expander_i2c_match), gpio_expander_i2c_match},
 };
 
 constexpr device_fragment_t gpio_expander_fragments[] = {
-    {"i2c", countof(gpio_expander_i2c_fragment), gpio_expander_i2c_fragment},
+    {"i2c", std::size(gpio_expander_i2c_fragment), gpio_expander_i2c_fragment},
 };
 
 static const gpio_pin_t gpio_expander_pins[] = {
@@ -138,13 +138,13 @@ static const device_metadata_t gpio_expander_metadata[] = {
 static composite_device_desc_t gpio_expander_dev = []() {
   composite_device_desc_t dev = {};
   dev.props = gpio_expander_props;
-  dev.props_count = countof(gpio_expander_props);
+  dev.props_count = std::size(gpio_expander_props);
   dev.fragments = gpio_expander_fragments;
-  dev.fragments_count = countof(gpio_expander_fragments);
+  dev.fragments_count = std::size(gpio_expander_fragments);
   dev.primary_fragment = gpio_expander_fragments[0].name;
   dev.spawn_colocated = false;
   dev.metadata_list = gpio_expander_metadata;
-  dev.metadata_count = countof(gpio_expander_metadata);
+  dev.metadata_count = std::size(gpio_expander_metadata);
   return dev;
 }();
 

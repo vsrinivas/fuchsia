@@ -768,14 +768,14 @@ class TxqTest : public MvmTest, public MockTrans {
         } {
     BIND_TEST(mvm_->trans);
 
-    for (size_t i = 0; i < ARRAY_SIZE(sta_.txq); ++i) {
+    for (size_t i = 0; i < std::size(sta_.txq); ++i) {
       sta_.txq[i] = reinterpret_cast<struct iwl_mvm_txq*>(calloc(1, sizeof(struct iwl_mvm_txq)));
       ASSERT_NE(nullptr, sta_.txq[i]);
     }
   }
 
   ~TxqTest() {
-    for (size_t i = 0; i < ARRAY_SIZE(sta_.txq); ++i) {
+    for (size_t i = 0; i < std::size(sta_.txq); ++i) {
       free(sta_.txq[i]);
     }
   }

@@ -84,7 +84,7 @@ TEST_F(FwTest, TestPageInit) {
               // IWL_UCODE_INIT
               {
                   .sec = sec,
-                  .num_sec = ARRAY_SIZE(sec),
+                  .num_sec = std::size(sec),
                   .paging_mem_size = PAGING_MEM_SIZE,
               },
 

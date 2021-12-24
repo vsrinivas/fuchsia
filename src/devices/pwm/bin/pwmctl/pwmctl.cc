@@ -96,11 +96,11 @@ zx_status_t run(int argc, char const* argv[], fidl::ClientEnd<fuchsia_hardware_p
   fidl::WireSyncClient<fuchsia_hardware_pwm::Pwm> client(std::move(device));
 
   const std::string cmd(argv[2]);
-  if (!strncmp(cmd_str::kEnable, argv[2], countof(cmd_str::kEnable))) {
+  if (!strncmp(cmd_str::kEnable, argv[2], std::size(cmd_str::kEnable))) {
     return enable(client);
-  } else if (!strncmp(cmd_str::kDisable, argv[2], countof(cmd_str::kDisable))) {
+  } else if (!strncmp(cmd_str::kDisable, argv[2], std::size(cmd_str::kDisable))) {
     return disable(client);
-  } else if (!strncmp(cmd_str::kSetConfig, argv[2], countof(cmd_str::kSetConfig))) {
+  } else if (!strncmp(cmd_str::kSetConfig, argv[2], std::size(cmd_str::kSetConfig))) {
     if (argc < 6) {
       fprintf(stderr, "%s expects 3 arguments %s %s <polarity> <period> <duty_cycle>\n", argv[1],
               argv[0], argv[1]);

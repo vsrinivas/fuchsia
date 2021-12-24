@@ -85,20 +85,20 @@ constexpr pbus_dev_t video_dev = []() {
   dev.pid = PDEV_PID_AMLOGIC_S905D2;
   dev.did = PDEV_DID_AMLOGIC_VIDEO;
   dev.mmio_list = astro_video_mmios;
-  dev.mmio_count = countof(astro_video_mmios);
+  dev.mmio_count = std::size(astro_video_mmios);
   dev.bti_list = astro_video_btis;
-  dev.bti_count = countof(astro_video_btis);
+  dev.bti_count = std::size(astro_video_btis);
   dev.irq_list = astro_video_irqs;
-  dev.irq_count = countof(astro_video_irqs);
+  dev.irq_count = std::size(astro_video_irqs);
   dev.smc_list = astro_video_smcs;
-  dev.smc_count = countof(astro_video_smcs);
+  dev.smc_count = std::size(astro_video_smcs);
   return dev;
 }();
 
 zx_status_t Astro::VideoInit() {
   zx_status_t status;
   if ((status = pbus_.AddComposite(&video_dev, reinterpret_cast<uint64_t>(aml_video_fragments),
-                                   countof(aml_video_fragments), "pdev")) != ZX_OK) {
+                                   std::size(aml_video_fragments), "pdev")) != ZX_OK) {
     zxlogf(ERROR, "%s: AddComposite() failed: %d", __func__, status);
     return status;
   }

@@ -31,7 +31,7 @@ static zx_status_t bind(void* ctx, zx_device_t* parent) {
       {BIND_PCI_DID, 0, 1234},
   };
   args.props = props;
-  args.prop_count = countof(props);
+  args.prop_count = std::size(props);
 
   zx_device_str_prop_t str_props[] = {
       zx_device_str_prop_t{.key = "stringbind.lib.kinglet",
@@ -39,7 +39,7 @@ static zx_status_t bind(void* ctx, zx_device_t* parent) {
       zx_device_str_prop_t{.key = "stringbind.lib.bobolink",
                            .property_value = str_prop_int_val(10)}};
   args.str_props = str_props;
-  args.str_prop_count = countof(str_props);
+  args.str_prop_count = std::size(str_props);
 
   return device_add(parent, &args, &dev);
 }

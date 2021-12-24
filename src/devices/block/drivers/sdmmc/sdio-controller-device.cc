@@ -713,7 +713,7 @@ zx::status<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwT
   size_t last_block_buffer_size = 0;   // The offset where the new block starts in this buffer.
 
   sdmmc_buffer_region_t buffers[SDIO_IO_RW_EXTD_MAX_BLKS_PER_CMD];
-  for (size_t i = 0; i < countof(buffers) && i < current_position.buffers.size(); i++) {
+  for (size_t i = 0; i < std::size(buffers) && i < current_position.buffers.size(); i++) {
     buffers[i] = current_position.buffers[i];
     if (i == 0) {
       ZX_ASSERT(current_position.first_buffer_offset < buffers[i].size);

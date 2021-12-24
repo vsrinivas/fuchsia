@@ -76,13 +76,13 @@ zx_status_t Sherlock::ButtonsInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = sherlock_buttons_fragments,
       .fragments_count = kSherlockButtonCount,
       .primary_fragment = "volume-up",  // ???
       .spawn_colocated = false,
       .metadata_list = available_buttons_metadata,
-      .metadata_count = countof(available_buttons_metadata),
+      .metadata_count = std::size(available_buttons_metadata),
   };
 
   zx_status_t status = DdkAddComposite("sherlock-buttons", &comp_desc);

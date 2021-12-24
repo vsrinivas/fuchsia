@@ -4,11 +4,11 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/thermal/ntc.h>
 #include <limits.h>
 
-#include <lib/ddk/metadata.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "astro.h"
@@ -101,11 +101,11 @@ zx_status_t Astro::ThermistorInit() {
   thermistor.pid = PDEV_PID_ASTRO;
   thermistor.did = PDEV_DID_AMLOGIC_THERMISTOR;
   thermistor.mmio_list = saradc_mmios;
-  thermistor.mmio_count = countof(saradc_mmios);
+  thermistor.mmio_count = std::size(saradc_mmios);
   thermistor.irq_list = saradc_irqs;
-  thermistor.irq_count = countof(saradc_irqs);
+  thermistor.irq_count = std::size(saradc_irqs);
   thermistor.metadata_list = therm_metadata;
-  thermistor.metadata_count = countof(therm_metadata);
+  thermistor.metadata_count = std::size(therm_metadata);
 
   zx_status_t status = pbus_.DeviceAdd(&thermistor);
   if (status != ZX_OK) {

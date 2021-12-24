@@ -122,7 +122,7 @@ TEST_F(WlanDeviceTest, FillBandInfos) {
   };
   wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
 
-  fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, ARRAY_SIZE(bands),
+  fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, std::size(bands),
                   band_infos);
   // 2.4Ghz
   wlan_info_band_info_t* exp_band_info = &band_infos[0];
@@ -562,7 +562,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
   void VerifyStaHasBeenRemoved() {
     auto mvm = mvmvif_sta_.mvm;
 
-    for (size_t i = 0; i < ARRAY_SIZE(mvm->fw_id_to_mac_id); i++) {
+    for (size_t i = 0; i < std::size(mvm->fw_id_to_mac_id); i++) {
       struct iwl_mvm_sta* mvm_sta = mvm->fw_id_to_mac_id[i];
       ASSERT_EQ(nullptr, mvm_sta);
     }

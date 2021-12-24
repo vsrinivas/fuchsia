@@ -4,6 +4,8 @@
 
 #include <zircon/types.h>
 
+#include <array>
+
 #include "aml-fclk.h"
 
 #define FCLK_PLL_RATE(_r, _premux, _postmux, _mux_div) \
@@ -18,4 +20,4 @@ static const aml_fclk_rate_table_t fclk_pll_rate_table[] = {
 
 const aml_fclk_rate_table_t* s905d2_fclk_get_rate_table() { return fclk_pll_rate_table; }
 
-size_t s905d2_fclk_get_rate_table_count() { return countof(fclk_pll_rate_table); }
+size_t s905d2_fclk_get_rate_table_count() { return std::size(fclk_pll_rate_table); }

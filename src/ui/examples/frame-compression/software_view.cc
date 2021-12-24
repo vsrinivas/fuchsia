@@ -282,7 +282,7 @@ void SoftwareView::SetAfbcPixelsFromColorOffset(Image& image, uint32_t color_off
               {8, 8}, {12, 8}, {12, 12}, {8, 12}, {4, 12}, {0, 12}, {0, 8},  {4, 8},
           };
 
-          for (unsigned l = 0; l < countof(kSubtileOffset); ++l) {
+          for (unsigned l = 0; l < std::size(kSubtileOffset); ++l) {
             unsigned offset = tile_offset + subtile_num_bytes * l;
 
             for (unsigned yy = 0; yy < kAfbcSubtileSize; ++yy) {

@@ -239,14 +239,14 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeBuffer) {
   fidl::Arena<> alloc;
   static constexpr uint8_t kBuffer[] = {0x12, 0x34, 0x56, 0x78, 0x76, 0x54, 0x32, 0x10};
   obj.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kBuffer),
-                                                                    countof(kBuffer)));
+                                                                    std::size(kBuffer)));
   auto status = helper.DecodeObject(obj, &out);
   ASSERT_OK(status.status_value());
   ASSERT_NO_FATAL_FAILURES(CheckEq(out, ACPI_OBJECT{
                                             .Buffer =
                                                 {
                                                     .Type = ACPI_TYPE_BUFFER,
-                                                    .Length = countof(kBuffer),
+                                                    .Length = std::size(kBuffer),
                                                     .Pointer = const_cast<uint8_t *>(kBuffer),
                                                 },
                                         }));
@@ -407,8 +407,8 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
   object.set_string_val(alloc, "hello");
   params.emplace_back(object);
   constexpr uint8_t kData[] = {1, 2, 3};
-  object.set_buffer_val(
-      alloc, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kData), countof(kData)));
+  object.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t *>(kData),
+                                                                       std::size(kData)));
   params.emplace_back(object);
 
   auto view = fidl::VectorView<facpi::Object>::FromExternal(params);
@@ -423,8 +423,8 @@ TEST_F(FidlEvaluateObjectTest, TestDecodeParameters) {
       {.Buffer = {.Type = ACPI_TYPE_BUFFER, .Length = 3, .Pointer = const_cast<uint8_t *>(kData)}},
   };
   auto value = std::move(result.value());
-  ASSERT_EQ(value.size(), countof(expected));
-  for (size_t i = 0; i < countof(expected); i++) {
+  ASSERT_EQ(value.size(), std::size(expected));
+  for (size_t i = 0; i < std::size(expected); i++) {
     ASSERT_NO_FATAL_FAILURES(CheckEq(value[i], expected[i]), "param %zd", i);
   }
 }
@@ -469,7 +469,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
   static constexpr uint8_t kBuffer[] = {0x12, 0x34, 0x56, 0x78, 0x76, 0x54, 0x32, 0x10};
   ACPI_OBJECT obj = {.Buffer = {
                          .Type = ACPI_TYPE_BUFFER,
-                         .Length = countof(kBuffer),
+                         .Length = std::size(kBuffer),
                          .Pointer = const_cast<uint8_t *>(kBuffer),
                      }};
   auto result = helper.EncodeObject(alloc, &obj);
@@ -477,7 +477,7 @@ TEST_F(FidlEvaluateObjectTest, TestEncodeBuffer) {
 
   facpi::Object expected;
   expected.set_buffer_val(alloc, fidl::VectorView<uint8_t>::FromExternal(
-                                     const_cast<uint8_t *>(kBuffer), countof(kBuffer)));
+                                     const_cast<uint8_t *>(kBuffer), std::size(kBuffer)));
   ASSERT_NO_FATAL_FAILURES(CheckEq(result.value(), expected));
 }
 

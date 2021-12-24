@@ -136,7 +136,7 @@ static int DoDump(const fbl::unique_fd& fd) {
 
   while ((record = ReadNextRecord(fd.get())) != nullptr) {
     uint32_t event = KTRACE_EVENT(record->tag);
-    if (event >= countof(g_tags)) {
+    if (event >= std::size(g_tags)) {
       printf("Unexpected event: 0x%x\n", event);
       continue;
     }
