@@ -155,7 +155,7 @@ impl LocalComponentRunnerBuilder {
             create_request_stream::<fcrunner::ComponentRunnerMarker>()
                 .expect("failed to create channel pair");
         let runner = LocalComponentRunner::new(local_component_implementations);
-        let runner_task = fasync::Task::local(async move {
+        let runner_task = fasync::Task::spawn(async move {
             if let Err(e) = runner.handle_stream(runner_request_stream).await {
                 error!("failed to run local component runner: {:?}", e);
             }

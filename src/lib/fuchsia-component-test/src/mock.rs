@@ -152,7 +152,7 @@ impl MocksRunner {
         mocks: Arc<Mutex<HashMap<String, Mock>>>,
         event_stream: ftest::RealmBuilderEventStream,
     ) -> fasync::Task<()> {
-        fasync::Task::local(async move {
+        fasync::Task::spawn(async move {
             if let Err(e) = Self::handle_event_stream(mocks, event_stream).await {
                 error!(
                     "error encountered while handling realm builder server event stream: {:?}",
@@ -187,7 +187,7 @@ impl MocksRunner {
                     }
                     running_mocks_guard.insert(
                         mock_id.clone(),
-                        fasync::Task::local(async move {
+                        fasync::Task::spawn(async move {
                             if let Err(e) = (*mock.0)(mock_handles).await {
                                 error!("error running mock: {:?}", e);
                             }
@@ -222,7 +222,7 @@ mod tests {
         },
     };
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn mock_handles_clone_from_namespace() {
         let dir_name = "data";
         let file_name = "example_file";
@@ -262,7 +262,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn mocks_are_run() {
         let (realm_builder_proxy, realm_builder_server_end) =
             create_proxy::<ftest::RealmBuilderMarker>().unwrap();
@@ -359,7 +359,7 @@ mod tests {
         receive_mock_1_called.await.unwrap();
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn mock_handles_service_connection() {
         let (svc_client_end, svc_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
         let (_ignored, outgoing_dir) = create_endpoints::<fio::DirectoryMarker>().unwrap();
@@ -380,7 +380,7 @@ mod tests {
 
         let mut fs = fserver::ServiceFs::new_local();
         fs.add_fidl_service(move |mut stream: fecho::EchoRequestStream| {
-            fasync::Task::local(async move {
+            fasync::Task::spawn(async move {
                 while let Some(fecho::EchoRequest::EchoString { value, responder }) =
                     stream.try_next().await.expect("failed to serve echo service")
                 {
