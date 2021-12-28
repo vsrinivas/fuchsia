@@ -16,7 +16,7 @@
 ##
 ##    --auth                  (C++ symbolizer) start the authentication process.
 ##
-##   Converts sybmolizer markup found in stdin to human readable using
+##   Converts symbolizer markup found in stdin to human readable using
 ##   local symbols (and remote if the --remote-symbols option is used).
 ##   This command is usually used on log output from either zx_log or syslog.
 ##   Anything that is not valid symbolizer markup is left alone. This is similar
