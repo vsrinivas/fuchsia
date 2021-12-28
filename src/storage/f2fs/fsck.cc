@@ -170,6 +170,25 @@ bool FsckWorker::IsValidSsaDataBlock(uint32_t block_address, uint32_t parent_nid
   return true;
 }
 
+bool FsckWorker::IsValidNid(nid_t nid) {
+  return nid <= (kNatEntryPerBlock * superblock_info_.GetRawSuperblock().segment_count_nat
+                 << (superblock_info_.GetLogBlocksPerSeg() - 1));
+}
+
+bool FsckWorker::IsValidBlockAddress(uint32_t addr) {
+  if (addr >= superblock_info_.GetRawSuperblock().block_count) {
+    std::cout << std::hex << "block[0x" << addr << "] should be less than [0x"
+              << superblock_info_.GetRawSuperblock().block_count << "]\n";
+    return false;
+  }
+  if (addr < segment_manager_->GetMainAreaStartBlock()) {
+    std::cout << std::hex << "block[0x" << addr << "] should be greater than [0x"
+              << segment_manager_->GetMainAreaStartBlock() << "]\n";
+    return false;
+  }
+  return true;
+}
+
 zx_status_t FsckWorker::ValidateNodeBlock(const Node &node_block, NodeInfo node_info,
                                           FileType ftype, NodeType ntype) {
   if (node_info.nid != LeToCpu(node_block.footer.nid) ||
@@ -637,7 +656,9 @@ zx_status_t FsckWorker::CheckDataBlock(uint32_t block_address, uint32_t &child_c
     return ZX_OK;
   }
 
-  IsValidBlockAddress(block_address);
+  if (!IsValidBlockAddress(block_address)) {
+    return ZX_ERR_INTERNAL;
+  }
 
   IsValidSsaDataBlock(block_address, parent_nid, index_in_node, ver);
 
@@ -749,6 +770,40 @@ zx_status_t FsckWorker::Init() {
   return ZX_OK;
 }
 
+zx_status_t FsckWorker::VerifyCursegOffset(CursegType segtype) {
+  CursegInfo *curseg = segment_manager_->CURSEG_I(segtype);
+  if (curseg->next_blkoff >= kSitVBlockMapSize * kBitsPerByte) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  block_t logical_curseg_offset = segment_manager_->GetMainAreaStartBlock() +
+                                  curseg->segno * superblock_info_.GetBlocksPerSeg() +
+                                  curseg->next_blkoff;
+
+  if (!IsValidBlockAddress(logical_curseg_offset)) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (TestValidBitmap(BlkoffFromMain(*segment_manager_, logical_curseg_offset),
+                      sit_area_bitmap_.get()) != 0x0) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (curseg->alloc_type == static_cast<uint8_t>(AllocMode::kLFS)) {
+    for (block_t offset = curseg->next_blkoff + 1; offset < kSitVBlockMapSize; ++offset) {
+      block_t logical_offset = segment_manager_->GetMainAreaStartBlock() +
+                               curseg->segno * superblock_info_.GetBlocksPerSeg() + offset;
+
+      if (TestValidBitmap(BlkoffFromMain(*segment_manager_, logical_offset),
+                          sit_area_bitmap_.get()) != 0x0) {
+        return ZX_ERR_INTERNAL;
+      }
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t FsckWorker::Verify() {
   zx_status_t status = ZX_OK;
   uint32_t nr_unref_nid = 0;
@@ -830,6 +885,16 @@ zx_status_t FsckWorker::Verify() {
   } else {
     printf(" [Fail] [0x%x]\n", fsck_.result.valid_inode_count);
     status = ZX_ERR_INTERNAL;
+  }
+
+  for (uint32_t segtype = 0; segtype < kNrCursegType; ++segtype) {
+    std::cout << "[FSCK] next_blkoff in curseg (" << segtype << ") is free             ";
+    if (VerifyCursegOffset(static_cast<CursegType>(segtype)) == ZX_OK) {
+      std::cout << " [Ok..]\n";
+    } else {
+      std::cout << " [Fail]\n";
+      status = ZX_ERR_INTERNAL;
+    }
   }
 
   return status;
@@ -1015,6 +1080,30 @@ zx_status_t FsckWorker::RepairCheckpoint() {
   if (superblock_info_.GetTotalValidInodeCount() != fsck_.result.valid_inode_count) {
     superblock_info_.GetCheckpoint().valid_inode_count = fsck_.result.valid_inode_count;
     need_update_checkpoint = true;
+  }
+
+  for (uint32_t segtype = 0; segtype < kNrCursegType; ++segtype) {
+    CursegInfo *curseg = segment_manager_->CURSEG_I(static_cast<CursegType>(segtype));
+    if (VerifyCursegOffset(static_cast<CursegType>(segtype)) != ZX_OK) {
+      uint16_t offset;
+      for (offset = 0; offset < kSitVBlockMapSize * kBitsPerByte; ++offset) {
+        block_t logical_offset = segment_manager_->GetMainAreaStartBlock() +
+                                 curseg->segno * superblock_info_.GetBlocksPerSeg() + offset;
+        if (TestValidBitmap(BlkoffFromMain(*segment_manager_, logical_offset),
+                            sit_area_bitmap_.get()) == 0x0) {
+          break;
+        }
+      }
+
+      if (segtype < static_cast<uint32_t>(CursegType::kCursegHotNode)) {
+        superblock_info_.GetCheckpoint().cur_data_blkoff[segtype] = offset;
+      } else {
+        superblock_info_.GetCheckpoint()
+            .cur_node_blkoff[segtype - static_cast<uint32_t>(CursegType::kCursegHotNode)] = offset;
+      }
+      superblock_info_.GetCheckpoint().alloc_type[segtype] = static_cast<uint8_t>(AllocMode::kSSR);
+      need_update_checkpoint = true;
+    }
   }
 
   if (need_update_checkpoint) {

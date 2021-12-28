@@ -168,7 +168,8 @@ class FsckWorker {
   // RepairSit() nullifies unreachable bits in SIT entries, including those in the journal.
   zx_status_t RepairSit();
   // RepairCheckpoint() corrects members in the checkpoint, including
-  // |valid_block_count|, |valid_node_count|, |valid_inode_count|.
+  // |valid_block_count|, |valid_node_count|, |valid_inode_count|, |cur_node_blkoff|,
+  // |cur_data_blkoff|.
   zx_status_t RepairCheckpoint();
   // RepairInodeLinks() iterates over inode link map and corrects link count for each inode.
   zx_status_t RepairInodeLinks();
@@ -214,26 +215,13 @@ class FsckWorker {
   void AddIntoInodeLinkMap(nid_t nid, uint32_t link_count);
   zx_status_t FindAndIncreaseInodeLinkMap(nid_t nid);
 
+  zx_status_t VerifyCursegOffset(CursegType segtype);
+
   inline bool IsValidSsaNodeBlock(nid_t nid, uint32_t block_address);
   inline bool IsValidSsaDataBlock(uint32_t block_address, uint32_t parent_nid,
                                   uint16_t index_in_node, uint8_t version);
-  bool IsValidNid(nid_t nid) {
-    return nid <= (kNatEntryPerBlock * superblock_info_.GetRawSuperblock().segment_count_nat
-                   << (superblock_info_.GetLogBlocksPerSeg() - 1));
-  }
-  bool IsValidBlockAddress(uint32_t addr) {
-    if (addr >= superblock_info_.GetRawSuperblock().block_count ||
-        addr < segment_manager_->GetMainAreaStartBlock()) {
-      ZX_ASSERT_MSG(addr < superblock_info_.GetRawSuperblock().block_count,
-                    "block[0x%x] should be less than [0x%lx]\n", addr,
-                    superblock_info_.GetRawSuperblock().block_count);
-      ZX_ASSERT_MSG(addr >= segment_manager_->GetMainAreaStartBlock(),
-                    "block[0x%x] should be larger than [0x%x]\n", addr,
-                    segment_manager_->GetMainAreaStartBlock());
-    }
-    return true;
-  }
-
+  bool IsValidNid(nid_t nid);
+  bool IsValidBlockAddress(uint32_t addr);
   block_t StartSummaryBlock() {
     return superblock_info_.StartCpAddr() +
            LeToCpu(superblock_info_.GetCheckpoint().cp_pack_start_sum);

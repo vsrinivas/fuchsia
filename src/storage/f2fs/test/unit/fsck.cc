@@ -437,7 +437,7 @@ TEST(FsckTest, InconsistentCheckpointNodeCount) {
 
   // Modify the checkpoint's node count (and CRC).
   auto checkpoint_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
-  ASSERT_EQ(checkpoint_ptr->valid_node_count, LeToCpu(1u));
+  ASSERT_EQ(checkpoint_ptr->valid_node_count, CpuToLe(1u));
   checkpoint_ptr->valid_node_count = CpuToLe(2u);
   uint32_t crc =
       F2fsCalCrc32(kF2fsSuperMagic, checkpoint_ptr, LeToCpu(checkpoint_ptr->checksum_offset));
@@ -461,7 +461,7 @@ TEST(FsckTest, InconsistentCheckpointNodeCount) {
   // Re-read the checkpoint pack header to check it is repaired.
   ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
   checkpoint_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
-  ASSERT_EQ(checkpoint_ptr->valid_node_count, LeToCpu(1u));
+  ASSERT_EQ(checkpoint_ptr->valid_node_count, CpuToLe(1u));
   ASSERT_EQ(
       *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint_ptr) +
                                      LeToCpu(checkpoint_ptr->checksum_offset))),
@@ -596,6 +596,71 @@ TEST(FsckTest, InodeLinkCountAndBlockCount) {
   node_block->i.i_blocks = 0xdeadbeef;
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), node_info.blk_addr), ZX_OK);
   EXPECT_EQ(fsck.Run(), ZX_ERR_INTERNAL);
+}
+
+TEST(FsckTest, InvalidNextOffsetInCurseg) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+
+  ASSERT_EQ(fsck.GetValidSuperblock(), ZX_OK);
+  ASSERT_EQ(fsck.GetValidCheckpoint(), ZX_OK);
+
+  auto ret = fsck.GetSuperblock(0);
+  ASSERT_TRUE(ret.is_ok());
+  Superblock *superblock_pointer =
+      reinterpret_cast<Superblock *>(ret->GetData().data() + kSuperOffset);
+  ASSERT_TRUE(fsck.ValidateCheckpoint(LeToCpu(superblock_pointer->cp_blkaddr)).is_ok());
+
+  // Read the 1st checkpoint pack header.
+  auto fs_block = std::make_unique<FsBlock>();
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+
+  // Corrupt the next_blkoff for hot node curseg (and CRC).
+  auto checkpoint_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
+  ASSERT_EQ(checkpoint_ptr->cur_node_blkoff[0], CpuToLe(uint16_t{1}));
+  checkpoint_ptr->cur_node_blkoff[0] = 0;
+  uint32_t crc =
+      F2fsCalCrc32(kF2fsSuperMagic, checkpoint_ptr, LeToCpu(checkpoint_ptr->checksum_offset));
+  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint_ptr) +
+                                 LeToCpu(checkpoint_ptr->checksum_offset))) = crc;
+
+  // Write the 1st checkpoint pack, header and footer both.
+  uint32_t cp_pack_block_count = LeToCpu(((Checkpoint *)fs_block.get())->cp_pack_total_block_count);
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(),
+                            LeToCpu(superblock_pointer->cp_blkaddr) + cp_pack_block_count - 1),
+            ZX_OK);
+
+  // Fsck should fail at verifying stage, try repair.
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.RepairCheckpoint(), ZX_OK);
+
+  // Re-read the checkpoint pack header to check it is repaired.
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+  checkpoint_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
+  ASSERT_EQ(checkpoint_ptr->cur_node_blkoff[0], CpuToLe(uint16_t{1}));
+
+  // Insert the flaw again, for hot data curseg.
+  checkpoint_ptr->cur_data_blkoff[0] = 0;
+  crc = F2fsCalCrc32(kF2fsSuperMagic, checkpoint_ptr, LeToCpu(checkpoint_ptr->checksum_offset));
+  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint_ptr) +
+                                 LeToCpu(checkpoint_ptr->checksum_offset))) = crc;
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+  ASSERT_EQ(fsck.WriteBlock(*fs_block.get(),
+                            LeToCpu(superblock_pointer->cp_blkaddr) + cp_pack_block_count - 1),
+            ZX_OK);
+
+  // Fsck should fail at verifying stage, try repair.
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+  ASSERT_EQ(fsck.DoFsck(), ZX_ERR_INTERNAL);
+  ASSERT_EQ(fsck.RepairCheckpoint(), ZX_OK);
+
+  // Re-read the checkpoint pack header to check it is repaired.
+  ASSERT_EQ(fsck.ReadBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
+  checkpoint_ptr = reinterpret_cast<Checkpoint *>(fs_block.get());
+  ASSERT_EQ(checkpoint_ptr->cur_data_blkoff[0], CpuToLe(uint16_t{1}));
 }
 
 }  // namespace

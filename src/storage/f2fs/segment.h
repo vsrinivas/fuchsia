@@ -335,7 +335,7 @@ class SegmentManager {
              CURSEG_I(CursegType::kCursegColdNode)->segno / superblock_info_->GetSegsPerSec()));
   }
 
-  // L: Logical segment nunmber in volume, R: Relative segment number in main area
+  // L: Logical segment number in volume, R: Relative segment number in main area
   uint32_t GetL2RSegNo(uint32_t segno) { return (segno - free_info_->start_segno); }
   uint32_t GetR2LSegNo(uint32_t segno) { return (segno + free_info_->start_segno); }
   bool IsDataSeg(CursegType t) {
