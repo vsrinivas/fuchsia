@@ -6,6 +6,7 @@
 #include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/geometry/bounding_box.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/material/material.h"
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
@@ -28,7 +29,7 @@ ImagePtr CreateImageFrom1x1RgbaBytes(Escher* escher, std::array<uint8_t, 4> byte
   auto gpu_uploader = std::make_unique<escher::BatchGpuUploader>(escher->GetWeakPtr(), 0);
   ImagePtr image = escher->NewRgbaImage(gpu_uploader.get(), 1, 1, bytes.data());
   gpu_uploader->Submit();
-  escher->vk_device().waitIdle();
+  ESCHER_DCHECK_VK_RESULT(escher->vk_device().waitIdle());
   return image;
 }
 
@@ -171,7 +172,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverOpaque) {
   }
 
   EndRenderingFrame();
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
 
   auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
@@ -247,7 +248,7 @@ VK_TEST_F(OpacityShapeTest, OpaqueOverTranslucent) {
   }
 
   EndRenderingFrame();
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
 
   auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
@@ -325,7 +326,7 @@ VK_TEST_F(OpacityShapeTest, TranslucentOverTranslucent) {
   }
 
   EndRenderingFrame();
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
 
   auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);
@@ -396,7 +397,7 @@ VK_TEST_F(OpacityShapeTest, PremultipliedTexture) {
   }
 
   EndRenderingFrame();
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
 
   auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);

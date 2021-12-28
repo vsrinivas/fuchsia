@@ -15,7 +15,7 @@ class CommandBufferTest : public ::testing::Test, public VulkanTester {
 
   void TearDown() override {
     auto escher = test::GetEscher();
-    escher->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
     EXPECT_TRUE(escher->Cleanup());
   }
 };

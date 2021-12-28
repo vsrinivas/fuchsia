@@ -73,7 +73,7 @@ void UniformBufferPool::InternalAllocate() {
     // querying it's memory requirements.  This shouldn't be necessary, since
     // all buffers are identically-configured.
     // TODO: disable this in release mode.
-    vk_device().getBufferMemoryRequirements(new_buffers[i]);
+    auto reqs = vk_device().getBufferMemoryRequirements(new_buffers[i]);
 
     // Sub-allocate memory for each buffer.
     auto mem = batch_mem->Suballocate(single_buffer_alloc_size, i * single_buffer_alloc_size);

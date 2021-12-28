@@ -90,7 +90,7 @@ VK_TEST_F(DebugShapeTest, Text) {
 
     TeardownFrame();
   }
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
   ASSERT_TRUE(escher()->Cleanup());
 }
 
@@ -130,7 +130,7 @@ VK_TEST_F(DebugShapeTest, Lines) {
     draw_and_check_histogram(escher::DebugRects::kYellow, (uint8_t)200);
     TeardownFrame();
   }
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
   ASSERT_TRUE(escher()->Cleanup());
 }
 
@@ -181,7 +181,7 @@ VK_TEST_F(DebugShapeTest, PaperTimestampGraph) {
 
     TeardownFrame();
   }
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
   ASSERT_TRUE(escher()->Cleanup());
 }
 

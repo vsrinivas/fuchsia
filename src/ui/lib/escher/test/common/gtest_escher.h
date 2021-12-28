@@ -101,6 +101,9 @@ bool GlobalEscherUsesVirtualGpu();
     }                                                   \
   } while (0)
 
+#define EXPECT_VK_SUCCESS(val) EXPECT_EQ(static_cast<VkResult>(val), VK_SUCCESS)
+#define ASSERT_VK_SUCCESS(val) ASSERT_EQ(static_cast<VkResult>(val), VK_SUCCESS)
+
 }  // namespace test
 }  // namespace escher
 

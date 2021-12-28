@@ -29,6 +29,21 @@
 
 namespace escher {
 
+inline void ESCHER_DCHECK_VK_RESULT(typename vk::Result result) {
+  FX_DCHECK(result == vk::Result::eSuccess);
+}
+
+// Panic if operation was unsuccessful, on debug mode only.
+template <typename T>
+auto ESCHER_DCHECK_VK_RESULT(typename vk::ResultValue<T> result) -> T {
+  FX_DCHECK(result.result == vk::Result::eSuccess);
+  return result.value;
+}
+
+inline void ESCHER_CHECKED_VK_RESULT(typename vk::Result result) {
+  FX_CHECK(result == vk::Result::eSuccess);
+}
+
 // Panic if operation was unsuccessful.
 template <typename T>
 auto ESCHER_CHECKED_VK_RESULT(typename vk::ResultValue<T> result) -> T {

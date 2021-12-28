@@ -45,7 +45,7 @@ VK_TEST_F(PaperShapeCacheTest, TestBoundingBox) {
     frame->EndFrame(SemaphorePtr(), []() {});
   }
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   ASSERT_TRUE(escher->Cleanup());
 }
 
@@ -234,7 +234,7 @@ VK_TEST_F(PaperShapeCacheTest, TestShadowCaching) {
     frame->EndFrame(SemaphorePtr(), []() {});
   }
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   ASSERT_TRUE(escher->Cleanup());
 }
 

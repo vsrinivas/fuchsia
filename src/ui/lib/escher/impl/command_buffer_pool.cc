@@ -57,7 +57,7 @@ CommandBufferPool::~CommandBufferPool() {
     // may be other pools with pending buffers, and there is no need to wait
     // for them to finish if the initial call to Cleanup() successfully returns
     // all buffers to the free list.
-    device_.waitIdle();
+    ESCHER_DCHECK_VK_RESULT(device_.waitIdle());
     Cleanup();
   }
   FX_DCHECK(pending_buffers_.empty());

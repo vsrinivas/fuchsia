@@ -9,6 +9,8 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/image_factory.h"
 
+#include "vulkan/vulkan.hpp"
+
 namespace escher {
 
 void ReadbackTest::SetUp() {
@@ -36,7 +38,7 @@ void ReadbackTest::SetUp() {
     black_ = image_utils::NewRgbaImage(&image_factory, uploader.get(), 1, 1, kBlack,
                                        vk::ImageLayout::eTransferSrcOptimal);
     uploader->Submit();
-    escher_->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher_->vk_device().waitIdle());
   }
 
   // |readback_buffer_| contains the data that is read back from
@@ -128,7 +130,7 @@ std::vector<uint8_t> ReadbackTest::ReadbackFromColorAttachment(const FramePtr& f
   // Submit the commands, wait for them to finish, and then copy and return the
   // data to the caller.
   frame->SubmitPartialFrame(SemaphorePtr());
-  escher_->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher_->vk_device().waitIdle());
 
   std::vector<uint8_t> result;
   result.resize(kNumFramebufferBytes);

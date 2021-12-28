@@ -94,7 +94,7 @@ VK_TEST_F(DebugFontTest, Glyphs) {
     frame->EndFrame(SemaphorePtr(), []() {});
   }
 
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
   ASSERT_TRUE(escher()->Cleanup());
 }
 

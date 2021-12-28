@@ -76,7 +76,7 @@ class RectangleCompositorTest : public ReadbackTest {
   // |ReadbackTest|
   void TearDown() override {
     frame_data_.frame->EndFrame(SemaphorePtr(), []() {});
-    escher()->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
     ASSERT_TRUE(escher()->Cleanup());
     ren_.reset();
     ReadbackTest::TearDown();

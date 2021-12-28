@@ -60,7 +60,7 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
   // Submit the work.
   uploader1->Submit();
   uploader2->Submit();
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
 
   // Check if the image downloaded contains color_2.
@@ -76,7 +76,7 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
       },
       region);
   downloader->Submit();
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(downloaded && image_correct);
 }

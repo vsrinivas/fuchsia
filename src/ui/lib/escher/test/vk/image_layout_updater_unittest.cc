@@ -69,7 +69,7 @@ VK_TEST_F(ImageLayoutUpdaterTest, SetLayout) {
   bool layout_updated = false;
   image_layout_updater->ScheduleSetImageInitialLayout(image, kNewLayout);
   image_layout_updater->Submit([&layout_updated]() { layout_updated = true; });
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_EQ(image->layout(), kNewLayout);
   EXPECT_TRUE(layout_updated);
@@ -86,7 +86,7 @@ VK_TEST_F(ImageLayoutUpdaterTest, SetLayout) {
   download_cmds->vk().copyImageToBuffer(image->vk(), image->layout(), buffer->vk(), {region});
   download_cmds->Submit([]() {});
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_VULKAN_VALIDATION_OK();
   EXPECT_TRUE(escher->Cleanup());
 }
@@ -109,7 +109,7 @@ VK_TEST_F(ImageLayoutUpdaterTest, SubmitToTransferCommandBuffer) {
   image_layout_updater->GenerateCommands(cmds.get());
   cmds->Submit([&cmds_submitted]() { cmds_submitted = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_EQ(image->layout(), kNewLayout);
   EXPECT_TRUE(cmds_submitted);
@@ -133,7 +133,7 @@ VK_TEST_F(ImageLayoutUpdaterTest, SubmitToGraphicsCommandBuffer) {
   image_layout_updater->GenerateCommands(cmds.get());
   cmds->Submit([&cmds_submitted]() { cmds_submitted = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_EQ(image->layout(), kNewLayout);
   EXPECT_TRUE(cmds_submitted);

@@ -60,7 +60,7 @@ VK_TEST_F(PaperRendererTest, DISABLED_TransientDepthStencilAndMsaaAttachments) {
     BeginRenderingFrame();
     DrawSceneContent(renderer(), kFramebufferWidth, kFramebufferHeight);
     EndRenderingFrame();
-    escher()->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
     TeardownFrame();
     EXPECT_EQ(0U, renderer()->GetTransientImageMemoryCommitment());
   }
@@ -74,7 +74,7 @@ VK_TEST_F(PaperRendererTest, DISABLED_TransientDepthStencilAndMsaaAttachments) {
     BeginRenderingFrame();
     DrawSceneContent(renderer(), kFramebufferWidth, kFramebufferHeight);
     EndRenderingFrame();
-    escher()->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
     TeardownFrame();
     EXPECT_EQ(0U, renderer()->GetTransientImageMemoryCommitment());
   }
@@ -87,7 +87,7 @@ VK_TEST_F(PaperRendererTest, DISABLED_TransientDepthStencilAndMsaaAttachments) {
     BeginRenderingFrame();
     DrawSceneContent(renderer(), kFramebufferWidth, kFramebufferHeight);
     EndRenderingFrame();
-    escher()->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
     TeardownFrame();
     EXPECT_EQ(0U, renderer()->GetTransientImageMemoryCommitment());
   }

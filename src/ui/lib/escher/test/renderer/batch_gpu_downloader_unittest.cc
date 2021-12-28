@@ -30,7 +30,7 @@ VK_TEST_F(BatchGpuDownloaderTest, CreateDestroyDownloader) {
     downloader->Submit([&batch_download_done]() { batch_download_done = true; });
   }
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
 }
@@ -49,7 +49,7 @@ VK_TEST_F(BatchGpuDownloaderTest, CallbackTriggeredOnEmptyDownloader) {
   bool callback_executed = false;
 
   downloader->Submit([&callback_executed] { callback_executed = true; });
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(callback_executed);
 }
@@ -62,7 +62,7 @@ VK_TEST_F(BatchGpuDownloaderTest, SubmitEmptyDownloader) {
   bool batch_download_done = false;
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
 }
@@ -95,7 +95,7 @@ VK_TEST_F(BatchGpuDownloaderTest, LazyInitializationTest) {
   // BatchGpuDownloader must be submitted before it is destroyed.
   bool batch_download_done = false;
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
   EXPECT_TRUE(read_done);
@@ -116,7 +116,7 @@ VK_TEST_F(BatchGpuDownloaderTest, SupportAllCommandBufferTypes) {
     downloader->Submit([done_ptr = &downloaders_done[i]]() { *done_ptr = true; });
   }
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   for (size_t i = 0; i < downloaders_done.size(); ++i) {
     EXPECT_TRUE(downloaders_done[i]);
@@ -136,7 +136,7 @@ VK_TEST_F(BatchGpuDownloaderTest, InitializeUploaderAndDownloader) {
   uploader->Submit([&uploader_finished]() { uploader_finished = true; });
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(uploader_finished);
   EXPECT_TRUE(batch_download_done);
@@ -172,7 +172,7 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
   bool batch_download_done = false;
   downloader.Submit([&batch_download_done]() { batch_download_done = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_done);
   EXPECT_TRUE(batch_download_done);
@@ -213,7 +213,7 @@ VK_TEST_F(BatchGpuDownloaderTest, SubmitToCommandBuffer) {
     command_buffer_done = true;
   });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_done);
   EXPECT_TRUE(command_buffer_done);
@@ -271,7 +271,7 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadTheSameImageTwice) {
   bool batch_download_done_2 = false;
   downloader2.Submit([&batch_download_done_2]() { batch_download_done_2 = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_image_done && read_image_done_2);
   EXPECT_TRUE(batch_download_done && batch_download_done_2);
@@ -321,7 +321,7 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadBufferTest) {
   bool batch_download_done = false;
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
 
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_buffer_done);
   EXPECT_TRUE(batch_download_done);
@@ -371,7 +371,7 @@ VK_TEST_F(BatchGpuDownloaderTest, MultipleReadToSameBuffer) {
 
   // Trigger Cleanup, which triggers the callback on the submitted command
   // buffer.
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
   EXPECT_TRUE(read_callback_executed);
@@ -423,7 +423,7 @@ VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
   // Submit all the work.
   bool batch_download_done = false;
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(read_buffer_done);
   EXPECT_TRUE(batch_download_done);

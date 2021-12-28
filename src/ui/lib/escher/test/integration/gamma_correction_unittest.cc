@@ -137,7 +137,7 @@ VK_TEST_F(GammaCorrectionTest, SomeCorrectedSomeNot) {
     ImagePtr image =
         escher()->NewRgbaImage(gpu_uploader.get(), 1, 1, ColorRgba::FromFloats(kColor).bytes());
     gpu_uploader->Submit();
-    escher()->vk_device().waitIdle();
+    EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
     TexturePtr tex = Texture::New(escher()->resource_recycler(), image, vk::Filter::eNearest);
     material = Material::New(glm::vec4(1, 1, 1, 1), tex);
   }
@@ -163,7 +163,7 @@ VK_TEST_F(GammaCorrectionTest, SomeCorrectedSomeNot) {
   }
 
   EndRenderingFrame();
-  escher()->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher()->vk_device().waitIdle());
 
   auto bytes = GetPixelData();
   const ColorHistogram<ColorBgra> histogram(bytes.data(), kFramebufferWidth * kFramebufferHeight);

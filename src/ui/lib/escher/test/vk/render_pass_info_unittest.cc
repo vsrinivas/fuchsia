@@ -33,7 +33,7 @@ ImagePtr CreateSwapchainImageWithLayout(Escher* escher, vk::ImageLayout layout) 
     result->set_swapchain_layout(layout);
   }
   updater.Submit();
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
   return result;
 }
 
@@ -128,7 +128,7 @@ VK_TEST_F(RenderPassInfoTest, NonSwapchainOutputImage) {
   const uint32_t kHeight = 1u;
   ImagePtr output_image = image_utils::NewColorAttachmentImage(&image_factory, kWidth, kHeight,
                                                                /* additional_flags */ {});
-  escher->vk_device().waitIdle();
+  EXPECT_VK_SUCCESS(escher->vk_device().waitIdle());
 
   TexturePtr color_texture = escher->NewTexture(output_image, vk::Filter::eNearest);
   TexturePtr depth_texture = NewDepthStencilTexture(escher);

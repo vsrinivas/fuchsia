@@ -12,6 +12,7 @@
 
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/image_cache.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/util/stopwatch.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
@@ -68,7 +69,7 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
 
   // Clean up before running benchmark.
   auto escher = demo->escher();
-  escher->vk_device().waitIdle();
+  escher::ESCHER_DCHECK_VK_RESULT(escher->vk_device().waitIdle());
   escher->Cleanup();
 
   uint64_t frame_number = 0;
@@ -106,7 +107,8 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
 
     // Prepare all semaphores to be waited-upon, and wait for the throwaway
     // frames to finish.
-    escher->vk_device().waitIdle();
+    auto result = escher->vk_device().waitIdle();
+    FX_CHECK(result == vk::Result::eSuccess);
     escher->Cleanup();
   }
 
@@ -135,7 +137,7 @@ void Demo::RunOffscreenBenchmark(Demo* demo, uint32_t framebuffer_width,
   }
 
   // Wait for the last frame to finish.
-  escher->vk_device().waitIdle();
+  escher::ESCHER_CHECKED_VK_RESULT(escher->vk_device().waitIdle());
   stopwatch.Stop();
   FX_CHECK(escher->Cleanup());
 

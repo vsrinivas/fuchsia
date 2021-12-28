@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/examples/escher/waterfall/waterfall_demo.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/test_with_vk_validation_layer.h"
@@ -42,7 +43,7 @@ VK_TEST_F(WaterfallDemoTest, SmokeTest) {
 
   bool frame_done = false;
   frame->EndFrame(escher::SemaphorePtr(), [&]() { frame_done = true; });
-  escher->vk_device().waitIdle();
+  escher::ESCHER_DCHECK_VK_RESULT(escher->vk_device().waitIdle());
   escher->Cleanup();
   EXPECT_TRUE(frame_done);
 }

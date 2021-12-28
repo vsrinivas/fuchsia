@@ -88,7 +88,7 @@ VK_TEST_F(ValidationLayerDefaultHandler, HandlerTest) {
     auto create_result = device.createImage(create_info);
     auto vk_image = create_result.value;
     device.destroyImage(vk_image);
-    device.waitIdle();
+    EXPECT_VK_SUCCESS(device.waitIdle());
   }
   EXPECT_VULKAN_VALIDATION_ERRORS_EQ(1);
 
@@ -99,7 +99,7 @@ VK_TEST_F(ValidationLayerDefaultHandler, HandlerTest) {
     auto create_result = device.createImage(create_info);
     auto vk_image = create_result.value;
     device.destroyImage(vk_image);
-    device.waitIdle();
+    EXPECT_VK_SUCCESS(device.waitIdle());
   }
   EXPECT_VULKAN_VALIDATION_ERRORS_EQ(1);
 
@@ -134,7 +134,7 @@ VK_TEST_F(ValidationLayerWithCustomHandler, HandlerTest) {
     auto create_result = device.createImage(create_info);
     auto vk_image = create_result.value;
     device.destroyImage(vk_image);
-    device.waitIdle();
+    EXPECT_VK_SUCCESS(device.waitIdle());
   }
   EXPECT_VULKAN_VALIDATION_ERRORS_EQ(1);
   EXPECT_EQ(GetCountErrors(), 1);
@@ -146,7 +146,7 @@ VK_TEST_F(ValidationLayerWithCustomHandler, HandlerTest) {
     auto create_result = device.createImage(create_info);
     auto vk_image = create_result.value;
     device.destroyImage(vk_image);
-    device.waitIdle();
+    EXPECT_VK_SUCCESS(device.waitIdle());
   }
   // no new errors occurred.
   EXPECT_VULKAN_VALIDATION_ERRORS_EQ(1);

@@ -52,7 +52,7 @@ void VulkanSwapchainHelper::DrawFrame(DrawFrameCallback draw_callback) {
         std::this_thread::sleep_for(chrono_timeout);
         timeout *= 2;
 
-        device_.waitIdle();
+        ESCHER_DCHECK_VK_RESULT(device_.waitIdle());
 
         result = device_.acquireNextImageKHR(swapchain_.swapchain, UINT64_MAX,
                                              image_available_semaphore->vk_semaphore(), nullptr);

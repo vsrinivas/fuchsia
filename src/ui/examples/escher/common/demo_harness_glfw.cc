@@ -12,6 +12,7 @@
 #include <GLFW/glfw3.h>
 
 #include "src/ui/examples/escher/common/demo.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
 static const char* kCacheDirectoryPath = "/tmp/escher_demoharness";
@@ -197,6 +198,6 @@ void DemoHarnessGlfw::RunForPlatform(Demo* demo) {
     }
     glfwPollEvents();
   }
-  device().waitIdle();
+  escher::ESCHER_CHECKED_VK_RESULT(device().waitIdle());
   glfwSetWindowShouldClose(g_window, GLFW_TRUE);
 }

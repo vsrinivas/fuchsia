@@ -14,6 +14,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/examples/escher/common/demo.h"
 #include "src/ui/lib/escher/escher_process_init.h"
+#include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/frame.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
@@ -57,7 +58,8 @@ void DemoHarness::Shutdown() {
   FX_DCHECK(!shutdown_complete_);
   shutdown_complete_ = true;
 
-  escher()->vk_device().waitIdle();
+  escher::ESCHER_DCHECK_VK_RESULT(escher()->vk_device().waitIdle());
+
   escher()->Cleanup();
 
   DestroySwapchain();
@@ -394,7 +396,8 @@ bool DemoHarness::MaybeDrawFrame() {
                                 kOffscreenBenchmarkFrameCount);
 
     // Guarantee that there are no frames in flight.
-    escher()->vk_device().waitIdle();
+    escher::ESCHER_DCHECK_VK_RESULT(escher()->vk_device().waitIdle());
+
     FX_CHECK(escher()->Cleanup());
     outstanding_frames_ = 0;
   }
