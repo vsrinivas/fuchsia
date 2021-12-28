@@ -23,6 +23,9 @@ toc:
 - title: "API development"
   section:
   - include: /docs/development/api/_toc.yaml
+- title: "Bluetooth"
+  section:
+  - include: /docs/development/bluetooth/_toc.yaml
 - title: "Configure editors"
   section:
   - include: /docs/development/editors/_toc.yaml
