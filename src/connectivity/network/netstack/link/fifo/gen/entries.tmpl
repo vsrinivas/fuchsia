@@ -5,11 +5,11 @@
 package {{ .Pkg }}
 
 import (
-    "fmt"
+	"fmt"
 	"math"
 	"math/bits"
 
-	{{ range .Imports }} "{{ . }}" {{ end }}
+	{{ range .Imports }}{{ printf "\n%q" }}{{ end }}
 )
 
 // Entries provides basic logic used in link devices to operate on queues of
@@ -126,7 +126,7 @@ func (e * {{ .Entries }}) getQueuedRange() (uint16, uint16) {
 	if e.sent == e.queued {
 		return uint16(len(e.storage)), 0
 	}
-  return e.mask(e.sent), e.mask(e.queued)
+	return e.mask(e.sent), e.mask(e.queued)
 }
 
 // GetReadied returns the first readied entry. Only valid if HaveReadied is
@@ -161,6 +161,6 @@ func (e *{{ .Entries }}) GetQueued(dst []{{ .EntryType }}) int {
 
 // GoString implements fmt.GoStringer.
 func (e {{ .Entries }}) GoString() string {
-    return fmt.Sprintf("%T{cap=%d, sent=%d, queued=%d, readied=%d}", e, len(e.storage), e.sent, e.queued, e.readied)
+	return fmt.Sprintf("%T{cap=%d, sent=%d, queued=%d, readied=%d}", e, len(e.storage), e.sent, e.queued, e.readied)
 }
 
