@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,6 +7,6 @@
 # team as reviewer.
 toc:
 - title: "Overview"
-  path: /docs/concepts/graphics/escher/README.md
-- title: "Building"
-  path: /docs/concepts/graphics/escher/building.md
+  path: /docs/development/graphics/sysmem/concepts/sysmem.md
+- title: "VMO hierarchy"
+  path: /docs/development/graphics/sysmem/concepts/vmos.md

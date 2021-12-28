@@ -77,7 +77,7 @@ For additional information see [Accessibility Semantics][semantics].
 ## Accessibility View
 
 The accessibility manager owns a view in the Fuchsia [view
-tree](/docs/concepts/graphics/scenic/view_ref.md).  This view allows
+tree](/docs/development/graphics/scenic/concepts/view_ref.md).  This view allows
 accessibility to intercept gestures, change graphics, inject input, and
 participate in focus changes.
 
@@ -133,4 +133,4 @@ Accessibility tests live in
 [a11yfocus]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78637
 [highlights]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78639
 [tts]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=78642
-[scenic]: /docs/concepts/graphics/scenic/scenic.md
+[scenic]: /docs/development/graphics/scenic/concepts/scenic.md

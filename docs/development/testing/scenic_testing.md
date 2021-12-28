@@ -191,7 +191,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
 
   * `fx test --host` runs all host tests, but you probably only want to run Escher tests.
   *  Escher: To run `escher_unittests` locally on Linux: follow instructions in
-     [Escher documentation](/docs/concepts/graphics/escher/building.md).
+     [Escher documentation](/docs/development/graphics/escher/concepts/building.md).
 
 ## Manual UI tests
 

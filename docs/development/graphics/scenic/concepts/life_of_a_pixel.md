@@ -19,4 +19,4 @@ The diagram below shows the steps a client Present follows when it is requested.
 9. The GPU processes the commands and sends the results to the display driver.
 10. The display driver pushes the pixels to the screen.
 
-![Image of the classes and calls a client Present request goes through to become a pixel on screen. This is a visual representation of the enumerated list above.](meta/life_of_pixel.svg)
+![Image of the classes and calls a client Present request goes through to become a pixel on screen. This is a visual representation of the enumerated list above.](/docs/development/graphics/scenic/meta/life_of_pixel.svg)

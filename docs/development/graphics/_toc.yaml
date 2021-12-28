@@ -6,18 +6,18 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Escher (Physically-based renderer)"
+- title: "Escher (Physically-based renderer) concepts"
   section:
-  - include: /docs/concepts/graphics/escher/_toc.yaml
+  - include: /docs/development/graphics/escher/concepts/_toc.yaml
 - title: "Flutter (UI toolkit)"
   path: //flutter.io/
   status: external
-- title: "Magma (Vulkan driver)"
+- title: "Magma (Vulkan driver) concepts"
   section:
-  - include: /docs/concepts/graphics/magma/_toc.yaml
-- title: "Scenic (Graphics engine)"
+  - include: /docs/development/graphics/magma/concepts/_toc.yaml
+- title: "Scenic (Graphics engine) concepts"
   section:
-  - include: /docs/concepts/graphics/scenic/_toc.yaml
-- title: "Sysmem (Shared memory manager)"
+  - include: /docs/development/graphics/scenic/concepts/_toc.yaml
+- title: "Sysmem (Shared memory manager) concepts"
   section:
-  - include: /docs/concepts/graphics/sysmem/_toc.yaml
+  - include: /docs/development/graphics/sysmem/concepts/_toc.yaml

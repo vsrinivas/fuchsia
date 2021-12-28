@@ -3,7 +3,7 @@ Magma Test Strategy
 
 ## Architecture Diagram
 
-* [Magma Block Diagram](block_diagram.svg)
+* [Magma Block Diagram](/docs/development/graphics/magma/block_diagram.svg)
 
 Four major interfaces
 

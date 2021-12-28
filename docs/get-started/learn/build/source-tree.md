@@ -130,7 +130,7 @@ but may provide some interesting places to begin exploring:
   services for [package management](/docs/concepts/packages/package.md).
 * `tests`: Platform end to end (E2E) integration tests.
 * `ui`: Services to support graphical user interface (GUI), including
-  [Scenic](/docs/concepts/graphics/scenic/README.md).
+  [Scenic](/docs/development/graphics/scenic/README.md).
 * `virtualization`: Hypervisor support for VM guests.
 * `zircon`: Libraries for interacting with the Zircon kernel.
 

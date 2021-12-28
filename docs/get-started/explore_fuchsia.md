@@ -86,6 +86,6 @@ check out the following resources:
 [fidl-tutorials]: /docs/development/languages/fidl/tutorials/overview.md
 [fidl-concepts]: /docs/concepts/fidl/overview.md
 [run-fuchsia-tests]: /docs/development/testing/run_fuchsia_tests.md
-[scenic]: /docs/concepts/graphics/scenic/scenic.md
+[scenic]: /docs/development/graphics/scenic/concepts/scenic.md
 [contribute-changes]: /docs/development/source_code/contribute_changes.md
 

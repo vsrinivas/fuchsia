@@ -735,16 +735,16 @@ for each new product type. This approach might be a valuable optimization in the
 future but was deemed too heavyweight for the current use-cases.
 
 [HID]: http://www.freebsddiary.org/APC/usb_hid_usages.php
-[views]: /docs/concepts/graphics/scenic/view_ref.md
-[scenic]: /docs/concepts/graphics/scenic/scenic.md
-[scenegraph]: /docs/concepts/graphics/scenic/scenic.md#scenes
-[viewref]: /docs/concepts/graphics/scenic/view_ref.md
-[focuschain]: /docs/concepts/graphics/scenic/focus_chain.md
+[views]: /docs/development/graphics/scenic/concepts/view_ref.md
+[scenic]: /docs/development/graphics/scenic/concepts/scenic.md
+[scenegraph]: /docs/development/graphics/scenic/concepts/scenic.md#scenes
+[viewref]: /docs/development/graphics/scenic/concepts/view_ref.md
+[focuschain]: /docs/development/graphics/scenic/concepts/focus_chain.md
 [latencyreference]: https://www-user.tu-chemnitz.de/~attig/Attig-Rauh-Franke-Krems_2017_LatencyGuidelines.pdf
 [inputmethod]: https://en.wikipedia.org/wiki/Input_method
 [i18n]: /docs/concepts/internationalization/introduction.md
 [inclusive]: /docs/concepts/principles/inclusive.md
-[root-presenter]: /docs/concepts/graphics/scenic/input.md#rootpresenter_transforms_and_routes_inputs
+[root-presenter]: /docs/development/graphics/scenic/concepts/input.md#rootpresenter_transforms_and_routes_inputs
 [input-pipeline]: /docs/concepts/session/input.md#input-pipeline
 [drivers]: /docs/concepts/drivers/driver_architectures/input_drivers/input.md
 [input-report]: https://fuchsia.dev/reference/fidl/fuchsia.input.report

@@ -87,13 +87,13 @@ direction).
 
 All Scenic coordinate systems are right handed.
 
-![Coordinate Spaces Diagram](meta/coordinate_spaces.svg)
+![Coordinate Spaces Diagram](/docs/development/graphics/scenic/meta/coordinate_spaces.svg)
 
 #### Layer Space (Screen Space)
 
-Layer Space is a 2D coordinate space corresponding to an area on the screen. 
-- Origin: Top left corner, X-axis pointing to the right and Y-axis pointing down. Axis-aligned 
-    with display. 
+Layer Space is a 2D coordinate space corresponding to an area on the screen.
+- Origin: Top left corner, X-axis pointing to the right and Y-axis pointing down. Axis-aligned
+    with display.
 - Dimensions: Typically equal to the display dimensions (a full screen layer).
 
 #### Camera Transform
@@ -220,7 +220,7 @@ will render at the minimum-coordinate of the view’s bounds. To fix this, apply
 another translation on the shape node to move it to the center of the view’s
 bounds.
 
-![Centering Geometry Diagram](meta/scenic_centering_geometry.png)
+![Centering Geometry Diagram](/docs/development/graphics/scenic/meta/scenic_centering_geometry.png)
 
 ## Debug Wireframe Rendering {#debug-wireframe-rendering}
 
@@ -268,7 +268,7 @@ in the client’s local coordinate system?
 The conversion of input coordinates from Layer Space to World Space involves the
 input system, compositor layer, and camera.
 
-![Input Coordinate Spaces](meta/input_coordinate_spaces.png)
+![Input Coordinate Spaces](/docs/development/graphics/scenic/meta/input_coordinate_spaces.png)
 
 To find which client we are sending the event to we perform a hit test. This is
 done by projecting a ray (in World Space) into the scene to see what objects it

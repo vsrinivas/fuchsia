@@ -32,7 +32,7 @@ Scenic's responsibilities are:
 
 ## Scenic and Fuchsia {#scenic-and-fuchsia}
 
-![Diagram of Scenic within Fuchsia](meta/scenic_within_fuchsia_diagram.png)
+![Diagram of Scenic within Fuchsia](/docs/development/graphics/scenic/meta/scenic_within_fuchsia_diagram.png)
 
 Scenic's API allows any client to insert its UI into the global scene graph.
 Processes using the UI framework [_Flutter_](https://flutter.io/) are one
@@ -190,7 +190,7 @@ can contain either an `Image` (perhaps transformed by a matrix), or a
 
 ### Scenic Resource Graph {#scenic-resource-graph}
 
-![Scenic Resource Graph](meta/scenic_resource_graph.png)
+![Scenic Resource Graph](/docs/development/graphics/scenic/meta/scenic_resource_graph.png)
 
 ### TODO: More Resources {#todo-more-resources}
 
@@ -203,7 +203,7 @@ Scenic manages a global scene graph in a three dimensional space. Some of the ch
 this space are defined by Scenic itself, whereas some are defined by the root presenter or even
 other clients.
 
-![Scenic Axes](meta/scenic_axes.png)
+![Scenic Axes](/docs/development/graphics/scenic/meta/scenic_axes.png)
 
 ### Units {#units}
 
@@ -228,7 +228,7 @@ presenter and the handedness will match.
 
 The bounds of the root view are defined by a min and a max point as follows:
 
-![Scenic Root View Bounds](meta/scenic_root_view_bounds.png)
+![Scenic Root View Bounds](/docs/development/graphics/scenic/meta/scenic_root_view_bounds.png)
 
 ## Views and Bounds {#views-and-bounds}
 

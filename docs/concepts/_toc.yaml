@@ -42,9 +42,6 @@ toc:
 - title: "FIDL"
   section:
   - include: /docs/concepts/fidl/_toc.yaml
-- title: "Graphics"
-  section:
-  - include: /docs/concepts/graphics/_toc.yaml
 - title: "Internationalization"
   section:
   - include: /docs/concepts/internationalization/_toc.yaml

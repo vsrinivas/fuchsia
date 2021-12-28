@@ -98,7 +98,7 @@ The kernel supports a `ZX_VMO_ZERO_CHILDREN` signal to help with these
 use-cases - if all [children][vmo_create_child] of a VMO are closed then
 `ZX_VMO_ZERO_CHILDREN` will be signaled on the parent VMO.
 
-![VMO hierarchy](images/vmo_hierarchy.png)
+![VMO hierarchy](/docs/development/graphics/sysmem/images/vmo_hierarchy.png)
 
 ### Client leaf VMOs
 These are the VMOs handed out to clients; clients name them by calling

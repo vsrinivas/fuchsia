@@ -1,7 +1,7 @@
 # Magma: Design
 
 For an overview of Magma including background, hardware requirements, and
-description of architecture, please see [Magma: Overview](README.md).
+description of architecture, please see [Magma: Overview](/docs/development/graphics/magma/README.md).
 
 ## Goals
 
@@ -35,7 +35,7 @@ representation, for example SPIR-V) into machine code, and format command
 buffers correctly for consumption by the hardware.  These are fed to the Magma
 system driver, which performs that actual programming of the hardware.
 
-![Block diagram of Magma architecture](block_diagram.png)
+![Block diagram of Magma architecture](/docs/development/graphics/magma/block_diagram.png)
 
 Magma defines two interfaces to gpu-specific code:
 
@@ -56,7 +56,7 @@ steps:
 2. Implement the msd interface to produce a magma system driver.
 
 For details on the process of building these two components, see the
-[porting](porting.md) guide.
+[porting](/docs/development/graphics/magma/concepts/porting.md) guide.
 
 ## The Magma interface
 
@@ -185,7 +185,7 @@ of a notification the vcd may be interested in is the completion of a command
 buffer.  The exact messages sent over the device and notification channels along
 with how those messages are handled varies by GPU driver.
 
-![Vulkan driver thread model](vulkan_driver_thread_model.png)
+![Vulkan driver thread model](/docs/development/graphics/magma/vulkan_driver_thread_model.png)
 
 Note that the process boundary enclosing the msd is the Fuchsia devhost process
 boundary for the msd.  This devhost process may include threads from other

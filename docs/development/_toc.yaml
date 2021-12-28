@@ -50,6 +50,9 @@ toc:
 - title: "Develop using the IDK"
   section:
   - include: /docs/development/idk/_toc.yaml
+- title: "Graphics"
+  section:
+  - include: /docs/development/graphics/_toc.yaml
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml

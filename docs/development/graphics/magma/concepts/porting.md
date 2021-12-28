@@ -1,7 +1,7 @@
 # Magma: Porting Guide
 
 For an overview of Magma including background, hardware requirements, and
-description of architecture, please see [Magma: Overview](README.md).
+description of architecture, please see [Magma: Overview](/docs/development/graphics/magma/README.md).
 
 This document gives a process a driver developer can follow to port a Vulkan
 driver to Fuchsia.
@@ -305,11 +305,11 @@ the system driver using the Zircon DDK.
 [boarddriver]: /docs/concepts/drivers/device_driver_model/platform-bus.md
 [icdabi]: /docs/concepts/system/abi/system.md#vulkan-icd
 [banjo]: /docs/concepts/drivers/device_driver_model/banjo.md
-[sysmem]: /docs/concepts/graphics/sysmem/sysmem.md
+[sysmem]: /docs/development/graphics/sysmem/concepts/sysmem.md
 [vkreadback]: /src/graphics/tests/vkreadback
 [hardwareunit]: /src/graphics/drivers/msd-arm-mali/tests/integration/run_unit_tests.cc
 [vulkanheader]: https://fuchsia.googlesource.com/third_party/Vulkan-Headers/+/refs/heads/master/include/vulkan/vulkan_fuchsia.h
-[scenic]: /docs/concepts/graphics/scenic/scenic.md
+[scenic]: /docs/development/graphics/scenic/concepts/scenic.md
 [msd-arm-mali]: /src/graphics/drivers/msd-arm-mali
 [aml-gpu]: /src/graphics/drivers/aml-gpu
 [msd-intel-gen]: /src/graphics/drivers/msd-intel-gen
@@ -330,9 +330,9 @@ the system driver using the Zircon DDK.
 [vmo]: /docs/reference/kernel_objects/vm_object.md
 [msdheader]: /src/graphics/lib/magma/include/msd/msd.h
 [magmaheader]: /src/graphics/lib/magma/include/magma/magma.h
-[l0]: /docs/concepts/graphics/magma/contributing.md#l0
-[l1]: /docs/concepts/graphics/magma/contributing.md#l1
-[teststrategy]: /docs/concepts/graphics/magma/test_strategy.md
+[l0]: /docs/development/graphics/magma/concepts/contributing.md#l0
+[l1]: /docs/development/graphics/magma/concepts/contributing.md#l1
+[teststrategy]: /docs/development/graphics/magma/concepts/test_strategy.md
 [loader-readme]: /src/graphics/bin/vulkan_loader/README.md
 [extmemoryspec]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_FUCHSIA_external_memory.html
 [extsemaphorespec]: https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VK_FUCHSIA_external_semaphore.html

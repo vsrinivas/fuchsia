@@ -1248,7 +1248,7 @@ environment to form a full SDK."
   client."
   full_description: "The region a Scenic client can draw in, and the coordinate system input events
   are delivered in. <code>Views</code> can be referred to cross-process by their associated <a href=\"docs/glossary#viewref\">ViewRef</a>."
-  see_also: ["<a href=\"/docs/concepts/graphics/scenic/view_bounds\">View bounds</a"]
+  see_also: ["<a href=\"/docs/development/graphics/scenic/concepts/view_bounds\">View bounds</a"]
   related_guides: [""]
   area: ["Graphics","HCI"]
 
@@ -1280,8 +1280,8 @@ environment to form a full SDK."
   communications Scenic clients are referred to by ViewRef. This is common for Input, Accessibility
   and Focus."
   see_also: ["<a href=\"https://fuchsia.dev/reference/fidl/fuchsia.ui.views#ViewRef\"><code>fuchsia.ui.views.ViewRef</code></a>",
-             "<a href=\"/docs/concepts/graphics/scenic/view_ref\">Scenic Views, view tree, and ViewRefs</a",
-             "<a href=\"/docs/concepts/graphics/scenic/focus_chain\">View focus</a"]
+             "<a href=\"/docs/development/graphics/scenic/concepts/view_ref\">Scenic Views, view tree, and ViewRefs</a",
+             "<a href=\"/docs/development/graphics/scenic/concepts/focus_chain\">View focus</a"]
   related_guides: [""]
   area: ["FIDL", "Graphics","HCI"]
 
