@@ -920,6 +920,7 @@
                 "#pkg-resolver",
                 "#sampler",
                 "#session-manager",
+                "#sysmem_connector",
             ],
         },
         {

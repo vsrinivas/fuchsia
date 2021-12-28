@@ -14,7 +14,10 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+            ],
         },
         {
             directory: "dev-sysmem",
