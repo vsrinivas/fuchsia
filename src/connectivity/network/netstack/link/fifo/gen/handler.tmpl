@@ -7,27 +7,26 @@
 package {{ .Pkg }}
 
 import (
-    "context"
-    "fmt"
-    "sync"
-    "syscall/zx"
-    "syscall/zx/zxwait"
-    "reflect"
-    "unsafe"
+	"context"
+	"fmt"
+	"sync"
+	"syscall/zx"
+	"syscall/zx/zxwait"
+	"reflect"
+	"unsafe"
 
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 
-    "gvisor.dev/gvisor/pkg/tcpip"
-    "gvisor.dev/gvisor/pkg/tcpip/stack"
+	"gvisor.dev/gvisor/pkg/tcpip"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 
-    {{ range .Imports }}
-    "{{ . }}"{{ end }}
+	{{ range .Imports }}{{ printf "\n%q" }}{{ end }}
 )
 
 type {{ .Handler }} struct {
-    TxDepth, RxDepth uint32
-    RxFifo, TxFifo zx.Handle
-    rx {{ .Entries }}
+	TxDepth, RxDepth uint32
+	RxFifo, TxFifo zx.Handle
+	rx {{ .Entries }}
 	tx struct {
 		mu struct {
 			sync.Mutex
@@ -42,9 +41,9 @@ type {{ .Handler }} struct {
 		cond sync.Cond
 	}
 	Stats struct {
-        Rx fifo.RxStats
-        Tx fifo.TxStats
-    }
+		Rx fifo.RxStats
+		Tx fifo.TxStats
+	}
 }
 
 
@@ -66,7 +65,7 @@ func (h *{{ .Handler }}) TxReceiverLoop(wasSent func(entry *{{ .EntryType }}) bo
 			var notSent uint64
 			for i := range scratch[:count] {
 				if !wasSent(&scratch[i]) {
-				  notSent++
+					notSent++
 				}
 			}
 			h.Stats.Tx.Drops.IncrementBy(notSent)
@@ -170,7 +169,7 @@ func (h *{{ .Handler }}) RxLoop(process func(entry *{{ .EntryType }}) {{ if .Sig
 			}
 			{{ end }}
 			if obs&zx.SignalFIFOPeerClosed != 0 {
-			    return fmt.Errorf("FifoRead(RX): peer closed")
+				return fmt.Errorf("FifoRead(RX): peer closed")
 			}
 			if obs&zx.SignalFIFOReadable != 0 {
 				switch status, count := FifoRead(h.RxFifo, scratch); status {
@@ -235,30 +234,30 @@ func (h *{{ .Handler }}) ProcessWrite(pkts stack.PacketBufferList, processor fun
 }
 
 func (h *{{ .Handler }}) DetachTx() {
-    h.tx.mu.Lock()
-    h.tx.mu.detached = true
-    h.tx.mu.Unlock()
-    h.tx.cond.Broadcast()
+	h.tx.mu.Lock()
+	h.tx.mu.detached = true
+	h.tx.mu.Unlock()
+	h.tx.cond.Broadcast()
 }
 
 func (h *{{ .Handler }}) InitRx(capacity uint16) uint16 {
-    return h.rx.Init(capacity)
+	return h.rx.Init(capacity)
 }
 
 func (h *{{ .Handler }}) InitTx(capacity uint16) uint16 {
 	h.tx.cond.L = &h.tx.mu.Mutex
-    return h.tx.mu.entries.Init(capacity)
+	return h.tx.mu.entries.Init(capacity)
 }
 
 func (h *{{ .Handler }}) PushInitialRx(entry {{ .EntryType }}) {
-    h.rx.storage[h.rx.readied] = entry
-    h.rx.IncrementReadied(1)
-    h.rx.IncrementQueued(1)
+	h.rx.storage[h.rx.readied] = entry
+	h.rx.IncrementReadied(1)
+	h.rx.IncrementQueued(1)
 }
 
 func (h *{{ .Handler }}) PushInitialTx(entry {{ .EntryType }}) {
-    h.tx.mu.entries.storage[h.tx.mu.entries.readied] = entry
-    h.tx.mu.entries.IncrementReadied(1)
+	h.tx.mu.entries.storage[h.tx.mu.entries.readied] = entry
+	h.tx.mu.entries.IncrementReadied(1)
 }
 
 func FifoWrite(handle zx.Handle, b []{{ .EntryType }}) (zx.Status, uint32) {
