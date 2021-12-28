@@ -286,13 +286,48 @@ void DeviceImpl::OnStreamRequested(uint32_t index,
       [this, index, format_index, request = std::move(request)](
           const fpromise::result<std::vector<fpromise::result<void, zx_status_t>>>&
               results) mutable {
-        controller_->CreateStream(current_configuration_index_, index, format_index,
-                                  std::move(request));
+        std::string description = "c" + std::to_string(current_configuration_index_) + "s" +
+                                  std::to_string(index) + "f" + std::to_string(format_index);
+        bool deallocation_complete = true;
+        if (results.is_error()) {
+          FX_LOGS(WARNING) << "aggregate deallocation wait failed prior to connecting to "
+                           << description;
+          deallocation_complete = false;
+        } else {
+          auto& wait_results = results.value();
+          for (const auto& wait_result : wait_results) {
+            if (wait_result.is_error()) {
+              FX_PLOGS(WARNING, wait_result.error()) << "wait failed for previous stream at index "
+                                                     << &wait_result - wait_results.data();
+              deallocation_complete = false;
+            }
+          }
+        }
+        fit::closure connect = [this, index, format_index, request = std::move(request),
+                                description]() mutable {
+          FX_LOGS(INFO) << "connecting to controller stream: " << description;
+          controller_->CreateStream(current_configuration_index_, index, format_index,
+                                    std::move(request));
+        };
+        // If the wait for deallocation failed, try to connect anyway after a fixed delay.
+        if (!deallocation_complete) {
+          constexpr uint32_t kFallbackDelayMsec = 5000;
+          FX_LOGS(WARNING) << "deallocation wait failed; falling back to timed wait of "
+                           << kFallbackDelayMsec << "ms";
+          ZX_ASSERT(async::PostDelayedTask(dispatcher_, std::move(connect),
+                                           zx::msec(kFallbackDelayMsec)) == ZX_OK);
+          return;
+        }
+        // Otherwise, connect immediately.
+        connect();
       };
 
   // Wait for any previous configurations buffers to finish deallocation, then connect
-  // to stream.
-  executor_.schedule_task(fpromise::join_promise_vector(std::move(deallocation_promises_))
+  // to stream. The move and clear are necessary to ensure subsequent accesses to the container
+  // produces well-defined results.
+  auto promises = std::move(deallocation_promises_);
+  deallocation_promises_.clear();
+  executor_.schedule_task(fpromise::join_promise_vector(std::move(promises))
                               .then(std::move(connect_to_stream))
                               .wrap_with(streams_[index]->Scope()));
 }
