@@ -6,11 +6,12 @@ use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
     EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
 };
+use anyhow::format_err;
 use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
-use std::io::Error;
+use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use test_output_directory as directory;
@@ -309,7 +310,26 @@ struct DirectoryDirectoryWriter {
 
 impl DirectoryWrite for DirectoryDirectoryWriter {
     fn new_file(&self, path: &Path) -> Result<Box<DynArtifact>, Error> {
-        let file = File::create(self.path.join(path))?;
+        let new_path = self.path.join(path);
+        // The path must be relative to the parent directory (no absolute paths) and cannot have
+        // any parent components (which can escape the parent directory).
+        if !new_path.starts_with(&self.path) || new_path.components().any(|c| {
+            match c {
+                std::path::Component::ParentDir => true,
+                _ => false,
+            }
+        }) {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format_err!(
+                    "Path {:?} results in destination {:?} that may be outside of {:?}",
+                    path,
+                    new_path,
+                    self.path
+                ),
+            ));
+        }
+        let file = File::create(new_path)?;
         Ok(Box::new(file))
     }
 }
@@ -772,6 +792,31 @@ mod test {
                         ),
                 )],
         );
+    }
+
+    #[fuchsia::test]
+    async fn ensure_paths_cannot_escape_directory() {
+        let dir = tempdir().expect("create temp directory");
+
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
+
+        let directory = run_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .await
+            .expect("make custom directory");
+        assert!(directory.new_file("file.txt".as_ref()).is_ok());
+
+        // Files in subdirectories currently fail if the preceding path does not exist.
+        assert!(directory.new_file("this/is/a/file/path.txt".as_ref()).is_err());
+
+        assert!(directory.new_file("../file.txt".as_ref()).is_err());
+        assert!(directory.new_file("/file.txt".as_ref()).is_err());
+        assert!(directory.new_file("../this/is/a/file/path.txt".as_ref()).is_err());
+        assert!(directory.new_file("/this/is/a/file/path.txt".as_ref()).is_err());
+        assert!(directory.new_file("/../file.txt".as_ref()).is_err());
+        assert!(directory.new_file("fail/../../file.txt".as_ref()).is_err());
     }
 
     #[fuchsia::test]
