@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.nullable",
+  "name": "test.nullable",
   "library_dependencies": [
     {
       "name": "zx",
@@ -89,7 +89,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.nullable/SimpleProtocol",
+      "name": "test.nullable/SimpleProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
         "line": 17,
@@ -99,7 +99,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 1238508415331800925,
+          "ordinal": 9142761280038437494,
           "name": "Add",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
@@ -110,7 +110,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.nullable/SimpleProtocolAddRequest",
+            "identifier": "test.nullable/SimpleProtocolAddRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -134,7 +134,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.nullable/SimpleProtocolAddTopResponse",
+            "identifier": "test.nullable/SimpleProtocolAddTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -164,7 +164,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.nullable/SimpleProtocolAddRequest",
+      "name": "test.nullable/SimpleProtocolAddRequest",
       "naming_context": [
         "SimpleProtocol",
         "Add",
@@ -278,7 +278,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/SimpleProtocolAddTopResponse",
+      "name": "test.nullable/SimpleProtocolAddTopResponse",
       "naming_context": [
         "SimpleProtocol",
         "Add",
@@ -353,7 +353,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableString",
+      "name": "test.nullable/StructWithNullableString",
       "naming_context": [
         "StructWithNullableString"
       ],
@@ -426,7 +426,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableVector",
+      "name": "test.nullable/StructWithNullableVector",
       "naming_context": [
         "StructWithNullableVector"
       ],
@@ -521,7 +521,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableHandle",
+      "name": "test.nullable/StructWithNullableHandle",
       "naming_context": [
         "StructWithNullableHandle"
       ],
@@ -597,7 +597,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableProtocol",
+      "name": "test.nullable/StructWithNullableProtocol",
       "naming_context": [
         "StructWithNullableProtocol"
       ],
@@ -612,7 +612,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.nullable/SimpleProtocol",
+            "identifier": "test.nullable/SimpleProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -671,7 +671,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableRequest",
+      "name": "test.nullable/StructWithNullableRequest",
       "naming_context": [
         "StructWithNullableRequest"
       ],
@@ -686,7 +686,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.nullable/SimpleProtocol",
+            "subtype": "test.nullable/SimpleProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -745,7 +745,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/Int32Wrapper",
+      "name": "test.nullable/Int32Wrapper",
       "naming_context": [
         "Int32Wrapper"
       ],
@@ -818,7 +818,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableStruct",
+      "name": "test.nullable/StructWithNullableStruct",
       "naming_context": [
         "StructWithNullableStruct"
       ],
@@ -833,7 +833,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.nullable/Int32Wrapper",
+            "identifier": "test.nullable/Int32Wrapper",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 8,
@@ -892,7 +892,7 @@
       }
     },
     {
-      "name": "fidl.test.nullable/StructWithNullableUnion",
+      "name": "test.nullable/StructWithNullableUnion",
       "naming_context": [
         "StructWithNullableUnion"
       ],
@@ -907,7 +907,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.nullable/SimpleUnion",
+            "identifier": "test.nullable/SimpleUnion",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 24,
@@ -970,7 +970,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.nullable/SimpleUnion",
+      "name": "test.nullable/SimpleUnion",
       "naming_context": [
         "SimpleUnion"
       ],
@@ -1072,31 +1072,31 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.nullable/StructWithNullableVector",
-    "fidl.test.nullable/StructWithNullableUnion",
-    "fidl.test.nullable/StructWithNullableStruct",
-    "fidl.test.nullable/StructWithNullableString",
-    "fidl.test.nullable/StructWithNullableRequest",
-    "fidl.test.nullable/StructWithNullableProtocol",
-    "fidl.test.nullable/StructWithNullableHandle",
-    "fidl.test.nullable/SimpleUnion",
-    "fidl.test.nullable/SimpleProtocolAddTopResponse",
-    "fidl.test.nullable/SimpleProtocolAddRequest",
-    "fidl.test.nullable/SimpleProtocol",
-    "fidl.test.nullable/Int32Wrapper"
+    "test.nullable/StructWithNullableVector",
+    "test.nullable/StructWithNullableUnion",
+    "test.nullable/StructWithNullableStruct",
+    "test.nullable/StructWithNullableString",
+    "test.nullable/StructWithNullableRequest",
+    "test.nullable/StructWithNullableProtocol",
+    "test.nullable/StructWithNullableHandle",
+    "test.nullable/SimpleUnion",
+    "test.nullable/SimpleProtocolAddTopResponse",
+    "test.nullable/SimpleProtocolAddRequest",
+    "test.nullable/SimpleProtocol",
+    "test.nullable/Int32Wrapper"
   ],
   "declarations": {
-    "fidl.test.nullable/SimpleProtocol": "interface",
-    "fidl.test.nullable/SimpleProtocolAddRequest": "struct",
-    "fidl.test.nullable/SimpleProtocolAddTopResponse": "struct",
-    "fidl.test.nullable/StructWithNullableString": "struct",
-    "fidl.test.nullable/StructWithNullableVector": "struct",
-    "fidl.test.nullable/StructWithNullableHandle": "struct",
-    "fidl.test.nullable/StructWithNullableProtocol": "struct",
-    "fidl.test.nullable/StructWithNullableRequest": "struct",
-    "fidl.test.nullable/Int32Wrapper": "struct",
-    "fidl.test.nullable/StructWithNullableStruct": "struct",
-    "fidl.test.nullable/StructWithNullableUnion": "struct",
-    "fidl.test.nullable/SimpleUnion": "union"
+    "test.nullable/SimpleProtocol": "interface",
+    "test.nullable/SimpleProtocolAddRequest": "struct",
+    "test.nullable/SimpleProtocolAddTopResponse": "struct",
+    "test.nullable/StructWithNullableString": "struct",
+    "test.nullable/StructWithNullableVector": "struct",
+    "test.nullable/StructWithNullableHandle": "struct",
+    "test.nullable/StructWithNullableProtocol": "struct",
+    "test.nullable/StructWithNullableRequest": "struct",
+    "test.nullable/Int32Wrapper": "struct",
+    "test.nullable/StructWithNullableStruct": "struct",
+    "test.nullable/StructWithNullableUnion": "struct",
+    "test.nullable/SimpleUnion": "union"
   }
 }

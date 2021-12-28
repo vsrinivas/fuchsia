@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace protocolrequest {
 #ifdef __Fuchsia__
@@ -26,16 +25,16 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestMessageTable;
+    test_protocolrequest_ParentGetChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable;
+    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
 
 }  // namespace _internal
 class Parent_RequestEncoder {
@@ -56,8 +55,8 @@ class Parent_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocolrequest::_internal::
-                   fidl_test_protocolrequest_ParentGetChildRequestMessageTable,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentGetChildRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -81,8 +80,8 @@ class Parent_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentGetChildRequestRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -90,7 +89,7 @@ class Parent_RequestEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage TakeChild(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* c) {
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -117,8 +116,8 @@ class Parent_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocolrequest::_internal::
-                   fidl_test_protocolrequest_ParentTakeChildRequestMessageTable,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentTakeChildRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -126,7 +125,7 @@ class Parent_RequestEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage TakeChildRequest(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -154,8 +153,8 @@ class Parent_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -164,17 +163,17 @@ class Parent_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildResponseMessageTable;
+    test_protocolrequest_ParentGetChildResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    test_protocolrequest_ParentGetChildRequestResponseMessageTable;
 
 }  // namespace _internal
 class Parent_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* c) {
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -201,15 +200,15 @@ class Parent_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocolrequest::_internal::
-                   fidl_test_protocolrequest_ParentGetChildResponseMessageTable,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentGetChildResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -237,8 +236,8 @@ class Parent_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable,
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentGetChildRequestResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -259,5 +258,4 @@ class Child_ResponseEncoder {
 
 }  // namespace protocolrequest
 }  // namespace test
-
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

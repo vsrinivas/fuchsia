@@ -3,7 +3,7 @@
 package errorsyntax
 
 import (
-	fidltesterrorsyntaxparent "fidl/fidl/test/errorsyntax/parent"
+	testerrorsyntaxparent "fidl/test/errorsyntax/parent"
 	_bindings "syscall/zx/fidl"
 )
 
@@ -30,8 +30,8 @@ func (msg *exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest) Marsha
 }
 
 type exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse struct {
-	_      struct{}                                                                      `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
-	Result fidltesterrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_      struct{}                                                                  `fidl:"s" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	Result testerrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mexampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse = _bindings.CreateLazyMarshaler(exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailResponse{})
@@ -119,13 +119,13 @@ func ExampleUseOfErrorSyntaxCallWhichMayFailResultWithErr(err uint32) ExampleUse
 }
 
 const (
-	ExampleUseOfErrorSyntaxComposedCallWhichMayFailOrdinal uint64 = 0x71f05a4555fd5234
-	ExampleUseOfErrorSyntaxCallWhichMayFailOrdinal         uint64 = 0x67314da4a7f84897
+	ExampleUseOfErrorSyntaxComposedCallWhichMayFailOrdinal uint64 = 0x3179cf8f46814221
+	ExampleUseOfErrorSyntaxCallWhichMayFailOrdinal         uint64 = 0x3424ff83ce3004a2
 )
 
 type ExampleUseOfErrorSyntaxWithCtxInterface _bindings.ChannelProxy
 
-func (p *ExampleUseOfErrorSyntaxWithCtxInterface) ComposedCallWhichMayFail(ctx_ _bindings.Context, s string) (fidltesterrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult, error) {
+func (p *ExampleUseOfErrorSyntaxWithCtxInterface) ComposedCallWhichMayFail(ctx_ _bindings.Context, s string) (testerrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult, error) {
 	req_ := &exampleUseOfErrorSyntaxWithCtxComposedCallWhichMayFailRequest{
 		S: s,
 	}
@@ -144,7 +144,7 @@ func (p *ExampleUseOfErrorSyntaxWithCtxInterface) CallWhichMayFail(ctx_ _binding
 }
 
 type ExampleUseOfErrorSyntaxWithCtx interface {
-	ComposedCallWhichMayFail(ctx_ _bindings.Context, s string) (fidltesterrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult, error)
+	ComposedCallWhichMayFail(ctx_ _bindings.Context, s string) (testerrorsyntaxparent.ParentUsesErrorSyntaxComposedCallWhichMayFailResult, error)
 	CallWhichMayFail(ctx_ _bindings.Context, s string) (ExampleUseOfErrorSyntaxCallWhichMayFailResult, error)
 }
 

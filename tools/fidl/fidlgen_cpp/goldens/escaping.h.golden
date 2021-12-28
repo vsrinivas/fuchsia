@@ -2,28 +2,28 @@
 
 #pragma once
 
-#include <fidl/fidl.test.escaping/cpp/wire.h>
-#include <fidl/test/escaping/cpp/natural_types.h>
+#include <fidl/test.escaping/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/escaping/cpp/natural_types.h>
 
-namespace fidl_test_escaping {
+namespace test_escaping {
 class DocCommentWithQuotes;
 
-}  // namespace fidl_test_escaping
+}  // namespace test_escaping
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_escaping::DocCommentWithQuotes>
+    ::test_escaping::DocCommentWithQuotes>
     final {
  public:
   uint8_t __reserved = 0u;
 };
 
-namespace fidl_test_escaping {
+namespace test_escaping {
 /// "pleaseescapethisdocommentproperly"
 class DocCommentWithQuotes final
     : public ::fidl::internal::CodableBase<DocCommentWithQuotes> {
@@ -40,7 +40,7 @@ class DocCommentWithQuotes final
   DocCommentWithQuotes() = default;
   DocCommentWithQuotes(uint8_t __reserved) : storage_({__reserved}) {}
   DocCommentWithQuotes(::fidl::internal::DesignatedInitializationProxy<
-                       ::fidl_test_escaping::DocCommentWithQuotes>
+                       ::test_escaping::DocCommentWithQuotes>
                            storage)
       : storage_(std::move(storage)) {}
   ~DocCommentWithQuotes() = default;
@@ -57,39 +57,38 @@ class DocCommentWithQuotes final
   }
 
  private:
-  friend struct ::fidl::CodingTraits<
-      ::fidl_test_escaping::DocCommentWithQuotes>;
+  friend struct ::fidl::CodingTraits<::test_escaping::DocCommentWithQuotes>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_escaping::DocCommentWithQuotes>
+      ::test_escaping::DocCommentWithQuotes>
       storage_ = {};
 };
 
-}  // namespace fidl_test_escaping
+}  // namespace test_escaping
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
+extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 template <>
-struct IsFidlType<::fidl_test_escaping::DocCommentWithQuotes>
+struct IsFidlType<::test_escaping::DocCommentWithQuotes>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_escaping::DocCommentWithQuotes>
+struct ::fidl::internal::TypeTraits<::test_escaping::DocCommentWithQuotes>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_escaping_DocCommentWithQuotesTable;
+      &test_escaping_DocCommentWithQuotesTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_escaping::DocCommentWithQuotes> {
+struct CodingTraits<::test_escaping::DocCommentWithQuotes> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_escaping::DocCommentWithQuotes* value,
+      EncoderImpl* encoder, ::test_escaping::DocCommentWithQuotes* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -101,7 +100,7 @@ struct CodingTraits<::fidl_test_escaping::DocCommentWithQuotes> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_escaping::DocCommentWithQuotes* value,
+                     ::test_escaping::DocCommentWithQuotes* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
   }

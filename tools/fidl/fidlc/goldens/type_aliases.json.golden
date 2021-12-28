@@ -1,11 +1,11 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.typealiases",
+  "name": "test.typealiases",
   "library_dependencies": [
     {
-      "name": "someotherlibrary",
+      "name": "test.someotherlibrary",
       "declarations": {
-        "someotherlibrary/ReferenceMe": {
+        "test.someotherlibrary/ReferenceMe": {
           "kind": "struct",
           "resource": false
         }
@@ -16,7 +16,7 @@
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "fidl.test.typealiases/obj_type",
+      "name": "test.typealiases/obj_type",
       "naming_context": [
         "obj_type"
       ],
@@ -72,7 +72,7 @@
   ],
   "experimental_resource_declarations": [
     {
-      "name": "fidl.test.typealiases/handle",
+      "name": "test.typealiases/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 13,
@@ -112,7 +112,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.typealiases/obj_type",
+            "identifier": "test.typealiases/obj_type",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -141,7 +141,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.typealiases/ExampleOfUseOfAliases",
+      "name": "test.typealiases/ExampleOfUseOfAliases",
       "naming_context": [
         "ExampleOfUseOfAliases"
       ],
@@ -177,7 +177,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/u32",
+            "name": "test.typealiases/u32",
             "args": [],
             "nullable": false
           },
@@ -243,7 +243,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/vec_of_strings",
+            "name": "test.typealiases/vec_of_strings",
             "args": [],
             "nullable": false
           },
@@ -310,7 +310,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/vec_of_strings",
+            "name": "test.typealiases/vec_of_strings",
             "args": [],
             "nullable": false,
             "maybe_size": "9"
@@ -378,7 +378,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
+            "name": "test.typealiases/vec_of_strings_at_most_5",
             "args": [],
             "nullable": false
           },
@@ -403,7 +403,7 @@
             "kind": "vector",
             "element_type": {
               "kind": "identifier",
-              "identifier": "someotherlibrary/ReferenceMe",
+              "identifier": "test.someotherlibrary/ReferenceMe",
               "nullable": false,
               "type_shape_v1": {
                 "inline_size": 1,
@@ -488,7 +488,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/channel",
+            "name": "test.typealiases/channel",
             "args": [],
             "nullable": false
           },
@@ -535,7 +535,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/alias_of_channel",
+            "name": "test.typealiases/alias_of_channel",
             "args": [],
             "nullable": false
           },
@@ -582,7 +582,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.typealiases/alias_of_channel",
+            "name": "test.typealiases/alias_of_channel",
             "args": [],
             "nullable": true
           },
@@ -629,7 +629,7 @@
   "union_declarations": [],
   "type_alias_declarations": [
     {
-      "name": "fidl.test.typealiases/u32",
+      "name": "test.typealiases/u32",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 19,
@@ -643,7 +643,7 @@
       }
     },
     {
-      "name": "fidl.test.typealiases/vec_of_strings",
+      "name": "test.typealiases/vec_of_strings",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 20,
@@ -663,7 +663,7 @@
       }
     },
     {
-      "name": "fidl.test.typealiases/vec_of_strings_at_most_5",
+      "name": "test.typealiases/vec_of_strings_at_most_5",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 21,
@@ -693,7 +693,7 @@
       }
     },
     {
-      "name": "fidl.test.typealiases/channel",
+      "name": "test.typealiases/channel",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 22,
@@ -701,13 +701,13 @@
         "length": 7
       },
       "partial_type_ctor": {
-        "name": "fidl.test.typealiases/handle",
+        "name": "test.typealiases/handle",
         "args": [],
         "nullable": false
       }
     },
     {
-      "name": "fidl.test.typealiases/alias_of_channel",
+      "name": "test.typealiases/alias_of_channel",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "line": 23,
@@ -715,30 +715,30 @@
         "length": 16
       },
       "partial_type_ctor": {
-        "name": "fidl.test.typealiases/handle",
+        "name": "test.typealiases/handle",
         "args": [],
         "nullable": false
       }
     }
   ],
   "declaration_order": [
-    "fidl.test.typealiases/vec_of_strings_at_most_5",
-    "fidl.test.typealiases/vec_of_strings",
-    "fidl.test.typealiases/u32",
-    "fidl.test.typealiases/obj_type",
-    "fidl.test.typealiases/handle",
-    "fidl.test.typealiases/channel",
-    "fidl.test.typealiases/alias_of_channel",
-    "fidl.test.typealiases/ExampleOfUseOfAliases"
+    "test.typealiases/vec_of_strings_at_most_5",
+    "test.typealiases/vec_of_strings",
+    "test.typealiases/u32",
+    "test.typealiases/obj_type",
+    "test.typealiases/handle",
+    "test.typealiases/channel",
+    "test.typealiases/alias_of_channel",
+    "test.typealiases/ExampleOfUseOfAliases"
   ],
   "declarations": {
-    "fidl.test.typealiases/obj_type": "enum",
-    "fidl.test.typealiases/handle": "experimental_resource",
-    "fidl.test.typealiases/ExampleOfUseOfAliases": "struct",
-    "fidl.test.typealiases/u32": "type_alias",
-    "fidl.test.typealiases/vec_of_strings": "type_alias",
-    "fidl.test.typealiases/vec_of_strings_at_most_5": "type_alias",
-    "fidl.test.typealiases/channel": "type_alias",
-    "fidl.test.typealiases/alias_of_channel": "type_alias"
+    "test.typealiases/obj_type": "enum",
+    "test.typealiases/handle": "experimental_resource",
+    "test.typealiases/ExampleOfUseOfAliases": "struct",
+    "test.typealiases/u32": "type_alias",
+    "test.typealiases/vec_of_strings": "type_alias",
+    "test.typealiases/vec_of_strings_at_most_5": "type_alias",
+    "test.typealiases/channel": "type_alias",
+    "test.typealiases/alias_of_channel": "type_alias"
   }
 }

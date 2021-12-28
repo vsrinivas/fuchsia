@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.emptystruct
+# test.emptystruct
 
 
 
 ## **PROTOCOLS**
 
 ## EmptyProtocol {#EmptyProtocol}
-*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=5)*
+*Defined in [test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=5)*
 
 
 
@@ -75,7 +75,7 @@
 ## **STRUCTS**
 
 ### Empty  {#Empty data-text="Empty"}
-*Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=3)*
+*Defined in [test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=3)*
 
 
 

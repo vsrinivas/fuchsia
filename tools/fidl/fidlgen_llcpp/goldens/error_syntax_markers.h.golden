@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_errorsyntax {
+namespace test_errorsyntax {
 
 class ExampleUseOfErrorSyntax final {
   ExampleUseOfErrorSyntax() = delete;
@@ -15,7 +15,7 @@ class ExampleUseOfErrorSyntax final {
     ComposedCallWhichMayFail() = delete;
 
    public:
-    using Protocol = ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax;
+    using Protocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -23,9 +23,9 @@ class ExampleUseOfErrorSyntax final {
     CallWhichMayFail() = delete;
 
    public:
-    using Protocol = ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax;
+    using Protocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_errorsyntax
+}  // namespace test_errorsyntax

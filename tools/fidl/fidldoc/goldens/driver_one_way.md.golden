@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.driveroneway
+# test.driveroneway
 
 
 
 ## **PROTOCOLS**
 
 ## OneWay {#OneWay}
-*Defined in [fidl.test.driveroneway/driver_one_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_one_way.test.fidl;l=12)*
+*Defined in [test.driveroneway/driver_one_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_one_way.test.fidl;l=12)*
 
 
 
@@ -34,7 +34,7 @@
 ## **STRUCTS**
 
 ### Payload  {#Payload data-text="Payload"}
-*Defined in [fidl.test.driveroneway/driver_one_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_one_way.test.fidl;l=7)*
+*Defined in [test.driveroneway/driver_one_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_one_way.test.fidl;l=7)*
 
 
 

@@ -1,4 +1,4 @@
-library fidl.test.anonymous;
+library test.anonymous;
 
 @on_expression
 type Expression = flexible union {

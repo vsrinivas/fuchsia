@@ -2,31 +2,31 @@
 
 #pragma once
 
-#include <fidl/fidl.test.table/cpp/wire.h>
-#include <fidl/test/table/cpp/natural_types.h>
+#include <fidl/test.table/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/table/cpp/natural_types.h>
 
-namespace fidl_test_table {
-using TableWithAttributes = ::fidl::test::table::TableWithAttributes;
+namespace test_table {
+using TableWithAttributes = ::test::table::TableWithAttributes;
 
-using SimpleTable = ::fidl::test::table::SimpleTable;
+using SimpleTable = ::test::table::SimpleTable;
 
-using ReverseOrdinalTable = ::fidl::test::table::ReverseOrdinalTable;
+using ReverseOrdinalTable = ::test::table::ReverseOrdinalTable;
 
-using OlderSimpleTable = ::fidl::test::table::OlderSimpleTable;
+using OlderSimpleTable = ::test::table::OlderSimpleTable;
 
-using NewerSimpleTable = ::fidl::test::table::NewerSimpleTable;
+using NewerSimpleTable = ::test::table::NewerSimpleTable;
 
-using ExtensionTable = ::fidl::test::table::ExtensionTable;
+using ExtensionTable = ::test::table::ExtensionTable;
 
-using SixtyFourOrdinalTable = ::fidl::test::table::SixtyFourOrdinalTable;
+using SixtyFourOrdinalTable = ::test::table::SixtyFourOrdinalTable;
 
-using EmptyTable = ::fidl::test::table::EmptyTable;
+using EmptyTable = ::test::table::EmptyTable;
 
-}  // namespace fidl_test_table
+}  // namespace test_table
 namespace fidl {}  // namespace fidl

@@ -1,27 +1,27 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.transitivedependenciescompose",
+  "name": "test.transitivedependenciescompose",
   "library_dependencies": [
     {
-      "name": "bottom",
+      "name": "test.bottom",
       "declarations": {
-        "bottom/Bottom": {
+        "test.bottom/Bottom": {
           "kind": "interface"
         },
-        "bottom/BottomGetFooTopResponse": {
+        "test.bottom/BottomGetFooTopResponse": {
           "kind": "struct",
           "resource": false
         },
-        "bottom/Foo": {
+        "test.bottom/Foo": {
           "kind": "struct",
           "resource": false
         }
       }
     },
     {
-      "name": "middle",
+      "name": "test.middle",
       "declarations": {
-        "middle/Middle": {
+        "test.middle/Middle": {
           "kind": "interface"
         }
       }
@@ -33,7 +33,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.transitivedependenciescompose/Top",
+      "name": "test.transitivedependenciescompose/Top",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
         "line": 8,
@@ -75,18 +75,18 @@
       ],
       "composed_protocols": [
         {
-          "name": "middle/Middle",
+          "name": "test.middle/Middle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
             "line": 9,
-            "column": 20,
+            "column": 25,
             "length": 6
           }
         }
       ],
       "methods": [
         {
-          "ordinal": 3210163844600846111,
+          "ordinal": 2618685789258237543,
           "name": "GetFoo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
@@ -98,7 +98,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "bottom/BottomGetFooTopResponse",
+            "identifier": "test.bottom/BottomGetFooTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -129,7 +129,7 @@
   "struct_declarations": [],
   "external_struct_declarations": [
     {
-      "name": "bottom/BottomGetFooTopResponse",
+      "name": "test.bottom/BottomGetFooTopResponse",
       "naming_context": [
         "Bottom",
         "GetFoo",
@@ -138,7 +138,7 @@
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
         "line": 17,
-        "column": 39,
+        "column": 31,
         "length": 31
       },
       "is_request_or_response": true,
@@ -162,7 +162,7 @@
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
                 "line": 17,
-                "column": 32,
+                "column": 24,
                 "length": 5
               }
             }
@@ -170,7 +170,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
             "line": 17,
-            "column": 13,
+            "column": 5,
             "length": 25
           }
         }
@@ -179,7 +179,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "bottom/Foo",
+            "identifier": "test.bottom/Foo",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -242,9 +242,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.transitivedependenciescompose/Top"
+    "test.transitivedependenciescompose/Top"
   ],
   "declarations": {
-    "fidl.test.transitivedependenciescompose/Top": "interface"
+    "test.transitivedependenciescompose/Top": "interface"
   }
 }

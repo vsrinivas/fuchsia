@@ -3,57 +3,57 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendRequestTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyTable;
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
-static const struct FidlStructElement Fields53fidl_test_emptystruct_EmptyProtocolSendRequestMessage[] = {
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestMessageTable;
+static const struct FidlStructElement Fields48test_emptystruct_EmptyProtocolSendRequestMessage[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields53fidl_test_emptystruct_EmptyProtocolSendRequestMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.emptystruct/EmptyProtocolSendRequestMessage"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields48test_emptystruct_EmptyProtocolSendRequestMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="test.emptystruct/EmptyProtocolSendRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
-static const struct FidlStructElement Fields54fidl_test_emptystruct_EmptyProtocolReceiveEventMessage[] = {
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveEventMessageTable;
+static const struct FidlStructElement Fields49test_emptystruct_EmptyProtocolReceiveEventMessage[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields54fidl_test_emptystruct_EmptyProtocolReceiveEventMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.emptystruct/EmptyProtocolReceiveEventMessage"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveEventMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields49test_emptystruct_EmptyProtocolReceiveEventMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="test.emptystruct/EmptyProtocolReceiveEventMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
-static const struct FidlStructElement Fields63fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessage[] = {
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
+static const struct FidlStructElement Fields58test_emptystruct_EmptyProtocolSendAndReceiveRequestMessage[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields63fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequestMessage"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields58test_emptystruct_EmptyProtocolSendAndReceiveRequestMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="test.emptystruct/EmptyProtocolSendAndReceiveRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
-static const struct FidlStructElement Fields64fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessage[] = {
+__LOCAL extern const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+static const struct FidlStructElement Fields59test_emptystruct_EmptyProtocolSendAndReceiveResponseMessage[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=16u, .offset_v2=16u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields64fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.emptystruct/EmptyProtocolSendAndReceiveResponseMessage"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields59test_emptystruct_EmptyProtocolSendAndReceiveResponseMessage, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="test.emptystruct/EmptyProtocolSendAndReceiveResponseMessage"};
 
 
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="fidl.test.emptystruct/Empty"};
+const struct FidlCodedStruct test_emptystruct_EmptyTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.emptystruct/Empty"};
 
-static const struct FidlStructElement Fields46fidl_test_emptystruct_EmptyProtocolSendRequest[] = {
+static const struct FidlStructElement Fields41test_emptystruct_EmptyProtocolSendRequest[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields46fidl_test_emptystruct_EmptyProtocolSendRequest, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="fidl.test.emptystruct/EmptyProtocolSendRequest"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields41test_emptystruct_EmptyProtocolSendRequest, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="test.emptystruct/EmptyProtocolSendRequest"};
 
-static const struct FidlStructElement Fields60fidl_test_emptystruct_EmptyProtocolSendAndReceiveTopResponse[] = {
+static const struct FidlStructElement Fields55test_emptystruct_EmptyProtocolSendAndReceiveTopResponse[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields60fidl_test_emptystruct_EmptyProtocolSendAndReceiveTopResponse, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields55test_emptystruct_EmptyProtocolSendAndReceiveTopResponse, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="test.emptystruct/EmptyProtocolSendAndReceiveTopResponse"};
 
-static const struct FidlStructElement Fields56fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequest[] = {
+static const struct FidlStructElement Fields51test_emptystruct_EmptyProtocolSendAndReceiveRequest[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields56fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequest, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolSendAndReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields51test_emptystruct_EmptyProtocolSendAndReceiveRequest, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="test.emptystruct/EmptyProtocolSendAndReceiveRequest"};
 
-static const struct FidlStructElement Fields49fidl_test_emptystruct_EmptyProtocolReceiveRequest[] = {
+static const struct FidlStructElement Fields44test_emptystruct_EmptyProtocolReceiveRequest[] = {
     /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}}
 };
-const struct FidlCodedStruct fidl_test_emptystruct_EmptyProtocolReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields49fidl_test_emptystruct_EmptyProtocolReceiveRequest, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="fidl.test.emptystruct/EmptyProtocolReceiveRequest"};
+const struct FidlCodedStruct test_emptystruct_EmptyProtocolReceiveRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields44test_emptystruct_EmptyProtocolReceiveRequest, .element_count=1u, .size_v1=8u, .size_v2=8u, .name="test.emptystruct/EmptyProtocolReceiveRequest"};
 

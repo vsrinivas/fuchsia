@@ -175,7 +175,7 @@ func SimpleUnionWithB(b float32) SimpleUnion {
 }
 
 const (
-	SimpleProtocolAddOrdinal uint64 = 0x113010d7832f175d
+	SimpleProtocolAddOrdinal uint64 = 0x7ee19cf19ae30276
 )
 
 type SimpleProtocolWithCtxInterface _bindings.ChannelProxy

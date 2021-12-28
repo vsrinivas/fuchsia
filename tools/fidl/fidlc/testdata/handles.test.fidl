@@ -1,4 +1,4 @@
-library fidl.test.handles;
+library test.handles;
 
 using zx;
 

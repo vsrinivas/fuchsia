@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.placementofattributes
+# test.placementofattributes
 
 
 
 ## **PROTOCOLS**
 
 ## ExampleProtocol {#ExampleProtocol}
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=22)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=22)*
 
 
 
@@ -23,7 +23,7 @@
     <tr>
             <td><code>arg</code></td>
             <td>
-                <code><a class='link' href='../exampleusing/'>exampleusing</a>/<a class='link' href='../exampleusing/#Empty'>Empty</a></code>
+                <code><a class='link' href='../test.exampleusing/'>test.exampleusing</a>/<a class='link' href='../test.exampleusing/#Empty'>Empty</a></code>
             </td>
         </tr></table>
 
@@ -34,7 +34,7 @@
 ## **STRUCTS**
 
 ### ExampleStruct  {#ExampleStruct data-text="ExampleStruct"}
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=30)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=30)*
 
 
 
@@ -58,7 +58,7 @@
 ### ExampleEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ExampleEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=16)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=16)*
 
 
 
@@ -78,7 +78,7 @@ Type: <code>uint32</code>
 ### ExampleTable  {#ExampleTable data-text="ExampleTable"}
 
 
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=36)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=36)*
 
 
 
@@ -100,7 +100,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### ExampleUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExampleUnion data-text="ExampleUnion"}
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=45)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=45)*
 
 
 
@@ -116,7 +116,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### ExampleXUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExampleXUnion data-text="ExampleXUnion"}
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=51)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=51)*
 
 
 
@@ -138,7 +138,7 @@ Type: <code>uint32</code>
 ### ExampleBits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#ExampleBits}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=7)*
+*Defined in [test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=7)*
 
 
 

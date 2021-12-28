@@ -3,12 +3,12 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedEnum fidl_test_consts_EnumTypeTable;
-__LOCAL extern const struct FidlCodedBits fidl_test_consts_BitsTypeTable;
+__LOCAL extern const struct FidlCodedEnum test_consts_EnumTypeTable;
+__LOCAL extern const struct FidlCodedBits test_consts_BitsTypeTable;
 
 
 
-static bool EnumValidatorFor_fidl_test_consts_EnumType(uint64_t v) {
+static bool EnumValidatorFor_test_consts_EnumType(uint64_t v) {
   switch (v) {
     case 1ul:
     case 2ul:
@@ -18,7 +18,7 @@ static bool EnumValidatorFor_fidl_test_consts_EnumType(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum fidl_test_consts_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_fidl_test_consts_EnumType, .name="fidl.test.consts/EnumType"};
+const struct FidlCodedEnum test_consts_EnumTypeTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Int32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_consts_EnumType, .name="test.consts/EnumType"};
 
-const struct FidlCodedBits fidl_test_consts_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="fidl.test.consts/BitsType"};
+const struct FidlCodedBits test_consts_BitsTypeTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=3ul, .name="test.consts/BitsType"};
 

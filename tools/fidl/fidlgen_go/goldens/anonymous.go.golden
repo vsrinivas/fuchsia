@@ -599,7 +599,7 @@ func (u *FunctionApplication) GetUnknownData() map[uint64]_bindings.UnknownData 
 }
 
 const (
-	SomeProtocolSomeMethodOrdinal uint64 = 0x7c16def2273b94ee
+	SomeProtocolSomeMethodOrdinal uint64 = 0x22ea52ec7a5146d8
 )
 
 type SomeProtocolWithCtxInterface _bindings.ChannelProxy

@@ -19,19 +19,18 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.bindingsdenylist/cpp/markers.h>
+#include <fidl/test.bindingsdenylist/cpp/markers.h>
 
-namespace fidl_test_bindingsdenylist {
+namespace test_bindingsdenylist {
 namespace wire {
 class OnlyLlcpp;
 
-extern "C" const fidl_type_t fidl_test_bindingsdenylist_OnlyLlcppTable;
+extern "C" const fidl_type_t test_bindingsdenylist_OnlyLlcppTable;
 
 class OnlyLlcpp {
  public:
   OnlyLlcpp()
-      : ordinal_(
-            ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::Invalid),
+      : ordinal_(::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -46,12 +45,11 @@ class OnlyLlcpp {
 
   bool has_invalid_tag() const {
     return ordinal_ ==
-           ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::Invalid;
+           ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::Invalid;
   }
 
   bool is_x() const {
-    return ordinal_ ==
-           ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
+    return ordinal_ == ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
   }
   static OnlyLlcpp WithX(uint32_t val) {
     OnlyLlcpp result;
@@ -60,28 +58,27 @@ class OnlyLlcpp {
   }
 
   void set_x(uint32_t elem) {
-    ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
+    ordinal_ = ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& mutable_x() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
+              ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
     return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& x() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
+              ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Tag which() const {
+  ::test_bindingsdenylist::wire::OnlyLlcpp::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Tag>(
-        ordinal_);
+    return static_cast<::test_bindingsdenylist::wire::OnlyLlcpp::Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_bindingsdenylist_OnlyLlcppTable;
+      &test_bindingsdenylist_OnlyLlcppTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -100,7 +97,7 @@ class OnlyLlcpp {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal ordinal_;
+  ::test_bindingsdenylist::wire::OnlyLlcpp::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
@@ -108,16 +105,16 @@ class OnlyLlcpp {
 constexpr uint32_t kAllBindings = 0u;
 
 }  // namespace wire
-}  // namespace fidl_test_bindingsdenylist
+}  // namespace test_bindingsdenylist
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
+struct IsFidlType<::test_bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
+struct IsUnion<::test_bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
+    std::is_standard_layout_v<::test_bindingsdenylist::wire::OnlyLlcpp>);
 
 }  // namespace fidl

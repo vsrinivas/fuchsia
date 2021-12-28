@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 
 class Protocol final {
   Protocol() = delete;
@@ -15,7 +15,7 @@ class Protocol final {
     RequestStrictResponseFlexible() = delete;
 
    public:
-    using Protocol = ::fidl_test_requestflexibleenvelope::Protocol;
+    using Protocol = ::test_requestflexibleenvelope::Protocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -23,9 +23,9 @@ class Protocol final {
     RequestFlexibleResponseStrict() = delete;
 
    public:
-    using Protocol = ::fidl_test_requestflexibleenvelope::Protocol;
+    using Protocol = ::test_requestflexibleenvelope::Protocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope

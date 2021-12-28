@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.doccomments/cpp/markers.h>
-#include <fidl/fidl.test.doccomments/cpp/wire_types.h>
+#include <fidl/test.doccomments/cpp/markers.h>
+#include <fidl/test.doccomments/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,55 +16,52 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 class Interface;
 
 class Service;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodRequestMessageTable;
+    test_doccomments_InterfaceMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceMethodResponseMessageTable;
+    test_doccomments_InterfaceMethodResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventRequestMessageTable;
+    test_doccomments_InterfaceOnEventRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_doccomments_InterfaceOnEventEventMessageTable;
-}  // namespace fidl_test_doccomments
+    test_doccomments_InterfaceOnEventEventMessageTable;
+}  // namespace test_doccomments
 template <>
-struct ::fidl::internal::WireOrdinal<::fidl_test_doccomments::Interface::Method>
+struct ::fidl::internal::WireOrdinal<::test_doccomments::Interface::Method>
     final {
-  static constexpr uint64_t value = 6649887292072346213lu;
+  static constexpr uint64_t value = 5017051197196532121lu;
 };
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_doccomments::Interface::OnEvent>
+struct ::fidl::internal::WireOrdinal<::test_doccomments::Interface::OnEvent>
     final {
-  static constexpr uint64_t value = 3999525675942213370lu;
+  static constexpr uint64_t value = 28780186509098736lu;
 };
 
-namespace fidl_test_doccomments {}  // namespace fidl_test_doccomments
+namespace test_doccomments {}  // namespace test_doccomments
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<::fidl_test_doccomments::Interface> {};
+struct ::fidl::internal::ProtocolDetails<::test_doccomments::Interface> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_doccomments::Interface>
+struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_doccomments::Interface>* impl,
+      ::fidl::WireServer<::test_doccomments::Interface>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static void Dispatch(
-      ::fidl::WireServer<::fidl_test_doccomments::Interface>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl,
+                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -73,7 +70,7 @@ struct ::fidl::internal::WireServerDispatcher<
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> final {
+struct ::fidl::WireRequest<::test_doccomments::Interface::Method> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
@@ -101,7 +98,7 @@ struct ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> final {
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
+struct ::fidl::WireResponse<::test_doccomments::Interface::OnEvent> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
@@ -131,12 +128,12 @@ struct ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent> final {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> final
+class ::fidl::WireResult<::test_doccomments::Interface::Method> final
     : public ::fidl::Result {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client,
-      ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request);
+      ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
+      ::fidl::WireRequest<::test_doccomments::Interface::Method>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -147,13 +144,13 @@ class ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
-    final : public ::fidl::Result {
+class ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> final
+    : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end,
+      ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>* request);
+      ::fidl::WireRequest<::test_doccomments::Interface::Method>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -164,7 +161,7 @@ class ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_doccomments::Interface> {
+    ::test_doccomments::Interface> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -172,23 +169,22 @@ class ::fidl::internal::WireEventHandlerInterface<
   ///
   /// event comment #3
   virtual void OnEvent(
-      ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>*
-          event) {}
+      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>* event) {}
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>
+class ::fidl::WireAsyncEventHandler<::test_doccomments::Interface>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_doccomments::Interface>,
+          ::test_doccomments::Interface>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>
+class ::fidl::WireSyncEventHandler<::test_doccomments::Interface>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_doccomments::Interface> {
+          ::test_doccomments::Interface> {
  public:
   WireSyncEventHandler() = default;
 
@@ -200,17 +196,16 @@ class ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end);
+      ::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end);
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::fidl_test_doccomments::Interface>
-    final
+class ::fidl::internal::WireEventDispatcher<::test_doccomments::Interface> final
     : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>> {
+          ::fidl::WireAsyncEventHandler<::test_doccomments::Interface>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>*
+      ::fidl::WireAsyncEventHandler<::test_doccomments::Interface>*
           event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
@@ -221,74 +216,66 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_doccomments::Interface>
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_doccomments::Interface>|,
+// const reference to a |fidl::ClientEnd<::test_doccomments::Interface>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_doccomments::Interface>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_doccomments::Interface>> {
+class ::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface>> {
  public:
   /// method comment #1
   ///
   /// method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() {
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
-    return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
+  ::fidl::WireResult<::test_doccomments::Interface::Method> Method() {
+    ::fidl::WireRequest<::test_doccomments::Interface::Method> _request{};
+    return ::fidl::WireResult<::test_doccomments::Interface::Method>(
         _client_end(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
-        _channel());
+  ::fidl::UnownedClientEnd<::test_doccomments::Interface> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_doccomments::Interface>(_channel());
   }
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_doccomments::Interface>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_doccomments::Interface>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_doccomments::Interface>> {
+                    ::test_doccomments::Interface>> {
  public:
   /// method comment #1
   ///
   /// method comment #3
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
-  Method() {
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method> _request{};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_doccomments::Interface::Method>(_client_end(), _allocator(),
-                                                    &_request);
+  ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> Method() {
+    ::fidl::WireRequest<::test_doccomments::Interface::Method> _request{};
+    return ::fidl::WireUnownedResult<::test_doccomments::Interface::Method>(
+        _client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
-        _channel());
+  ::fidl::UnownedClientEnd<::test_doccomments::Interface> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_doccomments::Interface>(_channel());
   }
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final
+class ::fidl::WireSyncClient<::test_doccomments::Interface> final
     : public ::fidl::internal::WireSyncClientBase<
-          ::fidl_test_doccomments::Interface> {
+          ::test_doccomments::Interface> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_doccomments::Interface>::WireSyncClientBase;
+      ::test_doccomments::Interface>::WireSyncClientBase;
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method defined in |SyncEventHandler|. The return
   // status of the handler function is folded with any transport-level errors
   // and returned.
   ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>&
+      ::fidl::WireSyncEventHandler<::test_doccomments::Interface>&
           event_handler) const {
     return event_handler.HandleOneEvent(client_end());
   }
@@ -298,19 +285,19 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::fidl_test_doccomments::Interface>
+class ::fidl::WireServer<::test_doccomments::Interface>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
 
   // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_doccomments::Interface;
+  using _EnclosingProtocol = ::test_doccomments::Interface;
 
-  using MethodCompleter = ::fidl::internal::WireCompleter<
-      ::fidl_test_doccomments::Interface::Method>;
-  using MethodRequestView = ::fidl::internal::WireRequestView<
-      ::fidl_test_doccomments::Interface::Method>;
+  using MethodCompleter =
+      ::fidl::internal::WireCompleter<::test_doccomments::Interface::Method>;
+  using MethodRequestView =
+      ::fidl::internal::WireRequestView<::test_doccomments::Interface::Method>;
 
   /// method comment #1
   ///
@@ -325,7 +312,7 @@ class ::fidl::WireServer<::fidl_test_doccomments::Interface>
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 
 /// service comment #1
 ///
@@ -334,7 +321,7 @@ class Service final {
   Service() = default;
 
  public:
-  static constexpr char Name[] = "fidl.test.doccomments.Service";
+  static constexpr char Name[] = "test.doccomments.Service";
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -346,11 +333,10 @@ class Service final {
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
     // Connects to the member protocol "interface".
-    // Returns a |fidl::ClientEnd<::fidl_test_doccomments::Interface>| on
-    // success, which can be used with |fidl::BindSyncClient| to create a
-    // synchronous client, or |fidl::WireClient| or |fidl::WireSharedClient| to
-    // create a client that supports both asynchronous and synchronous
-    // operations.
+    // Returns a |fidl::ClientEnd<::test_doccomments::Interface>| on success,
+    // which can be used with |fidl::BindSyncClient| to create a synchronous
+    // client, or |fidl::WireClient| or |fidl::WireSharedClient| to create a
+    // client that supports both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -361,10 +347,9 @@ class Service final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<::fidl_test_doccomments::Interface>>
+    ::zx::status<::fidl::ClientEnd<::test_doccomments::Interface>>
     connect_interface() {
-      auto endpoints =
-          ::fidl::CreateEndpoints<::fidl_test_doccomments::Interface>();
+      auto endpoints = ::fidl::CreateEndpoints<::test_doccomments::Interface>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -397,7 +382,7 @@ class Service final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_interface(::fidl::ServiceHandlerInterface::MemberHandler<
-                                 ::fidl_test_doccomments::Interface>
+                                 ::test_doccomments::Interface>
                                      handler) {
       return service_handler_->AddMember("interface", std::move(handler));
     }
@@ -407,39 +392,34 @@ class Service final {
   };
 };
 
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
+struct IsFidlType<::fidl::WireRequest<::test_doccomments::Interface::Method>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
+struct IsFidlMessage<::fidl::WireRequest<::test_doccomments::Interface::Method>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>) ==
-    ::fidl::WireRequest<
-        ::fidl_test_doccomments::Interface::Method>::PrimarySize);
+    sizeof(::fidl::WireRequest<::test_doccomments::Interface::Method>) ==
+    ::fidl::WireRequest<::test_doccomments::Interface::Method>::PrimarySize);
 
 template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
+struct IsFidlType<::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
+    ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>) ==
-    ::fidl::WireResponse<
-        ::fidl_test_doccomments::Interface::OnEvent>::PrimarySize);
+    sizeof(::fidl::WireResponse<::test_doccomments::Interface::OnEvent>) ==
+    ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>::PrimarySize);
 
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
+class ::fidl::internal::WireClientImpl<::test_doccomments::Interface> final
     : public ::fidl::internal::ClientBase {
  public:
   /// method comment #1
@@ -459,21 +439,20 @@ namespace fidl {
 // |EventSender| owns a server endpoint of a channel speaking
 // the Interface protocol, and can send events in that protocol.
 template <>
-class ::fidl::WireEventSender<::fidl_test_doccomments::Interface> {
+class ::fidl::WireEventSender<::test_doccomments::Interface> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_doccomments::Interface> server_end)
+      ::fidl::ServerEnd<::test_doccomments::Interface> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_doccomments::Interface>& server_end()
-      const {
+  const ::fidl::ServerEnd<::test_doccomments::Interface>& server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_doccomments::Interface>& server_end() {
+  ::fidl::ServerEnd<::test_doccomments::Interface>& server_end() {
     return server_end_;
   }
 
@@ -489,12 +468,11 @@ class ::fidl::WireEventSender<::fidl_test_doccomments::Interface> {
   fidl::Result OnEvent() const;
 
  private:
-  ::fidl::ServerEnd<::fidl_test_doccomments::Interface> server_end_;
+  ::fidl::ServerEnd<::test_doccomments::Interface> server_end_;
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_doccomments::Interface> {
+class ::fidl::internal::WireWeakEventSender<::test_doccomments::Interface> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
@@ -507,8 +485,8 @@ class ::fidl::internal::WireWeakEventSender<
 
  private:
   friend ServerBindingRefImpl<
-      ::fidl_test_doccomments::Interface,
-      typename ::fidl_test_doccomments::Interface::Transport>;
+      ::test_doccomments::Interface,
+      typename ::test_doccomments::Interface::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.experimentalmaybefromtypealias",
+  "name": "test.experimentalmaybefromtypealias",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+      "name": "test.experimentalmaybefromtypealias/MyProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 3,
@@ -22,7 +22,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/Testing",
+      "name": "test.experimentalmaybefromtypealias/Testing",
       "naming_context": [
         "Testing"
       ],
@@ -58,7 +58,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/U64",
+            "name": "test.experimentalmaybefromtypealias/U64",
             "args": [],
             "nullable": false
           },
@@ -104,7 +104,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "name": "test.experimentalmaybefromtypealias/U64",
               "args": [],
               "nullable": false
             },
@@ -171,7 +171,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "name": "test.experimentalmaybefromtypealias/U64",
               "args": [],
               "nullable": false
             },
@@ -239,7 +239,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -328,7 +328,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -416,7 +416,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -505,7 +505,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -611,7 +611,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/Vector",
+            "name": "test.experimentalmaybefromtypealias/Vector",
             "args": [],
             "nullable": false
           },
@@ -679,7 +679,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/Vector",
+              "name": "test.experimentalmaybefromtypealias/Vector",
               "args": [],
               "nullable": false
             },
@@ -767,7 +767,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/Vector",
+              "name": "test.experimentalmaybefromtypealias/Vector",
               "args": [],
               "nullable": false
             },
@@ -853,7 +853,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
+            "name": "test.experimentalmaybefromtypealias/AliasOfArray",
             "args": [],
             "nullable": false
           },
@@ -921,7 +921,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
+              "name": "test.experimentalmaybefromtypealias/AliasOfArray",
               "args": [],
               "nullable": false
             },
@@ -1009,7 +1009,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
+              "name": "test.experimentalmaybefromtypealias/AliasOfArray",
               "args": [],
               "nullable": false
             },
@@ -1052,7 +1052,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+            "subtype": "test.experimentalmaybefromtypealias/MyProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1074,7 +1074,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
+            "name": "test.experimentalmaybefromtypealias/AliasOfRequest",
             "args": [],
             "nullable": false
           },
@@ -1099,7 +1099,7 @@
             "kind": "vector",
             "element_type": {
               "kind": "request",
-              "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+              "subtype": "test.experimentalmaybefromtypealias/MyProtocol",
               "nullable": true,
               "type_shape_v1": {
                 "inline_size": 4,
@@ -1121,7 +1121,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
+              "name": "test.experimentalmaybefromtypealias/AliasOfRequest",
               "args": [],
               "nullable": false
             },
@@ -1166,7 +1166,7 @@
             "kind": "array",
             "element_type": {
               "kind": "request",
-              "subtype": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+              "subtype": "test.experimentalmaybefromtypealias/MyProtocol",
               "nullable": true,
               "type_shape_v1": {
                 "inline_size": 4,
@@ -1188,7 +1188,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
+              "name": "test.experimentalmaybefromtypealias/AliasOfRequest",
               "args": [],
               "nullable": false
             },
@@ -1274,7 +1274,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
+            "name": "test.experimentalmaybefromtypealias/AliasOfBytes",
             "args": [],
             "nullable": false
           },
@@ -1342,7 +1342,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
+              "name": "test.experimentalmaybefromtypealias/AliasOfBytes",
               "args": [],
               "nullable": false
             },
@@ -1430,7 +1430,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
+              "name": "test.experimentalmaybefromtypealias/AliasOfBytes",
               "args": [],
               "nullable": false
             },
@@ -1494,7 +1494,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/AliasOfString",
+            "name": "test.experimentalmaybefromtypealias/AliasOfString",
             "args": [],
             "nullable": false
           },
@@ -1540,7 +1540,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfString",
+              "name": "test.experimentalmaybefromtypealias/AliasOfString",
               "args": [],
               "nullable": false
             },
@@ -1606,7 +1606,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfString",
+              "name": "test.experimentalmaybefromtypealias/AliasOfString",
               "args": [],
               "nullable": false
             },
@@ -1672,7 +1672,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "name": "test.experimentalmaybefromtypealias/U64",
               "args": [],
               "nullable": false
             },
@@ -1698,7 +1698,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+            "name": "test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
             "args": [],
             "nullable": false
           },
@@ -1746,7 +1746,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -1772,7 +1772,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+              "name": "test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
               "args": [],
               "nullable": false
             },
@@ -1841,7 +1841,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -1867,7 +1867,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+              "name": "test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
               "args": [],
               "nullable": false
             },
@@ -1933,7 +1933,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/U64",
+              "name": "test.experimentalmaybefromtypealias/U64",
               "args": [],
               "nullable": false
             },
@@ -1958,7 +1958,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+            "name": "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
             "args": [],
             "nullable": false
           },
@@ -2006,7 +2006,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -2031,7 +2031,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+              "name": "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
               "args": [],
               "nullable": false
             },
@@ -2100,7 +2100,7 @@
                 }
               },
               "experimental_maybe_from_type_alias": {
-                "name": "fidl.test.experimentalmaybefromtypealias/U64",
+                "name": "test.experimentalmaybefromtypealias/U64",
                 "args": [],
                 "nullable": false
               },
@@ -2125,7 +2125,7 @@
               }
             },
             "experimental_maybe_from_type_alias": {
-              "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+              "name": "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
               "args": [],
               "nullable": false
             },
@@ -2192,7 +2192,7 @@
   "union_declarations": [],
   "type_alias_declarations": [
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
+      "name": "test.experimentalmaybefromtypealias/AliasOfBytes",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 5,
@@ -2206,7 +2206,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/AliasOfString",
+      "name": "test.experimentalmaybefromtypealias/AliasOfString",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 6,
@@ -2220,7 +2220,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/U64",
+      "name": "test.experimentalmaybefromtypealias/U64",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 7,
@@ -2234,7 +2234,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/Vector",
+      "name": "test.experimentalmaybefromtypealias/Vector",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 8,
@@ -2254,7 +2254,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
+      "name": "test.experimentalmaybefromtypealias/AliasOfArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 9,
@@ -2284,7 +2284,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
+      "name": "test.experimentalmaybefromtypealias/AliasOfRequest",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 10,
@@ -2295,7 +2295,7 @@
         "name": "request",
         "args": [
           {
-            "name": "fidl.test.experimentalmaybefromtypealias/MyProtocol",
+            "name": "test.experimentalmaybefromtypealias/MyProtocol",
             "args": [],
             "nullable": false
           }
@@ -2304,7 +2304,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+      "name": "test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 11,
@@ -2334,7 +2334,7 @@
       }
     },
     {
-      "name": "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+      "name": "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
         "line": 12,
@@ -2365,27 +2365,27 @@
     }
   ],
   "declaration_order": [
-    "fidl.test.experimentalmaybefromtypealias/Vector",
-    "fidl.test.experimentalmaybefromtypealias/U64",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
-    "fidl.test.experimentalmaybefromtypealias/MyProtocol",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfString",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfRequest",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfBytes",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfArray",
-    "fidl.test.experimentalmaybefromtypealias/Testing"
+    "test.experimentalmaybefromtypealias/Vector",
+    "test.experimentalmaybefromtypealias/U64",
+    "test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector",
+    "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray",
+    "test.experimentalmaybefromtypealias/MyProtocol",
+    "test.experimentalmaybefromtypealias/AliasOfString",
+    "test.experimentalmaybefromtypealias/AliasOfRequest",
+    "test.experimentalmaybefromtypealias/AliasOfBytes",
+    "test.experimentalmaybefromtypealias/AliasOfArray",
+    "test.experimentalmaybefromtypealias/Testing"
   ],
   "declarations": {
-    "fidl.test.experimentalmaybefromtypealias/MyProtocol": "interface",
-    "fidl.test.experimentalmaybefromtypealias/Testing": "struct",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfBytes": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfString": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/U64": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/Vector": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfArray": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfRequest": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector": "type_alias",
-    "fidl.test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray": "type_alias"
+    "test.experimentalmaybefromtypealias/MyProtocol": "interface",
+    "test.experimentalmaybefromtypealias/Testing": "struct",
+    "test.experimentalmaybefromtypealias/AliasOfBytes": "type_alias",
+    "test.experimentalmaybefromtypealias/AliasOfString": "type_alias",
+    "test.experimentalmaybefromtypealias/U64": "type_alias",
+    "test.experimentalmaybefromtypealias/Vector": "type_alias",
+    "test.experimentalmaybefromtypealias/AliasOfArray": "type_alias",
+    "test.experimentalmaybefromtypealias/AliasOfRequest": "type_alias",
+    "test.experimentalmaybefromtypealias/AliasOfVectorContainingAliasOfVector": "type_alias",
+    "test.experimentalmaybefromtypealias/AliasOfArrayContainingAliasOfArray": "type_alias"
   }
 }

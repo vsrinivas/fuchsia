@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.emptystruct/cpp/markers.h>
-#include <fidl/fidl.test.emptystruct/cpp/wire_types.h>
+#include <fidl/test.emptystruct/cpp/markers.h>
+#include <fidl/test.emptystruct/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,66 +16,62 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class EmptyProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
+    test_emptystruct_EmptyProtocolSendRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendResponseMessageTable;
+    test_emptystruct_EmptyProtocolSendResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveRequestMessageTable;
+    test_emptystruct_EmptyProtocolReceiveRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
+    test_emptystruct_EmptyProtocolReceiveEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
-}  // namespace fidl_test_emptystruct
+    test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+}  // namespace test_emptystruct
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_emptystruct::EmptyProtocol::Send>
+struct ::fidl::internal::WireOrdinal<::test_emptystruct::EmptyProtocol::Send>
     final {
-  static constexpr uint64_t value = 2183815705502904104lu;
+  static constexpr uint64_t value = 1378773277029173000lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::test_emptystruct::EmptyProtocol::Receive>
+    final {
+  static constexpr uint64_t value = 2301564782476583487lu;
 };
 template <>
 struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_emptystruct::EmptyProtocol::Receive>
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
     final {
-  static constexpr uint64_t value = 5025214662316626400lu;
-};
-template <>
-struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-    final {
-  static constexpr uint64_t value = 6253929606062814577lu;
+  static constexpr uint64_t value = 534401212734647530lu;
 };
 
-namespace fidl_test_emptystruct {}  // namespace fidl_test_emptystruct
+namespace test_emptystruct {}  // namespace test_emptystruct
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<
-    ::fidl_test_emptystruct::EmptyProtocol> {};
+struct ::fidl::internal::ProtocolDetails<::test_emptystruct::EmptyProtocol> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_emptystruct::EmptyProtocol>
+struct ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>* impl,
+      ::fidl::WireServer<::test_emptystruct::EmptyProtocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static void Dispatch(
-      ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>* impl,
+      ::fidl::WireServer<::test_emptystruct::EmptyProtocol>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
@@ -85,19 +81,19 @@ struct ::fidl::internal::WireServerDispatcher<
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
+struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_emptystruct::wire::Empty e;
+  ::test_emptystruct::wire::Empty e;
 
-  explicit WireRequest(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
+  explicit WireRequest(const ::test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
+      &::test_emptystruct::
+          test_emptystruct_EmptyProtocolSendRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -118,20 +114,19 @@ struct ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> final {
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>
-    final {
+struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_emptystruct::wire::Empty e;
+  ::test_emptystruct::wire::Empty e;
 
-  explicit WireResponse(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
+  explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
+      &::test_emptystruct::
+          test_emptystruct_EmptyProtocolReceiveEventMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -152,21 +147,20 @@ struct ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireRequest<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+struct ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_emptystruct::wire::Empty e;
+  ::test_emptystruct::wire::Empty e;
 
-  explicit WireRequest(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
+  explicit WireRequest(const ::test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
+      &::test_emptystruct::
+          test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -176,8 +170,8 @@ struct ::fidl::WireRequest<
   static constexpr bool HasPointer = false;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
-  using ResponseType = ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
+  using ResponseType =
+      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -189,21 +183,20 @@ struct ::fidl::WireRequest<
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+struct ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_emptystruct::wire::Empty e;
+  ::test_emptystruct::wire::Empty e;
 
-  explicit WireResponse(const ::fidl_test_emptystruct::wire::Empty& e) : e(e) {
+  explicit WireResponse(const ::test_emptystruct::wire::Empty& e) : e(e) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_emptystruct::
-          fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+      &::test_emptystruct::
+          test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -226,13 +219,12 @@ struct ::fidl::WireResponse<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send> final
+class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send> final
     : public ::fidl::Result {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> client,
-      ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
-          request);
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
+      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -243,15 +235,13 @@ class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send>
-    final : public ::fidl::Result {
+class ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::Send> final
+    : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
-          client_end,
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>*
-          request);
+      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -261,17 +251,17 @@ class ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send>
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+class ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
     final : public ::fidl::Result {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> client,
-      ::fidl::WireRequest<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request);
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
+      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+          request);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> client,
-      ::fidl::WireRequest<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request,
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
+      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+          request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -280,48 +270,42 @@ class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(
-        bytes_.data());
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_.data());
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(
-        bytes_.data());
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_.data());
   }
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   operator*() const {
     return value();
   }
@@ -331,24 +315,23 @@ class ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
 };
 template <>
 class ::fidl::WireUnownedResult<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
-          client_end,
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* request);
+      ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+          request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* response)
+      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
+          response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>&& decoded)
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>>&& decoded)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -363,46 +346,42 @@ class ::fidl::WireUnownedResult<
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_);
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_);
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_);
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>*>(bytes_);
   }
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>*
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&
+  const ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>&
   operator*() const {
     return value();
   }
@@ -412,28 +391,28 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_emptystruct::EmptyProtocol> {
+    ::test_emptystruct::EmptyProtocol> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
   virtual void Receive(
-      ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>*
-          event) {}
+      ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>* event) {
+  }
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>
+class ::fidl::WireAsyncEventHandler<::test_emptystruct::EmptyProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_emptystruct::EmptyProtocol>,
+          ::test_emptystruct::EmptyProtocol>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>
+class ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_emptystruct::EmptyProtocol> {
+          ::test_emptystruct::EmptyProtocol> {
  public:
   WireSyncEventHandler() = default;
 
@@ -445,19 +424,17 @@ class ::fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
-          client_end);
+      ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end);
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_emptystruct::EmptyProtocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_emptystruct::EmptyProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::test_emptystruct::EmptyProtocol>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>*
+      ::fidl::WireAsyncEventHandler<::test_emptystruct::EmptyProtocol>*
           event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
@@ -468,96 +445,90 @@ class ::fidl::internal::WireEventDispatcher<
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a
-// |fidl::ClientEnd<::fidl_test_emptystruct::EmptyProtocol>|, avoiding setting
-// up a client.
+// const reference to a |fidl::ClientEnd<::test_emptystruct::EmptyProtocol>|,
+// avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<
-    ::fidl_test_emptystruct::EmptyProtocol>
+class ::fidl::internal::WireSyncClientImpl<::test_emptystruct::EmptyProtocol>
     final : public ::fidl::internal::SyncEndpointManagedVeneer<
                 ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_emptystruct::EmptyProtocol>> {
+                    ::test_emptystruct::EmptyProtocol>> {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send> Send(
-      const ::fidl_test_emptystruct::wire::Empty& e) {
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> _request{
-        e};
-    return ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::Send>(
+  ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send> Send(
+      const ::test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request{e};
+    return ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send>(
         _client_end(), &_request);
   }
 
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive(const ::fidl_test_emptystruct::wire::Empty& e) {
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+  ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
+  SendAndReceive(const ::test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
         _request{e};
     return ::fidl::WireResult<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(_client_end(),
-                                                                &_request);
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>(_client_end(),
+                                                           &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client_end()
+  ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> _client_end()
       const {
-    return ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
+    return ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(
         _channel());
   }
 };
 
 template <>
 class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_emptystruct::EmptyProtocol>
+    ::test_emptystruct::EmptyProtocol>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_emptystruct::EmptyProtocol>> {
+                    ::test_emptystruct::EmptyProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_emptystruct::EmptyProtocol::Send> Send(
-      const ::fidl_test_emptystruct::wire::Empty& e) {
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send> _request{
-        e};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_emptystruct::EmptyProtocol::Send>(_client_end(),
-                                                      _allocator(), &_request);
+  ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::Send> Send(
+      const ::test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send> _request{e};
+    return ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::Send>(
+        _client_end(), _allocator(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive(const ::fidl_test_emptystruct::wire::Empty& e) {
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+  ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
+  SendAndReceive(const ::test_emptystruct::wire::Empty& e) {
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>
         _request{e};
     return ::fidl::WireUnownedResult<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>(
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>(
         _client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client_end()
+  ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> _client_end()
       const {
-    return ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
+    return ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(
         _channel());
   }
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final
+class ::fidl::WireSyncClient<::test_emptystruct::EmptyProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
-          ::fidl_test_emptystruct::EmptyProtocol> {
+          ::test_emptystruct::EmptyProtocol> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_emptystruct::EmptyProtocol>::WireSyncClientBase;
+      ::test_emptystruct::EmptyProtocol>::WireSyncClientBase;
   // Handle all possible events defined in this protocol.
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method defined in |SyncEventHandler|. The return
   // status of the handler function is folded with any transport-level errors
   // and returned.
   ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>&
+      ::fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>&
           event_handler) const {
     return event_handler.HandleOneEvent(client_end());
   }
@@ -565,7 +536,7 @@ class ::fidl::WireSyncClient<::fidl_test_emptystruct::EmptyProtocol> final
 
 template <>
 class ::fidl::internal::WireCompleterBase<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
     : public ::fidl::CompleterBase {
  public:
   // In the following methods, the return value indicates internal errors during
@@ -578,9 +549,9 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(const ::fidl_test_emptystruct::wire::Empty& e);
+  ::fidl::Result Reply(const ::test_emptystruct::wire::Empty& e);
   ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                       const ::fidl_test_emptystruct::wire::Empty& e);
+                       const ::test_emptystruct::wire::Empty& e);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -588,36 +559,36 @@ class ::fidl::internal::WireCompleterBase<
 
 template <>
 struct ::fidl::internal::WireMethodTypes<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive> {
+    ::test_emptystruct::EmptyProtocol::SendAndReceive> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>;
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>
+class ::fidl::WireServer<::test_emptystruct::EmptyProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
 
   // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_emptystruct::EmptyProtocol;
+  using _EnclosingProtocol = ::test_emptystruct::EmptyProtocol;
 
-  using SendCompleter = ::fidl::internal::WireCompleter<
-      ::fidl_test_emptystruct::EmptyProtocol::Send>;
+  using SendCompleter =
+      ::fidl::internal::WireCompleter<::test_emptystruct::EmptyProtocol::Send>;
   using SendRequestView = ::fidl::internal::WireRequestView<
-      ::fidl_test_emptystruct::EmptyProtocol::Send>;
+      ::test_emptystruct::EmptyProtocol::Send>;
 
   virtual void Send(SendRequestView request,
                     SendCompleter::Sync& _completer) = 0;
 
   using SendAndReceiveCompleter = ::fidl::internal::WireCompleter<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>;
   using SendAndReceiveRequestView = ::fidl::internal::WireRequestView<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>;
+      ::test_emptystruct::EmptyProtocol::SendAndReceive>;
 
   virtual void SendAndReceive(SendAndReceiveRequestView request,
                               SendAndReceiveCompleter::Sync& _completer) = 0;
@@ -632,102 +603,97 @@ class ::fidl::WireServer<::fidl_test_emptystruct::EmptyProtocol>
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
+struct IsFidlType<::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>) ==
-    ::fidl::WireRequest<
-        ::fidl_test_emptystruct::EmptyProtocol::Send>::PrimarySize);
+    sizeof(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>) ==
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>::PrimarySize);
 static_assert(
-    offsetof(::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>,
+    offsetof(::fidl::WireRequest<::test_emptystruct::EmptyProtocol::Send>, e) ==
+    16);
+
+template <>
+struct IsFidlType<
+    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>>
+    : public std::true_type {};
+static_assert(
+    sizeof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>) ==
+    ::fidl::WireResponse<
+        ::test_emptystruct::EmptyProtocol::Receive>::PrimarySize);
+static_assert(
+    offsetof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Receive>,
              e) == 16);
 
 template <>
 struct IsFidlType<
-    ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
+    ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireResponse<
-           ::fidl_test_emptystruct::EmptyProtocol::Receive>) ==
-    ::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::Receive>::PrimarySize);
+    sizeof(::fidl::WireRequest<
+           ::test_emptystruct::EmptyProtocol::SendAndReceive>) ==
+    ::fidl::WireRequest<
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>::PrimarySize);
 static_assert(
     offsetof(
-        ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>,
+        ::fidl::WireRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>,
         e) == 16);
 
 template <>
 struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
-    : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<
-           ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>) ==
-    ::fidl::WireRequest<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::PrimarySize);
-static_assert(
-    offsetof(::fidl::WireRequest<
-                 ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>,
-             e) == 16);
-
-template <>
-struct IsFidlType<::fidl::WireResponse<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
-    : public std::true_type {};
-template <>
-struct IsFidlMessage<::fidl::WireResponse<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+    ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>
     : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
-           ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>) ==
+           ::test_emptystruct::EmptyProtocol::SendAndReceive>) ==
     ::fidl::WireResponse<
-        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>::PrimarySize);
+        ::test_emptystruct::EmptyProtocol::SendAndReceive>::PrimarySize);
 static_assert(
-    offsetof(::fidl::WireResponse<
-                 ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>,
-             e) == 16);
+    offsetof(
+        ::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>,
+        e) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
-    final : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireClientImpl<::test_emptystruct::EmptyProtocol> final
+    : public ::fidl::internal::ClientBase {
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Send(const ::fidl_test_emptystruct::wire::Empty& e);
+  ::fidl::Result Send(const ::test_emptystruct::wire::Empty& e);
 
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result Send(::fidl::BufferSpan _buffer_span,
-                      const ::fidl_test_emptystruct::wire::Empty& e);
+                      const ::test_emptystruct::wire::Empty& e);
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void SendAndReceive(
-      const ::fidl_test_emptystruct::wire::Empty& e,
-      ::fidl::WireClientCallback<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-          _cb);
+  void SendAndReceive(const ::test_emptystruct::wire::Empty& e,
+                      ::fidl::WireClientCallback<
+                          ::test_emptystruct::EmptyProtocol::SendAndReceive>
+                          _cb);
 
   void SendAndReceive(
-      const ::fidl_test_emptystruct::wire::Empty& e,
+      const ::test_emptystruct::wire::Empty& e,
       ::fit::callback<
-          void(::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::
-                                        SendAndReceive>* response)>
+          void(::fidl::WireResponse<
+               ::test_emptystruct::EmptyProtocol::SendAndReceive>* response)>
           _cb);
 
   // Asynchronous variant of |EmptyProtocol.SendAndReceive()|.
@@ -736,23 +702,22 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
   // or |OnReply| are called on it.
   void SendAndReceive(
       ::fidl::BufferSpan _request_buffer,
-      const ::fidl_test_emptystruct::wire::Empty& e,
+      const ::test_emptystruct::wire::Empty& e,
       ::fidl::WireResponseContext<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>* _context);
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>* _context);
 
   // Synchronous variant of |SendAndReceive.SendAndReceive()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-  SendAndReceive_Sync(const ::fidl_test_emptystruct::wire::Empty& e);
+  ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
+  SendAndReceive_Sync(const ::test_emptystruct::wire::Empty& e);
 
   // Synchronous variant of |SendAndReceive.SendAndReceive()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::WireUnownedResult<
-      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+  ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::SendAndReceive>
   SendAndReceive_Sync(::fidl::BufferSpan _buffer_span,
-                      const ::fidl_test_emptystruct::wire::Empty& e);
+                      const ::test_emptystruct::wire::Empty& e);
   WireClientImpl() = default;
 };
 namespace fidl {
@@ -763,21 +728,21 @@ namespace fidl {
 // |EventSender| owns a server endpoint of a channel speaking
 // the EmptyProtocol protocol, and can send events in that protocol.
 template <>
-class ::fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol> {
+class ::fidl::WireEventSender<::test_emptystruct::EmptyProtocol> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_emptystruct::EmptyProtocol> server_end)
+      ::fidl::ServerEnd<::test_emptystruct::EmptyProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_emptystruct::EmptyProtocol>& server_end()
+  const ::fidl::ServerEnd<::test_emptystruct::EmptyProtocol>& server_end()
       const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_emptystruct::EmptyProtocol>& server_end() {
+  ::fidl::ServerEnd<::test_emptystruct::EmptyProtocol>& server_end() {
     return server_end_;
   }
 
@@ -787,34 +752,33 @@ class ::fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol> {
   // Whether the underlying channel is valid.
   bool is_valid() const { return server_end_.is_valid(); }
 
-  fidl::Result Receive(const ::fidl_test_emptystruct::wire::Empty& e) const;
+  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
   fidl::Result Receive(::fidl::BufferSpan _buffer,
-                       const ::fidl_test_emptystruct::wire::Empty& e) const;
+                       const ::test_emptystruct::wire::Empty& e) const;
 
  private:
-  ::fidl::ServerEnd<::fidl_test_emptystruct::EmptyProtocol> server_end_;
+  ::fidl::ServerEnd<::test_emptystruct::EmptyProtocol> server_end_;
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_emptystruct::EmptyProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
       : inner_(std::move(binding)) {}
 
-  fidl::Result Receive(const ::fidl_test_emptystruct::wire::Empty& e) const;
+  fidl::Result Receive(const ::test_emptystruct::wire::Empty& e) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
   fidl::Result Receive(::fidl::BufferSpan _buffer,
-                       const ::fidl_test_emptystruct::wire::Empty& e) const;
+                       const ::test_emptystruct::wire::Empty& e) const;
 
  private:
   friend ServerBindingRefImpl<
-      ::fidl_test_emptystruct::EmptyProtocol,
-      typename ::fidl_test_emptystruct::EmptyProtocol::Transport>;
+      ::test_emptystruct::EmptyProtocol,
+      typename ::test_emptystruct::EmptyProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace service {
 #ifdef __Fuchsia__
@@ -42,7 +41,7 @@ class EmptyService;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable;
+    test_service_SecondProtocolMethodOnSecondRequestMessageTable;
 
 }  // namespace _internal
 class SecondProtocol_RequestEncoder {
@@ -63,12 +62,11 @@ class SecondProtocol_RequestEncoder {
     } else {
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::service::_internal::
-            fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::service::_internal::
+                   test_service_SecondProtocolMethodOnSecondRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -83,7 +81,7 @@ class SecondProtocol_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable;
+    test_service_FirstProtocolMethodOnFirstRequestMessageTable;
 
 }  // namespace _internal
 class FirstProtocol_RequestEncoder {
@@ -103,12 +101,11 @@ class FirstProtocol_RequestEncoder {
     } else {
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::service::_internal::
-            fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::service::_internal::
+                   test_service_FirstProtocolMethodOnFirstRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -121,5 +118,4 @@ class FirstProtocol_ResponseEncoder {
 
 }  // namespace service
 }  // namespace test
-
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

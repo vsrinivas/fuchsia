@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_driveroneway {
+namespace test_driveroneway {
 
 class OneWay final {
   OneWay() = delete;
@@ -15,9 +15,9 @@ class OneWay final {
     Send() = delete;
 
    public:
-    using Protocol = ::fidl_test_driveroneway::OneWay;
+    using Protocol = ::test_driveroneway::OneWay;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
 };
-}  // namespace fidl_test_driveroneway
+}  // namespace test_driveroneway

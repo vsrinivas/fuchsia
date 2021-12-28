@@ -3,14 +3,14 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyStrictEnumTable;
-__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumWithCustomUnknownTable;
-__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumTable;
-__LOCAL extern const struct FidlCodedEnum fidl_test_enum_MyEmptyFlexibleEnumTable;
+__LOCAL extern const struct FidlCodedEnum test_enum_MyStrictEnumTable;
+__LOCAL extern const struct FidlCodedEnum test_enum_MyFlexibleEnumWithCustomUnknownTable;
+__LOCAL extern const struct FidlCodedEnum test_enum_MyFlexibleEnumTable;
+__LOCAL extern const struct FidlCodedEnum test_enum_MyEmptyFlexibleEnumTable;
 
 
 
-static bool EnumValidatorFor_fidl_test_enum_MyStrictEnum(uint64_t v) {
+static bool EnumValidatorFor_test_enum_MyStrictEnum(uint64_t v) {
   switch (v) {
     case 1ul:
     case 2ul:
@@ -20,11 +20,11 @@ static bool EnumValidatorFor_fidl_test_enum_MyStrictEnum(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum fidl_test_enum_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_fidl_test_enum_MyStrictEnum, .name="fidl.test.enum/MyStrictEnum"};
+const struct FidlCodedEnum test_enum_MyStrictEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_enum_MyStrictEnum, .name="test.enum/MyStrictEnum"};
 
-const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumWithCustomUnknownTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.enum/MyFlexibleEnumWithCustomUnknown"};
+const struct FidlCodedEnum test_enum_MyFlexibleEnumWithCustomUnknownTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.enum/MyFlexibleEnumWithCustomUnknown"};
 
-const struct FidlCodedEnum fidl_test_enum_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.enum/MyFlexibleEnum"};
+const struct FidlCodedEnum test_enum_MyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.enum/MyFlexibleEnum"};
 
-const struct FidlCodedEnum fidl_test_enum_MyEmptyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.enum/MyEmptyFlexibleEnum"};
+const struct FidlCodedEnum test_enum_MyEmptyFlexibleEnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="test.enum/MyEmptyFlexibleEnum"};
 

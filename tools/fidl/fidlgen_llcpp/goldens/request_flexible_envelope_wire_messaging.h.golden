@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.requestflexibleenvelope/cpp/markers.h>
-#include <fidl/fidl.test.requestflexibleenvelope/cpp/wire_types.h>
+#include <fidl/test.requestflexibleenvelope/cpp/markers.h>
+#include <fidl/test.requestflexibleenvelope/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,57 +16,55 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 class Protocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
-}  // namespace fidl_test_requestflexibleenvelope
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+}  // namespace test_requestflexibleenvelope
 template <>
 struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestStrictResponseFlexible>
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final {
-  static constexpr uint64_t value = 4346871690266280218lu;
+  static constexpr uint64_t value = 700529454616207123lu;
 };
 template <>
 struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestFlexibleResponseStrict>
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final {
-  static constexpr uint64_t value = 4374294377437089654lu;
+  static constexpr uint64_t value = 5191655763393883319lu;
 };
 
-namespace fidl_test_requestflexibleenvelope {
-}  // namespace fidl_test_requestflexibleenvelope
+namespace test_requestflexibleenvelope {
+}  // namespace test_requestflexibleenvelope
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<
-    ::fidl_test_requestflexibleenvelope::Protocol> {};
+    ::test_requestflexibleenvelope::Protocol> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+    ::test_requestflexibleenvelope::Protocol>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
+      ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static void Dispatch(
-      ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
+      ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
@@ -76,22 +74,22 @@ struct ::fidl::internal::WireServerDispatcher<
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestStrictResponseFlexible>
+struct ::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_requestflexibleenvelope::wire::StrictFoo s;
+  ::test_requestflexibleenvelope::wire::StrictFoo s;
 
-  explicit WireRequest(::fidl_test_requestflexibleenvelope::wire::StrictFoo s)
+  explicit WireRequest(::test_requestflexibleenvelope::wire::StrictFoo s)
       : s(s) {
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_requestflexibleenvelope::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -101,9 +99,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
-  using ResponseType =
-      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestStrictResponseFlexible>;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -115,23 +112,22 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>
+struct ::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f;
+  ::test_requestflexibleenvelope::wire::FlexibleFoo f;
 
-  explicit WireResponse(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f)
+  explicit WireResponse(::test_requestflexibleenvelope::wire::FlexibleFoo f)
       : f(f) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_requestflexibleenvelope::
-          fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -152,22 +148,22 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestFlexibleResponseStrict>
+struct ::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s;
+  ::test_requestflexibleenvelope::wire::FlexibleFoo s;
 
-  explicit WireRequest(::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s)
+  explicit WireRequest(::test_requestflexibleenvelope::wire::FlexibleFoo s)
       : s(s) {
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_requestflexibleenvelope::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -177,9 +173,8 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   static constexpr bool HasPointer = true;
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
-  using ResponseType =
-      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestFlexibleResponseStrict>;
+  using ResponseType = ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -191,22 +186,22 @@ struct ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>
+struct ::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_requestflexibleenvelope::wire::StrictFoo f;
+  ::test_requestflexibleenvelope::wire::StrictFoo f;
 
-  explicit WireResponse(::fidl_test_requestflexibleenvelope::wire::StrictFoo f)
+  explicit WireResponse(::test_requestflexibleenvelope::wire::StrictFoo f)
       : f(f) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_requestflexibleenvelope::
-          fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+      &::test_requestflexibleenvelope::
+          test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -229,19 +224,17 @@ struct ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestStrictResponseFlexible>
+class ::fidl::WireResult<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::fidl::Result {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          client,
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
+      ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>* request);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          client,
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
+      ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -251,53 +244,54 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                  RequestStrictResponseFlexible>*>(
         bytes_.data());
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestStrictResponseFlexible>*>(bytes_.data());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                       RequestStrictResponseFlexible>*>(
+        bytes_.data());
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   operator*() const {
     return value();
   }
@@ -306,25 +300,25 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                    RequestStrictResponseFlexible>
+class ::fidl::WireUnownedResult<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                RequestStrictResponseFlexible>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+          ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>>&& decoded)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
@@ -340,52 +334,52 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                  RequestStrictResponseFlexible>*>(bytes_);
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestStrictResponseFlexible>*>(bytes_);
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                       RequestStrictResponseFlexible>*>(bytes_);
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestStrictResponseFlexible>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>&
   operator*() const {
     return value();
   }
@@ -394,19 +388,17 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
   uint8_t* bytes_;
 };
 template <>
-class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestFlexibleResponseStrict>
+class ::fidl::WireResult<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::fidl::Result {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          client,
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
+      ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>* request);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          client,
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
+      ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
@@ -416,53 +408,54 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                  RequestFlexibleResponseStrict>*>(
         bytes_.data());
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestFlexibleResponseStrict>*>(bytes_.data());
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                       RequestFlexibleResponseStrict>*>(
+        bytes_.data());
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   operator*() const {
     return value();
   }
@@ -471,25 +464,25 @@ class ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                    RequestFlexibleResponseStrict>
+class ::fidl::WireUnownedResult<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                RequestFlexibleResponseStrict>* response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+          ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>>&& decoded)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
@@ -505,52 +498,52 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+        ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                  RequestFlexibleResponseStrict>*>(bytes_);
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
-    return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestFlexibleResponseStrict>*>(bytes_);
+    return reinterpret_cast<
+        const ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                       RequestFlexibleResponseStrict>*>(bytes_);
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>*
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>*
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>&
+  ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                                 RequestFlexibleResponseStrict>&
+  const ::fidl::WireResponse<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>&
   operator*() const {
     return value();
   }
@@ -560,27 +553,25 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_requestflexibleenvelope::Protocol> {
+    ::test_requestflexibleenvelope::Protocol> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+class ::fidl::WireAsyncEventHandler<::test_requestflexibleenvelope::Protocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_requestflexibleenvelope::Protocol>,
+          ::test_requestflexibleenvelope::Protocol>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+class ::fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_requestflexibleenvelope::Protocol> {
+          ::test_requestflexibleenvelope::Protocol> {
  public:
   WireSyncEventHandler() = default;
 
@@ -592,20 +583,20 @@ class ::fidl::WireSyncEventHandler<
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+      ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
           client_end);
 };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+    ::test_requestflexibleenvelope::Protocol>
     final : public ::fidl::internal::IncomingEventDispatcher<
                 ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_requestflexibleenvelope::Protocol>> {
+                    ::test_requestflexibleenvelope::Protocol>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<
-          ::fidl_test_requestflexibleenvelope::Protocol>* event_handler)
+      ::fidl::WireAsyncEventHandler<::test_requestflexibleenvelope::Protocol>*
+          event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -616,106 +607,104 @@ class ::fidl::internal::WireEventDispatcher<
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
-// |fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>|, avoiding
-// setting up a client.
+// |fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>|, avoiding setting
+// up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+    ::test_requestflexibleenvelope::Protocol>
     final : public ::fidl::internal::SyncEndpointManagedVeneer<
                 ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_requestflexibleenvelope::Protocol>> {
+                    ::test_requestflexibleenvelope::Protocol>> {
  public:
   // Request is heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                         RequestStrictResponseFlexible>
+  ::fidl::WireResult<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
   RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>
+      ::test_requestflexibleenvelope::wire::StrictFoo s) {
+    ::fidl::WireRequest<
+        ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
         _request{s};
-    return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
+    return ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::
                                   RequestStrictResponseFlexible>(_client_end(),
                                                                  &_request);
   }
 
   // Request is heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                         RequestFlexibleResponseStrict>
+  ::fidl::WireResult<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s) {
+    ::fidl::WireRequest<
+        ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
         _request{s};
-    return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
+    return ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::
                                   RequestFlexibleResponseStrict>(_client_end(),
                                                                  &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+  ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
   _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::fidl_test_requestflexibleenvelope::Protocol>(_channel());
+    return ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
+        _channel());
   }
 };
 
 template <>
 class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+    ::test_requestflexibleenvelope::Protocol>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_requestflexibleenvelope::Protocol>> {
+                    ::test_requestflexibleenvelope::Protocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>
+  ::fidl::WireUnownedResult<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
   RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>
+      ::test_requestflexibleenvelope::wire::StrictFoo s) {
+    ::fidl::WireRequest<
+        ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
         _request{s};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestStrictResponseFlexible>(_client_end(), _allocator(),
-                                           &_request);
+    return ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::
+                                         RequestStrictResponseFlexible>(
+        _client_end(), _allocator(), &_request);
   }
 
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>
+  ::fidl::WireUnownedResult<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s) {
+    ::fidl::WireRequest<
+        ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
         _request{s};
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestFlexibleResponseStrict>(_client_end(), _allocator(),
-                                           &_request);
+    return ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Protocol::
+                                         RequestFlexibleResponseStrict>(
+        _client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+  ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>
   _client_end() const {
-    return ::fidl::UnownedClientEnd<
-        ::fidl_test_requestflexibleenvelope::Protocol>(_channel());
+    return ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol>(
+        _channel());
   }
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
-    final : public ::fidl::internal::WireSyncClientBase<
-                ::fidl_test_requestflexibleenvelope::Protocol> {
+class ::fidl::WireSyncClient<::test_requestflexibleenvelope::Protocol> final
+    : public ::fidl::internal::WireSyncClientBase<
+          ::test_requestflexibleenvelope::Protocol> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_requestflexibleenvelope::Protocol>::WireSyncClientBase;
+      ::test_requestflexibleenvelope::Protocol>::WireSyncClientBase;
 };
 
 template <>
 class ::fidl::internal::WireCompleterBase<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestStrictResponseFlexible> : public ::fidl::CompleterBase {
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
+    : public ::fidl::CompleterBase {
  public:
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
@@ -727,43 +716,9 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
-  ::fidl::Result Reply(
-      ::fidl::BufferSpan _buffer,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
-
- protected:
-  using ::fidl::CompleterBase::CompleterBase;
-};
-
-template <>
-struct ::fidl::internal::WireMethodTypes<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestStrictResponseFlexible> {
-  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::fidl_test_requestflexibleenvelope::Protocol::
-          RequestStrictResponseFlexible>>;
-};
-
-template <>
-class ::fidl::internal::WireCompleterBase<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestFlexibleResponseStrict> : public ::fidl::CompleterBase {
- public:
-  // In the following methods, the return value indicates internal errors during
-  // the reply, such as encoding or writing to the transport.
-  // Note that any error will automatically lead to the destruction of the
-  // binding, after which the |on_unbound| callback will be triggered with a
-  // detailed reason.
-  //
-  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-  //
-  // Because the reply status is identical to the unbinding status, it can be
-  // safely ignored.
-  ::fidl::Result Reply(::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
+  ::fidl::Result Reply(::test_requestflexibleenvelope::wire::FlexibleFoo f);
   ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                       ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
+                       ::test_requestflexibleenvelope::wire::FlexibleFoo f);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -771,33 +726,60 @@ class ::fidl::internal::WireCompleterBase<
 
 template <>
 struct ::fidl::internal::WireMethodTypes<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestFlexibleResponseStrict> {
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::fidl_test_requestflexibleenvelope::Protocol::
-          RequestFlexibleResponseStrict>>;
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>;
+};
+
+template <>
+class ::fidl::internal::WireCompleterBase<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
+    : public ::fidl::CompleterBase {
+ public:
+  // In the following methods, the return value indicates internal errors during
+  // the reply, such as encoding or writing to the transport.
+  // Note that any error will automatically lead to the destruction of the
+  // binding, after which the |on_unbound| callback will be triggered with a
+  // detailed reason.
+  //
+  // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+  //
+  // Because the reply status is identical to the unbinding status, it can be
+  // safely ignored.
+  ::fidl::Result Reply(::test_requestflexibleenvelope::wire::StrictFoo f);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                       ::test_requestflexibleenvelope::wire::StrictFoo f);
+
+ protected:
+  using ::fidl::CompleterBase::CompleterBase;
+};
+
+template <>
+struct ::fidl::internal::WireMethodTypes<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> {
+  using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
+class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
 
   // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_requestflexibleenvelope::Protocol;
+  using _EnclosingProtocol = ::test_requestflexibleenvelope::Protocol;
 
   using RequestStrictResponseFlexibleCompleter =
-      ::fidl::internal::WireCompleter<
-          ::fidl_test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>;
+      ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::
+                                          RequestStrictResponseFlexible>;
   using RequestStrictResponseFlexibleRequestView =
       ::fidl::internal::WireRequestView<
-          ::fidl_test_requestflexibleenvelope::Protocol::
+          ::test_requestflexibleenvelope::Protocol::
               RequestStrictResponseFlexible>;
 
   virtual void RequestStrictResponseFlexible(
@@ -805,12 +787,11 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
       RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
 
   using RequestFlexibleResponseStrictCompleter =
-      ::fidl::internal::WireCompleter<
-          ::fidl_test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>;
+      ::fidl::internal::WireCompleter<::test_requestflexibleenvelope::Protocol::
+                                          RequestFlexibleResponseStrict>;
   using RequestFlexibleResponseStrictRequestView =
       ::fidl::internal::WireRequestView<
-          ::fidl_test_requestflexibleenvelope::Protocol::
+          ::test_requestflexibleenvelope::Protocol::
               RequestFlexibleResponseStrict>;
 
   virtual void RequestFlexibleResponseStrict(
@@ -827,104 +808,95 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
 namespace fidl {
 
 template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestStrictResponseFlexible>>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+    sizeof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>) ==
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+    ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                             RequestStrictResponseFlexible>::PrimarySize);
 static_assert(
-    offsetof(::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+    offsetof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                      RequestStrictResponseFlexible>,
              s) == 16);
 
 template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestStrictResponseFlexible>>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestStrictResponseFlexible>>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+    sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                     RequestStrictResponseFlexible>) ==
-    ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+    ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                              RequestStrictResponseFlexible>::PrimarySize);
 static_assert(
-    offsetof(::fidl::WireResponse<::fidl_test_requestflexibleenvelope::
-                                      Protocol::RequestStrictResponseFlexible>,
+    offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                      RequestStrictResponseFlexible>,
              f) == 16);
 
 template <>
-struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>>
+struct IsFidlType<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
-                            RequestFlexibleResponseStrict>>
+struct IsFidlMessage<::fidl::WireRequest<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+    sizeof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>) ==
-    ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+    ::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                             RequestFlexibleResponseStrict>::PrimarySize);
 static_assert(
-    offsetof(::fidl::WireRequest<::fidl_test_requestflexibleenvelope::Protocol::
+    offsetof(::fidl::WireRequest<::test_requestflexibleenvelope::Protocol::
                                      RequestFlexibleResponseStrict>,
              s) == 16);
 
 template <>
-struct IsFidlType<
-    ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestFlexibleResponseStrict>>
+struct IsFidlType<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<
-    ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
-                             RequestFlexibleResponseStrict>>
+struct IsFidlMessage<::fidl::WireResponse<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+    sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                     RequestFlexibleResponseStrict>) ==
-    ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+    ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                              RequestFlexibleResponseStrict>::PrimarySize);
 static_assert(
-    offsetof(::fidl::WireResponse<::fidl_test_requestflexibleenvelope::
-                                      Protocol::RequestFlexibleResponseStrict>,
+    offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
+                                      RequestFlexibleResponseStrict>,
              f) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireClientImpl<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
     final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // The request and callback are allocated on the heap.
   void RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::WireClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+      ::test_requestflexibleenvelope::wire::StrictFoo s,
+      ::fidl::WireClientCallback<::test_requestflexibleenvelope::Protocol::
                                      RequestStrictResponseFlexible>
           _cb);
 
   void RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      ::test_requestflexibleenvelope::wire::StrictFoo s,
       ::fit::callback<void(
-          ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+          ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestStrictResponseFlexible>* response)>
           _cb);
 
@@ -934,40 +906,39 @@ class ::fidl::internal::WireClientImpl<
   // or |OnReply| are called on it.
   void RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
-                                      Protocol::RequestStrictResponseFlexible>*
-          _context);
+      ::test_requestflexibleenvelope::wire::StrictFoo s,
+      ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
+                                      RequestStrictResponseFlexible>* _context);
 
   // Synchronous variant of
   // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Request is
   // heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                         RequestStrictResponseFlexible>
+  ::fidl::WireResult<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
   RequestStrictResponseFlexible_Sync(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
+      ::test_requestflexibleenvelope::wire::StrictFoo s);
 
   // Synchronous variant of
   // |RequestStrictResponseFlexible.RequestStrictResponseFlexible()|. Caller
   // provides the backing storage for FIDL message via request and response
   // buffers.
-  ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>
+  ::fidl::WireUnownedResult<
+      ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
   RequestStrictResponseFlexible_Sync(
       ::fidl::BufferSpan _buffer_span,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
+      ::test_requestflexibleenvelope::wire::StrictFoo s);
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
   void RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::WireClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::fidl::WireClientCallback<::test_requestflexibleenvelope::Protocol::
                                      RequestFlexibleResponseStrict>
           _cb);
 
   void RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s,
       ::fit::callback<void(
-          ::fidl::WireResponse<::fidl_test_requestflexibleenvelope::Protocol::
+          ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::
                                    RequestFlexibleResponseStrict>* response)>
           _cb);
 
@@ -977,28 +948,27 @@ class ::fidl::internal::WireClientImpl<
   // or |OnReply| are called on it.
   void RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
-                                      Protocol::RequestFlexibleResponseStrict>*
-          _context);
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
+                                      RequestFlexibleResponseStrict>* _context);
 
   // Synchronous variant of
   // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Request is
   // heap-allocated. Response is heap-allocated.
-  ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                         RequestFlexibleResponseStrict>
+  ::fidl::WireResult<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict_Sync(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
 
   // Synchronous variant of
   // |RequestFlexibleResponseStrict.RequestFlexibleResponseStrict()|. Caller
   // provides the backing storage for FIDL message via request and response
   // buffers.
-  ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>
+  ::fidl::WireUnownedResult<
+      ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict_Sync(
       ::fidl::BufferSpan _buffer_span,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s);
   WireClientImpl() = default;
 };
 namespace fidl {
@@ -1009,23 +979,21 @@ namespace fidl {
 // |EventSender| owns a server endpoint of a channel speaking
 // the Protocol protocol, and can send events in that protocol.
 template <>
-class ::fidl::WireEventSender<::fidl_test_requestflexibleenvelope::Protocol> {
+class ::fidl::WireEventSender<::test_requestflexibleenvelope::Protocol> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          server_end)
+      ::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol>&
+  const ::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol>&
   server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol>&
-  server_end() {
+  ::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol>& server_end() {
     return server_end_;
   }
 
@@ -1036,12 +1004,12 @@ class ::fidl::WireEventSender<::fidl_test_requestflexibleenvelope::Protocol> {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol> server_end_;
+  ::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol> server_end_;
 };
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_requestflexibleenvelope::Protocol> {
+    ::test_requestflexibleenvelope::Protocol> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
@@ -1049,8 +1017,8 @@ class ::fidl::internal::WireWeakEventSender<
 
  private:
   friend ServerBindingRefImpl<
-      ::fidl_test_requestflexibleenvelope::Protocol,
-      typename ::fidl_test_requestflexibleenvelope::Protocol::Transport>;
+      ::test_requestflexibleenvelope::Protocol,
+      typename ::test_requestflexibleenvelope::Protocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

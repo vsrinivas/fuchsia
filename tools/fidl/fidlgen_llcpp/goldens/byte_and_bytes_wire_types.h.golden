@@ -18,17 +18,17 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.byteandbytes/cpp/markers.h>
+#include <fidl/test.byteandbytes/cpp/markers.h>
 
-namespace fidl_test_byteandbytes {
+namespace test_byteandbytes {
 namespace wire {
 struct ByteAndBytes;
 
-extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
+extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
 struct ByteAndBytes {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_byteandbytes_ByteAndBytesTable;
+      &test_byteandbytes_ByteAndBytesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 56;
   static constexpr uint32_t PrimarySizeV1 = 56;
@@ -50,26 +50,26 @@ struct ByteAndBytes {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_byteandbytes
+}  // namespace test_byteandbytes
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_byteandbytes::wire::ByteAndBytes>
+struct IsFidlType<::test_byteandbytes::wire::ByteAndBytes>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_byteandbytes::wire::ByteAndBytes>
+struct IsStruct<::test_byteandbytes::wire::ByteAndBytes>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_byteandbytes::wire::ByteAndBytes>);
-static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
-                       single_byte) == 0);
-static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
-                       many_bytes) == 8);
-static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
+    std::is_standard_layout_v<::test_byteandbytes::wire::ByteAndBytes>);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, single_byte) ==
+              0);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes, many_bytes) ==
+              8);
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes,
                        only_one_k_bytes) == 24);
-static_assert(offsetof(::fidl_test_byteandbytes::wire::ByteAndBytes,
+static_assert(offsetof(::test_byteandbytes::wire::ByteAndBytes,
                        opt_only_one_k_bytes) == 40);
-static_assert(sizeof(::fidl_test_byteandbytes::wire::ByteAndBytes) ==
-              ::fidl_test_byteandbytes::wire::ByteAndBytes::PrimarySize);
+static_assert(sizeof(::test_byteandbytes::wire::ByteAndBytes) ==
+              ::test_byteandbytes::wire::ByteAndBytes::PrimarySize);
 
 }  // namespace fidl

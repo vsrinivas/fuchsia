@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/bottom/cpp/driver/wire.h>
-#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/driver/wire_messaging.h>
-#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
-#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/wire_types.h>
-#include <fidl/middle/cpp/driver/wire.h>
+#include <fidl/test.bottom/cpp/driver/wire.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/driver/wire_messaging.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire_types.h>
+#include <fidl/test.middle/cpp/driver/wire.h>

@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.vectors
+# test.vectors
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### ExampleUseOfVectors  {#ExampleUseOfVectors data-text="ExampleUseOfVectors"}
-*Defined in [fidl.test.vectors/vectors.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/vectors.test.fidl;l=6)*
+*Defined in [test.vectors/vectors.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/vectors.test.fidl;l=6)*
 
 
 

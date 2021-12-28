@@ -2,12 +2,11 @@
 
 #pragma once
 
-#include <fidl/test/protocolrequest/cpp/fidl.h>
-namespace fidl {
+#include <test/protocolrequest/cpp/fidl.h>
 namespace test {
 namespace protocolrequest {
 namespace testing {
-class Parent_TestBase : public ::fidl::test::protocolrequest::Parent {
+class Parent_TestBase : public ::test::protocolrequest::Parent {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -17,18 +16,17 @@ class Parent_TestBase : public ::fidl::test::protocolrequest::Parent {
   void GetChildRequest(GetChildRequestCallback callback) override {
     NotImplemented_("GetChildRequest");
   }
-  void TakeChild(::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>
-                     c) override {
+  void TakeChild(
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) override {
     NotImplemented_("TakeChild");
   }
   void TakeChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r)
-      override {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) override {
     NotImplemented_("TakeChildRequest");
   }
 };
 
-class Child_TestBase : public ::fidl::test::protocolrequest::Child {
+class Child_TestBase : public ::test::protocolrequest::Child {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -36,4 +34,3 @@ class Child_TestBase : public ::fidl::test::protocolrequest::Child {
 }  // namespace testing
 }  // namespace protocolrequest
 }  // namespace test
-}  // namespace fidl

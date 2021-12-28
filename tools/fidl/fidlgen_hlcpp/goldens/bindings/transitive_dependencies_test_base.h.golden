@@ -2,5 +2,5 @@
 
 #pragma once
 
-#include <fidl/test/transitivedependencies/cpp/fidl.h>
-#include <middle/cpp/fidl.h>
+#include <test/middle/cpp/fidl.h>
+#include <test/transitivedependencies/cpp/fidl.h>

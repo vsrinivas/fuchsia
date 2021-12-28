@@ -232,7 +232,7 @@ func (s_ *OtherProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 type OtherProtocolEventProxy _bindings.ChannelProxy
 
 const (
-	ProtocolFooOrdinal uint64 = 0x6d892a52b86296e3
+	ProtocolFooOrdinal uint64 = 0x567a8096af6e6139
 )
 
 type ProtocolWithCtxInterface _bindings.ChannelProxy

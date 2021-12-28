@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.experimentalmaybefromtypealias
+# test.experimentalmaybefromtypealias
 
 
 
 ## **PROTOCOLS**
 
 ## MyProtocol {#MyProtocol}
-*Defined in [fidl.test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl;l=3)*
+*Defined in [test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl;l=3)*
 
 
 
@@ -18,7 +18,7 @@
 ## **STRUCTS**
 
 ### Testing [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#Testing data-text="Testing"}
-*Defined in [fidl.test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl;l=14)*
+*Defined in [test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl;l=14)*
 
 
 
@@ -139,7 +139,7 @@
         </tr><tr id="Testing.r2">
             <td><code>r2</code></td>
             <td>
-                <code>vector&lt;fidl.test.experimentalmaybefromtypealias/MyProtocol&gt;</code>
+                <code>vector&lt;test.experimentalmaybefromtypealias/MyProtocol&gt;</code>
             </td>
             <td>
 </td>
@@ -147,7 +147,7 @@
         </tr><tr id="Testing.r3">
             <td><code>r3</code></td>
             <td>
-                <code>fidl.test.experimentalmaybefromtypealias/MyProtocol[4]</code>
+                <code>test.experimentalmaybefromtypealias/MyProtocol[4]</code>
             </td>
             <td>
 </td>

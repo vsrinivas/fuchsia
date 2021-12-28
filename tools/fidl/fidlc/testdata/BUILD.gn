@@ -41,7 +41,7 @@ standalone_libraries = [
 ]
 
 foreach(filename, standalone_libraries) {
-  library = "fidl.test." +
+  library = "test." +
             string_replace(string_replace(filename, ".test.fidl", ""), "_", "")
   fidl(library) {
     testonly = true

@@ -2,25 +2,24 @@
 
 #pragma once
 
-#include <fidl/fidl.test.handles/cpp/wire.h>
-#include <fidl/test/handles/cpp/natural_types.h>
+#include <fidl/test.handles/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/handles/cpp/natural_types.h>
 #include <zx/cpp/fidl_v2.h>
 
-namespace fidl_test_handles {
+namespace test_handles {
 class Handles;
 
-using obj_type = ::fidl::test::handles::obj_type;
+using obj_type = ::test::handles::obj_type;
 
-}  // namespace fidl_test_handles
+}  // namespace test_handles
 template <>
-struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_handles::Handles>
+struct ::fidl::internal::DesignatedInitializationProxy<::test_handles::Handles>
     final {
  public:
   ::zx::handle plain_handle = {};
@@ -85,14 +84,13 @@ struct ::fidl::internal::DesignatedInitializationProxy<
 
   ::zx::vmo aliased_rights_handle_field = {};
 
-  ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol> some_protocol =
-      {};
+  ::fidl::InterfaceHandle<::test::handles::SomeProtocol> some_protocol = {};
 
-  ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>
+  ::fidl::InterfaceRequest<::test::handles::SomeProtocol>
       request_some_protocol = {};
 };
 
-namespace fidl_test_handles {
+namespace test_handles {
 class Handles final : public ::fidl::internal::CodableBase<Handles> {
  private:
   friend ::fidl::internal::CodableBase<Handles>;
@@ -105,28 +103,27 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
 
  public:
   Handles() = default;
-  Handles(::zx::handle&& plain_handle, ::zx::bti&& bti_handle,
-          ::zx::channel&& channel_handle, ::zx::clock&& clock_handle,
-          ::zx::debuglog&& debuglog_handle, ::zx::event&& event_handle,
-          ::zx::eventpair&& eventpair_handle,
-          ::zx::exception&& exception_handle, ::zx::fifo&& fifo_handle,
-          ::zx::guest&& guest_handle, ::zx::interrupt&& interrupt_handle,
-          ::zx::iommu&& iommu_handle, ::zx::job&& job_handle,
-          ::zx::pager&& pager_handle, ::zx::pcidevice&& pcidevice_handle,
-          ::zx::pmt&& pmt_handle, ::zx::port&& port_handle,
-          ::zx::process&& process_handle, ::zx::profile&& profile_handle,
-          ::zx::resource&& resource_handle, ::zx::socket&& socket_handle,
-          ::zx::suspendtoken&& suspendtoken_handle,
-          ::zx::thread&& thread_handle, ::zx::timer&& timer_handle,
-          ::zx::vcpu&& vcpu_handle, ::zx::vmar&& vmar_handle,
-          ::zx::vmo&& vmo_handle, ::zx::vmo&& rights_handle,
-          ::zx::handle&& aliased_plain_handle_field,
-          ::zx::vmo&& aliased_subtype_handle_field,
-          ::zx::vmo&& aliased_rights_handle_field,
-          ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol>&&
-              some_protocol,
-          ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&&
-              request_some_protocol)
+  Handles(
+      ::zx::handle&& plain_handle, ::zx::bti&& bti_handle,
+      ::zx::channel&& channel_handle, ::zx::clock&& clock_handle,
+      ::zx::debuglog&& debuglog_handle, ::zx::event&& event_handle,
+      ::zx::eventpair&& eventpair_handle, ::zx::exception&& exception_handle,
+      ::zx::fifo&& fifo_handle, ::zx::guest&& guest_handle,
+      ::zx::interrupt&& interrupt_handle, ::zx::iommu&& iommu_handle,
+      ::zx::job&& job_handle, ::zx::pager&& pager_handle,
+      ::zx::pcidevice&& pcidevice_handle, ::zx::pmt&& pmt_handle,
+      ::zx::port&& port_handle, ::zx::process&& process_handle,
+      ::zx::profile&& profile_handle, ::zx::resource&& resource_handle,
+      ::zx::socket&& socket_handle, ::zx::suspendtoken&& suspendtoken_handle,
+      ::zx::thread&& thread_handle, ::zx::timer&& timer_handle,
+      ::zx::vcpu&& vcpu_handle, ::zx::vmar&& vmar_handle,
+      ::zx::vmo&& vmo_handle, ::zx::vmo&& rights_handle,
+      ::zx::handle&& aliased_plain_handle_field,
+      ::zx::vmo&& aliased_subtype_handle_field,
+      ::zx::vmo&& aliased_rights_handle_field,
+      ::fidl::InterfaceHandle<::test::handles::SomeProtocol>&& some_protocol,
+      ::fidl::InterfaceRequest<::test::handles::SomeProtocol>&&
+          request_some_protocol)
       : storage_({std::move(plain_handle),
                   std::move(bti_handle),
                   std::move(channel_handle),
@@ -160,9 +157,9 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
                   std::move(aliased_rights_handle_field),
                   std::move(some_protocol),
                   std::move(request_some_protocol)}) {}
-  Handles(::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_handles::Handles>
-              storage)
+  Handles(
+      ::fidl::internal::DesignatedInitializationProxy<::test_handles::Handles>
+          storage)
       : storage_(std::move(storage)) {}
   ~Handles() = default;
   Handles(Handles&&) noexcept = default;
@@ -483,70 +480,68 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
     return *this;
   }
 
-  const ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol>&
-  some_protocol() const {
+  const ::fidl::InterfaceHandle<::test::handles::SomeProtocol>& some_protocol()
+      const {
     return storage_.some_protocol;
   }
 
-  ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol>&
-  some_protocol() {
+  ::fidl::InterfaceHandle<::test::handles::SomeProtocol>& some_protocol() {
     return storage_.some_protocol;
   }
 
   Handles& set_some_protocol(
-      ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol> _value) {
+      ::fidl::InterfaceHandle<::test::handles::SomeProtocol> _value) {
     storage_.some_protocol = std::move(_value);
     return *this;
   }
 
-  const ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&
+  const ::fidl::InterfaceRequest<::test::handles::SomeProtocol>&
   request_some_protocol() const {
     return storage_.request_some_protocol;
   }
 
-  ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&
+  ::fidl::InterfaceRequest<::test::handles::SomeProtocol>&
   request_some_protocol() {
     return storage_.request_some_protocol;
   }
 
   Handles& set_request_some_protocol(
-      ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol> _value) {
+      ::fidl::InterfaceRequest<::test::handles::SomeProtocol> _value) {
     storage_.request_some_protocol = std::move(_value);
     return *this;
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_handles::Handles>;
+  friend struct ::fidl::CodingTraits<::test_handles::Handles>;
 
-  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_handles::Handles>
+  ::fidl::internal::DesignatedInitializationProxy<::test_handles::Handles>
       storage_ = {};
 };
 
-}  // namespace fidl_test_handles
+}  // namespace test_handles
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
+extern "C" const fidl_type_t test_handles_HandlesTable;
 
 template <>
-struct IsResource<::fidl_test_handles::Handles> : public std::true_type {};
+struct IsResource<::test_handles::Handles> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_handles::Handles> : public std::true_type {};
+struct IsFidlType<::test_handles::Handles> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_handles::Handles> final {
+struct ::fidl::internal::TypeTraits<::test_handles::Handles> final {
  public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_handles_HandlesTable;
+  static constexpr const fidl_type_t* kCodingTable = &test_handles_HandlesTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_handles::Handles> {
+struct CodingTraits<::test_handles::Handles> {
   static constexpr size_t inline_size_v1_no_ee = 132;
   static constexpr size_t inline_size_v2 = 132;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_handles::Handles* value, size_t offset,
+      EncoderImpl* encoder, ::test_handles::Handles* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -849,7 +844,7 @@ struct CodingTraits<::fidl_test_handles::Handles> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::fidl_test_handles::Handles* value,
+  static void Decode(DecoderImpl* decoder, ::test_handles::Handles* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.plain_handle, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.bti_handle, offset + 4);
@@ -895,8 +890,8 @@ struct CodingTraits<::fidl_test_handles::Handles> {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_handles::SomeProtocol>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_handles::SomeProtocol> final
+    : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };

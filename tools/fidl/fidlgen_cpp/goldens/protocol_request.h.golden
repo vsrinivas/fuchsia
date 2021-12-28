@@ -2,16 +2,16 @@
 
 #pragma once
 
-#include <fidl/fidl.test.protocolrequest/cpp/wire.h>
-#include <fidl/test/protocolrequest/cpp/natural_types.h>
+#include <fidl/test.protocolrequest/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/protocolrequest/cpp/natural_types.h>
 
-namespace fidl_test_protocolrequest {
+namespace test_protocolrequest {
 class ParentTakeChildRequestRequest;
 
 class ParentTakeChildRequest;
@@ -20,16 +20,16 @@ class ParentGetChildTopResponse;
 
 class ParentGetChildRequestTopResponse;
 
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+    ::test_protocolrequest::ParentTakeChildRequestRequest>
     final {
  public:
-  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r = {};
+  ::fidl::InterfaceRequest<::test::protocolrequest::Child> r = {};
 };
 
-namespace fidl_test_protocolrequest {
+namespace test_protocolrequest {
 class ParentTakeChildRequestRequest final
     : public ::fidl::internal::CodableBase<ParentTakeChildRequestRequest> {
  private:
@@ -44,11 +44,11 @@ class ParentTakeChildRequestRequest final
  public:
   ParentTakeChildRequestRequest() = default;
   ParentTakeChildRequestRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>&& r)
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>&& r)
       : storage_({std::move(r)}) {}
   ParentTakeChildRequestRequest(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+          ::test_protocolrequest::ParentTakeChildRequestRequest>
           storage)
       : storage_(std::move(storage)) {}
   ~ParentTakeChildRequestRequest() = default;
@@ -61,40 +61,39 @@ class ParentTakeChildRequestRequest final
   ParentTakeChildRequestRequest& operator=(
       const ParentTakeChildRequestRequest&) noexcept = delete;
 
-  const ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r()
-      const {
+  const ::fidl::InterfaceRequest<::test::protocolrequest::Child>& r() const {
     return storage_.r;
   }
 
-  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r() {
+  ::fidl::InterfaceRequest<::test::protocolrequest::Child>& r() {
     return storage_.r;
   }
 
   ParentTakeChildRequestRequest& set_r(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> _value) {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> _value) {
     storage_.r = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>;
+      ::test_protocolrequest::ParentTakeChildRequestRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+      ::test_protocolrequest::ParentTakeChildRequestRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_protocolrequest::ParentTakeChildRequest>
+    ::test_protocolrequest::ParentTakeChildRequest>
     final {
  public:
-  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c = {};
+  ::fidl::InterfaceHandle<::test::protocolrequest::Child> c = {};
 };
 
-namespace fidl_test_protocolrequest {
+namespace test_protocolrequest {
 class ParentTakeChildRequest final
     : public ::fidl::internal::CodableBase<ParentTakeChildRequest> {
  private:
@@ -109,10 +108,10 @@ class ParentTakeChildRequest final
  public:
   ParentTakeChildRequest() = default;
   ParentTakeChildRequest(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>&& c)
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>&& c)
       : storage_({std::move(c)}) {}
   ParentTakeChildRequest(::fidl::internal::DesignatedInitializationProxy<
-                         ::fidl_test_protocolrequest::ParentTakeChildRequest>
+                         ::test_protocolrequest::ParentTakeChildRequest>
                              storage)
       : storage_(std::move(storage)) {}
   ~ParentTakeChildRequest() = default;
@@ -123,40 +122,39 @@ class ParentTakeChildRequest final
   ParentTakeChildRequest& operator=(const ParentTakeChildRequest&) noexcept =
       delete;
 
-  const ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c()
-      const {
+  const ::fidl::InterfaceHandle<::test::protocolrequest::Child>& c() const {
     return storage_.c;
   }
 
-  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c() {
+  ::fidl::InterfaceHandle<::test::protocolrequest::Child>& c() {
     return storage_.c;
   }
 
   ParentTakeChildRequest& set_c(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> _value) {
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> _value) {
     storage_.c = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_protocolrequest::ParentTakeChildRequest>;
+      ::test_protocolrequest::ParentTakeChildRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_protocolrequest::ParentTakeChildRequest>
+      ::test_protocolrequest::ParentTakeChildRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+    ::test_protocolrequest::ParentGetChildTopResponse>
     final {
  public:
-  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c = {};
+  ::fidl::InterfaceHandle<::test::protocolrequest::Child> c = {};
 };
 
-namespace fidl_test_protocolrequest {
+namespace test_protocolrequest {
 class ParentGetChildTopResponse final
     : public ::fidl::internal::CodableBase<ParentGetChildTopResponse> {
  private:
@@ -171,12 +169,11 @@ class ParentGetChildTopResponse final
  public:
   ParentGetChildTopResponse() = default;
   ParentGetChildTopResponse(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>&& c)
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>&& c)
       : storage_({std::move(c)}) {}
-  ParentGetChildTopResponse(
-      ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_protocolrequest::ParentGetChildTopResponse>
-          storage)
+  ParentGetChildTopResponse(::fidl::internal::DesignatedInitializationProxy<
+                            ::test_protocolrequest::ParentGetChildTopResponse>
+                                storage)
       : storage_(std::move(storage)) {}
   ~ParentGetChildTopResponse() = default;
   ParentGetChildTopResponse(ParentGetChildTopResponse&&) noexcept = default;
@@ -186,40 +183,39 @@ class ParentGetChildTopResponse final
   ParentGetChildTopResponse& operator=(
       const ParentGetChildTopResponse&) noexcept = delete;
 
-  const ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c()
-      const {
+  const ::fidl::InterfaceHandle<::test::protocolrequest::Child>& c() const {
     return storage_.c;
   }
 
-  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c() {
+  ::fidl::InterfaceHandle<::test::protocolrequest::Child>& c() {
     return storage_.c;
   }
 
   ParentGetChildTopResponse& set_c(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> _value) {
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> _value) {
     storage_.c = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_protocolrequest::ParentGetChildTopResponse>;
+      ::test_protocolrequest::ParentGetChildTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+      ::test_protocolrequest::ParentGetChildTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+    ::test_protocolrequest::ParentGetChildRequestTopResponse>
     final {
  public:
-  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r = {};
+  ::fidl::InterfaceRequest<::test::protocolrequest::Child> r = {};
 };
 
-namespace fidl_test_protocolrequest {
+namespace test_protocolrequest {
 class ParentGetChildRequestTopResponse final
     : public ::fidl::internal::CodableBase<ParentGetChildRequestTopResponse> {
  private:
@@ -234,11 +230,11 @@ class ParentGetChildRequestTopResponse final
  public:
   ParentGetChildRequestTopResponse() = default;
   ParentGetChildRequestTopResponse(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>&& r)
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>&& r)
       : storage_({std::move(r)}) {}
   ParentGetChildRequestTopResponse(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+          ::test_protocolrequest::ParentGetChildRequestTopResponse>
           storage)
       : storage_(std::move(storage)) {}
   ~ParentGetChildRequestTopResponse() = default;
@@ -251,62 +247,60 @@ class ParentGetChildRequestTopResponse final
   ParentGetChildRequestTopResponse& operator=(
       const ParentGetChildRequestTopResponse&) noexcept = delete;
 
-  const ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r()
-      const {
+  const ::fidl::InterfaceRequest<::test::protocolrequest::Child>& r() const {
     return storage_.r;
   }
 
-  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r() {
+  ::fidl::InterfaceRequest<::test::protocolrequest::Child>& r() {
     return storage_.r;
   }
 
   ParentGetChildRequestTopResponse& set_r(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> _value) {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> _value) {
     storage_.r = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>;
+      ::test_protocolrequest::ParentGetChildRequestTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+      ::test_protocolrequest::ParentGetChildRequestTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest
 namespace fidl {
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+    test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 template <>
-struct IsResource<::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+struct IsResource<::test_protocolrequest::ParentTakeChildRequestRequest>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+struct IsFidlType<::test_protocolrequest::ParentTakeChildRequestRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+    ::test_protocolrequest::ParentTakeChildRequestRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+      &test_protocolrequest_ParentTakeChildRequestRequestTable;
 };
 
 template <>
-struct CodingTraits<
-    ::fidl_test_protocolrequest::ParentTakeChildRequestRequest> {
+struct CodingTraits<::test_protocolrequest::ParentTakeChildRequestRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest* value,
+      ::test_protocolrequest::ParentTakeChildRequestRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -323,7 +317,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest* value,
+      ::test_protocolrequest::ParentTakeChildRequestRequest* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.r, offset + 0);
   }
@@ -331,34 +325,33 @@ struct CodingTraits<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestTable;
+extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
 template <>
-struct IsResource<::fidl_test_protocolrequest::ParentTakeChildRequest>
+struct IsResource<::test_protocolrequest::ParentTakeChildRequest>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_protocolrequest::ParentTakeChildRequest>
+struct IsFidlType<::test_protocolrequest::ParentTakeChildRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_protocolrequest::ParentTakeChildRequest>
+    ::test_protocolrequest::ParentTakeChildRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_protocolrequest_ParentTakeChildRequestTable;
+      &test_protocolrequest_ParentTakeChildRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_protocolrequest::ParentTakeChildRequest> {
+struct CodingTraits<::test_protocolrequest::ParentTakeChildRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_protocolrequest::ParentTakeChildRequest* value, size_t offset,
+      ::test_protocolrequest::ParentTakeChildRequest* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -373,7 +366,7 @@ struct CodingTraits<::fidl_test_protocolrequest::ParentTakeChildRequest> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_protocolrequest::ParentTakeChildRequest* value,
+                     ::test_protocolrequest::ParentTakeChildRequest* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.c, offset + 0);
   }
@@ -382,34 +375,33 @@ struct CodingTraits<::fidl_test_protocolrequest::ParentTakeChildRequest> {
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildTopResponseTable;
+    test_protocolrequest_ParentGetChildTopResponseTable;
 
 template <>
-struct IsResource<::fidl_test_protocolrequest::ParentGetChildTopResponse>
+struct IsResource<::test_protocolrequest::ParentGetChildTopResponse>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_protocolrequest::ParentGetChildTopResponse>
+struct IsFidlType<::test_protocolrequest::ParentGetChildTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+    ::test_protocolrequest::ParentGetChildTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_protocolrequest_ParentGetChildTopResponseTable;
+      &test_protocolrequest_ParentGetChildTopResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_protocolrequest::ParentGetChildTopResponse> {
+struct CodingTraits<::test_protocolrequest::ParentGetChildTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_protocolrequest::ParentGetChildTopResponse* value,
-      size_t offset,
+      ::test_protocolrequest::ParentGetChildTopResponse* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -423,10 +415,9 @@ struct CodingTraits<::fidl_test_protocolrequest::ParentGetChildTopResponse> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::fidl_test_protocolrequest::ParentGetChildTopResponse* value,
-      size_t offset) {
+  static void Decode(DecoderImpl* decoder,
+                     ::test_protocolrequest::ParentGetChildTopResponse* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.c, offset + 0);
   }
 };
@@ -434,34 +425,33 @@ struct CodingTraits<::fidl_test_protocolrequest::ParentGetChildTopResponse> {
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestTopResponseTable;
+    test_protocolrequest_ParentGetChildRequestTopResponseTable;
 
 template <>
-struct IsResource<::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+struct IsResource<::test_protocolrequest::ParentGetChildRequestTopResponse>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+struct IsFidlType<::test_protocolrequest::ParentGetChildRequestTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+    ::test_protocolrequest::ParentGetChildRequestTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_protocolrequest_ParentGetChildRequestTopResponseTable;
+      &test_protocolrequest_ParentGetChildRequestTopResponseTable;
 };
 
 template <>
-struct CodingTraits<
-    ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse> {
+struct CodingTraits<::test_protocolrequest::ParentGetChildRequestTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse* value,
+      ::test_protocolrequest::ParentGetChildRequestTopResponse* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -478,7 +468,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse* value,
+      ::test_protocolrequest::ParentGetChildRequestTopResponse* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.r, offset + 0);
   }
@@ -489,142 +479,138 @@ struct CodingTraits<
 }  // namespace fidl
 
 template <>
-class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild> final
+class ::fidl::Response<::test_protocolrequest::Parent::GetChild> final
     : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>> {
+          ::fidl::Response<::test_protocolrequest::Parent::GetChild>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::fidl_test_protocolrequest::ParentGetChildTopResponse payload)
+  Response(::test_protocolrequest::ParentGetChildTopResponse payload)
       : payload_(std::move(payload)) {}
   Response(const Response&) noexcept = delete;
   Response& operator=(const Response&) noexcept = delete;
-  ::fidl_test_protocolrequest::ParentGetChildTopResponse* operator->() {
+  ::test_protocolrequest::ParentGetChildTopResponse* operator->() {
     return &payload_;
   }
-  const ::fidl_test_protocolrequest::ParentGetChildTopResponse* operator->()
-      const {
+  const ::test_protocolrequest::ParentGetChildTopResponse* operator->() const {
     return &payload_;
   }
-  ::fidl_test_protocolrequest::ParentGetChildTopResponse& operator*() {
+  ::test_protocolrequest::ParentGetChildTopResponse& operator*() {
     return payload_;
   }
-  const ::fidl_test_protocolrequest::ParentGetChildTopResponse& operator*()
-      const {
+  const ::test_protocolrequest::ParentGetChildTopResponse& operator*() const {
     return payload_;
   }
 
  private:
-  ::fidl_test_protocolrequest::ParentGetChildTopResponse payload_;
+  ::test_protocolrequest::ParentGetChildTopResponse payload_;
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>>
+    ::fidl::Response<::test_protocolrequest::Parent::GetChild>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_protocolrequest::ParentGetChildTopResponse;
+  using Payload = ::test_protocolrequest::ParentGetChildTopResponse;
 };
 namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_protocolrequest::Parent::GetChild>
+    ::test_protocolrequest::Parent::GetChild>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
       ::fitx::result<
           ::fidl::Error,
-          ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>>&)>;
+          ::fidl::Response<::test_protocolrequest::Parent::GetChild>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>&)>;
+      ::fidl::Response<::test_protocolrequest::Parent::GetChild>&)>;
 };
 
 template <>
-class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::fidl_test_protocolrequest::Parent::GetChildRequest>> {
+class ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(
-      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse payload)
+  Response(::test_protocolrequest::ParentGetChildRequestTopResponse payload)
       : payload_(std::move(payload)) {}
   Response(const Response&) noexcept = delete;
   Response& operator=(const Response&) noexcept = delete;
-  ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse* operator->() {
+  ::test_protocolrequest::ParentGetChildRequestTopResponse* operator->() {
     return &payload_;
   }
-  const ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse*
-  operator->() const {
+  const ::test_protocolrequest::ParentGetChildRequestTopResponse* operator->()
+      const {
     return &payload_;
   }
-  ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse& operator*() {
+  ::test_protocolrequest::ParentGetChildRequestTopResponse& operator*() {
     return payload_;
   }
-  const ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse&
-  operator*() const {
+  const ::test_protocolrequest::ParentGetChildRequestTopResponse& operator*()
+      const {
     return payload_;
   }
 
  private:
-  ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse payload_;
+  ::test_protocolrequest::ParentGetChildRequestTopResponse payload_;
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>>
+    ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse;
+  using Payload = ::test_protocolrequest::ParentGetChildRequestTopResponse;
 };
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_protocolrequest::Parent::GetChildRequest>
+    ::test_protocolrequest::Parent::GetChildRequest>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
-      ::fitx::result<::fidl::Error,
-                     ::fidl::Response<::fidl_test_protocolrequest::Parent::
-                                          GetChildRequest>>&)>;
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>&)>;
+      ::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>&)>;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Parent>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final
+    : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   void GetChild(
-      ::fidl::ClientCallback<::fidl_test_protocolrequest::Parent::GetChild>&&
+      ::fidl::ClientCallback<::test_protocolrequest::Parent::GetChild>&&
           _callback) const;
 
   void GetChild(
+      ::fidl::ClientResponseCallback<::test_protocolrequest::Parent::GetChild>&&
+          _callback) const;
+
+  void GetChildRequest(
+      ::fidl::ClientCallback<::test_protocolrequest::Parent::GetChildRequest>&&
+          _callback) const;
+
+  void GetChildRequest(
       ::fidl::ClientResponseCallback<
-          ::fidl_test_protocolrequest::Parent::GetChild>&& _callback) const;
-
-  void GetChildRequest(::fidl::ClientCallback<
-                       ::fidl_test_protocolrequest::Parent::GetChildRequest>&&
-                           _callback) const;
-
-  void GetChildRequest(::fidl::ClientResponseCallback<
-                       ::fidl_test_protocolrequest::Parent::GetChildRequest>&&
-                           _callback) const;
+          ::test_protocolrequest::Parent::GetChildRequest>&& _callback) const;
 
   ::fitx::result<::fidl::Error> TakeChild(
-      ::fidl_test_protocolrequest::ParentTakeChildRequest&& payload) const;
+      ::test_protocolrequest::ParentTakeChildRequest&& payload) const;
 
   ::fitx::result<::fidl::Error> TakeChildRequest(
-      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest&& payload)
-      const;
+      ::test_protocolrequest::ParentTakeChildRequestRequest&& payload) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -632,8 +618,8 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Child>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final
+    : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };

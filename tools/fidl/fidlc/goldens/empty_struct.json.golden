@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.emptystruct",
+  "name": "test.emptystruct",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.emptystruct/EmptyProtocol",
+      "name": "test.emptystruct/EmptyProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 5,
@@ -18,7 +18,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 2183815705502904104,
+          "ordinal": 1378773277029173000,
           "name": "Send",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
@@ -29,7 +29,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/EmptyProtocolSendRequest",
+            "identifier": "test.emptystruct/EmptyProtocolSendRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -55,7 +55,7 @@
           "has_error": false
         },
         {
-          "ordinal": 5025214662316626400,
+          "ordinal": 2301564782476583487,
           "name": "Receive",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
@@ -67,7 +67,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
+            "identifier": "test.emptystruct/EmptyProtocolReceiveRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -92,7 +92,7 @@
           "has_error": false
         },
         {
-          "ordinal": 6253929606062814577,
+          "ordinal": 534401212734647530,
           "name": "SendAndReceive",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
@@ -103,7 +103,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
+            "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -127,7 +127,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+            "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -157,7 +157,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.emptystruct/EmptyProtocolSendRequest",
+      "name": "test.emptystruct/EmptyProtocolSendRequest",
       "naming_context": [
         "EmptyProtocol",
         "Send",
@@ -174,7 +174,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/Empty",
+            "identifier": "test.emptystruct/Empty",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -233,7 +233,7 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
+      "name": "test.emptystruct/EmptyProtocolReceiveRequest",
       "naming_context": [
         "EmptyProtocol",
         "Receive",
@@ -250,7 +250,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/Empty",
+            "identifier": "test.emptystruct/Empty",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -309,7 +309,7 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
+      "name": "test.emptystruct/EmptyProtocolSendAndReceiveRequest",
       "naming_context": [
         "EmptyProtocol",
         "SendAndReceive",
@@ -326,7 +326,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/Empty",
+            "identifier": "test.emptystruct/Empty",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -385,7 +385,7 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+      "name": "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
       "naming_context": [
         "EmptyProtocol",
         "SendAndReceive",
@@ -402,7 +402,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.emptystruct/Empty",
+            "identifier": "test.emptystruct/Empty",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -461,7 +461,7 @@
       }
     },
     {
-      "name": "fidl.test.emptystruct/Empty",
+      "name": "test.emptystruct/Empty",
       "naming_context": [
         "Empty"
       ],
@@ -499,19 +499,19 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.emptystruct/Empty",
-    "fidl.test.emptystruct/EmptyProtocolSendRequest",
-    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
-    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest",
-    "fidl.test.emptystruct/EmptyProtocolReceiveRequest",
-    "fidl.test.emptystruct/EmptyProtocol"
+    "test.emptystruct/Empty",
+    "test.emptystruct/EmptyProtocolSendRequest",
+    "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+    "test.emptystruct/EmptyProtocolSendAndReceiveRequest",
+    "test.emptystruct/EmptyProtocolReceiveRequest",
+    "test.emptystruct/EmptyProtocol"
   ],
   "declarations": {
-    "fidl.test.emptystruct/EmptyProtocol": "interface",
-    "fidl.test.emptystruct/EmptyProtocolSendRequest": "struct",
-    "fidl.test.emptystruct/EmptyProtocolReceiveRequest": "struct",
-    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveRequest": "struct",
-    "fidl.test.emptystruct/EmptyProtocolSendAndReceiveTopResponse": "struct",
-    "fidl.test.emptystruct/Empty": "struct"
+    "test.emptystruct/EmptyProtocol": "interface",
+    "test.emptystruct/EmptyProtocolSendRequest": "struct",
+    "test.emptystruct/EmptyProtocolReceiveRequest": "struct",
+    "test.emptystruct/EmptyProtocolSendAndReceiveRequest": "struct",
+    "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse": "struct",
+    "test.emptystruct/Empty": "struct"
   }
 }

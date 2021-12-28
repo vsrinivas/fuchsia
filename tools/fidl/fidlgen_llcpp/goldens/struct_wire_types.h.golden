@@ -18,18 +18,18 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.struct/cpp/markers.h>
+#include <fidl/test.struct/cpp/markers.h>
 
-namespace fidl_test_struct {
+namespace test_struct {
 namespace wire {
 struct Simple;
 
 struct BasicStruct;
 
-extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
+extern "C" const fidl_type_t test_struct_SimpleTable;
 
 struct Simple {
-  static constexpr const fidl_type_t* Type = &fidl_test_struct_SimpleTable;
+  static constexpr const fidl_type_t* Type = &test_struct_SimpleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 2;
   static constexpr uint32_t PrimarySizeV1 = 2;
@@ -46,10 +46,10 @@ struct Simple {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
+extern "C" const fidl_type_t test_struct_BasicStructTable;
 
 struct BasicStruct {
-  static constexpr const fidl_type_t* Type = &fidl_test_struct_BasicStructTable;
+  static constexpr const fidl_type_t* Type = &test_struct_BasicStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -67,29 +67,27 @@ struct BasicStruct {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_struct
+}  // namespace test_struct
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_struct::wire::Simple> : public std::true_type {};
+struct IsFidlType<::test_struct::wire::Simple> : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_struct::wire::Simple> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_struct::wire::Simple>);
-static_assert(offsetof(::fidl_test_struct::wire::Simple, f1) == 0);
-static_assert(offsetof(::fidl_test_struct::wire::Simple, f2) == 1);
-static_assert(sizeof(::fidl_test_struct::wire::Simple) ==
-              ::fidl_test_struct::wire::Simple::PrimarySize);
+struct IsStruct<::test_struct::wire::Simple> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_struct::wire::Simple>);
+static_assert(offsetof(::test_struct::wire::Simple, f1) == 0);
+static_assert(offsetof(::test_struct::wire::Simple, f2) == 1);
+static_assert(sizeof(::test_struct::wire::Simple) ==
+              ::test_struct::wire::Simple::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_struct::wire::BasicStruct>
-    : public std::true_type {};
+struct IsFidlType<::test_struct::wire::BasicStruct> : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_struct::wire::BasicStruct> : public std::true_type {
-};
-static_assert(std::is_standard_layout_v<::fidl_test_struct::wire::BasicStruct>);
-static_assert(offsetof(::fidl_test_struct::wire::BasicStruct, x) == 0);
-static_assert(offsetof(::fidl_test_struct::wire::BasicStruct, y) == 8);
-static_assert(sizeof(::fidl_test_struct::wire::BasicStruct) ==
-              ::fidl_test_struct::wire::BasicStruct::PrimarySize);
+struct IsStruct<::test_struct::wire::BasicStruct> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_struct::wire::BasicStruct>);
+static_assert(offsetof(::test_struct::wire::BasicStruct, x) == 0);
+static_assert(offsetof(::test_struct::wire::BasicStruct, y) == 8);
+static_assert(sizeof(::test_struct::wire::BasicStruct) ==
+              ::test_struct::wire::BasicStruct::PrimarySize);
 
 }  // namespace fidl

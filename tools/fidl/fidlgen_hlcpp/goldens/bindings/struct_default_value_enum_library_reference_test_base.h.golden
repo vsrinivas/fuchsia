@@ -2,5 +2,5 @@
 
 #pragma once
 
-#include <dependent/cpp/fidl.h>
-#include <fidl/test/structdefaultvalueenumlibraryreference/cpp/fidl.h>
+#include <test/dependent/cpp/fidl.h>
+#include <test/structdefaultvalueenumlibraryreference/cpp/fidl.h>

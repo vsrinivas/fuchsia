@@ -96,7 +96,7 @@ func ExampleFooResultWithErr(err uint32) ExampleFooResult {
 }
 
 const (
-	ExampleFooOrdinal uint64 = 0x57e41804562237ae
+	ExampleFooOrdinal uint64 = 0xf5f1179dc411e44
 )
 
 type ExampleWithCtxInterface _bindings.ChannelProxy

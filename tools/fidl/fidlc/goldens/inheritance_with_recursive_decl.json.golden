@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.inheritancewithrecursivedecl",
+  "name": "test.inheritancewithrecursivedecl",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/Parent",
+      "name": "test.inheritancewithrecursivedecl/Parent",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 3,
@@ -18,7 +18,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 3051519745671742363,
+          "ordinal": 3973163707930985819,
           "name": "First",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
@@ -29,7 +29,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
+            "identifier": "test.inheritancewithrecursivedecl/ParentFirstRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -57,7 +57,7 @@
       ]
     },
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/Child",
+      "name": "test.inheritancewithrecursivedecl/Child",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
         "line": 9,
@@ -66,7 +66,7 @@
       },
       "composed_protocols": [
         {
-          "name": "fidl.test.inheritancewithrecursivedecl/Parent",
+          "name": "test.inheritancewithrecursivedecl/Parent",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 10,
@@ -77,7 +77,7 @@
       ],
       "methods": [
         {
-          "ordinal": 3051519745671742363,
+          "ordinal": 3973163707930985819,
           "name": "First",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
@@ -88,7 +88,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
+            "identifier": "test.inheritancewithrecursivedecl/ParentFirstRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -114,7 +114,7 @@
           "has_error": false
         },
         {
-          "ordinal": 489667253787160198,
+          "ordinal": 2545123272820824165,
           "name": "Second",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
@@ -125,7 +125,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
+            "identifier": "test.inheritancewithrecursivedecl/ChildSecondRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -156,7 +156,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
+      "name": "test.inheritancewithrecursivedecl/ParentFirstRequest",
       "naming_context": [
         "Parent",
         "First",
@@ -173,7 +173,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
+            "subtype": "test.inheritancewithrecursivedecl/Parent",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -232,7 +232,7 @@
       }
     },
     {
-      "name": "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
+      "name": "test.inheritancewithrecursivedecl/ChildSecondRequest",
       "naming_context": [
         "Child",
         "Second",
@@ -249,7 +249,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
+            "subtype": "test.inheritancewithrecursivedecl/Parent",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -313,15 +313,15 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
-    "fidl.test.inheritancewithrecursivedecl/Parent",
-    "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest",
-    "fidl.test.inheritancewithrecursivedecl/Child"
+    "test.inheritancewithrecursivedecl/ParentFirstRequest",
+    "test.inheritancewithrecursivedecl/Parent",
+    "test.inheritancewithrecursivedecl/ChildSecondRequest",
+    "test.inheritancewithrecursivedecl/Child"
   ],
   "declarations": {
-    "fidl.test.inheritancewithrecursivedecl/Parent": "interface",
-    "fidl.test.inheritancewithrecursivedecl/Child": "interface",
-    "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest": "struct",
-    "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest": "struct"
+    "test.inheritancewithrecursivedecl/Parent": "interface",
+    "test.inheritancewithrecursivedecl/Child": "interface",
+    "test.inheritancewithrecursivedecl/ParentFirstRequest": "struct",
+    "test.inheritancewithrecursivedecl/ChildSecondRequest": "struct"
   }
 }

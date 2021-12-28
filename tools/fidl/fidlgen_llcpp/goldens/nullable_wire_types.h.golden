@@ -20,10 +20,10 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.nullable/cpp/markers.h>
+#include <fidl/test.nullable/cpp/markers.h>
 #include <fidl/zx/cpp/wire_types.h>
 
-namespace fidl_test_nullable {
+namespace test_nullable {
 namespace wire {
 struct StructWithNullableVector;
 
@@ -45,11 +45,11 @@ class SimpleUnion;
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableRequestTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableRequestTable;
 
 struct StructWithNullableRequest {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableRequestTable;
+      &test_nullable_StructWithNullableRequestTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -57,7 +57,7 @@ struct StructWithNullableRequest {
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl::ServerEnd<::fidl_test_nullable::SimpleProtocol> val = {};
+  ::fidl::ServerEnd<::test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
 
@@ -69,11 +69,11 @@ struct StructWithNullableRequest {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableProtocolTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableProtocolTable;
 
 struct StructWithNullableProtocol {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableProtocolTable;
+      &test_nullable_StructWithNullableProtocolTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -81,7 +81,7 @@ struct StructWithNullableProtocol {
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl::ClientEnd<::fidl_test_nullable::SimpleProtocol> val = {};
+  ::fidl::ClientEnd<::test_nullable::SimpleProtocol> val = {};
 
   void _CloseHandles();
 
@@ -93,11 +93,11 @@ struct StructWithNullableProtocol {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableHandleTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableHandleTable;
 
 struct StructWithNullableHandle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableHandleTable;
+      &test_nullable_StructWithNullableHandleTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -115,11 +115,10 @@ struct StructWithNullableHandle {
 };
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_nullable_Int32WrapperTable;
+extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
 
 struct Int32Wrapper {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_Int32WrapperTable;
+  static constexpr const fidl_type_t* Type = &test_nullable_Int32WrapperTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -134,12 +133,12 @@ struct Int32Wrapper {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_nullable_SimpleUnionTable;
+extern "C" const fidl_type_t test_nullable_SimpleUnionTable;
 
 class SimpleUnion {
  public:
   SimpleUnion()
-      : ordinal_(::fidl_test_nullable::wire::SimpleUnion::Ordinal::Invalid),
+      : ordinal_(::test_nullable::wire::SimpleUnion::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -154,12 +153,11 @@ class SimpleUnion {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_nullable::wire::SimpleUnion::Ordinal::Invalid;
+    return ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::Invalid;
   }
 
   bool is_a() const {
-    return ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
+    return ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kA;
   }
   static SimpleUnion WithA(int32_t val) {
     SimpleUnion result;
@@ -168,21 +166,21 @@ class SimpleUnion {
   }
 
   void set_a(int32_t elem) {
-    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
+    ordinal_ = ::test_nullable::wire::SimpleUnion::Ordinal::kA;
     envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   int32_t& mutable_a() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA);
+    ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kA);
     return envelope_.As<int32_t>().get_data();
   }
   const int32_t& a() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA);
+    ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kA);
     return envelope_.As<int32_t>().get_data();
   }
 
   bool is_b() const {
-    return ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
+    return ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB;
   }
   static SimpleUnion WithB(float val) {
     SimpleUnion result;
@@ -191,25 +189,24 @@ class SimpleUnion {
   }
 
   void set_b(float elem) {
-    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
+    ordinal_ = ::test_nullable::wire::SimpleUnion::Ordinal::kB;
     envelope_.As<float>().set_data(std::move(elem));
   }
 
   float& mutable_b() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB);
+    ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB);
     return envelope_.As<float>().get_data();
   }
   const float& b() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB);
+    ZX_ASSERT(ordinal_ == ::test_nullable::wire::SimpleUnion::Ordinal::kB);
     return envelope_.As<float>().get_data();
   }
-  ::fidl_test_nullable::wire::SimpleUnion::Tag which() const {
+  ::test_nullable::wire::SimpleUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_nullable::wire::SimpleUnion::Tag>(ordinal_);
+    return static_cast<::test_nullable::wire::SimpleUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_SimpleUnionTable;
+  static constexpr const fidl_type_t* Type = &test_nullable_SimpleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -229,16 +226,16 @@ class SimpleUnion {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_nullable::wire::SimpleUnion::Ordinal ordinal_;
+  ::test_nullable::wire::SimpleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableVectorTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableVectorTable;
 
 struct StructWithNullableVector {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableVectorTable;
+      &test_nullable_StructWithNullableVectorTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -253,11 +250,11 @@ struct StructWithNullableVector {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableUnionTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableUnionTable;
 
 struct StructWithNullableUnion {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableUnionTable;
+      &test_nullable_StructWithNullableUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -265,18 +262,18 @@ struct StructWithNullableUnion {
   static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl_test_nullable::wire::SimpleUnion val = {};
+  ::test_nullable::wire::SimpleUnion val = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStructTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableStructTable;
 
 struct StructWithNullableStruct {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableStructTable;
+      &test_nullable_StructWithNullableStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -284,18 +281,18 @@ struct StructWithNullableStruct {
   static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl::ObjectView<::fidl_test_nullable::wire::Int32Wrapper> val = {};
+  ::fidl::ObjectView<::test_nullable::wire::Int32Wrapper> val = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_nullable_StructWithNullableStringTable;
+extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 
 struct StructWithNullableString {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_nullable_StructWithNullableStringTable;
+      &test_nullable_StructWithNullableStringTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -311,140 +308,130 @@ struct StructWithNullableString {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_nullable
+}  // namespace test_nullable
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableVector>
+struct IsFidlType<::test_nullable::wire::StructWithNullableVector>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableVector>
+struct IsStruct<::test_nullable::wire::StructWithNullableVector>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableVector>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableVector,
-                       val) == 0);
 static_assert(
-    sizeof(::fidl_test_nullable::wire::StructWithNullableVector) ==
-    ::fidl_test_nullable::wire::StructWithNullableVector::PrimarySize);
+    std::is_standard_layout_v<::test_nullable::wire::StructWithNullableVector>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableVector, val) ==
+              0);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableVector) ==
+              ::test_nullable::wire::StructWithNullableVector::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableUnion>
+struct IsFidlType<::test_nullable::wire::StructWithNullableUnion>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableUnion>
+struct IsStruct<::test_nullable::wire::StructWithNullableUnion>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableUnion>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableUnion,
-                       val) == 0);
-static_assert(sizeof(::fidl_test_nullable::wire::StructWithNullableUnion) ==
-              ::fidl_test_nullable::wire::StructWithNullableUnion::PrimarySize);
+static_assert(
+    std::is_standard_layout_v<::test_nullable::wire::StructWithNullableUnion>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableUnion, val) ==
+              0);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableUnion) ==
+              ::test_nullable::wire::StructWithNullableUnion::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableStruct>
+struct IsFidlType<::test_nullable::wire::StructWithNullableStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableStruct>
+struct IsStruct<::test_nullable::wire::StructWithNullableStruct>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableStruct>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableStruct,
-                       val) == 0);
 static_assert(
-    sizeof(::fidl_test_nullable::wire::StructWithNullableStruct) ==
-    ::fidl_test_nullable::wire::StructWithNullableStruct::PrimarySize);
+    std::is_standard_layout_v<::test_nullable::wire::StructWithNullableStruct>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableStruct, val) ==
+              0);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableStruct) ==
+              ::test_nullable::wire::StructWithNullableStruct::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableString>
+struct IsFidlType<::test_nullable::wire::StructWithNullableString>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableString>
+struct IsStruct<::test_nullable::wire::StructWithNullableString>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableString>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableString,
-                       val) == 0);
 static_assert(
-    sizeof(::fidl_test_nullable::wire::StructWithNullableString) ==
-    ::fidl_test_nullable::wire::StructWithNullableString::PrimarySize);
+    std::is_standard_layout_v<::test_nullable::wire::StructWithNullableString>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableString, val) ==
+              0);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableString) ==
+              ::test_nullable::wire::StructWithNullableString::PrimarySize);
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::fidl_test_nullable::wire::StructWithNullableRequest>
+struct IsResource<::test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableRequest>
+struct IsFidlType<::test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableRequest>
+struct IsStruct<::test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableRequest>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableRequest,
-                       val) == 0);
-static_assert(
-    sizeof(::fidl_test_nullable::wire::StructWithNullableRequest) ==
-    ::fidl_test_nullable::wire::StructWithNullableRequest::PrimarySize);
+              ::test_nullable::wire::StructWithNullableRequest>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableRequest, val) ==
+              0);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableRequest) ==
+              ::test_nullable::wire::StructWithNullableRequest::PrimarySize);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::fidl_test_nullable::wire::StructWithNullableProtocol>
+struct IsResource<::test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableProtocol>
+struct IsFidlType<::test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableProtocol>
+struct IsStruct<::test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableProtocol>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableProtocol,
+              ::test_nullable::wire::StructWithNullableProtocol>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableProtocol,
                        val) == 0);
-static_assert(
-    sizeof(::fidl_test_nullable::wire::StructWithNullableProtocol) ==
-    ::fidl_test_nullable::wire::StructWithNullableProtocol::PrimarySize);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableProtocol) ==
+              ::test_nullable::wire::StructWithNullableProtocol::PrimarySize);
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::fidl_test_nullable::wire::StructWithNullableHandle>
+struct IsResource<::test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableHandle>
+struct IsFidlType<::test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::StructWithNullableHandle>
+struct IsStruct<::test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_nullable::wire::StructWithNullableHandle>);
-static_assert(offsetof(::fidl_test_nullable::wire::StructWithNullableHandle,
-                       val) == 0);
 static_assert(
-    sizeof(::fidl_test_nullable::wire::StructWithNullableHandle) ==
-    ::fidl_test_nullable::wire::StructWithNullableHandle::PrimarySize);
+    std::is_standard_layout_v<::test_nullable::wire::StructWithNullableHandle>);
+static_assert(offsetof(::test_nullable::wire::StructWithNullableHandle, val) ==
+              0);
+static_assert(sizeof(::test_nullable::wire::StructWithNullableHandle) ==
+              ::test_nullable::wire::StructWithNullableHandle::PrimarySize);
 #endif  // __Fuchsia__
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::Int32Wrapper>
-    : public std::true_type {};
+struct IsFidlType<::test_nullable::wire::Int32Wrapper> : public std::true_type {
+};
 template <>
-struct IsStruct<::fidl_test_nullable::wire::Int32Wrapper>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_nullable::wire::Int32Wrapper>);
-static_assert(offsetof(::fidl_test_nullable::wire::Int32Wrapper, val) == 0);
-static_assert(sizeof(::fidl_test_nullable::wire::Int32Wrapper) ==
-              ::fidl_test_nullable::wire::Int32Wrapper::PrimarySize);
+struct IsStruct<::test_nullable::wire::Int32Wrapper> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_nullable::wire::Int32Wrapper>);
+static_assert(offsetof(::test_nullable::wire::Int32Wrapper, val) == 0);
+static_assert(sizeof(::test_nullable::wire::Int32Wrapper) ==
+              ::test_nullable::wire::Int32Wrapper::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::SimpleUnion>
-    : public std::true_type {};
+struct IsFidlType<::test_nullable::wire::SimpleUnion> : public std::true_type {
+};
 template <>
-struct IsUnion<::fidl_test_nullable::wire::SimpleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_nullable::wire::SimpleUnion>);
+struct IsUnion<::test_nullable::wire::SimpleUnion> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_nullable::wire::SimpleUnion>);
 
 }  // namespace fidl

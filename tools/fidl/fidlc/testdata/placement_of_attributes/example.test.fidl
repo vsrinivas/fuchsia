@@ -1,7 +1,7 @@
-library fidl.test.placementofattributes;
+library test.placementofattributes;
 
 // TODO: Support placement of an attribute on using.
-using exampleusing;
+using test.exampleusing;
 
 @on_bits
 type ExampleBits = strict bits {
@@ -22,7 +22,7 @@ type ExampleEnum = strict enum {
 protocol ExampleProtocol {
     @on_method
     Method(struct {
-        arg exampleusing.Empty;
+        arg test.exampleusing.Empty;
     });
 };
 

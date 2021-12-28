@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <someotherlibrary/cpp/fidl.h>
+#include <test/someotherlibrary/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace typealiases {
 
@@ -20,8 +19,8 @@ enum class obj_type : uint32_t {
   CHANNEL = 4u,
 };
 
-inline zx_status_t Clone(::fidl::test::typealiases::obj_type value,
-                         ::fidl::test::typealiases::obj_type* result) {
+inline zx_status_t Clone(::test::typealiases::obj_type value,
+                         ::test::typealiases::obj_type* result) {
   *result = value;
   return ZX_OK;
 }
@@ -42,7 +41,7 @@ class ExampleOfUseOfAliases final {
 
   ::std::vector<::std::string> field_of_vec_of_strings_at_most_5{};
 
-  ::std::vector<::someotherlibrary::ReferenceMe>
+  ::std::vector<::test::someotherlibrary::ReferenceMe>
       field_of_vec_of_ref_me_at_most_5{};
 
   ::zx::channel field_of_channel{};
@@ -64,8 +63,8 @@ class ExampleOfUseOfAliases final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::typealiases::ExampleOfUseOfAliases& _value,
-    ::fidl::test::typealiases::ExampleOfUseOfAliases* _result) {
+    const ::test::typealiases::ExampleOfUseOfAliases& _value,
+    ::test::typealiases::ExampleOfUseOfAliases* _result) {
   return _value.Clone(_result);
 }
 
@@ -74,39 +73,38 @@ using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
 
 }  // namespace typealiases
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::typealiases::obj_type> {
+struct CodingTraits<::test::typealiases::obj_type> {
   static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::typealiases::obj_type);
+      sizeof(::test::typealiases::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::typealiases::obj_type);
+      sizeof(::test::typealiases::obj_type);
   static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::typealiases::obj_type);
+      sizeof(::test::typealiases::obj_type);
   static void Encode(
-      Encoder* encoder, ::fidl::test::typealiases::obj_type* value,
-      size_t offset,
+      Encoder* encoder, ::test::typealiases::obj_type* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::fidl::test::typealiases::obj_type* value,
+  static void Decode(Decoder* decoder, ::test::typealiases::obj_type* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::typealiases::obj_type>(underlying);
+    *value = static_cast<::test::typealiases::obj_type>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::typealiases::obj_type value,
-                         ::fidl::test::typealiases::obj_type* result) {
-  return ::fidl::test::typealiases::Clone(value, result);
+inline zx_status_t Clone(::test::typealiases::obj_type value,
+                         ::test::typealiases::obj_type* result) {
+  return ::test::typealiases::Clone(value, result);
 }
 template <>
-struct Equality<::fidl::test::typealiases::obj_type> {
-  bool operator()(const ::fidl::test::typealiases::obj_type& _lhs,
-                  const ::fidl::test::typealiases::obj_type& _rhs) const {
+struct Equality<::test::typealiases::obj_type> {
+  bool operator()(const ::test::typealiases::obj_type& _lhs,
+                  const ::test::typealiases::obj_type& _rhs) const {
     return _lhs == _rhs;
   }
 };
@@ -114,36 +112,35 @@ struct Equality<::fidl::test::typealiases::obj_type> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::typealiases::ExampleOfUseOfAliases>
-    : public EncodableCodingTraits<
-          ::fidl::test::typealiases::ExampleOfUseOfAliases, 88, 88> {};
+struct CodingTraits<::test::typealiases::ExampleOfUseOfAliases>
+    : public EncodableCodingTraits<::test::typealiases::ExampleOfUseOfAliases,
+                                   88, 88> {};
 
 template <>
-struct HasPadding<::fidl::test::typealiases::ExampleOfUseOfAliases>
+struct HasPadding<::test::typealiases::ExampleOfUseOfAliases>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::typealiases::ExampleOfUseOfAliases>
+struct IsMemcpyCompatible<::test::typealiases::ExampleOfUseOfAliases>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::typealiases::ExampleOfUseOfAliases>::value &&
-          IsMemcpyCompatible<
-              ::std::vector<::someotherlibrary::ReferenceMe>>::value &&
+          !HasPadding<::test::typealiases::ExampleOfUseOfAliases>::value &&
           IsMemcpyCompatible<::std::vector<::std::string>>::value &&
+          IsMemcpyCompatible<
+              ::std::vector<::test::someotherlibrary::ReferenceMe>>::value &&
           IsMemcpyCompatible<::zx::channel>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::typealiases::ExampleOfUseOfAliases& value,
-    ::fidl::test::typealiases::ExampleOfUseOfAliases* result) {
-  return ::fidl::test::typealiases::Clone(value, result);
+    const ::test::typealiases::ExampleOfUseOfAliases& value,
+    ::test::typealiases::ExampleOfUseOfAliases* result) {
+  return ::test::typealiases::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::typealiases::ExampleOfUseOfAliases> {
+struct Equality<::test::typealiases::ExampleOfUseOfAliases> {
   bool operator()(
-      const ::fidl::test::typealiases::ExampleOfUseOfAliases& _lhs,
-      const ::fidl::test::typealiases::ExampleOfUseOfAliases& _rhs) const {
+      const ::test::typealiases::ExampleOfUseOfAliases& _lhs,
+      const ::test::typealiases::ExampleOfUseOfAliases& _rhs) const {
     if (!::fidl::Equals(_lhs.field_of_u32, _rhs.field_of_u32)) {
       return false;
     }

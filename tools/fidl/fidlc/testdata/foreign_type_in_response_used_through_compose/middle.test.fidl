@@ -1,15 +1,9 @@
-library middle;
+library test.middle;
 
-using bottom;
+using test.bottom;
 
-// TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
-// single component library names.
-@bindings_denylist("cpp")
 protocol Middle {
-    GetFoo() -> (
-            // TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
-            // single component library names.
-            @bindings_denylist("cpp") struct {
-        foo bottom.Foo;
+    GetFoo() -> (struct {
+        foo test.bottom.Foo;
     });
 };

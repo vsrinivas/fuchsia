@@ -2,12 +2,11 @@
 
 #pragma once
 
-#include <fidl/test/union/cpp/fidl.h>
-namespace fidl {
+#include <test/union/cpp/fidl.h>
 namespace test {
 namespace union_ {
 namespace testing {
-class TestProtocol_TestBase : public ::fidl::test::union_::TestProtocol {
+class TestProtocol_TestBase : public ::test::union_::TestProtocol {
  public:
   virtual ~TestProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -24,4 +23,3 @@ class TestProtocol_TestBase : public ::fidl::test::union_::TestProtocol {
 }  // namespace testing
 }  // namespace union_
 }  // namespace test
-}  // namespace fidl

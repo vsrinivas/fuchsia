@@ -2,16 +2,16 @@
 
 #pragma once
 
-#include <fidl/fidl.test.anonymous/cpp/wire.h>
-#include <fidl/test/anonymous/cpp/natural_types.h>
+#include <fidl/test.anonymous/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/anonymous/cpp/natural_types.h>
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class TableData;
 
 class SomeProtocolSomeMethodRequest;
@@ -22,36 +22,36 @@ class SomeProtocol_SomeMethod_Response;
 
 class SomeProtocolSomeMethodTopResponse;
 
-using UnionMember = ::fidl::test::anonymous::UnionMember;
+using UnionMember = ::test::anonymous::UnionMember;
 
-using TableMember = ::fidl::test::anonymous::TableMember;
+using TableMember = ::test::anonymous::TableMember;
 
 using SomeProtocol_SomeMethod_Error =
-    ::fidl::test::anonymous::SomeProtocol_SomeMethod_Error;
+    ::test::anonymous::SomeProtocol_SomeMethod_Error;
 
-using Op = ::fidl::test::anonymous::Op;
+using Op = ::test::anonymous::Op;
 
-using Flags = ::fidl::test::anonymous::Flags;
+using Flags = ::test::anonymous::Flags;
 
-using FunctionApplication = ::fidl::test::anonymous::FunctionApplication;
+using FunctionApplication = ::test::anonymous::FunctionApplication;
 
-using Expression = ::fidl::test::anonymous::Expression;
+using Expression = ::test::anonymous::Expression;
 
-using BitsMember = ::fidl::test::anonymous::BitsMember;
+using BitsMember = ::test::anonymous::BitsMember;
 
 using SomeProtocol_SomeMethod_Result =
-    ::fidl::test::anonymous::SomeProtocol_SomeMethod_Result;
+    ::test::anonymous::SomeProtocol_SomeMethod_Result;
 
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_anonymous::TableData>
+    ::test_anonymous::TableData>
     final {
  public:
   uint8_t data = {};
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class TableData final : public ::fidl::internal::CodableBase<TableData> {
  private:
   friend ::fidl::internal::CodableBase<TableData>;
@@ -66,7 +66,7 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
   TableData() = default;
   TableData(uint8_t data) : storage_({data}) {}
   TableData(::fidl::internal::DesignatedInitializationProxy<
-            ::fidl_test_anonymous::TableData>
+            ::test_anonymous::TableData>
                 storage)
       : storage_(std::move(storage)) {}
   ~TableData() = default;
@@ -83,25 +83,24 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_anonymous::TableData>;
+  friend struct ::fidl::CodingTraits<::test_anonymous::TableData>;
 
-  ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_anonymous::TableData>
+  ::fidl::internal::DesignatedInitializationProxy<::test_anonymous::TableData>
       storage_ = {};
 };
 
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_anonymous::SomeProtocolSomeMethodRequest>
+    ::test_anonymous::SomeProtocolSomeMethodRequest>
     final {
  public:
-  ::fidl_test_anonymous::UnionMember union_member = {};
+  ::test_anonymous::UnionMember union_member = {};
 
-  ::fidl_test_anonymous::TableMember table_member = {};
+  ::test_anonymous::TableMember table_member = {};
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class SomeProtocolSomeMethodRequest final
     : public ::fidl::internal::CodableBase<SomeProtocolSomeMethodRequest> {
  private:
@@ -115,13 +114,12 @@ class SomeProtocolSomeMethodRequest final
 
  public:
   SomeProtocolSomeMethodRequest() = default;
-  SomeProtocolSomeMethodRequest(::fidl_test_anonymous::UnionMember union_member,
-                                ::fidl_test_anonymous::TableMember table_member)
+  SomeProtocolSomeMethodRequest(::test_anonymous::UnionMember union_member,
+                                ::test_anonymous::TableMember table_member)
       : storage_({std::move(union_member), std::move(table_member)}) {}
-  SomeProtocolSomeMethodRequest(
-      ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_anonymous::SomeProtocolSomeMethodRequest>
-          storage)
+  SomeProtocolSomeMethodRequest(::fidl::internal::DesignatedInitializationProxy<
+                                ::test_anonymous::SomeProtocolSomeMethodRequest>
+                                    storage)
       : storage_(std::move(storage)) {}
   ~SomeProtocolSomeMethodRequest() = default;
   SomeProtocolSomeMethodRequest(SomeProtocolSomeMethodRequest&&) noexcept =
@@ -129,57 +127,57 @@ class SomeProtocolSomeMethodRequest final
   SomeProtocolSomeMethodRequest& operator=(
       SomeProtocolSomeMethodRequest&&) noexcept = default;
 
-  const ::fidl_test_anonymous::UnionMember& union_member() const {
+  const ::test_anonymous::UnionMember& union_member() const {
     return storage_.union_member;
   }
 
-  ::fidl_test_anonymous::UnionMember& union_member() {
+  ::test_anonymous::UnionMember& union_member() {
     return storage_.union_member;
   }
 
   SomeProtocolSomeMethodRequest& set_union_member(
-      ::fidl_test_anonymous::UnionMember _value) {
+      ::test_anonymous::UnionMember _value) {
     storage_.union_member = std::move(_value);
     return *this;
   }
 
-  const ::fidl_test_anonymous::TableMember& table_member() const {
+  const ::test_anonymous::TableMember& table_member() const {
     return storage_.table_member;
   }
 
-  ::fidl_test_anonymous::TableMember& table_member() {
+  ::test_anonymous::TableMember& table_member() {
     return storage_.table_member;
   }
 
   SomeProtocolSomeMethodRequest& set_table_member(
-      ::fidl_test_anonymous::TableMember _value) {
+      ::test_anonymous::TableMember _value) {
     storage_.table_member = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest>;
+      ::test_anonymous::SomeProtocolSomeMethodRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest>
+      ::test_anonymous::SomeProtocolSomeMethodRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_anonymous::OverrideTest>
+    ::test_anonymous::OverrideTest>
     final {
  public:
-  ::fidl_test_anonymous::Op op = {};
+  ::test_anonymous::Op op = {};
 
-  ::std::unique_ptr<::fidl_test_anonymous::Expression> left = {};
+  ::std::unique_ptr<::test_anonymous::Expression> left = {};
 
-  ::std::unique_ptr<::fidl_test_anonymous::Expression> right = {};
+  ::std::unique_ptr<::test_anonymous::Expression> right = {};
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
  private:
   friend ::fidl::internal::CodableBase<OverrideTest>;
@@ -192,73 +190,73 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
 
  public:
   OverrideTest() = default;
-  OverrideTest(::fidl_test_anonymous::Op op,
-               ::std::unique_ptr<::fidl_test_anonymous::Expression> left,
-               ::std::unique_ptr<::fidl_test_anonymous::Expression> right)
+  OverrideTest(::test_anonymous::Op op,
+               ::std::unique_ptr<::test_anonymous::Expression> left,
+               ::std::unique_ptr<::test_anonymous::Expression> right)
       : storage_({op, std::move(left), std::move(right)}) {}
   OverrideTest(::fidl::internal::DesignatedInitializationProxy<
-               ::fidl_test_anonymous::OverrideTest>
+               ::test_anonymous::OverrideTest>
                    storage)
       : storage_(std::move(storage)) {}
   ~OverrideTest() = default;
   OverrideTest(OverrideTest&&) noexcept = default;
   OverrideTest& operator=(OverrideTest&&) noexcept = default;
 
-  const ::fidl_test_anonymous::Op& op() const { return storage_.op; }
+  const ::test_anonymous::Op& op() const { return storage_.op; }
 
-  ::fidl_test_anonymous::Op& op() { return storage_.op; }
+  ::test_anonymous::Op& op() { return storage_.op; }
 
-  OverrideTest& set_op(::fidl_test_anonymous::Op _value) {
+  OverrideTest& set_op(::test_anonymous::Op _value) {
     storage_.op = std::move(_value);
     return *this;
   }
 
-  const ::std::unique_ptr<::fidl_test_anonymous::Expression>& left() const {
+  const ::std::unique_ptr<::test_anonymous::Expression>& left() const {
     return storage_.left;
   }
 
-  ::std::unique_ptr<::fidl_test_anonymous::Expression>& left() {
+  ::std::unique_ptr<::test_anonymous::Expression>& left() {
     return storage_.left;
   }
 
   OverrideTest& set_left(
-      ::std::unique_ptr<::fidl_test_anonymous::Expression> _value) {
+      ::std::unique_ptr<::test_anonymous::Expression> _value) {
     storage_.left = std::move(_value);
     return *this;
   }
 
-  const ::std::unique_ptr<::fidl_test_anonymous::Expression>& right() const {
+  const ::std::unique_ptr<::test_anonymous::Expression>& right() const {
     return storage_.right;
   }
 
-  ::std::unique_ptr<::fidl_test_anonymous::Expression>& right() {
+  ::std::unique_ptr<::test_anonymous::Expression>& right() {
     return storage_.right;
   }
 
   OverrideTest& set_right(
-      ::std::unique_ptr<::fidl_test_anonymous::Expression> _value) {
+      ::std::unique_ptr<::test_anonymous::Expression> _value) {
     storage_.right = std::move(_value);
     return *this;
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_anonymous::OverrideTest>;
+  friend struct ::fidl::CodingTraits<::test_anonymous::OverrideTest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_anonymous::OverrideTest>
+      ::test_anonymous::OverrideTest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>
+    ::test_anonymous::SomeProtocol_SomeMethod_Response>
     final {
  public:
-  ::fidl_test_anonymous::BitsMember bits_member = {};
+  ::test_anonymous::BitsMember bits_member = {};
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class SomeProtocol_SomeMethod_Response final
     : public ::fidl::internal::CodableBase<SomeProtocol_SomeMethod_Response> {
  private:
@@ -272,12 +270,11 @@ class SomeProtocol_SomeMethod_Response final
 
  public:
   SomeProtocol_SomeMethod_Response() = default;
-  SomeProtocol_SomeMethod_Response(
-      ::fidl_test_anonymous::BitsMember bits_member)
+  SomeProtocol_SomeMethod_Response(::test_anonymous::BitsMember bits_member)
       : storage_({bits_member}) {}
   SomeProtocol_SomeMethod_Response(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>
+          ::test_anonymous::SomeProtocol_SomeMethod_Response>
           storage)
       : storage_(std::move(storage)) {}
   ~SomeProtocol_SomeMethod_Response() = default;
@@ -286,39 +283,37 @@ class SomeProtocol_SomeMethod_Response final
   SomeProtocol_SomeMethod_Response& operator=(
       SomeProtocol_SomeMethod_Response&&) noexcept = default;
 
-  const ::fidl_test_anonymous::BitsMember& bits_member() const {
+  const ::test_anonymous::BitsMember& bits_member() const {
     return storage_.bits_member;
   }
 
-  ::fidl_test_anonymous::BitsMember& bits_member() {
-    return storage_.bits_member;
-  }
+  ::test_anonymous::BitsMember& bits_member() { return storage_.bits_member; }
 
   SomeProtocol_SomeMethod_Response& set_bits_member(
-      ::fidl_test_anonymous::BitsMember _value) {
+      ::test_anonymous::BitsMember _value) {
     storage_.bits_member = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>;
+      ::test_anonymous::SomeProtocol_SomeMethod_Response>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>
+      ::test_anonymous::SomeProtocol_SomeMethod_Response>
       storage_ = {};
 };
 
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse>
+    ::test_anonymous::SomeProtocolSomeMethodTopResponse>
     final {
  public:
-  ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result result = {};
+  ::test_anonymous::SomeProtocol_SomeMethod_Result result = {};
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class SomeProtocolSomeMethodTopResponse final
     : public ::fidl::internal::CodableBase<SomeProtocolSomeMethodTopResponse> {
  private:
@@ -333,11 +328,11 @@ class SomeProtocolSomeMethodTopResponse final
  public:
   SomeProtocolSomeMethodTopResponse() = default;
   SomeProtocolSomeMethodTopResponse(
-      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result result)
+      ::test_anonymous::SomeProtocol_SomeMethod_Result result)
       : storage_({std::move(result)}) {}
   SomeProtocolSomeMethodTopResponse(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse>
+          ::test_anonymous::SomeProtocolSomeMethodTopResponse>
           storage)
       : storage_(std::move(storage)) {}
   ~SomeProtocolSomeMethodTopResponse() = default;
@@ -346,53 +341,52 @@ class SomeProtocolSomeMethodTopResponse final
   SomeProtocolSomeMethodTopResponse& operator=(
       SomeProtocolSomeMethodTopResponse&&) noexcept = default;
 
-  const ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result& result() const {
+  const ::test_anonymous::SomeProtocol_SomeMethod_Result& result() const {
     return storage_.result;
   }
 
-  ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result& result() {
+  ::test_anonymous::SomeProtocol_SomeMethod_Result& result() {
     return storage_.result;
   }
 
   SomeProtocolSomeMethodTopResponse& set_result(
-      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result _value) {
+      ::test_anonymous::SomeProtocol_SomeMethod_Result _value) {
     storage_.result = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse>;
+      ::test_anonymous::SomeProtocolSomeMethodTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse>
+      ::test_anonymous::SomeProtocolSomeMethodTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_anonymous_TableDataTable;
+extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::TableData> : public std::true_type {};
+struct IsFidlType<::test_anonymous::TableData> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_anonymous::TableData> final {
+struct ::fidl::internal::TypeTraits<::test_anonymous::TableData> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_anonymous_TableDataTable;
+      &test_anonymous_TableDataTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_anonymous::TableData> {
+struct CodingTraits<::test_anonymous::TableData> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_anonymous::TableData* value,
-      size_t offset,
+      EncoderImpl* encoder, ::test_anonymous::TableData* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -402,40 +396,38 @@ struct CodingTraits<::fidl_test_anonymous::TableData> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_anonymous::TableData* value, size_t offset) {
+  static void Decode(DecoderImpl* decoder, ::test_anonymous::TableData* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.data, offset + 0);
   }
 };
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::SomeProtocolSomeMethodRequest>
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_anonymous::SomeProtocolSomeMethodRequest>
+    ::test_anonymous::SomeProtocolSomeMethodRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_anonymous_SomeProtocolSomeMethodRequestTable;
+      &test_anonymous_SomeProtocolSomeMethodRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodRequest> {
+struct CodingTraits<::test_anonymous::SomeProtocolSomeMethodRequest> {
   static constexpr size_t inline_size_v1_no_ee = 40;
   static constexpr size_t inline_size_v2 = 32;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest* value,
-      size_t offset,
+      ::test_anonymous::SomeProtocolSomeMethodRequest* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -451,10 +443,9 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodRequest> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest* value,
-      size_t offset) {
+  static void Decode(DecoderImpl* decoder,
+                     ::test_anonymous::SomeProtocolSomeMethodRequest* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.union_member, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.table_member, offset + 16);
   }
@@ -462,27 +453,26 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodRequest> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_anonymous_OverrideTestTable;
+extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::OverrideTest> : public std::true_type {
-};
+struct IsFidlType<::test_anonymous::OverrideTest> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_anonymous::OverrideTest> final {
+struct ::fidl::internal::TypeTraits<::test_anonymous::OverrideTest> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_anonymous_OverrideTestTable;
+      &test_anonymous_OverrideTestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_anonymous::OverrideTest> {
+struct CodingTraits<::test_anonymous::OverrideTest> {
   static constexpr size_t inline_size_v1_no_ee = 56;
   static constexpr size_t inline_size_v2 = 40;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_anonymous::OverrideTest* value,
+      EncoderImpl* encoder, ::test_anonymous::OverrideTest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -502,8 +492,7 @@ struct CodingTraits<::fidl_test_anonymous::OverrideTest> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_anonymous::OverrideTest* value,
-                     size_t offset) {
+                     ::test_anonymous::OverrideTest* value, size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.op, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.left, offset + 8);
     ::fidl::Decode(decoder, &value->storage_.right, offset + 24);
@@ -513,31 +502,30 @@ struct CodingTraits<::fidl_test_anonymous::OverrideTest> {
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+    test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>
+struct IsFidlType<::test_anonymous::SomeProtocol_SomeMethod_Response>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>
+    ::test_anonymous::SomeProtocol_SomeMethod_Response>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+      &test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_anonymous::SomeProtocol_SomeMethod_Response> {
+struct CodingTraits<::test_anonymous::SomeProtocol_SomeMethod_Response> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response* value,
-      size_t offset,
+      ::test_anonymous::SomeProtocol_SomeMethod_Response* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -548,10 +536,9 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocol_SomeMethod_Response> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response* value,
-      size_t offset) {
+  static void Decode(DecoderImpl* decoder,
+                     ::test_anonymous::SomeProtocol_SomeMethod_Response* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.bits_member, offset + 0);
   }
 };
@@ -559,31 +546,30 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocol_SomeMethod_Response> {
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+    test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse>
+struct IsFidlType<::test_anonymous::SomeProtocolSomeMethodTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse>
+    ::test_anonymous::SomeProtocolSomeMethodTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_anonymous_SomeProtocolSomeMethodTopResponseTable;
+      &test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse> {
+struct CodingTraits<::test_anonymous::SomeProtocolSomeMethodTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* value,
-      size_t offset,
+      ::test_anonymous::SomeProtocolSomeMethodTopResponse* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -593,10 +579,9 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* value,
-      size_t offset) {
+  static void Decode(DecoderImpl* decoder,
+                     ::test_anonymous::SomeProtocolSomeMethodTopResponse* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
   }
 };
@@ -606,72 +591,71 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse> {
 }  // namespace fidl
 
 template <>
-class ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
+class ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod> final
     : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>> {
+          ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse payload)
+  Response(::test_anonymous::SomeProtocolSomeMethodTopResponse payload)
       : payload_(std::move(payload)) {}
-  ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* operator->() {
+  ::test_anonymous::SomeProtocolSomeMethodTopResponse* operator->() {
     return &payload_;
   }
-  const ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* operator->()
+  const ::test_anonymous::SomeProtocolSomeMethodTopResponse* operator->()
       const {
     return &payload_;
   }
-  ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse& operator*() {
+  ::test_anonymous::SomeProtocolSomeMethodTopResponse& operator*() {
     return payload_;
   }
-  const ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse& operator*()
-      const {
+  const ::test_anonymous::SomeProtocolSomeMethodTopResponse& operator*() const {
     return payload_;
   }
 
  private:
-  ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse payload_;
+  ::test_anonymous::SomeProtocolSomeMethodTopResponse payload_;
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+    ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse;
+  using Payload = ::test_anonymous::SomeProtocolSomeMethodTopResponse;
 };
 namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_anonymous::SomeProtocol::SomeMethod>
+    ::test_anonymous::SomeProtocol::SomeMethod>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
       ::fitx::result<
           ::fidl::Error,
-          ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>>&)>;
+          ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>&)>;
+      ::fidl::Response<::test_anonymous::SomeProtocol::SomeMethod>&)>;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_anonymous::SomeProtocol>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol> final
+    : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   void SomeMethod(
-      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest&& payload,
-      ::fidl::ClientCallback<::fidl_test_anonymous::SomeProtocol::SomeMethod>&&
+      ::test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+      ::fidl::ClientCallback<::test_anonymous::SomeProtocol::SomeMethod>&&
           _callback) const;
 
   void SomeMethod(
-      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+      ::test_anonymous::SomeProtocolSomeMethodRequest&& payload,
       ::fidl::ClientResponseCallback<
-          ::fidl_test_anonymous::SomeProtocol::SomeMethod>&& _callback) const;
+          ::test_anonymous::SomeProtocol::SomeMethod>&& _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_transitivedependenciescompose {
+namespace test_transitivedependenciescompose {
 
 class Top final {
   Top() = delete;
@@ -15,9 +15,9 @@ class Top final {
     GetFoo() = delete;
 
    public:
-    using Protocol = ::fidl_test_transitivedependenciescompose::Top;
+    using Protocol = ::test_transitivedependenciescompose::Top;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_transitivedependenciescompose
+}  // namespace test_transitivedependenciescompose

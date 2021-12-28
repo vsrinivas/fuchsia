@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.nullable/cpp/markers.h>
-#include <fidl/fidl.test.nullable/cpp/wire_types.h>
+#include <fidl/test.nullable/cpp/markers.h>
+#include <fidl/test.nullable/cpp/wire_types.h>
 #include <lib/fidl_driver/cpp/wire_messaging.h>
 
 #ifdef __Fuchsia__

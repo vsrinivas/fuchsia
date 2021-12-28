@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_service {
+namespace test_service {
 
 class SecondProtocol final {
   SecondProtocol() = delete;
@@ -15,7 +15,7 @@ class SecondProtocol final {
     MethodOnSecond() = delete;
 
    public:
-    using Protocol = ::fidl_test_service::SecondProtocol;
+    using Protocol = ::test_service::SecondProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -30,9 +30,9 @@ class FirstProtocol final {
     MethodOnFirst() = delete;
 
    public:
-    using Protocol = ::fidl_test_service::FirstProtocol;
+    using Protocol = ::test_service::FirstProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
 };
-}  // namespace fidl_test_service
+}  // namespace test_service

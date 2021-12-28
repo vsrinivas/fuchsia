@@ -19,16 +19,16 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.emptystruct/cpp/markers.h>
+#include <fidl/test.emptystruct/cpp/markers.h>
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 namespace wire {
 struct Empty;
 
-extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
 struct Empty {
-  static constexpr const fidl_type_t* Type = &fidl_test_emptystruct_EmptyTable;
+  static constexpr const fidl_type_t* Type = &test_emptystruct_EmptyTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   static constexpr uint32_t PrimarySizeV1 = 1;
@@ -44,18 +44,16 @@ struct Empty {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_emptystruct::wire::Empty>
-    : public std::true_type {};
+struct IsFidlType<::test_emptystruct::wire::Empty> : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_emptystruct::wire::Empty> : public std::true_type {
-};
-static_assert(std::is_standard_layout_v<::fidl_test_emptystruct::wire::Empty>);
-static_assert(offsetof(::fidl_test_emptystruct::wire::Empty, __reserved) == 0);
-static_assert(sizeof(::fidl_test_emptystruct::wire::Empty) ==
-              ::fidl_test_emptystruct::wire::Empty::PrimarySize);
+struct IsStruct<::test_emptystruct::wire::Empty> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_emptystruct::wire::Empty>);
+static_assert(offsetof(::test_emptystruct::wire::Empty, __reserved) == 0);
+static_assert(sizeof(::test_emptystruct::wire::Empty) ==
+              ::test_emptystruct::wire::Empty::PrimarySize);
 
 }  // namespace fidl

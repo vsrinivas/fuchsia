@@ -76,7 +76,7 @@ impl ParentSynchronousProxy {
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request),),
-            0x2a592d0a81dac39b,
+            0x3723835775b3455b,
         )
     }
 }
@@ -134,7 +134,7 @@ impl ParentProxyInterface for ParentProxy {
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request)),
-            0x2a592d0a81dac39b,
+            0x3723835775b3455b,
         )
     }
 }
@@ -259,13 +259,13 @@ impl futures::Stream for ParentRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x2a592d0a81dac39b => {
+                0x3723835775b3455b => {
                     let mut req: (
                         HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                             fidl::endpoints::ServerEnd<ParentMarker>,
                         >,
                     ) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ParentFirstRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -314,12 +314,12 @@ impl ParentEncoder {
         out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x2a592d0a81dac39b);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x3723835775b3455b);
         let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
             fidl::endpoints::ServerEnd<ParentMarker>,
         >(in_request),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ParentFirstRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -392,7 +392,7 @@ impl ChildSynchronousProxy {
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request),),
-            0x2a592d0a81dac39b,
+            0x3723835775b3455b,
         )
     }
     pub fn r#second(
@@ -403,7 +403,7 @@ impl ChildSynchronousProxy {
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request),),
-            0x6cba5c5e01fee86,
+            0x23521821ca109865,
         )
     }
 }
@@ -467,7 +467,7 @@ impl ChildProxyInterface for ChildProxy {
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request)),
-            0x2a592d0a81dac39b,
+            0x3723835775b3455b,
         )
     }
     fn r#second(
@@ -478,7 +478,7 @@ impl ChildProxyInterface for ChildProxy {
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request)),
-            0x6cba5c5e01fee86,
+            0x23521821ca109865,
         )
     }
 }
@@ -603,13 +603,13 @@ impl futures::Stream for ChildRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x2a592d0a81dac39b => {
+                0x3723835775b3455b => {
                     let mut req: (
                         HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                             fidl::endpoints::ServerEnd<ParentMarker>,
                         >,
                     ) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ChildFirstRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ChildFirstRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -617,13 +617,13 @@ impl futures::Stream for ChildRequestStream {
 
                     Ok(ChildRequest::First { request: req.0.into_inner(), control_handle })
                 }
-                0x6cba5c5e01fee86 => {
+                0x23521821ca109865 => {
                     let mut req: (
                         HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                             fidl::endpoints::ServerEnd<ParentMarker>,
                         >,
                     ) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ChildSecondRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -685,12 +685,12 @@ impl ChildEncoder {
         out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x2a592d0a81dac39b);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x3723835775b3455b);
         let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
             fidl::endpoints::ServerEnd<ParentMarker>,
         >(in_request),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ChildFirstRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ChildFirstRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -701,12 +701,12 @@ impl ChildEncoder {
         out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
         mut in_request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x6cba5c5e01fee86);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x23521821ca109865);
         let mut body = (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
             fidl::endpoints::ServerEnd<ParentMarker>,
         >(in_request),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritancewithrecursivedecl/ChildSecondRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritancewithrecursivedecl/ChildSecondRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);

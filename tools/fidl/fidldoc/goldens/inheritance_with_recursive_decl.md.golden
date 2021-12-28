@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.inheritancewithrecursivedecl
+# test.inheritancewithrecursivedecl
 
 
 
 ## **PROTOCOLS**
 
 ## Child {#Child}
-*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=9)*
+*Defined in [test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=9)*
 
 
 
@@ -46,7 +46,7 @@
 
 
 ## Parent {#Parent}
-*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=3)*
+*Defined in [test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=3)*
 
 
 

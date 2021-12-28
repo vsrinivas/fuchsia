@@ -2,4 +2,4 @@
 
 #pragma once
 
-#include <fidl/test/padding/cpp/fidl.h>
+#include <test/padding/cpp/fidl.h>

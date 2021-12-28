@@ -2,6 +2,6 @@
 
 #pragma once
 
-#include <fidl/fidl.test.unionsandwich/cpp/markers.h>
-#include <fidl/fidl.test.unionsandwich/cpp/wire_messaging.h>
-#include <fidl/fidl.test.unionsandwich/cpp/wire_types.h>
+#include <fidl/test.unionsandwich/cpp/markers.h>
+#include <fidl/test.unionsandwich/cpp/wire_messaging.h>
+#include <fidl/test.unionsandwich/cpp/wire_types.h>

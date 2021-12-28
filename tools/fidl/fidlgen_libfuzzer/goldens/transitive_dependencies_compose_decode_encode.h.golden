@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.transitivedependenciescompose/cpp/wire.h>
+#include <fidl/test.transitivedependenciescompose/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,23 +10,23 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
-    fidl_test_transitivedependenciescompose_decoder_encoders = {
+    test_transitivedependenciescompose_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
+            .fidl_type_name = "::fidl::WireRequest<::test_"
                               "transitivedependenciescompose::Top::GetFoo>",
             .has_flexible_envelope = false,
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::fidl_test_transitivedependenciescompose::Top::GetFoo>>,
+                    ::test_transitivedependenciescompose::Top::GetFoo>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::fidl_test_"
+            .fidl_type_name = "::fidl::WireResponse<::test_"
                               "transitivedependenciescompose::Top::GetFoo>",
             .has_flexible_envelope = false,
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
-                    ::fidl_test_transitivedependenciescompose::Top::GetFoo>>,
+                    ::test_transitivedependenciescompose::Top::GetFoo>>,
         },
 };
 

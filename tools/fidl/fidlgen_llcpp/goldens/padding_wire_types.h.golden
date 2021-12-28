@@ -18,9 +18,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.padding/cpp/markers.h>
+#include <fidl/test.padding/cpp/markers.h>
 
-namespace fidl_test_padding {
+namespace test_padding {
 namespace wire {
 struct Padding7ByteMiddle;
 
@@ -54,11 +54,11 @@ struct Padding1ByteMiddle;
 
 struct Padding1ByteEnd;
 
-extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding1ByteMiddleTable;
 
 struct Padding1ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding1ByteMiddleTable;
+      &test_padding_Padding1ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -75,11 +75,10 @@ struct Padding1ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding1ByteEndTable;
 
 struct Padding1ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding1ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding1ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -96,11 +95,11 @@ struct Padding1ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding7ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding7ByteMiddleTable;
 
 struct Padding7ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding7ByteMiddleTable;
+      &test_padding_Padding7ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -117,11 +116,10 @@ struct Padding7ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding7ByteEndTable;
 
 struct Padding7ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding7ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding7ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -138,11 +136,11 @@ struct Padding7ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding6ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding6ByteMiddleTable;
 
 struct Padding6ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding6ByteMiddleTable;
+      &test_padding_Padding6ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -159,11 +157,10 @@ struct Padding6ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding6ByteEndTable;
 
 struct Padding6ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding6ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding6ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -180,11 +177,11 @@ struct Padding6ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding5ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding5ByteMiddleTable;
 
 struct Padding5ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding5ByteMiddleTable;
+      &test_padding_Padding5ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -203,11 +200,10 @@ struct Padding5ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding5ByteEndTable;
 
 struct Padding5ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding5ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding5ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -226,11 +222,11 @@ struct Padding5ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding4ByteMiddleTable;
 
 struct Padding4ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding4ByteMiddleTable;
+      &test_padding_Padding4ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -247,11 +243,10 @@ struct Padding4ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding4ByteEndTable;
 
 struct Padding4ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding4ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding4ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -268,12 +263,11 @@ struct Padding4ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t
-    fidl_test_padding_Padding4ByteAlignmentLength12Table;
+extern "C" const fidl_type_t test_padding_Padding4ByteAlignmentLength12Table;
 
 struct Padding4ByteAlignmentLength12 {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding4ByteAlignmentLength12Table;
+      &test_padding_Padding4ByteAlignmentLength12Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   static constexpr uint32_t PrimarySizeV1 = 12;
@@ -294,11 +288,11 @@ struct Padding4ByteAlignmentLength12 {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding3ByteMiddleTable;
 
 struct Padding3ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding3ByteMiddleTable;
+      &test_padding_Padding3ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -315,11 +309,10 @@ struct Padding3ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding3ByteEndTable;
 
 struct Padding3ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding3ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding3ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -336,11 +329,11 @@ struct Padding3ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding2ByteMiddleTable;
+extern "C" const fidl_type_t test_padding_Padding2ByteMiddleTable;
 
 struct Padding2ByteMiddle {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding2ByteMiddleTable;
+      &test_padding_Padding2ByteMiddleTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -357,11 +350,10 @@ struct Padding2ByteMiddle {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
+extern "C" const fidl_type_t test_padding_Padding2ByteEndTable;
 
 struct Padding2ByteEnd {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding2ByteEndTable;
+  static constexpr const fidl_type_t* Type = &test_padding_Padding2ByteEndTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -378,12 +370,11 @@ struct Padding2ByteEnd {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t
-    fidl_test_padding_Padding2ByteAlignmentLength6Table;
+extern "C" const fidl_type_t test_padding_Padding2ByteAlignmentLength6Table;
 
 struct Padding2ByteAlignmentLength6 {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_padding_Padding2ByteAlignmentLength6Table;
+      &test_padding_Padding2ByteAlignmentLength6Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 6;
   static constexpr uint32_t PrimarySizeV1 = 6;
@@ -403,229 +394,220 @@ struct Padding2ByteAlignmentLength6 {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_padding
+}  // namespace test_padding
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding7ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding7ByteMiddle>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding7ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding7ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding7ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding7ByteMiddle, b) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding7ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding7ByteMiddle::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding7ByteEnd>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_padding::wire::Padding7ByteEnd>
+struct IsStruct<::test_padding::wire::Padding7ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding7ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding7ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding7ByteEnd, b) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding7ByteEnd) ==
-              ::fidl_test_padding::wire::Padding7ByteEnd::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding7ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding7ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding7ByteMiddle, b) == 8);
+static_assert(sizeof(::test_padding::wire::Padding7ByteMiddle) ==
+              ::test_padding::wire::Padding7ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding6ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding7ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding6ByteMiddle>
+struct IsStruct<::test_padding::wire::Padding7ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding7ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding7ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding7ByteEnd, b) == 8);
+static_assert(sizeof(::test_padding::wire::Padding7ByteEnd) ==
+              ::test_padding::wire::Padding7ByteEnd::PrimarySize);
+
+template <>
+struct IsFidlType<::test_padding::wire::Padding6ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_padding::wire::Padding6ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding6ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding6ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding6ByteMiddle, b) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding6ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding6ByteMiddle::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding6ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding6ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding6ByteMiddle, b) == 8);
+static_assert(sizeof(::test_padding::wire::Padding6ByteMiddle) ==
+              ::test_padding::wire::Padding6ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding6ByteEnd>
+struct IsFidlType<::test_padding::wire::Padding6ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding6ByteEnd>
+struct IsStruct<::test_padding::wire::Padding6ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding6ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding6ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding6ByteEnd, b) == 8);
+static_assert(sizeof(::test_padding::wire::Padding6ByteEnd) ==
+              ::test_padding::wire::Padding6ByteEnd::PrimarySize);
+
+template <>
+struct IsFidlType<::test_padding::wire::Padding5ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_padding::wire::Padding5ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding6ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding6ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding6ByteEnd, b) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding6ByteEnd) ==
-              ::fidl_test_padding::wire::Padding6ByteEnd::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding5ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding5ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding5ByteMiddle, b) == 2);
+static_assert(offsetof(::test_padding::wire::Padding5ByteMiddle, c) == 8);
+static_assert(sizeof(::test_padding::wire::Padding5ByteMiddle) ==
+              ::test_padding::wire::Padding5ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding5ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding5ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding5ByteMiddle>
+struct IsStruct<::test_padding::wire::Padding5ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding5ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding5ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding5ByteEnd, b) == 8);
+static_assert(offsetof(::test_padding::wire::Padding5ByteEnd, c) == 10);
+static_assert(sizeof(::test_padding::wire::Padding5ByteEnd) ==
+              ::test_padding::wire::Padding5ByteEnd::PrimarySize);
+
+template <>
+struct IsFidlType<::test_padding::wire::Padding4ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_padding::wire::Padding4ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding5ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding5ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding5ByteMiddle, b) == 2);
-static_assert(offsetof(::fidl_test_padding::wire::Padding5ByteMiddle, c) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding5ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding5ByteMiddle::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding4ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding4ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding4ByteMiddle, b) == 8);
+static_assert(sizeof(::test_padding::wire::Padding4ByteMiddle) ==
+              ::test_padding::wire::Padding4ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding5ByteEnd>
+struct IsFidlType<::test_padding::wire::Padding4ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding5ByteEnd>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding5ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding5ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding5ByteEnd, b) == 8);
-static_assert(offsetof(::fidl_test_padding::wire::Padding5ByteEnd, c) == 10);
-static_assert(sizeof(::fidl_test_padding::wire::Padding5ByteEnd) ==
-              ::fidl_test_padding::wire::Padding5ByteEnd::PrimarySize);
+struct IsStruct<::test_padding::wire::Padding4ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding4ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding4ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding4ByteEnd, b) == 8);
+static_assert(sizeof(::test_padding::wire::Padding4ByteEnd) ==
+              ::test_padding::wire::Padding4ByteEnd::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding4ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding4ByteAlignmentLength12>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding4ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding4ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteMiddle, b) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding4ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding4ByteMiddle::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding4ByteEnd>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_padding::wire::Padding4ByteEnd>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding4ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteEnd, b) == 8);
-static_assert(sizeof(::fidl_test_padding::wire::Padding4ByteEnd) ==
-              ::fidl_test_padding::wire::Padding4ByteEnd::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding4ByteAlignmentLength12>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_padding::wire::Padding4ByteAlignmentLength12>
+struct IsStruct<::test_padding::wire::Padding4ByteAlignmentLength12>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_padding::wire::Padding4ByteAlignmentLength12>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteAlignmentLength12,
+              ::test_padding::wire::Padding4ByteAlignmentLength12>);
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
                        a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteAlignmentLength12,
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
                        b) == 4);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteAlignmentLength12,
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
                        c) == 6);
-static_assert(offsetof(::fidl_test_padding::wire::Padding4ByteAlignmentLength12,
+static_assert(offsetof(::test_padding::wire::Padding4ByteAlignmentLength12,
                        d) == 8);
-static_assert(
-    sizeof(::fidl_test_padding::wire::Padding4ByteAlignmentLength12) ==
-    ::fidl_test_padding::wire::Padding4ByteAlignmentLength12::PrimarySize);
+static_assert(sizeof(::test_padding::wire::Padding4ByteAlignmentLength12) ==
+              ::test_padding::wire::Padding4ByteAlignmentLength12::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding3ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding3ByteMiddle>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding3ByteMiddle>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding3ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding3ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding3ByteMiddle, b) == 4);
-static_assert(sizeof(::fidl_test_padding::wire::Padding3ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding3ByteMiddle::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding3ByteEnd>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_padding::wire::Padding3ByteEnd>
+struct IsStruct<::test_padding::wire::Padding3ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding3ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding3ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding3ByteEnd, b) == 4);
-static_assert(sizeof(::fidl_test_padding::wire::Padding3ByteEnd) ==
-              ::fidl_test_padding::wire::Padding3ByteEnd::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding3ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding3ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding3ByteMiddle, b) == 4);
+static_assert(sizeof(::test_padding::wire::Padding3ByteMiddle) ==
+              ::test_padding::wire::Padding3ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding2ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding3ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding2ByteMiddle>
+struct IsStruct<::test_padding::wire::Padding3ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding3ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding3ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding3ByteEnd, b) == 4);
+static_assert(sizeof(::test_padding::wire::Padding3ByteEnd) ==
+              ::test_padding::wire::Padding3ByteEnd::PrimarySize);
+
+template <>
+struct IsFidlType<::test_padding::wire::Padding2ByteMiddle>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_padding::wire::Padding2ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding2ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteMiddle, b) == 4);
-static_assert(sizeof(::fidl_test_padding::wire::Padding2ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding2ByteMiddle::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding2ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding2ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding2ByteMiddle, b) == 4);
+static_assert(sizeof(::test_padding::wire::Padding2ByteMiddle) ==
+              ::test_padding::wire::Padding2ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding2ByteEnd>
+struct IsFidlType<::test_padding::wire::Padding2ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding2ByteEnd>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding2ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteEnd, b) == 4);
-static_assert(sizeof(::fidl_test_padding::wire::Padding2ByteEnd) ==
-              ::fidl_test_padding::wire::Padding2ByteEnd::PrimarySize);
+struct IsStruct<::test_padding::wire::Padding2ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding2ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding2ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding2ByteEnd, b) == 4);
+static_assert(sizeof(::test_padding::wire::Padding2ByteEnd) ==
+              ::test_padding::wire::Padding2ByteEnd::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding2ByteAlignmentLength6>
+struct IsFidlType<::test_padding::wire::Padding2ByteAlignmentLength6>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding2ByteAlignmentLength6>
+struct IsStruct<::test_padding::wire::Padding2ByteAlignmentLength6>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_padding::wire::Padding2ByteAlignmentLength6>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteAlignmentLength6,
-                       a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteAlignmentLength6,
-                       b) == 2);
-static_assert(offsetof(::fidl_test_padding::wire::Padding2ByteAlignmentLength6,
-                       c) == 4);
-static_assert(
-    sizeof(::fidl_test_padding::wire::Padding2ByteAlignmentLength6) ==
-    ::fidl_test_padding::wire::Padding2ByteAlignmentLength6::PrimarySize);
+              ::test_padding::wire::Padding2ByteAlignmentLength6>);
+static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, a) ==
+              0);
+static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, b) ==
+              2);
+static_assert(offsetof(::test_padding::wire::Padding2ByteAlignmentLength6, c) ==
+              4);
+static_assert(sizeof(::test_padding::wire::Padding2ByteAlignmentLength6) ==
+              ::test_padding::wire::Padding2ByteAlignmentLength6::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding1ByteMiddle>
+struct IsFidlType<::test_padding::wire::Padding1ByteMiddle>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding1ByteMiddle>
+struct IsStruct<::test_padding::wire::Padding1ByteMiddle>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding1ByteMiddle>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding1ByteMiddle, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding1ByteMiddle, b) == 2);
-static_assert(sizeof(::fidl_test_padding::wire::Padding1ByteMiddle) ==
-              ::fidl_test_padding::wire::Padding1ByteMiddle::PrimarySize);
+    std::is_standard_layout_v<::test_padding::wire::Padding1ByteMiddle>);
+static_assert(offsetof(::test_padding::wire::Padding1ByteMiddle, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding1ByteMiddle, b) == 2);
+static_assert(sizeof(::test_padding::wire::Padding1ByteMiddle) ==
+              ::test_padding::wire::Padding1ByteMiddle::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_padding::wire::Padding1ByteEnd>
+struct IsFidlType<::test_padding::wire::Padding1ByteEnd>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_padding::wire::Padding1ByteEnd>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_padding::wire::Padding1ByteEnd>);
-static_assert(offsetof(::fidl_test_padding::wire::Padding1ByteEnd, a) == 0);
-static_assert(offsetof(::fidl_test_padding::wire::Padding1ByteEnd, b) == 2);
-static_assert(sizeof(::fidl_test_padding::wire::Padding1ByteEnd) ==
-              ::fidl_test_padding::wire::Padding1ByteEnd::PrimarySize);
+struct IsStruct<::test_padding::wire::Padding1ByteEnd> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_padding::wire::Padding1ByteEnd>);
+static_assert(offsetof(::test_padding::wire::Padding1ByteEnd, a) == 0);
+static_assert(offsetof(::test_padding::wire::Padding1ByteEnd, b) == 2);
+static_assert(sizeof(::test_padding::wire::Padding1ByteEnd) ==
+              ::test_padding::wire::Padding1ByteEnd::PrimarySize);
 
 }  // namespace fidl

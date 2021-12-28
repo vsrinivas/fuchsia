@@ -2,4 +2,4 @@
 
 #pragma once
 
-#include <fidl/test/vectors/cpp/fidl.h>
+#include <test/vectors/cpp/fidl.h>

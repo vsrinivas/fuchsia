@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.handles",
+  "name": "test.handles",
   "library_dependencies": [
     {
       "name": "zx",
@@ -87,7 +87,7 @@
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "fidl.test.handles/obj_type",
+      "name": "test.handles/obj_type",
       "naming_context": [
         "obj_type"
       ],
@@ -675,7 +675,7 @@
   ],
   "experimental_resource_declarations": [
     {
-      "name": "fidl.test.handles/handle",
+      "name": "test.handles/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 41,
@@ -715,7 +715,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.handles/obj_type",
+            "identifier": "test.handles/obj_type",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -774,7 +774,7 @@
   ],
   "interface_declarations": [
     {
-      "name": "fidl.test.handles/SomeProtocol",
+      "name": "test.handles/SomeProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 48,
@@ -788,7 +788,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.handles/Handles",
+      "name": "test.handles/Handles",
       "naming_context": [
         "Handles"
       ],
@@ -2003,7 +2003,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_plain_handle",
+            "name": "test.handles/aliased_plain_handle",
             "args": [],
             "nullable": false
           },
@@ -2050,7 +2050,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_subtype_handle",
+            "name": "test.handles/aliased_subtype_handle",
             "args": [],
             "nullable": false
           },
@@ -2097,7 +2097,7 @@
             }
           },
           "experimental_maybe_from_type_alias": {
-            "name": "fidl.test.handles/aliased_rights_handle",
+            "name": "test.handles/aliased_rights_handle",
             "args": [],
             "nullable": false
           },
@@ -2120,7 +2120,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.handles/SomeProtocol",
+            "identifier": "test.handles/SomeProtocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -2160,7 +2160,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.handles/SomeProtocol",
+            "subtype": "test.handles/SomeProtocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -2224,7 +2224,7 @@
   "union_declarations": [],
   "type_alias_declarations": [
     {
-      "name": "fidl.test.handles/aliased_plain_handle",
+      "name": "test.handles/aliased_plain_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 50,
@@ -2232,13 +2232,13 @@
         "length": 20
       },
       "partial_type_ctor": {
-        "name": "fidl.test.handles/handle",
+        "name": "test.handles/handle",
         "args": [],
         "nullable": false
       }
     },
     {
-      "name": "fidl.test.handles/aliased_subtype_handle",
+      "name": "test.handles/aliased_subtype_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 51,
@@ -2246,13 +2246,13 @@
         "length": 22
       },
       "partial_type_ctor": {
-        "name": "fidl.test.handles/handle",
+        "name": "test.handles/handle",
         "args": [],
         "nullable": false
       }
     },
     {
-      "name": "fidl.test.handles/aliased_rights_handle",
+      "name": "test.handles/aliased_rights_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
         "line": 52,
@@ -2260,7 +2260,7 @@
         "length": 21
       },
       "partial_type_ctor": {
-        "name": "fidl.test.handles/handle",
+        "name": "test.handles/handle",
         "args": [],
         "nullable": false,
         "handle_rights": {
@@ -2273,21 +2273,21 @@
     }
   ],
   "declaration_order": [
-    "fidl.test.handles/obj_type",
-    "fidl.test.handles/handle",
-    "fidl.test.handles/aliased_subtype_handle",
-    "fidl.test.handles/aliased_rights_handle",
-    "fidl.test.handles/aliased_plain_handle",
-    "fidl.test.handles/Handles",
-    "fidl.test.handles/SomeProtocol"
+    "test.handles/obj_type",
+    "test.handles/handle",
+    "test.handles/aliased_subtype_handle",
+    "test.handles/aliased_rights_handle",
+    "test.handles/aliased_plain_handle",
+    "test.handles/Handles",
+    "test.handles/SomeProtocol"
   ],
   "declarations": {
-    "fidl.test.handles/obj_type": "enum",
-    "fidl.test.handles/handle": "experimental_resource",
-    "fidl.test.handles/SomeProtocol": "interface",
-    "fidl.test.handles/Handles": "struct",
-    "fidl.test.handles/aliased_plain_handle": "type_alias",
-    "fidl.test.handles/aliased_subtype_handle": "type_alias",
-    "fidl.test.handles/aliased_rights_handle": "type_alias"
+    "test.handles/obj_type": "enum",
+    "test.handles/handle": "experimental_resource",
+    "test.handles/SomeProtocol": "interface",
+    "test.handles/Handles": "struct",
+    "test.handles/aliased_plain_handle": "type_alias",
+    "test.handles/aliased_subtype_handle": "type_alias",
+    "test.handles/aliased_rights_handle": "type_alias"
   }
 }

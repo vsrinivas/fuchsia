@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <middle/cpp/fidl.h>
+#include <test/middle/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace transitivedependencies {
 class Baz;
@@ -18,7 +17,7 @@ class Baz final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::middle::Bar g{};
+  ::test::middle::Bar g{};
 
   static inline ::std::unique_ptr<Baz> New() {
     return ::std::make_unique<Baz>();
@@ -31,9 +30,8 @@ class Baz final {
   zx_status_t Clone(Baz* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::transitivedependencies::Baz& _value,
-    ::fidl::test::transitivedependencies::Baz* _result) {
+inline zx_status_t Clone(const ::test::transitivedependencies::Baz& _value,
+                         ::test::transitivedependencies::Baz* _result) {
   return _value.Clone(_result);
 }
 
@@ -41,26 +39,27 @@ using BazPtr = ::std::unique_ptr<Baz>;
 
 }  // namespace transitivedependencies
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::transitivedependencies::Baz>
-    : public EncodableCodingTraits<::fidl::test::transitivedependencies::Baz, 4,
-                                   4> {};
+struct CodingTraits<::test::transitivedependencies::Baz>
+    : public EncodableCodingTraits<::test::transitivedependencies::Baz, 4, 4> {
+};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::transitivedependencies::Baz>
+struct IsMemcpyCompatible<::test::transitivedependencies::Baz>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::transitivedependencies::Baz>::value &&
-          IsMemcpyCompatible<::middle::Bar>::value> {};
+          !HasPadding<::test::transitivedependencies::Baz>::value &&
+          IsMemcpyCompatible<::test::middle::Bar>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::transitivedependencies::Baz& value,
-                         ::fidl::test::transitivedependencies::Baz* result) {
-  return ::fidl::test::transitivedependencies::Clone(value, result);
+inline zx_status_t Clone(const ::test::transitivedependencies::Baz& value,
+                         ::test::transitivedependencies::Baz* result) {
+  return ::test::transitivedependencies::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::transitivedependencies::Baz> {
-  bool operator()(const ::fidl::test::transitivedependencies::Baz& _lhs,
-                  const ::fidl::test::transitivedependencies::Baz& _rhs) const {
+struct Equality<::test::transitivedependencies::Baz> {
+  bool operator()(const ::test::transitivedependencies::Baz& _lhs,
+                  const ::test::transitivedependencies::Baz& _rhs) const {
     if (!::fidl::Equals(_lhs.g, _rhs.g)) {
       return false;
     }

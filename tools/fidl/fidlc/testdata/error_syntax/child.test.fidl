@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fidl.test.errorsyntax;
+library test.errorsyntax;
 
-using fidl.test.errorsyntax.parent;
+using test.errorsyntax.parent;
 
 protocol ExampleUseOfErrorSyntax {
-    compose fidl.test.errorsyntax.parent.ParentUsesErrorSyntax;
+    compose test.errorsyntax.parent.ParentUsesErrorSyntax;
     CallWhichMayFail(struct {
         s string;
     }) -> (struct {

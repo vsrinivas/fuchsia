@@ -1,4 +1,4 @@
-library fidl.test.union;
+library test.union;
 
 type Pizza = struct {
     toppings vector<string:16>;

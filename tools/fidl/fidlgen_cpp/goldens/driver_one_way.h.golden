@@ -2,30 +2,30 @@
 
 #pragma once
 
-#include <fidl/fidl.test.driveroneway/cpp/wire.h>
-#include <fidl/test/driveroneway/cpp/natural_types.h>
+#include <fidl/test.driveroneway/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/driveroneway/cpp/natural_types.h>
 
-namespace fidl_test_driveroneway {
+namespace test_driveroneway {
 class Payload;
 
 class OneWaySendRequest;
 
-}  // namespace fidl_test_driveroneway
+}  // namespace test_driveroneway
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_driveroneway::Payload>
+    ::test_driveroneway::Payload>
     final {
  public:
   uint32_t value = {};
 };
 
-namespace fidl_test_driveroneway {
+namespace test_driveroneway {
 class Payload final : public ::fidl::internal::CodableBase<Payload> {
  private:
   friend ::fidl::internal::CodableBase<Payload>;
@@ -40,7 +40,7 @@ class Payload final : public ::fidl::internal::CodableBase<Payload> {
   Payload() = default;
   Payload(uint32_t value) : storage_({value}) {}
   Payload(::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_driveroneway::Payload>
+          ::test_driveroneway::Payload>
               storage)
       : storage_(std::move(storage)) {}
   ~Payload() = default;
@@ -57,23 +57,22 @@ class Payload final : public ::fidl::internal::CodableBase<Payload> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_driveroneway::Payload>;
+  friend struct ::fidl::CodingTraits<::test_driveroneway::Payload>;
 
-  ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_driveroneway::Payload>
+  ::fidl::internal::DesignatedInitializationProxy<::test_driveroneway::Payload>
       storage_ = {};
 };
 
-}  // namespace fidl_test_driveroneway
+}  // namespace test_driveroneway
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_driveroneway::OneWaySendRequest>
+    ::test_driveroneway::OneWaySendRequest>
     final {
  public:
-  ::fidl_test_driveroneway::Payload payload = {};
+  ::test_driveroneway::Payload payload = {};
 };
 
-namespace fidl_test_driveroneway {
+namespace test_driveroneway {
 class OneWaySendRequest final
     : public ::fidl::internal::CodableBase<OneWaySendRequest> {
  private:
@@ -87,60 +86,58 @@ class OneWaySendRequest final
 
  public:
   OneWaySendRequest() = default;
-  OneWaySendRequest(::fidl_test_driveroneway::Payload payload)
+  OneWaySendRequest(::test_driveroneway::Payload payload)
       : storage_({std::move(payload)}) {}
   OneWaySendRequest(::fidl::internal::DesignatedInitializationProxy<
-                    ::fidl_test_driveroneway::OneWaySendRequest>
+                    ::test_driveroneway::OneWaySendRequest>
                         storage)
       : storage_(std::move(storage)) {}
   ~OneWaySendRequest() = default;
   OneWaySendRequest(OneWaySendRequest&&) noexcept = default;
   OneWaySendRequest& operator=(OneWaySendRequest&&) noexcept = default;
 
-  const ::fidl_test_driveroneway::Payload& payload() const {
+  const ::test_driveroneway::Payload& payload() const {
     return storage_.payload;
   }
 
-  ::fidl_test_driveroneway::Payload& payload() { return storage_.payload; }
+  ::test_driveroneway::Payload& payload() { return storage_.payload; }
 
-  OneWaySendRequest& set_payload(::fidl_test_driveroneway::Payload _value) {
+  OneWaySendRequest& set_payload(::test_driveroneway::Payload _value) {
     storage_.payload = std::move(_value);
     return *this;
   }
 
  private:
-  friend struct ::fidl::CodingTraits<
-      ::fidl_test_driveroneway::OneWaySendRequest>;
+  friend struct ::fidl::CodingTraits<::test_driveroneway::OneWaySendRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_driveroneway::OneWaySendRequest>
+      ::test_driveroneway::OneWaySendRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_driveroneway
+}  // namespace test_driveroneway
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_driveroneway_PayloadTable;
+extern "C" const fidl_type_t test_driveroneway_PayloadTable;
 
 template <>
-struct IsFidlType<::fidl_test_driveroneway::Payload> : public std::true_type {};
+struct IsFidlType<::test_driveroneway::Payload> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_driveroneway::Payload> final {
+struct ::fidl::internal::TypeTraits<::test_driveroneway::Payload> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_driveroneway_PayloadTable;
+      &test_driveroneway_PayloadTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_driveroneway::Payload> {
+struct CodingTraits<::test_driveroneway::Payload> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_driveroneway::Payload* value,
-      size_t offset,
+      EncoderImpl* encoder, ::test_driveroneway::Payload* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -150,36 +147,36 @@ struct CodingTraits<::fidl_test_driveroneway::Payload> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_driveroneway::Payload* value, size_t offset) {
+  static void Decode(DecoderImpl* decoder, ::test_driveroneway::Payload* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.value, offset + 0);
   }
 };
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_driveroneway_OneWaySendRequestTable;
+extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_driveroneway::OneWaySendRequest>
+struct IsFidlType<::test_driveroneway::OneWaySendRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_driveroneway::OneWaySendRequest>
+struct ::fidl::internal::TypeTraits<::test_driveroneway::OneWaySendRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_driveroneway_OneWaySendRequestTable;
+      &test_driveroneway_OneWaySendRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_driveroneway::OneWaySendRequest> {
+struct CodingTraits<::test_driveroneway::OneWaySendRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_driveroneway::OneWaySendRequest* value,
+      EncoderImpl* encoder, ::test_driveroneway::OneWaySendRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -191,7 +188,7 @@ struct CodingTraits<::fidl_test_driveroneway::OneWaySendRequest> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_driveroneway::OneWaySendRequest* value,
+                     ::test_driveroneway::OneWaySendRequest* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.payload, offset + 0);
   }

@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.byteandbytes
+# test.byteandbytes
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### ByteAndBytes  {#ByteAndBytes data-text="ByteAndBytes"}
-*Defined in [fidl.test.byteandbytes/byte_and_bytes.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl;l=3)*
+*Defined in [test.byteandbytes/byte_and_bytes.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl;l=3)*
 
 
 

@@ -2,12 +2,11 @@
 
 #pragma once
 
-#include <fidl/test/doccomments/cpp/fidl.h>
-namespace fidl {
+#include <test/doccomments/cpp/fidl.h>
 namespace test {
 namespace doccomments {
 namespace testing {
-class Interface_TestBase : public ::fidl::test::doccomments::Interface {
+class Interface_TestBase : public ::test::doccomments::Interface {
  public:
   virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -16,4 +15,3 @@ class Interface_TestBase : public ::fidl::test::doccomments::Interface {
 }  // namespace testing
 }  // namespace doccomments
 }  // namespace test
-}  // namespace fidl

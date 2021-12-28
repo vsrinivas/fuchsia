@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace bitsconstants {
 enum class BitsType : uint32_t {
@@ -21,106 +20,105 @@ enum class BitsType : uint32_t {
 
 const static BitsType BitsTypeMask = static_cast<BitsType>(131u);
 
-constexpr inline ::fidl::test::bitsconstants::BitsType operator|(
-    ::fidl::test::bitsconstants::BitsType _lhs,
-    ::fidl::test::bitsconstants::BitsType _rhs) {
-  return static_cast<::fidl::test::bitsconstants::BitsType>(
+constexpr inline ::test::bitsconstants::BitsType operator|(
+    ::test::bitsconstants::BitsType _lhs,
+    ::test::bitsconstants::BitsType _rhs) {
+  return static_cast<::test::bitsconstants::BitsType>(
       static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::bitsconstants::BitsType& operator|=(
-    ::fidl::test::bitsconstants::BitsType& _lhs,
-    ::fidl::test::bitsconstants::BitsType _rhs) {
+constexpr inline ::test::bitsconstants::BitsType& operator|=(
+    ::test::bitsconstants::BitsType& _lhs,
+    ::test::bitsconstants::BitsType _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::bitsconstants::BitsType operator&(
-    ::fidl::test::bitsconstants::BitsType _lhs,
-    ::fidl::test::bitsconstants::BitsType _rhs) {
-  return static_cast<::fidl::test::bitsconstants::BitsType>(
+constexpr inline ::test::bitsconstants::BitsType operator&(
+    ::test::bitsconstants::BitsType _lhs,
+    ::test::bitsconstants::BitsType _rhs) {
+  return static_cast<::test::bitsconstants::BitsType>(
       static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::bitsconstants::BitsType& operator&=(
-    ::fidl::test::bitsconstants::BitsType& _lhs,
-    ::fidl::test::bitsconstants::BitsType _rhs) {
+constexpr inline ::test::bitsconstants::BitsType& operator&=(
+    ::test::bitsconstants::BitsType& _lhs,
+    ::test::bitsconstants::BitsType _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::bitsconstants::BitsType operator^(
-    ::fidl::test::bitsconstants::BitsType _lhs,
-    ::fidl::test::bitsconstants::BitsType _rhs) {
-  return static_cast<::fidl::test::bitsconstants::BitsType>(
+constexpr inline ::test::bitsconstants::BitsType operator^(
+    ::test::bitsconstants::BitsType _lhs,
+    ::test::bitsconstants::BitsType _rhs) {
+  return static_cast<::test::bitsconstants::BitsType>(
       static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::bitsconstants::BitsType& operator^=(
-    ::fidl::test::bitsconstants::BitsType& _lhs,
-    ::fidl::test::bitsconstants::BitsType _rhs) {
+constexpr inline ::test::bitsconstants::BitsType& operator^=(
+    ::test::bitsconstants::BitsType& _lhs,
+    ::test::bitsconstants::BitsType _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::bitsconstants::BitsType operator~(
-    ::fidl::test::bitsconstants::BitsType _value) {
-  return static_cast<::fidl::test::bitsconstants::BitsType>(
+constexpr inline ::test::bitsconstants::BitsType operator~(
+    ::test::bitsconstants::BitsType _value) {
+  return static_cast<::test::bitsconstants::BitsType>(
       ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(::fidl::test::bitsconstants::BitsTypeMask));
+      static_cast<uint32_t>(::test::bitsconstants::BitsTypeMask));
 }
 
-inline zx_status_t Clone(::fidl::test::bitsconstants::BitsType value,
-                         ::fidl::test::bitsconstants::BitsType* result) {
+inline zx_status_t Clone(::test::bitsconstants::BitsType value,
+                         ::test::bitsconstants::BitsType* result) {
   *result = value;
   return ZX_OK;
 }
 
-constexpr ::fidl::test::bitsconstants::BitsType Const3 =
-    static_cast<::fidl::test::bitsconstants::BitsType>(131);
+constexpr ::test::bitsconstants::BitsType Const3 =
+    static_cast<::test::bitsconstants::BitsType>(131);
 
-constexpr ::fidl::test::bitsconstants::BitsType Const2 =
-    static_cast<::fidl::test::bitsconstants::BitsType>(129);
+constexpr ::test::bitsconstants::BitsType Const2 =
+    static_cast<::test::bitsconstants::BitsType>(129);
 
-constexpr ::fidl::test::bitsconstants::BitsType Const1 =
-    ::fidl::test::bitsconstants::BitsType::A;
+constexpr ::test::bitsconstants::BitsType Const1 =
+    ::test::bitsconstants::BitsType::A;
 
 }  // namespace bitsconstants
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::bitsconstants::BitsType> {
+struct CodingTraits<::test::bitsconstants::BitsType> {
   static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::bitsconstants::BitsType);
+      sizeof(::test::bitsconstants::BitsType);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::bitsconstants::BitsType);
+      sizeof(::test::bitsconstants::BitsType);
   static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::bitsconstants::BitsType);
+      sizeof(::test::bitsconstants::BitsType);
   static void Encode(
-      Encoder* encoder, ::fidl::test::bitsconstants::BitsType* value,
-      size_t offset,
+      Encoder* encoder, ::test::bitsconstants::BitsType* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::fidl::test::bitsconstants::BitsType* value,
+  static void Decode(Decoder* decoder, ::test::bitsconstants::BitsType* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::bitsconstants::BitsType>(underlying);
+    *value = static_cast<::test::bitsconstants::BitsType>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::bitsconstants::BitsType value,
-                         ::fidl::test::bitsconstants::BitsType* result) {
-  return ::fidl::test::bitsconstants::Clone(value, result);
+inline zx_status_t Clone(::test::bitsconstants::BitsType value,
+                         ::test::bitsconstants::BitsType* result) {
+  return ::test::bitsconstants::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::bitsconstants::BitsType> {
-  bool operator()(const ::fidl::test::bitsconstants::BitsType& _lhs,
-                  const ::fidl::test::bitsconstants::BitsType& _rhs) const {
+struct Equality<::test::bitsconstants::BitsType> {
+  bool operator()(const ::test::bitsconstants::BitsType& _lhs,
+                  const ::test::bitsconstants::BitsType& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);

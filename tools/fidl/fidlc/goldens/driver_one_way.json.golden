@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.driveroneway",
+  "name": "test.driveroneway",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.driveroneway/OneWay",
+      "name": "test.driveroneway/OneWay",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
         "line": 12,
@@ -51,7 +51,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 4532960833911862287,
+          "ordinal": 7942965975761529343,
           "name": "Send",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
@@ -62,7 +62,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.driveroneway/OneWaySendRequest",
+            "identifier": "test.driveroneway/OneWaySendRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -93,7 +93,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.driveroneway/OneWaySendRequest",
+      "name": "test.driveroneway/OneWaySendRequest",
       "naming_context": [
         "OneWay",
         "Send",
@@ -110,7 +110,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.driveroneway/Payload",
+            "identifier": "test.driveroneway/Payload",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -169,7 +169,7 @@
       }
     },
     {
-      "name": "fidl.test.driveroneway/Payload",
+      "name": "test.driveroneway/Payload",
       "naming_context": [
         "Payload"
       ],
@@ -247,13 +247,13 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.driveroneway/Payload",
-    "fidl.test.driveroneway/OneWaySendRequest",
-    "fidl.test.driveroneway/OneWay"
+    "test.driveroneway/Payload",
+    "test.driveroneway/OneWaySendRequest",
+    "test.driveroneway/OneWay"
   ],
   "declarations": {
-    "fidl.test.driveroneway/OneWay": "interface",
-    "fidl.test.driveroneway/OneWaySendRequest": "struct",
-    "fidl.test.driveroneway/Payload": "struct"
+    "test.driveroneway/OneWay": "interface",
+    "test.driveroneway/OneWaySendRequest": "struct",
+    "test.driveroneway/Payload": "struct"
   }
 }

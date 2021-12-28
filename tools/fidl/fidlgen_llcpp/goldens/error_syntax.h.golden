@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.errorsyntax.parent/cpp/wire.h>
-#include <fidl/fidl.test.errorsyntax/cpp/markers.h>
-#include <fidl/fidl.test.errorsyntax/cpp/wire_messaging.h>
-#include <fidl/fidl.test.errorsyntax/cpp/wire_types.h>
+#include <fidl/test.errorsyntax.parent/cpp/wire.h>
+#include <fidl/test.errorsyntax/cpp/markers.h>
+#include <fidl/test.errorsyntax/cpp/wire_messaging.h>
+#include <fidl/test.errorsyntax/cpp/wire_types.h>

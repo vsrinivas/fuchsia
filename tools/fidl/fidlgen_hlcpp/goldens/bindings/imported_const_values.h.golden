@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <dependent/cpp/fidl.h>
+#include <test/dependent/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace importedconstvalues {
 class MyStruct;
@@ -32,9 +31,8 @@ class MyStruct final {
   zx_status_t Clone(MyStruct* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::importedconstvalues::MyStruct& _value,
-    ::fidl::test::importedconstvalues::MyStruct* _result) {
+inline zx_status_t Clone(const ::test::importedconstvalues::MyStruct& _value,
+                         ::test::importedconstvalues::MyStruct* _result) {
   return _value.Clone(_result);
 }
 
@@ -42,28 +40,27 @@ using MyStructPtr = ::std::unique_ptr<MyStruct>;
 
 }  // namespace importedconstvalues
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::importedconstvalues::MyStruct>
-    : public EncodableCodingTraits<::fidl::test::importedconstvalues::MyStruct,
-                                   1, 1> {};
+struct CodingTraits<::test::importedconstvalues::MyStruct>
+    : public EncodableCodingTraits<::test::importedconstvalues::MyStruct, 1,
+                                   1> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::importedconstvalues::MyStruct>
+struct IsMemcpyCompatible<::test::importedconstvalues::MyStruct>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::importedconstvalues::MyStruct>::value &&
+          !HasPadding<::test::importedconstvalues::MyStruct>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::fidl::test::importedconstvalues::MyStruct& value,
-    ::fidl::test::importedconstvalues::MyStruct* result) {
-  return ::fidl::test::importedconstvalues::Clone(value, result);
+inline zx_status_t Clone(const ::test::importedconstvalues::MyStruct& value,
+                         ::test::importedconstvalues::MyStruct* result) {
+  return ::test::importedconstvalues::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::importedconstvalues::MyStruct> {
-  bool operator()(
-      const ::fidl::test::importedconstvalues::MyStruct& _lhs,
-      const ::fidl::test::importedconstvalues::MyStruct& _rhs) const {
+struct Equality<::test::importedconstvalues::MyStruct> {
+  bool operator()(const ::test::importedconstvalues::MyStruct& _lhs,
+                  const ::test::importedconstvalues::MyStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }

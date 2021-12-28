@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.nullable/cpp/wire.h>
+#include <fidl/test.nullable/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,77 +10,71 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
-    fidl_test_nullable_decoder_encoders = {
+    test_nullable_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableVector",
+            .fidl_type_name = "::test_nullable::wire::StructWithNullableVector",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableVector>,
+                ::test_nullable::wire::StructWithNullableVector>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_nullable::wire::StructWithNullableUnion",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_nullable::wire::StructWithNullableUnion>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_nullable::wire::StructWithNullableStruct",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_nullable::wire::StructWithNullableStruct>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_nullable::wire::StructWithNullableString",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_nullable::wire::StructWithNullableString>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableUnion",
+                "::test_nullable::wire::StructWithNullableRequest",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableUnion>,
+                ::test_nullable::wire::StructWithNullableRequest>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableStruct",
+                "::test_nullable::wire::StructWithNullableProtocol",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableStruct>,
+                ::test_nullable::wire::StructWithNullableProtocol>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableString",
+            .fidl_type_name = "::test_nullable::wire::StructWithNullableHandle",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableString>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableRequest",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableRequest>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableProtocol",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableProtocol>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl_test_nullable::wire::StructWithNullableHandle",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::StructWithNullableHandle>,
+                ::test_nullable::wire::StructWithNullableHandle>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_nullable::"
-                              "SimpleProtocol::Add>",
+            .fidl_type_name =
+                "::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::fidl_test_nullable::SimpleProtocol::Add>>,
+                ::fidl::WireRequest<::test_nullable::SimpleProtocol::Add>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::fidl_test_nullable::"
-                              "SimpleProtocol::Add>",
-            .has_flexible_envelope = false,
-            .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
-                    ::fidl_test_nullable::SimpleProtocol::Add>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl_test_nullable::wire::Int32Wrapper",
+            .fidl_type_name =
+                "::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_nullable::wire::Int32Wrapper>,
+                ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::test_nullable::wire::Int32Wrapper",
+            .has_flexible_envelope = false,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::test_nullable::wire::Int32Wrapper>,
         },
 };
 

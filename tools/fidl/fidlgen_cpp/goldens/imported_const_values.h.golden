@@ -2,29 +2,29 @@
 
 #pragma once
 
-#include <dependent/cpp/fidl_v2.h>
-#include <fidl/fidl.test.importedconstvalues/cpp/wire.h>
-#include <fidl/test/importedconstvalues/cpp/natural_types.h>
+#include <fidl/test.importedconstvalues/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/dependent/cpp/fidl_v2.h>
+#include <test/importedconstvalues/cpp/natural_types.h>
 
-namespace fidl_test_importedconstvalues {
+namespace test_importedconstvalues {
 class MyStruct;
 
-}  // namespace fidl_test_importedconstvalues
+}  // namespace test_importedconstvalues
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_importedconstvalues::MyStruct>
+    ::test_importedconstvalues::MyStruct>
     final {
  public:
   uint8_t __reserved = 0u;
 };
 
-namespace fidl_test_importedconstvalues {
+namespace test_importedconstvalues {
 class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
  private:
   friend ::fidl::internal::CodableBase<MyStruct>;
@@ -39,7 +39,7 @@ class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
   MyStruct() = default;
   MyStruct(uint8_t __reserved) : storage_({__reserved}) {}
   MyStruct(::fidl::internal::DesignatedInitializationProxy<
-           ::fidl_test_importedconstvalues::MyStruct>
+           ::test_importedconstvalues::MyStruct>
                storage)
       : storage_(std::move(storage)) {}
   ~MyStruct() = default;
@@ -56,38 +56,38 @@ class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_importedconstvalues::MyStruct>;
+  friend struct ::fidl::CodingTraits<::test_importedconstvalues::MyStruct>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_importedconstvalues::MyStruct>
+      ::test_importedconstvalues::MyStruct>
       storage_ = {};
 };
 
-}  // namespace fidl_test_importedconstvalues
+}  // namespace test_importedconstvalues
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_importedconstvalues_MyStructTable;
+extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
 template <>
-struct IsFidlType<::fidl_test_importedconstvalues::MyStruct>
+struct IsFidlType<::test_importedconstvalues::MyStruct>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_importedconstvalues::MyStruct>
+struct ::fidl::internal::TypeTraits<::test_importedconstvalues::MyStruct>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_importedconstvalues_MyStructTable;
+      &test_importedconstvalues_MyStructTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_importedconstvalues::MyStruct> {
+struct CodingTraits<::test_importedconstvalues::MyStruct> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_importedconstvalues::MyStruct* value,
+      EncoderImpl* encoder, ::test_importedconstvalues::MyStruct* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -99,7 +99,7 @@ struct CodingTraits<::fidl_test_importedconstvalues::MyStruct> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_importedconstvalues::MyStruct* value,
+                     ::test_importedconstvalues::MyStruct* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
   }

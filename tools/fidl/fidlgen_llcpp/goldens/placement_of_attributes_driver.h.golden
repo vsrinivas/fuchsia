@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/exampleusing/cpp/driver/wire.h>
-#include <fidl/fidl.test.placementofattributes/cpp/driver/wire_messaging.h>
-#include <fidl/fidl.test.placementofattributes/cpp/markers.h>
-#include <fidl/fidl.test.placementofattributes/cpp/wire_types.h>
+#include <fidl/test.exampleusing/cpp/driver/wire.h>
+#include <fidl/test.placementofattributes/cpp/driver/wire_messaging.h>
+#include <fidl/test.placementofattributes/cpp/markers.h>
+#include <fidl/test.placementofattributes/cpp/wire_types.h>

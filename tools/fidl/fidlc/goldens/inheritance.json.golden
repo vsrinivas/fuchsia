@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.inheritance",
+  "name": "test.inheritance",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.inheritance/super",
+      "name": "test.inheritance/super",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 3,
@@ -18,7 +18,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 4999045011615110827,
+          "ordinal": 7540745593380780216,
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
@@ -29,7 +29,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritance/SuperFooRequest",
+            "identifier": "test.inheritance/SuperFooRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -53,7 +53,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritance/SuperFooTopResponse",
+            "identifier": "test.inheritance/SuperFooTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -80,7 +80,7 @@
       ]
     },
     {
-      "name": "fidl.test.inheritance/sub",
+      "name": "test.inheritance/sub",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
         "line": 11,
@@ -89,7 +89,7 @@
       },
       "composed_protocols": [
         {
-          "name": "fidl.test.inheritance/super",
+          "name": "test.inheritance/super",
           "maybe_attributes": [
             {
               "name": "doc",
@@ -133,7 +133,7 @@
       ],
       "methods": [
         {
-          "ordinal": 4999045011615110827,
+          "ordinal": 7540745593380780216,
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
@@ -144,7 +144,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritance/SuperFooRequest",
+            "identifier": "test.inheritance/SuperFooRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -168,7 +168,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.inheritance/SuperFooTopResponse",
+            "identifier": "test.inheritance/SuperFooTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -198,7 +198,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.inheritance/SuperFooRequest",
+      "name": "test.inheritance/SuperFooRequest",
       "naming_context": [
         "super",
         "foo",
@@ -273,7 +273,7 @@
       }
     },
     {
-      "name": "fidl.test.inheritance/SuperFooTopResponse",
+      "name": "test.inheritance/SuperFooTopResponse",
       "naming_context": [
         "super",
         "foo",
@@ -353,15 +353,15 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.inheritance/SuperFooTopResponse",
-    "fidl.test.inheritance/SuperFooRequest",
-    "fidl.test.inheritance/super",
-    "fidl.test.inheritance/sub"
+    "test.inheritance/SuperFooTopResponse",
+    "test.inheritance/SuperFooRequest",
+    "test.inheritance/super",
+    "test.inheritance/sub"
   ],
   "declarations": {
-    "fidl.test.inheritance/super": "interface",
-    "fidl.test.inheritance/sub": "interface",
-    "fidl.test.inheritance/SuperFooRequest": "struct",
-    "fidl.test.inheritance/SuperFooTopResponse": "struct"
+    "test.inheritance/super": "interface",
+    "test.inheritance/sub": "interface",
+    "test.inheritance/SuperFooRequest": "struct",
+    "test.inheritance/SuperFooTopResponse": "struct"
   }
 }

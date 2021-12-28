@@ -1,6 +1,6 @@
-library fidl.test.typealiases;
+library test.typealiases;
 
-using someotherlibrary;
+using test.someotherlibrary;
 
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
@@ -27,7 +27,7 @@ type ExampleOfUseOfAliases = resource struct {
     field_of_vec_of_strings vec_of_strings;
     field_of_vec_of_strings_at_most_nine vec_of_strings:9;
     field_of_vec_of_strings_at_most_5 vec_of_strings_at_most_5;
-    field_of_vec_of_ref_me_at_most_5 vector<someotherlibrary.ReferenceMe>:5;
+    field_of_vec_of_ref_me_at_most_5 vector<test.someotherlibrary.ReferenceMe>:5;
     field_of_channel channel;
     field_of_client_end alias_of_channel;
     field_of_nullable_client_end alias_of_channel:optional;

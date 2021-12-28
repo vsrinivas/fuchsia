@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.error",
+  "name": "test.error",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.error/Example",
+      "name": "test.error/Example",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
         "line": 3,
@@ -18,7 +18,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 6333213382893778862,
+          "ordinal": 1107623248440401476,
           "name": "foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error.test.fidl",
@@ -29,7 +29,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.error/ExampleFooRequest",
+            "identifier": "test.error/ExampleFooRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -53,7 +53,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.error/ExampleFooTopResponse",
+            "identifier": "test.error/ExampleFooTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -78,7 +78,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.error/Example_foo_Result",
+            "identifier": "test.error/Example_foo_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -101,7 +101,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.error/Example_foo_Response",
+            "identifier": "test.error/Example_foo_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -151,7 +151,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.error/ExampleFooRequest",
+      "name": "test.error/ExampleFooRequest",
       "naming_context": [
         "Example",
         "foo",
@@ -226,7 +226,7 @@
       }
     },
     {
-      "name": "fidl.test.error/Example_foo_Response",
+      "name": "test.error/Example_foo_Response",
       "naming_context": [
         "Example",
         "foo",
@@ -303,7 +303,7 @@
       }
     },
     {
-      "name": "fidl.test.error/ExampleFooTopResponse",
+      "name": "test.error/ExampleFooTopResponse",
       "naming_context": [
         "Example",
         "foo",
@@ -320,7 +320,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.error/Example_foo_Result",
+            "identifier": "test.error/Example_foo_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -383,7 +383,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.error/Example_foo_Result",
+      "name": "test.error/Example_foo_Result",
       "naming_context": [
         "Example",
         "foo",
@@ -409,7 +409,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.error/Example_foo_Response",
+            "identifier": "test.error/Example_foo_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -495,17 +495,17 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.error/Example_foo_Response",
-    "fidl.test.error/Example_foo_Result",
-    "fidl.test.error/ExampleFooTopResponse",
-    "fidl.test.error/ExampleFooRequest",
-    "fidl.test.error/Example"
+    "test.error/Example_foo_Response",
+    "test.error/Example_foo_Result",
+    "test.error/ExampleFooTopResponse",
+    "test.error/ExampleFooRequest",
+    "test.error/Example"
   ],
   "declarations": {
-    "fidl.test.error/Example": "interface",
-    "fidl.test.error/ExampleFooRequest": "struct",
-    "fidl.test.error/Example_foo_Response": "struct",
-    "fidl.test.error/ExampleFooTopResponse": "struct",
-    "fidl.test.error/Example_foo_Result": "union"
+    "test.error/Example": "interface",
+    "test.error/ExampleFooRequest": "struct",
+    "test.error/Example_foo_Response": "struct",
+    "test.error/ExampleFooTopResponse": "struct",
+    "test.error/Example_foo_Result": "union"
   }
 }

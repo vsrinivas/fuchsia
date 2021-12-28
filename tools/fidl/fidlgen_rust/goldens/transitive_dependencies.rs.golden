@@ -27,7 +27,7 @@ use {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Baz {
-    pub g: fidl_middle::Bar,
+    pub g: fidl_test_middle::Bar,
 }
 
 impl fidl::encoding::Persistable for Baz {}
@@ -36,7 +36,7 @@ fidl_struct! {
   name: Baz,
   members: [
     g {
-      ty: fidl_middle::Bar,
+      ty: fidl_test_middle::Bar,
       offset_v1: 0,
       offset_v2: 0,
     },

@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.drivertwoway",
+  "name": "test.drivertwoway",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.drivertwoway/TwoWay",
+      "name": "test.drivertwoway/TwoWay",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
         "line": 8,
@@ -51,7 +51,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 7312196191678030330,
+          "ordinal": 989730524426044687,
           "name": "Add",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
@@ -62,7 +62,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.drivertwoway/TwoWayAddRequest",
+            "identifier": "test.drivertwoway/TwoWayAddRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -86,7 +86,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.drivertwoway/TwoWayAddTopResponse",
+            "identifier": "test.drivertwoway/TwoWayAddTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -116,7 +116,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.drivertwoway/TwoWayAddRequest",
+      "name": "test.drivertwoway/TwoWayAddRequest",
       "naming_context": [
         "TwoWay",
         "Add",
@@ -230,7 +230,7 @@
       }
     },
     {
-      "name": "fidl.test.drivertwoway/TwoWayAddTopResponse",
+      "name": "test.drivertwoway/TwoWayAddTopResponse",
       "naming_context": [
         "TwoWay",
         "Add",
@@ -310,13 +310,13 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.drivertwoway/TwoWayAddTopResponse",
-    "fidl.test.drivertwoway/TwoWayAddRequest",
-    "fidl.test.drivertwoway/TwoWay"
+    "test.drivertwoway/TwoWayAddTopResponse",
+    "test.drivertwoway/TwoWayAddRequest",
+    "test.drivertwoway/TwoWay"
   ],
   "declarations": {
-    "fidl.test.drivertwoway/TwoWay": "interface",
-    "fidl.test.drivertwoway/TwoWayAddRequest": "struct",
-    "fidl.test.drivertwoway/TwoWayAddTopResponse": "struct"
+    "test.drivertwoway/TwoWay": "interface",
+    "test.drivertwoway/TwoWayAddRequest": "struct",
+    "test.drivertwoway/TwoWayAddTopResponse": "struct"
   }
 }

@@ -7,7 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("measuretape") {
   testonly = true
 
-  name = "measuretape"
+  name = "test.measuretape"
 
   sources = [ "measuretape.test.fidl" ]
 

@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.table
+# test.table
 
 
 
@@ -17,7 +17,7 @@
 ### EmptyTable  {#EmptyTable data-text="EmptyTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=3)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=3)*
 
 
 
@@ -29,7 +29,7 @@
 ### ExtensionTable  {#ExtensionTable data-text="ExtensionTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=43)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=43)*
 
 
 
@@ -41,7 +41,7 @@
 ### NewerSimpleTable  {#NewerSimpleTable data-text="NewerSimpleTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=18)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=18)*
 
 
 
@@ -109,7 +109,7 @@
 ### OlderSimpleTable  {#OlderSimpleTable data-text="OlderSimpleTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=13)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=13)*
 
 
 
@@ -137,7 +137,7 @@
 ### ReverseOrdinalTable  {#ReverseOrdinalTable data-text="ReverseOrdinalTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=28)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=28)*
 
 
 
@@ -173,7 +173,7 @@
 ### SimpleTable  {#SimpleTable data-text="SimpleTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=5)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=5)*
 
 
 
@@ -225,7 +225,7 @@
 ### SixtyFourOrdinalTable  {#SixtyFourOrdinalTable data-text="SixtyFourOrdinalTable"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=45)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=45)*
 
 
 
@@ -749,7 +749,7 @@
 ### TableWithAttributes  {#TableWithAttributes data-text="TableWithAttributes"}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=35)*
+*Defined in [test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=35)*
 
 
 

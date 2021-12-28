@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_inheritance {
+namespace test_inheritance {
 
 class Super final {
   Super() = delete;
@@ -15,7 +15,7 @@ class Super final {
     Foo() = delete;
 
    public:
-    using Protocol = ::fidl_test_inheritance::Super;
+    using Protocol = ::test_inheritance::Super;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -30,9 +30,9 @@ class Sub final {
     Foo() = delete;
 
    public:
-    using Protocol = ::fidl_test_inheritance::Sub;
+    using Protocol = ::test_inheritance::Sub;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_inheritance
+}  // namespace test_inheritance

@@ -18,9 +18,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.consts/cpp/markers.h>
+#include <fidl/test.consts/cpp/markers.h>
 
-namespace fidl_test_consts {
+namespace test_consts {
 namespace wire {
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
@@ -73,49 +73,48 @@ class BitsType final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_consts::wire::BitsType BitsType::kValue =
-    ::fidl_test_consts::wire::BitsType(1u);
-constexpr const ::fidl_test_consts::wire::BitsType BitsType::kTrue =
-    ::fidl_test_consts::wire::BitsType(2u);
-constexpr const ::fidl_test_consts::wire::BitsType BitsType::kMask =
-    ::fidl_test_consts::wire::BitsType(3u);
+constexpr const ::test_consts::wire::BitsType BitsType::kValue =
+    ::test_consts::wire::BitsType(1u);
+constexpr const ::test_consts::wire::BitsType BitsType::kTrue =
+    ::test_consts::wire::BitsType(2u);
+constexpr const ::test_consts::wire::BitsType BitsType::kMask =
+    ::test_consts::wire::BitsType(3u);
 
-constexpr inline ::fidl_test_consts::wire::BitsType BitsType::operator~()
-    const {
-  return ::fidl_test_consts::wire::BitsType(
+constexpr inline ::test_consts::wire::BitsType BitsType::operator~() const {
+  return ::test_consts::wire::BitsType(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_consts::wire::BitsType BitsType::operator|(
-    const ::fidl_test_consts::wire::BitsType& other) const {
-  return ::fidl_test_consts::wire::BitsType(
+constexpr inline ::test_consts::wire::BitsType BitsType::operator|(
+    const ::test_consts::wire::BitsType& other) const {
+  return ::test_consts::wire::BitsType(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_consts::wire::BitsType BitsType::operator&(
-    const ::fidl_test_consts::wire::BitsType& other) const {
-  return ::fidl_test_consts::wire::BitsType(
+constexpr inline ::test_consts::wire::BitsType BitsType::operator&(
+    const ::test_consts::wire::BitsType& other) const {
+  return ::test_consts::wire::BitsType(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_consts::wire::BitsType BitsType::operator^(
-    const ::fidl_test_consts::wire::BitsType& other) const {
-  return ::fidl_test_consts::wire::BitsType(
+constexpr inline ::test_consts::wire::BitsType BitsType::operator^(
+    const ::test_consts::wire::BitsType& other) const {
+  return ::test_consts::wire::BitsType(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsType::operator|=(
-    const ::fidl_test_consts::wire::BitsType& other) {
+    const ::test_consts::wire::BitsType& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void BitsType::operator&=(
-    const ::fidl_test_consts::wire::BitsType& other) {
+    const ::test_consts::wire::BitsType& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void BitsType::operator^=(
-    const ::fidl_test_consts::wire::BitsType& other) {
+    const ::test_consts::wire::BitsType& other) {
   this->value_ ^= other.value_;
 }
 
@@ -136,17 +135,15 @@ constexpr float kMinTemp = -273.15f;
 
 constexpr uint64_t kFuchsia = 4054509061583223046u;
 
-constexpr ::fidl_test_consts::wire::EnumType kEnumVal =
-    ::fidl_test_consts::wire::EnumType::kValue;
+constexpr ::test_consts::wire::EnumType kEnumVal =
+    ::test_consts::wire::EnumType::kValue;
 
-constexpr ::fidl_test_consts::wire::EnumType kEnumTrue =
-    ::fidl_test_consts::wire::EnumType::kTrue;
+constexpr ::test_consts::wire::EnumType kEnumTrue =
+    ::test_consts::wire::EnumType::kTrue;
 
-constexpr int32_t kEnumPrimitiveVal =
-    ::fidl_test_consts::wire::EnumType::kValue;
+constexpr int32_t kEnumPrimitiveVal = ::test_consts::wire::EnumType::kValue;
 
-constexpr int32_t kEnumPrimitiveTrue =
-    ::fidl_test_consts::wire::EnumType::kTrue;
+constexpr int32_t kEnumPrimitiveTrue = ::test_consts::wire::EnumType::kTrue;
 
 constexpr bool kEnabledFlag = true;
 
@@ -154,40 +151,36 @@ constexpr uint64_t kDiamond = 1746410393481133080u;
 
 constexpr double kConversionFactor = 1.41421;
 
-constexpr ::fidl_test_consts::wire::BitsType kBitsVal =
-    ::fidl_test_consts::wire::BitsType::kValue;
+constexpr ::test_consts::wire::BitsType kBitsVal =
+    ::test_consts::wire::BitsType::kValue;
 
-constexpr ::fidl_test_consts::wire::BitsType kBitsTrue =
-    ::fidl_test_consts::wire::BitsType::kTrue;
+constexpr ::test_consts::wire::BitsType kBitsTrue =
+    ::test_consts::wire::BitsType::kTrue;
 
-constexpr int32_t kBitsPrimitiveVal =
-    ::fidl_test_consts::wire::BitsType::kValue;
+constexpr int32_t kBitsPrimitiveVal = ::test_consts::wire::BitsType::kValue;
 
-constexpr int32_t kBitsPrimitiveTrue =
-    ::fidl_test_consts::wire::BitsType::kTrue;
+constexpr int32_t kBitsPrimitiveTrue = ::test_consts::wire::BitsType::kTrue;
 
 constexpr uint16_t kAnswerInBinary = 42u;
 
 constexpr uint16_t kAnswer = 42u;
 
 }  // namespace wire
-}  // namespace fidl_test_consts
+}  // namespace test_consts
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_consts::wire::BitsType> : public std::true_type {
-};
+struct IsFidlType<::test_consts::wire::BitsType> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_consts::wire::BitsType>
-    : public std::false_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_consts::wire::BitsType>);
-static_assert(sizeof(::fidl_test_consts::wire::BitsType) == sizeof(uint32_t));
+struct ContainsHandle<::test_consts::wire::BitsType> : public std::false_type {
+};
+static_assert(std::is_standard_layout_v<::test_consts::wire::BitsType>);
+static_assert(sizeof(::test_consts::wire::BitsType) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::fidl_test_consts::wire::EnumType> : public std::true_type {
-};
+struct IsFidlType<::test_consts::wire::EnumType> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_consts::wire::EnumType>
-    : public std::false_type {};
+struct ContainsHandle<::test_consts::wire::EnumType> : public std::false_type {
+};
 
 }  // namespace fidl

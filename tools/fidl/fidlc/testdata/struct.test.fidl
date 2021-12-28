@@ -1,4 +1,4 @@
-library fidl.test.struct;
+library test.struct;
 
 type Simple = struct {
     f1 uint8;

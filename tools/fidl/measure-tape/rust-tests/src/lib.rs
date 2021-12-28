@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    fidl_measuretape as fmt,
+    fidl_test_measuretape as fmt,
     fuchsia_zircon::{Event, HandleBased, Vmo},
     measure_tape_for_toplevelunion::Measurable as _,
     measure_tape_for_toplevelunion::Size,

@@ -19,9 +19,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.doccomments/cpp/markers.h>
+#include <fidl/test.doccomments/cpp/markers.h>
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 namespace wire {
 /// strict bits comment #1
 ///
@@ -78,52 +78,49 @@ class MyStrictBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_doccomments::wire::MyStrictBits
-    MyStrictBits::kMyFirstBit = ::fidl_test_doccomments::wire::MyStrictBits(1u);
-constexpr const ::fidl_test_doccomments::wire::MyStrictBits
-    MyStrictBits::kMyOtherBit = ::fidl_test_doccomments::wire::MyStrictBits(2u);
-constexpr const ::fidl_test_doccomments::wire::MyStrictBits
-    MyStrictBits::kMask = ::fidl_test_doccomments::wire::MyStrictBits(3u);
+constexpr const ::test_doccomments::wire::MyStrictBits
+    MyStrictBits::kMyFirstBit = ::test_doccomments::wire::MyStrictBits(1u);
+constexpr const ::test_doccomments::wire::MyStrictBits
+    MyStrictBits::kMyOtherBit = ::test_doccomments::wire::MyStrictBits(2u);
+constexpr const ::test_doccomments::wire::MyStrictBits MyStrictBits::kMask =
+    ::test_doccomments::wire::MyStrictBits(3u);
 
-constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
+constexpr inline ::test_doccomments::wire::MyStrictBits
 MyStrictBits::operator~() const {
-  return ::fidl_test_doccomments::wire::MyStrictBits(
+  return ::test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
-MyStrictBits::operator|(
-    const ::fidl_test_doccomments::wire::MyStrictBits& other) const {
-  return ::fidl_test_doccomments::wire::MyStrictBits(
+constexpr inline ::test_doccomments::wire::MyStrictBits MyStrictBits::operator|(
+    const ::test_doccomments::wire::MyStrictBits& other) const {
+  return ::test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
-MyStrictBits::operator&(
-    const ::fidl_test_doccomments::wire::MyStrictBits& other) const {
-  return ::fidl_test_doccomments::wire::MyStrictBits(
+constexpr inline ::test_doccomments::wire::MyStrictBits MyStrictBits::operator&(
+    const ::test_doccomments::wire::MyStrictBits& other) const {
+  return ::test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_doccomments::wire::MyStrictBits
-MyStrictBits::operator^(
-    const ::fidl_test_doccomments::wire::MyStrictBits& other) const {
-  return ::fidl_test_doccomments::wire::MyStrictBits(
+constexpr inline ::test_doccomments::wire::MyStrictBits MyStrictBits::operator^(
+    const ::test_doccomments::wire::MyStrictBits& other) const {
+  return ::test_doccomments::wire::MyStrictBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyStrictBits::operator|=(
-    const ::fidl_test_doccomments::wire::MyStrictBits& other) {
+    const ::test_doccomments::wire::MyStrictBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyStrictBits::operator&=(
-    const ::fidl_test_doccomments::wire::MyStrictBits& other) {
+    const ::test_doccomments::wire::MyStrictBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyStrictBits::operator^=(
-    const ::fidl_test_doccomments::wire::MyStrictBits& other) {
+    const ::test_doccomments::wire::MyStrictBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -187,54 +184,52 @@ class MyFlexibleBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
-    MyFlexibleBits::kMyFirstBit =
-        ::fidl_test_doccomments::wire::MyFlexibleBits(1u);
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
-    MyFlexibleBits::kMyOtherBit =
-        ::fidl_test_doccomments::wire::MyFlexibleBits(2u);
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleBits
-    MyFlexibleBits::kMask = ::fidl_test_doccomments::wire::MyFlexibleBits(3u);
+constexpr const ::test_doccomments::wire::MyFlexibleBits
+    MyFlexibleBits::kMyFirstBit = ::test_doccomments::wire::MyFlexibleBits(1u);
+constexpr const ::test_doccomments::wire::MyFlexibleBits
+    MyFlexibleBits::kMyOtherBit = ::test_doccomments::wire::MyFlexibleBits(2u);
+constexpr const ::test_doccomments::wire::MyFlexibleBits MyFlexibleBits::kMask =
+    ::test_doccomments::wire::MyFlexibleBits(3u);
 
-constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
+constexpr inline ::test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator~() const {
-  return ::fidl_test_doccomments::wire::MyFlexibleBits(
+  return ::test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
+constexpr inline ::test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator|(
-    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) const {
-  return ::fidl_test_doccomments::wire::MyFlexibleBits(
+    const ::test_doccomments::wire::MyFlexibleBits& other) const {
+  return ::test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
+constexpr inline ::test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator&(
-    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) const {
-  return ::fidl_test_doccomments::wire::MyFlexibleBits(
+    const ::test_doccomments::wire::MyFlexibleBits& other) const {
+  return ::test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_doccomments::wire::MyFlexibleBits
+constexpr inline ::test_doccomments::wire::MyFlexibleBits
 MyFlexibleBits::operator^(
-    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) const {
-  return ::fidl_test_doccomments::wire::MyFlexibleBits(
+    const ::test_doccomments::wire::MyFlexibleBits& other) const {
+  return ::test_doccomments::wire::MyFlexibleBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyFlexibleBits::operator|=(
-    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
+    const ::test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyFlexibleBits::operator&=(
-    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
+    const ::test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyFlexibleBits::operator^=(
-    const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
+    const ::test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -291,10 +286,10 @@ class MyFlexibleEnum final {
  private:
   uint32_t value_;
 };
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::kFoo = ::fidl_test_doccomments::wire::MyFlexibleEnum(1u);
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::kBar = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
+constexpr const ::test_doccomments::wire::MyFlexibleEnum MyFlexibleEnum::kFoo =
+    ::test_doccomments::wire::MyFlexibleEnum(1u);
+constexpr const ::test_doccomments::wire::MyFlexibleEnum MyFlexibleEnum::kBar =
+    ::test_doccomments::wire::MyFlexibleEnum(2u);
 
 struct Struct;
 
@@ -304,13 +299,13 @@ class StrictUnion;
 
 class FlexibleUnion;
 
-extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
+extern "C" const fidl_type_t test_doccomments_StructTable;
 
 /// struct comment #1
 ///
 /// struct comment #3
 struct Struct {
-  static constexpr const fidl_type_t* Type = &fidl_test_doccomments_StructTable;
+  static constexpr const fidl_type_t* Type = &test_doccomments_StructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -329,9 +324,9 @@ struct Struct {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments
 template <>
-struct ::fidl::WireTableFrame<::fidl_test_doccomments::wire::Table> final {
+struct ::fidl::WireTableFrame<::test_doccomments::wire::Table> final {
  public:
   WireTableFrame() = default;
   // In its intended usage, WireTableFrame will be referenced by an ObjectView.
@@ -346,12 +341,12 @@ struct ::fidl::WireTableFrame<::fidl_test_doccomments::wire::Table> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
   ::fidl::Envelope<int32_t> field_;
 
-  friend class ::fidl_test_doccomments::wire::Table;
+  friend class ::test_doccomments::wire::Table;
 };
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 namespace wire {
-extern "C" const fidl_type_t fidl_test_doccomments_TableTable;
+extern "C" const fidl_type_t test_doccomments_TableTable;
 
 /// table comment #1
 ///
@@ -390,17 +385,16 @@ class Table final {
 
   Table() = default;
   explicit Table(::fidl::AnyArena& allocator)
-      : frame_ptr_(
-            ::fidl::ObjectView<
-                ::fidl::WireTableFrame<::fidl_test_doccomments::wire::Table>>(
-                allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<
+                   ::fidl::WireTableFrame<::test_doccomments::wire::Table>>(
+            allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
   explicit Table(
       ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::fidl_test_doccomments::wire::Table>>&& frame)
+          ::fidl::WireTableFrame<::test_doccomments::wire::Table>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~Table() = default;
   Table(const Table& other) noexcept = default;
@@ -408,7 +402,7 @@ class Table final {
   Table(Table&& other) noexcept = default;
   Table& operator=(Table&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type = &fidl_test_doccomments_TableTable;
+  static constexpr const fidl_type_t* Type = &test_doccomments_TableTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -419,11 +413,11 @@ class Table final {
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::fidl_test_doccomments::wire::Table>>(
-        allocator);
+        ::fidl::WireTableFrame<::test_doccomments::wire::Table>>(allocator);
   }
-  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
-                ::fidl_test_doccomments::wire::Table>>&& frame_ptr) {
+  void
+  Init(::fidl::ObjectView<
+       ::fidl::WireTableFrame<::test_doccomments::wire::Table>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -434,12 +428,11 @@ class Table final {
 
  private:
   uint64_t max_ordinal_ = 0;
-  ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::fidl_test_doccomments::wire::Table>>
+  ::fidl::ObjectView<::fidl::WireTableFrame<::test_doccomments::wire::Table>>
       frame_ptr_;
 };
 
-extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;
+extern "C" const fidl_type_t test_doccomments_StrictUnionTable;
 
 /// strict union comment #1
 ///
@@ -447,7 +440,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_StrictUnionTable;
 class StrictUnion {
  public:
   StrictUnion()
-      : ordinal_(::fidl_test_doccomments::wire::StrictUnion::Ordinal::Invalid),
+      : ordinal_(::test_doccomments::wire::StrictUnion::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -461,13 +454,11 @@ class StrictUnion {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_doccomments::wire::StrictUnion::Ordinal::Invalid;
+    return ordinal_ == ::test_doccomments::wire::StrictUnion::Ordinal::Invalid;
   }
 
   bool is_field() const {
-    return ordinal_ ==
-           ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
+    return ordinal_ == ::test_doccomments::wire::StrictUnion::Ordinal::kField;
   }
   static StrictUnion WithField(int32_t val) {
     StrictUnion result;
@@ -479,7 +470,7 @@ class StrictUnion {
   ///
   /// union member comment #3
   void set_field(int32_t elem) {
-    ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
+    ordinal_ = ::test_doccomments::wire::StrictUnion::Ordinal::kField;
     envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
@@ -488,22 +479,20 @@ class StrictUnion {
   /// union member comment #3
   int32_t& mutable_field() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField);
+              ::test_doccomments::wire::StrictUnion::Ordinal::kField);
     return envelope_.As<int32_t>().get_data();
   }
   const int32_t& field() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField);
+              ::test_doccomments::wire::StrictUnion::Ordinal::kField);
     return envelope_.As<int32_t>().get_data();
   }
-  ::fidl_test_doccomments::wire::StrictUnion::Tag which() const {
+  ::test_doccomments::wire::StrictUnion::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_doccomments::wire::StrictUnion::Tag>(
-        ordinal_);
+    return static_cast<::test_doccomments::wire::StrictUnion::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_doccomments_StrictUnionTable;
+  static constexpr const fidl_type_t* Type = &test_doccomments_StrictUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -522,12 +511,12 @@ class StrictUnion {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_doccomments::wire::StrictUnion::Ordinal ordinal_;
+  ::test_doccomments::wire::StrictUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_doccomments_FlexibleUnionTable;
+extern "C" const fidl_type_t test_doccomments_FlexibleUnionTable;
 
 /// flexible union comment #1
 ///
@@ -535,8 +524,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_FlexibleUnionTable;
 class FlexibleUnion {
  public:
   FlexibleUnion()
-      : ordinal_(
-            ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::Invalid),
+      : ordinal_(::test_doccomments::wire::FlexibleUnion::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -552,12 +540,11 @@ class FlexibleUnion {
 
   bool has_invalid_tag() const {
     return ordinal_ ==
-           ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::Invalid;
+           ::test_doccomments::wire::FlexibleUnion::Ordinal::Invalid;
   }
 
   bool is_field() const {
-    return ordinal_ ==
-           ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
+    return ordinal_ == ::test_doccomments::wire::FlexibleUnion::Ordinal::kField;
   }
   static FlexibleUnion WithField(int32_t val) {
     FlexibleUnion result;
@@ -569,7 +556,7 @@ class FlexibleUnion {
   ///
   /// union member comment #3
   void set_field(int32_t elem) {
-    ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
+    ordinal_ = ::test_doccomments::wire::FlexibleUnion::Ordinal::kField;
     envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
@@ -578,18 +565,18 @@ class FlexibleUnion {
   /// union member comment #3
   int32_t& mutable_field() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField);
+              ::test_doccomments::wire::FlexibleUnion::Ordinal::kField);
     return envelope_.As<int32_t>().get_data();
   }
   const int32_t& field() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField);
+              ::test_doccomments::wire::FlexibleUnion::Ordinal::kField);
     return envelope_.As<int32_t>().get_data();
   }
-  ::fidl_test_doccomments::wire::FlexibleUnion::Tag which() const;
+  ::test_doccomments::wire::FlexibleUnion::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_doccomments_FlexibleUnionTable;
+      &test_doccomments_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -608,7 +595,7 @@ class FlexibleUnion {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal ordinal_;
+  ::test_doccomments::wire::FlexibleUnion::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
@@ -619,79 +606,75 @@ class FlexibleUnion {
 constexpr int32_t kC = 4u;
 
 }  // namespace wire
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyStrictBits>
+struct IsFidlType<::test_doccomments::wire::MyStrictBits>
     : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_doccomments::wire::MyStrictBits>
+struct ContainsHandle<::test_doccomments::wire::MyStrictBits>
     : public std::false_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyStrictBits>);
-static_assert(sizeof(::fidl_test_doccomments::wire::MyStrictBits) ==
+    std::is_standard_layout_v<::test_doccomments::wire::MyStrictBits>);
+static_assert(sizeof(::test_doccomments::wire::MyStrictBits) ==
               sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleBits>
+struct IsFidlType<::test_doccomments::wire::MyFlexibleBits>
     : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_doccomments::wire::MyFlexibleBits>
+struct ContainsHandle<::test_doccomments::wire::MyFlexibleBits>
     : public std::false_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyFlexibleBits>);
-static_assert(sizeof(::fidl_test_doccomments::wire::MyFlexibleBits) ==
+    std::is_standard_layout_v<::test_doccomments::wire::MyFlexibleBits>);
+static_assert(sizeof(::test_doccomments::wire::MyFlexibleBits) ==
               sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::Struct>
+struct IsFidlType<::test_doccomments::wire::Struct> : public std::true_type {};
+template <>
+struct IsStruct<::test_doccomments::wire::Struct> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_doccomments::wire::Struct>);
+static_assert(offsetof(::test_doccomments::wire::Struct, field) == 0);
+static_assert(sizeof(::test_doccomments::wire::Struct) ==
+              ::test_doccomments::wire::Struct::PrimarySize);
+
+template <>
+struct IsFidlType<::test_doccomments::wire::Table> : public std::true_type {};
+template <>
+struct IsTable<::test_doccomments::wire::Table> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_doccomments::wire::Table>);
+
+template <>
+struct IsFidlType<::test_doccomments::wire::StrictUnion>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_doccomments::wire::Struct> : public std::true_type {
+struct IsUnion<::test_doccomments::wire::StrictUnion> : public std::true_type {
 };
-static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Struct>);
-static_assert(offsetof(::fidl_test_doccomments::wire::Struct, field) == 0);
-static_assert(sizeof(::fidl_test_doccomments::wire::Struct) ==
-              ::fidl_test_doccomments::wire::Struct::PrimarySize);
+static_assert(std::is_standard_layout_v<::test_doccomments::wire::StrictUnion>);
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::Table>
+struct IsFidlType<::test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
 template <>
-struct IsTable<::fidl_test_doccomments::wire::Table> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Table>);
-
-template <>
-struct IsFidlType<::fidl_test_doccomments::wire::StrictUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_doccomments::wire::StrictUnion>
+struct IsUnion<::test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_doccomments::wire::StrictUnion>);
+    std::is_standard_layout_v<::test_doccomments::wire::FlexibleUnion>);
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::FlexibleUnion>
+struct IsFidlType<::test_doccomments::wire::MyStrictEnum>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_doccomments::wire::FlexibleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_doccomments::wire::FlexibleUnion>);
-
-template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyStrictEnum>
-    : public std::true_type {};
-template <>
-struct ContainsHandle<::fidl_test_doccomments::wire::MyStrictEnum>
+struct ContainsHandle<::test_doccomments::wire::MyStrictEnum>
     : public std::false_type {};
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleEnum>
+struct IsFidlType<::test_doccomments::wire::MyFlexibleEnum>
     : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_doccomments::wire::MyFlexibleEnum>
+struct ContainsHandle<::test_doccomments::wire::MyFlexibleEnum>
     : public std::false_type {};
 
 }  // namespace fidl

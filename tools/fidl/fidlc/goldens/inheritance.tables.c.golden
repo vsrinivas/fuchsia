@@ -3,35 +3,35 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_inheritance_SuperFooTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_inheritance_SuperFooRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_inheritance_SuperFooTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_inheritance_SuperFooRequestTable;
 
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_inheritance_superfooRequestMessageTable;
-static const struct FidlStructElement Fields44fidl_test_inheritance_superfooRequestMessage[] = {
+__LOCAL extern const struct FidlCodedStruct test_inheritance_superfooRequestMessageTable;
+static const struct FidlStructElement Fields39test_inheritance_superfooRequestMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_inheritance_superfooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields44fidl_test_inheritance_superfooRequestMessage, .element_count=1u, .size_v1=32u, .size_v2=32u, .name="fidl.test.inheritance/superfooRequestMessage"};
+const struct FidlCodedStruct test_inheritance_superfooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields39test_inheritance_superfooRequestMessage, .element_count=1u, .size_v1=32u, .size_v2=32u, .name="test.inheritance/superfooRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_inheritance_superfooResponseMessageTable;
-const struct FidlCodedStruct fidl_test_inheritance_superfooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritance/superfooResponseMessage"};
+__LOCAL extern const struct FidlCodedStruct test_inheritance_superfooResponseMessageTable;
+const struct FidlCodedStruct test_inheritance_superfooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=24u, .size_v2=24u, .name="test.inheritance/superfooResponseMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_inheritance_subfooRequestMessageTable;
-static const struct FidlStructElement Fields42fidl_test_inheritance_subfooRequestMessage[] = {
+__LOCAL extern const struct FidlCodedStruct test_inheritance_subfooRequestMessageTable;
+static const struct FidlStructElement Fields37test_inheritance_subfooRequestMessage[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_inheritance_subfooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields42fidl_test_inheritance_subfooRequestMessage, .element_count=1u, .size_v1=32u, .size_v2=32u, .name="fidl.test.inheritance/subfooRequestMessage"};
+const struct FidlCodedStruct test_inheritance_subfooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=Fields37test_inheritance_subfooRequestMessage, .element_count=1u, .size_v1=32u, .size_v2=32u, .name="test.inheritance/subfooRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_inheritance_subfooResponseMessageTable;
-const struct FidlCodedStruct fidl_test_inheritance_subfooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=24u, .size_v2=24u, .name="fidl.test.inheritance/subfooResponseMessage"};
+__LOCAL extern const struct FidlCodedStruct test_inheritance_subfooResponseMessageTable;
+const struct FidlCodedStruct test_inheritance_subfooResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=24u, .size_v2=24u, .name="test.inheritance/subfooResponseMessage"};
 
 
-const struct FidlCodedStruct fidl_test_inheritance_SuperFooTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="fidl.test.inheritance/SuperFooTopResponse"};
+const struct FidlCodedStruct test_inheritance_SuperFooTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=8u, .size_v2=8u, .name="test.inheritance/SuperFooTopResponse"};
 
-static const struct FidlStructElement Fields37fidl_test_inheritance_SuperFooRequest[] = {
+static const struct FidlStructElement Fields32test_inheritance_SuperFooRequest[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&String4294967295nonnullableTable)}}
 };
-const struct FidlCodedStruct fidl_test_inheritance_SuperFooRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields37fidl_test_inheritance_SuperFooRequest, .element_count=1u, .size_v1=16u, .size_v2=16u, .name="fidl.test.inheritance/SuperFooRequest"};
+const struct FidlCodedStruct test_inheritance_SuperFooRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields32test_inheritance_SuperFooRequest, .element_count=1u, .size_v1=16u, .size_v2=16u, .name="test.inheritance/SuperFooRequest"};
 

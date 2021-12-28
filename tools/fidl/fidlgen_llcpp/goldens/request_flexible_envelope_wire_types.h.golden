@@ -19,21 +19,21 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.requestflexibleenvelope/cpp/markers.h>
+#include <fidl/test.requestflexibleenvelope/cpp/markers.h>
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 namespace wire {
 class StrictFoo;
 
 class FlexibleFoo;
 
-extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_StrictFooTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_StrictFooTable;
 
 class StrictFoo {
  public:
   StrictFoo()
-      : ordinal_(::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::
-                     Invalid),
+      : ordinal_(
+            ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -48,13 +48,13 @@ class StrictFoo {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_requestflexibleenvelope::wire::StrictFoo::
-                           Ordinal::Invalid;
+    return ordinal_ ==
+           ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::Invalid;
   }
 
   bool is_s() const {
     return ordinal_ ==
-           ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
+           ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
   }
   static StrictFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     StrictFoo result;
@@ -71,35 +71,31 @@ class StrictFoo {
   }
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
+    ordinal_ = ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
     envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
   void set_s(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
+    ordinal_ = ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
     set_s(::fidl::ObjectView<::fidl::StringView>(allocator,
                                                  std::forward<Args>(args)...));
   }
 
   ::fidl::StringView& mutable_s() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
     return ordinal_ ==
-           ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
+           ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
   }
   static StrictFoo WithI(int32_t val) {
     StrictFoo result;
@@ -108,31 +104,28 @@ class StrictFoo {
   }
 
   void set_i(int32_t elem) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
+    ordinal_ = ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   int32_t& mutable_i() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Tag which() const {
+  ::test_requestflexibleenvelope::wire::StrictFoo::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Tag>(ordinal_);
+    return static_cast<::test_requestflexibleenvelope::wire::StrictFoo::Tag>(
+        ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_requestflexibleenvelope_StrictFooTable;
+      &test_requestflexibleenvelope_StrictFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -152,18 +145,18 @@ class StrictFoo {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal ordinal_;
+  ::test_requestflexibleenvelope::wire::StrictFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_requestflexibleenvelope_FlexibleFooTable;
+extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 
 class FlexibleFoo {
  public:
   FlexibleFoo()
-      : ordinal_(::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::
-                     Ordinal::Invalid),
+      : ordinal_(::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::
+                     Invalid),
         envelope_ {}
   {}
 
@@ -179,13 +172,13 @@ class FlexibleFoo {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::
-                           Ordinal::Invalid;
+    return ordinal_ ==
+           ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::Invalid;
   }
 
   bool is_s() const {
     return ordinal_ ==
-           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
+           ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
   }
   static FlexibleFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     FlexibleFoo result;
@@ -202,35 +195,31 @@ class FlexibleFoo {
   }
 
   void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
+    ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
     envelope_.As<::fidl::StringView>().set_data(std::move(elem));
   }
 
   template <typename... Args>
   void set_s(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
+    ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
     set_s(::fidl::ObjectView<::fidl::StringView>(allocator,
                                                  std::forward<Args>(args)...));
   }
 
   ::fidl::StringView& mutable_s() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
   const ::fidl::StringView& s() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS);
     return envelope_.As<::fidl::StringView>().get_data();
   }
 
   bool is_i() const {
     return ordinal_ ==
-           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
+           ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
   }
   static FlexibleFoo WithI(int32_t val) {
     FlexibleFoo result;
@@ -239,27 +228,24 @@ class FlexibleFoo {
   }
 
   void set_i(int32_t elem) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
+    ordinal_ = ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
   }
 
   int32_t& mutable_i() {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
   const int32_t& i() const {
-    ZX_ASSERT(
-        ordinal_ ==
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
+    ZX_ASSERT(ordinal_ ==
+              ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI);
     return envelope_.As<int32_t>().get_data();
   }
-  ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Tag which() const;
+  ::test_requestflexibleenvelope::wire::FlexibleFoo::Tag which() const;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_requestflexibleenvelope_FlexibleFooTable;
+      &test_requestflexibleenvelope_FlexibleFooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -279,31 +265,31 @@ class FlexibleFoo {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal ordinal_;
+  ::test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
 }  // namespace wire
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_requestflexibleenvelope::wire::StrictFoo>
+struct IsFidlType<::test_requestflexibleenvelope::wire::StrictFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_requestflexibleenvelope::wire::StrictFoo>
+struct IsUnion<::test_requestflexibleenvelope::wire::StrictFoo>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_requestflexibleenvelope::wire::StrictFoo>);
+static_assert(
+    std::is_standard_layout_v<::test_requestflexibleenvelope::wire::StrictFoo>);
 
 template <>
-struct IsFidlType<::fidl_test_requestflexibleenvelope::wire::FlexibleFoo>
+struct IsFidlType<::test_requestflexibleenvelope::wire::FlexibleFoo>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_requestflexibleenvelope::wire::FlexibleFoo>
+struct IsUnion<::test_requestflexibleenvelope::wire::FlexibleFoo>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo>);
+              ::test_requestflexibleenvelope::wire::FlexibleFoo>);
 
 }  // namespace fidl

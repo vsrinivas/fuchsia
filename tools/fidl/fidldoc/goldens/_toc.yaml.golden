@@ -3,85 +3,85 @@ toc:
   path: /README.md
 - title: API
   section:
-  - title: fidl.test.anonymous
-    path: /fidl.test.anonymous
-  - title: fidl.test.arrays
-    path: /fidl.test.arrays
-  - title: fidl.test.bindingsdenylist
-    path: /fidl.test.bindingsdenylist
-  - title: fidl.test.bits
-    path: /fidl.test.bits
-  - title: fidl.test.bitsconstants
-    path: /fidl.test.bitsconstants
-  - title: fidl.test.byteandbytes
-    path: /fidl.test.byteandbytes
-  - title: fidl.test.constants
-    path: /fidl.test.constants
-  - title: fidl.test.consts
-    path: /fidl.test.consts
-  - title: fidl.test.doccomments
-    path: /fidl.test.doccomments
-  - title: fidl.test.driveroneway
-    path: /fidl.test.driveroneway
-  - title: fidl.test.drivertwoway
-    path: /fidl.test.drivertwoway
-  - title: fidl.test.emptystruct
-    path: /fidl.test.emptystruct
-  - title: fidl.test.encapsulatedstructs
-    path: /fidl.test.encapsulatedstructs
-  - title: fidl.test.enum
-    path: /fidl.test.enum
-  - title: fidl.test.error
-    path: /fidl.test.error
-  - title: fidl.test.errorsyntax
-    path: /fidl.test.errorsyntax
-  - title: fidl.test.escaping
-    path: /fidl.test.escaping
-  - title: fidl.test.experimentalmaybefromtypealias
-    path: /fidl.test.experimentalmaybefromtypealias
-  - title: fidl.test.foreigntypeinresponseusedthroughcompose
-    path: /fidl.test.foreigntypeinresponseusedthroughcompose
-  - title: fidl.test.handles
-    path: /fidl.test.handles
-  - title: fidl.test.handlesintypes
-    path: /fidl.test.handlesintypes
-  - title: fidl.test.importedconstvalues
-    path: /fidl.test.importedconstvalues
-  - title: fidl.test.inheritance
-    path: /fidl.test.inheritance
-  - title: fidl.test.inheritancewithrecursivedecl
-    path: /fidl.test.inheritancewithrecursivedecl
-  - title: fidl.test.nullable
-    path: /fidl.test.nullable
-  - title: fidl.test.padding
-    path: /fidl.test.padding
-  - title: fidl.test.placementofattributes
-    path: /fidl.test.placementofattributes
-  - title: fidl.test.protocolrequest
-    path: /fidl.test.protocolrequest
-  - title: fidl.test.protocols
-    path: /fidl.test.protocols
-  - title: fidl.test.requestflexibleenvelope
-    path: /fidl.test.requestflexibleenvelope
-  - title: fidl.test.service
-    path: /fidl.test.service
-  - title: fidl.test.struct
-    path: /fidl.test.struct
-  - title: fidl.test.structdefaultvalueenumlibraryreference
-    path: /fidl.test.structdefaultvalueenumlibraryreference
-  - title: fidl.test.table
-    path: /fidl.test.table
-  - title: fidl.test.transitivedependencies
-    path: /fidl.test.transitivedependencies
-  - title: fidl.test.transitivedependenciescompose
-    path: /fidl.test.transitivedependenciescompose
-  - title: fidl.test.typealiases
-    path: /fidl.test.typealiases
-  - title: fidl.test.union
-    path: /fidl.test.union
-  - title: fidl.test.unionsandwich
-    path: /fidl.test.unionsandwich
-  - title: fidl.test.vectors
-    path: /fidl.test.vectors
-  - title: fidl.test.versions
-    path: /fidl.test.versions
+  - title: test.anonymous
+    path: /test.anonymous
+  - title: test.arrays
+    path: /test.arrays
+  - title: test.bindingsdenylist
+    path: /test.bindingsdenylist
+  - title: test.bits
+    path: /test.bits
+  - title: test.bitsconstants
+    path: /test.bitsconstants
+  - title: test.byteandbytes
+    path: /test.byteandbytes
+  - title: test.constants
+    path: /test.constants
+  - title: test.consts
+    path: /test.consts
+  - title: test.doccomments
+    path: /test.doccomments
+  - title: test.driveroneway
+    path: /test.driveroneway
+  - title: test.drivertwoway
+    path: /test.drivertwoway
+  - title: test.emptystruct
+    path: /test.emptystruct
+  - title: test.encapsulatedstructs
+    path: /test.encapsulatedstructs
+  - title: test.enum
+    path: /test.enum
+  - title: test.error
+    path: /test.error
+  - title: test.errorsyntax
+    path: /test.errorsyntax
+  - title: test.escaping
+    path: /test.escaping
+  - title: test.experimentalmaybefromtypealias
+    path: /test.experimentalmaybefromtypealias
+  - title: test.foreigntypeinresponseusedthroughcompose
+    path: /test.foreigntypeinresponseusedthroughcompose
+  - title: test.handles
+    path: /test.handles
+  - title: test.handlesintypes
+    path: /test.handlesintypes
+  - title: test.importedconstvalues
+    path: /test.importedconstvalues
+  - title: test.inheritance
+    path: /test.inheritance
+  - title: test.inheritancewithrecursivedecl
+    path: /test.inheritancewithrecursivedecl
+  - title: test.nullable
+    path: /test.nullable
+  - title: test.padding
+    path: /test.padding
+  - title: test.placementofattributes
+    path: /test.placementofattributes
+  - title: test.protocolrequest
+    path: /test.protocolrequest
+  - title: test.protocols
+    path: /test.protocols
+  - title: test.requestflexibleenvelope
+    path: /test.requestflexibleenvelope
+  - title: test.service
+    path: /test.service
+  - title: test.struct
+    path: /test.struct
+  - title: test.structdefaultvalueenumlibraryreference
+    path: /test.structdefaultvalueenumlibraryreference
+  - title: test.table
+    path: /test.table
+  - title: test.transitivedependencies
+    path: /test.transitivedependencies
+  - title: test.transitivedependenciescompose
+    path: /test.transitivedependenciescompose
+  - title: test.typealiases
+    path: /test.typealiases
+  - title: test.union
+    path: /test.union
+  - title: test.unionsandwich
+    path: /test.unionsandwich
+  - title: test.vectors
+    path: /test.vectors
+  - title: test.versions
+    path: /test.versions

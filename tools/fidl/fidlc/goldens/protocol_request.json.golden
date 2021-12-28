@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.protocolrequest",
+  "name": "test.protocolrequest",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.protocolrequest/Child",
+      "name": "test.protocolrequest/Child",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 3,
@@ -19,7 +19,7 @@
       "methods": []
     },
     {
-      "name": "fidl.test.protocolrequest/Parent",
+      "name": "test.protocolrequest/Parent",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
         "line": 5,
@@ -29,7 +29,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 7929845654914578302,
+          "ordinal": 881818649151440699,
           "name": "GetChild",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -41,7 +41,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocolrequest/ParentGetChildTopResponse",
+            "identifier": "test.protocolrequest/ParentGetChildTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -66,7 +66,7 @@
           "has_error": false
         },
         {
-          "ordinal": 1819029190665166744,
+          "ordinal": 1096855814967598201,
           "name": "GetChildRequest",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -78,7 +78,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocolrequest/ParentGetChildRequestTopResponse",
+            "identifier": "test.protocolrequest/ParentGetChildRequestTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -103,7 +103,7 @@
           "has_error": false
         },
         {
-          "ordinal": 374110854839013230,
+          "ordinal": 4470101341872267920,
           "name": "TakeChild",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -114,7 +114,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocolrequest/ParentTakeChildRequest",
+            "identifier": "test.protocolrequest/ParentTakeChildRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -140,7 +140,7 @@
           "has_error": false
         },
         {
-          "ordinal": 1574820689302890956,
+          "ordinal": 2333981071306416007,
           "name": "TakeChildRequest",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
@@ -151,7 +151,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocolrequest/ParentTakeChildRequestRequest",
+            "identifier": "test.protocolrequest/ParentTakeChildRequestRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -182,7 +182,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.protocolrequest/ParentGetChildTopResponse",
+      "name": "test.protocolrequest/ParentGetChildTopResponse",
       "naming_context": [
         "Parent",
         "GetChild",
@@ -199,7 +199,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocolrequest/Child",
+            "identifier": "test.protocolrequest/Child",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -258,7 +258,7 @@
       }
     },
     {
-      "name": "fidl.test.protocolrequest/ParentGetChildRequestTopResponse",
+      "name": "test.protocolrequest/ParentGetChildRequestTopResponse",
       "naming_context": [
         "Parent",
         "GetChildRequest",
@@ -275,7 +275,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.protocolrequest/Child",
+            "subtype": "test.protocolrequest/Child",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -334,7 +334,7 @@
       }
     },
     {
-      "name": "fidl.test.protocolrequest/ParentTakeChildRequest",
+      "name": "test.protocolrequest/ParentTakeChildRequest",
       "naming_context": [
         "Parent",
         "TakeChild",
@@ -351,7 +351,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocolrequest/Child",
+            "identifier": "test.protocolrequest/Child",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -410,7 +410,7 @@
       }
     },
     {
-      "name": "fidl.test.protocolrequest/ParentTakeChildRequestRequest",
+      "name": "test.protocolrequest/ParentTakeChildRequestRequest",
       "naming_context": [
         "Parent",
         "TakeChildRequest",
@@ -427,7 +427,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.protocolrequest/Child",
+            "subtype": "test.protocolrequest/Child",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -491,19 +491,19 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.protocolrequest/ParentTakeChildRequestRequest",
-    "fidl.test.protocolrequest/ParentTakeChildRequest",
-    "fidl.test.protocolrequest/ParentGetChildTopResponse",
-    "fidl.test.protocolrequest/ParentGetChildRequestTopResponse",
-    "fidl.test.protocolrequest/Parent",
-    "fidl.test.protocolrequest/Child"
+    "test.protocolrequest/ParentTakeChildRequestRequest",
+    "test.protocolrequest/ParentTakeChildRequest",
+    "test.protocolrequest/ParentGetChildTopResponse",
+    "test.protocolrequest/ParentGetChildRequestTopResponse",
+    "test.protocolrequest/Parent",
+    "test.protocolrequest/Child"
   ],
   "declarations": {
-    "fidl.test.protocolrequest/Child": "interface",
-    "fidl.test.protocolrequest/Parent": "interface",
-    "fidl.test.protocolrequest/ParentGetChildTopResponse": "struct",
-    "fidl.test.protocolrequest/ParentGetChildRequestTopResponse": "struct",
-    "fidl.test.protocolrequest/ParentTakeChildRequest": "struct",
-    "fidl.test.protocolrequest/ParentTakeChildRequestRequest": "struct"
+    "test.protocolrequest/Child": "interface",
+    "test.protocolrequest/Parent": "interface",
+    "test.protocolrequest/ParentGetChildTopResponse": "struct",
+    "test.protocolrequest/ParentGetChildRequestTopResponse": "struct",
+    "test.protocolrequest/ParentTakeChildRequest": "struct",
+    "test.protocolrequest/ParentTakeChildRequestRequest": "struct"
   }
 }

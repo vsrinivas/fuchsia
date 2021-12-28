@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_placementofattributes {
+namespace test_placementofattributes {
 
 class ExampleProtocol final {
   ExampleProtocol() = delete;
@@ -15,9 +15,9 @@ class ExampleProtocol final {
     Method() = delete;
 
    public:
-    using Protocol = ::fidl_test_placementofattributes::ExampleProtocol;
+    using Protocol = ::test_placementofattributes::ExampleProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
 };
-}  // namespace fidl_test_placementofattributes
+}  // namespace test_placementofattributes

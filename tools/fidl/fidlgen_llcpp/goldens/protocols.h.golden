@@ -2,6 +2,6 @@
 
 #pragma once
 
-#include <fidl/fidl.test.protocols/cpp/markers.h>
-#include <fidl/fidl.test.protocols/cpp/wire_messaging.h>
-#include <fidl/fidl.test.protocols/cpp/wire_types.h>
+#include <fidl/test.protocols/cpp/markers.h>
+#include <fidl/test.protocols/cpp/wire_messaging.h>
+#include <fidl/test.protocols/cpp/wire_types.h>

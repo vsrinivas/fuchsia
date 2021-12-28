@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_error {
+namespace test_error {
 
 class Example final {
   Example() = delete;
@@ -15,9 +15,9 @@ class Example final {
     Foo() = delete;
 
    public:
-    using Protocol = ::fidl_test_error::Example;
+    using Protocol = ::test_error::Example;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_error
+}  // namespace test_error

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.drivertwoway/cpp/wire.h>
+#include <fidl/test.drivertwoway/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,7 +10,7 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
-    fidl_test_drivertwoway_decoder_encoders = {
+    test_drivertwoway_decoder_encoders = {
 
 };
 

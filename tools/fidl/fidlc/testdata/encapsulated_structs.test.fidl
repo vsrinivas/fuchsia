@@ -1,4 +1,4 @@
-library fidl.test.encapsulatedstructs;
+library test.encapsulatedstructs;
 
 using zx;
 

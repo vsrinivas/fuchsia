@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace emptystruct {
 class Empty;
@@ -35,8 +34,8 @@ class Empty final {
   zx_status_t Clone(Empty* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::emptystruct::Empty& _value,
-                         ::fidl::test::emptystruct::Empty* _result) {
+inline zx_status_t Clone(const ::test::emptystruct::Empty& _value,
+                         ::test::emptystruct::Empty* _result) {
   return _value.Clone(_result);
 }
 
@@ -46,16 +45,16 @@ using EmptyPtr = ::std::unique_ptr<Empty>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable;
+    test_emptystruct_EmptyProtocolSendRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable;
 
 }  // namespace _internal
 class EmptyProtocol_RequestEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Send(
-      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage Send(::fidl::Encoder* _encoder,
+                                           ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -74,15 +73,15 @@ class EmptyProtocol_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::emptystruct::_internal::
-                   fidl_test_emptystruct_EmptyProtocolSendRequestMessageTable,
+               &::test::emptystruct::_internal::
+                   test_emptystruct_EmptyProtocolSendRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
-      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
+      ::fidl::Encoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -102,8 +101,8 @@ class EmptyProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::emptystruct::_internal::
-            fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable,
+        &::test::emptystruct::_internal::
+            test_emptystruct_EmptyProtocolSendAndReceiveRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -112,16 +111,16 @@ class EmptyProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable;
+    test_emptystruct_EmptyProtocolReceiveEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
 
 }  // namespace _internal
 class EmptyProtocol_ResponseEncoder {
  public:
-  static ::fidl::HLCPPOutgoingMessage Receive(
-      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
+  static ::fidl::HLCPPOutgoingMessage Receive(::fidl::Encoder* _encoder,
+                                              ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -140,14 +139,14 @@ class EmptyProtocol_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::emptystruct::_internal::
-                   fidl_test_emptystruct_EmptyProtocolReceiveEventMessageTable,
+               &::test::emptystruct::_internal::
+                   test_emptystruct_EmptyProtocolReceiveEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage SendAndReceive(
-      ::fidl::Encoder* _encoder, ::fidl::test::emptystruct::Empty* e) {
+      ::fidl::Encoder* _encoder, ::test::emptystruct::Empty* e) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -167,8 +166,8 @@ class EmptyProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::emptystruct::_internal::
-            fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable,
+        &::test::emptystruct::_internal::
+            test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -178,25 +177,26 @@ class EmptyProtocol_ResponseEncoder {
 
 }  // namespace emptystruct
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::emptystruct::Empty>
-    : public EncodableCodingTraits<::fidl::test::emptystruct::Empty, 1, 1> {};
+struct CodingTraits<::test::emptystruct::Empty>
+    : public EncodableCodingTraits<::test::emptystruct::Empty, 1, 1> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::emptystruct::Empty>
+struct IsMemcpyCompatible<::test::emptystruct::Empty>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::emptystruct::Empty>::value &&
+          !HasPadding<::test::emptystruct::Empty>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::emptystruct::Empty& value,
-                         ::fidl::test::emptystruct::Empty* result) {
-  return ::fidl::test::emptystruct::Clone(value, result);
+inline zx_status_t Clone(const ::test::emptystruct::Empty& value,
+                         ::test::emptystruct::Empty* result) {
+  return ::test::emptystruct::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::emptystruct::Empty> {
-  bool operator()(const ::fidl::test::emptystruct::Empty& _lhs,
-                  const ::fidl::test::emptystruct::Empty& _rhs) const {
+struct Equality<::test::emptystruct::Empty> {
+  bool operator()(const ::test::emptystruct::Empty& _lhs,
+                  const ::test::emptystruct::Empty& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }

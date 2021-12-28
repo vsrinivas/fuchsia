@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/test/errorsyntax/cpp/fidl.h>
-#include <fidl/test/errorsyntax/parent/cpp/libfuzzer.h>
+#include <test/errorsyntax/cpp/fidl.h>
+#include <test/errorsyntax/parent/cpp/libfuzzer.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -14,10 +14,10 @@
 
 namespace fuzzing {
 
-using ExampleUseOfErrorSyntax_CallWhichMayFail_Response = ::fidl::test::
-    errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
+using ExampleUseOfErrorSyntax_CallWhichMayFail_Response =
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
 using ExampleUseOfErrorSyntax_CallWhichMayFail_Result =
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
 
 template <>
 struct MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
@@ -44,7 +44,7 @@ struct MinSize<ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
   operator size_t() {
     size_t sizes[] = {
         0,
-        MinSize<::fidl::test::errorsyntax::
+        MinSize<::test::errorsyntax::
                     ExampleUseOfErrorSyntax_CallWhichMayFail_Response>(),
         MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
@@ -67,7 +67,7 @@ struct Allocate<ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<::fidl::test::errorsyntax::
+            Allocate<::test::errorsyntax::
                          ExampleUseOfErrorSyntax_CallWhichMayFail_Response>{}(
                 src, size));
         break;

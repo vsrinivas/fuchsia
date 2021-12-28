@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_drivertwoway {
+namespace test_drivertwoway {
 
 class TwoWay final {
   TwoWay() = delete;
@@ -15,9 +15,9 @@ class TwoWay final {
     Add() = delete;
 
    public:
-    using Protocol = ::fidl_test_drivertwoway::TwoWay;
+    using Protocol = ::test_drivertwoway::TwoWay;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_drivertwoway
+}  // namespace test_drivertwoway

@@ -9,7 +9,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace handles {
 
@@ -76,8 +75,8 @@ enum class obj_type : uint32_t {
   MSI_INTERRUPT = 33u,
 };
 
-inline zx_status_t Clone(::fidl::test::handles::obj_type value,
-                         ::fidl::test::handles::obj_type* result) {
+inline zx_status_t Clone(::test::handles::obj_type value,
+                         ::test::handles::obj_type* result) {
   *result = value;
   return ZX_OK;
 }
@@ -158,9 +157,9 @@ class Handles final {
 
   ::zx::vmo aliased_rights_handle_field{};
 
-  ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol> some_protocol{};
+  ::fidl::InterfaceHandle<::test::handles::SomeProtocol> some_protocol{};
 
-  ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>
+  ::fidl::InterfaceRequest<::test::handles::SomeProtocol>
       request_some_protocol{};
 
   static inline ::std::unique_ptr<Handles> New() {
@@ -174,8 +173,8 @@ class Handles final {
   zx_status_t Clone(Handles* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::handles::Handles& _value,
-                         ::fidl::test::handles::Handles* _result) {
+inline zx_status_t Clone(const ::test::handles::Handles& _value,
+                         ::test::handles::Handles* _result) {
   return _value.Clone(_result);
 }
 
@@ -195,37 +194,36 @@ class SomeProtocol_ResponseEncoder {
 
 }  // namespace handles
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::handles::obj_type> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::handles::obj_type);
+struct CodingTraits<::test::handles::obj_type> {
+  static constexpr size_t inline_size_old = sizeof(::test::handles::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::handles::obj_type);
-  static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::handles::obj_type);
+      sizeof(::test::handles::obj_type);
+  static constexpr size_t inline_size_v2 = sizeof(::test::handles::obj_type);
   static void Encode(
-      Encoder* encoder, ::fidl::test::handles::obj_type* value, size_t offset,
+      Encoder* encoder, ::test::handles::obj_type* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::handles::obj_type* value,
+  static void Decode(Decoder* decoder, ::test::handles::obj_type* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::handles::obj_type>(underlying);
+    *value = static_cast<::test::handles::obj_type>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::handles::obj_type value,
-                         ::fidl::test::handles::obj_type* result) {
-  return ::fidl::test::handles::Clone(value, result);
+inline zx_status_t Clone(::test::handles::obj_type value,
+                         ::test::handles::obj_type* result) {
+  return ::test::handles::Clone(value, result);
 }
 template <>
-struct Equality<::fidl::test::handles::obj_type> {
-  bool operator()(const ::fidl::test::handles::obj_type& _lhs,
-                  const ::fidl::test::handles::obj_type& _rhs) const {
+struct Equality<::test::handles::obj_type> {
+  bool operator()(const ::test::handles::obj_type& _lhs,
+                  const ::test::handles::obj_type& _rhs) const {
     return _lhs == _rhs;
   }
 };
@@ -233,17 +231,17 @@ struct Equality<::fidl::test::handles::obj_type> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::handles::Handles>
-    : public EncodableCodingTraits<::fidl::test::handles::Handles, 132, 132> {};
+struct CodingTraits<::test::handles::Handles>
+    : public EncodableCodingTraits<::test::handles::Handles, 132, 132> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::handles::Handles>
+struct IsMemcpyCompatible<::test::handles::Handles>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::handles::Handles>::value &&
-          IsMemcpyCompatible<::fidl::InterfaceHandle<
-              ::fidl::test::handles::SomeProtocol>>::value &&
-          IsMemcpyCompatible<::fidl::InterfaceRequest<
-              ::fidl::test::handles::SomeProtocol>>::value &&
+          !HasPadding<::test::handles::Handles>::value &&
+          IsMemcpyCompatible<
+              ::fidl::InterfaceHandle<::test::handles::SomeProtocol>>::value &&
+          IsMemcpyCompatible<
+              ::fidl::InterfaceRequest<::test::handles::SomeProtocol>>::value &&
           IsMemcpyCompatible<::zx::bti>::value &&
           IsMemcpyCompatible<::zx::channel>::value &&
           IsMemcpyCompatible<::zx::clock>::value &&
@@ -272,15 +270,15 @@ struct IsMemcpyCompatible<::fidl::test::handles::Handles>
           IsMemcpyCompatible<::zx::vmar>::value &&
           IsMemcpyCompatible<::zx::vmo>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::handles::Handles& value,
-                         ::fidl::test::handles::Handles* result) {
-  return ::fidl::test::handles::Clone(value, result);
+inline zx_status_t Clone(const ::test::handles::Handles& value,
+                         ::test::handles::Handles* result) {
+  return ::test::handles::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::handles::Handles> {
-  bool operator()(const ::fidl::test::handles::Handles& _lhs,
-                  const ::fidl::test::handles::Handles& _rhs) const {
+struct Equality<::test::handles::Handles> {
+  bool operator()(const ::test::handles::Handles& _lhs,
+                  const ::test::handles::Handles& _rhs) const {
     if (!::fidl::Equals(_lhs.plain_handle, _rhs.plain_handle)) {
       return false;
     }

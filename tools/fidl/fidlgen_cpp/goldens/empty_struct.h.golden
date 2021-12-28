@@ -2,16 +2,16 @@
 
 #pragma once
 
-#include <fidl/fidl.test.emptystruct/cpp/wire.h>
-#include <fidl/test/emptystruct/cpp/natural_types.h>
+#include <fidl/test.emptystruct/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/emptystruct/cpp/natural_types.h>
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class Empty;
 
 class EmptyProtocolSendRequest;
@@ -22,16 +22,16 @@ class EmptyProtocolSendAndReceiveRequest;
 
 class EmptyProtocolReceiveRequest;
 
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_emptystruct::Empty>
+    ::test_emptystruct::Empty>
     final {
  public:
   uint8_t __reserved = 0u;
 };
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class Empty final : public ::fidl::internal::CodableBase<Empty> {
  private:
   friend ::fidl::internal::CodableBase<Empty>;
@@ -45,9 +45,9 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
  public:
   Empty() = default;
   Empty(uint8_t __reserved) : storage_({__reserved}) {}
-  Empty(::fidl::internal::DesignatedInitializationProxy<
-        ::fidl_test_emptystruct::Empty>
-            storage)
+  Empty(
+      ::fidl::internal::DesignatedInitializationProxy<::test_emptystruct::Empty>
+          storage)
       : storage_(std::move(storage)) {}
   ~Empty() = default;
   Empty(Empty&&) noexcept = default;
@@ -63,23 +63,22 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_emptystruct::Empty>;
+  friend struct ::fidl::CodingTraits<::test_emptystruct::Empty>;
 
-  ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_emptystruct::Empty>
+  ::fidl::internal::DesignatedInitializationProxy<::test_emptystruct::Empty>
       storage_ = {};
 };
 
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_emptystruct::EmptyProtocolSendRequest>
+    ::test_emptystruct::EmptyProtocolSendRequest>
     final {
  public:
-  ::fidl_test_emptystruct::Empty e = {};
+  ::test_emptystruct::Empty e = {};
 };
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class EmptyProtocolSendRequest final
     : public ::fidl::internal::CodableBase<EmptyProtocolSendRequest> {
  private:
@@ -93,10 +92,10 @@ class EmptyProtocolSendRequest final
 
  public:
   EmptyProtocolSendRequest() = default;
-  EmptyProtocolSendRequest(::fidl_test_emptystruct::Empty e)
+  EmptyProtocolSendRequest(::test_emptystruct::Empty e)
       : storage_({std::move(e)}) {}
   EmptyProtocolSendRequest(::fidl::internal::DesignatedInitializationProxy<
-                           ::fidl_test_emptystruct::EmptyProtocolSendRequest>
+                           ::test_emptystruct::EmptyProtocolSendRequest>
                                storage)
       : storage_(std::move(storage)) {}
   ~EmptyProtocolSendRequest() = default;
@@ -104,34 +103,34 @@ class EmptyProtocolSendRequest final
   EmptyProtocolSendRequest& operator=(EmptyProtocolSendRequest&&) noexcept =
       default;
 
-  const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
 
-  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() { return storage_.e; }
 
-  EmptyProtocolSendRequest& set_e(::fidl_test_emptystruct::Empty _value) {
+  EmptyProtocolSendRequest& set_e(::test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_emptystruct::EmptyProtocolSendRequest>;
+      ::test_emptystruct::EmptyProtocolSendRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_emptystruct::EmptyProtocolSendRequest>
+      ::test_emptystruct::EmptyProtocolSendRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
     final {
  public:
-  ::fidl_test_emptystruct::Empty e = {};
+  ::test_emptystruct::Empty e = {};
 };
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class EmptyProtocolSendAndReceiveTopResponse final
     : public ::fidl::internal::CodableBase<
           EmptyProtocolSendAndReceiveTopResponse> {
@@ -146,11 +145,11 @@ class EmptyProtocolSendAndReceiveTopResponse final
 
  public:
   EmptyProtocolSendAndReceiveTopResponse() = default;
-  EmptyProtocolSendAndReceiveTopResponse(::fidl_test_emptystruct::Empty e)
+  EmptyProtocolSendAndReceiveTopResponse(::test_emptystruct::Empty e)
       : storage_({std::move(e)}) {}
   EmptyProtocolSendAndReceiveTopResponse(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+          ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
           storage)
       : storage_(std::move(storage)) {}
   ~EmptyProtocolSendAndReceiveTopResponse() = default;
@@ -159,35 +158,35 @@ class EmptyProtocolSendAndReceiveTopResponse final
   EmptyProtocolSendAndReceiveTopResponse& operator=(
       EmptyProtocolSendAndReceiveTopResponse&&) noexcept = default;
 
-  const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
 
-  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() { return storage_.e; }
 
   EmptyProtocolSendAndReceiveTopResponse& set_e(
-      ::fidl_test_emptystruct::Empty _value) {
+      ::test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
     final {
  public:
-  ::fidl_test_emptystruct::Empty e = {};
+  ::test_emptystruct::Empty e = {};
 };
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class EmptyProtocolSendAndReceiveRequest final
     : public ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveRequest> {
  private:
@@ -201,11 +200,11 @@ class EmptyProtocolSendAndReceiveRequest final
 
  public:
   EmptyProtocolSendAndReceiveRequest() = default;
-  EmptyProtocolSendAndReceiveRequest(::fidl_test_emptystruct::Empty e)
+  EmptyProtocolSendAndReceiveRequest(::test_emptystruct::Empty e)
       : storage_({std::move(e)}) {}
   EmptyProtocolSendAndReceiveRequest(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+          ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
           storage)
       : storage_(std::move(storage)) {}
   ~EmptyProtocolSendAndReceiveRequest() = default;
@@ -214,35 +213,34 @@ class EmptyProtocolSendAndReceiveRequest final
   EmptyProtocolSendAndReceiveRequest& operator=(
       EmptyProtocolSendAndReceiveRequest&&) noexcept = default;
 
-  const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
 
-  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() { return storage_.e; }
 
-  EmptyProtocolSendAndReceiveRequest& set_e(
-      ::fidl_test_emptystruct::Empty _value) {
+  EmptyProtocolSendAndReceiveRequest& set_e(::test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_emptystruct::EmptyProtocolReceiveRequest>
+    ::test_emptystruct::EmptyProtocolReceiveRequest>
     final {
  public:
-  ::fidl_test_emptystruct::Empty e = {};
+  ::test_emptystruct::Empty e = {};
 };
 
-namespace fidl_test_emptystruct {
+namespace test_emptystruct {
 class EmptyProtocolReceiveRequest final
     : public ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest> {
  private:
@@ -256,60 +254,58 @@ class EmptyProtocolReceiveRequest final
 
  public:
   EmptyProtocolReceiveRequest() = default;
-  EmptyProtocolReceiveRequest(::fidl_test_emptystruct::Empty e)
+  EmptyProtocolReceiveRequest(::test_emptystruct::Empty e)
       : storage_({std::move(e)}) {}
-  EmptyProtocolReceiveRequest(
-      ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_emptystruct::EmptyProtocolReceiveRequest>
-          storage)
+  EmptyProtocolReceiveRequest(::fidl::internal::DesignatedInitializationProxy<
+                              ::test_emptystruct::EmptyProtocolReceiveRequest>
+                                  storage)
       : storage_(std::move(storage)) {}
   ~EmptyProtocolReceiveRequest() = default;
   EmptyProtocolReceiveRequest(EmptyProtocolReceiveRequest&&) noexcept = default;
   EmptyProtocolReceiveRequest& operator=(
       EmptyProtocolReceiveRequest&&) noexcept = default;
 
-  const ::fidl_test_emptystruct::Empty& e() const { return storage_.e; }
+  const ::test_emptystruct::Empty& e() const { return storage_.e; }
 
-  ::fidl_test_emptystruct::Empty& e() { return storage_.e; }
+  ::test_emptystruct::Empty& e() { return storage_.e; }
 
-  EmptyProtocolReceiveRequest& set_e(::fidl_test_emptystruct::Empty _value) {
+  EmptyProtocolReceiveRequest& set_e(::test_emptystruct::Empty _value) {
     storage_.e = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_emptystruct::EmptyProtocolReceiveRequest>;
+      ::test_emptystruct::EmptyProtocolReceiveRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_emptystruct::EmptyProtocolReceiveRequest>
+      ::test_emptystruct::EmptyProtocolReceiveRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_emptystruct
+}  // namespace test_emptystruct
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_emptystruct_EmptyTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 
 template <>
-struct IsFidlType<::fidl_test_emptystruct::Empty> : public std::true_type {};
+struct IsFidlType<::test_emptystruct::Empty> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_emptystruct::Empty> final {
+struct ::fidl::internal::TypeTraits<::test_emptystruct::Empty> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_emptystruct_EmptyTable;
+      &test_emptystruct_EmptyTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_emptystruct::Empty> {
+struct CodingTraits<::test_emptystruct::Empty> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_emptystruct::Empty* value,
-      size_t offset,
+      EncoderImpl* encoder, ::test_emptystruct::Empty* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -319,39 +315,38 @@ struct CodingTraits<::fidl_test_emptystruct::Empty> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_emptystruct::Empty* value, size_t offset) {
+  static void Decode(DecoderImpl* decoder, ::test_emptystruct::Empty* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
   }
 };
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_emptystruct::EmptyProtocolSendRequest>
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_emptystruct::EmptyProtocolSendRequest>
+    ::test_emptystruct::EmptyProtocolSendRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_emptystruct_EmptyProtocolSendRequestTable;
+      &test_emptystruct_EmptyProtocolSendRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolSendRequest> {
+struct CodingTraits<::test_emptystruct::EmptyProtocolSendRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder,
-      ::fidl_test_emptystruct::EmptyProtocolSendRequest* value, size_t offset,
+      EncoderImpl* encoder, ::test_emptystruct::EmptyProtocolSendRequest* value,
+      size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -362,7 +357,7 @@ struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolSendRequest> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_emptystruct::EmptyProtocolSendRequest* value,
+                     ::test_emptystruct::EmptyProtocolSendRequest* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
   }
@@ -371,32 +366,31 @@ struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolSendRequest> {
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 template <>
-struct IsFidlType<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
+    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
+      &test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 };
 
 template <>
 struct CodingTraits<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
+    ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* value,
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -409,7 +403,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* value,
+      ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
   }
@@ -418,31 +412,30 @@ struct CodingTraits<
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+    test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+struct IsFidlType<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest>
+    ::test_emptystruct::EmptyProtocolSendAndReceiveRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+      &test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 };
 
 template <>
-struct CodingTraits<
-    ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
+struct CodingTraits<::test_emptystruct::EmptyProtocolSendAndReceiveRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest* value,
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -455,7 +448,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest* value,
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
   }
@@ -463,32 +456,30 @@ struct CodingTraits<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t
-    fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
+extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_emptystruct::EmptyProtocolReceiveRequest>
+struct IsFidlType<::test_emptystruct::EmptyProtocolReceiveRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_emptystruct::EmptyProtocolReceiveRequest>
+    ::test_emptystruct::EmptyProtocolReceiveRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_emptystruct_EmptyProtocolReceiveRequestTable;
+      &test_emptystruct_EmptyProtocolReceiveRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolReceiveRequest> {
+struct CodingTraits<::test_emptystruct::EmptyProtocolReceiveRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_emptystruct::EmptyProtocolReceiveRequest* value,
-      size_t offset,
+      ::test_emptystruct::EmptyProtocolReceiveRequest* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -498,10 +489,9 @@ struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolReceiveRequest> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::fidl_test_emptystruct::EmptyProtocolReceiveRequest* value,
-      size_t offset) {
+  static void Decode(DecoderImpl* decoder,
+                     ::test_emptystruct::EmptyProtocolReceiveRequest* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.e, offset + 0);
   }
 };
@@ -511,82 +501,75 @@ struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolReceiveRequest> {
 }  // namespace fidl
 
 template <>
-class ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-    final : public ::fidl::internal::MessageBase<::fidl::Response<
-                ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>> {
+class ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload)
+  Response(::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload)
       : payload_(std::move(payload)) {}
-  ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse*
-  operator->() {
+  ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* operator->() {
     return &payload_;
   }
-  const ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse*
-  operator->() const {
+  const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse* operator->()
+      const {
     return &payload_;
   }
-  ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& operator*() {
+  ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& operator*() {
     return payload_;
   }
-  const ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse&
-  operator*() const {
+  const ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& operator*()
+      const {
     return payload_;
   }
 
  private:
-  ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload_;
+  ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload_;
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+    ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload =
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
+  using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
 };
 namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    ::test_emptystruct::EmptyProtocol::SendAndReceive>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
       ::fitx::result<::fidl::Error,
-                     ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::
-                                          SendAndReceive>>&)>;
+                     ::fidl::Response<
+                         ::test_emptystruct::EmptyProtocol::SendAndReceive>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
+      ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
 };
 
 template <>
-class ::fidl::internal::NaturalClientImpl<
-    ::fidl_test_emptystruct::EmptyProtocol>
+class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   void SendAndReceive(
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
       ::fidl::ClientCallback<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
-      const;
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback) const;
 
   void SendAndReceive(
-      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
+      ::test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
       ::fidl::ClientResponseCallback<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
-      const;
+          ::test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback) const;
 
   ::fitx::result<::fidl::Error> Send(
-      ::fidl_test_emptystruct::EmptyProtocolSendRequest&& payload) const;
+      ::test_emptystruct::EmptyProtocolSendRequest&& payload) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

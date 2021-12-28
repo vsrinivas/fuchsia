@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.arrays
+# test.arrays
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### StructLargeArray  {#StructLargeArray data-text="StructLargeArray"}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=7)*
+*Defined in [test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=7)*
 
 
 
@@ -29,7 +29,7 @@
 </table>
 
 ### StructSmallArray  {#StructSmallArray data-text="StructSmallArray"}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=3)*
+*Defined in [test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=3)*
 
 
 
@@ -55,7 +55,7 @@
 ### TableLargeArray  {#TableLargeArray data-text="TableLargeArray"}
 
 
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=15)*
+*Defined in [test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=15)*
 
 
 
@@ -75,7 +75,7 @@
 ### TableSmallArray  {#TableSmallArray data-text="TableSmallArray"}
 
 
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=11)*
+*Defined in [test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=11)*
 
 
 
@@ -97,7 +97,7 @@
 ## **UNIONS**
 
 ### UnionLargeArray [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionLargeArray data-text="UnionLargeArray"}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=23)*
+*Defined in [test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=23)*
 
 
 
@@ -113,7 +113,7 @@
         </tr></table>
 
 ### UnionSmallArray [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionSmallArray data-text="UnionSmallArray"}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=19)*
+*Defined in [test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=19)*
 
 
 

@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_protocolrequest {
+namespace test_protocolrequest {
 
 class Parent final {
   Parent() = delete;
@@ -15,7 +15,7 @@ class Parent final {
     GetChild() = delete;
 
    public:
-    using Protocol = ::fidl_test_protocolrequest::Parent;
+    using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -23,7 +23,7 @@ class Parent final {
     GetChildRequest() = delete;
 
    public:
-    using Protocol = ::fidl_test_protocolrequest::Parent;
+    using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -31,7 +31,7 @@ class Parent final {
     TakeChild() = delete;
 
    public:
-    using Protocol = ::fidl_test_protocolrequest::Parent;
+    using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -39,7 +39,7 @@ class Parent final {
     TakeChildRequest() = delete;
 
    public:
-    using Protocol = ::fidl_test_protocolrequest::Parent;
+    using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -51,4 +51,4 @@ class Child final {
  public:
   using Transport = ::fidl::internal::ChannelTransport;
 };
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest

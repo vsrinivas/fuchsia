@@ -19,25 +19,25 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.errorsyntax.parent/cpp/wire_types.h>
-#include <fidl/fidl.test.errorsyntax/cpp/markers.h>
+#include <fidl/test.errorsyntax.parent/cpp/wire_types.h>
+#include <fidl/test.errorsyntax/cpp/markers.h>
 
-namespace fidl_test_errorsyntax {
+namespace test_errorsyntax {
 namespace wire {
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult;
 
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
+    test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
  public:
-  using Response = fidl_test_errorsyntax::wire::
-      ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
+  using Response =
+      test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse;
 
   ExampleUseOfErrorSyntaxCallWhichMayFailResult()
-      : ordinal_(::fidl_test_errorsyntax::wire::
+      : ordinal_(::test_errorsyntax::wire::
                      ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::
                          Invalid),
         envelope_ {}
@@ -59,17 +59,17 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
 
   bool has_invalid_tag() const {
     return ordinal_ ==
-           ::fidl_test_errorsyntax::wire::
+           ::test_errorsyntax::wire::
                ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::Invalid;
   }
 
   bool is_response() const {
-    return ordinal_ == ::fidl_test_errorsyntax::wire::
+    return ordinal_ == ::test_errorsyntax::wire::
                            ExampleUseOfErrorSyntaxCallWhichMayFailResult::
                                Ordinal::kResponse;
   }
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithResponse(
-      ::fidl::ObjectView<::fidl_test_errorsyntax::wire::
+      ::fidl::ObjectView<::test_errorsyntax::wire::
                              ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
           val) {
     ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
@@ -82,62 +82,61 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
       ::fidl::AnyArena& allocator, Args&&... args) {
     ExampleUseOfErrorSyntaxCallWhichMayFailResult result;
     result.set_response(
-        ::fidl::ObjectView<::fidl_test_errorsyntax::wire::
+        ::fidl::ObjectView<::test_errorsyntax::wire::
                                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
-      ::fidl::ObjectView<::fidl_test_errorsyntax::wire::
+      ::fidl::ObjectView<::test_errorsyntax::wire::
                              ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
           elem) {
-    ordinal_ = ::fidl_test_errorsyntax::wire::
+    ordinal_ = ::test_errorsyntax::wire::
         ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
     envelope_
-        .As<::fidl_test_errorsyntax::wire::
+        .As<::test_errorsyntax::wire::
                 ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
         .set_data(std::move(elem));
   }
 
   template <typename... Args>
   void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_errorsyntax::wire::
+    ordinal_ = ::test_errorsyntax::wire::
         ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse;
     set_response(
-        ::fidl::ObjectView<::fidl_test_errorsyntax::wire::
+        ::fidl::ObjectView<::test_errorsyntax::wire::
                                ExampleUseOfErrorSyntaxCallWhichMayFailResponse>(
             allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_errorsyntax::wire::
-      ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
-      mutable_response() {
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
+  mutable_response() {
     ZX_ASSERT(
         ordinal_ ==
-        ::fidl_test_errorsyntax::wire::
+        ::test_errorsyntax::wire::
             ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse);
     return envelope_
-        .As<::fidl_test_errorsyntax::wire::
+        .As<::test_errorsyntax::wire::
                 ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
         .get_data();
   }
-  const ::fidl_test_errorsyntax::wire::
+  const ::test_errorsyntax::wire::
       ExampleUseOfErrorSyntaxCallWhichMayFailResponse&
       response() const {
     ZX_ASSERT(
         ordinal_ ==
-        ::fidl_test_errorsyntax::wire::
+        ::test_errorsyntax::wire::
             ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kResponse);
     return envelope_
-        .As<::fidl_test_errorsyntax::wire::
+        .As<::test_errorsyntax::wire::
                 ExampleUseOfErrorSyntaxCallWhichMayFailResponse>()
         .get_data();
   }
 
   bool is_err() const {
     return ordinal_ ==
-           ::fidl_test_errorsyntax::wire::
+           ::test_errorsyntax::wire::
                ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
   }
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithErr(uint32_t val) {
@@ -147,34 +146,33 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
   }
 
   void set_err(uint32_t elem) {
-    ordinal_ = ::fidl_test_errorsyntax::wire::
+    ordinal_ = ::test_errorsyntax::wire::
         ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr;
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& mutable_err() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_errorsyntax::wire::
+              ::test_errorsyntax::wire::
                   ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_errorsyntax::wire::
+              ::test_errorsyntax::wire::
                   ExampleUseOfErrorSyntaxCallWhichMayFailResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::fidl_test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
-      Tag
-      which() const {
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag
+  which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_errorsyntax::wire::
+    return static_cast<::test_errorsyntax::wire::
                            ExampleUseOfErrorSyntaxCallWhichMayFailResult::Tag>(
         ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
+      &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -194,18 +192,18 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
+  ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult::
       Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+    test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+      &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -221,38 +219,38 @@ struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_errorsyntax
+}  // namespace test_errorsyntax
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_errorsyntax::wire::
-                      ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
+struct IsFidlType<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_errorsyntax::wire::
-                    ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
+struct IsStruct<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_errorsyntax::wire::
+              ::test_errorsyntax::wire::
                   ExampleUseOfErrorSyntaxCallWhichMayFailResponse>);
-static_assert(offsetof(::fidl_test_errorsyntax::wire::
+static_assert(offsetof(::test_errorsyntax::wire::
                            ExampleUseOfErrorSyntaxCallWhichMayFailResponse,
                        value) == 0);
-static_assert(sizeof(::fidl_test_errorsyntax::wire::
+static_assert(sizeof(::test_errorsyntax::wire::
                          ExampleUseOfErrorSyntaxCallWhichMayFailResponse) ==
-              ::fidl_test_errorsyntax::wire::
+              ::test_errorsyntax::wire::
                   ExampleUseOfErrorSyntaxCallWhichMayFailResponse::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_errorsyntax::wire::
-                      ExampleUseOfErrorSyntaxCallWhichMayFailResult>
+struct IsFidlType<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_errorsyntax::wire::
-                   ExampleUseOfErrorSyntaxCallWhichMayFailResult>
+struct IsUnion<
+    ::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailResult>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_errorsyntax::wire::
+              ::test_errorsyntax::wire::
                   ExampleUseOfErrorSyntaxCallWhichMayFailResult>);
 
 }  // namespace fidl

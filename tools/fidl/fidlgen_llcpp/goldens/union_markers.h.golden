@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_union {
+namespace test_union {
 
 class TestProtocol final {
   TestProtocol() = delete;
@@ -15,7 +15,7 @@ class TestProtocol final {
     StrictXUnionHenceResponseMayBeStackAllocated() = delete;
 
    public:
-    using Protocol = ::fidl_test_union::TestProtocol;
+    using Protocol = ::test_union::TestProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -23,9 +23,9 @@ class TestProtocol final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
 
    public:
-    using Protocol = ::fidl_test_union::TestProtocol;
+    using Protocol = ::test_union::TestProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_union
+}  // namespace test_union

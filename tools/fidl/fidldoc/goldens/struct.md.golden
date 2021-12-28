@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.struct
+# test.struct
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### BasicStruct  {#BasicStruct data-text="BasicStruct"}
-*Defined in [fidl.test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=8)*
+*Defined in [test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=8)*
 
 
 
@@ -37,7 +37,7 @@
 </table>
 
 ### Simple  {#Simple data-text="Simple"}
-*Defined in [fidl.test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=3)*
+*Defined in [test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=3)*
 
 
 

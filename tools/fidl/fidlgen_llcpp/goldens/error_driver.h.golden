@@ -2,6 +2,6 @@
 
 #pragma once
 
-#include <fidl/fidl.test.error/cpp/driver/wire_messaging.h>
-#include <fidl/fidl.test.error/cpp/markers.h>
-#include <fidl/fidl.test.error/cpp/wire_types.h>
+#include <fidl/test.error/cpp/driver/wire_messaging.h>
+#include <fidl/test.error/cpp/markers.h>
+#include <fidl/test.error/cpp/wire_types.h>

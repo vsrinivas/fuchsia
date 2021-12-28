@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.transitivedependencies/cpp/driver/wire_messaging.h>
-#include <fidl/fidl.test.transitivedependencies/cpp/markers.h>
-#include <fidl/fidl.test.transitivedependencies/cpp/wire_types.h>
-#include <fidl/middle/cpp/driver/wire.h>
+#include <fidl/test.middle/cpp/driver/wire.h>
+#include <fidl/test.transitivedependencies/cpp/driver/wire_messaging.h>
+#include <fidl/test.transitivedependencies/cpp/markers.h>
+#include <fidl/test.transitivedependencies/cpp/wire_types.h>

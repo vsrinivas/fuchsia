@@ -2,29 +2,29 @@
 
 #pragma once
 
-#include <dependent/cpp/fidl_v2.h>
-#include <fidl/fidl.test.structdefaultvalueenumlibraryreference/cpp/wire.h>
-#include <fidl/test/structdefaultvalueenumlibraryreference/cpp/natural_types.h>
+#include <fidl/test.structdefaultvalueenumlibraryreference/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/dependent/cpp/fidl_v2.h>
+#include <test/structdefaultvalueenumlibraryreference/cpp/natural_types.h>
 
-namespace fidl_test_structdefaultvalueenumlibraryreference {
+namespace test_structdefaultvalueenumlibraryreference {
 class Foo;
 
-}  // namespace fidl_test_structdefaultvalueenumlibraryreference
+}  // namespace test_structdefaultvalueenumlibraryreference
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_structdefaultvalueenumlibraryreference::Foo>
+    ::test_structdefaultvalueenumlibraryreference::Foo>
     final {
  public:
-  ::dependent::MyEnum field = ::dependent::MyEnum::A;
+  ::test_dependent::MyEnum field = ::test::dependent::MyEnum::A;
 };
 
-namespace fidl_test_structdefaultvalueenumlibraryreference {
+namespace test_structdefaultvalueenumlibraryreference {
 class Foo final : public ::fidl::internal::CodableBase<Foo> {
  private:
   friend ::fidl::internal::CodableBase<Foo>;
@@ -37,62 +37,61 @@ class Foo final : public ::fidl::internal::CodableBase<Foo> {
 
  public:
   Foo() = default;
-  Foo(::dependent::MyEnum field) : storage_({field}) {}
+  Foo(::test_dependent::MyEnum field) : storage_({field}) {}
   Foo(::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_structdefaultvalueenumlibraryreference::Foo>
+      ::test_structdefaultvalueenumlibraryreference::Foo>
           storage)
       : storage_(std::move(storage)) {}
   ~Foo() = default;
   Foo(Foo&&) noexcept = default;
   Foo& operator=(Foo&&) noexcept = default;
 
-  const ::dependent::MyEnum& field() const { return storage_.field; }
+  const ::test_dependent::MyEnum& field() const { return storage_.field; }
 
-  ::dependent::MyEnum& field() { return storage_.field; }
+  ::test_dependent::MyEnum& field() { return storage_.field; }
 
-  Foo& set_field(::dependent::MyEnum _value) {
+  Foo& set_field(::test_dependent::MyEnum _value) {
     storage_.field = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_structdefaultvalueenumlibraryreference::Foo>;
+      ::test_structdefaultvalueenumlibraryreference::Foo>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_structdefaultvalueenumlibraryreference::Foo>
+      ::test_structdefaultvalueenumlibraryreference::Foo>
       storage_ = {};
 };
 
-}  // namespace fidl_test_structdefaultvalueenumlibraryreference
+}  // namespace test_structdefaultvalueenumlibraryreference
 namespace fidl {
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_structdefaultvalueenumlibraryreference_FooTable;
+    test_structdefaultvalueenumlibraryreference_FooTable;
 
 template <>
-struct IsFidlType<::fidl_test_structdefaultvalueenumlibraryreference::Foo>
+struct IsFidlType<::test_structdefaultvalueenumlibraryreference::Foo>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_structdefaultvalueenumlibraryreference::Foo>
+    ::test_structdefaultvalueenumlibraryreference::Foo>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_structdefaultvalueenumlibraryreference_FooTable;
+      &test_structdefaultvalueenumlibraryreference_FooTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_structdefaultvalueenumlibraryreference::Foo> {
+struct CodingTraits<::test_structdefaultvalueenumlibraryreference::Foo> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_structdefaultvalueenumlibraryreference::Foo* value,
-      size_t offset,
+      ::test_structdefaultvalueenumlibraryreference::Foo* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -102,10 +101,9 @@ struct CodingTraits<::fidl_test_structdefaultvalueenumlibraryreference::Foo> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(
-      DecoderImpl* decoder,
-      ::fidl_test_structdefaultvalueenumlibraryreference::Foo* value,
-      size_t offset) {
+  static void Decode(DecoderImpl* decoder,
+                     ::test_structdefaultvalueenumlibraryreference::Foo* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.field, offset + 0);
   }
 };

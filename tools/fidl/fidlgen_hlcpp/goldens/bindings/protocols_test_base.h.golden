@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include <fidl/test/protocols/cpp/fidl.h>
-namespace fidl {
+#include <test/protocols/cpp/fidl.h>
 namespace test {
 namespace protocols {
 namespace testing {
 class HandleRightsProtocol_TestBase
-    : public ::fidl::test::protocols::HandleRightsProtocol {
+    : public ::test::protocols::HandleRightsProtocol {
  public:
   virtual ~HandleRightsProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -22,7 +21,7 @@ class HandleRightsProtocol_TestBase
 };
 
 class WithAndWithoutRequestResponse_TestBase
-    : public ::fidl::test::protocols::WithAndWithoutRequestResponse {
+    : public ::test::protocols::WithAndWithoutRequestResponse {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -49,7 +48,7 @@ class WithAndWithoutRequestResponse_TestBase
   }
 };
 
-class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
+class Transitional_TestBase : public ::test::protocols::Transitional {
  public:
   virtual ~Transitional_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -59,39 +58,36 @@ class Transitional_TestBase : public ::fidl::test::protocols::Transitional {
   void OneWay(int64_t x) override { NotImplemented_("OneWay"); }
 };
 
-class MethodWithUnion_TestBase
-    : public ::fidl::test::protocols::MethodWithUnion {
+class MethodWithUnion_TestBase : public ::test::protocols::MethodWithUnion {
  public:
   virtual ~MethodWithUnion_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void UnionMethod(::fidl::test::protocols::TheUnion u) override {
+  void UnionMethod(::test::protocols::TheUnion u) override {
     NotImplemented_("UnionMethod");
   }
 };
 
-class WithProtocolEnds_TestBase
-    : public ::fidl::test::protocols::WithProtocolEnds {
+class WithProtocolEnds_TestBase : public ::test::protocols::WithProtocolEnds {
  public:
   virtual ~WithProtocolEnds_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in,
       ClientEndsCallback callback) override {
     NotImplemented_("ClientEnds");
   }
   void ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-          in,
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in,
       ServerEndsCallback callback) override {
     NotImplemented_("ServerEnds");
   }
-  void StructContainingEnds(::fidl::test::protocols::ProtocolEnds in,
+  void StructContainingEnds(::test::protocols::ProtocolEnds in,
                             StructContainingEndsCallback callback) override {
     NotImplemented_("StructContainingEnds");
   }
 };
 
-class ManyParameters_TestBase : public ::fidl::test::protocols::ManyParameters {
+class ManyParameters_TestBase : public ::test::protocols::ManyParameters {
  public:
   virtual ~ManyParameters_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -102,8 +98,7 @@ class ManyParameters_TestBase : public ::fidl::test::protocols::ManyParameters {
   }
 };
 
-class WithErrorSyntax_TestBase
-    : public ::fidl::test::protocols::WithErrorSyntax {
+class WithErrorSyntax_TestBase : public ::test::protocols::WithErrorSyntax {
  public:
   virtual ~WithErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -122,15 +117,14 @@ class WithErrorSyntax_TestBase
 };
 
 class DiscoverableProtocol_TestBase
-    : public ::fidl::test::protocols::DiscoverableProtocol {
+    : public ::test::protocols::DiscoverableProtocol {
  public:
   virtual ~DiscoverableProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void Method() override { NotImplemented_("Method"); }
 };
 
-class ChannelProtocol_TestBase
-    : public ::fidl::test::protocols::ChannelProtocol {
+class ChannelProtocol_TestBase : public ::test::protocols::ChannelProtocol {
  public:
   virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -148,4 +142,3 @@ class ChannelProtocol_TestBase
 }  // namespace testing
 }  // namespace protocols
 }  // namespace test
-}  // namespace fidl

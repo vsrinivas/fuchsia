@@ -1,4 +1,4 @@
-library fidl.test.nullable;
+library test.nullable;
 
 using zx;
 

@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.protocols",
+  "name": "test.protocols",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.protocols/rights",
+      "name": "test.protocols/rights",
       "naming_context": [
         "rights"
       ],
@@ -83,7 +83,7 @@
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "fidl.test.protocols/obj_type",
+      "name": "test.protocols/obj_type",
       "naming_context": [
         "obj_type"
       ],
@@ -137,7 +137,7 @@
       "strict": true
     },
     {
-      "name": "fidl.test.protocols/ErrorEnum",
+      "name": "test.protocols/ErrorEnum",
       "naming_context": [
         "ErrorEnum"
       ],
@@ -193,7 +193,7 @@
   ],
   "experimental_resource_declarations": [
     {
-      "name": "fidl.test.protocols/handle",
+      "name": "test.protocols/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 16,
@@ -233,7 +233,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/obj_type",
+            "identifier": "test.protocols/obj_type",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -265,7 +265,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/rights",
+            "identifier": "test.protocols/rights",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -292,7 +292,7 @@
   ],
   "interface_declarations": [
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponse",
+      "name": "test.protocols/WithAndWithoutRequestResponse",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 23,
@@ -302,7 +302,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 7699066378708085668,
+          "ordinal": 5413654872775949227,
           "name": "NoRequestNoResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -316,7 +316,7 @@
           "has_error": false
         },
         {
-          "ordinal": 4641225961522096302,
+          "ordinal": 1631193469798418024,
           "name": "NoRequestEmptyResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -330,7 +330,7 @@
           "has_error": false
         },
         {
-          "ordinal": 4935493674668456948,
+          "ordinal": 9037369643591427517,
           "name": "NoRequestWithResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -342,7 +342,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -367,7 +367,7 @@
           "has_error": false
         },
         {
-          "ordinal": 8985942600963248509,
+          "ordinal": 7326057319832554103,
           "name": "WithRequestNoResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -378,7 +378,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -404,7 +404,7 @@
           "has_error": false
         },
         {
-          "ordinal": 7344052883704365182,
+          "ordinal": 2877322062572412767,
           "name": "WithRequestEmptyResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -415,7 +415,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -441,7 +441,7 @@
           "has_error": false
         },
         {
-          "ordinal": 2103802322332450033,
+          "ordinal": 6417226585456833969,
           "name": "WithRequestWithResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -452,7 +452,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -476,7 +476,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -501,7 +501,7 @@
           "has_error": false
         },
         {
-          "ordinal": 1323081535741489193,
+          "ordinal": 5397663296507358806,
           "name": "OnEmptyResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -515,7 +515,7 @@
           "has_error": false
         },
         {
-          "ordinal": 1691906546593908418,
+          "ordinal": 5811598563493228968,
           "name": "OnWithResponse",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -527,7 +527,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
+            "identifier": "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -554,7 +554,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax",
+      "name": "test.protocols/WithErrorSyntax",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 51,
@@ -564,7 +564,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 4000554951765344912,
+          "ordinal": 268248568430741139,
           "name": "ResponseAsStruct",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -576,7 +576,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
+            "identifier": "test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -601,7 +601,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
+            "identifier": "test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -624,7 +624,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
+            "identifier": "test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -669,7 +669,7 @@
           }
         },
         {
-          "ordinal": 3421672554503271630,
+          "ordinal": 6930994461233198567,
           "name": "ErrorAsPrimitive",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -681,7 +681,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
+            "identifier": "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -706,7 +706,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -729,7 +729,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -774,7 +774,7 @@
           }
         },
         {
-          "ordinal": 627496610701472780,
+          "ordinal": 5491891352371277635,
           "name": "ErrorAsEnum",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -786,7 +786,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
+            "identifier": "test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -811,7 +811,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -834,7 +834,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -857,7 +857,7 @@
           },
           "maybe_response_err_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ErrorEnum",
+            "identifier": "test.protocols/ErrorEnum",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -880,7 +880,7 @@
           }
         },
         {
-          "ordinal": 2147949819621101463,
+          "ordinal": 1371676333068455103,
           "name": "HandleInResult",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -892,7 +892,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse",
+            "identifier": "test.protocols/WithErrorSyntaxHandleInResultTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -917,7 +917,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
+            "identifier": "test.protocols/WithErrorSyntax_HandleInResult_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -940,7 +940,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
+            "identifier": "test.protocols/WithErrorSyntax_HandleInResult_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -987,7 +987,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocol",
+      "name": "test.protocols/ChannelProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 65,
@@ -1030,7 +1030,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 565531679656837166,
+          "ordinal": 3155008840945527714,
           "name": "MethodA",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1041,7 +1041,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolMethodARequest",
+            "identifier": "test.protocols/ChannelProtocolMethodARequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1067,7 +1067,7 @@
           "has_error": false
         },
         {
-          "ordinal": 5963604044179602938,
+          "ordinal": 2220452875311597006,
           "name": "EventA",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1079,7 +1079,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolEventARequest",
+            "identifier": "test.protocols/ChannelProtocolEventARequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1104,7 +1104,7 @@
           "has_error": false
         },
         {
-          "ordinal": 6746905632127147242,
+          "ordinal": 8903004957800778182,
           "name": "MethodB",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1115,7 +1115,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolMethodBRequest",
+            "identifier": "test.protocols/ChannelProtocolMethodBRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1139,7 +1139,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolMethodBTopResponse",
+            "identifier": "test.protocols/ChannelProtocolMethodBTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1164,7 +1164,7 @@
           "has_error": false
         },
         {
-          "ordinal": 875219241480379432,
+          "ordinal": 591935489944717925,
           "name": "TakeHandle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1175,7 +1175,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolTakeHandleRequest",
+            "identifier": "test.protocols/ChannelProtocolTakeHandleRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1201,7 +1201,7 @@
           "has_error": false
         },
         {
-          "ordinal": 9065806117349865322,
+          "ordinal": 7411742788430590287,
           "name": "MutateSocket",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1212,7 +1212,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolMutateSocketRequest",
+            "identifier": "test.protocols/ChannelProtocolMutateSocketRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1236,7 +1236,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse",
+            "identifier": "test.protocols/ChannelProtocolMutateSocketTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1263,7 +1263,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/SyscallProtocol",
+      "name": "test.protocols/SyscallProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 91,
@@ -1306,7 +1306,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 1454353253880264687,
+          "ordinal": 1468025868259603279,
           "name": "MethodC",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1317,7 +1317,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/SyscallProtocolMethodCRequest",
+            "identifier": "test.protocols/SyscallProtocolMethodCRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1345,7 +1345,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/Transitional",
+      "name": "test.protocols/Transitional",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 98,
@@ -1355,7 +1355,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 7121112290509197032,
+          "ordinal": 5849263021838298888,
           "name": "Request",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1378,7 +1378,7 @@
           ],
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/TransitionalRequestRequest",
+            "identifier": "test.protocols/TransitionalRequestRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1402,7 +1402,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/TransitionalRequestTopResponse",
+            "identifier": "test.protocols/TransitionalRequestTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1427,7 +1427,7 @@
           "has_error": false
         },
         {
-          "ordinal": 1124136612964114085,
+          "ordinal": 4336658926562441191,
           "name": "OneWay",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1450,7 +1450,7 @@
           ],
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/TransitionalOneWayRequest",
+            "identifier": "test.protocols/TransitionalOneWayRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1476,7 +1476,7 @@
           "has_error": false
         },
         {
-          "ordinal": 6033576734966581606,
+          "ordinal": 8507647465196374081,
           "name": "Event",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1500,7 +1500,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/TransitionalEventRequest",
+            "identifier": "test.protocols/TransitionalEventRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1527,7 +1527,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/DiscoverableProtocol",
+      "name": "test.protocols/DiscoverableProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 118,
@@ -1549,7 +1549,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 16177161678225767,
+          "ordinal": 3455873048082739435,
           "name": "Method",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1565,7 +1565,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/HandleRightsProtocol",
+      "name": "test.protocols/HandleRightsProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 122,
@@ -1575,7 +1575,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 5073990954122988412,
+          "ordinal": 1155044649514904573,
           "name": "NoResponseMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1586,7 +1586,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest",
+            "identifier": "test.protocols/HandleRightsProtocolNoResponseMethodRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1612,7 +1612,7 @@
           "has_error": false
         },
         {
-          "ordinal": 6841738779450413052,
+          "ordinal": 5956276128041940295,
           "name": "ResponseMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1623,7 +1623,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest",
+            "identifier": "test.protocols/HandleRightsProtocolResponseMethodRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1647,7 +1647,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+            "identifier": "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1672,7 +1672,7 @@
           "has_error": false
         },
         {
-          "ordinal": 929632006073412977,
+          "ordinal": 476727631355490611,
           "name": "AnEvent",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1684,7 +1684,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/HandleRightsProtocolAnEventRequest",
+            "identifier": "test.protocols/HandleRightsProtocolAnEventRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1711,7 +1711,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEnds",
+      "name": "test.protocols/WithProtocolEnds",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 143,
@@ -1721,7 +1721,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 6967495859718087341,
+          "ordinal": 5870448041025163330,
           "name": "ClientEnds",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1732,7 +1732,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
+            "identifier": "test.protocols/WithProtocolEndsClientEndsRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1756,7 +1756,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
+            "identifier": "test.protocols/WithProtocolEndsClientEndsTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1781,7 +1781,7 @@
           "has_error": false
         },
         {
-          "ordinal": 4493250268989071740,
+          "ordinal": 8115535094437022259,
           "name": "ServerEnds",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1792,7 +1792,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
+            "identifier": "test.protocols/WithProtocolEndsServerEndsRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1816,7 +1816,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
+            "identifier": "test.protocols/WithProtocolEndsServerEndsTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -1841,7 +1841,7 @@
           "has_error": false
         },
         {
-          "ordinal": 175407360796475740,
+          "ordinal": 4076866772260025813,
           "name": "StructContainingEnds",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1852,7 +1852,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
+            "identifier": "test.protocols/WithProtocolEndsStructContainingEndsRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1876,7 +1876,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+            "identifier": "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1903,7 +1903,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/ManyParameters",
+      "name": "test.protocols/ManyParameters",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 161,
@@ -1913,7 +1913,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 2979943048488637411,
+          "ordinal": 6423043252952467815,
           "name": "Fifteen",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -1957,7 +1957,7 @@
           ],
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ManyParametersFifteenRequest",
+            "identifier": "test.protocols/ManyParametersFifteenRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1985,7 +1985,7 @@
       ]
     },
     {
-      "name": "fidl.test.protocols/MethodWithUnion",
+      "name": "test.protocols/MethodWithUnion",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
         "line": 187,
@@ -1995,7 +1995,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 6602599911470270762,
+          "ordinal": 4124874338266649112,
           "name": "UnionMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
@@ -2006,7 +2006,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
+            "identifier": "test.protocols/MethodWithUnionUnionMethodRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -2037,7 +2037,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+      "name": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "NoRequestWithResponse",
@@ -2112,7 +2112,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
+      "name": "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestNoResponse",
@@ -2187,7 +2187,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
+      "name": "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestEmptyResponse",
@@ -2262,7 +2262,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
+      "name": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestWithResponse",
@@ -2337,7 +2337,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+      "name": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "WithRequestWithResponse",
@@ -2412,7 +2412,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
+      "name": "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
       "naming_context": [
         "WithAndWithoutRequestResponse",
         "OnWithResponse",
@@ -2487,7 +2487,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
+      "name": "test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
       "naming_context": [
         "WithErrorSyntax",
         "ResponseAsStruct",
@@ -2642,7 +2642,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
+      "name": "test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
       "naming_context": [
         "WithErrorSyntax",
         "ResponseAsStruct",
@@ -2659,7 +2659,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
+            "identifier": "test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -2718,7 +2718,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
+      "name": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
       "naming_context": [
         "WithErrorSyntax",
         "ErrorAsPrimitive",
@@ -2755,7 +2755,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
+      "name": "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
       "naming_context": [
         "WithErrorSyntax",
         "ErrorAsPrimitive",
@@ -2772,7 +2772,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -2831,7 +2831,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+      "name": "test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
       "naming_context": [
         "WithErrorSyntax",
         "ErrorAsEnum",
@@ -2868,7 +2868,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
+      "name": "test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
       "naming_context": [
         "WithErrorSyntax",
         "ErrorAsEnum",
@@ -2885,7 +2885,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -2944,7 +2944,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
+      "name": "test.protocols/WithErrorSyntax_HandleInResult_Response",
       "naming_context": [
         "WithErrorSyntax",
         "HandleInResult",
@@ -3024,7 +3024,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse",
+      "name": "test.protocols/WithErrorSyntaxHandleInResultTopResponse",
       "naming_context": [
         "WithErrorSyntax",
         "HandleInResult",
@@ -3041,7 +3041,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
+            "identifier": "test.protocols/WithErrorSyntax_HandleInResult_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -3100,7 +3100,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolMethodARequest",
+      "name": "test.protocols/ChannelProtocolMethodARequest",
       "naming_context": [
         "ChannelProtocol",
         "MethodA",
@@ -3214,7 +3214,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolEventARequest",
+      "name": "test.protocols/ChannelProtocolEventARequest",
       "naming_context": [
         "ChannelProtocol",
         "EventA",
@@ -3328,7 +3328,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolMethodBRequest",
+      "name": "test.protocols/ChannelProtocolMethodBRequest",
       "naming_context": [
         "ChannelProtocol",
         "MethodB",
@@ -3442,7 +3442,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolMethodBTopResponse",
+      "name": "test.protocols/ChannelProtocolMethodBTopResponse",
       "naming_context": [
         "ChannelProtocol",
         "MethodB",
@@ -3517,7 +3517,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolTakeHandleRequest",
+      "name": "test.protocols/ChannelProtocolTakeHandleRequest",
       "naming_context": [
         "ChannelProtocol",
         "TakeHandle",
@@ -3595,7 +3595,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolMutateSocketRequest",
+      "name": "test.protocols/ChannelProtocolMutateSocketRequest",
       "naming_context": [
         "ChannelProtocol",
         "MutateSocket",
@@ -3673,7 +3673,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse",
+      "name": "test.protocols/ChannelProtocolMutateSocketTopResponse",
       "naming_context": [
         "ChannelProtocol",
         "MutateSocket",
@@ -3751,7 +3751,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/SyscallProtocolMethodCRequest",
+      "name": "test.protocols/SyscallProtocolMethodCRequest",
       "naming_context": [
         "SyscallProtocol",
         "MethodC",
@@ -3865,7 +3865,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/TransitionalRequestRequest",
+      "name": "test.protocols/TransitionalRequestRequest",
       "naming_context": [
         "Transitional",
         "Request",
@@ -3940,7 +3940,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/TransitionalRequestTopResponse",
+      "name": "test.protocols/TransitionalRequestTopResponse",
       "naming_context": [
         "Transitional",
         "Request",
@@ -4015,7 +4015,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/TransitionalOneWayRequest",
+      "name": "test.protocols/TransitionalOneWayRequest",
       "naming_context": [
         "Transitional",
         "OneWay",
@@ -4090,7 +4090,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/TransitionalEventRequest",
+      "name": "test.protocols/TransitionalEventRequest",
       "naming_context": [
         "Transitional",
         "Event",
@@ -4165,7 +4165,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest",
+      "name": "test.protocols/HandleRightsProtocolNoResponseMethodRequest",
       "naming_context": [
         "HandleRightsProtocol",
         "NoResponseMethod",
@@ -4243,7 +4243,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest",
+      "name": "test.protocols/HandleRightsProtocolResponseMethodRequest",
       "naming_context": [
         "HandleRightsProtocol",
         "ResponseMethod",
@@ -4321,7 +4321,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+      "name": "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
       "naming_context": [
         "HandleRightsProtocol",
         "ResponseMethod",
@@ -4399,7 +4399,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/HandleRightsProtocolAnEventRequest",
+      "name": "test.protocols/HandleRightsProtocolAnEventRequest",
       "naming_context": [
         "HandleRightsProtocol",
         "AnEvent",
@@ -4477,7 +4477,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
+      "name": "test.protocols/WithProtocolEndsClientEndsRequest",
       "naming_context": [
         "WithProtocolEnds",
         "ClientEnds",
@@ -4494,7 +4494,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -4553,7 +4553,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
+      "name": "test.protocols/WithProtocolEndsClientEndsTopResponse",
       "naming_context": [
         "WithProtocolEnds",
         "ClientEnds",
@@ -4570,7 +4570,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -4629,7 +4629,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
+      "name": "test.protocols/WithProtocolEndsServerEndsRequest",
       "naming_context": [
         "WithProtocolEnds",
         "ServerEnds",
@@ -4646,7 +4646,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -4705,7 +4705,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
+      "name": "test.protocols/WithProtocolEndsServerEndsTopResponse",
       "naming_context": [
         "WithProtocolEnds",
         "ServerEnds",
@@ -4722,7 +4722,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -4781,7 +4781,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
+      "name": "test.protocols/WithProtocolEndsStructContainingEndsRequest",
       "naming_context": [
         "WithProtocolEnds",
         "StructContainingEnds",
@@ -4798,7 +4798,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ProtocolEnds",
+            "identifier": "test.protocols/ProtocolEnds",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -4857,7 +4857,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+      "name": "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
       "naming_context": [
         "WithProtocolEnds",
         "StructContainingEnds",
@@ -4874,7 +4874,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ProtocolEnds",
+            "identifier": "test.protocols/ProtocolEnds",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -4933,7 +4933,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ManyParametersFifteenRequest",
+      "name": "test.protocols/ManyParametersFifteenRequest",
       "naming_context": [
         "ManyParameters",
         "Fifteen",
@@ -5554,7 +5554,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
+      "name": "test.protocols/MethodWithUnionUnionMethodRequest",
       "naming_context": [
         "MethodWithUnion",
         "UnionMethod",
@@ -5571,7 +5571,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/TheUnion",
+            "identifier": "test.protocols/TheUnion",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -5630,7 +5630,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/ProtocolEnds",
+      "name": "test.protocols/ProtocolEnds",
       "naming_context": [
         "ProtocolEnds"
       ],
@@ -5645,7 +5645,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -5685,7 +5685,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -5725,7 +5725,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/DiscoverableProtocol",
+            "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -5765,7 +5765,7 @@
         {
           "type": {
             "kind": "request",
-            "subtype": "fidl.test.protocols/DiscoverableProtocol",
+            "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 4,
@@ -5828,7 +5828,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
+      "name": "test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
       "naming_context": [
         "WithErrorSyntax",
         "ResponseAsStruct",
@@ -5854,7 +5854,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
+            "identifier": "test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -5938,7 +5938,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
+      "name": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
       "naming_context": [
         "WithErrorSyntax",
         "ErrorAsPrimitive",
@@ -5964,7 +5964,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -6048,7 +6048,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
+      "name": "test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
       "naming_context": [
         "WithErrorSyntax",
         "ErrorAsEnum",
@@ -6074,7 +6074,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+            "identifier": "test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -6108,7 +6108,7 @@
           "name": "err",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/ErrorEnum",
+            "identifier": "test.protocols/ErrorEnum",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -6159,7 +6159,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
+      "name": "test.protocols/WithErrorSyntax_HandleInResult_Result",
       "naming_context": [
         "WithErrorSyntax",
         "HandleInResult",
@@ -6185,7 +6185,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
+            "identifier": "test.protocols/WithErrorSyntax_HandleInResult_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -6269,7 +6269,7 @@
       }
     },
     {
-      "name": "fidl.test.protocols/TheUnion",
+      "name": "test.protocols/TheUnion",
       "naming_context": [
         "TheUnion"
       ],
@@ -6338,123 +6338,123 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.protocols/rights",
-    "fidl.test.protocols/obj_type",
-    "fidl.test.protocols/handle",
-    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response",
-    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result",
-    "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse",
-    "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse",
-    "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest",
-    "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest",
-    "fidl.test.protocols/HandleRightsProtocolAnEventRequest",
-    "fidl.test.protocols/HandleRightsProtocol",
-    "fidl.test.protocols/ChannelProtocolTakeHandleRequest",
-    "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse",
-    "fidl.test.protocols/ChannelProtocolMutateSocketRequest",
-    "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
-    "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
-    "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
-    "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
-    "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
-    "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
-    "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
-    "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
-    "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
-    "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
-    "fidl.test.protocols/WithAndWithoutRequestResponse",
-    "fidl.test.protocols/TransitionalRequestTopResponse",
-    "fidl.test.protocols/TransitionalRequestRequest",
-    "fidl.test.protocols/TransitionalOneWayRequest",
-    "fidl.test.protocols/TransitionalEventRequest",
-    "fidl.test.protocols/Transitional",
-    "fidl.test.protocols/TheUnion",
-    "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
-    "fidl.test.protocols/MethodWithUnion",
-    "fidl.test.protocols/SyscallProtocolMethodCRequest",
-    "fidl.test.protocols/SyscallProtocol",
-    "fidl.test.protocols/ProtocolEnds",
-    "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
-    "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
-    "fidl.test.protocols/WithProtocolEnds",
-    "fidl.test.protocols/ManyParametersFifteenRequest",
-    "fidl.test.protocols/ManyParameters",
-    "fidl.test.protocols/ErrorEnum",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
-    "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
-    "fidl.test.protocols/WithErrorSyntax",
-    "fidl.test.protocols/DiscoverableProtocol",
-    "fidl.test.protocols/ChannelProtocolMethodBTopResponse",
-    "fidl.test.protocols/ChannelProtocolMethodBRequest",
-    "fidl.test.protocols/ChannelProtocolMethodARequest",
-    "fidl.test.protocols/ChannelProtocolEventARequest",
-    "fidl.test.protocols/ChannelProtocol"
+    "test.protocols/rights",
+    "test.protocols/obj_type",
+    "test.protocols/handle",
+    "test.protocols/WithErrorSyntax_HandleInResult_Response",
+    "test.protocols/WithErrorSyntax_HandleInResult_Result",
+    "test.protocols/WithErrorSyntaxHandleInResultTopResponse",
+    "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+    "test.protocols/HandleRightsProtocolResponseMethodRequest",
+    "test.protocols/HandleRightsProtocolNoResponseMethodRequest",
+    "test.protocols/HandleRightsProtocolAnEventRequest",
+    "test.protocols/HandleRightsProtocol",
+    "test.protocols/ChannelProtocolTakeHandleRequest",
+    "test.protocols/ChannelProtocolMutateSocketTopResponse",
+    "test.protocols/ChannelProtocolMutateSocketRequest",
+    "test.protocols/WithProtocolEndsServerEndsTopResponse",
+    "test.protocols/WithProtocolEndsServerEndsRequest",
+    "test.protocols/WithProtocolEndsClientEndsTopResponse",
+    "test.protocols/WithProtocolEndsClientEndsRequest",
+    "test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
+    "test.protocols/WithErrorSyntax_ResponseAsStruct_Result",
+    "test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
+    "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
+    "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result",
+    "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
+    "test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
+    "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
+    "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+    "test.protocols/WithAndWithoutRequestResponse",
+    "test.protocols/TransitionalRequestTopResponse",
+    "test.protocols/TransitionalRequestRequest",
+    "test.protocols/TransitionalOneWayRequest",
+    "test.protocols/TransitionalEventRequest",
+    "test.protocols/Transitional",
+    "test.protocols/TheUnion",
+    "test.protocols/MethodWithUnionUnionMethodRequest",
+    "test.protocols/MethodWithUnion",
+    "test.protocols/SyscallProtocolMethodCRequest",
+    "test.protocols/SyscallProtocol",
+    "test.protocols/ProtocolEnds",
+    "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+    "test.protocols/WithProtocolEndsStructContainingEndsRequest",
+    "test.protocols/WithProtocolEnds",
+    "test.protocols/ManyParametersFifteenRequest",
+    "test.protocols/ManyParameters",
+    "test.protocols/ErrorEnum",
+    "test.protocols/WithErrorSyntax_ErrorAsEnum_Result",
+    "test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
+    "test.protocols/WithErrorSyntax",
+    "test.protocols/DiscoverableProtocol",
+    "test.protocols/ChannelProtocolMethodBTopResponse",
+    "test.protocols/ChannelProtocolMethodBRequest",
+    "test.protocols/ChannelProtocolMethodARequest",
+    "test.protocols/ChannelProtocolEventARequest",
+    "test.protocols/ChannelProtocol"
   ],
   "declarations": {
-    "fidl.test.protocols/rights": "bits",
-    "fidl.test.protocols/obj_type": "enum",
-    "fidl.test.protocols/ErrorEnum": "enum",
-    "fidl.test.protocols/handle": "experimental_resource",
-    "fidl.test.protocols/WithAndWithoutRequestResponse": "interface",
-    "fidl.test.protocols/WithErrorSyntax": "interface",
-    "fidl.test.protocols/ChannelProtocol": "interface",
-    "fidl.test.protocols/SyscallProtocol": "interface",
-    "fidl.test.protocols/Transitional": "interface",
-    "fidl.test.protocols/DiscoverableProtocol": "interface",
-    "fidl.test.protocols/HandleRightsProtocol": "interface",
-    "fidl.test.protocols/WithProtocolEnds": "interface",
-    "fidl.test.protocols/ManyParameters": "interface",
-    "fidl.test.protocols/MethodWithUnion": "interface",
-    "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse": "struct",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest": "struct",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest": "struct",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest": "struct",
-    "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse": "struct",
-    "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Response": "struct",
-    "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response": "struct",
-    "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Response": "struct",
-    "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse": "struct",
-    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Response": "struct",
-    "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse": "struct",
-    "fidl.test.protocols/ChannelProtocolMethodARequest": "struct",
-    "fidl.test.protocols/ChannelProtocolEventARequest": "struct",
-    "fidl.test.protocols/ChannelProtocolMethodBRequest": "struct",
-    "fidl.test.protocols/ChannelProtocolMethodBTopResponse": "struct",
-    "fidl.test.protocols/ChannelProtocolTakeHandleRequest": "struct",
-    "fidl.test.protocols/ChannelProtocolMutateSocketRequest": "struct",
-    "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse": "struct",
-    "fidl.test.protocols/SyscallProtocolMethodCRequest": "struct",
-    "fidl.test.protocols/TransitionalRequestRequest": "struct",
-    "fidl.test.protocols/TransitionalRequestTopResponse": "struct",
-    "fidl.test.protocols/TransitionalOneWayRequest": "struct",
-    "fidl.test.protocols/TransitionalEventRequest": "struct",
-    "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest": "struct",
-    "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest": "struct",
-    "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse": "struct",
-    "fidl.test.protocols/HandleRightsProtocolAnEventRequest": "struct",
-    "fidl.test.protocols/WithProtocolEndsClientEndsRequest": "struct",
-    "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse": "struct",
-    "fidl.test.protocols/WithProtocolEndsServerEndsRequest": "struct",
-    "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse": "struct",
-    "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest": "struct",
-    "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse": "struct",
-    "fidl.test.protocols/ManyParametersFifteenRequest": "struct",
-    "fidl.test.protocols/MethodWithUnionUnionMethodRequest": "struct",
-    "fidl.test.protocols/ProtocolEnds": "struct",
-    "fidl.test.protocols/WithErrorSyntax_ResponseAsStruct_Result": "union",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
-    "fidl.test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union",
-    "fidl.test.protocols/WithErrorSyntax_HandleInResult_Result": "union",
-    "fidl.test.protocols/TheUnion": "union"
+    "test.protocols/rights": "bits",
+    "test.protocols/obj_type": "enum",
+    "test.protocols/ErrorEnum": "enum",
+    "test.protocols/handle": "experimental_resource",
+    "test.protocols/WithAndWithoutRequestResponse": "interface",
+    "test.protocols/WithErrorSyntax": "interface",
+    "test.protocols/ChannelProtocol": "interface",
+    "test.protocols/SyscallProtocol": "interface",
+    "test.protocols/Transitional": "interface",
+    "test.protocols/DiscoverableProtocol": "interface",
+    "test.protocols/HandleRightsProtocol": "interface",
+    "test.protocols/WithProtocolEnds": "interface",
+    "test.protocols/ManyParameters": "interface",
+    "test.protocols/MethodWithUnion": "interface",
+    "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse": "struct",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest": "struct",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest": "struct",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest": "struct",
+    "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse": "struct",
+    "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest": "struct",
+    "test.protocols/WithErrorSyntax_ResponseAsStruct_Response": "struct",
+    "test.protocols/WithErrorSyntaxResponseAsStructTopResponse": "struct",
+    "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response": "struct",
+    "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse": "struct",
+    "test.protocols/WithErrorSyntax_ErrorAsEnum_Response": "struct",
+    "test.protocols/WithErrorSyntaxErrorAsEnumTopResponse": "struct",
+    "test.protocols/WithErrorSyntax_HandleInResult_Response": "struct",
+    "test.protocols/WithErrorSyntaxHandleInResultTopResponse": "struct",
+    "test.protocols/ChannelProtocolMethodARequest": "struct",
+    "test.protocols/ChannelProtocolEventARequest": "struct",
+    "test.protocols/ChannelProtocolMethodBRequest": "struct",
+    "test.protocols/ChannelProtocolMethodBTopResponse": "struct",
+    "test.protocols/ChannelProtocolTakeHandleRequest": "struct",
+    "test.protocols/ChannelProtocolMutateSocketRequest": "struct",
+    "test.protocols/ChannelProtocolMutateSocketTopResponse": "struct",
+    "test.protocols/SyscallProtocolMethodCRequest": "struct",
+    "test.protocols/TransitionalRequestRequest": "struct",
+    "test.protocols/TransitionalRequestTopResponse": "struct",
+    "test.protocols/TransitionalOneWayRequest": "struct",
+    "test.protocols/TransitionalEventRequest": "struct",
+    "test.protocols/HandleRightsProtocolNoResponseMethodRequest": "struct",
+    "test.protocols/HandleRightsProtocolResponseMethodRequest": "struct",
+    "test.protocols/HandleRightsProtocolResponseMethodTopResponse": "struct",
+    "test.protocols/HandleRightsProtocolAnEventRequest": "struct",
+    "test.protocols/WithProtocolEndsClientEndsRequest": "struct",
+    "test.protocols/WithProtocolEndsClientEndsTopResponse": "struct",
+    "test.protocols/WithProtocolEndsServerEndsRequest": "struct",
+    "test.protocols/WithProtocolEndsServerEndsTopResponse": "struct",
+    "test.protocols/WithProtocolEndsStructContainingEndsRequest": "struct",
+    "test.protocols/WithProtocolEndsStructContainingEndsTopResponse": "struct",
+    "test.protocols/ManyParametersFifteenRequest": "struct",
+    "test.protocols/MethodWithUnionUnionMethodRequest": "struct",
+    "test.protocols/ProtocolEnds": "struct",
+    "test.protocols/WithErrorSyntax_ResponseAsStruct_Result": "union",
+    "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Result": "union",
+    "test.protocols/WithErrorSyntax_ErrorAsEnum_Result": "union",
+    "test.protocols/WithErrorSyntax_HandleInResult_Result": "union",
+    "test.protocols/TheUnion": "union"
   }
 }

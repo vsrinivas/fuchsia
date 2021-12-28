@@ -4,14 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fidl.test.placementofattributes") {
+fidl("test.placementofattributes") {
   testonly = true
   sources = [ "example.test.fidl" ]
-  public_deps = [ ":exampleusing" ]
+  public_deps = [ ":test.exampleusing" ]
   host_llcpp = true
 }
 
-fidl("exampleusing") {
+fidl("test.exampleusing") {
   testonly = true
   sources = [ "exampleusing.test.fidl" ]
   host_llcpp = true

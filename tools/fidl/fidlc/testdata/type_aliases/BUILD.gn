@@ -4,14 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fidl.test.typealiases") {
+fidl("test.typealiases") {
   testonly = true
   sources = [ "example.test.fidl" ]
-  public_deps = [ ":someotherlibrary" ]
+  public_deps = [ ":test.someotherlibrary" ]
   host_llcpp = true
 }
 
-fidl("someotherlibrary") {
+fidl("test.someotherlibrary") {
   testonly = true
   sources = [ "someotherlibrary.test.fidl" ]
   host_llcpp = true

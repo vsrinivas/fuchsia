@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.error
+# test.error
 
 
 
 ## **PROTOCOLS**
 
 ## Example {#Example}
-*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
+*Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
 
 
 
@@ -43,7 +43,7 @@
 ## **STRUCTS**
 
 ### Example_foo_Response  {#Example_foo_Response data-text="Example_foo_Response"}
-*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
+*Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 
 
@@ -69,7 +69,7 @@
 ## **UNIONS**
 
 ### Example_foo_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Example_foo_Result data-text="Example_foo_Result"}
-*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
+*Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 
 

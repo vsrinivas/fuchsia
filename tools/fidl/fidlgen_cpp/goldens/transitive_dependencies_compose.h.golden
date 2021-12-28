@@ -2,15 +2,15 @@
 
 #pragma once
 
-#include <bottom/cpp/fidl_v2.h>
-#include <fidl/fidl.test.transitivedependenciescompose/cpp/wire.h>
-#include <fidl/test/transitivedependenciescompose/cpp/natural_types.h>
+#include <fidl/test.transitivedependenciescompose/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <middle/cpp/fidl_v2.h>
+#include <test/bottom/cpp/fidl_v2.h>
+#include <test/middle/cpp/fidl_v2.h>
+#include <test/transitivedependenciescompose/cpp/natural_types.h>
 
 namespace fidl {}  // namespace fidl

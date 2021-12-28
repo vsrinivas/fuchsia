@@ -1,4 +1,4 @@
-library fidl.test.error;
+library test.error;
 
 protocol Example {
     foo(struct {

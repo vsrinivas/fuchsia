@@ -19,22 +19,22 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.error/cpp/markers.h>
+#include <fidl/test.error/cpp/markers.h>
 
-namespace fidl_test_error {
+namespace test_error {
 namespace wire {
 struct ExampleFooResponse;
 
 class ExampleFooResult;
 
-extern "C" const fidl_type_t fidl_test_error_Example_foo_ResultTable;
+extern "C" const fidl_type_t test_error_Example_foo_ResultTable;
 
 class ExampleFooResult {
  public:
-  using Response = fidl_test_error::wire::ExampleFooResponse;
+  using Response = test_error::wire::ExampleFooResponse;
 
   ExampleFooResult()
-      : ordinal_(::fidl_test_error::wire::ExampleFooResult::Ordinal::Invalid),
+      : ordinal_(::test_error::wire::ExampleFooResult::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -49,16 +49,14 @@ class ExampleFooResult {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_error::wire::ExampleFooResult::Ordinal::Invalid;
+    return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::Invalid;
   }
 
   bool is_response() const {
-    return ordinal_ ==
-           ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
+    return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kResponse;
   }
   static ExampleFooResult WithResponse(
-      ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse> val) {
+      ::fidl::ObjectView<::test_error::wire::ExampleFooResponse> val) {
     ExampleFooResult result;
     result.set_response(val);
     return result;
@@ -69,41 +67,38 @@ class ExampleFooResult {
                                        Args&&... args) {
     ExampleFooResult result;
     result.set_response(
-        ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>(
+        ::fidl::ObjectView<::test_error::wire::ExampleFooResponse>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_response(
-      ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse> elem) {
-    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
-    envelope_.As<::fidl_test_error::wire::ExampleFooResponse>().set_data(
+      ::fidl::ObjectView<::test_error::wire::ExampleFooResponse> elem) {
+    ordinal_ = ::test_error::wire::ExampleFooResult::Ordinal::kResponse;
+    envelope_.As<::test_error::wire::ExampleFooResponse>().set_data(
         std::move(elem));
   }
 
   template <typename... Args>
   void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
-    set_response(
-        ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse>(
-            allocator, std::forward<Args>(args)...));
+    ordinal_ = ::test_error::wire::ExampleFooResult::Ordinal::kResponse;
+    set_response(::fidl::ObjectView<::test_error::wire::ExampleFooResponse>(
+        allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_error::wire::ExampleFooResponse& mutable_response() {
+  ::test_error::wire::ExampleFooResponse& mutable_response() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse);
-    return envelope_.As<::fidl_test_error::wire::ExampleFooResponse>()
-        .get_data();
+              ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
+    return envelope_.As<::test_error::wire::ExampleFooResponse>().get_data();
   }
-  const ::fidl_test_error::wire::ExampleFooResponse& response() const {
+  const ::test_error::wire::ExampleFooResponse& response() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse);
-    return envelope_.As<::fidl_test_error::wire::ExampleFooResponse>()
-        .get_data();
+              ::test_error::wire::ExampleFooResult::Ordinal::kResponse);
+    return envelope_.As<::test_error::wire::ExampleFooResponse>().get_data();
   }
 
   bool is_err() const {
-    return ordinal_ == ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
+    return ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr;
   }
   static ExampleFooResult WithErr(uint32_t val) {
     ExampleFooResult result;
@@ -112,28 +107,25 @@ class ExampleFooResult {
   }
 
   void set_err(uint32_t elem) {
-    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
+    ordinal_ = ::test_error::wire::ExampleFooResult::Ordinal::kErr;
     envelope_.As<uint32_t>().set_data(std::move(elem));
   }
 
   uint32_t& mutable_err() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr);
+    ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
   const uint32_t& err() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr);
+    ZX_ASSERT(ordinal_ == ::test_error::wire::ExampleFooResult::Ordinal::kErr);
     return envelope_.As<uint32_t>().get_data();
   }
-  ::fidl_test_error::wire::ExampleFooResult::Tag which() const {
+  ::test_error::wire::ExampleFooResult::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_error::wire::ExampleFooResult::Tag>(
-        ordinal_);
+    return static_cast<::test_error::wire::ExampleFooResult::Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_error_Example_foo_ResultTable;
+      &test_error_Example_foo_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -153,16 +145,16 @@ class ExampleFooResult {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_error::wire::ExampleFooResult::Ordinal ordinal_;
+  ::test_error::wire::ExampleFooResult::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
+extern "C" const fidl_type_t test_error_Example_foo_ResponseTable;
 
 struct ExampleFooResponse {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_error_Example_foo_ResponseTable;
+      &test_error_Example_foo_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -178,28 +170,26 @@ struct ExampleFooResponse {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_error
+}  // namespace test_error
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_error::wire::ExampleFooResponse>
+struct IsFidlType<::test_error::wire::ExampleFooResponse>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_error::wire::ExampleFooResponse>
+struct IsStruct<::test_error::wire::ExampleFooResponse>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_error::wire::ExampleFooResponse>);
-static_assert(offsetof(::fidl_test_error::wire::ExampleFooResponse, y) == 0);
-static_assert(sizeof(::fidl_test_error::wire::ExampleFooResponse) ==
-              ::fidl_test_error::wire::ExampleFooResponse::PrimarySize);
+    std::is_standard_layout_v<::test_error::wire::ExampleFooResponse>);
+static_assert(offsetof(::test_error::wire::ExampleFooResponse, y) == 0);
+static_assert(sizeof(::test_error::wire::ExampleFooResponse) ==
+              ::test_error::wire::ExampleFooResponse::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_error::wire::ExampleFooResult>
+struct IsFidlType<::test_error::wire::ExampleFooResult>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_error::wire::ExampleFooResult>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_error::wire::ExampleFooResult>);
+struct IsUnion<::test_error::wire::ExampleFooResult> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_error::wire::ExampleFooResult>);
 
 }  // namespace fidl

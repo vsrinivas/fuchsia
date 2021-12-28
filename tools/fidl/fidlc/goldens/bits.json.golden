@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.bits",
+  "name": "test.bits",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.bits/MyBits",
+      "name": "test.bits/MyBits",
       "naming_context": [
         "MyBits"
       ],
@@ -99,7 +99,7 @@
       "strict": true
     },
     {
-      "name": "fidl.test.bits/StrictBits",
+      "name": "test.bits/StrictBits",
       "naming_context": [
         "StrictBits"
       ],
@@ -175,7 +175,7 @@
       "strict": true
     },
     {
-      "name": "fidl.test.bits/FlexibleBits",
+      "name": "test.bits/FlexibleBits",
       "naming_context": [
         "FlexibleBits"
       ],
@@ -262,13 +262,13 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.bits/StrictBits",
-    "fidl.test.bits/MyBits",
-    "fidl.test.bits/FlexibleBits"
+    "test.bits/StrictBits",
+    "test.bits/MyBits",
+    "test.bits/FlexibleBits"
   ],
   "declarations": {
-    "fidl.test.bits/MyBits": "bits",
-    "fidl.test.bits/StrictBits": "bits",
-    "fidl.test.bits/FlexibleBits": "bits"
+    "test.bits/MyBits": "bits",
+    "test.bits/StrictBits": "bits",
+    "test.bits/FlexibleBits": "bits"
   }
 }

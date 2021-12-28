@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/union/cpp/fidl.h>
+#include <test/union/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,34 +13,33 @@
 
 namespace fuzzing {
 
-using UnionWithAttributes = ::fidl::test::union_::UnionWithAttributes;
-using Union = ::fidl::test::union_::Union;
-using StructWithNullableXUnion = ::fidl::test::union_::StructWithNullableXUnion;
-using StrictUnion = ::fidl::test::union_::StrictUnion;
-using StrictSimpleXUnion = ::fidl::test::union_::StrictSimpleXUnion;
-using StrictFoo = ::fidl::test::union_::StrictFoo;
-using StrictBoundedXUnion = ::fidl::test::union_::StrictBoundedXUnion;
-using ReverseOrdinalUnion = ::fidl::test::union_::ReverseOrdinalUnion;
-using Pizza = ::fidl::test::union_::Pizza;
-using Pasta = ::fidl::test::union_::Pasta;
-using StrictPizzaOrPasta = ::fidl::test::union_::StrictPizzaOrPasta;
-using PizzaOrPasta = ::fidl::test::union_::PizzaOrPasta;
-using FlexiblePizzaOrPasta = ::fidl::test::union_::FlexiblePizzaOrPasta;
-using ExplicitPizzaOrPasta = ::fidl::test::union_::ExplicitPizzaOrPasta;
-using OlderSimpleUnion = ::fidl::test::union_::OlderSimpleUnion;
-using NullableUnionStruct = ::fidl::test::union_::NullableUnionStruct;
-using NewerSimpleUnion = ::fidl::test::union_::NewerSimpleUnion;
-using FlexibleUnion = ::fidl::test::union_::FlexibleUnion;
-using FlexibleFoo = ::fidl::test::union_::FlexibleFoo;
-using FieldCollision = ::fidl::test::union_::FieldCollision;
-using ExplicitXUnion = ::fidl::test::union_::ExplicitXUnion;
-using UnionSandwich = ::fidl::test::union_::UnionSandwich;
-using ExplicitUnion = ::fidl::test::union_::ExplicitUnion;
-using ExplicitStrictFoo = ::fidl::test::union_::ExplicitStrictFoo;
-using ExplicitFoo = ::fidl::test::union_::ExplicitFoo;
-using Empty = ::fidl::test::union_::Empty;
-using XUnionContainingEmptyStruct =
-    ::fidl::test::union_::XUnionContainingEmptyStruct;
+using UnionWithAttributes = ::test::union_::UnionWithAttributes;
+using Union = ::test::union_::Union;
+using StructWithNullableXUnion = ::test::union_::StructWithNullableXUnion;
+using StrictUnion = ::test::union_::StrictUnion;
+using StrictSimpleXUnion = ::test::union_::StrictSimpleXUnion;
+using StrictFoo = ::test::union_::StrictFoo;
+using StrictBoundedXUnion = ::test::union_::StrictBoundedXUnion;
+using ReverseOrdinalUnion = ::test::union_::ReverseOrdinalUnion;
+using Pizza = ::test::union_::Pizza;
+using Pasta = ::test::union_::Pasta;
+using StrictPizzaOrPasta = ::test::union_::StrictPizzaOrPasta;
+using PizzaOrPasta = ::test::union_::PizzaOrPasta;
+using FlexiblePizzaOrPasta = ::test::union_::FlexiblePizzaOrPasta;
+using ExplicitPizzaOrPasta = ::test::union_::ExplicitPizzaOrPasta;
+using OlderSimpleUnion = ::test::union_::OlderSimpleUnion;
+using NullableUnionStruct = ::test::union_::NullableUnionStruct;
+using NewerSimpleUnion = ::test::union_::NewerSimpleUnion;
+using FlexibleUnion = ::test::union_::FlexibleUnion;
+using FlexibleFoo = ::test::union_::FlexibleFoo;
+using FieldCollision = ::test::union_::FieldCollision;
+using ExplicitXUnion = ::test::union_::ExplicitXUnion;
+using UnionSandwich = ::test::union_::UnionSandwich;
+using ExplicitUnion = ::test::union_::ExplicitUnion;
+using ExplicitStrictFoo = ::test::union_::ExplicitStrictFoo;
+using ExplicitFoo = ::test::union_::ExplicitFoo;
+using Empty = ::test::union_::Empty;
+using XUnionContainingEmptyStruct = ::test::union_::XUnionContainingEmptyStruct;
 
 template <>
 struct MinSize<UnionWithAttributes> {
@@ -113,7 +112,7 @@ struct Allocate<Union> {
 template <>
 struct MinSize<StructWithNullableXUnion> {
   operator size_t() {
-    return MinSize<::std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>>();
+    return MinSize<::std::unique_ptr<::test::union_::OlderSimpleUnion>>();
   }
 };
 template <>
@@ -124,12 +123,10 @@ struct Allocate<StructWithNullableXUnion> {
     const size_t slack_per_member =
         (*size - MinSize<StructWithNullableXUnion>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>>() +
-        slack_per_member;
-    out.x1 =
-        Allocate<::std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>>{}(
-            src, &out_size);
+    out_size = MinSize<::std::unique_ptr<::test::union_::OlderSimpleUnion>>() +
+               slack_per_member;
+    out.x1 = Allocate<::std::unique_ptr<::test::union_::OlderSimpleUnion>>{}(
+        src, &out_size);
     return out;
   }
 };
@@ -340,8 +337,8 @@ struct Allocate<Pasta> {
 template <>
 struct MinSize<StrictPizzaOrPasta> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::fidl::test::union_::Pizza>(),
-                      MinSize<::fidl::test::union_::Pasta>()};
+    size_t sizes[] = {0, MinSize<::test::union_::Pizza>(),
+                      MinSize<::test::union_::Pasta>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -359,11 +356,11 @@ struct Allocate<StrictPizzaOrPasta> {
     StrictPizzaOrPasta out;
     switch (selector % 2) {
       case 0: {
-        out.set_pizza(Allocate<::fidl::test::union_::Pizza>{}(src, size));
+        out.set_pizza(Allocate<::test::union_::Pizza>{}(src, size));
         break;
       }
       case 1: {
-        out.set_pasta(Allocate<::fidl::test::union_::Pasta>{}(src, size));
+        out.set_pasta(Allocate<::test::union_::Pasta>{}(src, size));
         break;
       }
     }
@@ -374,8 +371,8 @@ struct Allocate<StrictPizzaOrPasta> {
 template <>
 struct MinSize<PizzaOrPasta> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::fidl::test::union_::Pizza>(),
-                      MinSize<::fidl::test::union_::Pasta>()};
+    size_t sizes[] = {0, MinSize<::test::union_::Pizza>(),
+                      MinSize<::test::union_::Pasta>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -393,11 +390,11 @@ struct Allocate<PizzaOrPasta> {
     PizzaOrPasta out;
     switch (selector % 2) {
       case 0: {
-        out.set_pizza(Allocate<::fidl::test::union_::Pizza>{}(src, size));
+        out.set_pizza(Allocate<::test::union_::Pizza>{}(src, size));
         break;
       }
       case 1: {
-        out.set_pasta(Allocate<::fidl::test::union_::Pasta>{}(src, size));
+        out.set_pasta(Allocate<::test::union_::Pasta>{}(src, size));
         break;
       }
     }
@@ -408,8 +405,8 @@ struct Allocate<PizzaOrPasta> {
 template <>
 struct MinSize<FlexiblePizzaOrPasta> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::fidl::test::union_::Pizza>(),
-                      MinSize<::fidl::test::union_::Pasta>()};
+    size_t sizes[] = {0, MinSize<::test::union_::Pizza>(),
+                      MinSize<::test::union_::Pasta>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -427,11 +424,11 @@ struct Allocate<FlexiblePizzaOrPasta> {
     FlexiblePizzaOrPasta out;
     switch (selector % 2) {
       case 0: {
-        out.set_pizza(Allocate<::fidl::test::union_::Pizza>{}(src, size));
+        out.set_pizza(Allocate<::test::union_::Pizza>{}(src, size));
         break;
       }
       case 1: {
-        out.set_pasta(Allocate<::fidl::test::union_::Pasta>{}(src, size));
+        out.set_pasta(Allocate<::test::union_::Pasta>{}(src, size));
         break;
       }
     }
@@ -442,8 +439,8 @@ struct Allocate<FlexiblePizzaOrPasta> {
 template <>
 struct MinSize<ExplicitPizzaOrPasta> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::fidl::test::union_::Pizza>(),
-                      MinSize<::fidl::test::union_::Pasta>()};
+    size_t sizes[] = {0, MinSize<::test::union_::Pizza>(),
+                      MinSize<::test::union_::Pasta>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -461,11 +458,11 @@ struct Allocate<ExplicitPizzaOrPasta> {
     ExplicitPizzaOrPasta out;
     switch (selector % 2) {
       case 0: {
-        out.set_pizza(Allocate<::fidl::test::union_::Pizza>{}(src, size));
+        out.set_pizza(Allocate<::test::union_::Pizza>{}(src, size));
         break;
       }
       case 1: {
-        out.set_pasta(Allocate<::fidl::test::union_::Pasta>{}(src, size));
+        out.set_pasta(Allocate<::test::union_::Pasta>{}(src, size));
         break;
       }
     }
@@ -509,7 +506,7 @@ struct Allocate<OlderSimpleUnion> {
 template <>
 struct MinSize<NullableUnionStruct> {
   operator size_t() {
-    return MinSize<::std::unique_ptr<::fidl::test::union_::Union>>();
+    return MinSize<::std::unique_ptr<::test::union_::Union>>();
   }
 };
 template <>
@@ -520,10 +517,10 @@ struct Allocate<NullableUnionStruct> {
     const size_t slack_per_member =
         (*size - MinSize<NullableUnionStruct>()) / 1;
     size_t out_size;
-    out_size = MinSize<::std::unique_ptr<::fidl::test::union_::Union>>() +
-               slack_per_member;
-    out.the_union = Allocate<::std::unique_ptr<::fidl::test::union_::Union>>{}(
-        src, &out_size);
+    out_size =
+        MinSize<::std::unique_ptr<::test::union_::Union>>() + slack_per_member;
+    out.the_union =
+        Allocate<::std::unique_ptr<::test::union_::Union>>{}(src, &out_size);
     return out;
   }
 };
@@ -702,8 +699,7 @@ struct Allocate<ExplicitXUnion> {
 template <>
 struct MinSize<UnionSandwich> {
   operator size_t() {
-    return MinSize<uint32_t>() +
-           MinSize<::fidl::test::union_::ExplicitXUnion>() +
+    return MinSize<uint32_t>() + MinSize<::test::union_::ExplicitXUnion>() +
            MinSize<uint32_t>();
   }
 };
@@ -716,9 +712,8 @@ struct Allocate<UnionSandwich> {
     size_t out_size;
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.a = Allocate<uint32_t>{}(src, &out_size);
-    out_size =
-        MinSize<::fidl::test::union_::ExplicitXUnion>() + slack_per_member;
-    out.u = Allocate<::fidl::test::union_::ExplicitXUnion>{}(src, &out_size);
+    out_size = MinSize<::test::union_::ExplicitXUnion>() + slack_per_member;
+    out.u = Allocate<::test::union_::ExplicitXUnion>{}(src, &out_size);
     out_size = MinSize<uint32_t>() + slack_per_member;
     out.b = Allocate<uint32_t>{}(src, &out_size);
     return out;
@@ -842,7 +837,7 @@ struct Allocate<Empty> {
 template <>
 struct MinSize<XUnionContainingEmptyStruct> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::fidl::test::union_::Empty>()};
+    size_t sizes[] = {0, MinSize<::test::union_::Empty>()};
     return 1 + *std::max_element(sizes, sizes + 1 + 1);
   }
 };
@@ -860,7 +855,7 @@ struct Allocate<XUnionContainingEmptyStruct> {
     XUnionContainingEmptyStruct out;
     switch (selector % 1) {
       case 0: {
-        out.set_empty(Allocate<::fidl::test::union_::Empty>{}(src, size));
+        out.set_empty(Allocate<::test::union_::Empty>{}(src, size));
         break;
       }
     }

@@ -1,12 +1,12 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.enum",
+  "name": "test.enum",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "fidl.test.enum/MyStrictEnum",
+      "name": "test.enum/MyStrictEnum",
       "naming_context": [
         "MyStrictEnum"
       ],
@@ -60,7 +60,7 @@
       "strict": true
     },
     {
-      "name": "fidl.test.enum/MyFlexibleEnum",
+      "name": "test.enum/MyFlexibleEnum",
       "naming_context": [
         "MyFlexibleEnum"
       ],
@@ -115,7 +115,7 @@
       "maybe_unknown_value": 4294967295
     },
     {
-      "name": "fidl.test.enum/MyFlexibleEnumWithCustomUnknown",
+      "name": "test.enum/MyFlexibleEnumWithCustomUnknown",
       "naming_context": [
         "MyFlexibleEnumWithCustomUnknown"
       ],
@@ -201,7 +201,7 @@
       "maybe_unknown_value": 3
     },
     {
-      "name": "fidl.test.enum/MyEmptyFlexibleEnum",
+      "name": "test.enum/MyEmptyFlexibleEnum",
       "naming_context": [
         "MyEmptyFlexibleEnum"
       ],
@@ -226,15 +226,15 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.enum/MyStrictEnum",
-    "fidl.test.enum/MyFlexibleEnumWithCustomUnknown",
-    "fidl.test.enum/MyFlexibleEnum",
-    "fidl.test.enum/MyEmptyFlexibleEnum"
+    "test.enum/MyStrictEnum",
+    "test.enum/MyFlexibleEnumWithCustomUnknown",
+    "test.enum/MyFlexibleEnum",
+    "test.enum/MyEmptyFlexibleEnum"
   ],
   "declarations": {
-    "fidl.test.enum/MyStrictEnum": "enum",
-    "fidl.test.enum/MyFlexibleEnum": "enum",
-    "fidl.test.enum/MyFlexibleEnumWithCustomUnknown": "enum",
-    "fidl.test.enum/MyEmptyFlexibleEnum": "enum"
+    "test.enum/MyStrictEnum": "enum",
+    "test.enum/MyFlexibleEnum": "enum",
+    "test.enum/MyFlexibleEnumWithCustomUnknown": "enum",
+    "test.enum/MyEmptyFlexibleEnum": "enum"
   }
 }

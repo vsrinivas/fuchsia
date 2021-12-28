@@ -1424,8 +1424,8 @@ func (_m *UnionWithAttributes) GetUnknownData() _bindings.UnknownData {
 }
 
 const (
-	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal   uint64 = 0x747b084a44f0dc3e
-	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x57615a25c2a785d2
+	TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal   uint64 = 0x816ec730baa90dd
+	TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal uint64 = 0x6ad517317388ea05
 )
 
 type TestProtocolWithCtxInterface _bindings.ChannelProxy

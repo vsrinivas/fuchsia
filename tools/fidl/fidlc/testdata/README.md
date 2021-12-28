@@ -8,8 +8,8 @@ To add a new standalone library:
 
 1. Choose a **name**, e.g. `foo_bar`.
 2. Create a FIDL file with the `.test.fidl` extension, e.g. `foo_bar.test.fidl`.
-3. Declare the library as `fidl.test.` followed by **name** without underscores,
-   e.g. `library fidl.test.foobar;`.
+3. Declare the library as `test.` followed by **name** without underscores,
+   e.g. `library test.foobar;`.
 4. Add the filename to the `standalone_libraries` list in BUILD.gn.
 5. Add an entry to `fidl_testdata_info` in info.gni, providing the **name** and
    the target that BUILD.gn generates, e.g.:
@@ -17,7 +17,7 @@ To add a new standalone library:
 ```
 {
   name = "foo_bar"
-  target = "//tools/fidl/fidlc/testdata:fidl.test.foobar"
+  target = "//tools/fidl/fidlc/testdata:test.foobar"
 }
 ```
 
@@ -30,7 +30,7 @@ dependencies, not to group together similar standalone libraries.
 1. Choose a **name**, e.g. `foo_bar`.
 2. Create a subdirectory named **name** containing two or more FIDL files ending
    in `.test.fidl` and a BUILD.gn to build them.
-3. Ensure one of the libraries is named appropriately, e.g. `fidl.test.foobar`,
+3. Ensure one of the libraries is named appropriately, e.g. `test.foobar`,
    and that its build target name is the same.
 4. Add an entry to `fidl_testdata_info` in info.gni, providing the **name** and
    the target that BUILD.gn generates, e.g.:
@@ -38,7 +38,7 @@ dependencies, not to group together similar standalone libraries.
 ```
 {
   name = "foo_bar"
-  target = "//tools/fidl/fidlc/testdata/foo_bar:fidl.test.foobar"
+  target = "//tools/fidl/fidlc/testdata/foo_bar:test.foobar"
 }
 ```
 

@@ -3,11 +3,11 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct bottom_FooTable;
-__LOCAL extern const struct FidlCodedStruct middle_BarTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_transitivedependencies_BazTable;
+__LOCAL extern const struct FidlCodedStruct test_bottom_FooTable;
+__LOCAL extern const struct FidlCodedStruct test_middle_BarTable;
+__LOCAL extern const struct FidlCodedStruct test_transitivedependencies_BazTable;
 
 
 
-const struct FidlCodedStruct fidl_test_transitivedependencies_BazTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="fidl.test.transitivedependencies/Baz"};
+const struct FidlCodedStruct test_transitivedependencies_BazTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="test.transitivedependencies/Baz"};
 

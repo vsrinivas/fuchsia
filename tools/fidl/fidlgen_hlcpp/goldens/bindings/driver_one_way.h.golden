@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace driveroneway {
 class Payload;
@@ -29,8 +28,8 @@ class Payload final {
   zx_status_t Clone(Payload* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::driveroneway::Payload& _value,
-                         ::fidl::test::driveroneway::Payload* _result) {
+inline zx_status_t Clone(const ::test::driveroneway::Payload& _value,
+                         ::test::driveroneway::Payload* _result) {
   return _value.Clone(_result);
 }
 
@@ -38,26 +37,26 @@ using PayloadPtr = ::std::unique_ptr<Payload>;
 
 }  // namespace driveroneway
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::driveroneway::Payload>
-    : public EncodableCodingTraits<::fidl::test::driveroneway::Payload, 4, 4> {
-};
+struct CodingTraits<::test::driveroneway::Payload>
+    : public EncodableCodingTraits<::test::driveroneway::Payload, 4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::driveroneway::Payload>
+struct IsMemcpyCompatible<::test::driveroneway::Payload>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::driveroneway::Payload>::value &&
+          !HasPadding<::test::driveroneway::Payload>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::driveroneway::Payload& value,
-                         ::fidl::test::driveroneway::Payload* result) {
-  return ::fidl::test::driveroneway::Clone(value, result);
+inline zx_status_t Clone(const ::test::driveroneway::Payload& value,
+                         ::test::driveroneway::Payload* result) {
+  return ::test::driveroneway::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::driveroneway::Payload> {
-  bool operator()(const ::fidl::test::driveroneway::Payload& _lhs,
-                  const ::fidl::test::driveroneway::Payload& _rhs) const {
+struct Equality<::test::driveroneway::Payload> {
+  bool operator()(const ::test::driveroneway::Payload& _lhs,
+                  const ::test::driveroneway::Payload& _rhs) const {
     if (!::fidl::Equals(_lhs.value, _rhs.value)) {
       return false;
     }

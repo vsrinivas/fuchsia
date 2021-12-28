@@ -2,20 +2,19 @@
 
 #pragma once
 
-#include <fidl/fidl.test.versions/cpp/wire.h>
-namespace fidl_test_versions {
+#include <fidl/test.versions/cpp/wire.h>
+namespace test_versions {
 namespace testing {
 
 class OtherProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_versions::OtherProtocol> {
+    : public ::fidl::WireServer<::test_versions::OtherProtocol> {
  public:
   virtual ~OtherProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
 
-class Protocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_versions::Protocol> {
+class Protocol_TestBase : public ::fidl::WireServer<::test_versions::Protocol> {
  public:
   virtual ~Protocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -26,4 +25,4 @@ class Protocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_versions
+}  // namespace test_versions

@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.transitivedependencies
+# test.transitivedependencies
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### Baz  {#Baz data-text="Baz"}
-*Defined in [fidl.test.transitivedependencies/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl;l=8)*
+*Defined in [test.transitivedependencies/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl;l=8)*
 
 
 
@@ -20,7 +20,7 @@
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Baz.g">
             <td><code>g</code></td>
             <td>
-                <code><a class='link' href='../middle/'>middle</a>/<a class='link' href='../middle/#Bar'>Bar</a></code>
+                <code><a class='link' href='../test.middle/'>test.middle</a>/<a class='link' href='../test.middle/#Bar'>Bar</a></code>
             </td>
             <td>
 </td>

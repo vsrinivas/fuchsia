@@ -2,15 +2,14 @@
 
 #pragma once
 
-#include <bottom/cpp/natural_types.h>
-#include <middle/cpp/natural_types.h>
+#include <test/bottom/cpp/natural_types.h>
+#include <test/middle/cpp/natural_types.h>
 
 #include "lib/fidl/cpp/internal/natural_types_header.h"
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace transitivedependenciescompose {
 #ifdef __Fuchsia__
@@ -23,7 +22,7 @@ using TopHandle = ::fidl::InterfaceHandle<Top>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooRequestMessageTable;
+    test_transitivedependenciescompose_TopGetFooRequestMessageTable;
 
 }  // namespace _internal
 class Top_RequestEncoder {
@@ -45,8 +44,8 @@ class Top_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::transitivedependenciescompose::_internal::
-            fidl_test_transitivedependenciescompose_TopGetFooRequestMessageTable,
+        &::test::transitivedependenciescompose::_internal::
+            test_transitivedependenciescompose_TopGetFooRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -55,13 +54,13 @@ class Top_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable;
+    test_transitivedependenciescompose_TopGetFooResponseMessageTable;
 
 }  // namespace _internal
 class Top_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::Encoder* _encoder,
-                                             ::bottom::Foo* foo) {
+                                             ::test::bottom::Foo* foo) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -81,8 +80,8 @@ class Top_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::transitivedependenciescompose::_internal::
-            fidl_test_transitivedependenciescompose_TopGetFooResponseMessageTable,
+        &::test::transitivedependenciescompose::_internal::
+            test_transitivedependenciescompose_TopGetFooResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -92,5 +91,4 @@ class Top_ResponseEncoder {
 
 }  // namespace transitivedependenciescompose
 }  // namespace test
-
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

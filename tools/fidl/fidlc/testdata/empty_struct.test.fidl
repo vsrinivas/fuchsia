@@ -1,4 +1,4 @@
-library fidl.test.emptystruct;
+library test.emptystruct;
 
 type Empty = struct {};
 

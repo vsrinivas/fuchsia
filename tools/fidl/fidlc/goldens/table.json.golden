@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.table",
+  "name": "test.table",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -12,7 +12,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.table/EmptyTable",
+      "name": "test.table/EmptyTable",
       "naming_context": [
         "EmptyTable"
       ],
@@ -45,7 +45,7 @@
       }
     },
     {
-      "name": "fidl.test.table/SimpleTable",
+      "name": "test.table/SimpleTable",
       "naming_context": [
         "SimpleTable"
       ],
@@ -175,7 +175,7 @@
       }
     },
     {
-      "name": "fidl.test.table/OlderSimpleTable",
+      "name": "test.table/OlderSimpleTable",
       "naming_context": [
         "OlderSimpleTable"
       ],
@@ -252,7 +252,7 @@
       }
     },
     {
-      "name": "fidl.test.table/NewerSimpleTable",
+      "name": "test.table/NewerSimpleTable",
       "naming_context": [
         "NewerSimpleTable"
       ],
@@ -425,7 +425,7 @@
       }
     },
     {
-      "name": "fidl.test.table/ReverseOrdinalTable",
+      "name": "test.table/ReverseOrdinalTable",
       "naming_context": [
         "ReverseOrdinalTable"
       ],
@@ -558,7 +558,7 @@
       }
     },
     {
-      "name": "fidl.test.table/TableWithAttributes",
+      "name": "test.table/TableWithAttributes",
       "naming_context": [
         "TableWithAttributes"
       ],
@@ -671,7 +671,7 @@
       }
     },
     {
-      "name": "fidl.test.table/ExtensionTable",
+      "name": "test.table/ExtensionTable",
       "naming_context": [
         "ExtensionTable"
       ],
@@ -704,7 +704,7 @@
       }
     },
     {
-      "name": "fidl.test.table/SixtyFourOrdinalTable",
+      "name": "test.table/SixtyFourOrdinalTable",
       "naming_context": [
         "SixtyFourOrdinalTable"
       ],
@@ -2799,7 +2799,7 @@
           "reserved": false,
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.table/ExtensionTable",
+            "identifier": "test.table/ExtensionTable",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -2854,23 +2854,23 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.table/TableWithAttributes",
-    "fidl.test.table/SimpleTable",
-    "fidl.test.table/ReverseOrdinalTable",
-    "fidl.test.table/OlderSimpleTable",
-    "fidl.test.table/NewerSimpleTable",
-    "fidl.test.table/ExtensionTable",
-    "fidl.test.table/SixtyFourOrdinalTable",
-    "fidl.test.table/EmptyTable"
+    "test.table/TableWithAttributes",
+    "test.table/SimpleTable",
+    "test.table/ReverseOrdinalTable",
+    "test.table/OlderSimpleTable",
+    "test.table/NewerSimpleTable",
+    "test.table/ExtensionTable",
+    "test.table/SixtyFourOrdinalTable",
+    "test.table/EmptyTable"
   ],
   "declarations": {
-    "fidl.test.table/EmptyTable": "table",
-    "fidl.test.table/SimpleTable": "table",
-    "fidl.test.table/OlderSimpleTable": "table",
-    "fidl.test.table/NewerSimpleTable": "table",
-    "fidl.test.table/ReverseOrdinalTable": "table",
-    "fidl.test.table/TableWithAttributes": "table",
-    "fidl.test.table/ExtensionTable": "table",
-    "fidl.test.table/SixtyFourOrdinalTable": "table"
+    "test.table/EmptyTable": "table",
+    "test.table/SimpleTable": "table",
+    "test.table/OlderSimpleTable": "table",
+    "test.table/NewerSimpleTable": "table",
+    "test.table/ReverseOrdinalTable": "table",
+    "test.table/TableWithAttributes": "table",
+    "test.table/ExtensionTable": "table",
+    "test.table/SixtyFourOrdinalTable": "table"
   }
 }

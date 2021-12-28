@@ -1,4 +1,4 @@
-library fidl.test.table;
+library test.table;
 
 type EmptyTable = table {};
 

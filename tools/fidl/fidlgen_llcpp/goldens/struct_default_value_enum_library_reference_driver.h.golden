@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/dependent/cpp/driver/wire.h>
-#include <fidl/fidl.test.structdefaultvalueenumlibraryreference/cpp/driver/wire_messaging.h>
-#include <fidl/fidl.test.structdefaultvalueenumlibraryreference/cpp/markers.h>
-#include <fidl/fidl.test.structdefaultvalueenumlibraryreference/cpp/wire_types.h>
+#include <fidl/test.dependent/cpp/driver/wire.h>
+#include <fidl/test.structdefaultvalueenumlibraryreference/cpp/driver/wire_messaging.h>
+#include <fidl/test.structdefaultvalueenumlibraryreference/cpp/markers.h>
+#include <fidl/test.structdefaultvalueenumlibraryreference/cpp/wire_types.h>

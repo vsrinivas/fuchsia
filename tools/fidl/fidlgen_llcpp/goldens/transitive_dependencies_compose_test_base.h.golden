@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.transitivedependenciescompose/cpp/wire.h>
-namespace fidl_test_transitivedependenciescompose {
+#include <fidl/test.transitivedependenciescompose/cpp/wire.h>
+namespace test_transitivedependenciescompose {
 namespace testing {
 
-class Top_TestBase : public ::fidl::WireServer<
-                         ::fidl_test_transitivedependenciescompose::Top> {
+class Top_TestBase
+    : public ::fidl::WireServer<::test_transitivedependenciescompose::Top> {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -18,4 +18,4 @@ class Top_TestBase : public ::fidl::WireServer<
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_transitivedependenciescompose
+}  // namespace test_transitivedependenciescompose

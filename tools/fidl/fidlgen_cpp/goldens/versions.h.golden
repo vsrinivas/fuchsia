@@ -2,36 +2,35 @@
 
 #pragma once
 
-#include <fidl/fidl.test.versions/cpp/wire.h>
-#include <fidl/test/versions/cpp/natural_types.h>
+#include <fidl/test.versions/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/versions/cpp/natural_types.h>
 
-namespace fidl_test_versions {
+namespace test_versions {
 class Struct;
 
-using Union = ::fidl::test::versions::Union;
+using Union = ::test::versions::Union;
 
-using Table = ::fidl::test::versions::Table;
+using Table = ::test::versions::Table;
 
-using Enum = ::fidl::test::versions::Enum;
+using Enum = ::test::versions::Enum;
 
-using Bits = ::fidl::test::versions::Bits;
+using Bits = ::test::versions::Bits;
 
-}  // namespace fidl_test_versions
+}  // namespace test_versions
 template <>
-struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_versions::Struct>
+struct ::fidl::internal::DesignatedInitializationProxy<::test_versions::Struct>
     final {
  public:
   uint32_t x = {};
 };
 
-namespace fidl_test_versions {
+namespace test_versions {
 class Struct final : public ::fidl::internal::CodableBase<Struct> {
  private:
   friend ::fidl::internal::CodableBase<Struct>;
@@ -45,9 +44,9 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
  public:
   Struct() = default;
   Struct(uint32_t x) : storage_({x}) {}
-  Struct(::fidl::internal::DesignatedInitializationProxy<
-         ::fidl_test_versions::Struct>
-             storage)
+  Struct(
+      ::fidl::internal::DesignatedInitializationProxy<::test_versions::Struct>
+          storage)
       : storage_(std::move(storage)) {}
   ~Struct() = default;
   Struct(Struct&&) noexcept = default;
@@ -63,37 +62,36 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_versions::Struct>;
+  friend struct ::fidl::CodingTraits<::test_versions::Struct>;
 
-  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_versions::Struct>
+  ::fidl::internal::DesignatedInitializationProxy<::test_versions::Struct>
       storage_ = {};
 };
 
-constexpr uint32_t Const = ::fidl::test::versions::Const;
+constexpr uint32_t Const = ::test::versions::Const;
 
-}  // namespace fidl_test_versions
+}  // namespace test_versions
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_versions_StructTable;
+extern "C" const fidl_type_t test_versions_StructTable;
 
 template <>
-struct IsFidlType<::fidl_test_versions::Struct> : public std::true_type {};
+struct IsFidlType<::test_versions::Struct> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_versions::Struct> final {
+struct ::fidl::internal::TypeTraits<::test_versions::Struct> final {
  public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_versions_StructTable;
+  static constexpr const fidl_type_t* kCodingTable = &test_versions_StructTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_versions::Struct> {
+struct CodingTraits<::test_versions::Struct> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_versions::Struct* value, size_t offset,
+      EncoderImpl* encoder, ::test_versions::Struct* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -103,7 +101,7 @@ struct CodingTraits<::fidl_test_versions::Struct> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::fidl_test_versions::Struct* value,
+  static void Decode(DecoderImpl* decoder, ::test_versions::Struct* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
   }
@@ -113,8 +111,8 @@ struct CodingTraits<::fidl_test_versions::Struct> {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_versions::OtherProtocol>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_versions::OtherProtocol> final
+    : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
@@ -124,7 +122,7 @@ namespace fidl {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_versions::Protocol> final
+class ::fidl::internal::NaturalClientImpl<::test_versions::Protocol> final
     : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;

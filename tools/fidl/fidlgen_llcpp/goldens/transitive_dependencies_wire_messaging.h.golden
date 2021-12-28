@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.transitivedependencies/cpp/markers.h>
-#include <fidl/fidl.test.transitivedependencies/cpp/wire_types.h>
+#include <fidl/test.transitivedependencies/cpp/markers.h>
+#include <fidl/test.transitivedependencies/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,6 +16,6 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/middle/cpp/wire_messaging.h>
+#include <fidl/test.middle/cpp/wire_messaging.h>
 
 namespace fidl {}  // namespace fidl

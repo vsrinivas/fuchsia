@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace error {
 class Example_foo_Response;
@@ -45,9 +44,8 @@ class Example_foo_Response final {
   zx_status_t Clone(Example_foo_Response* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::error::Example_foo_Response& _value,
-    ::fidl::test::error::Example_foo_Response* _result) {
+inline zx_status_t Clone(const ::test::error::Example_foo_Response& _value,
+                         ::test::error::Example_foo_Response* _result) {
   return _value.Clone(_result);
 }
 
@@ -63,8 +61,7 @@ class Example_foo_Result final {
   Example_foo_Result(Example_foo_Result&&);
   Example_foo_Result& operator=(Example_foo_Result&&);
 
-  static Example_foo_Result WithResponse(
-      ::fidl::test::error::Example_foo_Response&&);
+  static Example_foo_Result WithResponse(::test::error::Example_foo_Response&&);
   static Example_foo_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -88,29 +85,26 @@ class Example_foo_Result final {
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_response() const {
-    return tag_ == ::fidl::test::error::Example_foo_Result::Tag::kResponse;
+    return tag_ == ::test::error::Example_foo_Result::Tag::kResponse;
   }
 
-  ::fidl::test::error::Example_foo_Response& response() {
-    EnsureStorageInitialized(
-        ::fidl::test::error::Example_foo_Result::Tag::kResponse);
+  ::test::error::Example_foo_Response& response() {
+    EnsureStorageInitialized(::test::error::Example_foo_Result::Tag::kResponse);
     return response_;
   }
 
-  const ::fidl::test::error::Example_foo_Response& response() const {
+  const ::test::error::Example_foo_Response& response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
-  Example_foo_Result& set_response(
-      ::fidl::test::error::Example_foo_Response value);
+  Example_foo_Result& set_response(::test::error::Example_foo_Response value);
 
   bool is_err() const {
-    return tag_ == ::fidl::test::error::Example_foo_Result::Tag::kErr;
+    return tag_ == ::test::error::Example_foo_Result::Tag::kErr;
   }
 
   uint32_t& err() {
-    EnsureStorageInitialized(
-        ::fidl::test::error::Example_foo_Result::Tag::kErr);
+    EnsureStorageInitialized(::test::error::Example_foo_Result::Tag::kErr);
     return err_;
   }
 
@@ -120,20 +114,19 @@ class Example_foo_Result final {
   }
   Example_foo_Result& set_err(uint32_t value);
 
-  ::fidl::test::error::Example_foo_Result::Tag Which() const {
-    return ::fidl::test::error::Example_foo_Result::Tag(tag_);
+  ::test::error::Example_foo_Result::Tag Which() const {
+    return ::test::error::Example_foo_Result::Tag(tag_);
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  friend ::fidl::Equality<::fidl::test::error::Example_foo_Result>;
+  friend ::fidl::Equality<::test::error::Example_foo_Result>;
   Example_foo_Result(fpromise::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(
-          ::fidl::test::error::Example_foo_Response{result.take_value()});
+      set_response(::test::error::Example_foo_Response{result.take_value()});
     } else {
       set_err(result.take_error());
     }
@@ -157,15 +150,15 @@ class Example_foo_Result final {
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::error::Example_foo_Result::Tag::Invalid);
+      ::test::error::Example_foo_Result::Tag::Invalid);
   union {
-    ::fidl::test::error::Example_foo_Response response_;
+    ::test::error::Example_foo_Response response_;
     uint32_t err_;
   };
 };
 
-inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Result& value,
-                         ::fidl::test::error::Example_foo_Result* result) {
+inline zx_status_t Clone(const ::test::error::Example_foo_Result& value,
+                         ::test::error::Example_foo_Result* result) {
   return value.Clone(result);
 }
 
@@ -174,8 +167,7 @@ using Example_foo_ResultPtr = ::std::unique_ptr<Example_foo_Result>;
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_error_ExamplefooRequestMessageTable;
+__LOCAL extern "C" const fidl_type_t test_error_ExamplefooRequestMessageTable;
 
 }  // namespace _internal
 class Example_RequestEncoder {
@@ -199,25 +191,23 @@ class Example_RequestEncoder {
       ::fidl::Encode(_encoder, s, 16);
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::error::_internal::
-                   fidl_test_error_ExamplefooRequestMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::error::_internal::test_error_ExamplefooRequestMessageTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
 };
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_error_ExamplefooResponseMessageTable;
+__LOCAL extern "C" const fidl_type_t test_error_ExamplefooResponseMessageTable;
 
 }  // namespace _internal
 class Example_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(
-      ::fidl::Encoder* _encoder,
-      ::fidl::test::error::Example_foo_Result* result) {
+      ::fidl::Encoder* _encoder, ::test::error::Example_foo_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -235,11 +225,11 @@ class Example_ResponseEncoder {
       ::fidl::Encode(_encoder, result, 16);
     }
 
-    fidl_trace(DidHLCPPEncode,
-               &::fidl::test::error::_internal::
-                   fidl_test_error_ExamplefooResponseMessageTable,
-               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-               _encoder->CurrentHandleCount());
+    fidl_trace(
+        DidHLCPPEncode,
+        &::test::error::_internal::test_error_ExamplefooResponseMessageTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
@@ -247,26 +237,27 @@ class Example_ResponseEncoder {
 
 }  // namespace error
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::error::Example_foo_Response>
-    : public EncodableCodingTraits<::fidl::test::error::Example_foo_Response, 8,
-                                   8> {};
+struct CodingTraits<::test::error::Example_foo_Response>
+    : public EncodableCodingTraits<::test::error::Example_foo_Response, 8, 8> {
+};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::error::Example_foo_Response>
+struct IsMemcpyCompatible<::test::error::Example_foo_Response>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::error::Example_foo_Response>::value &&
+          !HasPadding<::test::error::Example_foo_Response>::value &&
           IsMemcpyCompatible<int64_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Response& value,
-                         ::fidl::test::error::Example_foo_Response* result) {
-  return ::fidl::test::error::Clone(value, result);
+inline zx_status_t Clone(const ::test::error::Example_foo_Response& value,
+                         ::test::error::Example_foo_Response* result) {
+  return ::test::error::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::error::Example_foo_Response> {
-  bool operator()(const ::fidl::test::error::Example_foo_Response& _lhs,
-                  const ::fidl::test::error::Example_foo_Response& _rhs) const {
+struct Equality<::test::error::Example_foo_Response> {
+  bool operator()(const ::test::error::Example_foo_Response& _lhs,
+                  const ::test::error::Example_foo_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.y, _rhs.y)) {
       return false;
     }
@@ -274,23 +265,22 @@ struct Equality<::fidl::test::error::Example_foo_Response> {
   }
 };
 template <>
-struct IsFidlXUnion<::fidl::test::error::Example_foo_Result>
-    : public std::true_type {};
+struct IsFidlXUnion<::test::error::Example_foo_Result> : public std::true_type {
+};
 
 template <>
-struct CodingTraits<::fidl::test::error::Example_foo_Result>
-    : public EncodableCodingTraits<::fidl::test::error::Example_foo_Result, 24,
-                                   16> {};
+struct CodingTraits<::test::error::Example_foo_Result>
+    : public EncodableCodingTraits<::test::error::Example_foo_Result, 24, 16> {
+};
 
 template <>
-struct CodingTraits<std::unique_ptr<::fidl::test::error::Example_foo_Result>> {
+struct CodingTraits<std::unique_ptr<::test::error::Example_foo_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::fidl::test::error::Example_foo_Result>* value,
-      size_t offset,
+      std::unique_ptr<::test::error::Example_foo_Result>* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
@@ -298,43 +288,41 @@ struct CodingTraits<std::unique_ptr<::fidl::test::error::Example_foo_Result>> {
     }
   }
 
-  static void Decode(
-      Decoder* _decoder,
-      std::unique_ptr<::fidl::test::error::Example_foo_Result>* value,
-      size_t offset) {
+  static void Decode(Decoder* _decoder,
+                     std::unique_ptr<::test::error::Example_foo_Result>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
     }
 
-    value->reset(new ::fidl::test::error::Example_foo_Result);
+    value->reset(new ::test::error::Example_foo_Result);
 
-    ::fidl::test::error::Example_foo_Result::Decode(_decoder, value->get(),
-                                                    offset);
+    ::test::error::Example_foo_Result::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(const ::fidl::test::error::Example_foo_Result& value,
-                         ::fidl::test::error::Example_foo_Result* result) {
-  return ::fidl::test::error::Clone(value, result);
+inline zx_status_t Clone(const ::test::error::Example_foo_Result& value,
+                         ::test::error::Example_foo_Result* result) {
+  return ::test::error::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::error::Example_foo_Result> {
-  bool operator()(const ::fidl::test::error::Example_foo_Result& _lhs,
-                  const ::fidl::test::error::Example_foo_Result& _rhs) const {
+struct Equality<::test::error::Example_foo_Result> {
+  bool operator()(const ::test::error::Example_foo_Result& _lhs,
+                  const ::test::error::Example_foo_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::error::Example_foo_Result::Tag::Invalid):
+          ::test::error::Example_foo_Result::Tag::Invalid):
         return true;
-      case ::fidl::test::error::Example_foo_Result::Tag::kResponse:
+      case ::test::error::Example_foo_Result::Tag::kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::fidl::test::error::Example_foo_Result::Tag::kErr:
+      case ::test::error::Example_foo_Result::Tag::kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 
       default:

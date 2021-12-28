@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <dependent/cpp/fidl.h>
+#include <test/dependent/cpp/fidl.h>
 
 #include "lib/fidl/cpp/internal/header.h"
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace structdefaultvalueenumlibraryreference {
 class Foo;
@@ -18,7 +17,7 @@ class Foo final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::dependent::MyEnum field = ::dependent::MyEnum::A;
+  ::test::dependent::MyEnum field = ::test::dependent::MyEnum::A;
 
   static inline ::std::unique_ptr<Foo> New() {
     return ::std::make_unique<Foo>();
@@ -32,8 +31,8 @@ class Foo final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& _value,
-    ::fidl::test::structdefaultvalueenumlibraryreference::Foo* _result) {
+    const ::test::structdefaultvalueenumlibraryreference::Foo& _value,
+    ::test::structdefaultvalueenumlibraryreference::Foo* _result) {
   return _value.Clone(_result);
 }
 
@@ -41,32 +40,30 @@ using FooPtr = ::std::unique_ptr<Foo>;
 
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+struct CodingTraits<::test::structdefaultvalueenumlibraryreference::Foo>
     : public EncodableCodingTraits<
-          ::fidl::test::structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
+          ::test::structdefaultvalueenumlibraryreference::Foo, 4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<
-    ::fidl::test::structdefaultvalueenumlibraryreference::Foo>
+struct IsMemcpyCompatible<::test::structdefaultvalueenumlibraryreference::Foo>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::structdefaultvalueenumlibraryreference::
-                          Foo>::value &&
-          IsMemcpyCompatible<::dependent::MyEnum>::value> {};
+          !HasPadding<
+              ::test::structdefaultvalueenumlibraryreference::Foo>::value &&
+          IsMemcpyCompatible<::test::dependent::MyEnum>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& value,
-    ::fidl::test::structdefaultvalueenumlibraryreference::Foo* result) {
-  return ::fidl::test::structdefaultvalueenumlibraryreference::Clone(value,
-                                                                     result);
+    const ::test::structdefaultvalueenumlibraryreference::Foo& value,
+    ::test::structdefaultvalueenumlibraryreference::Foo* result) {
+  return ::test::structdefaultvalueenumlibraryreference::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::structdefaultvalueenumlibraryreference::Foo> {
+struct Equality<::test::structdefaultvalueenumlibraryreference::Foo> {
   bool operator()(
-      const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& _lhs,
-      const ::fidl::test::structdefaultvalueenumlibraryreference::Foo& _rhs)
-      const {
+      const ::test::structdefaultvalueenumlibraryreference::Foo& _lhs,
+      const ::test::structdefaultvalueenumlibraryreference::Foo& _rhs) const {
     if (!::fidl::Equals(_lhs.field, _rhs.field)) {
       return false;
     }

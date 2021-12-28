@@ -2,31 +2,31 @@
 
 #pragma once
 
-#include <fidl/fidl.test.inheritancewithrecursivedecl/cpp/wire.h>
-#include <fidl/test/inheritancewithrecursivedecl/cpp/natural_types.h>
+#include <fidl/test.inheritancewithrecursivedecl/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/inheritancewithrecursivedecl/cpp/natural_types.h>
 
-namespace fidl_test_inheritancewithrecursivedecl {
+namespace test_inheritancewithrecursivedecl {
 class ParentFirstRequest;
 
 class ChildSecondRequest;
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace test_inheritancewithrecursivedecl
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>
+    ::test_inheritancewithrecursivedecl::ParentFirstRequest>
     final {
  public:
-  ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
+  ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
       request = {};
 };
 
-namespace fidl_test_inheritancewithrecursivedecl {
+namespace test_inheritancewithrecursivedecl {
 class ParentFirstRequest final
     : public ::fidl::internal::CodableBase<ParentFirstRequest> {
  private:
@@ -41,13 +41,12 @@ class ParentFirstRequest final
  public:
   ParentFirstRequest() = default;
   ParentFirstRequest(
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>&& request)
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>&&
+          request)
       : storage_({std::move(request)}) {}
-  ParentFirstRequest(
-      ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>
-          storage)
+  ParentFirstRequest(::fidl::internal::DesignatedInitializationProxy<
+                     ::test_inheritancewithrecursivedecl::ParentFirstRequest>
+                         storage)
       : storage_(std::move(storage)) {}
   ~ParentFirstRequest() = default;
   ParentFirstRequest(ParentFirstRequest&&) noexcept = default;
@@ -55,20 +54,18 @@ class ParentFirstRequest final
   ParentFirstRequest(const ParentFirstRequest&) noexcept = delete;
   ParentFirstRequest& operator=(const ParentFirstRequest&) noexcept = delete;
 
-  const ::fidl::InterfaceRequest<
-      ::fidl::test::inheritancewithrecursivedecl::Parent>&
+  const ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>&
   request() const {
     return storage_.request;
   }
 
-  ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>&
+  ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>&
   request() {
     return storage_.request;
   }
 
   ParentFirstRequest& set_request(
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
           _value) {
     storage_.request = std::move(_value);
     return *this;
@@ -76,24 +73,24 @@ class ParentFirstRequest final
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>;
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace test_inheritancewithrecursivedecl
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>
+    ::test_inheritancewithrecursivedecl::ChildSecondRequest>
     final {
  public:
-  ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
+  ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
       request = {};
 };
 
-namespace fidl_test_inheritancewithrecursivedecl {
+namespace test_inheritancewithrecursivedecl {
 class ChildSecondRequest final
     : public ::fidl::internal::CodableBase<ChildSecondRequest> {
  private:
@@ -108,13 +105,12 @@ class ChildSecondRequest final
  public:
   ChildSecondRequest() = default;
   ChildSecondRequest(
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>&& request)
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>&&
+          request)
       : storage_({std::move(request)}) {}
-  ChildSecondRequest(
-      ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>
-          storage)
+  ChildSecondRequest(::fidl::internal::DesignatedInitializationProxy<
+                     ::test_inheritancewithrecursivedecl::ChildSecondRequest>
+                         storage)
       : storage_(std::move(storage)) {}
   ~ChildSecondRequest() = default;
   ChildSecondRequest(ChildSecondRequest&&) noexcept = default;
@@ -122,20 +118,18 @@ class ChildSecondRequest final
   ChildSecondRequest(const ChildSecondRequest&) noexcept = delete;
   ChildSecondRequest& operator=(const ChildSecondRequest&) noexcept = delete;
 
-  const ::fidl::InterfaceRequest<
-      ::fidl::test::inheritancewithrecursivedecl::Parent>&
+  const ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>&
   request() const {
     return storage_.request;
   }
 
-  ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>&
+  ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>&
   request() {
     return storage_.request;
   }
 
   ChildSecondRequest& set_request(
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
           _value) {
     storage_.request = std::move(_value);
     return *this;
@@ -143,45 +137,44 @@ class ChildSecondRequest final
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>;
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace test_inheritancewithrecursivedecl
 namespace fidl {
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+    test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 template <>
-struct IsResource<::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>
+struct IsResource<::test_inheritancewithrecursivedecl::ParentFirstRequest>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>
+struct IsFidlType<::test_inheritancewithrecursivedecl::ParentFirstRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest>
+    ::test_inheritancewithrecursivedecl::ParentFirstRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
+      &test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 };
 
 template <>
-struct CodingTraits<
-    ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest> {
+struct CodingTraits<::test_inheritancewithrecursivedecl::ParentFirstRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest* value,
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -198,7 +191,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest* value,
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.request, offset + 0);
   }
@@ -207,34 +200,33 @@ struct CodingTraits<
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+    test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 template <>
-struct IsResource<::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>
+struct IsResource<::test_inheritancewithrecursivedecl::ChildSecondRequest>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>
+struct IsFidlType<::test_inheritancewithrecursivedecl::ChildSecondRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest>
+    ::test_inheritancewithrecursivedecl::ChildSecondRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
+      &test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 };
 
 template <>
-struct CodingTraits<
-    ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest> {
+struct CodingTraits<::test_inheritancewithrecursivedecl::ChildSecondRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest* value,
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -251,7 +243,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest* value,
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.request, offset + 0);
   }
@@ -262,13 +254,12 @@ struct CodingTraits<
 }  // namespace fidl
 template <>
 class ::fidl::internal::NaturalClientImpl<
-    ::fidl_test_inheritancewithrecursivedecl::Parent>
+    ::test_inheritancewithrecursivedecl::Parent>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> First(
-      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest&& payload)
-      const;
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest&& payload) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -277,17 +268,15 @@ namespace fidl {
 }  // namespace fidl
 template <>
 class ::fidl::internal::NaturalClientImpl<
-    ::fidl_test_inheritancewithrecursivedecl::Child>
+    ::test_inheritancewithrecursivedecl::Child>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> First(
-      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest&& payload)
-      const;
+      ::test_inheritancewithrecursivedecl::ParentFirstRequest&& payload) const;
 
   ::fitx::result<::fidl::Error> Second(
-      ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest&& payload)
-      const;
+      ::test_inheritancewithrecursivedecl::ChildSecondRequest&& payload) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

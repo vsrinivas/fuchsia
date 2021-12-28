@@ -2,22 +2,22 @@
 
 #pragma once
 
-#include <fidl/fidl.test.byteandbytes/cpp/wire.h>
-#include <fidl/test/byteandbytes/cpp/natural_types.h>
+#include <fidl/test.byteandbytes/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/byteandbytes/cpp/natural_types.h>
 
-namespace fidl_test_byteandbytes {
+namespace test_byteandbytes {
 class ByteAndBytes;
 
-}  // namespace fidl_test_byteandbytes
+}  // namespace test_byteandbytes
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_byteandbytes::ByteAndBytes>
+    ::test_byteandbytes::ByteAndBytes>
     final {
  public:
   uint8_t single_byte = {};
@@ -29,7 +29,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   ::fidl::VectorPtr<uint8_t> opt_only_one_k_bytes = {};
 };
 
-namespace fidl_test_byteandbytes {
+namespace test_byteandbytes {
 class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
  private:
   friend ::fidl::internal::CodableBase<ByteAndBytes>;
@@ -49,7 +49,7 @@ class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
                   std::move(only_one_k_bytes),
                   std::move(opt_only_one_k_bytes)}) {}
   ByteAndBytes(::fidl::internal::DesignatedInitializationProxy<
-               ::fidl_test_byteandbytes::ByteAndBytes>
+               ::test_byteandbytes::ByteAndBytes>
                    storage)
       : storage_(std::move(storage)) {}
   ~ByteAndBytes() = default;
@@ -103,38 +103,36 @@ class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_byteandbytes::ByteAndBytes>;
+  friend struct ::fidl::CodingTraits<::test_byteandbytes::ByteAndBytes>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_byteandbytes::ByteAndBytes>
+      ::test_byteandbytes::ByteAndBytes>
       storage_ = {};
 };
 
-}  // namespace fidl_test_byteandbytes
+}  // namespace test_byteandbytes
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
+extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 
 template <>
-struct IsFidlType<::fidl_test_byteandbytes::ByteAndBytes>
-    : public std::true_type {};
+struct IsFidlType<::test_byteandbytes::ByteAndBytes> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_byteandbytes::ByteAndBytes>
-    final {
+struct ::fidl::internal::TypeTraits<::test_byteandbytes::ByteAndBytes> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_byteandbytes_ByteAndBytesTable;
+      &test_byteandbytes_ByteAndBytesTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_byteandbytes::ByteAndBytes> {
+struct CodingTraits<::test_byteandbytes::ByteAndBytes> {
   static constexpr size_t inline_size_v1_no_ee = 56;
   static constexpr size_t inline_size_v2 = 56;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_byteandbytes::ByteAndBytes* value,
+      EncoderImpl* encoder, ::test_byteandbytes::ByteAndBytes* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -161,8 +159,7 @@ struct CodingTraits<::fidl_test_byteandbytes::ByteAndBytes> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_byteandbytes::ByteAndBytes* value,
-                     size_t offset) {
+                     ::test_byteandbytes::ByteAndBytes* value, size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.single_byte, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.many_bytes, offset + 8);
     ::fidl::Decode(decoder, &value->storage_.only_one_k_bytes, offset + 24);

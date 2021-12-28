@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.bindingsdenylist/cpp/wire.h>
-namespace fidl_test_bindingsdenylist {
+#include <fidl/test.bindingsdenylist/cpp/wire.h>
+namespace test_bindingsdenylist {
 namespace testing {
 
 class OnlyLibfuzzerAndDeps_TestBase
-    : public ::fidl::WireServer<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+    : public ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
   virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -21,11 +20,11 @@ class OnlyLibfuzzerAndDeps_TestBase
 };
 
 class OnlyCppAndDeps_TestBase
-    : public ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyCppAndDeps> {
+    : public ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> {
  public:
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
 }  // namespace testing
-}  // namespace fidl_test_bindingsdenylist
+}  // namespace test_bindingsdenylist

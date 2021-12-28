@@ -2,17 +2,17 @@
 
 #pragma once
 
-#include <fidl/fidl.test.errorsyntax/cpp/wire.h>
-#include <fidl/test/errorsyntax/cpp/natural_types.h>
-#include <fidl/test/errorsyntax/parent/cpp/fidl_v2.h>
+#include <fidl/test.errorsyntax/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/errorsyntax/cpp/natural_types.h>
+#include <test/errorsyntax/parent/cpp/fidl_v2.h>
 
-namespace fidl_test_errorsyntax {
+namespace test_errorsyntax {
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
@@ -20,18 +20,18 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 class ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 
 using ExampleUseOfErrorSyntax_CallWhichMayFail_Result =
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
 
-}  // namespace fidl_test_errorsyntax
+}  // namespace test_errorsyntax
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     final {
  public:
   int64_t value = {};
 };
 
-namespace fidl_test_errorsyntax {
+namespace test_errorsyntax {
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
     : public ::fidl::internal::CodableBase<
           ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
@@ -51,8 +51,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
       : storage_({value}) {}
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_errorsyntax::
-              ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+          ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
           storage)
       : storage_(std::move(storage)) {}
   ~ExampleUseOfErrorSyntax_CallWhichMayFail_Response() = default;
@@ -72,26 +71,24 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
       storage_ = {};
 };
 
-}  // namespace fidl_test_errorsyntax
+}  // namespace test_errorsyntax
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
     final {
  public:
-  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
-      result = {};
+  ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result result =
+      {};
 };
 
-namespace fidl_test_errorsyntax {
+namespace test_errorsyntax {
 class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
     : public ::fidl::internal::CodableBase<
           ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
@@ -108,12 +105,12 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
  public:
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse() = default;
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
           result)
       : storage_({std::move(result)}) {}
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_errorsyntax::
+          ::test_errorsyntax::
               ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
           storage)
       : storage_(std::move(storage)) {}
@@ -123,19 +120,18 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& operator=(
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&) noexcept = default;
 
-  const ::fidl_test_errorsyntax::
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
-      result() const {
+  const ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
+  result() const {
     return storage_.result;
   }
 
-  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
+  ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
   result() {
     return storage_.result;
   }
 
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& set_result(
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
           _value) {
     storage_.result = std::move(_value);
     return *this;
@@ -143,25 +139,23 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_errorsyntax
+}  // namespace test_errorsyntax
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     final {
  public:
   ::std::string s = {};
 };
 
-namespace fidl_test_errorsyntax {
+namespace test_errorsyntax {
 class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
     : public ::fidl::internal::CodableBase<
           ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
@@ -181,8 +175,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
       : storage_({std::move(s)}) {}
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_errorsyntax::
-              ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+          ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
           storage)
       : storage_(std::move(storage)) {}
   ~ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
@@ -202,44 +195,44 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_errorsyntax
+}  // namespace test_errorsyntax
 namespace fidl {
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+    test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 
 template <>
 struct IsFidlType<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+      &test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_errorsyntax::
-                        ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+struct CodingTraits<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response* value,
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response*
+          value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -252,8 +245,8 @@ struct CodingTraits<::fidl_test_errorsyntax::
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response* value,
+      ::test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response*
+          value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.value, offset + 0);
   }
@@ -262,33 +255,33 @@ struct CodingTraits<::fidl_test_errorsyntax::
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
 template <>
 struct IsFidlType<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+      &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_errorsyntax::
-                        ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+struct CodingTraits<
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* value,
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
+          value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -301,8 +294,8 @@ struct CodingTraits<::fidl_test_errorsyntax::
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_errorsyntax::
-          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* value,
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
+          value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
   }
@@ -311,33 +304,32 @@ struct CodingTraits<::fidl_test_errorsyntax::
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
 template <>
 struct IsFidlType<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+      &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 };
 
 template <>
 struct CodingTraits<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+    ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
-          value,
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -350,8 +342,7 @@ struct CodingTraits<
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
-          value,
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
   }
@@ -363,165 +354,163 @@ struct CodingTraits<
 
 template <>
 class ::fidl::Response<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-    final
-    : public ::fidl::internal::MessageBase<
-          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                               ComposedCallWhichMayFail>> {
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    final : public ::fidl::internal::MessageBase<
+                ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                     ComposedCallWhichMayFail>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::fidl_test_errorsyntax_parent::
+  Response(::test_errorsyntax_parent::
                ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse payload)
       : payload_(std::move(payload)) {}
-  ::fidl_test_errorsyntax_parent::
+  ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse*
       operator->() {
     return &payload_;
   }
-  const ::fidl_test_errorsyntax_parent::
+  const ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse*
       operator->() const {
     return &payload_;
   }
-  ::fidl_test_errorsyntax_parent::
+  ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&
       operator*() {
     return payload_;
   }
-  const ::fidl_test_errorsyntax_parent::
+  const ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&
       operator*() const {
     return payload_;
   }
 
  private:
-  ::fidl_test_errorsyntax_parent::
+  ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse payload_;
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_errorsyntax_parent::
+  using Payload = ::test_errorsyntax_parent::
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
 };
 namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
       ::fitx::result<
           ::fidl::Error,
-          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+          ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                ComposedCallWhichMayFail>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+      ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                            ComposedCallWhichMayFail>&)>;
 };
 
 template <>
 class ::fidl::Response<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final
     : public ::fidl::internal::MessageBase<::fidl::Response<
-          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::fidl_test_errorsyntax::
-               ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse payload)
+  Response(
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse
+          payload)
       : payload_(std::move(payload)) {}
-  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
+  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
   operator->() {
     return &payload_;
   }
-  const ::fidl_test_errorsyntax::
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
-      operator->() const {
+  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
+  operator->() const {
     return &payload_;
   }
-  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
+  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
   operator*() {
     return payload_;
   }
-  const ::fidl_test_errorsyntax::
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
-      operator*() const {
+  const ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
+  operator*() const {
     return payload_;
   }
 
  private:
-  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse
+  ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse
       payload_;
 };
 
 template <>
 struct ::fidl::internal::MessageTraits<::fidl::Response<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_errorsyntax::
-      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+  using Payload =
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 };
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
       ::fitx::result<
           ::fidl::Error,
-          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+          ::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                CallWhichMayFail>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                           CallWhichMayFail>&)>;
+      ::fidl::Response<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&)>;
 };
 
 template <>
 class ::fidl::internal::NaturalClientImpl<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   void ComposedCallWhichMayFail(
-      ::fidl_test_errorsyntax_parent::
+      ::test_errorsyntax_parent::
           ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
-      ::fidl::ClientCallback<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+      ::fidl::ClientCallback<::test_errorsyntax::ExampleUseOfErrorSyntax::
                                  ComposedCallWhichMayFail>&& _callback) const;
 
   void ComposedCallWhichMayFail(
-      ::fidl_test_errorsyntax_parent::
+      ::test_errorsyntax_parent::
           ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
       ::fidl::ClientResponseCallback<
-          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::
               ComposedCallWhichMayFail>&& _callback) const;
 
   void CallWhichMayFail(
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
           payload,
       ::fidl::ClientCallback<
-          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
           _callback) const;
 
   void CallWhichMayFail(
-      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
+      ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
           payload,
       ::fidl::ClientResponseCallback<
-          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
           _callback) const;
 };
 namespace fidl {

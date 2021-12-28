@@ -2,19 +2,19 @@
 
 [TOC]
 
-# fidl.test.versions
+# test.versions
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
 ## **PROTOCOLS**
 
 ## OtherProtocol {#OtherProtocol}
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=45)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=45)*
 
 
 
 ## Protocol {#Protocol}
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=48)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=48)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
@@ -32,7 +32,7 @@
 ## **STRUCTS**
 
 ### Struct  {#Struct data-text="Struct"}
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=24)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=24)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
@@ -56,7 +56,7 @@
 ### Enum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Enum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=18)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=18)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
@@ -76,7 +76,7 @@ Type: <code>uint32</code>
 ### Table  {#Table data-text="Table"}
 
 
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=30)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=30)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
@@ -106,7 +106,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### Union [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=38)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=38)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
@@ -136,7 +136,7 @@ Type: <code>uint32</code>
 ### Bits [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Bits}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=12)*
+*Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=12)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 

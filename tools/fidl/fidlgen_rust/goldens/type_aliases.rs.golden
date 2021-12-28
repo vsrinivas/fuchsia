@@ -73,7 +73,7 @@ pub struct ExampleOfUseOfAliases {
     pub field_of_vec_of_strings: Vec<String>,
     pub field_of_vec_of_strings_at_most_nine: Vec<String>,
     pub field_of_vec_of_strings_at_most_5: Vec<String>,
-    pub field_of_vec_of_ref_me_at_most_5: Vec<fidl_someotherlibrary::ReferenceMe>,
+    pub field_of_vec_of_ref_me_at_most_5: Vec<fidl_test_someotherlibrary::ReferenceMe>,
     pub field_of_channel: fidl::Channel,
     pub field_of_client_end: fidl::Channel,
     pub field_of_nullable_client_end: Option<fidl::Channel>,
@@ -103,7 +103,7 @@ fidl_struct! {
       offset_v2: 40,
     },
     field_of_vec_of_ref_me_at_most_5 {
-      ty: Vec<fidl_someotherlibrary::ReferenceMe>,
+      ty: Vec<fidl_test_someotherlibrary::ReferenceMe>,
       offset_v1: 56,
       offset_v2: 56,
     },

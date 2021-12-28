@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.inheritance
+# test.inheritance
 
 
 
 ## **PROTOCOLS**
 
 ## sub {#sub}
-*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=11)*
+*Defined in [test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=11)*
 
 
 
@@ -39,7 +39,7 @@
         </tr></table>
 
 ## super {#super}
-*Defined in [fidl.test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
+*Defined in [test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
 
 
 

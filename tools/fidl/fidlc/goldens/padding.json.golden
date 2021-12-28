@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.padding",
+  "name": "test.padding",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.padding/Padding1ByteEnd",
+      "name": "test.padding/Padding1ByteEnd",
       "naming_context": [
         "Padding1ByteEnd"
       ],
@@ -122,7 +122,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding2ByteEnd",
+      "name": "test.padding/Padding2ByteEnd",
       "naming_context": [
         "Padding2ByteEnd"
       ],
@@ -234,7 +234,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding3ByteEnd",
+      "name": "test.padding/Padding3ByteEnd",
       "naming_context": [
         "Padding3ByteEnd"
       ],
@@ -346,7 +346,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding4ByteEnd",
+      "name": "test.padding/Padding4ByteEnd",
       "naming_context": [
         "Padding4ByteEnd"
       ],
@@ -458,7 +458,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding5ByteEnd",
+      "name": "test.padding/Padding5ByteEnd",
       "naming_context": [
         "Padding5ByteEnd"
       ],
@@ -609,7 +609,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding6ByteEnd",
+      "name": "test.padding/Padding6ByteEnd",
       "naming_context": [
         "Padding6ByteEnd"
       ],
@@ -721,7 +721,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding7ByteEnd",
+      "name": "test.padding/Padding7ByteEnd",
       "naming_context": [
         "Padding7ByteEnd"
       ],
@@ -833,7 +833,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding1ByteMiddle",
+      "name": "test.padding/Padding1ByteMiddle",
       "naming_context": [
         "Padding1ByteMiddle"
       ],
@@ -945,7 +945,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding2ByteMiddle",
+      "name": "test.padding/Padding2ByteMiddle",
       "naming_context": [
         "Padding2ByteMiddle"
       ],
@@ -1057,7 +1057,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding3ByteMiddle",
+      "name": "test.padding/Padding3ByteMiddle",
       "naming_context": [
         "Padding3ByteMiddle"
       ],
@@ -1169,7 +1169,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding4ByteMiddle",
+      "name": "test.padding/Padding4ByteMiddle",
       "naming_context": [
         "Padding4ByteMiddle"
       ],
@@ -1281,7 +1281,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding5ByteMiddle",
+      "name": "test.padding/Padding5ByteMiddle",
       "naming_context": [
         "Padding5ByteMiddle"
       ],
@@ -1432,7 +1432,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding6ByteMiddle",
+      "name": "test.padding/Padding6ByteMiddle",
       "naming_context": [
         "Padding6ByteMiddle"
       ],
@@ -1544,7 +1544,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding7ByteMiddle",
+      "name": "test.padding/Padding7ByteMiddle",
       "naming_context": [
         "Padding7ByteMiddle"
       ],
@@ -1656,7 +1656,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding4ByteAlignmentLength12",
+      "name": "test.padding/Padding4ByteAlignmentLength12",
       "naming_context": [
         "Padding4ByteAlignmentLength12"
       ],
@@ -1846,7 +1846,7 @@
       }
     },
     {
-      "name": "fidl.test.padding/Padding2ByteAlignmentLength6",
+      "name": "test.padding/Padding2ByteAlignmentLength6",
       "naming_context": [
         "Padding2ByteAlignmentLength6"
       ],
@@ -2002,39 +2002,39 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.padding/Padding7ByteMiddle",
-    "fidl.test.padding/Padding7ByteEnd",
-    "fidl.test.padding/Padding6ByteMiddle",
-    "fidl.test.padding/Padding6ByteEnd",
-    "fidl.test.padding/Padding5ByteMiddle",
-    "fidl.test.padding/Padding5ByteEnd",
-    "fidl.test.padding/Padding4ByteMiddle",
-    "fidl.test.padding/Padding4ByteEnd",
-    "fidl.test.padding/Padding4ByteAlignmentLength12",
-    "fidl.test.padding/Padding3ByteMiddle",
-    "fidl.test.padding/Padding3ByteEnd",
-    "fidl.test.padding/Padding2ByteMiddle",
-    "fidl.test.padding/Padding2ByteEnd",
-    "fidl.test.padding/Padding2ByteAlignmentLength6",
-    "fidl.test.padding/Padding1ByteMiddle",
-    "fidl.test.padding/Padding1ByteEnd"
+    "test.padding/Padding7ByteMiddle",
+    "test.padding/Padding7ByteEnd",
+    "test.padding/Padding6ByteMiddle",
+    "test.padding/Padding6ByteEnd",
+    "test.padding/Padding5ByteMiddle",
+    "test.padding/Padding5ByteEnd",
+    "test.padding/Padding4ByteMiddle",
+    "test.padding/Padding4ByteEnd",
+    "test.padding/Padding4ByteAlignmentLength12",
+    "test.padding/Padding3ByteMiddle",
+    "test.padding/Padding3ByteEnd",
+    "test.padding/Padding2ByteMiddle",
+    "test.padding/Padding2ByteEnd",
+    "test.padding/Padding2ByteAlignmentLength6",
+    "test.padding/Padding1ByteMiddle",
+    "test.padding/Padding1ByteEnd"
   ],
   "declarations": {
-    "fidl.test.padding/Padding1ByteEnd": "struct",
-    "fidl.test.padding/Padding2ByteEnd": "struct",
-    "fidl.test.padding/Padding3ByteEnd": "struct",
-    "fidl.test.padding/Padding4ByteEnd": "struct",
-    "fidl.test.padding/Padding5ByteEnd": "struct",
-    "fidl.test.padding/Padding6ByteEnd": "struct",
-    "fidl.test.padding/Padding7ByteEnd": "struct",
-    "fidl.test.padding/Padding1ByteMiddle": "struct",
-    "fidl.test.padding/Padding2ByteMiddle": "struct",
-    "fidl.test.padding/Padding3ByteMiddle": "struct",
-    "fidl.test.padding/Padding4ByteMiddle": "struct",
-    "fidl.test.padding/Padding5ByteMiddle": "struct",
-    "fidl.test.padding/Padding6ByteMiddle": "struct",
-    "fidl.test.padding/Padding7ByteMiddle": "struct",
-    "fidl.test.padding/Padding4ByteAlignmentLength12": "struct",
-    "fidl.test.padding/Padding2ByteAlignmentLength6": "struct"
+    "test.padding/Padding1ByteEnd": "struct",
+    "test.padding/Padding2ByteEnd": "struct",
+    "test.padding/Padding3ByteEnd": "struct",
+    "test.padding/Padding4ByteEnd": "struct",
+    "test.padding/Padding5ByteEnd": "struct",
+    "test.padding/Padding6ByteEnd": "struct",
+    "test.padding/Padding7ByteEnd": "struct",
+    "test.padding/Padding1ByteMiddle": "struct",
+    "test.padding/Padding2ByteMiddle": "struct",
+    "test.padding/Padding3ByteMiddle": "struct",
+    "test.padding/Padding4ByteMiddle": "struct",
+    "test.padding/Padding5ByteMiddle": "struct",
+    "test.padding/Padding6ByteMiddle": "struct",
+    "test.padding/Padding7ByteMiddle": "struct",
+    "test.padding/Padding4ByteAlignmentLength12": "struct",
+    "test.padding/Padding2ByteAlignmentLength6": "struct"
   }
 }

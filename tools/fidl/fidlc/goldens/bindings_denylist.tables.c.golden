@@ -3,36 +3,36 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedBits fidl_test_bindingsdenylist_OnlySyzkallerTable;
-__LOCAL extern const struct FidlCodedTable fidl_test_bindingsdenylist_OnlyRustTable;
-__LOCAL extern const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppTable;
-__LOCAL extern const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyGoTable;
-__LOCAL extern const struct FidlCodedEnum fidl_test_bindingsdenylist_OnlyDartTable;
+__LOCAL extern const struct FidlCodedBits test_bindingsdenylist_OnlySyzkallerTable;
+__LOCAL extern const struct FidlCodedTable test_bindingsdenylist_OnlyRustTable;
+__LOCAL extern const struct FidlCodedXUnion test_bindingsdenylist_OnlyLlcppTable;
+__LOCAL extern const struct FidlCodedXUnion test_bindingsdenylist_OnlyLlcppNullableRefTable;
+__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_OnlyGoTable;
+__LOCAL extern const struct FidlCodedEnum test_bindingsdenylist_OnlyDartTable;
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
-const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessage"};
+__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
+const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
-const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessage"};
+__LOCAL extern const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
+const struct FidlCodedStruct test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="test.bindingsdenylist/OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessage"};
 
 
-const struct FidlCodedBits fidl_test_bindingsdenylist_OnlySyzkallerTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="fidl.test.bindingsdenylist/OnlySyzkaller"};
+const struct FidlCodedBits test_bindingsdenylist_OnlySyzkallerTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .mask=1ul, .name="test.bindingsdenylist/OnlySyzkaller"};
 
-const struct FidlCodedTable fidl_test_bindingsdenylist_OnlyRustTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.bindingsdenylist/OnlyRust"};
+const struct FidlCodedTable test_bindingsdenylist_OnlyRustTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="test.bindingsdenylist/OnlyRust"};
 
-static const struct FidlXUnionField Fields36fidl_test_bindingsdenylist_OnlyLlcpp[] = {
+static const struct FidlXUnionField Fields31test_bindingsdenylist_OnlyLlcpp[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields36fidl_test_bindingsdenylist_OnlyLlcpp, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.bindingsdenylist/OnlyLlcpp", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields47fidl_test_bindingsdenylist_OnlyLlcppNullableRef[] = {
+const struct FidlCodedXUnion test_bindingsdenylist_OnlyLlcppTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields31test_bindingsdenylist_OnlyLlcpp, .nullable=kFidlNullability_Nonnullable, .name="test.bindingsdenylist/OnlyLlcpp", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields42test_bindingsdenylist_OnlyLlcppNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)}
 };
-const struct FidlCodedXUnion fidl_test_bindingsdenylist_OnlyLlcppNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields47fidl_test_bindingsdenylist_OnlyLlcppNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.bindingsdenylist/OnlyLlcpp", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-const struct FidlCodedStruct fidl_test_bindingsdenylist_OnlyGoTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="fidl.test.bindingsdenylist/OnlyGo"};
+const struct FidlCodedXUnion test_bindingsdenylist_OnlyLlcppNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=1u, .fields=Fields42test_bindingsdenylist_OnlyLlcppNullableRef, .nullable=kFidlNullability_Nullable, .name="test.bindingsdenylist/OnlyLlcpp", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+const struct FidlCodedStruct test_bindingsdenylist_OnlyGoTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.bindingsdenylist/OnlyGo"};
 
-static bool EnumValidatorFor_fidl_test_bindingsdenylist_OnlyDart(uint64_t v) {
+static bool EnumValidatorFor_test_bindingsdenylist_OnlyDart(uint64_t v) {
   switch (v) {
     case 1ul:
       return true;
@@ -41,5 +41,5 @@ static bool EnumValidatorFor_fidl_test_bindingsdenylist_OnlyDart(uint64_t v) {
   }
 }
 
-const struct FidlCodedEnum fidl_test_bindingsdenylist_OnlyDartTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_fidl_test_bindingsdenylist_OnlyDart, .name="fidl.test.bindingsdenylist/OnlyDart"};
+const struct FidlCodedEnum test_bindingsdenylist_OnlyDartTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Strict, .validate=&EnumValidatorFor_test_bindingsdenylist_OnlyDart, .name="test.bindingsdenylist/OnlyDart"};
 

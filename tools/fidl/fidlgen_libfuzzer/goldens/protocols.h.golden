@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/protocols/cpp/fidl.h>
+#include <test/protocols/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,27 +13,27 @@
 
 namespace fuzzing {
 
-using rights = ::fidl::test::protocols::rights;
-using obj_type = ::fidl::test::protocols::obj_type;
+using rights = ::test::protocols::rights;
+using obj_type = ::test::protocols::obj_type;
 using WithErrorSyntax_HandleInResult_Response =
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response;
+    ::test::protocols::WithErrorSyntax_HandleInResult_Response;
 using WithErrorSyntax_HandleInResult_Result =
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result;
+    ::test::protocols::WithErrorSyntax_HandleInResult_Result;
 using WithErrorSyntax_ResponseAsStruct_Response =
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
 using WithErrorSyntax_ResponseAsStruct_Result =
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result;
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result;
 using WithErrorSyntax_ErrorAsPrimitive_Response =
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response;
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response;
 using WithErrorSyntax_ErrorAsPrimitive_Result =
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
 using WithErrorSyntax_ErrorAsEnum_Response =
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
-using TheUnion = ::fidl::test::protocols::TheUnion;
-using ProtocolEnds = ::fidl::test::protocols::ProtocolEnds;
-using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
+using TheUnion = ::test::protocols::TheUnion;
+using ProtocolEnds = ::test::protocols::ProtocolEnds;
+using ErrorEnum = ::test::protocols::ErrorEnum;
 using WithErrorSyntax_ErrorAsEnum_Result =
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
 
 template <>
 struct MinSize<rights> {
@@ -97,8 +97,7 @@ struct MinSize<WithErrorSyntax_HandleInResult_Result> {
   operator size_t() {
     size_t sizes[] = {
         0,
-        MinSize<
-            ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response>(),
+        MinSize<::test::protocols::WithErrorSyntax_HandleInResult_Response>(),
         MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
@@ -119,8 +118,9 @@ struct Allocate<WithErrorSyntax_HandleInResult_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<::fidl::test::protocols::
-                         WithErrorSyntax_HandleInResult_Response>{}(src, size));
+            Allocate<
+                ::test::protocols::WithErrorSyntax_HandleInResult_Response>{}(
+                src, size));
         break;
       }
       case 1: {
@@ -159,10 +159,10 @@ struct Allocate<WithErrorSyntax_ResponseAsStruct_Response> {
 template <>
 struct MinSize<WithErrorSyntax_ResponseAsStruct_Result> {
   operator size_t() {
-    size_t sizes[] = {0,
-                      MinSize<::fidl::test::protocols::
-                                  WithErrorSyntax_ResponseAsStruct_Response>(),
-                      MinSize<uint32_t>()};
+    size_t sizes[] = {
+        0,
+        MinSize<::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>(),
+        MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -182,9 +182,9 @@ struct Allocate<WithErrorSyntax_ResponseAsStruct_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<::fidl::test::protocols::
-                         WithErrorSyntax_ResponseAsStruct_Response>{}(src,
-                                                                      size));
+            Allocate<
+                ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>{}(
+                src, size));
         break;
       }
       case 1: {
@@ -217,10 +217,10 @@ struct Allocate<WithErrorSyntax_ErrorAsPrimitive_Response> {
 template <>
 struct MinSize<WithErrorSyntax_ErrorAsPrimitive_Result> {
   operator size_t() {
-    size_t sizes[] = {0,
-                      MinSize<::fidl::test::protocols::
-                                  WithErrorSyntax_ErrorAsPrimitive_Response>(),
-                      MinSize<uint32_t>()};
+    size_t sizes[] = {
+        0,
+        MinSize<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>(),
+        MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -240,9 +240,9 @@ struct Allocate<WithErrorSyntax_ErrorAsPrimitive_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<::fidl::test::protocols::
-                         WithErrorSyntax_ErrorAsPrimitive_Response>{}(src,
-                                                                      size));
+            Allocate<
+                ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>{}(
+                src, size));
         break;
       }
       case 1: {
@@ -305,13 +305,13 @@ template <>
 struct MinSize<ProtocolEnds> {
   operator size_t() {
     return MinSize<::fidl::InterfaceHandle<
-               ::fidl::test::protocols::DiscoverableProtocol>>() +
+               ::test::protocols::DiscoverableProtocol>>() +
            MinSize<::fidl::InterfaceRequest<
-               ::fidl::test::protocols::DiscoverableProtocol>>() +
+               ::test::protocols::DiscoverableProtocol>>() +
            MinSize<::fidl::InterfaceHandle<
-               ::fidl::test::protocols::DiscoverableProtocol>>() +
+               ::test::protocols::DiscoverableProtocol>>() +
            MinSize<::fidl::InterfaceRequest<
-               ::fidl::test::protocols::DiscoverableProtocol>>();
+               ::test::protocols::DiscoverableProtocol>>();
   }
 };
 template <>
@@ -322,25 +322,29 @@ struct Allocate<ProtocolEnds> {
     const size_t slack_per_member = (*size - MinSize<ProtocolEnds>()) / 4;
     size_t out_size;
     out_size = MinSize<::fidl::InterfaceHandle<
-                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+                   ::test::protocols::DiscoverableProtocol>>() +
                slack_per_member;
-    out.client = Allocate<::fidl::InterfaceHandle<
-        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out.client = Allocate<
+        ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>>{}(
+        src, &out_size);
     out_size = MinSize<::fidl::InterfaceRequest<
-                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+                   ::test::protocols::DiscoverableProtocol>>() +
                slack_per_member;
-    out.server = Allocate<::fidl::InterfaceRequest<
-        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out.server = Allocate<
+        ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>>{}(
+        src, &out_size);
     out_size = MinSize<::fidl::InterfaceHandle<
-                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+                   ::test::protocols::DiscoverableProtocol>>() +
                slack_per_member;
-    out.client_opt = Allocate<::fidl::InterfaceHandle<
-        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out.client_opt = Allocate<
+        ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>>{}(
+        src, &out_size);
     out_size = MinSize<::fidl::InterfaceRequest<
-                   ::fidl::test::protocols::DiscoverableProtocol>>() +
+                   ::test::protocols::DiscoverableProtocol>>() +
                slack_per_member;
-    out.server_opt = Allocate<::fidl::InterfaceRequest<
-        ::fidl::test::protocols::DiscoverableProtocol>>{}(src, &out_size);
+    out.server_opt = Allocate<
+        ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>>{}(
+        src, &out_size);
     return out;
   }
 };
@@ -373,10 +377,8 @@ template <>
 struct MinSize<WithErrorSyntax_ErrorAsEnum_Result> {
   operator size_t() {
     size_t sizes[] = {
-        0,
-        MinSize<
-            ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>(),
-        MinSize<::fidl::test::protocols::ErrorEnum>()};
+        0, MinSize<::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>(),
+        MinSize<::test::protocols::ErrorEnum>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -395,12 +397,12 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<::fidl::test::protocols::
-                         WithErrorSyntax_ErrorAsEnum_Response>{}(src, size));
+            Allocate<::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>{}(
+                src, size));
         break;
       }
       case 1: {
-        out.set_err(Allocate<::fidl::test::protocols::ErrorEnum>{}(src, size));
+        out.set_err(Allocate<::test::protocols::ErrorEnum>{}(src, size));
         break;
       }
     }

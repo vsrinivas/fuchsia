@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.enum
+# test.enum
 
 
 
@@ -15,7 +15,7 @@
 ### MyEmptyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyEmptyFlexibleEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=20)*
+*Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=20)*
 
 
 
@@ -26,7 +26,7 @@ Type: <code>uint32</code>
 ### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=8)*
+*Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=8)*
 
 
 
@@ -47,7 +47,7 @@ Type: <code>uint32</code>
 ### MyFlexibleEnumWithCustomUnknown [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnumWithCustomUnknown}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=13)*
+*Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=13)*
 
 
 
@@ -73,7 +73,7 @@ Type: <code>uint32</code>
 ### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=3)*
+*Defined in [test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=3)*
 
 
 

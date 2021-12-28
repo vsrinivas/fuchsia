@@ -1,4 +1,4 @@
-library fidl.test.inheritancewithrecursivedecl;
+library test.inheritancewithrecursivedecl;
 
 protocol Parent {
     First(resource struct {

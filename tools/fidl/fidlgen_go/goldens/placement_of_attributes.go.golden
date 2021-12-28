@@ -3,7 +3,7 @@
 package placementofattributes
 
 import (
-	exampleusing "fidl/exampleusing"
+	testexampleusing "fidl/test/exampleusing"
 	_strings "strings"
 	_bindings "syscall/zx/fidl"
 )
@@ -111,8 +111,8 @@ func (msg *ExampleStruct) Marshaler() _bindings.Marshaler {
 }
 
 type exampleProtocolWithCtxMethodRequest struct {
-	_   struct{}           `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
-	Arg exampleusing.Empty `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_   struct{}               `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	Arg testexampleusing.Empty `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mexampleProtocolWithCtxMethodRequest = _bindings.CreateLazyMarshaler(exampleProtocolWithCtxMethodRequest{})
@@ -252,12 +252,12 @@ func (u *ExampleTable) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 const (
-	ExampleProtocolMethodOrdinal uint64 = 0x207d2f81c0ddb184
+	ExampleProtocolMethodOrdinal uint64 = 0x53978e6fc7476749
 )
 
 type ExampleProtocolWithCtxInterface _bindings.ChannelProxy
 
-func (p *ExampleProtocolWithCtxInterface) Method(ctx_ _bindings.Context, arg exampleusing.Empty) error {
+func (p *ExampleProtocolWithCtxInterface) Method(ctx_ _bindings.Context, arg testexampleusing.Empty) error {
 	req_ := &exampleProtocolWithCtxMethodRequest{
 		Arg: arg,
 	}
@@ -266,7 +266,7 @@ func (p *ExampleProtocolWithCtxInterface) Method(ctx_ _bindings.Context, arg exa
 }
 
 type ExampleProtocolWithCtx interface {
-	Method(ctx_ _bindings.Context, arg exampleusing.Empty) error
+	Method(ctx_ _bindings.Context, arg testexampleusing.Empty) error
 }
 
 type ExampleProtocolWithCtxTransitionalBase struct{}

@@ -19,10 +19,10 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.encapsulatedstructs/cpp/markers.h>
+#include <fidl/test.encapsulatedstructs/cpp/markers.h>
 #include <fidl/zx/cpp/wire_types.h>
 
-namespace fidl_test_encapsulatedstructs {
+namespace test_encapsulatedstructs {
 namespace wire {
 struct NonInlineStructTestStruct;
 
@@ -36,11 +36,11 @@ struct StructPaddingTestStruct;
 
 struct TopLevelStruct;
 
-extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int16Int8Table;
+extern "C" const fidl_type_t test_encapsulatedstructs_Int16Int8Table;
 
 struct Int16Int8 {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_encapsulatedstructs_Int16Int8Table;
+      &test_encapsulatedstructs_Int16Int8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -60,11 +60,11 @@ struct Int16Int8 {
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t
-    fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
+    test_encapsulatedstructs_NonInlineStructTestStructTable;
 
 struct NonInlineStructTestStruct {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
+      &test_encapsulatedstructs_NonInlineStructTestStructTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -72,8 +72,7 @@ struct NonInlineStructTestStruct {
   static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl::ObjectView<::fidl_test_encapsulatedstructs::wire::Int16Int8> element =
-      {};
+  ::fidl::ObjectView<::test_encapsulatedstructs::wire::Int16Int8> element = {};
 
   ::zx::handle h = {};
 
@@ -85,11 +84,11 @@ struct NonInlineStructTestStruct {
 };
 #endif  // __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int8Int32Table;
+extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 
 struct Int8Int32 {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_encapsulatedstructs_Int8Int32Table;
+      &test_encapsulatedstructs_Int8Int32Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -106,11 +105,11 @@ struct Int8Int32 {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
+extern "C" const fidl_type_t test_encapsulatedstructs_ArrayInt16Int8Table;
 
 struct ArrayInt16Int8 {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
+      &test_encapsulatedstructs_ArrayInt16Int8Table;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 12;
   static constexpr uint32_t PrimarySizeV1 = 12;
@@ -118,7 +117,7 @@ struct ArrayInt16Int8 {
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl::Array<::fidl_test_encapsulatedstructs::wire::Int16Int8, 3> arr = {};
+  ::fidl::Array<::test_encapsulatedstructs::wire::Int16Int8, 3> arr = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -126,11 +125,11 @@ struct ArrayInt16Int8 {
 };
 
 extern "C" const fidl_type_t
-    fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
+    test_encapsulatedstructs_StructPaddingTestStructTable;
 
 struct StructPaddingTestStruct {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
+      &test_encapsulatedstructs_StructPaddingTestStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -138,11 +137,11 @@ struct StructPaddingTestStruct {
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
 
-  ::fidl_test_encapsulatedstructs::wire::Int16Int8 trailing = {};
+  ::test_encapsulatedstructs::wire::Int16Int8 trailing = {};
 
-  ::fidl_test_encapsulatedstructs::wire::Int8Int32 inner = {};
+  ::test_encapsulatedstructs::wire::Int8Int32 inner = {};
 
-  ::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8 array = {};
+  ::test_encapsulatedstructs::wire::ArrayInt16Int8 array = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -151,11 +150,11 @@ struct StructPaddingTestStruct {
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
+extern "C" const fidl_type_t test_encapsulatedstructs_TopLevelStructTable;
 
 struct TopLevelStruct {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_encapsulatedstructs_TopLevelStructTable;
+      &test_encapsulatedstructs_TopLevelStructTable;
   static constexpr uint32_t MaxNumHandles = 1;
   static constexpr uint32_t PrimarySize = 40;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -163,9 +162,9 @@ struct TopLevelStruct {
   static constexpr uint32_t MaxOutOfLineV1 = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct a = {};
+  ::test_encapsulatedstructs::wire::StructPaddingTestStruct a = {};
 
-  ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct b = {};
+  ::test_encapsulatedstructs::wire::NonInlineStructTestStruct b = {};
 
   void _CloseHandles();
 
@@ -176,123 +175,110 @@ struct TopLevelStruct {
 #endif  // __Fuchsia__
 
 }  // namespace wire
-}  // namespace fidl_test_encapsulatedstructs
+}  // namespace test_encapsulatedstructs
 namespace fidl {
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<
-    ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>
+struct IsResource<::test_encapsulatedstructs::wire::NonInlineStructTestStruct>
     : public std::true_type {};
 template <>
-struct IsFidlType<
-    ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>
+struct IsFidlType<::test_encapsulatedstructs::wire::NonInlineStructTestStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<
-    ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>
+struct IsStruct<::test_encapsulatedstructs::wire::NonInlineStructTestStruct>
     : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_encapsulatedstructs::wire::NonInlineStructTestStruct>);
 static_assert(
-    std::is_standard_layout_v<
-        ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>);
-static_assert(
-    offsetof(::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct,
+    offsetof(::test_encapsulatedstructs::wire::NonInlineStructTestStruct,
              element) == 0);
 static_assert(
-    offsetof(::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct,
-             h) == 8);
+    offsetof(::test_encapsulatedstructs::wire::NonInlineStructTestStruct, h) ==
+    8);
 static_assert(
-    sizeof(::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct) ==
-    ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct::
-        PrimarySize);
+    sizeof(::test_encapsulatedstructs::wire::NonInlineStructTestStruct) ==
+    ::test_encapsulatedstructs::wire::NonInlineStructTestStruct::PrimarySize);
 #endif  // __Fuchsia__
 
 template <>
-struct IsFidlType<::fidl_test_encapsulatedstructs::wire::Int8Int32>
+struct IsFidlType<::test_encapsulatedstructs::wire::Int8Int32>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_encapsulatedstructs::wire::Int8Int32>
+struct IsStruct<::test_encapsulatedstructs::wire::Int8Int32>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_encapsulatedstructs::wire::Int8Int32>);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::Int8Int32, a) ==
-              0);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::Int8Int32, b) ==
-              4);
-static_assert(sizeof(::fidl_test_encapsulatedstructs::wire::Int8Int32) ==
-              ::fidl_test_encapsulatedstructs::wire::Int8Int32::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_encapsulatedstructs::wire::Int16Int8>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_encapsulatedstructs::wire::Int16Int8>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_encapsulatedstructs::wire::Int16Int8>);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::Int16Int8, a) ==
-              0);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::Int16Int8, b) ==
-              2);
-static_assert(sizeof(::fidl_test_encapsulatedstructs::wire::Int16Int8) ==
-              ::fidl_test_encapsulatedstructs::wire::Int16Int8::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8>);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8,
-                       arr) == 0);
 static_assert(
-    sizeof(::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8) ==
-    ::fidl_test_encapsulatedstructs::wire::ArrayInt16Int8::PrimarySize);
+    std::is_standard_layout_v<::test_encapsulatedstructs::wire::Int8Int32>);
+static_assert(offsetof(::test_encapsulatedstructs::wire::Int8Int32, a) == 0);
+static_assert(offsetof(::test_encapsulatedstructs::wire::Int8Int32, b) == 4);
+static_assert(sizeof(::test_encapsulatedstructs::wire::Int8Int32) ==
+              ::test_encapsulatedstructs::wire::Int8Int32::PrimarySize);
 
 template <>
-struct IsFidlType<
-    ::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct>
+struct IsFidlType<::test_encapsulatedstructs::wire::Int16Int8>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct>
+struct IsStruct<::test_encapsulatedstructs::wire::Int16Int8>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_encapsulatedstructs::wire::Int16Int8>);
+static_assert(offsetof(::test_encapsulatedstructs::wire::Int16Int8, a) == 0);
+static_assert(offsetof(::test_encapsulatedstructs::wire::Int16Int8, b) == 2);
+static_assert(sizeof(::test_encapsulatedstructs::wire::Int16Int8) ==
+              ::test_encapsulatedstructs::wire::Int16Int8::PrimarySize);
+
+template <>
+struct IsFidlType<::test_encapsulatedstructs::wire::ArrayInt16Int8>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_encapsulatedstructs::wire::ArrayInt16Int8>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct>);
+              ::test_encapsulatedstructs::wire::ArrayInt16Int8>);
+static_assert(offsetof(::test_encapsulatedstructs::wire::ArrayInt16Int8, arr) ==
+              0);
+static_assert(sizeof(::test_encapsulatedstructs::wire::ArrayInt16Int8) ==
+              ::test_encapsulatedstructs::wire::ArrayInt16Int8::PrimarySize);
+
+template <>
+struct IsFidlType<::test_encapsulatedstructs::wire::StructPaddingTestStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_encapsulatedstructs::wire::StructPaddingTestStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::test_encapsulatedstructs::wire::StructPaddingTestStruct>);
 static_assert(
-    offsetof(::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct,
+    offsetof(::test_encapsulatedstructs::wire::StructPaddingTestStruct,
              trailing) == 0);
 static_assert(
-    offsetof(::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct,
+    offsetof(::test_encapsulatedstructs::wire::StructPaddingTestStruct,
              inner) == 4);
 static_assert(
-    offsetof(::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct,
+    offsetof(::test_encapsulatedstructs::wire::StructPaddingTestStruct,
              array) == 12);
 static_assert(
-    sizeof(::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct) ==
-    ::fidl_test_encapsulatedstructs::wire::StructPaddingTestStruct::
-        PrimarySize);
+    sizeof(::test_encapsulatedstructs::wire::StructPaddingTestStruct) ==
+    ::test_encapsulatedstructs::wire::StructPaddingTestStruct::PrimarySize);
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::fidl_test_encapsulatedstructs::wire::TopLevelStruct>
+struct IsResource<::test_encapsulatedstructs::wire::TopLevelStruct>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_encapsulatedstructs::wire::TopLevelStruct>
+struct IsFidlType<::test_encapsulatedstructs::wire::TopLevelStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_encapsulatedstructs::wire::TopLevelStruct>
+struct IsStruct<::test_encapsulatedstructs::wire::TopLevelStruct>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_encapsulatedstructs::wire::TopLevelStruct>);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::TopLevelStruct,
-                       a) == 0);
-static_assert(offsetof(::fidl_test_encapsulatedstructs::wire::TopLevelStruct,
-                       b) == 24);
-static_assert(
-    sizeof(::fidl_test_encapsulatedstructs::wire::TopLevelStruct) ==
-    ::fidl_test_encapsulatedstructs::wire::TopLevelStruct::PrimarySize);
+              ::test_encapsulatedstructs::wire::TopLevelStruct>);
+static_assert(offsetof(::test_encapsulatedstructs::wire::TopLevelStruct, a) ==
+              0);
+static_assert(offsetof(::test_encapsulatedstructs::wire::TopLevelStruct, b) ==
+              24);
+static_assert(sizeof(::test_encapsulatedstructs::wire::TopLevelStruct) ==
+              ::test_encapsulatedstructs::wire::TopLevelStruct::PrimarySize);
 #endif  // __Fuchsia__
 
 }  // namespace fidl

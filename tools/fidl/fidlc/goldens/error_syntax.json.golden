@@ -1,26 +1,26 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.errorsyntax",
+  "name": "test.errorsyntax",
   "library_dependencies": [
     {
-      "name": "fidl.test.errorsyntax.parent",
+      "name": "test.errorsyntax.parent",
       "declarations": {
-        "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax": {
+        "test.errorsyntax.parent/ParentUsesErrorSyntax": {
           "kind": "interface"
         },
-        "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest": {
+        "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest": {
           "kind": "struct",
           "resource": false
         },
-        "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response": {
+        "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response": {
           "kind": "struct",
           "resource": false
         },
-        "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse": {
+        "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse": {
           "kind": "struct",
           "resource": false
         },
-        "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result": {
+        "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result": {
           "kind": "union",
           "resource": false
         }
@@ -33,7 +33,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax",
+      "name": "test.errorsyntax/ExampleUseOfErrorSyntax",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
         "line": 9,
@@ -42,18 +42,18 @@
       },
       "composed_protocols": [
         {
-          "name": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax",
+          "name": "test.errorsyntax.parent/ParentUsesErrorSyntax",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
             "line": 10,
-            "column": 42,
+            "column": 37,
             "length": 21
           }
         }
       ],
       "methods": [
         {
-          "ordinal": 8210161374538322484,
+          "ordinal": 3565108794310607393,
           "name": "ComposedCallWhichMayFail",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
@@ -64,7 +64,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
+            "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -88,7 +88,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
+            "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -113,7 +113,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result",
+            "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -136,7 +136,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response",
+            "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -181,7 +181,7 @@
           }
         },
         {
-          "ordinal": 7435809829353441431,
+          "ordinal": 3757408930698888354,
           "name": "CallWhichMayFail",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
@@ -192,7 +192,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+            "identifier": "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -216,7 +216,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+            "identifier": "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -241,7 +241,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
+            "identifier": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -264,7 +264,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
+            "identifier": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -314,7 +314,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+      "name": "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
       "naming_context": [
         "ExampleUseOfErrorSyntax",
         "CallWhichMayFail",
@@ -389,7 +389,7 @@
       }
     },
     {
-      "name": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
+      "name": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
       "naming_context": [
         "ExampleUseOfErrorSyntax",
         "CallWhichMayFail",
@@ -466,7 +466,7 @@
       }
     },
     {
-      "name": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+      "name": "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
       "naming_context": [
         "ExampleUseOfErrorSyntax",
         "CallWhichMayFail",
@@ -483,7 +483,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
+            "identifier": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -544,7 +544,7 @@
   ],
   "external_struct_declarations": [
     {
-      "name": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
+      "name": "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
       "naming_context": [
         "ParentUsesErrorSyntax",
         "ComposedCallWhichMayFail",
@@ -619,7 +619,7 @@
       }
     },
     {
-      "name": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
+      "name": "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
       "naming_context": [
         "ParentUsesErrorSyntax",
         "ComposedCallWhichMayFail",
@@ -636,7 +636,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result",
+            "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -695,7 +695,7 @@
       }
     },
     {
-      "name": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response",
+      "name": "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response",
       "naming_context": [
         "ParentUsesErrorSyntax",
         "ComposedCallWhichMayFail",
@@ -775,7 +775,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
+      "name": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
       "naming_context": [
         "ExampleUseOfErrorSyntax",
         "CallWhichMayFail",
@@ -801,7 +801,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
+            "identifier": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -887,17 +887,17 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntax"
+    "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
+    "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result",
+    "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+    "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+    "test.errorsyntax/ExampleUseOfErrorSyntax"
   ],
   "declarations": {
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntax": "interface",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest": "struct",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response": "struct",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse": "struct",
-    "fidl.test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result": "union"
+    "test.errorsyntax/ExampleUseOfErrorSyntax": "interface",
+    "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest": "struct",
+    "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response": "struct",
+    "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse": "struct",
+    "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Result": "union"
   }
 }

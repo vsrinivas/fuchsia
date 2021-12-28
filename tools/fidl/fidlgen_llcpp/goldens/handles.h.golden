@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.handles/cpp/markers.h>
-#include <fidl/fidl.test.handles/cpp/wire_messaging.h>
-#include <fidl/fidl.test.handles/cpp/wire_types.h>
+#include <fidl/test.handles/cpp/markers.h>
+#include <fidl/test.handles/cpp/wire_messaging.h>
+#include <fidl/test.handles/cpp/wire_types.h>
 #include <fidl/zx/cpp/wire.h>

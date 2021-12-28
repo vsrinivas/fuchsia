@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.constants
+# test.constants
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### Struct  {#Struct data-text="Struct"}
-*Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=41)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=41)*
 
 
 
@@ -67,7 +67,7 @@
 ### Enum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Enum}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=33)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=33)*
 
 
 
@@ -83,7 +83,7 @@ Type: <code>uint32</code>
 ### EnumType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#EnumType}
 Type: <code>int32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=16)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=16)*
 
 
 
@@ -107,7 +107,7 @@ Type: <code>int32</code>
 ### Bits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Bits}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=37)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=37)*
 
 
 
@@ -123,7 +123,7 @@ Type: <code>uint32</code>
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=22)*
+*Defined in [test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=22)*
 
 
 

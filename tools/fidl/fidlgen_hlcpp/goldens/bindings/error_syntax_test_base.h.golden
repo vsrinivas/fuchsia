@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <fidl/test/errorsyntax/cpp/fidl.h>
-#include <fidl/test/errorsyntax/parent/cpp/fidl.h>
-namespace fidl {
+#include <test/errorsyntax/cpp/fidl.h>
+#include <test/errorsyntax/parent/cpp/fidl.h>
 namespace test {
 namespace errorsyntax {
 namespace testing {
 class ExampleUseOfErrorSyntax_TestBase
-    : public ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax {
+    : public ::test::errorsyntax::ExampleUseOfErrorSyntax {
  public:
   virtual ~ExampleUseOfErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -25,4 +24,3 @@ class ExampleUseOfErrorSyntax_TestBase
 }  // namespace testing
 }  // namespace errorsyntax
 }  // namespace test
-}  // namespace fidl

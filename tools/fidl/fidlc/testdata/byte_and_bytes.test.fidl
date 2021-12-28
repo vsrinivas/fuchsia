@@ -1,4 +1,4 @@
-library fidl.test.byteandbytes;
+library test.byteandbytes;
 
 type ByteAndBytes = struct {
     single_byte byte;

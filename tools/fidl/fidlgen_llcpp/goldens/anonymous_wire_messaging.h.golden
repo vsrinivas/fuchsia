@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.anonymous/cpp/markers.h>
-#include <fidl/fidl.test.anonymous/cpp/wire_types.h>
+#include <fidl/test.anonymous/cpp/markers.h>
+#include <fidl/test.anonymous/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,43 +16,39 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 class SomeProtocol;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+    test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
-}  // namespace fidl_test_anonymous
+    test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+}  // namespace test_anonymous
 template <>
-struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_anonymous::SomeProtocol::SomeMethod>
+struct ::fidl::internal::WireOrdinal<::test_anonymous::SomeProtocol::SomeMethod>
     final {
-  static constexpr uint64_t value = 8941579241812366574lu;
+  static constexpr uint64_t value = 2515914517457749720lu;
 };
 
-namespace fidl_test_anonymous {}  // namespace fidl_test_anonymous
+namespace test_anonymous {}  // namespace test_anonymous
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<::fidl_test_anonymous::SomeProtocol> {
-};
+struct ::fidl::internal::ProtocolDetails<::test_anonymous::SomeProtocol> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_anonymous::SomeProtocol>
+struct ::fidl::internal::WireServerDispatcher<::test_anonymous::SomeProtocol>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>* impl,
+      ::fidl::WireServer<::test_anonymous::SomeProtocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static void Dispatch(
-      ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_anonymous::SomeProtocol>* impl,
+                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -61,26 +57,25 @@ struct ::fidl::internal::WireServerDispatcher<
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-    final {
-  using UnionMember = fidl_test_anonymous::wire::UnionMember;
-  using TableMember = fidl_test_anonymous::wire::TableMember;
+struct ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> final {
+  using UnionMember = test_anonymous::wire::UnionMember;
+  using TableMember = test_anonymous::wire::TableMember;
 
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_anonymous::wire::UnionMember union_member;
-  ::fidl_test_anonymous::wire::TableMember table_member;
+  ::test_anonymous::wire::UnionMember union_member;
+  ::test_anonymous::wire::TableMember table_member;
 
-  explicit WireRequest(::fidl_test_anonymous::wire::UnionMember union_member,
-                       ::fidl_test_anonymous::wire::TableMember table_member)
+  explicit WireRequest(::test_anonymous::wire::UnionMember union_member,
+                       ::test_anonymous::wire::TableMember table_member)
       : union_member(union_member), table_member(table_member) {
     _InitHeader();
   }
   WireRequest() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_anonymous::
-          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
+      &::test_anonymous::
+          test_anonymous_SomeProtocolSomeMethodRequestMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 48;
   static constexpr uint32_t PrimarySizeV1 = 56;
@@ -91,7 +86,7 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType =
-      ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>;
+      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -103,24 +98,23 @@ struct ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   void _InitHeader();
 };
 template <>
-struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-    final {
-  using Result = fidl_test_anonymous::wire::SomeProtocolSomeMethodResult;
+struct ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod> final {
+  using Result = test_anonymous::wire::SomeProtocolSomeMethodResult;
 
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result;
+  ::test_anonymous::wire::SomeProtocolSomeMethodResult result;
 
   explicit WireResponse(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result)
+      ::test_anonymous::wire::SomeProtocolSomeMethodResult result)
       : result(result) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_anonymous::
-          fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
+      &::test_anonymous::
+          test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 32;
   static constexpr uint32_t PrimarySizeV1 = 40;
@@ -143,17 +137,15 @@ struct ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
+class ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> final
     : public ::fidl::Result {
  public:
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client,
-      ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-          request);
+      ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
+      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>* request);
   WireResult(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client,
-      ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-          request,
+      ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
+      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -162,43 +154,41 @@ class ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
   WireResult* operator=(const WireResult&) = delete;
   ~WireResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-  Unwrap() {
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*>(
+        ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
         bytes_.data());
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>*>(bytes_.data());
+        ::test_anonymous::SomeProtocol::SomeMethod>*>(bytes_.data());
   }
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
-  value() {
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>&
   operator*() const {
     return value();
   }
@@ -207,23 +197,23 @@ class ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+class ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client_end,
+      ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-          request);
+      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>* request);
   explicit WireUnownedResult(
-      ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+      ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::fidl_test_anonymous::SomeProtocol::SomeMethod>>&& decoded)
+      ::fidl::DecodedMessage<
+          ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>&&
+          decoded)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -238,43 +228,41 @@ class ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-  Unwrap() {
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>* Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<
-        ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*>(
+        ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*>(
         bytes_);
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>*>(bytes_);
+        ::test_anonymous::SomeProtocol::SomeMethod>*>(bytes_);
   }
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
-  value() {
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>& value() {
     return *Unwrap();
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>&
   value() const {
     return *Unwrap();
   }
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
   operator->() {
     return &value();
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
   operator->() const {
     return &value();
   }
 
-  ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
+  ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>&
   operator*() {
     return value();
   }
-  const ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>&
+  const ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>&
   operator*() const {
     return value();
   }
@@ -284,25 +272,25 @@ class ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_anonymous::SomeProtocol> {
+    ::test_anonymous::SomeProtocol> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_anonymous::SomeProtocol>
+class ::fidl::WireAsyncEventHandler<::test_anonymous::SomeProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_anonymous::SomeProtocol>,
+          ::test_anonymous::SomeProtocol>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_anonymous::SomeProtocol>
+class ::fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_anonymous::SomeProtocol> {
+          ::test_anonymous::SomeProtocol> {
  public:
   WireSyncEventHandler() = default;
 
@@ -314,17 +302,16 @@ class ::fidl::WireSyncEventHandler<::fidl_test_anonymous::SomeProtocol>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> client_end);
+      ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end);
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::fidl_test_anonymous::SomeProtocol>
-    final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::fidl_test_anonymous::SomeProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<::test_anonymous::SomeProtocol>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_anonymous::SomeProtocol>*
+      ::fidl::WireAsyncEventHandler<::test_anonymous::SomeProtocol>*
           event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
@@ -335,72 +322,66 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_anonymous::SomeProtocol>
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_anonymous::SomeProtocol>|,
+// const reference to a |fidl::ClientEnd<::test_anonymous::SomeProtocol>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_anonymous::SomeProtocol>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_anonymous::SomeProtocol>> {
+class ::fidl::internal::WireSyncClientImpl<::test_anonymous::SomeProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<
+              ::test_anonymous::SomeProtocol>> {
  public:
   // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
-             ::fidl_test_anonymous::wire::TableMember table_member) {
-    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-        _request{union_member, table_member};
-    return ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>(
+  ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(
+      ::test_anonymous::wire::UnionMember union_member,
+      ::test_anonymous::wire::TableMember table_member) {
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
+        union_member, table_member};
+    return ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>(
         _client_end(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
-        _channel());
+  ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(_channel());
   }
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_anonymous::SomeProtocol>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_anonymous::SomeProtocol>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_anonymous::SomeProtocol>> {
+                    ::test_anonymous::SomeProtocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
-             ::fidl_test_anonymous::wire::TableMember table_member) {
-    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-        _request{union_member, table_member};
+  ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>
+  SomeMethod(::test_anonymous::wire::UnionMember union_member,
+             ::test_anonymous::wire::TableMember table_member) {
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
+        union_member, table_member};
     return ::fidl::WireUnownedResult<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>(
-        _client_end(), _allocator(), &_request);
+        ::test_anonymous::SomeProtocol::SomeMethod>(_client_end(), _allocator(),
+                                                    &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_anonymous::SomeProtocol>(
-        _channel());
+  ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(_channel());
   }
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_anonymous::SomeProtocol> final
+class ::fidl::WireSyncClient<::test_anonymous::SomeProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
-          ::fidl_test_anonymous::SomeProtocol> {
+          ::test_anonymous::SomeProtocol> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_anonymous::SomeProtocol>::WireSyncClientBase;
+      ::test_anonymous::SomeProtocol>::WireSyncClientBase;
 };
 
 template <>
 class ::fidl::internal::WireCompleterBase<
-    ::fidl_test_anonymous::SomeProtocol::SomeMethod>
-    : public ::fidl::CompleterBase {
+    ::test_anonymous::SomeProtocol::SomeMethod> : public ::fidl::CompleterBase {
  public:
   // In the following methods, the return value indicates internal errors during
   // the reply, such as encoding or writing to the transport.
@@ -413,17 +394,15 @@ class ::fidl::internal::WireCompleterBase<
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
   ::fidl::Result Reply(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result);
-  ::fidl::Result ReplySuccess(
-      ::fidl_test_anonymous::wire::BitsMember bits_member);
+      ::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+  ::fidl::Result ReplySuccess(::test_anonymous::wire::BitsMember bits_member);
   ::fidl::Result ReplyError(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError error);
+      ::test_anonymous::wire::SomeProtocolSomeMethodError error);
   ::fidl::Result Reply(
       ::fidl::BufferSpan _buffer,
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult result);
-  ::fidl::Result ReplySuccess(
-      ::fidl::BufferSpan _buffer,
-      ::fidl_test_anonymous::wire::BitsMember bits_member);
+      ::test_anonymous::wire::SomeProtocolSomeMethodResult result);
+  ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer,
+                              ::test_anonymous::wire::BitsMember bits_member);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -431,28 +410,28 @@ class ::fidl::internal::WireCompleterBase<
 
 template <>
 struct ::fidl::internal::WireMethodTypes<
-    ::fidl_test_anonymous::SomeProtocol::SomeMethod> {
+    ::test_anonymous::SomeProtocol::SomeMethod> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::fidl_test_anonymous::SomeProtocol::SomeMethod>>;
+      ::test_anonymous::SomeProtocol::SomeMethod>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>
+class ::fidl::WireServer<::test_anonymous::SomeProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
 
   // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_anonymous::SomeProtocol;
+  using _EnclosingProtocol = ::test_anonymous::SomeProtocol;
 
   using SomeMethodCompleter = ::fidl::internal::WireCompleter<
-      ::fidl_test_anonymous::SomeProtocol::SomeMethod>;
+      ::test_anonymous::SomeProtocol::SomeMethod>;
   using SomeMethodRequestView = ::fidl::internal::WireRequestView<
-      ::fidl_test_anonymous::SomeProtocol::SomeMethod>;
+      ::test_anonymous::SomeProtocol::SomeMethod>;
 
   virtual void SomeMethod(SomeMethodRequestView request,
                           SomeMethodCompleter::Sync& _completer) = 0;
@@ -468,65 +447,60 @@ namespace fidl {
 
 template <>
 struct IsFidlType<
-    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+    ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
     : public std::true_type {};
 static_assert(
-    sizeof(
-        ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>) ==
+    sizeof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>) ==
     ::fidl::WireRequest<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>::PrimarySize);
+        ::test_anonymous::SomeProtocol::SomeMethod>::PrimarySize);
 static_assert(
-    offsetof(
-        ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
-        union_member) == 16);
+    offsetof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+             union_member) == 16);
 static_assert(
-    offsetof(
-        ::fidl::WireRequest<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
-        table_member) == 32);
+    offsetof(::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
+             table_member) == 32);
 
 template <>
 struct IsFidlType<
-    ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<
-    ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+    ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>>
     : public std::true_type {};
 static_assert(
-    sizeof(::fidl::WireResponse<
-           ::fidl_test_anonymous::SomeProtocol::SomeMethod>) ==
+    sizeof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>) ==
     ::fidl::WireResponse<
-        ::fidl_test_anonymous::SomeProtocol::SomeMethod>::PrimarySize);
+        ::test_anonymous::SomeProtocol::SomeMethod>::PrimarySize);
 static_assert(
-    offsetof(
-        ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
-        result) == 16);
+    offsetof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>,
+             result) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
-    final : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
+    : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |SomeProtocol.SomeMethod()|.
   // Allocates 96 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void SomeMethod(::fidl_test_anonymous::wire::UnionMember union_member,
-                  ::fidl_test_anonymous::wire::TableMember table_member,
-                  ::fidl::WireClientCallback<
-                      ::fidl_test_anonymous::SomeProtocol::SomeMethod>
-                      _cb);
+  void SomeMethod(
+      ::test_anonymous::wire::UnionMember union_member,
+      ::test_anonymous::wire::TableMember table_member,
+      ::fidl::WireClientCallback<::test_anonymous::SomeProtocol::SomeMethod>
+          _cb);
 
   void SomeMethod(
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member,
-      ::fit::callback<void(
-          ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>*
-              response)>
+      ::test_anonymous::wire::UnionMember union_member,
+      ::test_anonymous::wire::TableMember table_member,
+      ::fit::callback<
+          void(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>*
+                   response)>
           _cb);
 
   // Asynchronous variant of |SomeProtocol.SomeMethod()|.
@@ -535,25 +509,25 @@ class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
   // or |OnReply| are called on it.
   void SomeMethod(
       ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_anonymous::wire::UnionMember union_member,
-      ::fidl_test_anonymous::wire::TableMember table_member,
-      ::fidl::WireResponseContext<
-          ::fidl_test_anonymous::SomeProtocol::SomeMethod>* _context);
+      ::test_anonymous::wire::UnionMember union_member,
+      ::test_anonymous::wire::TableMember table_member,
+      ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
+          _context);
 
   // Synchronous variant of |SomeMethod.SomeMethod()|.
   // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
-  SomeMethod_Sync(::fidl_test_anonymous::wire::UnionMember union_member,
-                  ::fidl_test_anonymous::wire::TableMember table_member);
+  ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod>
+  SomeMethod_Sync(::test_anonymous::wire::UnionMember union_member,
+                  ::test_anonymous::wire::TableMember table_member);
 
   // Synchronous variant of |SomeMethod.SomeMethod()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  ::fidl::WireUnownedResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>
+  ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod>
   SomeMethod_Sync(::fidl::BufferSpan _buffer_span,
-                  ::fidl_test_anonymous::wire::UnionMember union_member,
-                  ::fidl_test_anonymous::wire::TableMember table_member);
+                  ::test_anonymous::wire::UnionMember union_member,
+                  ::test_anonymous::wire::TableMember table_member);
   WireClientImpl() = default;
 };
 namespace fidl {
@@ -564,21 +538,20 @@ namespace fidl {
 // |EventSender| owns a server endpoint of a channel speaking
 // the SomeProtocol protocol, and can send events in that protocol.
 template <>
-class ::fidl::WireEventSender<::fidl_test_anonymous::SomeProtocol> {
+class ::fidl::WireEventSender<::test_anonymous::SomeProtocol> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_anonymous::SomeProtocol> server_end)
+      ::fidl::ServerEnd<::test_anonymous::SomeProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_anonymous::SomeProtocol>& server_end()
-      const {
+  const ::fidl::ServerEnd<::test_anonymous::SomeProtocol>& server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_anonymous::SomeProtocol>& server_end() {
+  ::fidl::ServerEnd<::test_anonymous::SomeProtocol>& server_end() {
     return server_end_;
   }
 
@@ -589,12 +562,11 @@ class ::fidl::WireEventSender<::fidl_test_anonymous::SomeProtocol> {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<::fidl_test_anonymous::SomeProtocol> server_end_;
+  ::fidl::ServerEnd<::test_anonymous::SomeProtocol> server_end_;
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_anonymous::SomeProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_anonymous::SomeProtocol> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
@@ -602,8 +574,8 @@ class ::fidl::internal::WireWeakEventSender<
 
  private:
   friend ServerBindingRefImpl<
-      ::fidl_test_anonymous::SomeProtocol,
-      typename ::fidl_test_anonymous::SomeProtocol::Transport>;
+      ::test_anonymous::SomeProtocol,
+      typename ::test_anonymous::SomeProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

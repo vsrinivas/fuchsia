@@ -1,4 +1,4 @@
-library fidl.test.requestflexibleenvelope;
+library test.requestflexibleenvelope;
 
 type FlexibleFoo = flexible union {
     1: s string;

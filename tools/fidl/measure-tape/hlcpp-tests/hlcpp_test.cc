@@ -4,10 +4,12 @@
 
 #include <gtest/gtest.h>
 #include <measure_tape/hlcpp/measure_tape_for_toplevelunion.h>
-#include <measuretape/cpp/fidl.h>
+#include <test/measuretape/cpp/fidl.h>
 
 namespace measure_tape {
 namespace measuretape {
+
+using test::measuretape::Measure;
 
 const char kHelloWorldEn[] = "hello, world!";
 const char kHelloWorldFr[] = "bonjour, le monde!";
@@ -24,7 +26,7 @@ static_assert(sizeof(kHelloWorldRu) == 20 + 1);
 static_assert(sizeof(kHelloWorldZh) == 16 + 1);
 
 TEST(MeasureTape, Primitive) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   value.set_primitive(5);
 
   auto size = Measure(value);
@@ -33,7 +35,7 @@ TEST(MeasureTape, Primitive) {
 }
 
 TEST(MeasureTape, Handle) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   zx::handle h;
   value.set_handle(std::move(h));
 
@@ -43,8 +45,8 @@ TEST(MeasureTape, Handle) {
 }
 
 TEST(MeasureTape, StructWithString) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::StructWithString struct_with_string;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::StructWithString struct_with_string;
   struct_with_string.string = kHelloWorldEn;  // 13 chars
   value.set_struct_with_string(std::move(struct_with_string));
 
@@ -54,8 +56,8 @@ TEST(MeasureTape, StructWithString) {
 }
 
 TEST(MeasureTape, StructWithOptString_NoString) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::StructWithOptString struct_with_opt_string;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::StructWithOptString struct_with_opt_string;
   value.set_struct_with_opt_string(std::move(struct_with_opt_string));
 
   auto size = Measure(value);
@@ -64,8 +66,8 @@ TEST(MeasureTape, StructWithOptString_NoString) {
 }
 
 TEST(MeasureTape, StructWithOptString_HasString) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::StructWithOptString struct_with_opt_string;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::StructWithOptString struct_with_opt_string;
   struct_with_opt_string.opt_string = kHelloWorldFr;  // 18 chars
   value.set_struct_with_opt_string(std::move(struct_with_opt_string));
 
@@ -75,8 +77,8 @@ TEST(MeasureTape, StructWithOptString_HasString) {
 }
 
 TEST(MeasureTape, Table_Empty) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::Table table;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::Table table;
   value.set_table(std::move(table));
 
   auto size = Measure(value);
@@ -85,8 +87,8 @@ TEST(MeasureTape, Table_Empty) {
 }
 
 TEST(MeasureTape, Table_OnlyMaxOrdinalIsSet) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::Table table;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::Table table;
   table.set_primitive(42);
   value.set_table(std::move(table));
 
@@ -96,8 +98,8 @@ TEST(MeasureTape, Table_OnlyMaxOrdinalIsSet) {
 }
 
 TEST(MeasureTape, Table_StringIsSet) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::Table table;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::Table table;
   table.set_string(kHelloWorldDe);  // 12 chars
   value.set_table(std::move(table));
 
@@ -107,7 +109,7 @@ TEST(MeasureTape, Table_StringIsSet) {
 }
 
 TEST(MeasureTape, ArrayOfTwelveBytes) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::array<uint8_t, 12> array_of_twelve_bytes = {};
   value.set_array_of_twelve_bytes(std::move(array_of_twelve_bytes));
 
@@ -117,7 +119,7 @@ TEST(MeasureTape, ArrayOfTwelveBytes) {
 }
 
 TEST(MeasureTape, ArrayOfThreeStrings) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::array<std::string, 3> array_of_three_strings = {
       kHelloWorldEs,  // 12 bytes
       kHelloWorldRu,  // 20 bytes
@@ -131,7 +133,7 @@ TEST(MeasureTape, ArrayOfThreeStrings) {
 }
 
 TEST(MeasureTape, ArrayOfThreeHandles) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::array<zx::handle, 3> array_of_three_handles = {};
   value.set_array_of_three_handles(std::move(array_of_three_handles));
 
@@ -141,8 +143,8 @@ TEST(MeasureTape, ArrayOfThreeHandles) {
 }
 
 TEST(MeasureTape, ArrayOfTwoTables_BothEmpty) {
-  ::measuretape::TopLevelUnion value;
-  std::array<::measuretape::Table, 2> array_of_two_tables = {};
+  ::test::measuretape::TopLevelUnion value;
+  std::array<::test::measuretape::Table, 2> array_of_two_tables = {};
   value.set_array_of_two_tables(std::move(array_of_two_tables));
 
   auto size = Measure(value);
@@ -151,13 +153,13 @@ TEST(MeasureTape, ArrayOfTwoTables_BothEmpty) {
 }
 
 TEST(MeasureTape, ArrayOfTwoTables_Mixed) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::Table t1;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::Table t1;
   t1.set_primitive(27);
-  ::measuretape::Table t2;
+  ::test::measuretape::Table t2;
   zx::handle handle;
   t2.set_handle(std::move(handle));
-  std::array<::measuretape::Table, 2> array_of_two_tables = {
+  std::array<::test::measuretape::Table, 2> array_of_two_tables = {
       std::move(t1),
       std::move(t2),
   };
@@ -169,12 +171,12 @@ TEST(MeasureTape, ArrayOfTwoTables_Mixed) {
 }
 
 TEST(MeasureTape, ArrayOfTwoUnions) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::Union u1;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::Union u1;
   u1.set_primitive(654321);
-  ::measuretape::Union u2;
+  ::test::measuretape::Union u2;
   u2.set_primitive(123456);
-  std::array<::measuretape::Union, 2> array_of_two_unions = {
+  std::array<::test::measuretape::Union, 2> array_of_two_unions = {
       std::move(u1),
       std::move(u2),
   };
@@ -186,8 +188,8 @@ TEST(MeasureTape, ArrayOfTwoUnions) {
 }
 
 TEST(MeasureTape, StructWithTwoArrays) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::StructWithTwoArrays struct_with_two_arrays;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::StructWithTwoArrays struct_with_two_arrays;
   value.set_struct_with_two_arrays(std::move(struct_with_two_arrays));
 
   auto size = Measure(value);
@@ -196,8 +198,9 @@ TEST(MeasureTape, StructWithTwoArrays) {
 }
 
 TEST(MeasureTape, ArrayOfThreeStructsWithOneHandle) {
-  ::measuretape::TopLevelUnion value;
-  std::array<::measuretape::StructWithOneHandle, 3> array_of_three_structs_with_one_handle = {};
+  ::test::measuretape::TopLevelUnion value;
+  std::array<::test::measuretape::StructWithOneHandle, 3> array_of_three_structs_with_one_handle =
+      {};
   value.set_array_of_three_structs_with_one_handle(
       std::move(array_of_three_structs_with_one_handle));
 
@@ -207,8 +210,9 @@ TEST(MeasureTape, ArrayOfThreeStructsWithOneHandle) {
 }
 
 TEST(MeasureTape, ArrayOfThreeStructsWithTwoHandles) {
-  ::measuretape::TopLevelUnion value;
-  std::array<::measuretape::StructWithTwoHandles, 3> array_of_three_structs_with_two_handles = {};
+  ::test::measuretape::TopLevelUnion value;
+  std::array<::test::measuretape::StructWithTwoHandles, 3> array_of_three_structs_with_two_handles =
+      {};
   value.set_array_of_three_structs_with_two_handles(
       std::move(array_of_three_structs_with_two_handles));
 
@@ -218,7 +222,7 @@ TEST(MeasureTape, ArrayOfThreeStructsWithTwoHandles) {
 }
 
 TEST(MeasureTape, VectorOfBytes_ThreeBytes) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::vector<uint8_t> vector_of_bytes = {1, 2, 3};
   value.set_vector_of_bytes(std::move(vector_of_bytes));
 
@@ -228,7 +232,7 @@ TEST(MeasureTape, VectorOfBytes_ThreeBytes) {
 }
 
 TEST(MeasureTape, VectorOfBytes_NineBytes) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::vector<uint8_t> vector_of_bytes = {1, 2, 3, 4, 5, 6, 7, 8, 9};
   value.set_vector_of_bytes(std::move(vector_of_bytes));
 
@@ -238,7 +242,7 @@ TEST(MeasureTape, VectorOfBytes_NineBytes) {
 }
 
 TEST(MeasureTape, VectorOfStrings) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::vector<std::string> vector_of_strings = {
       kHelloWorldEs,  // 12 bytes
       kHelloWorldRu,  // 20 bytes
@@ -252,7 +256,7 @@ TEST(MeasureTape, VectorOfStrings) {
 }
 
 TEST(MeasureTape, VectorOfHandles_Empty) {
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::vector<zx::handle> vector_of_handles;
   value.set_vector_of_handles(std::move(vector_of_handles));
 
@@ -263,7 +267,7 @@ TEST(MeasureTape, VectorOfHandles_Empty) {
 
 TEST(MeasureTape, VectorOfHandles_ThreeHandles) {
   // three handles, i.e. 16 bytes payload with alignment
-  ::measuretape::TopLevelUnion value;
+  ::test::measuretape::TopLevelUnion value;
   std::vector<zx::handle> vector_of_handles;
   zx::handle handle1;
   vector_of_handles.push_back(std::move(handle1));
@@ -279,11 +283,11 @@ TEST(MeasureTape, VectorOfHandles_ThreeHandles) {
 }
 
 TEST(MeasureTape, VectorOfTables_TwoEmptyTables) {
-  ::measuretape::TopLevelUnion value;
-  std::vector<::measuretape::Table> vector_of_tables;
-  ::measuretape::Table t1;
+  ::test::measuretape::TopLevelUnion value;
+  std::vector<::test::measuretape::Table> vector_of_tables;
+  ::test::measuretape::Table t1;
   vector_of_tables.push_back(std::move(t1));
-  ::measuretape::Table t2;
+  ::test::measuretape::Table t2;
   vector_of_tables.push_back(std::move(t2));
   value.set_vector_of_tables(std::move(vector_of_tables));
 
@@ -293,12 +297,12 @@ TEST(MeasureTape, VectorOfTables_TwoEmptyTables) {
 }
 
 TEST(MeasureTape, VectorOfTables_Mixed) {
-  ::measuretape::TopLevelUnion value;
-  std::vector<::measuretape::Table> vector_of_tables;
-  ::measuretape::Table t1;
+  ::test::measuretape::TopLevelUnion value;
+  std::vector<::test::measuretape::Table> vector_of_tables;
+  ::test::measuretape::Table t1;
   t1.set_primitive(27);
   vector_of_tables.push_back(std::move(t1));
-  ::measuretape::Table t2;
+  ::test::measuretape::Table t2;
   zx::handle handle;
   t2.set_handle(std::move(handle));
   vector_of_tables.push_back(std::move(t2));
@@ -310,12 +314,12 @@ TEST(MeasureTape, VectorOfTables_Mixed) {
 }
 
 TEST(MeasureTape, VectorOfUnions) {
-  ::measuretape::TopLevelUnion value;
-  std::vector<::measuretape::Union> vector_of_unions;
-  ::measuretape::Union u1;
+  ::test::measuretape::TopLevelUnion value;
+  std::vector<::test::measuretape::Union> vector_of_unions;
+  ::test::measuretape::Union u1;
   u1.set_primitive(654321);
   vector_of_unions.push_back(std::move(u1));
-  ::measuretape::Union u2;
+  ::test::measuretape::Union u2;
   u2.set_primitive(123456);
   vector_of_unions.push_back(std::move(u2));
   value.set_vector_of_unions(std::move(vector_of_unions));
@@ -326,8 +330,8 @@ TEST(MeasureTape, VectorOfUnions) {
 }
 
 TEST(MeasureTape, StructWithTwoVectors_BothNull) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::StructWithTwoVectors struct_with_two_vectors;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::StructWithTwoVectors struct_with_two_vectors;
   EXPECT_FALSE(struct_with_two_vectors.vector_of_bytes.has_value());
   EXPECT_FALSE(struct_with_two_vectors.vector_of_strings.has_value());
   value.set_struct_with_two_vectors(std::move(struct_with_two_vectors));
@@ -338,8 +342,8 @@ TEST(MeasureTape, StructWithTwoVectors_BothNull) {
 }
 
 TEST(MeasureTape, StructWithTwoVectors_ThreeBytesInFirstTwoStringsInSecond) {
-  ::measuretape::TopLevelUnion value;
-  ::measuretape::StructWithTwoVectors struct_with_two_vectors;
+  ::test::measuretape::TopLevelUnion value;
+  ::test::measuretape::StructWithTwoVectors struct_with_two_vectors;
   std::vector<uint8_t> vector_of_bytes = {1, 2, 3};
   fidl::VectorPtr<uint8_t> ptr_vector_of_bytes(std::move(vector_of_bytes));
   struct_with_two_vectors.vector_of_bytes = std::move(ptr_vector_of_bytes);
@@ -357,13 +361,13 @@ TEST(MeasureTape, StructWithTwoVectors_ThreeBytesInFirstTwoStringsInSecond) {
 }
 
 TEST(MeasureTape, VectorOfStructsWithOneHandle) {
-  ::measuretape::TopLevelUnion value;
-  std::vector<::measuretape::StructWithOneHandle> vector_of_structs_with_one_handle;
-  ::measuretape::StructWithOneHandle struct_with_handle1;
+  ::test::measuretape::TopLevelUnion value;
+  std::vector<::test::measuretape::StructWithOneHandle> vector_of_structs_with_one_handle;
+  ::test::measuretape::StructWithOneHandle struct_with_handle1;
   vector_of_structs_with_one_handle.push_back(std::move(struct_with_handle1));
-  ::measuretape::StructWithOneHandle struct_with_handle2;
+  ::test::measuretape::StructWithOneHandle struct_with_handle2;
   vector_of_structs_with_one_handle.push_back(std::move(struct_with_handle2));
-  ::measuretape::StructWithOneHandle struct_with_handle3;
+  ::test::measuretape::StructWithOneHandle struct_with_handle3;
   vector_of_structs_with_one_handle.push_back(std::move(struct_with_handle3));
   value.set_vector_of_structs_with_one_handle(std::move(vector_of_structs_with_one_handle));
 
@@ -373,13 +377,13 @@ TEST(MeasureTape, VectorOfStructsWithOneHandle) {
 }
 
 TEST(MeasureTape, VectorOfStructsWithTwoHandles) {
-  ::measuretape::TopLevelUnion value;
-  std::vector<::measuretape::StructWithTwoHandles> vector_of_structs_with_two_handles;
-  ::measuretape::StructWithTwoHandles struct_with_two_handles1;
+  ::test::measuretape::TopLevelUnion value;
+  std::vector<::test::measuretape::StructWithTwoHandles> vector_of_structs_with_two_handles;
+  ::test::measuretape::StructWithTwoHandles struct_with_two_handles1;
   vector_of_structs_with_two_handles.push_back(std::move(struct_with_two_handles1));
-  ::measuretape::StructWithTwoHandles struct_with_two_handles2;
+  ::test::measuretape::StructWithTwoHandles struct_with_two_handles2;
   vector_of_structs_with_two_handles.push_back(std::move(struct_with_two_handles1));
-  ::measuretape::StructWithTwoHandles struct_with_two_handles3;
+  ::test::measuretape::StructWithTwoHandles struct_with_two_handles3;
   vector_of_structs_with_two_handles.push_back(std::move(struct_with_two_handles1));
   value.set_vector_of_structs_with_two_handles(std::move(vector_of_structs_with_two_handles));
 
@@ -389,7 +393,7 @@ TEST(MeasureTape, VectorOfStructsWithTwoHandles) {
 }
 
 TEST(MeasureTape, AnotherTopLevelThing) {
-  ::measuretape::AnotherTopLevelThing value;
+  ::test::measuretape::AnotherTopLevelThing value;
   auto size = Measure(value);
   EXPECT_EQ(size.num_bytes, 8);
   EXPECT_EQ(size.num_handles, 0);

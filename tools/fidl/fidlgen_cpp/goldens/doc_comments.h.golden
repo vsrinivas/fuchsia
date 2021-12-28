@@ -2,59 +2,59 @@
 
 #pragma once
 
-#include <fidl/fidl.test.doccomments/cpp/wire.h>
-#include <fidl/test/doccomments/cpp/natural_types.h>
+#include <fidl/test.doccomments/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/doccomments/cpp/natural_types.h>
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 class Struct;
 
 /// table comment #1
 ///
 /// table comment #3
-using Table = ::fidl::test::doccomments::Table;
+using Table = ::test::doccomments::Table;
 
 /// strict union comment #1
 ///
 /// strict union comment #3
-using StrictUnion = ::fidl::test::doccomments::StrictUnion;
+using StrictUnion = ::test::doccomments::StrictUnion;
 
 /// strict enum comment #1.
 ///
 /// strict enum comment #2.
-using MyStrictEnum = ::fidl::test::doccomments::MyStrictEnum;
+using MyStrictEnum = ::test::doccomments::MyStrictEnum;
 
 /// strict bits comment #1
 ///
 /// strict bits comment #2
-using MyStrictBits = ::fidl::test::doccomments::MyStrictBits;
+using MyStrictBits = ::test::doccomments::MyStrictBits;
 const static MyStrictBits MyStrictBitsMask =
-    ::fidl::test::doccomments::MyStrictBitsMask;
+    ::test::doccomments::MyStrictBitsMask;
 
 /// flexible enum comment #1.
 ///
 /// flexible enum comment #2.
-using MyFlexibleEnum = ::fidl::test::doccomments::MyFlexibleEnum;
+using MyFlexibleEnum = ::test::doccomments::MyFlexibleEnum;
 
 /// flexible bits comment #1
 ///
 /// flexible bits comment #2
-using MyFlexibleBits = ::fidl::test::doccomments::MyFlexibleBits;
+using MyFlexibleBits = ::test::doccomments::MyFlexibleBits;
 
 /// flexible union comment #1
 ///
 /// flexible union comment #3
-using FlexibleUnion = ::fidl::test::doccomments::FlexibleUnion;
+using FlexibleUnion = ::test::doccomments::FlexibleUnion;
 
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_doccomments::Struct>
+    ::test_doccomments::Struct>
     final {
  public:
   /// struct member comment #1
@@ -63,7 +63,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   int32_t Field = {};
 };
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 /// struct comment #1
 ///
 /// struct comment #3
@@ -81,7 +81,7 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   Struct() = default;
   Struct(int32_t Field) : storage_({Field}) {}
   Struct(::fidl::internal::DesignatedInitializationProxy<
-         ::fidl_test_doccomments::Struct>
+         ::test_doccomments::Struct>
              storage)
       : storage_(std::move(storage)) {}
   ~Struct() = default;
@@ -107,42 +107,40 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_doccomments::Struct>;
+  friend struct ::fidl::CodingTraits<::test_doccomments::Struct>;
 
-  ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_doccomments::Struct>
+  ::fidl::internal::DesignatedInitializationProxy<::test_doccomments::Struct>
       storage_ = {};
 };
 
 /// const comment #1
 ///
 /// const comment #3
-constexpr int32_t C = ::fidl::test::doccomments::C;
+constexpr int32_t C = ::test::doccomments::C;
 
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
+extern "C" const fidl_type_t test_doccomments_StructTable;
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::Struct> : public std::true_type {};
+struct IsFidlType<::test_doccomments::Struct> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_doccomments::Struct> final {
+struct ::fidl::internal::TypeTraits<::test_doccomments::Struct> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_doccomments_StructTable;
+      &test_doccomments_StructTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_doccomments::Struct> {
+struct CodingTraits<::test_doccomments::Struct> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_doccomments::Struct* value,
-      size_t offset,
+      EncoderImpl* encoder, ::test_doccomments::Struct* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -152,8 +150,8 @@ struct CodingTraits<::fidl_test_doccomments::Struct> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_doccomments::Struct* value, size_t offset) {
+  static void Decode(DecoderImpl* decoder, ::test_doccomments::Struct* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.Field, offset + 0);
   }
 };
@@ -162,8 +160,8 @@ struct CodingTraits<::fidl_test_doccomments::Struct> {
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::NaturalClientImpl<::fidl_test_doccomments::Interface>
-    final : public ::fidl::internal::NaturalClientBase {
+class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final
+    : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   /// method comment #1

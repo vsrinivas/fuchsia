@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.bitsconstants
+# test.bitsconstants
 
 
 
@@ -21,7 +21,7 @@
 ### BitsType [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.bitsconstants/bits_constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=3)*
+*Defined in [test.bitsconstants/bits_constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bits_constants.test.fidl;l=3)*
 
 
 

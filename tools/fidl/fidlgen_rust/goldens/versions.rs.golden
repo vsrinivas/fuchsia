@@ -512,7 +512,7 @@ impl ProtocolSynchronousProxy {
         ProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x6d892a52b86296e3)
+        self.client.send(&mut (), 0x567a8096af6e6139)
     }
 }
 
@@ -559,7 +559,7 @@ impl ProtocolProxy {
 
 impl ProtocolProxyInterface for ProtocolProxy {
     fn r#foo(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x6d892a52b86296e3)
+        self.client.send(&mut (), 0x567a8096af6e6139)
     }
 }
 
@@ -683,9 +683,9 @@ impl futures::Stream for ProtocolRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x6d892a52b86296e3 => {
+                0x567a8096af6e6139 => {
                     let mut req: () = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.versions/ProtocolFooRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.versions/ProtocolFooRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -731,10 +731,10 @@ impl ProtocolEncoder {
         out_bytes: &'a mut Vec<u8>,
         out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x6d892a52b86296e3);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x567a8096af6e6139);
         let mut body = ();
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.versions/ProtocolFooRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.versions/ProtocolFooRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -766,7 +766,7 @@ pub struct ServiceMarker;
 impl fidl::endpoints::ServiceMarker for ServiceMarker {
     type Proxy = ServiceProxy;
     type Request = ServiceRequest;
-    const SERVICE_NAME: &'static str = "fidl.test.versions.Service";
+    const SERVICE_NAME: &'static str = "test.versions.Service";
 }
 
 /// A request for one of the member protocols of Service.

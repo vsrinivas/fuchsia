@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.bindingsdenylist",
+  "name": "test.bindingsdenylist",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlySyzkaller",
+      "name": "test.bindingsdenylist/OnlySyzkaller",
       "naming_context": [
         "OnlySyzkaller"
       ],
@@ -96,7 +96,7 @@
   ],
   "const_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/AllBindings",
+      "name": "test.bindingsdenylist/AllBindings",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 9,
@@ -172,7 +172,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyDart",
+      "name": "test.bindingsdenylist/OnlyDart",
       "naming_context": [
         "OnlyDart"
       ],
@@ -243,7 +243,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps",
+      "name": "test.bindingsdenylist/OnlyLibfuzzerAndDeps",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 35,
@@ -286,7 +286,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 2054945783954685224,
+          "ordinal": 2342407566057198902,
           "name": "LibfuzzerNeedsNonemptyProtocol",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
@@ -302,7 +302,7 @@
       ]
     },
     {
-      "name": "fidl.test.bindingsdenylist/OnlyCppAndDeps",
+      "name": "test.bindingsdenylist/OnlyCppAndDeps",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 42,
@@ -348,7 +348,7 @@
   ],
   "service_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyHlcpp",
+      "name": "test.bindingsdenylist/OnlyHlcpp",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
         "line": 45,
@@ -393,7 +393,7 @@
   ],
   "struct_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyGo",
+      "name": "test.bindingsdenylist/OnlyGo",
       "naming_context": [
         "OnlyGo"
       ],
@@ -462,7 +462,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyRust",
+      "name": "test.bindingsdenylist/OnlyRust",
       "naming_context": [
         "OnlyRust"
       ],
@@ -530,7 +530,7 @@
   ],
   "union_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyLlcpp",
+      "name": "test.bindingsdenylist/OnlyLlcpp",
       "naming_context": [
         "OnlyLlcpp"
       ],
@@ -632,25 +632,25 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.bindingsdenylist/OnlySyzkaller",
-    "fidl.test.bindingsdenylist/OnlyRust",
-    "fidl.test.bindingsdenylist/OnlyLlcpp",
-    "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps",
-    "fidl.test.bindingsdenylist/OnlyHlcpp",
-    "fidl.test.bindingsdenylist/OnlyGo",
-    "fidl.test.bindingsdenylist/OnlyDart",
-    "fidl.test.bindingsdenylist/OnlyCppAndDeps",
-    "fidl.test.bindingsdenylist/AllBindings"
+    "test.bindingsdenylist/OnlySyzkaller",
+    "test.bindingsdenylist/OnlyRust",
+    "test.bindingsdenylist/OnlyLlcpp",
+    "test.bindingsdenylist/OnlyLibfuzzerAndDeps",
+    "test.bindingsdenylist/OnlyHlcpp",
+    "test.bindingsdenylist/OnlyGo",
+    "test.bindingsdenylist/OnlyDart",
+    "test.bindingsdenylist/OnlyCppAndDeps",
+    "test.bindingsdenylist/AllBindings"
   ],
   "declarations": {
-    "fidl.test.bindingsdenylist/OnlySyzkaller": "bits",
-    "fidl.test.bindingsdenylist/AllBindings": "const",
-    "fidl.test.bindingsdenylist/OnlyDart": "enum",
-    "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
-    "fidl.test.bindingsdenylist/OnlyCppAndDeps": "interface",
-    "fidl.test.bindingsdenylist/OnlyHlcpp": "service",
-    "fidl.test.bindingsdenylist/OnlyGo": "struct",
-    "fidl.test.bindingsdenylist/OnlyRust": "table",
-    "fidl.test.bindingsdenylist/OnlyLlcpp": "union"
+    "test.bindingsdenylist/OnlySyzkaller": "bits",
+    "test.bindingsdenylist/AllBindings": "const",
+    "test.bindingsdenylist/OnlyDart": "enum",
+    "test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
+    "test.bindingsdenylist/OnlyCppAndDeps": "interface",
+    "test.bindingsdenylist/OnlyHlcpp": "service",
+    "test.bindingsdenylist/OnlyGo": "struct",
+    "test.bindingsdenylist/OnlyRust": "table",
+    "test.bindingsdenylist/OnlyLlcpp": "union"
   }
 }

@@ -249,7 +249,7 @@ impl fidl::endpoints::ProtocolMarker for ExampleProtocolMarker {
 }
 
 pub trait ExampleProtocolProxyInterface: Send + Sync {
-    fn r#method(&self, arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error>;
+    fn r#method(&self, arg: &mut fidl_test_exampleusing::Empty) -> Result<(), fidl::Error>;
 }
 
 #[derive(Debug)]
@@ -274,8 +274,8 @@ impl ExampleProtocolSynchronousProxy {
     pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ExampleProtocolEvent, fidl::Error> {
         ExampleProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
-    pub fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
-        self.client.send(&mut (arg,), 0x207d2f81c0ddb184)
+    pub fn r#method(&self, mut arg: &mut fidl_test_exampleusing::Empty) -> Result<(), fidl::Error> {
+        self.client.send(&mut (arg,), 0x53978e6fc7476749)
     }
 }
 
@@ -315,14 +315,14 @@ impl ExampleProtocolProxy {
     pub fn take_event_stream(&self) -> ExampleProtocolEventStream {
         ExampleProtocolEventStream { event_receiver: self.client.take_event_receiver() }
     }
-    pub fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
+    pub fn r#method(&self, mut arg: &mut fidl_test_exampleusing::Empty) -> Result<(), fidl::Error> {
         ExampleProtocolProxyInterface::r#method(self, arg)
     }
 }
 
 impl ExampleProtocolProxyInterface for ExampleProtocolProxy {
-    fn r#method(&self, mut arg: &mut fidl_exampleusing::Empty) -> Result<(), fidl::Error> {
-        self.client.send(&mut (arg), 0x207d2f81c0ddb184)
+    fn r#method(&self, mut arg: &mut fidl_test_exampleusing::Empty) -> Result<(), fidl::Error> {
+        self.client.send(&mut (arg), 0x53978e6fc7476749)
     }
 }
 
@@ -447,10 +447,10 @@ impl futures::Stream for ExampleProtocolRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x207d2f81c0ddb184 => {
-                    let mut req: (fidl_exampleusing::Empty,) =
+                0x53978e6fc7476749 => {
+                    let mut req: (fidl_test_exampleusing::Empty,) =
                         fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.placementofattributes/ExampleProtocolMethodRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.placementofattributes/ExampleProtocolMethodRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -469,12 +469,14 @@ impl futures::Stream for ExampleProtocolRequestStream {
 }
 #[derive(Debug)]
 pub enum ExampleProtocolRequest {
-    Method { arg: fidl_exampleusing::Empty, control_handle: ExampleProtocolControlHandle },
+    Method { arg: fidl_test_exampleusing::Empty, control_handle: ExampleProtocolControlHandle },
 }
 
 impl ExampleProtocolRequest {
     #[allow(irrefutable_let_patterns)]
-    pub fn into_method(self) -> Option<(fidl_exampleusing::Empty, ExampleProtocolControlHandle)> {
+    pub fn into_method(
+        self,
+    ) -> Option<(fidl_test_exampleusing::Empty, ExampleProtocolControlHandle)> {
         if let ExampleProtocolRequest::Method { arg, control_handle } = self {
             Some((arg, control_handle))
         } else {
@@ -496,12 +498,12 @@ impl ExampleProtocolEncoder {
     pub fn encode_method_request<'a>(
         out_bytes: &'a mut Vec<u8>,
         out_handles: &'a mut Vec<fidl::HandleDisposition<'static>>,
-        mut in_arg: &mut fidl_exampleusing::Empty,
+        mut in_arg: &mut fidl_test_exampleusing::Empty,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(0, 0x207d2f81c0ddb184);
+        let header = fidl::encoding::TransactionHeader::new(0, 0x53978e6fc7476749);
         let mut body = ((in_arg),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.placementofattributes/ExampleProtocolMethodRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.placementofattributes/ExampleProtocolMethodRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);

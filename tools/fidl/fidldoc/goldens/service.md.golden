@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.service
+# test.service
 
 
 
 ## **PROTOCOLS**
 
 ## FirstProtocol {#FirstProtocol}
-*Defined in [fidl.test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=8)*
+*Defined in [test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=8)*
 
 
 
@@ -23,7 +23,7 @@
 
 
 ## SecondProtocol {#SecondProtocol}
-*Defined in [fidl.test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=16)*
+*Defined in [test.service/service.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/service.test.fidl;l=16)*
 
 
 

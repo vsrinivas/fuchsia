@@ -2,25 +2,25 @@
 
 #pragma once
 
-#include <fidl/fidl.test.typealiases/cpp/wire.h>
-#include <fidl/test/typealiases/cpp/natural_types.h>
+#include <fidl/test.typealiases/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
-#include <someotherlibrary/cpp/fidl_v2.h>
+#include <test/someotherlibrary/cpp/fidl_v2.h>
+#include <test/typealiases/cpp/natural_types.h>
 
-namespace fidl_test_typealiases {
+namespace test_typealiases {
 class ExampleOfUseOfAliases;
 
-using obj_type = ::fidl::test::typealiases::obj_type;
+using obj_type = ::test::typealiases::obj_type;
 
-}  // namespace fidl_test_typealiases
+}  // namespace test_typealiases
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_typealiases::ExampleOfUseOfAliases>
+    ::test_typealiases::ExampleOfUseOfAliases>
     final {
  public:
   uint32_t field_of_u32 = {};
@@ -31,7 +31,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
 
   ::std::vector<::std::string> field_of_vec_of_strings_at_most_5 = {};
 
-  ::std::vector<::someotherlibrary::ReferenceMe>
+  ::std::vector<::test_someotherlibrary::ReferenceMe>
       field_of_vec_of_ref_me_at_most_5 = {};
 
   ::zx::channel field_of_channel = {};
@@ -41,7 +41,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   ::zx::channel field_of_nullable_client_end = {};
 };
 
-namespace fidl_test_typealiases {
+namespace test_typealiases {
 class ExampleOfUseOfAliases final
     : public ::fidl::internal::CodableBase<ExampleOfUseOfAliases> {
  private:
@@ -60,7 +60,7 @@ class ExampleOfUseOfAliases final
       ::std::vector<::std::string> field_of_vec_of_strings,
       ::std::vector<::std::string> field_of_vec_of_strings_at_most_nine,
       ::std::vector<::std::string> field_of_vec_of_strings_at_most_5,
-      ::std::vector<::someotherlibrary::ReferenceMe>
+      ::std::vector<::test_someotherlibrary::ReferenceMe>
           field_of_vec_of_ref_me_at_most_5,
       ::zx::channel&& field_of_channel, ::zx::channel&& field_of_client_end,
       ::zx::channel&& field_of_nullable_client_end)
@@ -71,7 +71,7 @@ class ExampleOfUseOfAliases final
                   std::move(field_of_channel), std::move(field_of_client_end),
                   std::move(field_of_nullable_client_end)}) {}
   ExampleOfUseOfAliases(::fidl::internal::DesignatedInitializationProxy<
-                        ::fidl_test_typealiases::ExampleOfUseOfAliases>
+                        ::test_typealiases::ExampleOfUseOfAliases>
                             storage)
       : storage_(std::move(storage)) {}
   ~ExampleOfUseOfAliases() = default;
@@ -134,18 +134,18 @@ class ExampleOfUseOfAliases final
     return *this;
   }
 
-  const ::std::vector<::someotherlibrary::ReferenceMe>&
+  const ::std::vector<::test_someotherlibrary::ReferenceMe>&
   field_of_vec_of_ref_me_at_most_5() const {
     return storage_.field_of_vec_of_ref_me_at_most_5;
   }
 
-  ::std::vector<::someotherlibrary::ReferenceMe>&
+  ::std::vector<::test_someotherlibrary::ReferenceMe>&
   field_of_vec_of_ref_me_at_most_5() {
     return storage_.field_of_vec_of_ref_me_at_most_5;
   }
 
   ExampleOfUseOfAliases& set_field_of_vec_of_ref_me_at_most_5(
-      ::std::vector<::someotherlibrary::ReferenceMe> _value) {
+      ::std::vector<::test_someotherlibrary::ReferenceMe> _value) {
     storage_.field_of_vec_of_ref_me_at_most_5 = std::move(_value);
     return *this;
   }
@@ -187,44 +187,42 @@ class ExampleOfUseOfAliases final
   }
 
  private:
-  friend struct ::fidl::CodingTraits<
-      ::fidl_test_typealiases::ExampleOfUseOfAliases>;
+  friend struct ::fidl::CodingTraits<::test_typealiases::ExampleOfUseOfAliases>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_typealiases::ExampleOfUseOfAliases>
+      ::test_typealiases::ExampleOfUseOfAliases>
       storage_ = {};
 };
 
-}  // namespace fidl_test_typealiases
+}  // namespace test_typealiases
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
+extern "C" const fidl_type_t test_typealiases_ExampleOfUseOfAliasesTable;
 
 template <>
-struct IsResource<::fidl_test_typealiases::ExampleOfUseOfAliases>
+struct IsResource<::test_typealiases::ExampleOfUseOfAliases>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_typealiases::ExampleOfUseOfAliases>
+struct IsFidlType<::test_typealiases::ExampleOfUseOfAliases>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::fidl_test_typealiases::ExampleOfUseOfAliases>
+struct ::fidl::internal::TypeTraits<::test_typealiases::ExampleOfUseOfAliases>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_typealiases_ExampleOfUseOfAliasesTable;
+      &test_typealiases_ExampleOfUseOfAliasesTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_typealiases::ExampleOfUseOfAliases> {
+struct CodingTraits<::test_typealiases::ExampleOfUseOfAliases> {
   static constexpr size_t inline_size_v1_no_ee = 88;
   static constexpr size_t inline_size_v2 = 88;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder,
-      ::fidl_test_typealiases::ExampleOfUseOfAliases* value, size_t offset,
+      EncoderImpl* encoder, ::test_typealiases::ExampleOfUseOfAliases* value,
+      size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -284,7 +282,7 @@ struct CodingTraits<::fidl_test_typealiases::ExampleOfUseOfAliases> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_typealiases::ExampleOfUseOfAliases* value,
+                     ::test_typealiases::ExampleOfUseOfAliases* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.field_of_u32, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_strings,

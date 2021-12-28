@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.placementofattributes/cpp/wire.h>
+#include <fidl/test.placementofattributes/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,29 +10,29 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
-    fidl_test_placementofattributes_decoder_encoders = {
+    test_placementofattributes_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
-                "::fidl_test_placementofattributes::wire::ExampleTable",
+                "::test_placementofattributes::wire::ExampleTable",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_placementofattributes::wire::ExampleTable>,
+                ::test_placementofattributes::wire::ExampleTable>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
-                "::fidl_test_placementofattributes::wire::ExampleStruct",
+                "::test_placementofattributes::wire::ExampleStruct",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_placementofattributes::wire::ExampleStruct>,
+                ::test_placementofattributes::wire::ExampleStruct>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
+            .fidl_type_name = "::fidl::WireRequest<::test_"
                               "placementofattributes::ExampleProtocol::Method>",
             .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::fidl_test_placementofattributes::
-                                        ExampleProtocol::Method>>,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::test_placementofattributes::ExampleProtocol::Method>>,
         },
 };
 

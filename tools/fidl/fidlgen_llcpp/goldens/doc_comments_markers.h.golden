@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_doccomments {
+namespace test_doccomments {
 
 /// interface comment #1
 ///
@@ -21,7 +21,7 @@ class Interface final {
     Method() = delete;
 
    public:
-    using Protocol = ::fidl_test_doccomments::Interface;
+    using Protocol = ::test_doccomments::Interface;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -32,9 +32,9 @@ class Interface final {
     OnEvent() = delete;
 
    public:
-    using Protocol = ::fidl_test_doccomments::Interface;
+    using Protocol = ::test_doccomments::Interface;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments

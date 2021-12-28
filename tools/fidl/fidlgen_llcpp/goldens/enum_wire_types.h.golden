@@ -18,9 +18,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.enum/cpp/markers.h>
+#include <fidl/test.enum/cpp/markers.h>
 
-namespace fidl_test_enum {
+namespace test_enum {
 namespace wire {
 
 enum class MyStrictEnum : uint32_t {
@@ -61,15 +61,15 @@ class MyFlexibleEnumWithCustomUnknown final {
  private:
   uint32_t value_;
 };
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
+constexpr const ::test_enum::wire::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::kFoo =
-        ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(1u);
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
+        ::test_enum::wire::MyFlexibleEnumWithCustomUnknown(1u);
+constexpr const ::test_enum::wire::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::kBar =
-        ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(2u);
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown
+        ::test_enum::wire::MyFlexibleEnumWithCustomUnknown(2u);
+constexpr const ::test_enum::wire::MyFlexibleEnumWithCustomUnknown
     MyFlexibleEnumWithCustomUnknown::kCustomUnknown =
-        ::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown(3u);
+        ::test_enum::wire::MyFlexibleEnumWithCustomUnknown(3u);
 
 class MyFlexibleEnum final {
  public:
@@ -99,10 +99,10 @@ class MyFlexibleEnum final {
  private:
   uint32_t value_;
 };
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kFoo =
-    ::fidl_test_enum::wire::MyFlexibleEnum(1u);
-constexpr const ::fidl_test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kBar =
-    ::fidl_test_enum::wire::MyFlexibleEnum(2u);
+constexpr const ::test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kFoo =
+    ::test_enum::wire::MyFlexibleEnum(1u);
+constexpr const ::test_enum::wire::MyFlexibleEnum MyFlexibleEnum::kBar =
+    ::test_enum::wire::MyFlexibleEnum(2u);
 
 class MyEmptyFlexibleEnum final {
  public:
@@ -121,35 +121,33 @@ class MyEmptyFlexibleEnum final {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_enum
+}  // namespace test_enum
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_enum::wire::MyStrictEnum>
-    : public std::true_type {};
+struct IsFidlType<::test_enum::wire::MyStrictEnum> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_enum::wire::MyStrictEnum>
+struct ContainsHandle<::test_enum::wire::MyStrictEnum>
     : public std::false_type {};
 
 template <>
-struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown>
+struct IsFidlType<::test_enum::wire::MyFlexibleEnumWithCustomUnknown>
     : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown>
+struct ContainsHandle<::test_enum::wire::MyFlexibleEnumWithCustomUnknown>
     : public std::false_type {};
 
 template <>
-struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnum>
-    : public std::true_type {};
+struct IsFidlType<::test_enum::wire::MyFlexibleEnum> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_enum::wire::MyFlexibleEnum>
+struct ContainsHandle<::test_enum::wire::MyFlexibleEnum>
     : public std::false_type {};
 
 template <>
-struct IsFidlType<::fidl_test_enum::wire::MyEmptyFlexibleEnum>
+struct IsFidlType<::test_enum::wire::MyEmptyFlexibleEnum>
     : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_enum::wire::MyEmptyFlexibleEnum>
+struct ContainsHandle<::test_enum::wire::MyEmptyFlexibleEnum>
     : public std::false_type {};
 
 }  // namespace fidl

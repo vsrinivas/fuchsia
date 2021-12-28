@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace inheritance {
 #ifdef __Fuchsia__
@@ -26,7 +25,7 @@ using subHandle = ::fidl::InterfaceHandle<sub>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_superfooRequestMessageTable;
+    test_inheritance_superfooRequestMessageTable;
 
 }  // namespace _internal
 class super_RequestEncoder {
@@ -51,8 +50,8 @@ class super_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::inheritance::_internal::
-                   fidl_test_inheritance_superfooRequestMessageTable,
+               &::test::inheritance::_internal::
+                   test_inheritance_superfooRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -61,7 +60,7 @@ class super_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_superfooResponseMessageTable;
+    test_inheritance_superfooResponseMessageTable;
 
 }  // namespace _internal
 class super_ResponseEncoder {
@@ -86,8 +85,8 @@ class super_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::inheritance::_internal::
-                   fidl_test_inheritance_superfooResponseMessageTable,
+               &::test::inheritance::_internal::
+                   test_inheritance_superfooResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -98,8 +97,7 @@ class super_ResponseEncoder {
 #ifdef __Fuchsia__
 
 namespace _internal {
-__LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_subfooRequestMessageTable;
+__LOCAL extern "C" const fidl_type_t test_inheritance_subfooRequestMessageTable;
 
 }  // namespace _internal
 class sub_RequestEncoder {
@@ -124,8 +122,8 @@ class sub_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::inheritance::_internal::
-                   fidl_test_inheritance_subfooRequestMessageTable,
+               &::test::inheritance::_internal::
+                   test_inheritance_subfooRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -134,7 +132,7 @@ class sub_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritance_subfooResponseMessageTable;
+    test_inheritance_subfooResponseMessageTable;
 
 }  // namespace _internal
 class sub_ResponseEncoder {
@@ -159,8 +157,8 @@ class sub_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::inheritance::_internal::
-                   fidl_test_inheritance_subfooResponseMessageTable,
+               &::test::inheritance::_internal::
+                   test_inheritance_subfooResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -170,10 +168,12 @@ class sub_ResponseEncoder {
 
 }  // namespace inheritance
 }  // namespace test
+namespace fidl {
 
 //
 // Proxies and stubs declarations
 //
+}  // namespace fidl
 namespace test {
 namespace inheritance {
 #ifdef __Fuchsia__
@@ -187,7 +187,7 @@ using superSyncPtr = ::fidl::SynchronousInterfacePtr<super>;
 class super_SyncProxy;
 
 namespace internal {
-constexpr uint64_t ksuper_foo_Ordinal = 0x45602cf3b581d6ablu;
+constexpr uint64_t ksuper_foo_Ordinal = 0x68a61c2a230db8b8lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -202,7 +202,7 @@ using subSyncPtr = ::fidl::SynchronousInterfacePtr<sub>;
 class sub_SyncProxy;
 
 namespace internal {
-constexpr uint64_t ksub_foo_Ordinal = 0x45602cf3b581d6ablu;
+constexpr uint64_t ksub_foo_Ordinal = 0x68a61c2a230db8b8lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -210,10 +210,10 @@ constexpr uint64_t ksub_foo_Ordinal = 0x45602cf3b581d6ablu;
 
 class super {
  public:
-  using Proxy_ = ::fidl::test::inheritance::super_Proxy;
-  using Stub_ = ::fidl::test::inheritance::super_Stub;
-  using EventSender_ = ::fidl::test::inheritance::super_EventSender;
-  using Sync_ = ::fidl::test::inheritance::super_Sync;
+  using Proxy_ = ::test::inheritance::super_Proxy;
+  using Stub_ = ::test::inheritance::super_Stub;
+  using EventSender_ = ::test::inheritance::super_EventSender;
+  using Sync_ = ::test::inheritance::super_Sync;
   virtual ~super();
   using fooCallback = fit::function<void(int64_t)>;
 
@@ -243,7 +243,7 @@ class super_EventSender {
 
 class super_Sync {
  public:
-  using Proxy_ = ::fidl::test::inheritance::super_SyncProxy;
+  using Proxy_ = ::test::inheritance::super_SyncProxy;
   virtual ~super_Sync();
   virtual zx_status_t foo(::std::string s, int64_t* out_y) = 0;
 };
@@ -254,36 +254,35 @@ class super_Proxy final : public ::fidl::internal::Proxy, public super {
   ~super_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.inheritance/super.foo
+  // cts-coverage-fidl-name:test.inheritance/super.foo
   void foo(::std::string s, fooCallback callback) override;
 
  private:
-  super_Proxy(const ::fidl::test::inheritance::super_Proxy&) = delete;
-  super_Proxy& operator=(const ::fidl::test::inheritance::super_Proxy&) =
-      delete;
+  super_Proxy(const ::test::inheritance::super_Proxy&) = delete;
+  super_Proxy& operator=(const ::test::inheritance::super_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class super_Stub final : public ::fidl::internal::Stub,
-                         public ::fidl::test::inheritance::super_EventSender {
+                         public ::test::inheritance::super_EventSender {
  public:
-  typedef class ::fidl::test::inheritance::super super_clazz;
-  explicit super_Stub(::fidl::test::inheritance::super_Stub::super_clazz* impl);
+  typedef class ::test::inheritance::super super_clazz;
+  explicit super_Stub(::test::inheritance::super_Stub::super_clazz* impl);
   ~super_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::inheritance::super_Stub::super_clazz* impl_;
+  ::test::inheritance::super_Stub::super_clazz* impl_;
 };
 
-class super_SyncProxy : public ::fidl::test::inheritance::super_Sync {
+class super_SyncProxy : public ::test::inheritance::super_Sync {
  public:
   explicit super_SyncProxy(::zx::channel channel);
   ~super_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.inheritance/super.foo
+  // cts-coverage-fidl-name:test.inheritance/super.foo
   zx_status_t foo(::std::string s, int64_t* out_y) override;
 
  private:
@@ -296,10 +295,10 @@ class super_SyncProxy : public ::fidl::test::inheritance::super_Sync {
 
 class sub {
  public:
-  using Proxy_ = ::fidl::test::inheritance::sub_Proxy;
-  using Stub_ = ::fidl::test::inheritance::sub_Stub;
-  using EventSender_ = ::fidl::test::inheritance::sub_EventSender;
-  using Sync_ = ::fidl::test::inheritance::sub_Sync;
+  using Proxy_ = ::test::inheritance::sub_Proxy;
+  using Stub_ = ::test::inheritance::sub_Stub;
+  using EventSender_ = ::test::inheritance::sub_EventSender;
+  using Sync_ = ::test::inheritance::sub_Sync;
   virtual ~sub();
   using fooCallback = fit::function<void(int64_t)>;
 
@@ -329,7 +328,7 @@ class sub_EventSender {
 
 class sub_Sync {
  public:
-  using Proxy_ = ::fidl::test::inheritance::sub_SyncProxy;
+  using Proxy_ = ::test::inheritance::sub_SyncProxy;
   virtual ~sub_Sync();
   virtual zx_status_t foo(::std::string s, int64_t* out_y) = 0;
 };
@@ -340,35 +339,35 @@ class sub_Proxy final : public ::fidl::internal::Proxy, public sub {
   ~sub_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.inheritance/sub.foo
+  // cts-coverage-fidl-name:test.inheritance/sub.foo
   void foo(::std::string s, fooCallback callback) override;
 
  private:
-  sub_Proxy(const ::fidl::test::inheritance::sub_Proxy&) = delete;
-  sub_Proxy& operator=(const ::fidl::test::inheritance::sub_Proxy&) = delete;
+  sub_Proxy(const ::test::inheritance::sub_Proxy&) = delete;
+  sub_Proxy& operator=(const ::test::inheritance::sub_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class sub_Stub final : public ::fidl::internal::Stub,
-                       public ::fidl::test::inheritance::sub_EventSender {
+                       public ::test::inheritance::sub_EventSender {
  public:
-  typedef class ::fidl::test::inheritance::sub sub_clazz;
-  explicit sub_Stub(::fidl::test::inheritance::sub_Stub::sub_clazz* impl);
+  typedef class ::test::inheritance::sub sub_clazz;
+  explicit sub_Stub(::test::inheritance::sub_Stub::sub_clazz* impl);
   ~sub_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::inheritance::sub_Stub::sub_clazz* impl_;
+  ::test::inheritance::sub_Stub::sub_clazz* impl_;
 };
 
-class sub_SyncProxy : public ::fidl::test::inheritance::sub_Sync {
+class sub_SyncProxy : public ::test::inheritance::sub_Sync {
  public:
   explicit sub_SyncProxy(::zx::channel channel);
   ~sub_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.inheritance/sub.foo
+  // cts-coverage-fidl-name:test.inheritance/sub.foo
   zx_status_t foo(::std::string s, int64_t* out_y) override;
 
  private:
@@ -379,4 +378,3 @@ class sub_SyncProxy : public ::fidl::test::inheritance::sub_Sync {
 
 }  // namespace inheritance
 }  // namespace test
-}  // namespace fidl

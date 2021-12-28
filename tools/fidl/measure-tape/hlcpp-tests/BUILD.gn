@@ -21,8 +21,8 @@ measure_tape("measure_tape_for_toplevelunion") {
   testonly = true
   target_binding = "hlcpp"
   target_types = [
-    "measuretape/TopLevelUnion",
-    "measuretape/AnotherTopLevelThing",
+    "test.measuretape/TopLevelUnion",
+    "test.measuretape/AnotherTopLevelThing",
   ]
   fidls = [ "//tools/fidl/measure-tape/testdata:measuretape" ]
 }

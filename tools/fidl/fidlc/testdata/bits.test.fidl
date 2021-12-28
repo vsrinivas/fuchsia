@@ -1,4 +1,4 @@
-library fidl.test.bits;
+library test.bits;
 
 type MyBits = strict bits : uint32 {
     MY_FIRST_BIT = 1;

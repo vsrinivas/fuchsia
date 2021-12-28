@@ -3,80 +3,80 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_StrictFooTable;
-__LOCAL extern const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_StrictFooNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
-__LOCAL extern const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_FlexibleFooTable;
-__LOCAL extern const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_FlexibleFooNullableRefTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+__LOCAL extern const struct FidlCodedXUnion test_requestflexibleenvelope_StrictFooTable;
+__LOCAL extern const struct FidlCodedXUnion test_requestflexibleenvelope_StrictFooNullableRefTable;
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+__LOCAL extern const struct FidlCodedXUnion test_requestflexibleenvelope_FlexibleFooTable;
+__LOCAL extern const struct FidlCodedXUnion test_requestflexibleenvelope_FlexibleFooNullableRefTable;
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
 
 static const struct FidlCodedString String4294967295nonnullableTable = {.tag=kFidlTypeString, .max_size=4294967295u, .nullable=kFidlNullability_Nonnullable};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
-static const struct FidlStructElement Fields85fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_StrictFooTable)}}
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable;
+static const struct FidlStructElement Fields80test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_StrictFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields85fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequestMessage"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields80test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
-static const struct FidlStructElement Fields86fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_FlexibleFooTable)}}
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable;
+static const struct FidlStructElement Fields81test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_FlexibleFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields86fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponseMessage"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields81test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleResponseMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
-static const struct FidlStructElement Fields85fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_FlexibleFooTable)}}
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable;
+static const struct FidlStructElement Fields80test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_FlexibleFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields85fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequestMessage"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields80test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequestMessage"};
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
-static const struct FidlStructElement Fields86fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessage[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_StrictFooTable)}}
+__LOCAL extern const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable;
+static const struct FidlStructElement Fields81test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessage[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=16u, .offset_v2=16u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_StrictFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields86fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponseMessage"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .elements=Fields81test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseMessage, .element_count=1u, .size_v1=40u, .size_v2=32u, .name="test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictResponseMessage"};
 
 
-static const struct FidlXUnionField Fields43fidl_test_requestflexibleenvelope_StrictFoo[] = {
+static const struct FidlXUnionField Fields38test_requestflexibleenvelope_StrictFoo[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_StrictFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields43fidl_test_requestflexibleenvelope_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.requestflexibleenvelope/StrictFoo", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields54fidl_test_requestflexibleenvelope_StrictFooNullableRef[] = {
+const struct FidlCodedXUnion test_requestflexibleenvelope_StrictFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields38test_requestflexibleenvelope_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="test.requestflexibleenvelope/StrictFoo", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields49test_requestflexibleenvelope_StrictFooNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_StrictFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields54fidl_test_requestflexibleenvelope_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.requestflexibleenvelope/StrictFoo", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlStructElement Fields78fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_StrictFooTable)}}
+const struct FidlCodedXUnion test_requestflexibleenvelope_StrictFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields49test_requestflexibleenvelope_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="test.requestflexibleenvelope/StrictFoo", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlStructElement Fields73test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_StrictFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields78fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequest, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields73test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequest, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest"};
 
-static const struct FidlStructElement Fields82fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_StrictFooTable)}}
+static const struct FidlStructElement Fields77test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_StrictFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields82fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields77test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse"};
 
-static const struct FidlXUnionField Fields45fidl_test_requestflexibleenvelope_FlexibleFoo[] = {
+static const struct FidlXUnionField Fields40test_requestflexibleenvelope_FlexibleFoo[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_FlexibleFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields45fidl_test_requestflexibleenvelope_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.requestflexibleenvelope/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlXUnionField Fields56fidl_test_requestflexibleenvelope_FlexibleFooNullableRef[] = {
+const struct FidlCodedXUnion test_requestflexibleenvelope_FlexibleFooTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields40test_requestflexibleenvelope_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="test.requestflexibleenvelope/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields51test_requestflexibleenvelope_FlexibleFooNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&String4294967295nonnullableTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
 };
-const struct FidlCodedXUnion fidl_test_requestflexibleenvelope_FlexibleFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields56fidl_test_requestflexibleenvelope_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.requestflexibleenvelope/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
-static const struct FidlStructElement Fields82fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponse[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_FlexibleFooTable)}}
+const struct FidlCodedXUnion test_requestflexibleenvelope_FlexibleFooNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields51test_requestflexibleenvelope_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="test.requestflexibleenvelope/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlStructElement Fields77test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponse[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_FlexibleFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields82fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields77test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponse, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse"};
 
-static const struct FidlStructElement Fields78fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequest[] = {
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_requestflexibleenvelope_FlexibleFooTable)}}
+static const struct FidlStructElement Fields73test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&test_requestflexibleenvelope_FlexibleFooTable)}}
 };
-const struct FidlCodedStruct fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields78fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequest, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest"};
+const struct FidlCodedStruct test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_ContainsEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=Fields73test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequest, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest"};
 

@@ -1,4 +1,4 @@
-library dependent;
+library test.dependent;
 
 alias aliased_string = string;
 

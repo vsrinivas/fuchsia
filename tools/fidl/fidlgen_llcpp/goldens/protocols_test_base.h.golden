@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.protocols/cpp/wire.h>
-namespace fidl_test_protocols {
+#include <fidl/test.protocols/cpp/wire.h>
+namespace test_protocols {
 namespace testing {
 
 class HandleRightsProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol> {
+    : public ::fidl::WireServer<::test_protocols::HandleRightsProtocol> {
  public:
   virtual ~HandleRightsProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -26,7 +26,7 @@ class HandleRightsProtocol_TestBase
 
 class WithAndWithoutRequestResponse_TestBase
     : public ::fidl::WireServer<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse> {
+          ::test_protocols::WithAndWithoutRequestResponse> {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -64,7 +64,7 @@ class WithAndWithoutRequestResponse_TestBase
 };
 
 class Transitional_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::Transitional> {
+    : public ::fidl::WireServer<::test_protocols::Transitional> {
  public:
   virtual ~Transitional_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -80,7 +80,7 @@ class Transitional_TestBase
 };
 
 class MethodWithUnion_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion> {
+    : public ::fidl::WireServer<::test_protocols::MethodWithUnion> {
  public:
   virtual ~MethodWithUnion_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -92,7 +92,7 @@ class MethodWithUnion_TestBase
 };
 
 class WithProtocolEnds_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds> {
+    : public ::fidl::WireServer<::test_protocols::WithProtocolEnds> {
  public:
   virtual ~WithProtocolEnds_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -113,7 +113,7 @@ class WithProtocolEnds_TestBase
 };
 
 class ManyParameters_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::ManyParameters> {
+    : public ::fidl::WireServer<::test_protocols::ManyParameters> {
  public:
   virtual ~ManyParameters_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -125,7 +125,7 @@ class ManyParameters_TestBase
 };
 
 class WithErrorSyntax_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax> {
+    : public ::fidl::WireServer<::test_protocols::WithErrorSyntax> {
  public:
   virtual ~WithErrorSyntax_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -152,7 +152,7 @@ class WithErrorSyntax_TestBase
 };
 
 class DiscoverableProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol> {
+    : public ::fidl::WireServer<::test_protocols::DiscoverableProtocol> {
  public:
   virtual ~DiscoverableProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -164,7 +164,7 @@ class DiscoverableProtocol_TestBase
 };
 
 class ChannelProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol> {
+    : public ::fidl::WireServer<::test_protocols::ChannelProtocol> {
  public:
   virtual ~ChannelProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -187,4 +187,4 @@ class ChannelProtocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_protocols
+}  // namespace test_protocols

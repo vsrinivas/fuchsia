@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include <fidl/test/handles/cpp/fidl.h>
+#include <test/handles/cpp/fidl.h>
 #include <zx/cpp/fidl.h>
-namespace fidl {
 namespace test {
 namespace handles {
 namespace testing {
-class SomeProtocol_TestBase : public ::fidl::test::handles::SomeProtocol {
+class SomeProtocol_TestBase : public ::test::handles::SomeProtocol {
  public:
   virtual ~SomeProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -16,4 +15,3 @@ class SomeProtocol_TestBase : public ::fidl::test::handles::SomeProtocol {
 }  // namespace testing
 }  // namespace handles
 }  // namespace test
-}  // namespace fidl

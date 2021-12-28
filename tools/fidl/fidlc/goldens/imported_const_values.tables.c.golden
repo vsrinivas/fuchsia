@@ -3,11 +3,11 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_importedconstvalues_MyStructTable;
-__LOCAL extern const struct FidlCodedEnum dependent_MyEnumTable;
-__LOCAL extern const struct FidlCodedBits dependent_MyBitsTable;
+__LOCAL extern const struct FidlCodedStruct test_importedconstvalues_MyStructTable;
+__LOCAL extern const struct FidlCodedEnum test_dependent_MyEnumTable;
+__LOCAL extern const struct FidlCodedBits test_dependent_MyBitsTable;
 
 
 
-const struct FidlCodedStruct fidl_test_importedconstvalues_MyStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="fidl.test.importedconstvalues/MyStruct"};
+const struct FidlCodedStruct test_importedconstvalues_MyStructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.importedconstvalues/MyStruct"};
 

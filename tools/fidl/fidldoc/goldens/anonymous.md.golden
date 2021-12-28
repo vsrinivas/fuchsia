@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.anonymous
+# test.anonymous
 
 
 
 ## **PROTOCOLS**
 
 ## SomeProtocol {#SomeProtocol}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=25)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=25)*
 
 
 
@@ -48,7 +48,7 @@
 ## **STRUCTS**
 
 ### OverrideTest  {#OverrideTest data-text="OverrideTest"}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=6)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=6)*
 
 
 
@@ -82,7 +82,7 @@
 </table>
 
 ### SomeProtocol_SomeMethod_Response  {#SomeProtocol_SomeMethod_Response data-text="SomeProtocol_SomeMethod_Response"}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
 
 
 
@@ -100,7 +100,7 @@
 </table>
 
 ### TableData  {#TableData data-text="TableData"}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=33)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=33)*
 
 
 
@@ -124,7 +124,7 @@
 ### Op [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Op}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=7)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=7)*
 
 
 
@@ -150,7 +150,7 @@ Type: <code>uint32</code>
 ### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=42)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=42)*
 
 
 
@@ -175,7 +175,7 @@ Type: <code>uint32</code>
 ### FunctionApplication  {#FunctionApplication data-text="FunctionApplication"}
 
 
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=15)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=15)*
 
 
 
@@ -219,7 +219,7 @@ Type: <code>uint32</code>
 ### TableMember  {#TableMember data-text="TableMember"}
 
 
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=31)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=31)*
 
 
 
@@ -249,7 +249,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### Expression [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Expression data-text="Expression"}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=4)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=4)*
 
 
 
@@ -281,7 +281,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### SomeProtocol_SomeMethod_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#SomeProtocol_SomeMethod_Result data-text="SomeProtocol_SomeMethod_Result"}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
 
 
 
@@ -305,7 +305,7 @@ Type: <code>uint32</code>
         </tr></table>
 
 ### UnionMember [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionMember data-text="UnionMember"}
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=27)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=27)*
 
 
 
@@ -335,7 +335,7 @@ Type: <code>uint32</code>
 ### BitsMember [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsMember}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=38)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=38)*
 
 
 
@@ -356,7 +356,7 @@ Type: <code>uint32</code>
 ### Flags [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Flags}
 Type: <code>uint16</code>
 
-*Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=19)*
+*Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=19)*
 
 
 

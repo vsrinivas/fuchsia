@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/driveroneway/cpp/fidl.h>
+#include <test/driveroneway/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,7 +13,7 @@
 
 namespace fuzzing {
 
-using Payload = ::fidl::test::driveroneway::Payload;
+using Payload = ::test::driveroneway::Payload;
 
 template <>
 struct MinSize<Payload> {

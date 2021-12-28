@@ -875,14 +875,14 @@ func (_m *TheUnion) GetUnknownData() _bindings.UnknownData {
 }
 
 const (
-	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal      uint64 = 0x6ad894147d0c6ba4
-	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal   uint64 = 0x4068f26bf6d868ae
-	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal    uint64 = 0x447e655905ccfbf4
-	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal    uint64 = 0x7cb47b2f9e76d17d
-	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint64 = 0x65eb512ff0e1c07e
-	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal  uint64 = 0x1d323510d4447cf1
-	WithAndWithoutRequestResponseOnEmptyResponseOrdinal          uint64 = 0x125c87a592bff029
-	WithAndWithoutRequestResponseOnWithResponseOrdinal           uint64 = 0x177adc0a3ee346c2
+	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal      uint64 = 0x4b212a6c8c5f7bab
+	WithAndWithoutRequestResponseNoRequestEmptyResponseOrdinal   uint64 = 0x16a329d17f458668
+	WithAndWithoutRequestResponseNoRequestWithResponseOrdinal    uint64 = 0x7d6b2fcf0e2a65bd
+	WithAndWithoutRequestResponseWithRequestNoResponseOrdinal    uint64 = 0x65ab625138c50a77
+	WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal uint64 = 0x27ee4d2bd405df5f
+	WithAndWithoutRequestResponseWithRequestWithResponseOrdinal  uint64 = 0x590e91945d58f5b1
+	WithAndWithoutRequestResponseOnEmptyResponseOrdinal          uint64 = 0x4ae85a2b8d7c2e56
+	WithAndWithoutRequestResponseOnWithResponseOrdinal           uint64 = 0x50a6f21a322f31a8
 )
 
 type WithAndWithoutRequestResponseWithCtxInterface _bindings.ChannelProxy
@@ -1033,10 +1033,10 @@ func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) err
 }
 
 const (
-	WithErrorSyntaxResponseAsStructOrdinal uint64 = 0x3784d38864674290
-	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 0x2f7c390f3cdef4ce
-	WithErrorSyntaxErrorAsEnumOrdinal      uint64 = 0x8b550d7c29f740c
-	WithErrorSyntaxHandleInResultOrdinal   uint64 = 0x1dcf0cfb09e14f97
+	WithErrorSyntaxResponseAsStructOrdinal uint64 = 0x3b902a6d8d24693
+	WithErrorSyntaxErrorAsPrimitiveOrdinal uint64 = 0x602fd6bd920135e7
+	WithErrorSyntaxErrorAsEnumOrdinal      uint64 = 0x4c371e1673212f43
+	WithErrorSyntaxHandleInResultOrdinal   uint64 = 0x13092c5b835b0cbf
 )
 
 type WithErrorSyntaxWithCtxInterface _bindings.ChannelProxy
@@ -1118,11 +1118,11 @@ func (s_ *WithErrorSyntaxWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_b
 type WithErrorSyntaxEventProxy _bindings.ChannelProxy
 
 const (
-	ChannelProtocolMethodAOrdinal      uint64 = 0x7d92c10fb2d002e
-	ChannelProtocolEventAOrdinal       uint64 = 0x52c2fa481a687dfa
-	ChannelProtocolMethodBOrdinal      uint64 = 0x5da1d2ed00055cea
-	ChannelProtocolTakeHandleOrdinal   uint64 = 0xc25674355065c28
-	ChannelProtocolMutateSocketOrdinal uint64 = 0x7dd036a18b33b76a
+	ChannelProtocolMethodAOrdinal      uint64 = 0x2bc8d7d32bc66ba2
+	ChannelProtocolEventAOrdinal       uint64 = 0x1ed0a220297145ce
+	ChannelProtocolMethodBOrdinal      uint64 = 0x7b8dd3d6c741c9c6
+	ChannelProtocolTakeHandleOrdinal   uint64 = 0x836fa31201a0a65
+	ChannelProtocolMutateSocketOrdinal uint64 = 0x66dbcccc06f7f14f
 )
 
 type ChannelProtocolWithCtxInterface _bindings.ChannelProxy
@@ -1255,9 +1255,9 @@ func (p *ChannelProtocolEventProxy) EventA(a int64, b int64) error {
 }
 
 const (
-	TransitionalRequestOrdinal uint64 = 0x62d345e621780ee8
-	TransitionalOneWayOrdinal  uint64 = 0xf99bc4b26bc9ea5
-	TransitionalEventOrdinal   uint64 = 0x53bb9212bcbe8966
+	TransitionalRequestOrdinal uint64 = 0x512cc1ba467fef08
+	TransitionalOneWayOrdinal  uint64 = 0x3c2ee8512dc7f7e7
+	TransitionalEventOrdinal   uint64 = 0x76113c4b4d484841
 )
 
 type TransitionalWithCtxInterface _bindings.ChannelProxy
@@ -1350,7 +1350,7 @@ func (p *TransitionalEventProxy) Event(x int64) error {
 }
 
 const (
-	DiscoverableProtocolMethodOrdinal uint64 = 0x39790af74e0167
+	DiscoverableProtocolMethodOrdinal uint64 = 0x2ff5ba3a2bd170eb
 )
 
 type DiscoverableProtocolWithCtxInterface _bindings.ChannelProxy
@@ -1376,13 +1376,13 @@ func NewDiscoverableProtocolWithCtxInterfaceRequest() (DiscoverableProtocolWithC
 
 // Implements ServiceRequest.
 func (_ DiscoverableProtocolWithCtxInterfaceRequest) Name() string {
-	return "fidl.test.protocols.DiscoverableProtocol"
+	return "test.protocols.DiscoverableProtocol"
 }
 func (c DiscoverableProtocolWithCtxInterfaceRequest) ToChannel() _zx.Channel {
 	return c.Channel
 }
 
-const DiscoverableProtocolName = "fidl.test.protocols.DiscoverableProtocol"
+const DiscoverableProtocolName = "test.protocols.DiscoverableProtocol"
 
 type DiscoverableProtocolWithCtxStub struct {
 	Impl DiscoverableProtocolWithCtx
@@ -1400,9 +1400,9 @@ func (s_ *DiscoverableProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs
 type DiscoverableProtocolEventProxy _bindings.ChannelProxy
 
 const (
-	HandleRightsProtocolNoResponseMethodOrdinal uint64 = 0x466a6fe3be0bcb7c
-	HandleRightsProtocolResponseMethodOrdinal   uint64 = 0x5ef2bd2bbb280ffc
-	HandleRightsProtocolAnEventOrdinal          uint64 = 0xce6b76255d6ed71
+	HandleRightsProtocolNoResponseMethodOrdinal uint64 = 0x10078afd320d2bfd
+	HandleRightsProtocolResponseMethodOrdinal   uint64 = 0x52a8f194ac143547
+	HandleRightsProtocolAnEventOrdinal          uint64 = 0x69dad41418eb133
 )
 
 type HandleRightsProtocolWithCtxInterface _bindings.ChannelProxy
@@ -1488,9 +1488,9 @@ func (p *HandleRightsProtocolEventProxy) AnEvent(h _zx.Socket) error {
 }
 
 const (
-	WithProtocolEndsClientEndsOrdinal           uint64 = 0x60b18491ac8062ad
-	WithProtocolEndsServerEndsOrdinal           uint64 = 0x3e5b3b503a05a17c
-	WithProtocolEndsStructContainingEndsOrdinal uint64 = 0x26f2c10b743415c
+	WithProtocolEndsClientEndsOrdinal           uint64 = 0x51780563edb15042
+	WithProtocolEndsServerEndsOrdinal           uint64 = 0x70a02c2ba2228a33
+	WithProtocolEndsStructContainingEndsOrdinal uint64 = 0x3893f0baad26f5d5
 )
 
 type WithProtocolEndsWithCtxInterface _bindings.ChannelProxy
@@ -1589,7 +1589,7 @@ func (s_ *WithProtocolEndsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_
 type WithProtocolEndsEventProxy _bindings.ChannelProxy
 
 const (
-	ManyParametersFifteenOrdinal uint64 = 0x295ae26a080f53e3
+	ManyParametersFifteenOrdinal uint64 = 0x59233bcecd338967
 )
 
 type ManyParametersWithCtxInterface _bindings.ChannelProxy
@@ -1653,7 +1653,7 @@ func (s_ *ManyParametersWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bi
 type ManyParametersEventProxy _bindings.ChannelProxy
 
 const (
-	MethodWithUnionUnionMethodOrdinal uint64 = 0x5ba125a32d36092a
+	MethodWithUnionUnionMethodOrdinal uint64 = 0x393e7f5b2b821218
 )
 
 type MethodWithUnionWithCtxInterface _bindings.ChannelProxy

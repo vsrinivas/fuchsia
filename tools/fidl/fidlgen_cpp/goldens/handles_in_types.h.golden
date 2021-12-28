@@ -2,28 +2,28 @@
 
 #pragma once
 
-#include <fidl/fidl.test.handlesintypes/cpp/wire.h>
-#include <fidl/test/handlesintypes/cpp/natural_types.h>
+#include <fidl/test.handlesintypes/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/handlesintypes/cpp/natural_types.h>
 
-namespace fidl_test_handlesintypes {
+namespace test_handlesintypes {
 class HandlesInTypes;
 
-using obj_type = ::fidl::test::handlesintypes::obj_type;
+using obj_type = ::test::handlesintypes::obj_type;
 
-using UnionWithHandle = ::fidl::test::handlesintypes::UnionWithHandle;
+using UnionWithHandle = ::test::handlesintypes::UnionWithHandle;
 
-using TableWithHandle = ::fidl::test::handlesintypes::TableWithHandle;
+using TableWithHandle = ::test::handlesintypes::TableWithHandle;
 
-}  // namespace fidl_test_handlesintypes
+}  // namespace test_handlesintypes
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_handlesintypes::HandlesInTypes>
+    ::test_handlesintypes::HandlesInTypes>
     final {
  public:
   ::zx::vmo normal_handle = {};
@@ -34,12 +34,12 @@ struct ::fidl::internal::DesignatedInitializationProxy<
 
   ::std::vector<::std::array<::zx::vmo, 5>> handle_in_mixed_vec_array = {};
 
-  ::fidl_test_handlesintypes::TableWithHandle table_with_handle = {};
+  ::test_handlesintypes::TableWithHandle table_with_handle = {};
 
-  ::fidl_test_handlesintypes::UnionWithHandle union_with_handle = {};
+  ::test_handlesintypes::UnionWithHandle union_with_handle = {};
 };
 
-namespace fidl_test_handlesintypes {
+namespace test_handlesintypes {
 class HandlesInTypes final
     : public ::fidl::internal::CodableBase<HandlesInTypes> {
  private:
@@ -57,14 +57,14 @@ class HandlesInTypes final
       ::zx::vmo&& normal_handle, ::std::vector<::zx::vmo>&& handle_in_vec,
       ::std::array<::zx::vmo, 5>&& handle_in_array,
       ::std::vector<::std::array<::zx::vmo, 5>>&& handle_in_mixed_vec_array,
-      ::fidl_test_handlesintypes::TableWithHandle&& table_with_handle,
-      ::fidl_test_handlesintypes::UnionWithHandle&& union_with_handle)
+      ::test_handlesintypes::TableWithHandle&& table_with_handle,
+      ::test_handlesintypes::UnionWithHandle&& union_with_handle)
       : storage_(
             {std::move(normal_handle), std::move(handle_in_vec),
              std::move(handle_in_array), std::move(handle_in_mixed_vec_array),
              std::move(table_with_handle), std::move(union_with_handle)}) {}
   HandlesInTypes(::fidl::internal::DesignatedInitializationProxy<
-                 ::fidl_test_handlesintypes::HandlesInTypes>
+                 ::test_handlesintypes::HandlesInTypes>
                      storage)
       : storage_(std::move(storage)) {}
   ~HandlesInTypes() = default;
@@ -121,71 +121,70 @@ class HandlesInTypes final
     return *this;
   }
 
-  const ::fidl_test_handlesintypes::TableWithHandle& table_with_handle() const {
+  const ::test_handlesintypes::TableWithHandle& table_with_handle() const {
     return storage_.table_with_handle;
   }
 
-  ::fidl_test_handlesintypes::TableWithHandle& table_with_handle() {
+  ::test_handlesintypes::TableWithHandle& table_with_handle() {
     return storage_.table_with_handle;
   }
 
   HandlesInTypes& set_table_with_handle(
-      ::fidl_test_handlesintypes::TableWithHandle _value) {
+      ::test_handlesintypes::TableWithHandle _value) {
     storage_.table_with_handle = std::move(_value);
     return *this;
   }
 
-  const ::fidl_test_handlesintypes::UnionWithHandle& union_with_handle() const {
+  const ::test_handlesintypes::UnionWithHandle& union_with_handle() const {
     return storage_.union_with_handle;
   }
 
-  ::fidl_test_handlesintypes::UnionWithHandle& union_with_handle() {
+  ::test_handlesintypes::UnionWithHandle& union_with_handle() {
     return storage_.union_with_handle;
   }
 
   HandlesInTypes& set_union_with_handle(
-      ::fidl_test_handlesintypes::UnionWithHandle _value) {
+      ::test_handlesintypes::UnionWithHandle _value) {
     storage_.union_with_handle = std::move(_value);
     return *this;
   }
 
  private:
-  friend struct ::fidl::CodingTraits<
-      ::fidl_test_handlesintypes::HandlesInTypes>;
+  friend struct ::fidl::CodingTraits<::test_handlesintypes::HandlesInTypes>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_handlesintypes::HandlesInTypes>
+      ::test_handlesintypes::HandlesInTypes>
       storage_ = {};
 };
 
-}  // namespace fidl_test_handlesintypes
+}  // namespace test_handlesintypes
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
+extern "C" const fidl_type_t test_handlesintypes_HandlesInTypesTable;
 
 template <>
-struct IsResource<::fidl_test_handlesintypes::HandlesInTypes>
+struct IsResource<::test_handlesintypes::HandlesInTypes>
     : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_handlesintypes::HandlesInTypes>
+struct IsFidlType<::test_handlesintypes::HandlesInTypes>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_handlesintypes::HandlesInTypes>
+struct ::fidl::internal::TypeTraits<::test_handlesintypes::HandlesInTypes>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_handlesintypes_HandlesInTypesTable;
+      &test_handlesintypes_HandlesInTypesTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_handlesintypes::HandlesInTypes> {
+struct CodingTraits<::test_handlesintypes::HandlesInTypes> {
   static constexpr size_t inline_size_v1_no_ee = 104;
   static constexpr size_t inline_size_v2 = 96;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_handlesintypes::HandlesInTypes* value,
+      EncoderImpl* encoder, ::test_handlesintypes::HandlesInTypes* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -239,7 +238,7 @@ struct CodingTraits<::fidl_test_handlesintypes::HandlesInTypes> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_handlesintypes::HandlesInTypes* value,
+                     ::test_handlesintypes::HandlesInTypes* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.normal_handle, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.handle_in_vec, offset + 8);

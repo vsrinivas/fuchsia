@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.versions",
+  "name": "test.versions",
   "maybe_attributes": [
     {
       "name": "available",
@@ -77,7 +77,7 @@
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.versions/Bits",
+      "name": "test.versions/Bits",
       "naming_context": [
         "Bits"
       ],
@@ -282,7 +282,7 @@
   ],
   "const_declarations": [
     {
-      "name": "fidl.test.versions/Const",
+      "name": "test.versions/Const",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
         "line": 9,
@@ -398,7 +398,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "fidl.test.versions/Enum",
+      "name": "test.versions/Enum",
       "naming_context": [
         "Enum"
       ],
@@ -583,7 +583,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.versions/OtherProtocol",
+      "name": "test.versions/OtherProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
         "line": 45,
@@ -594,7 +594,7 @@
       "methods": []
     },
     {
-      "name": "fidl.test.versions/Protocol",
+      "name": "test.versions/Protocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
         "line": 48,
@@ -676,7 +676,7 @@
       ],
       "composed_protocols": [
         {
-          "name": "fidl.test.versions/OtherProtocol",
+          "name": "test.versions/OtherProtocol",
           "maybe_attributes": [
             {
               "name": "available",
@@ -760,7 +760,7 @@
       ],
       "methods": [
         {
-          "ordinal": 7892886356712658659,
+          "ordinal": 6231434419097198905,
           "name": "Foo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
@@ -851,7 +851,7 @@
   ],
   "service_declarations": [
     {
-      "name": "fidl.test.versions/Service",
+      "name": "test.versions/Service",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
         "line": 57,
@@ -935,7 +935,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.versions/Protocol",
+            "identifier": "test.versions/Protocol",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1042,7 +1042,7 @@
   ],
   "struct_declarations": [
     {
-      "name": "fidl.test.versions/Struct",
+      "name": "test.versions/Struct",
       "naming_context": [
         "Struct"
       ],
@@ -1264,7 +1264,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.versions/Table",
+      "name": "test.versions/Table",
       "naming_context": [
         "Table"
       ],
@@ -1562,7 +1562,7 @@
   ],
   "union_declarations": [
     {
-      "name": "fidl.test.versions/Union",
+      "name": "test.versions/Union",
       "naming_context": [
         "Union"
       ],
@@ -1860,7 +1860,7 @@
   ],
   "type_alias_declarations": [
     {
-      "name": "fidl.test.versions/Alias",
+      "name": "test.versions/Alias",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
         "line": 6,
@@ -1948,27 +1948,27 @@
     }
   ],
   "declaration_order": [
-    "fidl.test.versions/Union",
-    "fidl.test.versions/Table",
-    "fidl.test.versions/Struct",
-    "fidl.test.versions/Service",
-    "fidl.test.versions/OtherProtocol",
-    "fidl.test.versions/Protocol",
-    "fidl.test.versions/Enum",
-    "fidl.test.versions/Const",
-    "fidl.test.versions/Bits",
-    "fidl.test.versions/Alias"
+    "test.versions/Union",
+    "test.versions/Table",
+    "test.versions/Struct",
+    "test.versions/Service",
+    "test.versions/OtherProtocol",
+    "test.versions/Protocol",
+    "test.versions/Enum",
+    "test.versions/Const",
+    "test.versions/Bits",
+    "test.versions/Alias"
   ],
   "declarations": {
-    "fidl.test.versions/Bits": "bits",
-    "fidl.test.versions/Const": "const",
-    "fidl.test.versions/Enum": "enum",
-    "fidl.test.versions/OtherProtocol": "interface",
-    "fidl.test.versions/Protocol": "interface",
-    "fidl.test.versions/Service": "service",
-    "fidl.test.versions/Struct": "struct",
-    "fidl.test.versions/Table": "table",
-    "fidl.test.versions/Union": "union",
-    "fidl.test.versions/Alias": "type_alias"
+    "test.versions/Bits": "bits",
+    "test.versions/Const": "const",
+    "test.versions/Enum": "enum",
+    "test.versions/OtherProtocol": "interface",
+    "test.versions/Protocol": "interface",
+    "test.versions/Service": "service",
+    "test.versions/Struct": "struct",
+    "test.versions/Table": "table",
+    "test.versions/Union": "union",
+    "test.versions/Alias": "type_alias"
   }
 }

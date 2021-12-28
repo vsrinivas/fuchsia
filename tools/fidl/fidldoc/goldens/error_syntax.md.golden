@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.errorsyntax
+# test.errorsyntax
 
 
 
 ## **PROTOCOLS**
 
 ## ExampleUseOfErrorSyntax {#ExampleUseOfErrorSyntax}
-*Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=9)*
+*Defined in [test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=9)*
 
 
 
@@ -59,7 +59,7 @@
     <tr>
             <td><code>result</code></td>
             <td>
-                <code><a class='link' href='../fidl.test.errorsyntax.parent/'>fidl.test.errorsyntax.parent</a>/<a class='link' href='../fidl.test.errorsyntax.parent/#ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result'>ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result</a></code>
+                <code><a class='link' href='../test.errorsyntax.parent/'>test.errorsyntax.parent</a>/<a class='link' href='../test.errorsyntax.parent/#ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result'>ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result</a></code>
             </td>
         </tr></table>
 
@@ -68,7 +68,7 @@
 ## **STRUCTS**
 
 ### ExampleUseOfErrorSyntax_CallWhichMayFail_Response  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Response data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Response"}
-*Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
+*Defined in [test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
 
 
 
@@ -94,7 +94,7 @@
 ## **UNIONS**
 
 ### ExampleUseOfErrorSyntax_CallWhichMayFail_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Result data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Result"}
-*Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
+*Defined in [test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
 
 
 

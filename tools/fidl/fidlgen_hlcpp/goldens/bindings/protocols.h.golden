@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace protocols {
 enum class rights : uint32_t {
@@ -19,57 +18,51 @@ enum class rights : uint32_t {
 
 const static rights rightsMask = static_cast<rights>(3u);
 
-constexpr inline ::fidl::test::protocols::rights operator|(
-    ::fidl::test::protocols::rights _lhs,
-    ::fidl::test::protocols::rights _rhs) {
-  return static_cast<::fidl::test::protocols::rights>(
-      static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
+constexpr inline ::test::protocols::rights operator|(
+    ::test::protocols::rights _lhs, ::test::protocols::rights _rhs) {
+  return static_cast<::test::protocols::rights>(static_cast<uint32_t>(_lhs) |
+                                                static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::protocols::rights& operator|=(
-    ::fidl::test::protocols::rights& _lhs,
-    ::fidl::test::protocols::rights _rhs) {
+constexpr inline ::test::protocols::rights& operator|=(
+    ::test::protocols::rights& _lhs, ::test::protocols::rights _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::protocols::rights operator&(
-    ::fidl::test::protocols::rights _lhs,
-    ::fidl::test::protocols::rights _rhs) {
-  return static_cast<::fidl::test::protocols::rights>(
-      static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
+constexpr inline ::test::protocols::rights operator&(
+    ::test::protocols::rights _lhs, ::test::protocols::rights _rhs) {
+  return static_cast<::test::protocols::rights>(static_cast<uint32_t>(_lhs) &
+                                                static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::protocols::rights& operator&=(
-    ::fidl::test::protocols::rights& _lhs,
-    ::fidl::test::protocols::rights _rhs) {
+constexpr inline ::test::protocols::rights& operator&=(
+    ::test::protocols::rights& _lhs, ::test::protocols::rights _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::protocols::rights operator^(
-    ::fidl::test::protocols::rights _lhs,
-    ::fidl::test::protocols::rights _rhs) {
-  return static_cast<::fidl::test::protocols::rights>(
-      static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
+constexpr inline ::test::protocols::rights operator^(
+    ::test::protocols::rights _lhs, ::test::protocols::rights _rhs) {
+  return static_cast<::test::protocols::rights>(static_cast<uint32_t>(_lhs) ^
+                                                static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::protocols::rights& operator^=(
-    ::fidl::test::protocols::rights& _lhs,
-    ::fidl::test::protocols::rights _rhs) {
+constexpr inline ::test::protocols::rights& operator^=(
+    ::test::protocols::rights& _lhs, ::test::protocols::rights _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::protocols::rights operator~(
-    ::fidl::test::protocols::rights _value) {
-  return static_cast<::fidl::test::protocols::rights>(
+constexpr inline ::test::protocols::rights operator~(
+    ::test::protocols::rights _value) {
+  return static_cast<::test::protocols::rights>(
       ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(::fidl::test::protocols::rightsMask));
+      static_cast<uint32_t>(::test::protocols::rightsMask));
 }
 
-inline zx_status_t Clone(::fidl::test::protocols::rights value,
-                         ::fidl::test::protocols::rights* result) {
+inline zx_status_t Clone(::test::protocols::rights value,
+                         ::test::protocols::rights* result) {
   *result = value;
   return ZX_OK;
 }
@@ -81,8 +74,8 @@ enum class obj_type : uint32_t {
   SOCKET = 14u,
 };
 
-inline zx_status_t Clone(::fidl::test::protocols::obj_type value,
-                         ::fidl::test::protocols::obj_type* result) {
+inline zx_status_t Clone(::test::protocols::obj_type value,
+                         ::test::protocols::obj_type* result) {
   *result = value;
   return ZX_OK;
 }
@@ -150,8 +143,8 @@ enum class ErrorEnum : uint32_t {
   ERR_BAR = 2u,
 };
 
-inline zx_status_t Clone(::fidl::test::protocols::ErrorEnum value,
-                         ::fidl::test::protocols::ErrorEnum* result) {
+inline zx_status_t Clone(::test::protocols::ErrorEnum value,
+                         ::test::protocols::ErrorEnum* result) {
   *result = value;
   return ZX_OK;
 }
@@ -211,9 +204,8 @@ class WithErrorSyntax_HandleInResult_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response&
-        _value,
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response* _result) {
+    const ::test::protocols::WithErrorSyntax_HandleInResult_Response& _value,
+    ::test::protocols::WithErrorSyntax_HandleInResult_Response* _result) {
   return _value.Clone(_result);
 }
 
@@ -236,7 +228,7 @@ class WithErrorSyntax_HandleInResult_Result final {
       WithErrorSyntax_HandleInResult_Result&&);
 
   static WithErrorSyntax_HandleInResult_Result WithResponse(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response&&);
+      ::test::protocols::WithErrorSyntax_HandleInResult_Response&&);
   static WithErrorSyntax_HandleInResult_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -261,34 +253,33 @@ class WithErrorSyntax_HandleInResult_Result final {
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_response() const {
-    return tag_ == ::fidl::test::protocols::
-                       WithErrorSyntax_HandleInResult_Result::Tag::kResponse;
+    return tag_ == ::test::protocols::WithErrorSyntax_HandleInResult_Result::
+                       Tag::kResponse;
   }
 
-  ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response& response() {
+  ::test::protocols::WithErrorSyntax_HandleInResult_Response& response() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+        ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
             kResponse);
     return response_;
   }
 
-  const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response&
-  response() const {
+  const ::test::protocols::WithErrorSyntax_HandleInResult_Response& response()
+      const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_HandleInResult_Result& set_response(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response value);
+      ::test::protocols::WithErrorSyntax_HandleInResult_Response value);
 
   bool is_err() const {
-    return tag_ == ::fidl::test::protocols::
-                       WithErrorSyntax_HandleInResult_Result::Tag::kErr;
+    return tag_ ==
+           ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::kErr;
   }
 
   uint32_t& err() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-            kErr);
+        ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::kErr);
     return err_;
   }
 
@@ -298,10 +289,8 @@ class WithErrorSyntax_HandleInResult_Result final {
   }
   WithErrorSyntax_HandleInResult_Result& set_err(uint32_t value);
 
-  ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag Which()
-      const {
-    return ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag(
-        tag_);
+  ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag Which() const {
+    return ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag(tag_);
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
@@ -309,14 +298,13 @@ class WithErrorSyntax_HandleInResult_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>;
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result>;
   WithErrorSyntax_HandleInResult_Result(
       fpromise::result<::zx::handle, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response{
-              result.take_value()});
+      set_response(::test::protocols::WithErrorSyntax_HandleInResult_Response{
+          result.take_value()});
     } else {
       set_err(result.take_error());
     }
@@ -342,17 +330,16 @@ class WithErrorSyntax_HandleInResult_Result final {
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-          Invalid);
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::Invalid);
   union {
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response response_;
+    ::test::protocols::WithErrorSyntax_HandleInResult_Response response_;
     uint32_t err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result& value,
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
+    const ::test::protocols::WithErrorSyntax_HandleInResult_Result& value,
+    ::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
   return value.Clone(result);
 }
 
@@ -364,10 +351,10 @@ using WithErrorSyntax_HandleInResult_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
+    test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable;
 
 }  // namespace _internal
 class HandleRightsProtocol_RequestEncoder {
@@ -401,8 +388,8 @@ class HandleRightsProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_HandleRightsProtocolNoResponseMethodRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -437,8 +424,8 @@ class HandleRightsProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_HandleRightsProtocolResponseMethodRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -447,10 +434,10 @@ class HandleRightsProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
+    test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_HandleRightsProtocolAnEventEventMessageTable;
+    test_protocols_HandleRightsProtocolAnEventEventMessageTable;
 
 }  // namespace _internal
 class HandleRightsProtocol_ResponseEncoder {
@@ -484,8 +471,8 @@ class HandleRightsProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_HandleRightsProtocolResponseMethodResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -517,12 +504,11 @@ class HandleRightsProtocol_ResponseEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_HandleRightsProtocolAnEventEventMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_HandleRightsProtocolAnEventEventMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
 };
@@ -561,10 +547,8 @@ class WithErrorSyntax_ResponseAsStruct_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
-        _value,
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response*
-        _result) {
+    const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response& _value,
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response* _result) {
   return _value.Clone(_result);
 }
 
@@ -584,7 +568,7 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
       WithErrorSyntax_ResponseAsStruct_Result&&);
 
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&&);
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&&);
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -610,35 +594,33 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_response() const {
-    return tag_ == ::fidl::test::protocols::
-                       WithErrorSyntax_ResponseAsStruct_Result::Tag::kResponse;
+    return tag_ == ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+                       Tag::kResponse;
   }
 
-  ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
-  response() {
+  ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response& response() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+        ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
             kResponse);
     return response_;
   }
 
-  const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
-  response() const {
+  const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response& response()
+      const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ResponseAsStruct_Result& set_response(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response value);
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response value);
 
   bool is_err() const {
-    return tag_ == ::fidl::test::protocols::
-                       WithErrorSyntax_ResponseAsStruct_Result::Tag::kErr;
+    return tag_ == ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
+                       Tag::kErr;
   }
 
   uint32_t& err() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-            kErr);
+        ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::kErr);
     return err_;
   }
 
@@ -648,10 +630,10 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   }
   WithErrorSyntax_ResponseAsStruct_Result& set_err(uint32_t value);
 
-  ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag Which()
+  ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag Which()
       const {
-    return ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
-        Tag(tag_);
+    return ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag(
+        tag_);
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
@@ -659,15 +641,14 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>;
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>;
   WithErrorSyntax_ResponseAsStruct_Result(
       fpromise::result<::std::tuple<int64_t, int64_t, int64_t>, uint32_t>&&
           result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response{
-              result.take_value()});
+      set_response(::test::protocols::WithErrorSyntax_ResponseAsStruct_Response{
+          result.take_value()});
     } else {
       set_err(result.take_error());
     }
@@ -695,19 +676,16 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
-          Invalid);
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::Invalid);
   union {
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response
-        response_;
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response response_;
     uint32_t err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
+    const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result& value,
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
   return value.Clone(result);
 }
 
@@ -742,10 +720,8 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
-        _value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response*
-        _result) {
+    const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response& _value,
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response* _result) {
   return _value.Clone(_result);
 }
 
@@ -765,7 +741,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
       WithErrorSyntax_ErrorAsPrimitive_Result&&);
 
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&&);
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&&);
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -791,35 +767,33 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_response() const {
-    return tag_ == ::fidl::test::protocols::
-                       WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kResponse;
+    return tag_ == ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+                       Tag::kResponse;
   }
 
-  ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
-  response() {
+  ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response& response() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+        ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
             kResponse);
     return response_;
   }
 
-  const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
-  response() const {
+  const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response& response()
+      const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ErrorAsPrimitive_Result& set_response(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response value);
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response value);
 
   bool is_err() const {
-    return tag_ == ::fidl::test::protocols::
-                       WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kErr;
+    return tag_ == ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
+                       Tag::kErr;
   }
 
   uint32_t& err() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-            kErr);
+        ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kErr);
     return err_;
   }
 
@@ -829,10 +803,10 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   }
   WithErrorSyntax_ErrorAsPrimitive_Result& set_err(uint32_t value);
 
-  ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag Which()
+  ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag Which()
       const {
-    return ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-        Tag(tag_);
+    return ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag(
+        tag_);
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
@@ -840,13 +814,13 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>;
   WithErrorSyntax_ErrorAsPrimitive_Result(
       fpromise::result<void, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
       set_response(
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response{});
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response{});
     } else {
       set_err(result.take_error());
     }
@@ -870,19 +844,16 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
-          Invalid);
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::Invalid);
   union {
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response
-        response_;
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response response_;
     uint32_t err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+    const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result& value,
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
   return value.Clone(result);
 }
 
@@ -915,8 +886,8 @@ class WithErrorSyntax_ErrorAsEnum_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response* _result) {
+    const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _value,
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response* _result) {
   return _value.Clone(_result);
 }
 
@@ -927,22 +898,22 @@ using WithErrorSyntax_ErrorAsEnum_ResponsePtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable;
 
 }  // namespace _internal
 class WithAndWithoutRequestResponse_RequestEncoder {
@@ -965,8 +936,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -990,8 +961,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1015,8 +986,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1043,8 +1014,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1071,8 +1042,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1099,8 +1070,8 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1109,22 +1080,22 @@ class WithAndWithoutRequestResponse_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
+    test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable;
+    test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
+    test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
 
 }  // namespace _internal
 class WithAndWithoutRequestResponse_ResponseEncoder {
@@ -1147,8 +1118,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1174,8 +1145,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1198,8 +1169,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1225,8 +1196,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1249,8 +1220,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1276,8 +1247,8 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1289,10 +1260,10 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestRequestMessageTable;
+    test_protocols_TransitionalRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalOneWayRequestMessageTable;
+    test_protocols_TransitionalOneWayRequestMessageTable;
 
 }  // namespace _internal
 class Transitional_RequestEncoder {
@@ -1317,8 +1288,8 @@ class Transitional_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalRequestRequestMessageTable,
+               &::test::protocols::_internal::
+                   test_protocols_TransitionalRequestRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1344,8 +1315,8 @@ class Transitional_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalOneWayRequestMessageTable,
+               &::test::protocols::_internal::
+                   test_protocols_TransitionalOneWayRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1354,10 +1325,10 @@ class Transitional_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalRequestResponseMessageTable;
+    test_protocols_TransitionalRequestResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_TransitionalEventEventMessageTable;
+    test_protocols_TransitionalEventEventMessageTable;
 
 }  // namespace _internal
 class Transitional_ResponseEncoder {
@@ -1382,8 +1353,8 @@ class Transitional_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalRequestResponseMessageTable,
+               &::test::protocols::_internal::
+                   test_protocols_TransitionalRequestResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1408,8 +1379,8 @@ class Transitional_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_TransitionalEventEventMessageTable,
+               &::test::protocols::_internal::
+                   test_protocols_TransitionalEventEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1448,12 +1419,10 @@ class TheUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_v() const {
-    return tag_ == ::fidl::test::protocols::TheUnion::Tag::kV;
-  }
+  bool is_v() const { return tag_ == ::test::protocols::TheUnion::Tag::kV; }
 
   uint32_t& v() {
-    EnsureStorageInitialized(::fidl::test::protocols::TheUnion::Tag::kV);
+    EnsureStorageInitialized(::test::protocols::TheUnion::Tag::kV);
     return v_;
   }
 
@@ -1465,13 +1434,13 @@ class TheUnion final {
   TheUnion& SetUnknownData(fidl_xunion_tag_t ordinal,
                            std::vector<uint8_t> bytes);
 
-  ::fidl::test::protocols::TheUnion::Tag Which() const {
+  ::test::protocols::TheUnion::Tag Which() const {
     switch (tag_) {
-      case ::fidl::test::protocols::TheUnion::Tag::Invalid:
-      case ::fidl::test::protocols::TheUnion::Tag::kV:
-        return ::fidl::test::protocols::TheUnion::Tag(tag_);
+      case ::test::protocols::TheUnion::Tag::Invalid:
+      case ::test::protocols::TheUnion::Tag::kV:
+        return ::test::protocols::TheUnion::Tag(tag_);
       default:
-        return ::fidl::test::protocols::TheUnion::Tag::kUnknown;
+        return ::test::protocols::TheUnion::Tag::kUnknown;
     }
   }
 
@@ -1479,28 +1448,28 @@ class TheUnion final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != ::fidl::test::protocols::TheUnion::Tag::kUnknown) {
+    if (Which() != ::test::protocols::TheUnion::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
   }
 
-  friend ::fidl::Equality<::fidl::test::protocols::TheUnion>;
+  friend ::fidl::Equality<::test::protocols::TheUnion>;
 
  private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::protocols::TheUnion::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ =
+      static_cast<fidl_xunion_tag_t>(::test::protocols::TheUnion::Tag::Invalid);
   union {
     uint32_t v_;
     std::vector<uint8_t> unknown_data_;
   };
 };
 
-inline zx_status_t Clone(const ::fidl::test::protocols::TheUnion& value,
-                         ::fidl::test::protocols::TheUnion* result) {
+inline zx_status_t Clone(const ::test::protocols::TheUnion& value,
+                         ::test::protocols::TheUnion* result) {
   return value.Clone(result);
 }
 
@@ -1510,13 +1479,13 @@ using TheUnionPtr = ::std::unique_ptr<TheUnion>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
+    test_protocols_MethodWithUnionUnionMethodRequestMessageTable;
 
 }  // namespace _internal
 class MethodWithUnion_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage UnionMethod(
-      ::fidl::Encoder* _encoder, ::fidl::test::protocols::TheUnion* u) {
+      ::fidl::Encoder* _encoder, ::test::protocols::TheUnion* u) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1534,12 +1503,11 @@ class MethodWithUnion_RequestEncoder {
       ::fidl::Encode(_encoder, u, 16);
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_MethodWithUnionUnionMethodRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_MethodWithUnionUnionMethodRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -1556,16 +1524,13 @@ class ProtocolEnds final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
-      client{};
+  ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> client{};
 
-  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-      server{};
+  ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> server{};
 
-  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
-      client_opt{};
+  ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> client_opt{};
 
-  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+  ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>
       server_opt{};
 
   static inline ::std::unique_ptr<ProtocolEnds> New() {
@@ -1580,8 +1545,8 @@ class ProtocolEnds final {
   zx_status_t Clone(ProtocolEnds* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::protocols::ProtocolEnds& _value,
-                         ::fidl::test::protocols::ProtocolEnds* _result) {
+inline zx_status_t Clone(const ::test::protocols::ProtocolEnds& _value,
+                         ::test::protocols::ProtocolEnds* _result) {
   return _value.Clone(_result);
 }
 
@@ -1592,21 +1557,20 @@ using ProtocolEndsPtr = ::std::unique_ptr<ProtocolEnds>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
+    test_protocols_WithProtocolEndsClientEndsRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
+    test_protocols_WithProtocolEndsServerEndsRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
+    test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable;
 
 }  // namespace _internal
 class WithProtocolEnds_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ClientEnds(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
-          in) {
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* in) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1632,19 +1596,17 @@ class WithProtocolEnds_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithProtocolEndsClientEndsRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithProtocolEndsClientEndsRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ServerEnds(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
-          in) {
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>* in) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1670,17 +1632,16 @@ class WithProtocolEnds_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithProtocolEndsServerEndsRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithProtocolEndsServerEndsRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
-      ::fidl::Encoder* _encoder, ::fidl::test::protocols::ProtocolEnds* in) {
+      ::fidl::Encoder* _encoder, ::test::protocols::ProtocolEnds* in) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1700,8 +1661,8 @@ class WithProtocolEnds_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithProtocolEndsStructContainingEndsRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -1710,21 +1671,20 @@ class WithProtocolEnds_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
+    test_protocols_WithProtocolEndsClientEndsResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
+    test_protocols_WithProtocolEndsServerEndsResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
+    test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
 
 }  // namespace _internal
 class WithProtocolEnds_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ClientEnds(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
-          out) {
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* out) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1752,16 +1712,15 @@ class WithProtocolEnds_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithProtocolEndsClientEndsResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithProtocolEndsClientEndsResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ServerEnds(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
-          out) {
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>* out) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1789,14 +1748,14 @@ class WithProtocolEnds_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithProtocolEndsServerEndsResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithProtocolEndsServerEndsResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage StructContainingEnds(
-      ::fidl::Encoder* _encoder, ::fidl::test::protocols::ProtocolEnds* out) {
+      ::fidl::Encoder* _encoder, ::test::protocols::ProtocolEnds* out) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -1816,8 +1775,8 @@ class WithProtocolEnds_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -1829,7 +1788,7 @@ class WithProtocolEnds_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ManyParametersFifteenRequestMessageTable;
+    test_protocols_ManyParametersFifteenRequestMessageTable;
 
 }  // namespace _internal
 class ManyParameters_RequestEncoder {
@@ -1914,8 +1873,8 @@ class ManyParameters_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ManyParametersFifteenRequestMessageTable,
+               &::test::protocols::_internal::
+                   test_protocols_ManyParametersFifteenRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -1940,9 +1899,9 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
       WithErrorSyntax_ErrorAsEnum_Result&&);
 
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&&);
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&&);
   static WithErrorSyntax_ErrorAsEnum_Result WithErr(
-      ::fidl::test::protocols::ErrorEnum&&);
+      ::test::protocols::ErrorEnum&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
 
@@ -1965,47 +1924,44 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
   bool is_response() const {
-    return tag_ == ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
-                       Tag::kResponse;
+    return tag_ == ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+                       kResponse;
   }
 
-  ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& response() {
+  ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& response() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-            kResponse);
+        ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kResponse);
     return response_;
   }
 
-  const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response&
-  response() const {
+  const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& response()
+      const {
     ZX_ASSERT(is_response());
     return response_;
   }
   WithErrorSyntax_ErrorAsEnum_Result& set_response(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response value);
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response value);
 
   bool is_err() const {
-    return tag_ == ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::
-                       Tag::kErr;
+    return tag_ ==
+           ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr;
   }
 
-  ::fidl::test::protocols::ErrorEnum& err() {
+  ::test::protocols::ErrorEnum& err() {
     EnsureStorageInitialized(
-        ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr);
+        ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr);
     return err_;
   }
 
-  const ::fidl::test::protocols::ErrorEnum& err() const {
+  const ::test::protocols::ErrorEnum& err() const {
     ZX_ASSERT(is_err());
     return err_;
   }
   WithErrorSyntax_ErrorAsEnum_Result& set_err(
-      ::fidl::test::protocols::ErrorEnum value);
+      ::test::protocols::ErrorEnum value);
 
-  ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which()
-      const {
-    return ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag(
-        tag_);
+  ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag Which() const {
+    return ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag(tag_);
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
@@ -2013,27 +1969,26 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
   friend ::fidl::Equality<
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>;
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>;
   WithErrorSyntax_ErrorAsEnum_Result(
-      fpromise::result<void, ::fidl::test::protocols::ErrorEnum>&& result) {
+      fpromise::result<void, ::test::protocols::ErrorEnum>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response{});
+      set_response(::test::protocols::WithErrorSyntax_ErrorAsEnum_Response{});
     } else {
       set_err(result.take_error());
     }
   }
   WithErrorSyntax_ErrorAsEnum_Result(fpromise::ok_result<void>&& result)
       : WithErrorSyntax_ErrorAsEnum_Result(
-            fpromise::result<void, ::fidl::test::protocols::ErrorEnum>(
+            fpromise::result<void, ::test::protocols::ErrorEnum>(
                 std::move(result))) {}
   WithErrorSyntax_ErrorAsEnum_Result(
-      fpromise::error_result<::fidl::test::protocols::ErrorEnum>&& result)
+      fpromise::error_result<::test::protocols::ErrorEnum>&& result)
       : WithErrorSyntax_ErrorAsEnum_Result(
-            fpromise::result<void, ::fidl::test::protocols::ErrorEnum>(
+            fpromise::result<void, ::test::protocols::ErrorEnum>(
                 std::move(result))) {}
-  operator fpromise::result<void, ::fidl::test::protocols::ErrorEnum>() && {
+  operator fpromise::result<void, ::test::protocols::ErrorEnum>() && {
     if (is_err()) {
       return fpromise::error(err());
     }
@@ -2045,17 +2000,16 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-          Invalid);
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::Invalid);
   union {
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response response_;
-    ::fidl::test::protocols::ErrorEnum err_;
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response response_;
+    ::test::protocols::ErrorEnum err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
+    const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& value,
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
   return value.Clone(result);
 }
 
@@ -2066,16 +2020,16 @@ using WithErrorSyntax_ErrorAsEnum_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable;
+    test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable;
+    test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable;
 
 }  // namespace _internal
 class WithErrorSyntax_RequestEncoder {
@@ -2098,8 +2052,8 @@ class WithErrorSyntax_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxResponseAsStructRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -2123,8 +2077,8 @@ class WithErrorSyntax_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxErrorAsPrimitiveRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -2145,12 +2099,11 @@ class WithErrorSyntax_RequestEncoder {
     } else {
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_WithErrorSyntaxErrorAsEnumRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2172,8 +2125,8 @@ class WithErrorSyntax_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxHandleInResultRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -2182,24 +2135,23 @@ class WithErrorSyntax_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
+    test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
+    test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
+    test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
 
 }  // namespace _internal
 class WithErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(
       ::fidl::Encoder* _encoder,
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
-          result) {
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2219,16 +2171,15 @@ class WithErrorSyntax_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxResponseAsStructResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsPrimitive(
       ::fidl::Encoder* _encoder,
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
-          result) {
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2248,15 +2199,15 @@ class WithErrorSyntax_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage ErrorAsEnum(
       ::fidl::Encoder* _encoder,
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2276,15 +2227,15 @@ class WithErrorSyntax_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxErrorAsEnumResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage HandleInResult(
       ::fidl::Encoder* _encoder,
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -2304,8 +2255,8 @@ class WithErrorSyntax_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -2317,7 +2268,7 @@ class WithErrorSyntax_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_DiscoverableProtocolMethodRequestMessageTable;
+    test_protocols_DiscoverableProtocolMethodRequestMessageTable;
 
 }  // namespace _internal
 class DiscoverableProtocol_RequestEncoder {
@@ -2337,12 +2288,11 @@ class DiscoverableProtocol_RequestEncoder {
     } else {
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_DiscoverableProtocolMethodRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_DiscoverableProtocolMethodRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2357,16 +2307,16 @@ class DiscoverableProtocol_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodARequestMessageTable;
+    test_protocols_ChannelProtocolMethodARequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBRequestMessageTable;
+    test_protocols_ChannelProtocolMethodBRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
+    test_protocols_ChannelProtocolTakeHandleRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
+    test_protocols_ChannelProtocolMutateSocketRequestMessageTable;
 
 }  // namespace _internal
 class ChannelProtocol_RequestEncoder {
@@ -2394,12 +2344,11 @@ class ChannelProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 24);
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMethodARequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolMethodARequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2426,12 +2375,11 @@ class ChannelProtocol_RequestEncoder {
       ::fidl::Encode(_encoder, b, 24);
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMethodBRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolMethodBRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2462,12 +2410,11 @@ class ChannelProtocol_RequestEncoder {
                      });
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolTakeHandleRequestMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolTakeHandleRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
 
     return _encoder->GetMessage();
   }
@@ -2500,8 +2447,8 @@ class ChannelProtocol_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMutateSocketRequestMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_ChannelProtocolMutateSocketRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -2510,16 +2457,16 @@ class ChannelProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolEventAEventMessageTable;
+    test_protocols_ChannelProtocolEventAEventMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMethodBResponseMessageTable;
+    test_protocols_ChannelProtocolMethodBResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolTakeHandleResponseMessageTable;
+    test_protocols_ChannelProtocolTakeHandleResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
+    test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
 
 }  // namespace _internal
 class ChannelProtocol_ResponseEncoder {
@@ -2548,8 +2495,8 @@ class ChannelProtocol_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocols::_internal::
-                   fidl_test_protocols_ChannelProtocolEventAEventMessageTable,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolEventAEventMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -2573,12 +2520,11 @@ class ChannelProtocol_ResponseEncoder {
       ::fidl::Encode(_encoder, result, 16);
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMethodBResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolMethodBResponseMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage TakeHandle(::fidl::Encoder* _encoder) {
@@ -2596,12 +2542,11 @@ class ChannelProtocol_ResponseEncoder {
     } else {
     }
 
-    fidl_trace(
-        DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolTakeHandleResponseMessageTable,
-        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
-        _encoder->CurrentHandleCount());
+    fidl_trace(DidHLCPPEncode,
+               &::test::protocols::_internal::
+                   test_protocols_ChannelProtocolTakeHandleResponseMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage MutateSocket(::fidl::Encoder* _encoder,
@@ -2633,8 +2578,8 @@ class ChannelProtocol_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocols::_internal::
-            fidl_test_protocols_ChannelProtocolMutateSocketResponseMessageTable,
+        &::test::protocols::_internal::
+            test_protocols_ChannelProtocolMutateSocketResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -2644,74 +2589,71 @@ class ChannelProtocol_ResponseEncoder {
 
 }  // namespace protocols
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::protocols::rights> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::protocols::rights);
+struct CodingTraits<::test::protocols::rights> {
+  static constexpr size_t inline_size_old = sizeof(::test::protocols::rights);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::protocols::rights);
-  static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::protocols::rights);
+      sizeof(::test::protocols::rights);
+  static constexpr size_t inline_size_v2 = sizeof(::test::protocols::rights);
   static void Encode(
-      Encoder* encoder, ::fidl::test::protocols::rights* value, size_t offset,
+      Encoder* encoder, ::test::protocols::rights* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::protocols::rights* value,
+  static void Decode(Decoder* decoder, ::test::protocols::rights* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::protocols::rights>(underlying);
+    *value = static_cast<::test::protocols::rights>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::protocols::rights value,
-                         ::fidl::test::protocols::rights* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+inline zx_status_t Clone(::test::protocols::rights value,
+                         ::test::protocols::rights* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::protocols::rights> {
-  bool operator()(const ::fidl::test::protocols::rights& _lhs,
-                  const ::fidl::test::protocols::rights& _rhs) const {
+struct Equality<::test::protocols::rights> {
+  bool operator()(const ::test::protocols::rights& _lhs,
+                  const ::test::protocols::rights& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
   }
 };
 template <>
-struct CodingTraits<::fidl::test::protocols::obj_type> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::protocols::obj_type);
+struct CodingTraits<::test::protocols::obj_type> {
+  static constexpr size_t inline_size_old = sizeof(::test::protocols::obj_type);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::protocols::obj_type);
-  static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::protocols::obj_type);
+      sizeof(::test::protocols::obj_type);
+  static constexpr size_t inline_size_v2 = sizeof(::test::protocols::obj_type);
   static void Encode(
-      Encoder* encoder, ::fidl::test::protocols::obj_type* value, size_t offset,
+      Encoder* encoder, ::test::protocols::obj_type* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::protocols::obj_type* value,
+  static void Decode(Decoder* decoder, ::test::protocols::obj_type* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::protocols::obj_type>(underlying);
+    *value = static_cast<::test::protocols::obj_type>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::protocols::obj_type value,
-                         ::fidl::test::protocols::obj_type* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+inline zx_status_t Clone(::test::protocols::obj_type value,
+                         ::test::protocols::obj_type* result) {
+  return ::test::protocols::Clone(value, result);
 }
 template <>
-struct Equality<::fidl::test::protocols::obj_type> {
-  bool operator()(const ::fidl::test::protocols::obj_type& _lhs,
-                  const ::fidl::test::protocols::obj_type& _rhs) const {
+struct Equality<::test::protocols::obj_type> {
+  bool operator()(const ::test::protocols::obj_type& _lhs,
+                  const ::test::protocols::obj_type& _rhs) const {
     return _lhs == _rhs;
   }
 };
@@ -2719,35 +2661,30 @@ struct Equality<::fidl::test::protocols::obj_type> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response>
+struct CodingTraits<::test::protocols::WithErrorSyntax_HandleInResult_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response, 4,
-          4> {};
+          ::test::protocols::WithErrorSyntax_HandleInResult_Response, 4, 4> {};
 
 template <>
 struct IsMemcpyCompatible<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response>
+    ::test::protocols::WithErrorSyntax_HandleInResult_Response>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::protocols::
+          !HasPadding<::test::protocols::
                           WithErrorSyntax_HandleInResult_Response>::value &&
           IsMemcpyCompatible<::zx::handle>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+    const ::test::protocols::WithErrorSyntax_HandleInResult_Response& value,
+    ::test::protocols::WithErrorSyntax_HandleInResult_Response* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response> {
+struct Equality<::test::protocols::WithErrorSyntax_HandleInResult_Response> {
   bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response&
-          _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response&
-          _rhs) const {
+      const ::test::protocols::WithErrorSyntax_HandleInResult_Response& _lhs,
+      const ::test::protocols::WithErrorSyntax_HandleInResult_Response& _rhs)
+      const {
     if (!::fidl::Equals(_lhs.h, _rhs.h)) {
       return false;
     }
@@ -2759,27 +2696,23 @@ struct Equality<
 #ifdef __Fuchsia__
 
 template <>
-struct IsFidlXUnion<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>
+struct IsFidlXUnion<::test::protocols::WithErrorSyntax_HandleInResult_Result>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>
+struct CodingTraits<::test::protocols::WithErrorSyntax_HandleInResult_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result, 24,
-          16> {};
+          ::test::protocols::WithErrorSyntax_HandleInResult_Result, 24, 16> {};
 
 template <>
-struct CodingTraits<std::unique_ptr<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>> {
+struct CodingTraits<
+    std::unique_ptr<::test::protocols::WithErrorSyntax_HandleInResult_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>*
+      std::unique_ptr<::test::protocols::WithErrorSyntax_HandleInResult_Result>*
           value,
       size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -2791,8 +2724,7 @@ struct CodingTraits<std::unique_ptr<
 
   static void Decode(
       Decoder* _decoder,
-      std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result>*
+      std::unique_ptr<::test::protocols::WithErrorSyntax_HandleInResult_Result>*
           value,
       size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
@@ -2801,42 +2733,38 @@ struct CodingTraits<std::unique_ptr<
       return;
     }
 
-    value->reset(
-        new ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result);
+    value->reset(new ::test::protocols::WithErrorSyntax_HandleInResult_Result);
 
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Decode(
+    ::test::protocols::WithErrorSyntax_HandleInResult_Result::Decode(
         _decoder, value->get(), offset);
   }
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result& value,
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+    const ::test::protocols::WithErrorSyntax_HandleInResult_Result& value,
+    ::test::protocols::WithErrorSyntax_HandleInResult_Result* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result> {
+struct Equality<::test::protocols::WithErrorSyntax_HandleInResult_Result> {
   bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result&
-          _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result&
-          _rhs) const {
+      const ::test::protocols::WithErrorSyntax_HandleInResult_Result& _lhs,
+      const ::test::protocols::WithErrorSyntax_HandleInResult_Result& _rhs)
+      const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+          ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
               Invalid):
         return true;
-      case ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
+      case ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
           kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::
-          kErr:
+      case ::test::protocols::WithErrorSyntax_HandleInResult_Result::Tag::kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 
       default:
@@ -2848,35 +2776,31 @@ struct Equality<
 
 template <>
 struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response,
-          24, 24> {};
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response, 24,
+          24> {};
 
 template <>
 struct IsMemcpyCompatible<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::protocols::
+          !HasPadding<::test::protocols::
                           WithErrorSyntax_ResponseAsStruct_Response>::value &&
           IsMemcpyCompatible<int64_t>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response*
-        result) {
-  return ::fidl::test::protocols::Clone(value, result);
+    const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response& value,
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response> {
+struct Equality<::test::protocols::WithErrorSyntax_ResponseAsStruct_Response> {
   bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
-          _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response&
-          _rhs) const {
+      const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response& _lhs,
+      const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Response& _rhs)
+      const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -2890,28 +2814,25 @@ struct Equality<
   }
 };
 template <>
-struct IsFidlXUnion<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
+struct IsFidlXUnion<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
+struct CodingTraits<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result, 24,
-          16> {};
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result, 24, 16> {
+};
 
 template <>
 struct CodingTraits<std::unique_ptr<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>> {
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
       std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
-          value,
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>* value,
       size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
@@ -2923,8 +2844,7 @@ struct CodingTraits<std::unique_ptr<
   static void Decode(
       Decoder* _decoder,
       std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>*
-          value,
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result>* value,
       size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -2933,42 +2853,39 @@ struct CodingTraits<std::unique_ptr<
     }
 
     value->reset(
-        new ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result);
+        new ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result);
 
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Decode(
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Decode(
         _decoder, value->get(), offset);
   }
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+    const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result& value,
+    ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result> {
+struct Equality<::test::protocols::WithErrorSyntax_ResponseAsStruct_Result> {
   bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
-          _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result&
-          _rhs) const {
+      const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result& _lhs,
+      const ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result& _rhs)
+      const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
-              Tag::Invalid):
+          ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+              Invalid):
         return true;
-      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
-          Tag::kResponse:
+      case ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+          kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::
-          Tag::kErr:
+      case ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result::Tag::
+          kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 
       default:
@@ -2978,154 +2895,30 @@ struct Equality<
 };
 template <>
 struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1,
-          1> {};
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response, 1, 1> {
+};
 
 template <>
 struct IsMemcpyCompatible<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::protocols::
+          !HasPadding<::test::protocols::
                           WithErrorSyntax_ErrorAsPrimitive_Response>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response*
-        result) {
-  return ::fidl::test::protocols::Clone(value, result);
+    const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response& value,
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {
+struct Equality<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {
   bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
-          _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response&
-          _rhs) const {
-    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct IsFidlXUnion<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
-    : public std::true_type {};
-
-template <>
-struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
-    : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result, 24,
-          16> {};
-
-template <>
-struct CodingTraits<std::unique_ptr<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>> {
-  static constexpr size_t inline_size_v1_no_ee = 24;
-  static constexpr size_t inline_size_v2 = 16;
-
-  static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
-          value,
-      size_t offset,
-      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
-    auto&& p_xunion = *value;
-    if (p_xunion) {
-      p_xunion->Encode(encoder, offset);
-    }
-  }
-
-  static void Decode(
-      Decoder* _decoder,
-      std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>*
-          value,
-      size_t offset) {
-    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
-    if (encoded->tag == 0) {
-      value->reset(nullptr);
-      return;
-    }
-
-    value->reset(
-        new ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result);
-
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
-        _decoder, value->get(), offset);
-  }
-};
-
-inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
-        value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
-  return ::fidl::test::protocols::Clone(value, result);
-}
-
-template <>
-struct Equality<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result> {
-  bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
-          _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result&
-          _rhs) const {
-    if (_lhs.Ordinal() != _rhs.Ordinal()) {
-      return false;
-    }
-
-    switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-              Tag::Invalid):
-        return true;
-      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-          Tag::kResponse:
-        return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::
-          Tag::kErr:
-        return ::fidl::Equals(_lhs.err_, _rhs.err_);
-
-      default:
-        return false;
-    }
-  }
-};
-template <>
-struct CodingTraits<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
-    : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {
-};
-
-template <>
-struct IsMemcpyCompatible<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
-    : public internal::BoolConstant<
-          !HasPadding<::fidl::test::protocols::
-                          WithErrorSyntax_ErrorAsEnum_Response>::value &&
-          IsMemcpyCompatible<uint8_t>::value> {};
-
-inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response* result) {
-  return ::fidl::test::protocols::Clone(value, result);
-}
-
-template <>
-struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
-  bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _rhs)
+      const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response& _lhs,
+      const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response& _rhs)
       const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
@@ -3134,22 +2927,131 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
   }
 };
 template <>
-struct IsFidlXUnion<::fidl::test::protocols::TheUnion> : public std::true_type {
+struct IsFidlXUnion<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public EncodableCodingTraits<
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result, 24, 16> {
 };
 
 template <>
-struct CodingTraits<::fidl::test::protocols::TheUnion>
-    : public EncodableCodingTraits<::fidl::test::protocols::TheUnion, 24, 16> {
-};
-
-template <>
-struct CodingTraits<std::unique_ptr<::fidl::test::protocols::TheUnion>> {
+struct CodingTraits<std::unique_ptr<
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::fidl::test::protocols::TheUnion>* value, size_t offset,
+      std::unique_ptr<
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>* value,
+      size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(
+      Decoder* _decoder,
+      std::unique_ptr<
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result>* value,
+      size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(
+        new ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result);
+
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Decode(
+        _decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(
+    const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result& value,
+    ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+  return ::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result> {
+  bool operator()(
+      const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result& _lhs,
+      const ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result& _rhs)
+      const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+              Invalid):
+        return true;
+      case ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+          kResponse:
+        return ::fidl::Equals(_lhs.response_, _rhs.response_);
+      case ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::
+          kErr:
+        return ::fidl::Equals(_lhs.err_, _rhs.err_);
+
+      default:
+        return false;
+    }
+  }
+};
+template <>
+struct CodingTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public EncodableCodingTraits<
+          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response, 1, 1> {};
+
+template <>
+struct IsMemcpyCompatible<
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public internal::BoolConstant<
+          !HasPadding<
+              ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response>::value &&
+          IsMemcpyCompatible<uint8_t>::value> {};
+
+inline zx_status_t Clone(
+    const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& value,
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response* result) {
+  return ::test::protocols::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::protocols::WithErrorSyntax_ErrorAsEnum_Response> {
+  bool operator()(
+      const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _lhs,
+      const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Response& _rhs)
+      const {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct IsFidlXUnion<::test::protocols::TheUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::protocols::TheUnion>
+    : public EncodableCodingTraits<::test::protocols::TheUnion, 24, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::test::protocols::TheUnion>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(
+      Encoder* encoder, std::unique_ptr<::test::protocols::TheUnion>* value,
+      size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
     if (p_xunion) {
@@ -3158,7 +3060,7 @@ struct CodingTraits<std::unique_ptr<::fidl::test::protocols::TheUnion>> {
   }
 
   static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::fidl::test::protocols::TheUnion>* value,
+                     std::unique_ptr<::test::protocols::TheUnion>* value,
                      size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -3166,30 +3068,30 @@ struct CodingTraits<std::unique_ptr<::fidl::test::protocols::TheUnion>> {
       return;
     }
 
-    value->reset(new ::fidl::test::protocols::TheUnion);
+    value->reset(new ::test::protocols::TheUnion);
 
-    ::fidl::test::protocols::TheUnion::Decode(_decoder, value->get(), offset);
+    ::test::protocols::TheUnion::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(const ::fidl::test::protocols::TheUnion& value,
-                         ::fidl::test::protocols::TheUnion* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+inline zx_status_t Clone(const ::test::protocols::TheUnion& value,
+                         ::test::protocols::TheUnion* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::protocols::TheUnion> {
-  bool operator()(const ::fidl::test::protocols::TheUnion& _lhs,
-                  const ::fidl::test::protocols::TheUnion& _rhs) const {
+struct Equality<::test::protocols::TheUnion> {
+  bool operator()(const ::test::protocols::TheUnion& _lhs,
+                  const ::test::protocols::TheUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::protocols::TheUnion::Tag::Invalid):
+          ::test::protocols::TheUnion::Tag::Invalid):
         return true;
-      case ::fidl::test::protocols::TheUnion::Tag::kV:
+      case ::test::protocols::TheUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
       default:
         return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
@@ -3199,28 +3101,27 @@ struct Equality<::fidl::test::protocols::TheUnion> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::protocols::ProtocolEnds>
-    : public EncodableCodingTraits<::fidl::test::protocols::ProtocolEnds, 16,
-                                   16> {};
+struct CodingTraits<::test::protocols::ProtocolEnds>
+    : public EncodableCodingTraits<::test::protocols::ProtocolEnds, 16, 16> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::protocols::ProtocolEnds>
+struct IsMemcpyCompatible<::test::protocols::ProtocolEnds>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::protocols::ProtocolEnds>::value &&
+          !HasPadding<::test::protocols::ProtocolEnds>::value &&
           IsMemcpyCompatible<::fidl::InterfaceHandle<
-              ::fidl::test::protocols::DiscoverableProtocol>>::value &&
+              ::test::protocols::DiscoverableProtocol>>::value &&
           IsMemcpyCompatible<::fidl::InterfaceRequest<
-              ::fidl::test::protocols::DiscoverableProtocol>>::value> {};
+              ::test::protocols::DiscoverableProtocol>>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::protocols::ProtocolEnds& value,
-                         ::fidl::test::protocols::ProtocolEnds* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+inline zx_status_t Clone(const ::test::protocols::ProtocolEnds& value,
+                         ::test::protocols::ProtocolEnds* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::protocols::ProtocolEnds> {
-  bool operator()(const ::fidl::test::protocols::ProtocolEnds& _lhs,
-                  const ::fidl::test::protocols::ProtocolEnds& _rhs) const {
+struct Equality<::test::protocols::ProtocolEnds> {
+  bool operator()(const ::test::protocols::ProtocolEnds& _lhs,
+                  const ::test::protocols::ProtocolEnds& _rhs) const {
     if (!::fidl::Equals(_lhs.client, _rhs.client)) {
       return false;
     }
@@ -3239,61 +3140,58 @@ struct Equality<::fidl::test::protocols::ProtocolEnds> {
 #endif  // __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::protocols::ErrorEnum> {
+struct CodingTraits<::test::protocols::ErrorEnum> {
   static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::protocols::ErrorEnum);
+      sizeof(::test::protocols::ErrorEnum);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::protocols::ErrorEnum);
-  static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::protocols::ErrorEnum);
+      sizeof(::test::protocols::ErrorEnum);
+  static constexpr size_t inline_size_v2 = sizeof(::test::protocols::ErrorEnum);
   static void Encode(
-      Encoder* encoder, ::fidl::test::protocols::ErrorEnum* value,
-      size_t offset,
+      Encoder* encoder, ::test::protocols::ErrorEnum* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder,
-                     ::fidl::test::protocols::ErrorEnum* value, size_t offset) {
+  static void Decode(Decoder* decoder, ::test::protocols::ErrorEnum* value,
+                     size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::protocols::ErrorEnum>(underlying);
+    *value = static_cast<::test::protocols::ErrorEnum>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::protocols::ErrorEnum value,
-                         ::fidl::test::protocols::ErrorEnum* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+inline zx_status_t Clone(::test::protocols::ErrorEnum value,
+                         ::test::protocols::ErrorEnum* result) {
+  return ::test::protocols::Clone(value, result);
 }
 template <>
-struct Equality<::fidl::test::protocols::ErrorEnum> {
-  bool operator()(const ::fidl::test::protocols::ErrorEnum& _lhs,
-                  const ::fidl::test::protocols::ErrorEnum& _rhs) const {
+struct Equality<::test::protocols::ErrorEnum> {
+  bool operator()(const ::test::protocols::ErrorEnum& _lhs,
+                  const ::test::protocols::ErrorEnum& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
-struct IsFidlXUnion<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
+struct IsFidlXUnion<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public std::true_type {};
 
 template <>
-struct CodingTraits<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
+struct CodingTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 24, 16> {
-};
+          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result, 24, 16> {};
 
 template <>
-struct CodingTraits<std::unique_ptr<
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>> {
+struct CodingTraits<
+    std::unique_ptr<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
+      std::unique_ptr<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>*
+          value,
       size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
@@ -3304,8 +3202,8 @@ struct CodingTraits<std::unique_ptr<
 
   static void Decode(
       Decoder* _decoder,
-      std::unique_ptr<
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>* value,
+      std::unique_ptr<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result>*
+          value,
       size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -3313,40 +3211,36 @@ struct CodingTraits<std::unique_ptr<
       return;
     }
 
-    value->reset(
-        new ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result);
+    value->reset(new ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result);
 
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Decode(
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Decode(
         _decoder, value->get(), offset);
   }
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& value,
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
-  return ::fidl::test::protocols::Clone(value, result);
+    const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& value,
+    ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* result) {
+  return ::test::protocols::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
+struct Equality<::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
   bool operator()(
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& _lhs,
-      const ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& _rhs)
-      const {
+      const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& _lhs,
+      const ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-              Invalid):
+          ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::Invalid):
         return true;
-      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
+      case ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
           kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::
-          kErr:
+      case ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 
       default:
@@ -3358,6 +3252,7 @@ struct Equality<::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result> {
 //
 // Proxies and stubs declarations
 //
+}  // namespace fidl
 namespace test {
 namespace protocols {
 #ifdef __Fuchsia__
@@ -3373,10 +3268,10 @@ class HandleRightsProtocol_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kHandleRightsProtocol_NoResponseMethod_Ordinal =
-    0x466a6fe3be0bcb7clu;
+    0x10078afd320d2bfdlu;
 constexpr uint64_t kHandleRightsProtocol_ResponseMethod_Ordinal =
-    0x5ef2bd2bbb280ffclu;
-constexpr uint64_t kHandleRightsProtocol_AnEvent_Ordinal = 0xce6b76255d6ed71lu;
+    0x52a8f194ac143547lu;
+constexpr uint64_t kHandleRightsProtocol_AnEvent_Ordinal = 0x69dad41418eb133lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3394,26 +3289,26 @@ class WithAndWithoutRequestResponse_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
-    0x6ad894147d0c6ba4lu;
+    0x4b212a6c8c5f7bablu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
-        0x4068f26bf6d868aelu;
+        0x16a329d17f458668lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
-        0x447e655905ccfbf4lu;
+        0x7d6b2fcf0e2a65bdlu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
-        0x7cb47b2f9e76d17dlu;
+        0x65ab625138c50a77lu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
-        0x65eb512ff0e1c07elu;
+        0x27ee4d2bd405df5flu;
 constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
-        0x1d323510d4447cf1lu;
+        0x590e91945d58f5b1lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
-    0x125c87a592bff029lu;
+    0x4ae85a2b8d7c2e56lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
-    0x177adc0a3ee346c2lu;
+    0x50a6f21a322f31a8lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3428,9 +3323,9 @@ using TransitionalSyncPtr = ::fidl::SynchronousInterfacePtr<Transitional>;
 class Transitional_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kTransitional_Request_Ordinal = 0x62d345e621780ee8lu;
-constexpr uint64_t kTransitional_OneWay_Ordinal = 0xf99bc4b26bc9ea5lu;
-constexpr uint64_t kTransitional_Event_Ordinal = 0x53bb9212bcbe8966lu;
+constexpr uint64_t kTransitional_Request_Ordinal = 0x512cc1ba467fef08lu;
+constexpr uint64_t kTransitional_OneWay_Ordinal = 0x3c2ee8512dc7f7e7lu;
+constexpr uint64_t kTransitional_Event_Ordinal = 0x76113c4b4d484841lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3445,7 +3340,7 @@ using MethodWithUnionSyncPtr = ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
 class MethodWithUnion_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal = 0x5ba125a32d36092alu;
+constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3461,10 +3356,10 @@ using WithProtocolEndsSyncPtr =
 class WithProtocolEnds_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kWithProtocolEnds_ClientEnds_Ordinal = 0x60b18491ac8062adlu;
-constexpr uint64_t kWithProtocolEnds_ServerEnds_Ordinal = 0x3e5b3b503a05a17clu;
+constexpr uint64_t kWithProtocolEnds_ClientEnds_Ordinal = 0x51780563edb15042lu;
+constexpr uint64_t kWithProtocolEnds_ServerEnds_Ordinal = 0x70a02c2ba2228a33lu;
 constexpr uint64_t kWithProtocolEnds_StructContainingEnds_Ordinal =
-    0x26f2c10b743415clu;
+    0x3893f0baad26f5d5lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3479,7 +3374,7 @@ using ManyParametersSyncPtr = ::fidl::SynchronousInterfacePtr<ManyParameters>;
 class ManyParameters_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kManyParameters_Fifteen_Ordinal = 0x295ae26a080f53e3lu;
+constexpr uint64_t kManyParameters_Fifteen_Ordinal = 0x59233bcecd338967lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3495,12 +3390,12 @@ class WithErrorSyntax_SyncProxy;
 
 namespace internal {
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
-    0x3784d38864674290lu;
+    0x3b902a6d8d24693lu;
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
-    0x2f7c390f3cdef4celu;
-constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x8b550d7c29f740clu;
+    0x602fd6bd920135e7lu;
+constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c371e1673212f43lu;
 constexpr uint64_t kWithErrorSyntax_HandleInResult_Ordinal =
-    0x1dcf0cfb09e14f97lu;
+    0x13092c5b835b0cbflu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3516,7 +3411,7 @@ using DiscoverableProtocolSyncPtr =
 class DiscoverableProtocol_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kDiscoverableProtocol_Method_Ordinal = 0x39790af74e0167lu;
+constexpr uint64_t kDiscoverableProtocol_Method_Ordinal = 0x2ff5ba3a2bd170eblu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3531,11 +3426,11 @@ using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x7d92c10fb2d002elu;
-constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x52c2fa481a687dfalu;
-constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x5da1d2ed00055cealu;
-constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal = 0xc25674355065c28lu;
-constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76alu;
+constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x2bc8d7d32bc66ba2lu;
+constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1ed0a220297145celu;
+constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x7b8dd3d6c741c9c6lu;
+constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal = 0x836fa31201a0a65lu;
+constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x66dbcccc06f7f14flu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -3543,11 +3438,10 @@ constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x7dd036a18b33b76alu;
 
 class HandleRightsProtocol {
  public:
-  using Proxy_ = ::fidl::test::protocols::HandleRightsProtocol_Proxy;
-  using Stub_ = ::fidl::test::protocols::HandleRightsProtocol_Stub;
-  using EventSender_ =
-      ::fidl::test::protocols::HandleRightsProtocol_EventSender;
-  using Sync_ = ::fidl::test::protocols::HandleRightsProtocol_Sync;
+  using Proxy_ = ::test::protocols::HandleRightsProtocol_Proxy;
+  using Stub_ = ::test::protocols::HandleRightsProtocol_Stub;
+  using EventSender_ = ::test::protocols::HandleRightsProtocol_EventSender;
+  using Sync_ = ::test::protocols::HandleRightsProtocol_Sync;
   virtual ~HandleRightsProtocol();
 
   virtual void NoResponseMethod(::zx::socket h) = 0;
@@ -3584,7 +3478,7 @@ class HandleRightsProtocol_EventSender {
 
 class HandleRightsProtocol_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::HandleRightsProtocol_SyncProxy;
+  using Proxy_ = ::test::protocols::HandleRightsProtocol_SyncProxy;
   virtual ~HandleRightsProtocol_Sync();
   virtual zx_status_t NoResponseMethod(::zx::socket h) = 0;
   virtual zx_status_t ResponseMethod(::zx::socket h, ::zx::socket* out_h) = 0;
@@ -3598,30 +3492,30 @@ class HandleRightsProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~HandleRightsProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.NoResponseMethod
+  // cts-coverage-fidl-name:test.protocols/HandleRightsProtocol.NoResponseMethod
   void NoResponseMethod(::zx::socket h) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.ResponseMethod
+  // cts-coverage-fidl-name:test.protocols/HandleRightsProtocol.ResponseMethod
   void ResponseMethod(::zx::socket h, ResponseMethodCallback callback) override;
   AnEventCallback AnEvent;
 
  private:
   HandleRightsProtocol_Proxy(
-      const ::fidl::test::protocols::HandleRightsProtocol_Proxy&) = delete;
+      const ::test::protocols::HandleRightsProtocol_Proxy&) = delete;
   HandleRightsProtocol_Proxy& operator=(
-      const ::fidl::test::protocols::HandleRightsProtocol_Proxy&) = delete;
+      const ::test::protocols::HandleRightsProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class HandleRightsProtocol_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::HandleRightsProtocol_EventSender {
+      public ::test::protocols::HandleRightsProtocol_EventSender {
  public:
-  typedef class ::fidl::test::protocols::HandleRightsProtocol
+  typedef class ::test::protocols::HandleRightsProtocol
       HandleRightsProtocol_clazz;
   explicit HandleRightsProtocol_Stub(
-      ::fidl::test::protocols::HandleRightsProtocol_Stub::
-          HandleRightsProtocol_clazz* impl);
+      ::test::protocols::HandleRightsProtocol_Stub::HandleRightsProtocol_clazz*
+          impl);
   ~HandleRightsProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -3629,18 +3523,18 @@ class HandleRightsProtocol_Stub final
   void AnEvent(::zx::socket h) override;
 
  private:
-  ::fidl::test::protocols::HandleRightsProtocol_Stub::
-      HandleRightsProtocol_clazz* impl_;
+  ::test::protocols::HandleRightsProtocol_Stub::HandleRightsProtocol_clazz*
+      impl_;
 };
 
 class HandleRightsProtocol_SyncProxy
-    : public ::fidl::test::protocols::HandleRightsProtocol_Sync {
+    : public ::test::protocols::HandleRightsProtocol_Sync {
  public:
   explicit HandleRightsProtocol_SyncProxy(::zx::channel channel);
   ~HandleRightsProtocol_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.NoResponseMethod
+  // cts-coverage-fidl-name:test.protocols/HandleRightsProtocol.NoResponseMethod
   zx_status_t NoResponseMethod(::zx::socket h) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/HandleRightsProtocol.ResponseMethod
+  // cts-coverage-fidl-name:test.protocols/HandleRightsProtocol.ResponseMethod
   zx_status_t ResponseMethod(::zx::socket h, ::zx::socket* out_h) override;
 
  private:
@@ -3653,11 +3547,11 @@ class HandleRightsProtocol_SyncProxy
 
 class WithAndWithoutRequestResponse {
  public:
-  using Proxy_ = ::fidl::test::protocols::WithAndWithoutRequestResponse_Proxy;
-  using Stub_ = ::fidl::test::protocols::WithAndWithoutRequestResponse_Stub;
+  using Proxy_ = ::test::protocols::WithAndWithoutRequestResponse_Proxy;
+  using Stub_ = ::test::protocols::WithAndWithoutRequestResponse_Stub;
   using EventSender_ =
-      ::fidl::test::protocols::WithAndWithoutRequestResponse_EventSender;
-  using Sync_ = ::fidl::test::protocols::WithAndWithoutRequestResponse_Sync;
+      ::test::protocols::WithAndWithoutRequestResponse_EventSender;
+  using Sync_ = ::test::protocols::WithAndWithoutRequestResponse_Sync;
   virtual ~WithAndWithoutRequestResponse();
 
   virtual void NoRequestNoResponse() = 0;
@@ -3718,8 +3612,7 @@ class WithAndWithoutRequestResponse_EventSender {
 
 class WithAndWithoutRequestResponse_Sync {
  public:
-  using Proxy_ =
-      ::fidl::test::protocols::WithAndWithoutRequestResponse_SyncProxy;
+  using Proxy_ = ::test::protocols::WithAndWithoutRequestResponse_SyncProxy;
   virtual ~WithAndWithoutRequestResponse_Sync();
   virtual zx_status_t NoRequestNoResponse() = 0;
   virtual zx_status_t NoRequestEmptyResponse() = 0;
@@ -3739,18 +3632,18 @@ class WithAndWithoutRequestResponse_Proxy final
   ~WithAndWithoutRequestResponse_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse
   void NoRequestNoResponse() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse
   void NoRequestEmptyResponse(NoRequestEmptyResponseCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse
   void NoRequestWithResponse(NoRequestWithResponseCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse
   void WithRequestNoResponse(::std::string arg) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse
   void WithRequestEmptyResponse(
       ::std::string arg, WithRequestEmptyResponseCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse
   void WithRequestWithResponse(
       ::std::string arg, WithRequestWithResponseCallback callback) override;
   OnEmptyResponseCallback OnEmptyResponse;
@@ -3758,24 +3651,21 @@ class WithAndWithoutRequestResponse_Proxy final
 
  private:
   WithAndWithoutRequestResponse_Proxy(
-      const ::fidl::test::protocols::WithAndWithoutRequestResponse_Proxy&) =
-      delete;
+      const ::test::protocols::WithAndWithoutRequestResponse_Proxy&) = delete;
   WithAndWithoutRequestResponse_Proxy& operator=(
-      const ::fidl::test::protocols::WithAndWithoutRequestResponse_Proxy&) =
-      delete;
+      const ::test::protocols::WithAndWithoutRequestResponse_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class WithAndWithoutRequestResponse_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::
-          WithAndWithoutRequestResponse_EventSender {
+      public ::test::protocols::WithAndWithoutRequestResponse_EventSender {
  public:
-  typedef class ::fidl::test::protocols::WithAndWithoutRequestResponse
+  typedef class ::test::protocols::WithAndWithoutRequestResponse
       WithAndWithoutRequestResponse_clazz;
   explicit WithAndWithoutRequestResponse_Stub(
-      ::fidl::test::protocols::WithAndWithoutRequestResponse_Stub::
+      ::test::protocols::WithAndWithoutRequestResponse_Stub::
           WithAndWithoutRequestResponse_clazz* impl);
   ~WithAndWithoutRequestResponse_Stub() override;
 
@@ -3785,26 +3675,26 @@ class WithAndWithoutRequestResponse_Stub final
   void OnWithResponse(::std::string ret) override;
 
  private:
-  ::fidl::test::protocols::WithAndWithoutRequestResponse_Stub::
+  ::test::protocols::WithAndWithoutRequestResponse_Stub::
       WithAndWithoutRequestResponse_clazz* impl_;
 };
 
 class WithAndWithoutRequestResponse_SyncProxy
-    : public ::fidl::test::protocols::WithAndWithoutRequestResponse_Sync {
+    : public ::test::protocols::WithAndWithoutRequestResponse_Sync {
  public:
   explicit WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel);
   ~WithAndWithoutRequestResponse_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.NoRequestNoResponse
   zx_status_t NoRequestNoResponse() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.NoRequestEmptyResponse
   zx_status_t NoRequestEmptyResponse() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.NoRequestWithResponse
   zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.WithRequestNoResponse
   zx_status_t WithRequestNoResponse(::std::string arg) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.WithRequestEmptyResponse
   zx_status_t WithRequestEmptyResponse(::std::string arg) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse
+  // cts-coverage-fidl-name:test.protocols/WithAndWithoutRequestResponse.WithRequestWithResponse
   zx_status_t WithRequestWithResponse(::std::string arg,
                                       ::std::string* out_ret) override;
 
@@ -3818,10 +3708,10 @@ class WithAndWithoutRequestResponse_SyncProxy
 
 class Transitional {
  public:
-  using Proxy_ = ::fidl::test::protocols::Transitional_Proxy;
-  using Stub_ = ::fidl::test::protocols::Transitional_Stub;
-  using EventSender_ = ::fidl::test::protocols::Transitional_EventSender;
-  using Sync_ = ::fidl::test::protocols::Transitional_Sync;
+  using Proxy_ = ::test::protocols::Transitional_Proxy;
+  using Stub_ = ::test::protocols::Transitional_Stub;
+  using EventSender_ = ::test::protocols::Transitional_EventSender;
+  using Sync_ = ::test::protocols::Transitional_Sync;
   virtual ~Transitional();
   using RequestCallback = fit::function<void(int64_t)>;
 
@@ -3857,7 +3747,7 @@ class Transitional_EventSender {
 
 class Transitional_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::Transitional_SyncProxy;
+  using Proxy_ = ::test::protocols::Transitional_SyncProxy;
   virtual ~Transitional_Sync();
   virtual zx_status_t Request(int64_t x, int64_t* out_y) = 0;
   virtual zx_status_t OneWay(int64_t x) = 0;
@@ -3870,28 +3760,27 @@ class Transitional_Proxy final : public ::fidl::internal::Proxy,
   ~Transitional_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.Request
+  // cts-coverage-fidl-name:test.protocols/Transitional.Request
   void Request(int64_t x, RequestCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.OneWay
+  // cts-coverage-fidl-name:test.protocols/Transitional.OneWay
   void OneWay(int64_t x) override;
   EventCallback Event;
 
  private:
-  Transitional_Proxy(const ::fidl::test::protocols::Transitional_Proxy&) =
+  Transitional_Proxy(const ::test::protocols::Transitional_Proxy&) = delete;
+  Transitional_Proxy& operator=(const ::test::protocols::Transitional_Proxy&) =
       delete;
-  Transitional_Proxy& operator=(
-      const ::fidl::test::protocols::Transitional_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class Transitional_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::Transitional_EventSender {
+      public ::test::protocols::Transitional_EventSender {
  public:
-  typedef class ::fidl::test::protocols::Transitional Transitional_clazz;
+  typedef class ::test::protocols::Transitional Transitional_clazz;
   explicit Transitional_Stub(
-      ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl);
+      ::test::protocols::Transitional_Stub::Transitional_clazz* impl);
   ~Transitional_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -3899,17 +3788,16 @@ class Transitional_Stub final
   void Event(int64_t x) override;
 
  private:
-  ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl_;
+  ::test::protocols::Transitional_Stub::Transitional_clazz* impl_;
 };
 
-class Transitional_SyncProxy
-    : public ::fidl::test::protocols::Transitional_Sync {
+class Transitional_SyncProxy : public ::test::protocols::Transitional_Sync {
  public:
   explicit Transitional_SyncProxy(::zx::channel channel);
   ~Transitional_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.Request
+  // cts-coverage-fidl-name:test.protocols/Transitional.Request
   zx_status_t Request(int64_t x, int64_t* out_y) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/Transitional.OneWay
+  // cts-coverage-fidl-name:test.protocols/Transitional.OneWay
   zx_status_t OneWay(int64_t x) override;
 
  private:
@@ -3922,13 +3810,13 @@ class Transitional_SyncProxy
 
 class MethodWithUnion {
  public:
-  using Proxy_ = ::fidl::test::protocols::MethodWithUnion_Proxy;
-  using Stub_ = ::fidl::test::protocols::MethodWithUnion_Stub;
-  using EventSender_ = ::fidl::test::protocols::MethodWithUnion_EventSender;
-  using Sync_ = ::fidl::test::protocols::MethodWithUnion_Sync;
+  using Proxy_ = ::test::protocols::MethodWithUnion_Proxy;
+  using Stub_ = ::test::protocols::MethodWithUnion_Stub;
+  using EventSender_ = ::test::protocols::MethodWithUnion_EventSender;
+  using Sync_ = ::test::protocols::MethodWithUnion_Sync;
   virtual ~MethodWithUnion();
 
-  virtual void UnionMethod(::fidl::test::protocols::TheUnion u) = 0;
+  virtual void UnionMethod(::test::protocols::TheUnion u) = 0;
 };
 
 class MethodWithUnion_RequestDecoder {
@@ -3936,7 +3824,7 @@ class MethodWithUnion_RequestDecoder {
   MethodWithUnion_RequestDecoder() = default;
   virtual ~MethodWithUnion_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
-  virtual void UnionMethod(::fidl::test::protocols::TheUnion u) = 0;
+  virtual void UnionMethod(::test::protocols::TheUnion u) = 0;
 };
 
 class MethodWithUnion_ResponseDecoder {
@@ -3953,9 +3841,9 @@ class MethodWithUnion_EventSender {
 
 class MethodWithUnion_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::MethodWithUnion_SyncProxy;
+  using Proxy_ = ::test::protocols::MethodWithUnion_SyncProxy;
   virtual ~MethodWithUnion_Sync();
-  virtual zx_status_t UnionMethod(::fidl::test::protocols::TheUnion u) = 0;
+  virtual zx_status_t UnionMethod(::test::protocols::TheUnion u) = 0;
 };
 
 class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy,
@@ -3965,42 +3853,41 @@ class MethodWithUnion_Proxy final : public ::fidl::internal::Proxy,
   ~MethodWithUnion_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/MethodWithUnion.UnionMethod
-  void UnionMethod(::fidl::test::protocols::TheUnion u) override;
+  // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
+  void UnionMethod(::test::protocols::TheUnion u) override;
 
  private:
-  MethodWithUnion_Proxy(const ::fidl::test::protocols::MethodWithUnion_Proxy&) =
+  MethodWithUnion_Proxy(const ::test::protocols::MethodWithUnion_Proxy&) =
       delete;
   MethodWithUnion_Proxy& operator=(
-      const ::fidl::test::protocols::MethodWithUnion_Proxy&) = delete;
+      const ::test::protocols::MethodWithUnion_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class MethodWithUnion_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::MethodWithUnion_EventSender {
+      public ::test::protocols::MethodWithUnion_EventSender {
  public:
-  typedef class ::fidl::test::protocols::MethodWithUnion MethodWithUnion_clazz;
+  typedef class ::test::protocols::MethodWithUnion MethodWithUnion_clazz;
   explicit MethodWithUnion_Stub(
-      ::fidl::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz*
-          impl);
+      ::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl);
   ~MethodWithUnion_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl_;
+  ::test::protocols::MethodWithUnion_Stub::MethodWithUnion_clazz* impl_;
 };
 
 class MethodWithUnion_SyncProxy
-    : public ::fidl::test::protocols::MethodWithUnion_Sync {
+    : public ::test::protocols::MethodWithUnion_Sync {
  public:
   explicit MethodWithUnion_SyncProxy(::zx::channel channel);
   ~MethodWithUnion_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/MethodWithUnion.UnionMethod
-  zx_status_t UnionMethod(::fidl::test::protocols::TheUnion u) override;
+  // cts-coverage-fidl-name:test.protocols/MethodWithUnion.UnionMethod
+  zx_status_t UnionMethod(::test::protocols::TheUnion u) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -4012,28 +3899,27 @@ class MethodWithUnion_SyncProxy
 
 class WithProtocolEnds {
  public:
-  using Proxy_ = ::fidl::test::protocols::WithProtocolEnds_Proxy;
-  using Stub_ = ::fidl::test::protocols::WithProtocolEnds_Stub;
-  using EventSender_ = ::fidl::test::protocols::WithProtocolEnds_EventSender;
-  using Sync_ = ::fidl::test::protocols::WithProtocolEnds_Sync;
+  using Proxy_ = ::test::protocols::WithProtocolEnds_Proxy;
+  using Stub_ = ::test::protocols::WithProtocolEnds_Stub;
+  using EventSender_ = ::test::protocols::WithProtocolEnds_EventSender;
+  using Sync_ = ::test::protocols::WithProtocolEnds_Sync;
   virtual ~WithProtocolEnds();
   using ClientEndsCallback = fit::function<void(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>)>;
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>)>;
 
   virtual void ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in,
       ClientEndsCallback callback) = 0;
   using ServerEndsCallback = fit::function<void(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>)>;
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>)>;
 
   virtual void ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-          in,
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in,
       ServerEndsCallback callback) = 0;
   using StructContainingEndsCallback =
-      fit::function<void(::fidl::test::protocols::ProtocolEnds)>;
+      fit::function<void(::test::protocols::ProtocolEnds)>;
 
-  virtual void StructContainingEnds(::fidl::test::protocols::ProtocolEnds in,
+  virtual void StructContainingEnds(::test::protocols::ProtocolEnds in,
                                     StructContainingEndsCallback callback) = 0;
 };
 
@@ -4043,13 +3929,10 @@ class WithProtocolEnds_RequestDecoder {
   virtual ~WithProtocolEnds_RequestDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
   virtual void ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
-          in) = 0;
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in) = 0;
   virtual void ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-          in) = 0;
-  virtual void StructContainingEnds(
-      ::fidl::test::protocols::ProtocolEnds in) = 0;
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in) = 0;
+  virtual void StructContainingEnds(::test::protocols::ProtocolEnds in) = 0;
 };
 
 class WithProtocolEnds_ResponseDecoder {
@@ -4058,13 +3941,11 @@ class WithProtocolEnds_ResponseDecoder {
   virtual ~WithProtocolEnds_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
   virtual void ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
-          out) = 0;
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> out) = 0;
   virtual void ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>
           out) = 0;
-  virtual void StructContainingEnds(
-      ::fidl::test::protocols::ProtocolEnds out) = 0;
+  virtual void StructContainingEnds(::test::protocols::ProtocolEnds out) = 0;
 };
 
 class WithProtocolEnds_EventSender {
@@ -4074,20 +3955,19 @@ class WithProtocolEnds_EventSender {
 
 class WithProtocolEnds_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::WithProtocolEnds_SyncProxy;
+  using Proxy_ = ::test::protocols::WithProtocolEnds_SyncProxy;
   virtual ~WithProtocolEnds_Sync();
   virtual zx_status_t ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>*
           out_out) = 0;
   virtual zx_status_t ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-          in,
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>*
           out_out) = 0;
   virtual zx_status_t StructContainingEnds(
-      ::fidl::test::protocols::ProtocolEnds in,
-      ::fidl::test::protocols::ProtocolEnds* out_out) = 0;
+      ::test::protocols::ProtocolEnds in,
+      ::test::protocols::ProtocolEnds* out_out) = 0;
 };
 
 class WithProtocolEnds_Proxy final : public ::fidl::internal::Proxy,
@@ -4098,66 +3978,62 @@ class WithProtocolEnds_Proxy final : public ::fidl::internal::Proxy,
   ~WithProtocolEnds_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ClientEnds
+  // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.ClientEnds
   void ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in,
       ClientEndsCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ServerEnds
+  // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.ServerEnds
   void ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-          in,
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in,
       ServerEndsCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.StructContainingEnds
-  void StructContainingEnds(::fidl::test::protocols::ProtocolEnds in,
+  // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.StructContainingEnds
+  void StructContainingEnds(::test::protocols::ProtocolEnds in,
                             StructContainingEndsCallback callback) override;
 
  private:
-  WithProtocolEnds_Proxy(
-      const ::fidl::test::protocols::WithProtocolEnds_Proxy&) = delete;
+  WithProtocolEnds_Proxy(const ::test::protocols::WithProtocolEnds_Proxy&) =
+      delete;
   WithProtocolEnds_Proxy& operator=(
-      const ::fidl::test::protocols::WithProtocolEnds_Proxy&) = delete;
+      const ::test::protocols::WithProtocolEnds_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class WithProtocolEnds_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::WithProtocolEnds_EventSender {
+      public ::test::protocols::WithProtocolEnds_EventSender {
  public:
-  typedef class ::fidl::test::protocols::WithProtocolEnds
-      WithProtocolEnds_clazz;
+  typedef class ::test::protocols::WithProtocolEnds WithProtocolEnds_clazz;
   explicit WithProtocolEnds_Stub(
-      ::fidl::test::protocols::WithProtocolEnds_Stub::WithProtocolEnds_clazz*
-          impl);
+      ::test::protocols::WithProtocolEnds_Stub::WithProtocolEnds_clazz* impl);
   ~WithProtocolEnds_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocols::WithProtocolEnds_Stub::WithProtocolEnds_clazz* impl_;
+  ::test::protocols::WithProtocolEnds_Stub::WithProtocolEnds_clazz* impl_;
 };
 
 class WithProtocolEnds_SyncProxy
-    : public ::fidl::test::protocols::WithProtocolEnds_Sync {
+    : public ::test::protocols::WithProtocolEnds_Sync {
  public:
   explicit WithProtocolEnds_SyncProxy(::zx::channel channel);
   ~WithProtocolEnds_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ClientEnds
+  // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.ClientEnds
   zx_status_t ClientEnds(
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in,
-      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>*
-          out_out) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.ServerEnds
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* out_out)
+      override;
+  // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.ServerEnds
   zx_status_t ServerEnds(
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
-          in,
-      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>*
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol> in,
+      ::fidl::InterfaceRequest<::test::protocols::DiscoverableProtocol>*
           out_out) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithProtocolEnds.StructContainingEnds
+  // cts-coverage-fidl-name:test.protocols/WithProtocolEnds.StructContainingEnds
   zx_status_t StructContainingEnds(
-      ::fidl::test::protocols::ProtocolEnds in,
-      ::fidl::test::protocols::ProtocolEnds* out_out) override;
+      ::test::protocols::ProtocolEnds in,
+      ::test::protocols::ProtocolEnds* out_out) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -4169,10 +4045,10 @@ class WithProtocolEnds_SyncProxy
 
 class ManyParameters {
  public:
-  using Proxy_ = ::fidl::test::protocols::ManyParameters_Proxy;
-  using Stub_ = ::fidl::test::protocols::ManyParameters_Stub;
-  using EventSender_ = ::fidl::test::protocols::ManyParameters_EventSender;
-  using Sync_ = ::fidl::test::protocols::ManyParameters_Sync;
+  using Proxy_ = ::test::protocols::ManyParameters_Proxy;
+  using Stub_ = ::test::protocols::ManyParameters_Stub;
+  using EventSender_ = ::test::protocols::ManyParameters_EventSender;
+  using Sync_ = ::test::protocols::ManyParameters_Sync;
   virtual ~ManyParameters();
 
   virtual void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
@@ -4204,7 +4080,7 @@ class ManyParameters_EventSender {
 
 class ManyParameters_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::ManyParameters_SyncProxy;
+  using Proxy_ = ::test::protocols::ManyParameters_SyncProxy;
   virtual ~ManyParameters_Sync();
   virtual zx_status_t Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5,
                               bool p6, bool p7, bool p8, bool p9, bool p10,
@@ -4219,42 +4095,40 @@ class ManyParameters_Proxy final : public ::fidl::internal::Proxy,
   ~ManyParameters_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ManyParameters.Fifteen
+  // cts-coverage-fidl-name:test.protocols/ManyParameters.Fifteen
   void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7,
                bool p8, bool p9, bool p10, bool p11, bool p12, bool p13,
                bool p14, bool p15) override;
 
  private:
-  ManyParameters_Proxy(const ::fidl::test::protocols::ManyParameters_Proxy&) =
-      delete;
+  ManyParameters_Proxy(const ::test::protocols::ManyParameters_Proxy&) = delete;
   ManyParameters_Proxy& operator=(
-      const ::fidl::test::protocols::ManyParameters_Proxy&) = delete;
+      const ::test::protocols::ManyParameters_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class ManyParameters_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::ManyParameters_EventSender {
+      public ::test::protocols::ManyParameters_EventSender {
  public:
-  typedef class ::fidl::test::protocols::ManyParameters ManyParameters_clazz;
+  typedef class ::test::protocols::ManyParameters ManyParameters_clazz;
   explicit ManyParameters_Stub(
-      ::fidl::test::protocols::ManyParameters_Stub::ManyParameters_clazz* impl);
+      ::test::protocols::ManyParameters_Stub::ManyParameters_clazz* impl);
   ~ManyParameters_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocols::ManyParameters_Stub::ManyParameters_clazz* impl_;
+  ::test::protocols::ManyParameters_Stub::ManyParameters_clazz* impl_;
 };
 
-class ManyParameters_SyncProxy
-    : public ::fidl::test::protocols::ManyParameters_Sync {
+class ManyParameters_SyncProxy : public ::test::protocols::ManyParameters_Sync {
  public:
   explicit ManyParameters_SyncProxy(::zx::channel channel);
   ~ManyParameters_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ManyParameters.Fifteen
+  // cts-coverage-fidl-name:test.protocols/ManyParameters.Fifteen
   zx_status_t Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
                       bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
                       bool p13, bool p14, bool p15) override;
@@ -4269,25 +4143,25 @@ class ManyParameters_SyncProxy
 
 class WithErrorSyntax {
  public:
-  using Proxy_ = ::fidl::test::protocols::WithErrorSyntax_Proxy;
-  using Stub_ = ::fidl::test::protocols::WithErrorSyntax_Stub;
-  using EventSender_ = ::fidl::test::protocols::WithErrorSyntax_EventSender;
-  using Sync_ = ::fidl::test::protocols::WithErrorSyntax_Sync;
+  using Proxy_ = ::test::protocols::WithErrorSyntax_Proxy;
+  using Stub_ = ::test::protocols::WithErrorSyntax_Stub;
+  using EventSender_ = ::test::protocols::WithErrorSyntax_EventSender;
+  using Sync_ = ::test::protocols::WithErrorSyntax_Sync;
   virtual ~WithErrorSyntax();
   using ResponseAsStructCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result)>;
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result)>;
 
   virtual void ResponseAsStruct(ResponseAsStructCallback callback) = 0;
   using ErrorAsPrimitiveCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result)>;
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result)>;
 
   virtual void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) = 0;
   using ErrorAsEnumCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result)>;
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result)>;
 
   virtual void ErrorAsEnum(ErrorAsEnumCallback callback) = 0;
   using HandleInResultCallback = fit::function<void(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result)>;
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result)>;
 
   virtual void HandleInResult(HandleInResultCallback callback) = 0;
 };
@@ -4309,16 +4183,13 @@ class WithErrorSyntax_ResponseDecoder {
   virtual ~WithErrorSyntax_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
   virtual void ResponseAsStruct(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result
-          result) = 0;
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result result) = 0;
   virtual void ErrorAsPrimitive(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result
-          result) = 0;
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result result) = 0;
   virtual void ErrorAsEnum(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result result) = 0;
   virtual void HandleInResult(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result
-          result) = 0;
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result result) = 0;
 };
 
 class WithErrorSyntax_EventSender {
@@ -4328,20 +4199,18 @@ class WithErrorSyntax_EventSender {
 
 class WithErrorSyntax_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::WithErrorSyntax_SyncProxy;
+  using Proxy_ = ::test::protocols::WithErrorSyntax_SyncProxy;
   virtual ~WithErrorSyntax_Sync();
   virtual zx_status_t ResponseAsStruct(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
           out_result) = 0;
   virtual zx_status_t ErrorAsPrimitive(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
           out_result) = 0;
   virtual zx_status_t ErrorAsEnum(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result*
-          out_result) = 0;
+      ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
   virtual zx_status_t HandleInResult(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result*
-          out_result) = 0;
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result* out_result) = 0;
 };
 
 class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
@@ -4351,62 +4220,60 @@ class WithErrorSyntax_Proxy final : public ::fidl::internal::Proxy,
   ~WithErrorSyntax_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ResponseAsStruct
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.ResponseAsStruct
   void ResponseAsStruct(ResponseAsStructCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsPrimitive
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.ErrorAsPrimitive
   void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsEnum
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.ErrorAsEnum
   void ErrorAsEnum(ErrorAsEnumCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.HandleInResult
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.HandleInResult
   void HandleInResult(HandleInResultCallback callback) override;
 
  private:
-  WithErrorSyntax_Proxy(const ::fidl::test::protocols::WithErrorSyntax_Proxy&) =
+  WithErrorSyntax_Proxy(const ::test::protocols::WithErrorSyntax_Proxy&) =
       delete;
   WithErrorSyntax_Proxy& operator=(
-      const ::fidl::test::protocols::WithErrorSyntax_Proxy&) = delete;
+      const ::test::protocols::WithErrorSyntax_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class WithErrorSyntax_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::WithErrorSyntax_EventSender {
+      public ::test::protocols::WithErrorSyntax_EventSender {
  public:
-  typedef class ::fidl::test::protocols::WithErrorSyntax WithErrorSyntax_clazz;
+  typedef class ::test::protocols::WithErrorSyntax WithErrorSyntax_clazz;
   explicit WithErrorSyntax_Stub(
-      ::fidl::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz*
-          impl);
+      ::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz* impl);
   ~WithErrorSyntax_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz* impl_;
+  ::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz* impl_;
 };
 
 class WithErrorSyntax_SyncProxy
-    : public ::fidl::test::protocols::WithErrorSyntax_Sync {
+    : public ::test::protocols::WithErrorSyntax_Sync {
  public:
   explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
   ~WithErrorSyntax_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ResponseAsStruct
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.ResponseAsStruct
   zx_status_t ResponseAsStruct(
-      ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result*
-          out_result) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsPrimitive
-  zx_status_t ErrorAsPrimitive(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result*
-          out_result) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.ErrorAsEnum
-  zx_status_t ErrorAsEnum(
-      ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result* out_result)
+      ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* out_result)
       override;
-  // cts-coverage-fidl-name:fidl.test.protocols/WithErrorSyntax.HandleInResult
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.ErrorAsPrimitive
+  zx_status_t ErrorAsPrimitive(
+      ::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result* out_result)
+      override;
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.ErrorAsEnum
+  zx_status_t ErrorAsEnum(::test::protocols::WithErrorSyntax_ErrorAsEnum_Result*
+                              out_result) override;
+  // cts-coverage-fidl-name:test.protocols/WithErrorSyntax.HandleInResult
   zx_status_t HandleInResult(
-      ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result*
-          out_result) override;
+      ::test::protocols::WithErrorSyntax_HandleInResult_Result* out_result)
+      override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -4418,11 +4285,10 @@ class WithErrorSyntax_SyncProxy
 
 class DiscoverableProtocol {
  public:
-  using Proxy_ = ::fidl::test::protocols::DiscoverableProtocol_Proxy;
-  using Stub_ = ::fidl::test::protocols::DiscoverableProtocol_Stub;
-  using EventSender_ =
-      ::fidl::test::protocols::DiscoverableProtocol_EventSender;
-  using Sync_ = ::fidl::test::protocols::DiscoverableProtocol_Sync;
+  using Proxy_ = ::test::protocols::DiscoverableProtocol_Proxy;
+  using Stub_ = ::test::protocols::DiscoverableProtocol_Stub;
+  using EventSender_ = ::test::protocols::DiscoverableProtocol_EventSender;
+  using Sync_ = ::test::protocols::DiscoverableProtocol_Sync;
   static const char Name_[];
   virtual ~DiscoverableProtocol();
 
@@ -4451,7 +4317,7 @@ class DiscoverableProtocol_EventSender {
 
 class DiscoverableProtocol_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::DiscoverableProtocol_SyncProxy;
+  using Proxy_ = ::test::protocols::DiscoverableProtocol_SyncProxy;
   virtual ~DiscoverableProtocol_Sync();
   virtual zx_status_t Method() = 0;
 };
@@ -4464,43 +4330,43 @@ class DiscoverableProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~DiscoverableProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/DiscoverableProtocol.Method
+  // cts-coverage-fidl-name:test.protocols/DiscoverableProtocol.Method
   void Method() override;
 
  private:
   DiscoverableProtocol_Proxy(
-      const ::fidl::test::protocols::DiscoverableProtocol_Proxy&) = delete;
+      const ::test::protocols::DiscoverableProtocol_Proxy&) = delete;
   DiscoverableProtocol_Proxy& operator=(
-      const ::fidl::test::protocols::DiscoverableProtocol_Proxy&) = delete;
+      const ::test::protocols::DiscoverableProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class DiscoverableProtocol_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::DiscoverableProtocol_EventSender {
+      public ::test::protocols::DiscoverableProtocol_EventSender {
  public:
-  typedef class ::fidl::test::protocols::DiscoverableProtocol
+  typedef class ::test::protocols::DiscoverableProtocol
       DiscoverableProtocol_clazz;
   explicit DiscoverableProtocol_Stub(
-      ::fidl::test::protocols::DiscoverableProtocol_Stub::
-          DiscoverableProtocol_clazz* impl);
+      ::test::protocols::DiscoverableProtocol_Stub::DiscoverableProtocol_clazz*
+          impl);
   ~DiscoverableProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocols::DiscoverableProtocol_Stub::
-      DiscoverableProtocol_clazz* impl_;
+  ::test::protocols::DiscoverableProtocol_Stub::DiscoverableProtocol_clazz*
+      impl_;
 };
 
 class DiscoverableProtocol_SyncProxy
-    : public ::fidl::test::protocols::DiscoverableProtocol_Sync {
+    : public ::test::protocols::DiscoverableProtocol_Sync {
  public:
   explicit DiscoverableProtocol_SyncProxy(::zx::channel channel);
   ~DiscoverableProtocol_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/DiscoverableProtocol.Method
+  // cts-coverage-fidl-name:test.protocols/DiscoverableProtocol.Method
   zx_status_t Method() override;
 
  private:
@@ -4513,10 +4379,10 @@ class DiscoverableProtocol_SyncProxy
 
 class ChannelProtocol {
  public:
-  using Proxy_ = ::fidl::test::protocols::ChannelProtocol_Proxy;
-  using Stub_ = ::fidl::test::protocols::ChannelProtocol_Stub;
-  using EventSender_ = ::fidl::test::protocols::ChannelProtocol_EventSender;
-  using Sync_ = ::fidl::test::protocols::ChannelProtocol_Sync;
+  using Proxy_ = ::test::protocols::ChannelProtocol_Proxy;
+  using Stub_ = ::test::protocols::ChannelProtocol_Stub;
+  using EventSender_ = ::test::protocols::ChannelProtocol_EventSender;
+  using Sync_ = ::test::protocols::ChannelProtocol_Sync;
   virtual ~ChannelProtocol();
 
   virtual void MethodA(int64_t a, int64_t b) = 0;
@@ -4562,7 +4428,7 @@ class ChannelProtocol_EventSender {
 
 class ChannelProtocol_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocols::ChannelProtocol_SyncProxy;
+  using Proxy_ = ::test::protocols::ChannelProtocol_SyncProxy;
   virtual ~ChannelProtocol_Sync();
   virtual zx_status_t MethodA(int64_t a, int64_t b) = 0;
   virtual zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) = 0;
@@ -4577,33 +4443,32 @@ class ChannelProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~ChannelProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodA
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MethodA
   void MethodA(int64_t a, int64_t b) override;
   EventACallback EventA;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodB
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MethodB
   void MethodB(int64_t a, int64_t b, MethodBCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.TakeHandle
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.TakeHandle
   void TakeHandle(::zx::handle h, TakeHandleCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MutateSocket
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MutateSocket
   void MutateSocket(::zx::socket a, MutateSocketCallback callback) override;
 
  private:
-  ChannelProtocol_Proxy(const ::fidl::test::protocols::ChannelProtocol_Proxy&) =
+  ChannelProtocol_Proxy(const ::test::protocols::ChannelProtocol_Proxy&) =
       delete;
   ChannelProtocol_Proxy& operator=(
-      const ::fidl::test::protocols::ChannelProtocol_Proxy&) = delete;
+      const ::test::protocols::ChannelProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class ChannelProtocol_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::protocols::ChannelProtocol_EventSender {
+      public ::test::protocols::ChannelProtocol_EventSender {
  public:
-  typedef class ::fidl::test::protocols::ChannelProtocol ChannelProtocol_clazz;
+  typedef class ::test::protocols::ChannelProtocol ChannelProtocol_clazz;
   explicit ChannelProtocol_Stub(
-      ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz*
-          impl);
+      ::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl);
   ~ChannelProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -4611,21 +4476,21 @@ class ChannelProtocol_Stub final
   void EventA(int64_t a, int64_t b) override;
 
  private:
-  ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl_;
+  ::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl_;
 };
 
 class ChannelProtocol_SyncProxy
-    : public ::fidl::test::protocols::ChannelProtocol_Sync {
+    : public ::test::protocols::ChannelProtocol_Sync {
  public:
   explicit ChannelProtocol_SyncProxy(::zx::channel channel);
   ~ChannelProtocol_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodA
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MethodA
   zx_status_t MethodA(int64_t a, int64_t b) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MethodB
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MethodB
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.TakeHandle
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.TakeHandle
   zx_status_t TakeHandle(::zx::handle h) override;
-  // cts-coverage-fidl-name:fidl.test.protocols/ChannelProtocol.MutateSocket
+  // cts-coverage-fidl-name:test.protocols/ChannelProtocol.MutateSocket
   zx_status_t MutateSocket(::zx::socket a, ::zx::socket* out_b) override;
 
  private:
@@ -4636,4 +4501,3 @@ class ChannelProtocol_SyncProxy
 
 }  // namespace protocols
 }  // namespace test
-}  // namespace fidl

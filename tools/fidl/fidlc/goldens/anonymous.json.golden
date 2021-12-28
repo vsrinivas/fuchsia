@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.anonymous",
+  "name": "test.anonymous",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.anonymous/BitsMember",
+      "name": "test.anonymous/BitsMember",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -85,7 +85,7 @@
       "strict": false
     },
     {
-      "name": "fidl.test.anonymous/Flags",
+      "name": "test.anonymous/Flags",
       "naming_context": [
         "Expression",
         "function_application",
@@ -159,7 +159,7 @@
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
+      "name": "test.anonymous/SomeProtocol_SomeMethod_Error",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -218,7 +218,7 @@
       "maybe_unknown_value": 4294967295
     },
     {
-      "name": "fidl.test.anonymous/Op",
+      "name": "test.anonymous/Op",
       "naming_context": [
         "Expression",
         "bin_op",
@@ -297,7 +297,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.anonymous/SomeProtocol",
+      "name": "test.anonymous/SomeProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
         "line": 25,
@@ -307,7 +307,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 8941579241812366574,
+          "ordinal": 2515914517457749720,
           "name": "SomeMethod",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
@@ -318,7 +318,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
+            "identifier": "test.anonymous/SomeProtocolSomeMethodRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 40,
@@ -342,7 +342,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
+            "identifier": "test.anonymous/SomeProtocolSomeMethodTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -367,7 +367,7 @@
           "has_error": true,
           "maybe_response_result_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+            "identifier": "test.anonymous/SomeProtocol_SomeMethod_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -390,7 +390,7 @@
           },
           "maybe_response_success_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
+            "identifier": "test.anonymous/SomeProtocol_SomeMethod_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -413,7 +413,7 @@
           },
           "maybe_response_err_type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
+            "identifier": "test.anonymous/SomeProtocol_SomeMethod_Error",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -441,7 +441,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.anonymous/TableData",
+      "name": "test.anonymous/TableData",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -518,7 +518,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
+      "name": "test.anonymous/SomeProtocolSomeMethodRequest",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -547,7 +547,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/UnionMember",
+            "identifier": "test.anonymous/UnionMember",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -587,7 +587,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/TableMember",
+            "identifier": "test.anonymous/TableMember",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -646,7 +646,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
+      "name": "test.anonymous/SomeProtocol_SomeMethod_Response",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -665,7 +665,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/BitsMember",
+            "identifier": "test.anonymous/BitsMember",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -724,7 +724,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
+      "name": "test.anonymous/SomeProtocolSomeMethodTopResponse",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -741,7 +741,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+            "identifier": "test.anonymous/SomeProtocol_SomeMethod_Result",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -800,7 +800,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/OverrideTest",
+      "name": "test.anonymous/OverrideTest",
       "naming_context": [
         "Expression",
         "bin_op"
@@ -849,7 +849,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/Op",
+            "identifier": "test.anonymous/Op",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -889,7 +889,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/Expression",
+            "identifier": "test.anonymous/Expression",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 24,
@@ -929,7 +929,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/Expression",
+            "identifier": "test.anonymous/Expression",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 24,
@@ -991,7 +991,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.anonymous/TableMember",
+      "name": "test.anonymous/TableMember",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -1022,7 +1022,7 @@
             "kind": "vector",
             "element_type": {
               "kind": "identifier",
-              "identifier": "fidl.test.anonymous/TableData",
+              "identifier": "test.anonymous/TableData",
               "nullable": false,
               "type_shape_v1": {
                 "inline_size": 1,
@@ -1095,7 +1095,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/FunctionApplication",
+      "name": "test.anonymous/FunctionApplication",
       "naming_context": [
         "Expression",
         "function_application"
@@ -1158,7 +1158,7 @@
             "kind": "vector",
             "element_type": {
               "kind": "identifier",
-              "identifier": "fidl.test.anonymous/Expression",
+              "identifier": "test.anonymous/Expression",
               "nullable": true,
               "type_shape_v1": {
                 "inline_size": 24,
@@ -1213,7 +1213,7 @@
           "reserved": false,
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/Flags",
+            "identifier": "test.anonymous/Flags",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 2,
@@ -1267,7 +1267,7 @@
   ],
   "union_declarations": [
     {
-      "name": "fidl.test.anonymous/UnionMember",
+      "name": "test.anonymous/UnionMember",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -1347,7 +1347,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
+      "name": "test.anonymous/SomeProtocol_SomeMethod_Result",
       "naming_context": [
         "SomeProtocol",
         "SomeMethod",
@@ -1373,7 +1373,7 @@
           "name": "response",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
+            "identifier": "test.anonymous/SomeProtocol_SomeMethod_Response",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1407,7 +1407,7 @@
           "name": "err",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
+            "identifier": "test.anonymous/SomeProtocol_SomeMethod_Error",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1458,7 +1458,7 @@
       }
     },
     {
-      "name": "fidl.test.anonymous/Expression",
+      "name": "test.anonymous/Expression",
       "naming_context": [
         "Expression"
       ],
@@ -1520,7 +1520,7 @@
           "name": "bin_op",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/OverrideTest",
+            "identifier": "test.anonymous/OverrideTest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 56,
@@ -1554,7 +1554,7 @@
           "name": "function_application",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.anonymous/FunctionApplication",
+            "identifier": "test.anonymous/FunctionApplication",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1607,37 +1607,37 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.anonymous/UnionMember",
-    "fidl.test.anonymous/TableData",
-    "fidl.test.anonymous/TableMember",
-    "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
-    "fidl.test.anonymous/SomeProtocol_SomeMethod_Error",
-    "fidl.test.anonymous/Op",
-    "fidl.test.anonymous/OverrideTest",
-    "fidl.test.anonymous/Flags",
-    "fidl.test.anonymous/FunctionApplication",
-    "fidl.test.anonymous/Expression",
-    "fidl.test.anonymous/BitsMember",
-    "fidl.test.anonymous/SomeProtocol_SomeMethod_Response",
-    "fidl.test.anonymous/SomeProtocol_SomeMethod_Result",
-    "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
-    "fidl.test.anonymous/SomeProtocol"
+    "test.anonymous/UnionMember",
+    "test.anonymous/TableData",
+    "test.anonymous/TableMember",
+    "test.anonymous/SomeProtocolSomeMethodRequest",
+    "test.anonymous/SomeProtocol_SomeMethod_Error",
+    "test.anonymous/Op",
+    "test.anonymous/OverrideTest",
+    "test.anonymous/Flags",
+    "test.anonymous/FunctionApplication",
+    "test.anonymous/Expression",
+    "test.anonymous/BitsMember",
+    "test.anonymous/SomeProtocol_SomeMethod_Response",
+    "test.anonymous/SomeProtocol_SomeMethod_Result",
+    "test.anonymous/SomeProtocolSomeMethodTopResponse",
+    "test.anonymous/SomeProtocol"
   ],
   "declarations": {
-    "fidl.test.anonymous/BitsMember": "bits",
-    "fidl.test.anonymous/Flags": "bits",
-    "fidl.test.anonymous/SomeProtocol_SomeMethod_Error": "enum",
-    "fidl.test.anonymous/Op": "enum",
-    "fidl.test.anonymous/SomeProtocol": "interface",
-    "fidl.test.anonymous/TableData": "struct",
-    "fidl.test.anonymous/SomeProtocolSomeMethodRequest": "struct",
-    "fidl.test.anonymous/SomeProtocol_SomeMethod_Response": "struct",
-    "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse": "struct",
-    "fidl.test.anonymous/OverrideTest": "struct",
-    "fidl.test.anonymous/TableMember": "table",
-    "fidl.test.anonymous/FunctionApplication": "table",
-    "fidl.test.anonymous/UnionMember": "union",
-    "fidl.test.anonymous/SomeProtocol_SomeMethod_Result": "union",
-    "fidl.test.anonymous/Expression": "union"
+    "test.anonymous/BitsMember": "bits",
+    "test.anonymous/Flags": "bits",
+    "test.anonymous/SomeProtocol_SomeMethod_Error": "enum",
+    "test.anonymous/Op": "enum",
+    "test.anonymous/SomeProtocol": "interface",
+    "test.anonymous/TableData": "struct",
+    "test.anonymous/SomeProtocolSomeMethodRequest": "struct",
+    "test.anonymous/SomeProtocol_SomeMethod_Response": "struct",
+    "test.anonymous/SomeProtocolSomeMethodTopResponse": "struct",
+    "test.anonymous/OverrideTest": "struct",
+    "test.anonymous/TableMember": "table",
+    "test.anonymous/FunctionApplication": "table",
+    "test.anonymous/UnionMember": "union",
+    "test.anonymous/SomeProtocol_SomeMethod_Result": "union",
+    "test.anonymous/Expression": "union"
   }
 }

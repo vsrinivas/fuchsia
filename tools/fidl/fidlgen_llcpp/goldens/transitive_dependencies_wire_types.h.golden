@@ -18,18 +18,18 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.transitivedependencies/cpp/markers.h>
-#include <fidl/middle/cpp/wire_types.h>
+#include <fidl/test.middle/cpp/wire_types.h>
+#include <fidl/test.transitivedependencies/cpp/markers.h>
 
-namespace fidl_test_transitivedependencies {
+namespace test_transitivedependencies {
 namespace wire {
 struct Baz;
 
-extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
+extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 
 struct Baz {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_transitivedependencies_BazTable;
+      &test_transitivedependencies_BazTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -37,7 +37,7 @@ struct Baz {
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
 
-  ::middle::wire::Bar g = {};
+  ::test_middle::wire::Bar g = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -45,19 +45,19 @@ struct Baz {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_transitivedependencies
+}  // namespace test_transitivedependencies
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_transitivedependencies::wire::Baz>
+struct IsFidlType<::test_transitivedependencies::wire::Baz>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_transitivedependencies::wire::Baz>
+struct IsStruct<::test_transitivedependencies::wire::Baz>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_transitivedependencies::wire::Baz>);
-static_assert(offsetof(::fidl_test_transitivedependencies::wire::Baz, g) == 0);
-static_assert(sizeof(::fidl_test_transitivedependencies::wire::Baz) ==
-              ::fidl_test_transitivedependencies::wire::Baz::PrimarySize);
+    std::is_standard_layout_v<::test_transitivedependencies::wire::Baz>);
+static_assert(offsetof(::test_transitivedependencies::wire::Baz, g) == 0);
+static_assert(sizeof(::test_transitivedependencies::wire::Baz) ==
+              ::test_transitivedependencies::wire::Baz::PrimarySize);
 
 }  // namespace fidl

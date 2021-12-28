@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.service/cpp/wire.h>
-namespace fidl_test_service {
+#include <fidl/test.service/cpp/wire.h>
+namespace test_service {
 namespace testing {
 
 class SecondProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_service::SecondProtocol> {
+    : public ::fidl::WireServer<::test_service::SecondProtocol> {
  public:
   virtual ~SecondProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -20,7 +20,7 @@ class SecondProtocol_TestBase
 };
 
 class FirstProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_service::FirstProtocol> {
+    : public ::fidl::WireServer<::test_service::FirstProtocol> {
  public:
   virtual ~FirstProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -32,4 +32,4 @@ class FirstProtocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_service
+}  // namespace test_service

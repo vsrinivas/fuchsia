@@ -1,3 +1,3 @@
-library someotherlibrary;
+library test.someotherlibrary;
 
 type ReferenceMe = struct {};

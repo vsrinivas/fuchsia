@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace inheritancewithrecursivedecl {
 #ifdef __Fuchsia__
@@ -26,15 +25,15 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
+    test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable;
 
 }  // namespace _internal
 class Parent_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage First(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>*
+          request) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -62,8 +61,8 @@ class Parent_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::inheritancewithrecursivedecl::_internal::
-            fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
+        &::test::inheritancewithrecursivedecl::_internal::
+            test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -80,18 +79,18 @@ class Parent_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
+    test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
+    test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable;
 
 }  // namespace _internal
 class Child_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage First(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>*
+          request) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -119,8 +118,8 @@ class Child_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::inheritancewithrecursivedecl::_internal::
-            fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
+        &::test::inheritancewithrecursivedecl::_internal::
+            test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -128,8 +127,8 @@ class Child_RequestEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage Second(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<
-          ::fidl::test::inheritancewithrecursivedecl::Parent>* request) {
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>*
+          request) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -157,8 +156,8 @@ class Child_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::inheritancewithrecursivedecl::_internal::
-            fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
+        &::test::inheritancewithrecursivedecl::_internal::
+            test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -173,5 +172,4 @@ class Child_ResponseEncoder {
 
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
-
-}  // namespace fidl
+namespace fidl {}  // namespace fidl

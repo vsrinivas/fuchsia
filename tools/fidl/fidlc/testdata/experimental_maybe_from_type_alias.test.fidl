@@ -1,4 +1,4 @@
-library fidl.test.experimentalmaybefromtypealias;
+library test.experimentalmaybefromtypealias;
 
 protocol MyProtocol {};
 

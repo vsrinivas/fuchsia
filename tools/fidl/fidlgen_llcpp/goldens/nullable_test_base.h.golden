@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.nullable/cpp/wire.h>
-namespace fidl_test_nullable {
+#include <fidl/test.nullable/cpp/wire.h>
+namespace test_nullable {
 namespace testing {
 
 class SimpleProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol> {
+    : public ::fidl::WireServer<::test_nullable::SimpleProtocol> {
  public:
   virtual ~SimpleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -18,4 +18,4 @@ class SimpleProtocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_nullable
+}  // namespace test_nullable

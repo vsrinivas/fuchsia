@@ -27,7 +27,7 @@ use {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct Foo {
-    pub field: fidl_dependent::MyEnum,
+    pub field: fidl_test_dependent::MyEnum,
 }
 
 impl fidl::encoding::Persistable for Foo {}
@@ -36,7 +36,7 @@ fidl_struct! {
   name: Foo,
   members: [
     field {
-      ty: fidl_dependent::MyEnum,
+      ty: fidl_test_dependent::MyEnum,
       offset_v1: 0,
       offset_v2: 0,
     },

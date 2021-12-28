@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.error/cpp/wire.h>
+#include <fidl/test.error/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,27 +10,26 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
-    fidl_test_error_decoder_encoders = {
+    test_error_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl_test_error::wire::ExampleFooResponse",
+            .fidl_type_name = "::test_error::wire::ExampleFooResponse",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_error::wire::ExampleFooResponse>,
+                ::test_error::wire::ExampleFooResponse>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name =
-                "::fidl::WireRequest<::fidl_test_error::Example::Foo>",
+            .fidl_type_name = "::fidl::WireRequest<::test_error::Example::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireRequest<::fidl_test_error::Example::Foo>>,
+                ::fidl::WireRequest<::test_error::Example::Foo>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
-                "::fidl::WireResponse<::fidl_test_error::Example::Foo>",
+                "::fidl::WireResponse<::test_error::Example::Foo>",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl::WireResponse<::fidl_test_error::Example::Foo>>,
+                ::fidl::WireResponse<::test_error::Example::Foo>>,
         },
 };
 

@@ -3,14 +3,14 @@
 package foreigntypeinresponseusedthroughcompose
 
 import (
-	bottom "fidl/bottom"
-	middle "fidl/middle"
+	testbottom "fidl/test/bottom"
+	testmiddle "fidl/test/middle"
 	_bindings "syscall/zx/fidl"
 )
 
 type topWithCtxGetFooResponse struct {
-	_   struct{}   `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
-	Foo bottom.Foo `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	_   struct{}       `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8" fidl_size_v2:"8" fidl_alignment_v2:"8"`
+	Foo testbottom.Foo `fidl_offset_v1:"0" fidl_offset_v2:"0"`
 }
 
 var _mtopWithCtxGetFooResponse = _bindings.CreateLazyMarshaler(topWithCtxGetFooResponse{})
@@ -20,12 +20,12 @@ func (msg *topWithCtxGetFooResponse) Marshaler() _bindings.Marshaler {
 }
 
 const (
-	TopGetFooOrdinal uint64 = 0x6ae8d19bc98f3d92
+	TopGetFooOrdinal uint64 = 0x401a9ffa95a4c333
 )
 
 type TopWithCtxInterface _bindings.ChannelProxy
 
-func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (bottom.Foo, error) {
+func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (testbottom.Foo, error) {
 	var req_ _bindings.Message
 	resp_ := &topWithCtxGetFooResponse{}
 	err_ := ((*_bindings.ChannelProxy)(p)).Call(TopGetFooOrdinal, req_, resp_)
@@ -33,7 +33,7 @@ func (p *TopWithCtxInterface) GetFoo(ctx_ _bindings.Context) (bottom.Foo, error)
 }
 
 type TopWithCtx interface {
-	GetFoo(ctx_ _bindings.Context) (bottom.Foo, error)
+	GetFoo(ctx_ _bindings.Context) (testbottom.Foo, error)
 }
 
 type TopWithCtxTransitionalBase struct{}

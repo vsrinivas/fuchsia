@@ -2,12 +2,11 @@
 
 #pragma once
 
-#include <fidl/test/error/cpp/fidl.h>
-namespace fidl {
+#include <test/error/cpp/fidl.h>
 namespace test {
 namespace error {
 namespace testing {
-class Example_TestBase : public ::fidl::test::error::Example {
+class Example_TestBase : public ::test::error::Example {
  public:
   virtual ~Example_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -18,4 +17,3 @@ class Example_TestBase : public ::fidl::test::error::Example {
 }  // namespace testing
 }  // namespace error
 }  // namespace test
-}  // namespace fidl

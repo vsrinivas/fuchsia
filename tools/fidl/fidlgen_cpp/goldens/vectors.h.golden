@@ -2,22 +2,22 @@
 
 #pragma once
 
-#include <fidl/fidl.test.vectors/cpp/wire.h>
-#include <fidl/test/vectors/cpp/natural_types.h>
+#include <fidl/test.vectors/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/vectors/cpp/natural_types.h>
 
-namespace fidl_test_vectors {
+namespace test_vectors {
 class ExampleUseOfVectors;
 
-}  // namespace fidl_test_vectors
+}  // namespace test_vectors
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_vectors::ExampleUseOfVectors>
+    ::test_vectors::ExampleUseOfVectors>
     final {
  public:
   ::std::vector<uint8_t> vector_of_uint8 = {};
@@ -25,7 +25,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   ::std::vector<::std::vector<bool>> vector_of_vector_of_bool = {};
 };
 
-namespace fidl_test_vectors {
+namespace test_vectors {
 class ExampleUseOfVectors final
     : public ::fidl::internal::CodableBase<ExampleUseOfVectors> {
  private:
@@ -45,7 +45,7 @@ class ExampleUseOfVectors final
       : storage_({std::move(vector_of_uint8),
                   std::move(vector_of_vector_of_bool)}) {}
   ExampleUseOfVectors(::fidl::internal::DesignatedInitializationProxy<
-                      ::fidl_test_vectors::ExampleUseOfVectors>
+                      ::test_vectors::ExampleUseOfVectors>
                           storage)
       : storage_(std::move(storage)) {}
   ~ExampleUseOfVectors() = default;
@@ -78,38 +78,37 @@ class ExampleUseOfVectors final
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_vectors::ExampleUseOfVectors>;
+  friend struct ::fidl::CodingTraits<::test_vectors::ExampleUseOfVectors>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_vectors::ExampleUseOfVectors>
+      ::test_vectors::ExampleUseOfVectors>
       storage_ = {};
 };
 
-}  // namespace fidl_test_vectors
+}  // namespace test_vectors
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
+extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 
 template <>
-struct IsFidlType<::fidl_test_vectors::ExampleUseOfVectors>
-    : public std::true_type {};
-
-template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_vectors::ExampleUseOfVectors>
-    final {
- public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_vectors_ExampleUseOfVectorsTable;
+struct IsFidlType<::test_vectors::ExampleUseOfVectors> : public std::true_type {
 };
 
 template <>
-struct CodingTraits<::fidl_test_vectors::ExampleUseOfVectors> {
+struct ::fidl::internal::TypeTraits<::test_vectors::ExampleUseOfVectors> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &test_vectors_ExampleUseOfVectorsTable;
+};
+
+template <>
+struct CodingTraits<::test_vectors::ExampleUseOfVectors> {
   static constexpr size_t inline_size_v1_no_ee = 32;
   static constexpr size_t inline_size_v2 = 32;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_vectors::ExampleUseOfVectors* value,
+      EncoderImpl* encoder, ::test_vectors::ExampleUseOfVectors* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -127,7 +126,7 @@ struct CodingTraits<::fidl_test_vectors::ExampleUseOfVectors> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_vectors::ExampleUseOfVectors* value,
+                     ::test_vectors::ExampleUseOfVectors* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.vector_of_uint8, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.vector_of_vector_of_bool,

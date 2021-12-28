@@ -2,24 +2,24 @@
 
 #pragma once
 
-#include <fidl/fidl.test.enum/cpp/wire.h>
-#include <fidl/test/enum/cpp/natural_types.h>
+#include <fidl/test.enum/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/enum/cpp/natural_types.h>
 
-namespace fidl_test_enum {
-using MyStrictEnum = ::fidl::test::enum_::MyStrictEnum;
+namespace test_enum {
+using MyStrictEnum = ::test::enum_::MyStrictEnum;
 
 using MyFlexibleEnumWithCustomUnknown =
-    ::fidl::test::enum_::MyFlexibleEnumWithCustomUnknown;
+    ::test::enum_::MyFlexibleEnumWithCustomUnknown;
 
-using MyFlexibleEnum = ::fidl::test::enum_::MyFlexibleEnum;
+using MyFlexibleEnum = ::test::enum_::MyFlexibleEnum;
 
-using MyEmptyFlexibleEnum = ::fidl::test::enum_::MyEmptyFlexibleEnum;
+using MyEmptyFlexibleEnum = ::test::enum_::MyEmptyFlexibleEnum;
 
-}  // namespace fidl_test_enum
+}  // namespace test_enum
 namespace fidl {}  // namespace fidl

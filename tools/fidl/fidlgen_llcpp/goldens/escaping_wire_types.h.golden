@@ -18,18 +18,18 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.escaping/cpp/markers.h>
+#include <fidl/test.escaping/cpp/markers.h>
 
-namespace fidl_test_escaping {
+namespace test_escaping {
 namespace wire {
 struct DocCommentWithQuotes;
 
-extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
+extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 /// "pleaseescapethisdocommentproperly"
 struct DocCommentWithQuotes {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_escaping_DocCommentWithQuotesTable;
+      &test_escaping_DocCommentWithQuotesTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   static constexpr uint32_t PrimarySizeV1 = 1;
@@ -45,20 +45,20 @@ struct DocCommentWithQuotes {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_escaping
+}  // namespace test_escaping
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_escaping::wire::DocCommentWithQuotes>
+struct IsFidlType<::test_escaping::wire::DocCommentWithQuotes>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_escaping::wire::DocCommentWithQuotes>
+struct IsStruct<::test_escaping::wire::DocCommentWithQuotes>
     : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_escaping::wire::DocCommentWithQuotes>);
-static_assert(offsetof(::fidl_test_escaping::wire::DocCommentWithQuotes,
+static_assert(
+    std::is_standard_layout_v<::test_escaping::wire::DocCommentWithQuotes>);
+static_assert(offsetof(::test_escaping::wire::DocCommentWithQuotes,
                        __reserved) == 0);
-static_assert(sizeof(::fidl_test_escaping::wire::DocCommentWithQuotes) ==
-              ::fidl_test_escaping::wire::DocCommentWithQuotes::PrimarySize);
+static_assert(sizeof(::test_escaping::wire::DocCommentWithQuotes) ==
+              ::test_escaping::wire::DocCommentWithQuotes::PrimarySize);
 
 }  // namespace fidl

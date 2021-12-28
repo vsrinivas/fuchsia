@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_inheritancewithrecursivedecl {
+namespace test_inheritancewithrecursivedecl {
 
 class Parent final {
   Parent() = delete;
@@ -15,7 +15,7 @@ class Parent final {
     First() = delete;
 
    public:
-    using Protocol = ::fidl_test_inheritancewithrecursivedecl::Parent;
+    using Protocol = ::test_inheritancewithrecursivedecl::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -30,7 +30,7 @@ class Child final {
     First() = delete;
 
    public:
-    using Protocol = ::fidl_test_inheritancewithrecursivedecl::Child;
+    using Protocol = ::test_inheritancewithrecursivedecl::Child;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
@@ -38,9 +38,9 @@ class Child final {
     Second() = delete;
 
    public:
-    using Protocol = ::fidl_test_inheritancewithrecursivedecl::Child;
+    using Protocol = ::test_inheritancewithrecursivedecl::Child;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
 };
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace test_inheritancewithrecursivedecl

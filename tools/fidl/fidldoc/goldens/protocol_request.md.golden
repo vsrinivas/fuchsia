@@ -2,19 +2,19 @@
 
 [TOC]
 
-# fidl.test.protocolrequest
+# test.protocolrequest
 
 
 
 ## **PROTOCOLS**
 
 ## Child {#Child}
-*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=3)*
+*Defined in [test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=3)*
 
 
 
 ## Parent {#Parent}
-*Defined in [fidl.test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=5)*
+*Defined in [test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=5)*
 
 
 

@@ -411,8 +411,8 @@ func (u *Table) GetUnknownData() map[uint64]_bindings.UnknownData {
 }
 
 const (
-	InterfaceMethodOrdinal  uint64 = 0x5c492542705b4265
-	InterfaceOnEventOrdinal uint64 = 0x37812b697096f6fa
+	InterfaceMethodOrdinal  uint64 = 0x45a0257b7cd8f999
+	InterfaceOnEventOrdinal uint64 = 0x663f6d5971bef0
 )
 
 type InterfaceWithCtxInterface _bindings.ChannelProxy

@@ -45,10 +45,10 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.handles/cpp/markers.h>
+#include <fidl/test.handles/cpp/markers.h>
 #include <fidl/zx/cpp/wire_types.h>
 
-namespace fidl_test_handles {
+namespace test_handles {
 namespace wire {
 
 enum class ObjType : uint32_t {
@@ -118,10 +118,10 @@ struct Handles;
 
 #ifdef __Fuchsia__
 
-extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
+extern "C" const fidl_type_t test_handles_HandlesTable;
 
 struct Handles {
-  static constexpr const fidl_type_t* Type = &fidl_test_handles_HandlesTable;
+  static constexpr const fidl_type_t* Type = &test_handles_HandlesTable;
   static constexpr uint32_t MaxNumHandles = 33;
   static constexpr uint32_t PrimarySize = 132;
   static constexpr uint32_t PrimarySizeV1 = 132;
@@ -191,10 +191,9 @@ struct Handles {
 
   ::zx::vmo aliased_rights_handle_field = {};
 
-  ::fidl::ClientEnd<::fidl_test_handles::SomeProtocol> some_protocol = {};
+  ::fidl::ClientEnd<::test_handles::SomeProtocol> some_protocol = {};
 
-  ::fidl::ServerEnd<::fidl_test_handles::SomeProtocol> request_some_protocol =
-      {};
+  ::fidl::ServerEnd<::test_handles::SomeProtocol> request_some_protocol = {};
 
   void _CloseHandles();
 
@@ -205,79 +204,63 @@ struct Handles {
 #endif  // __Fuchsia__
 
 }  // namespace wire
-}  // namespace fidl_test_handles
+}  // namespace test_handles
 namespace fidl {
 
 #ifdef __Fuchsia__
 template <>
-struct IsResource<::fidl_test_handles::wire::Handles> : public std::true_type {
-};
+struct IsResource<::test_handles::wire::Handles> : public std::true_type {};
 template <>
-struct IsFidlType<::fidl_test_handles::wire::Handles> : public std::true_type {
-};
+struct IsFidlType<::test_handles::wire::Handles> : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_handles::wire::Handles> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_handles::wire::Handles>);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, plain_handle) == 0);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, bti_handle) == 4);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, channel_handle) ==
-              8);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, clock_handle) == 12);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, debuglog_handle) ==
-              16);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, event_handle) == 20);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, eventpair_handle) ==
-              24);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, exception_handle) ==
-              28);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, fifo_handle) == 32);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, guest_handle) == 36);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, interrupt_handle) ==
-              40);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, iommu_handle) == 44);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, job_handle) == 48);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, pager_handle) == 52);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, pcidevice_handle) ==
-              56);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, pmt_handle) == 60);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, port_handle) == 64);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, process_handle) ==
-              68);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, profile_handle) ==
-              72);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, resource_handle) ==
-              76);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, socket_handle) ==
-              80);
-static_assert(offsetof(::fidl_test_handles::wire::Handles,
-                       suspendtoken_handle) == 84);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, thread_handle) ==
-              88);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, timer_handle) == 92);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, vcpu_handle) == 96);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, vmar_handle) == 100);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, vmo_handle) == 104);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, rights_handle) ==
-              108);
-static_assert(offsetof(::fidl_test_handles::wire::Handles,
+struct IsStruct<::test_handles::wire::Handles> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_handles::wire::Handles>);
+static_assert(offsetof(::test_handles::wire::Handles, plain_handle) == 0);
+static_assert(offsetof(::test_handles::wire::Handles, bti_handle) == 4);
+static_assert(offsetof(::test_handles::wire::Handles, channel_handle) == 8);
+static_assert(offsetof(::test_handles::wire::Handles, clock_handle) == 12);
+static_assert(offsetof(::test_handles::wire::Handles, debuglog_handle) == 16);
+static_assert(offsetof(::test_handles::wire::Handles, event_handle) == 20);
+static_assert(offsetof(::test_handles::wire::Handles, eventpair_handle) == 24);
+static_assert(offsetof(::test_handles::wire::Handles, exception_handle) == 28);
+static_assert(offsetof(::test_handles::wire::Handles, fifo_handle) == 32);
+static_assert(offsetof(::test_handles::wire::Handles, guest_handle) == 36);
+static_assert(offsetof(::test_handles::wire::Handles, interrupt_handle) == 40);
+static_assert(offsetof(::test_handles::wire::Handles, iommu_handle) == 44);
+static_assert(offsetof(::test_handles::wire::Handles, job_handle) == 48);
+static_assert(offsetof(::test_handles::wire::Handles, pager_handle) == 52);
+static_assert(offsetof(::test_handles::wire::Handles, pcidevice_handle) == 56);
+static_assert(offsetof(::test_handles::wire::Handles, pmt_handle) == 60);
+static_assert(offsetof(::test_handles::wire::Handles, port_handle) == 64);
+static_assert(offsetof(::test_handles::wire::Handles, process_handle) == 68);
+static_assert(offsetof(::test_handles::wire::Handles, profile_handle) == 72);
+static_assert(offsetof(::test_handles::wire::Handles, resource_handle) == 76);
+static_assert(offsetof(::test_handles::wire::Handles, socket_handle) == 80);
+static_assert(offsetof(::test_handles::wire::Handles, suspendtoken_handle) ==
+              84);
+static_assert(offsetof(::test_handles::wire::Handles, thread_handle) == 88);
+static_assert(offsetof(::test_handles::wire::Handles, timer_handle) == 92);
+static_assert(offsetof(::test_handles::wire::Handles, vcpu_handle) == 96);
+static_assert(offsetof(::test_handles::wire::Handles, vmar_handle) == 100);
+static_assert(offsetof(::test_handles::wire::Handles, vmo_handle) == 104);
+static_assert(offsetof(::test_handles::wire::Handles, rights_handle) == 108);
+static_assert(offsetof(::test_handles::wire::Handles,
                        aliased_plain_handle_field) == 112);
-static_assert(offsetof(::fidl_test_handles::wire::Handles,
+static_assert(offsetof(::test_handles::wire::Handles,
                        aliased_subtype_handle_field) == 116);
-static_assert(offsetof(::fidl_test_handles::wire::Handles,
+static_assert(offsetof(::test_handles::wire::Handles,
                        aliased_rights_handle_field) == 120);
-static_assert(offsetof(::fidl_test_handles::wire::Handles, some_protocol) ==
-              124);
-static_assert(offsetof(::fidl_test_handles::wire::Handles,
-                       request_some_protocol) == 128);
-static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
-              ::fidl_test_handles::wire::Handles::PrimarySize);
+static_assert(offsetof(::test_handles::wire::Handles, some_protocol) == 124);
+static_assert(offsetof(::test_handles::wire::Handles, request_some_protocol) ==
+              128);
+static_assert(sizeof(::test_handles::wire::Handles) ==
+              ::test_handles::wire::Handles::PrimarySize);
 #endif  // __Fuchsia__
 
 template <>
-struct IsFidlType<::fidl_test_handles::wire::ObjType> : public std::true_type {
-};
+struct IsFidlType<::test_handles::wire::ObjType> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_handles::wire::ObjType>
-    : public std::false_type {};
+struct ContainsHandle<::test_handles::wire::ObjType> : public std::false_type {
+};
 
 }  // namespace fidl

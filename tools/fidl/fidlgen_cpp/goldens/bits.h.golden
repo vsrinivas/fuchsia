@@ -2,23 +2,23 @@
 
 #pragma once
 
-#include <fidl/fidl.test.bits/cpp/wire.h>
-#include <fidl/test/bits/cpp/natural_types.h>
+#include <fidl/test.bits/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/bits/cpp/natural_types.h>
 
-namespace fidl_test_bits {
-using StrictBits = ::fidl::test::bits::StrictBits;
-const static StrictBits StrictBitsMask = ::fidl::test::bits::StrictBitsMask;
+namespace test_bits {
+using StrictBits = ::test::bits::StrictBits;
+const static StrictBits StrictBitsMask = ::test::bits::StrictBitsMask;
 
-using MyBits = ::fidl::test::bits::MyBits;
-const static MyBits MyBitsMask = ::fidl::test::bits::MyBitsMask;
+using MyBits = ::test::bits::MyBits;
+const static MyBits MyBitsMask = ::test::bits::MyBitsMask;
 
-using FlexibleBits = ::fidl::test::bits::FlexibleBits;
+using FlexibleBits = ::test::bits::FlexibleBits;
 
-}  // namespace fidl_test_bits
+}  // namespace test_bits
 namespace fidl {}  // namespace fidl

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.doccomments/cpp/wire.h>
+#include <fidl/test.doccomments/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,35 +10,33 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
-    fidl_test_doccomments_decoder_encoders = {
+    test_doccomments_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl_test_doccomments::wire::Table",
+            .fidl_type_name = "::test_doccomments::wire::Table",
             .has_flexible_envelope = true,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_doccomments::wire::Table>,
+                ::test_doccomments::wire::Table>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl_test_doccomments::wire::Struct",
+            .fidl_type_name = "::test_doccomments::wire::Struct",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
-                ::fidl_test_doccomments::wire::Struct>,
+                ::test_doccomments::wire::Struct>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_doccomments::"
-                              "Interface::Method>",
+            .fidl_type_name =
+                "::fidl::WireRequest<::test_doccomments::Interface::Method>",
             .has_flexible_envelope = false,
-            .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::fidl_test_doccomments::Interface::Method>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireRequest<::test_doccomments::Interface::Method>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireResponse<::fidl_test_doccomments::"
-                              "Interface::OnEvent>",
+            .fidl_type_name =
+                "::fidl::WireResponse<::test_doccomments::Interface::OnEvent>",
             .has_flexible_envelope = false,
-            .decoder_encoder =
-                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireResponse<
-                    ::fidl_test_doccomments::Interface::OnEvent>>,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>,
         },
 };
 

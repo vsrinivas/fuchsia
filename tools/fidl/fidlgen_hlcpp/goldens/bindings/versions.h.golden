@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace versions {
 class Union;
@@ -56,12 +55,11 @@ class Enum final {
 };
 
 #if !(__cplusplus < 201703)
-constexpr const ::fidl::test::versions::Enum Enum::A =
-    ::fidl::test::versions::Enum(1u);
+constexpr const ::test::versions::Enum Enum::A = ::test::versions::Enum(1u);
 #endif  // !(__cplusplus < 201703)
 
-inline zx_status_t Clone(::fidl::test::versions::Enum value,
-                         ::fidl::test::versions::Enum* result) {
+inline zx_status_t Clone(::test::versions::Enum value,
+                         ::test::versions::Enum* result) {
   *result = value;
   return ZX_OK;
 }
@@ -123,53 +121,48 @@ class Bits final {
 };
 
 #if !(__cplusplus < 201703)
-constexpr const ::fidl::test::versions::Bits Bits::A =
-    ::fidl::test::versions::Bits(1u);
-constexpr const ::fidl::test::versions::Bits Bits::kMask =
-    ::fidl::test::versions::Bits(1u);
+constexpr const ::test::versions::Bits Bits::A = ::test::versions::Bits(1u);
+constexpr const ::test::versions::Bits Bits::kMask = ::test::versions::Bits(1u);
 
 #endif  // !(__cplusplus < 201703)
 
-constexpr inline ::fidl::test::versions::Bits Bits::operator~() const {
-  return ::fidl::test::versions::Bits(
+constexpr inline ::test::versions::Bits Bits::operator~() const {
+  return ::test::versions::Bits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl::test::versions::Bits Bits::operator|(
-    const ::fidl::test::versions::Bits& other) const {
-  return ::fidl::test::versions::Bits(
+constexpr inline ::test::versions::Bits Bits::operator|(
+    const ::test::versions::Bits& other) const {
+  return ::test::versions::Bits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl::test::versions::Bits Bits::operator&(
-    const ::fidl::test::versions::Bits& other) const {
-  return ::fidl::test::versions::Bits(
+constexpr inline ::test::versions::Bits Bits::operator&(
+    const ::test::versions::Bits& other) const {
+  return ::test::versions::Bits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl::test::versions::Bits Bits::operator^(
-    const ::fidl::test::versions::Bits& other) const {
-  return ::fidl::test::versions::Bits(
+constexpr inline ::test::versions::Bits Bits::operator^(
+    const ::test::versions::Bits& other) const {
+  return ::test::versions::Bits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
-constexpr inline void Bits::operator|=(
-    const ::fidl::test::versions::Bits& other) {
+constexpr inline void Bits::operator|=(const ::test::versions::Bits& other) {
   this->value_ |= other.value_;
 }
 
-constexpr inline void Bits::operator&=(
-    const ::fidl::test::versions::Bits& other) {
+constexpr inline void Bits::operator&=(const ::test::versions::Bits& other) {
   this->value_ &= other.value_;
 }
 
-constexpr inline void Bits::operator^=(
-    const ::fidl::test::versions::Bits& other) {
+constexpr inline void Bits::operator^=(const ::test::versions::Bits& other) {
   this->value_ ^= other.value_;
 }
 
-inline zx_status_t Clone(::fidl::test::versions::Bits value,
-                         ::fidl::test::versions::Bits* result) {
+inline zx_status_t Clone(::test::versions::Bits value,
+                         ::test::versions::Bits* result) {
   *result = value;
   return ZX_OK;
 }
@@ -205,10 +198,10 @@ class Union final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_x() const { return tag_ == ::fidl::test::versions::Union::Tag::kX; }
+  bool is_x() const { return tag_ == ::test::versions::Union::Tag::kX; }
 
   uint32_t& x() {
-    EnsureStorageInitialized(::fidl::test::versions::Union::Tag::kX);
+    EnsureStorageInitialized(::test::versions::Union::Tag::kX);
     return x_;
   }
 
@@ -219,13 +212,13 @@ class Union final {
   Union& set_x(uint32_t value);
   Union& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
 
-  ::fidl::test::versions::Union::Tag Which() const {
+  ::test::versions::Union::Tag Which() const {
     switch (tag_) {
-      case ::fidl::test::versions::Union::Tag::Invalid:
-      case ::fidl::test::versions::Union::Tag::kX:
-        return ::fidl::test::versions::Union::Tag(tag_);
+      case ::test::versions::Union::Tag::Invalid:
+      case ::test::versions::Union::Tag::kX:
+        return ::test::versions::Union::Tag(tag_);
       default:
-        return ::fidl::test::versions::Union::Tag::kUnknown;
+        return ::test::versions::Union::Tag::kUnknown;
     }
   }
 
@@ -233,28 +226,28 @@ class Union final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
   const std::vector<uint8_t>* UnknownBytes() const {
-    if (Which() != ::fidl::test::versions::Union::Tag::kUnknown) {
+    if (Which() != ::test::versions::Union::Tag::kUnknown) {
       return nullptr;
     }
     return &unknown_data_;
   }
 
-  friend ::fidl::Equality<::fidl::test::versions::Union>;
+  friend ::fidl::Equality<::test::versions::Union>;
 
  private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::versions::Union::Tag::Invalid);
+  ::fidl_xunion_tag_t tag_ =
+      static_cast<fidl_xunion_tag_t>(::test::versions::Union::Tag::Invalid);
   union {
     uint32_t x_;
     std::vector<uint8_t> unknown_data_;
   };
 };
 
-inline zx_status_t Clone(const ::fidl::test::versions::Union& value,
-                         ::fidl::test::versions::Union* result) {
+inline zx_status_t Clone(const ::test::versions::Union& value,
+                         ::test::versions::Union* result) {
   return value.Clone(result);
 }
 
@@ -382,8 +375,8 @@ class Struct final {
   zx_status_t Clone(Struct* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::versions::Struct& _value,
-                         ::fidl::test::versions::Struct* _result) {
+inline zx_status_t Clone(const ::test::versions::Struct& _value,
+                         ::test::versions::Struct* _result) {
   return _value.Clone(_result);
 }
 
@@ -404,7 +397,7 @@ class OtherProtocol_ResponseEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_versions_ProtocolFooRequestMessageTable;
+    test_versions_ProtocolFooRequestMessageTable;
 
 }  // namespace _internal
 class Protocol_RequestEncoder {
@@ -425,8 +418,8 @@ class Protocol_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::versions::_internal::
-                   fidl_test_versions_ProtocolFooRequestMessageTable,
+               &::test::versions::_internal::
+                   test_versions_ProtocolFooRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -443,20 +436,21 @@ constexpr uint32_t Const = 0u;
 
 }  // namespace versions
 }  // namespace test
+namespace fidl {
 template <>
-struct IsFidlXUnion<::fidl::test::versions::Union> : public std::true_type {};
+struct IsFidlXUnion<::test::versions::Union> : public std::true_type {};
 
 template <>
-struct CodingTraits<::fidl::test::versions::Union>
-    : public EncodableCodingTraits<::fidl::test::versions::Union, 24, 16> {};
+struct CodingTraits<::test::versions::Union>
+    : public EncodableCodingTraits<::test::versions::Union, 24, 16> {};
 
 template <>
-struct CodingTraits<std::unique_ptr<::fidl::test::versions::Union>> {
+struct CodingTraits<std::unique_ptr<::test::versions::Union>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
-      Encoder* encoder, std::unique_ptr<::fidl::test::versions::Union>* value,
+      Encoder* encoder, std::unique_ptr<::test::versions::Union>* value,
       size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
@@ -466,7 +460,7 @@ struct CodingTraits<std::unique_ptr<::fidl::test::versions::Union>> {
   }
 
   static void Decode(Decoder* _decoder,
-                     std::unique_ptr<::fidl::test::versions::Union>* value,
+                     std::unique_ptr<::test::versions::Union>* value,
                      size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
@@ -474,30 +468,30 @@ struct CodingTraits<std::unique_ptr<::fidl::test::versions::Union>> {
       return;
     }
 
-    value->reset(new ::fidl::test::versions::Union);
+    value->reset(new ::test::versions::Union);
 
-    ::fidl::test::versions::Union::Decode(_decoder, value->get(), offset);
+    ::test::versions::Union::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(const ::fidl::test::versions::Union& value,
-                         ::fidl::test::versions::Union* result) {
-  return ::fidl::test::versions::Clone(value, result);
+inline zx_status_t Clone(const ::test::versions::Union& value,
+                         ::test::versions::Union* result) {
+  return ::test::versions::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::versions::Union> {
-  bool operator()(const ::fidl::test::versions::Union& _lhs,
-                  const ::fidl::test::versions::Union& _rhs) const {
+struct Equality<::test::versions::Union> {
+  bool operator()(const ::test::versions::Union& _lhs,
+                  const ::test::versions::Union& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::versions::Union::Tag::Invalid):
+          ::test::versions::Union::Tag::Invalid):
         return true;
-      case ::fidl::test::versions::Union::Tag::kX:
+      case ::test::versions::Union::Tag::kX:
         return ::fidl::Equals(_lhs.x_, _rhs.x_);
       default:
         return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
@@ -505,17 +499,17 @@ struct Equality<::fidl::test::versions::Union> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::versions::Table>
-    : public EncodableCodingTraits<::fidl::test::versions::Table, 16, 16> {};
+struct CodingTraits<::test::versions::Table>
+    : public EncodableCodingTraits<::test::versions::Table, 16, 16> {};
 
-inline zx_status_t Clone(const ::fidl::test::versions::Table& _value,
-                         ::fidl::test::versions::Table* result) {
+inline zx_status_t Clone(const ::test::versions::Table& _value,
+                         ::test::versions::Table* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::versions::Table> {
-  bool operator()(const ::fidl::test::versions::Table& _lhs,
-                  const ::fidl::test::versions::Table& _rhs) const {
+struct Equality<::test::versions::Table> {
+  bool operator()(const ::test::versions::Table& _lhs,
+                  const ::test::versions::Table& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
         return false;
@@ -530,24 +524,24 @@ struct Equality<::fidl::test::versions::Table> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::versions::Struct>
-    : public EncodableCodingTraits<::fidl::test::versions::Struct, 4, 4> {};
+struct CodingTraits<::test::versions::Struct>
+    : public EncodableCodingTraits<::test::versions::Struct, 4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::versions::Struct>
+struct IsMemcpyCompatible<::test::versions::Struct>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::versions::Struct>::value &&
+          !HasPadding<::test::versions::Struct>::value &&
           IsMemcpyCompatible<uint32_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::versions::Struct& value,
-                         ::fidl::test::versions::Struct* result) {
-  return ::fidl::test::versions::Clone(value, result);
+inline zx_status_t Clone(const ::test::versions::Struct& value,
+                         ::test::versions::Struct* result) {
+  return ::test::versions::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::versions::Struct> {
-  bool operator()(const ::fidl::test::versions::Struct& _lhs,
-                  const ::fidl::test::versions::Struct& _rhs) const {
+struct Equality<::test::versions::Struct> {
+  bool operator()(const ::test::versions::Struct& _lhs,
+                  const ::test::versions::Struct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }
@@ -555,70 +549,66 @@ struct Equality<::fidl::test::versions::Struct> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::versions::Enum> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::versions::Enum);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::versions::Enum);
-  static constexpr size_t inline_size_v2 = sizeof(::fidl::test::versions::Enum);
+struct CodingTraits<::test::versions::Enum> {
+  static constexpr size_t inline_size_old = sizeof(::test::versions::Enum);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::versions::Enum);
+  static constexpr size_t inline_size_v2 = sizeof(::test::versions::Enum);
   static void Encode(
-      Encoder* encoder, ::fidl::test::versions::Enum* value, size_t offset,
+      Encoder* encoder, ::test::versions::Enum* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::versions::Enum* value,
+  static void Decode(Decoder* decoder, ::test::versions::Enum* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::versions::Enum>(underlying);
+    *value = static_cast<::test::versions::Enum>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::versions::Enum value,
-                         ::fidl::test::versions::Enum* result) {
-  return ::fidl::test::versions::Clone(value, result);
+inline zx_status_t Clone(::test::versions::Enum value,
+                         ::test::versions::Enum* result) {
+  return ::test::versions::Clone(value, result);
 }
 template <>
-struct Equality<::fidl::test::versions::Enum> {
-  bool operator()(const ::fidl::test::versions::Enum& _lhs,
-                  const ::fidl::test::versions::Enum& _rhs) const {
+struct Equality<::test::versions::Enum> {
+  bool operator()(const ::test::versions::Enum& _lhs,
+                  const ::test::versions::Enum& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
-struct CodingTraits<::fidl::test::versions::Bits> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::versions::Bits);
-  static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::versions::Bits);
-  static constexpr size_t inline_size_v2 = sizeof(::fidl::test::versions::Bits);
+struct CodingTraits<::test::versions::Bits> {
+  static constexpr size_t inline_size_old = sizeof(::test::versions::Bits);
+  static constexpr size_t inline_size_v1_no_ee = sizeof(::test::versions::Bits);
+  static constexpr size_t inline_size_v2 = sizeof(::test::versions::Bits);
   static void Encode(
-      Encoder* encoder, ::fidl::test::versions::Bits* value, size_t offset,
+      Encoder* encoder, ::test::versions::Bits* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::versions::Bits* value,
+  static void Decode(Decoder* decoder, ::test::versions::Bits* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::versions::Bits>(underlying);
+    *value = static_cast<::test::versions::Bits>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::versions::Bits value,
-                         ::fidl::test::versions::Bits* result) {
-  return ::fidl::test::versions::Clone(value, result);
+inline zx_status_t Clone(::test::versions::Bits value,
+                         ::test::versions::Bits* result) {
+  return ::test::versions::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::versions::Bits> {
-  bool operator()(const ::fidl::test::versions::Bits& _lhs,
-                  const ::fidl::test::versions::Bits& _rhs) const {
+struct Equality<::test::versions::Bits> {
+  bool operator()(const ::test::versions::Bits& _lhs,
+                  const ::test::versions::Bits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
@@ -628,6 +618,7 @@ struct Equality<::fidl::test::versions::Bits> {
 //
 // Proxies and stubs declarations
 //
+}  // namespace fidl
 namespace test {
 namespace versions {
 #ifdef __Fuchsia__
@@ -657,7 +648,7 @@ using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
 class Protocol_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kProtocol_Foo_Ordinal = 0x6d892a52b86296e3lu;
+constexpr uint64_t kProtocol_Foo_Ordinal = 0x567a8096af6e6139lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -667,7 +658,7 @@ class Service final {
  public:
   class Handler;
 
-  static constexpr char Name[] = "fidl.test.versions.Service";
+  static constexpr char Name[] = "test.versions.Service";
 
   explicit Service(std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
@@ -675,9 +666,9 @@ class Service final {
   explicit operator bool() const { return !!service_; }
   /// Returns a |fidl::MemberConnector| which can be used to connect to the
   /// member protocol "p".
-  ::fidl::MemberConnector<::fidl::test::versions::Protocol> p() const {
-    return ::fidl::MemberConnector<::fidl::test::versions::Protocol>(
-        service_.get(), "p");
+  ::fidl::MemberConnector<::test::versions::Protocol> p() const {
+    return ::fidl::MemberConnector<::test::versions::Protocol>(service_.get(),
+                                                               "p");
   }
 
  private:
@@ -696,8 +687,7 @@ class Service::Handler final {
   ///
   /// Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
   zx_status_t add_p(
-      ::fidl::InterfaceRequestHandler<::fidl::test::versions::Protocol>
-          handler) {
+      ::fidl::InterfaceRequestHandler<::test::versions::Protocol> handler) {
     return service_->AddMember("p", std::move(handler));
   }
 
@@ -710,10 +700,10 @@ class Service::Handler final {
 
 class OtherProtocol {
  public:
-  using Proxy_ = ::fidl::test::versions::OtherProtocol_Proxy;
-  using Stub_ = ::fidl::test::versions::OtherProtocol_Stub;
-  using EventSender_ = ::fidl::test::versions::OtherProtocol_EventSender;
-  using Sync_ = ::fidl::test::versions::OtherProtocol_Sync;
+  using Proxy_ = ::test::versions::OtherProtocol_Proxy;
+  using Stub_ = ::test::versions::OtherProtocol_Stub;
+  using EventSender_ = ::test::versions::OtherProtocol_EventSender;
+  using Sync_ = ::test::versions::OtherProtocol_Sync;
   virtual ~OtherProtocol();
 };
 
@@ -738,7 +728,7 @@ class OtherProtocol_EventSender {
 
 class OtherProtocol_Sync {
  public:
-  using Proxy_ = ::fidl::test::versions::OtherProtocol_SyncProxy;
+  using Proxy_ = ::test::versions::OtherProtocol_SyncProxy;
   virtual ~OtherProtocol_Sync();
 };
 
@@ -751,32 +741,30 @@ class OtherProtocol_Proxy final : public ::fidl::internal::Proxy,
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
  private:
-  OtherProtocol_Proxy(const ::fidl::test::versions::OtherProtocol_Proxy&) =
+  OtherProtocol_Proxy(const ::test::versions::OtherProtocol_Proxy&) = delete;
+  OtherProtocol_Proxy& operator=(const ::test::versions::OtherProtocol_Proxy&) =
       delete;
-  OtherProtocol_Proxy& operator=(
-      const ::fidl::test::versions::OtherProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class OtherProtocol_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::versions::OtherProtocol_EventSender {
+      public ::test::versions::OtherProtocol_EventSender {
  public:
-  typedef class ::fidl::test::versions::OtherProtocol OtherProtocol_clazz;
+  typedef class ::test::versions::OtherProtocol OtherProtocol_clazz;
   explicit OtherProtocol_Stub(
-      ::fidl::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl);
+      ::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl);
   ~OtherProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl_;
+  ::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl_;
 };
 
-class OtherProtocol_SyncProxy
-    : public ::fidl::test::versions::OtherProtocol_Sync {
+class OtherProtocol_SyncProxy : public ::test::versions::OtherProtocol_Sync {
  public:
   explicit OtherProtocol_SyncProxy(::zx::channel channel);
   ~OtherProtocol_SyncProxy() override;
@@ -791,10 +779,10 @@ class OtherProtocol_SyncProxy
 
 class Protocol {
  public:
-  using Proxy_ = ::fidl::test::versions::Protocol_Proxy;
-  using Stub_ = ::fidl::test::versions::Protocol_Stub;
-  using EventSender_ = ::fidl::test::versions::Protocol_EventSender;
-  using Sync_ = ::fidl::test::versions::Protocol_Sync;
+  using Proxy_ = ::test::versions::Protocol_Proxy;
+  using Stub_ = ::test::versions::Protocol_Stub;
+  using EventSender_ = ::test::versions::Protocol_EventSender;
+  using Sync_ = ::test::versions::Protocol_Sync;
   virtual ~Protocol();
 
   virtual void Foo() = 0;
@@ -822,7 +810,7 @@ class Protocol_EventSender {
 
 class Protocol_Sync {
  public:
-  using Proxy_ = ::fidl::test::versions::Protocol_SyncProxy;
+  using Proxy_ = ::test::versions::Protocol_SyncProxy;
   virtual ~Protocol_Sync();
   virtual zx_status_t Foo() = 0;
 };
@@ -833,38 +821,35 @@ class Protocol_Proxy final : public ::fidl::internal::Proxy, public Protocol {
   ~Protocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.versions/Protocol.Foo
+  // cts-coverage-fidl-name:test.versions/Protocol.Foo
   void Foo() override;
 
  private:
-  Protocol_Proxy(const ::fidl::test::versions::Protocol_Proxy&) = delete;
-  Protocol_Proxy& operator=(const ::fidl::test::versions::Protocol_Proxy&) =
-      delete;
+  Protocol_Proxy(const ::test::versions::Protocol_Proxy&) = delete;
+  Protocol_Proxy& operator=(const ::test::versions::Protocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Protocol_Stub final
-    : public ::fidl::internal::Stub,
-      public ::fidl::test::versions::Protocol_EventSender {
+class Protocol_Stub final : public ::fidl::internal::Stub,
+                            public ::test::versions::Protocol_EventSender {
  public:
-  typedef class ::fidl::test::versions::Protocol Protocol_clazz;
-  explicit Protocol_Stub(
-      ::fidl::test::versions::Protocol_Stub::Protocol_clazz* impl);
+  typedef class ::test::versions::Protocol Protocol_clazz;
+  explicit Protocol_Stub(::test::versions::Protocol_Stub::Protocol_clazz* impl);
   ~Protocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::versions::Protocol_Stub::Protocol_clazz* impl_;
+  ::test::versions::Protocol_Stub::Protocol_clazz* impl_;
 };
 
-class Protocol_SyncProxy : public ::fidl::test::versions::Protocol_Sync {
+class Protocol_SyncProxy : public ::test::versions::Protocol_Sync {
  public:
   explicit Protocol_SyncProxy(::zx::channel channel);
   ~Protocol_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.versions/Protocol.Foo
+  // cts-coverage-fidl-name:test.versions/Protocol.Foo
   zx_status_t Foo() override;
 
  private:
@@ -875,4 +860,3 @@ class Protocol_SyncProxy : public ::fidl::test::versions::Protocol_Sync {
 
 }  // namespace versions
 }  // namespace test
-}  // namespace fidl

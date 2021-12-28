@@ -18,19 +18,19 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/dependent/cpp/wire_types.h>
-#include <fidl/fidl.test.structdefaultvalueenumlibraryreference/cpp/markers.h>
+#include <fidl/test.dependent/cpp/wire_types.h>
+#include <fidl/test.structdefaultvalueenumlibraryreference/cpp/markers.h>
 
-namespace fidl_test_structdefaultvalueenumlibraryreference {
+namespace test_structdefaultvalueenumlibraryreference {
 namespace wire {
 struct Foo;
 
 extern "C" const fidl_type_t
-    fidl_test_structdefaultvalueenumlibraryreference_FooTable;
+    test_structdefaultvalueenumlibraryreference_FooTable;
 
 struct Foo {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_structdefaultvalueenumlibraryreference_FooTable;
+      &test_structdefaultvalueenumlibraryreference_FooTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
@@ -38,7 +38,7 @@ struct Foo {
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
 
-  ::dependent::wire::MyEnum field = {};
+  ::test_dependent::wire::MyEnum field = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -46,22 +46,21 @@ struct Foo {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_structdefaultvalueenumlibraryreference
+}  // namespace test_structdefaultvalueenumlibraryreference
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo>
+struct IsFidlType<::test_structdefaultvalueenumlibraryreference::wire::Foo>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo>
+struct IsStruct<::test_structdefaultvalueenumlibraryreference::wire::Foo>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo>);
+              ::test_structdefaultvalueenumlibraryreference::wire::Foo>);
+static_assert(offsetof(::test_structdefaultvalueenumlibraryreference::wire::Foo,
+                       field) == 0);
 static_assert(
-    offsetof(::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo,
-             field) == 0);
-static_assert(
-    sizeof(::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo) ==
-    ::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo::PrimarySize);
+    sizeof(::test_structdefaultvalueenumlibraryreference::wire::Foo) ==
+    ::test_structdefaultvalueenumlibraryreference::wire::Foo::PrimarySize);
 
 }  // namespace fidl

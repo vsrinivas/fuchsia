@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/wire.h>
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire.h>
+namespace test_foreigntypeinresponseusedthroughcompose {
 namespace testing {
 
-class Top_TestBase
-    : public ::fidl::WireServer<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+class Top_TestBase : public ::fidl::WireServer<
+                         ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -19,4 +18,4 @@ class Top_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+}  // namespace test_foreigntypeinresponseusedthroughcompose

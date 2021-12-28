@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.protocolrequest/cpp/wire.h>
-namespace fidl_test_protocolrequest {
+#include <fidl/test.protocolrequest/cpp/wire.h>
+namespace test_protocolrequest {
 namespace testing {
 
 class Parent_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocolrequest::Parent> {
+    : public ::fidl::WireServer<::test_protocolrequest::Parent> {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -33,11 +33,11 @@ class Parent_TestBase
 };
 
 class Child_TestBase
-    : public ::fidl::WireServer<::fidl_test_protocolrequest::Child> {
+    : public ::fidl::WireServer<::test_protocolrequest::Child> {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
                                ::fidl::CompleterBase& completer) = 0;
 };
 }  // namespace testing
-}  // namespace fidl_test_protocolrequest
+}  // namespace test_protocolrequest

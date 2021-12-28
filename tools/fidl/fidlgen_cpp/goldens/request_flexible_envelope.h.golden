@@ -2,16 +2,16 @@
 
 #pragma once
 
-#include <fidl/fidl.test.requestflexibleenvelope/cpp/wire.h>
-#include <fidl/test/requestflexibleenvelope/cpp/natural_types.h>
+#include <fidl/test.requestflexibleenvelope/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/requestflexibleenvelope/cpp/natural_types.h>
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 class ProtocolRequestStrictResponseFlexibleRequest;
 
 class ProtocolRequestFlexibleResponseStrictTopResponse;
@@ -20,21 +20,21 @@ class ProtocolRequestStrictResponseFlexibleTopResponse;
 
 class ProtocolRequestFlexibleResponseStrictRequest;
 
-using StrictFoo = ::fidl::test::requestflexibleenvelope::StrictFoo;
+using StrictFoo = ::test::requestflexibleenvelope::StrictFoo;
 
-using FlexibleFoo = ::fidl::test::requestflexibleenvelope::FlexibleFoo;
+using FlexibleFoo = ::test::requestflexibleenvelope::FlexibleFoo;
 
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleRequest>
     final {
  public:
-  ::fidl_test_requestflexibleenvelope::StrictFoo s = {};
+  ::test_requestflexibleenvelope::StrictFoo s = {};
 };
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 class ProtocolRequestStrictResponseFlexibleRequest final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestStrictResponseFlexibleRequest> {
@@ -51,11 +51,11 @@ class ProtocolRequestStrictResponseFlexibleRequest final
  public:
   ProtocolRequestStrictResponseFlexibleRequest() = default;
   ProtocolRequestStrictResponseFlexibleRequest(
-      ::fidl_test_requestflexibleenvelope::StrictFoo s)
+      ::test_requestflexibleenvelope::StrictFoo s)
       : storage_({std::move(s)}) {}
   ProtocolRequestStrictResponseFlexibleRequest(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_requestflexibleenvelope::
+          ::test_requestflexibleenvelope::
               ProtocolRequestStrictResponseFlexibleRequest>
           storage)
       : storage_(std::move(storage)) {}
@@ -65,40 +65,40 @@ class ProtocolRequestStrictResponseFlexibleRequest final
   ProtocolRequestStrictResponseFlexibleRequest& operator=(
       ProtocolRequestStrictResponseFlexibleRequest&&) noexcept = default;
 
-  const ::fidl_test_requestflexibleenvelope::StrictFoo& s() const {
+  const ::test_requestflexibleenvelope::StrictFoo& s() const {
     return storage_.s;
   }
 
-  ::fidl_test_requestflexibleenvelope::StrictFoo& s() { return storage_.s; }
+  ::test_requestflexibleenvelope::StrictFoo& s() { return storage_.s; }
 
   ProtocolRequestStrictResponseFlexibleRequest& set_s(
-      ::fidl_test_requestflexibleenvelope::StrictFoo _value) {
+      ::test_requestflexibleenvelope::StrictFoo _value) {
     storage_.s = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestFlexibleResponseStrictTopResponse>
     final {
  public:
-  ::fidl_test_requestflexibleenvelope::StrictFoo f = {};
+  ::test_requestflexibleenvelope::StrictFoo f = {};
 };
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 class ProtocolRequestFlexibleResponseStrictTopResponse final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestFlexibleResponseStrictTopResponse> {
@@ -115,11 +115,11 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
  public:
   ProtocolRequestFlexibleResponseStrictTopResponse() = default;
   ProtocolRequestFlexibleResponseStrictTopResponse(
-      ::fidl_test_requestflexibleenvelope::StrictFoo f)
+      ::test_requestflexibleenvelope::StrictFoo f)
       : storage_({std::move(f)}) {}
   ProtocolRequestFlexibleResponseStrictTopResponse(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_requestflexibleenvelope::
+          ::test_requestflexibleenvelope::
               ProtocolRequestFlexibleResponseStrictTopResponse>
           storage)
       : storage_(std::move(storage)) {}
@@ -129,40 +129,40 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
   ProtocolRequestFlexibleResponseStrictTopResponse& operator=(
       ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
 
-  const ::fidl_test_requestflexibleenvelope::StrictFoo& f() const {
+  const ::test_requestflexibleenvelope::StrictFoo& f() const {
     return storage_.f;
   }
 
-  ::fidl_test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
+  ::test_requestflexibleenvelope::StrictFoo& f() { return storage_.f; }
 
   ProtocolRequestFlexibleResponseStrictTopResponse& set_f(
-      ::fidl_test_requestflexibleenvelope::StrictFoo _value) {
+      ::test_requestflexibleenvelope::StrictFoo _value) {
     storage_.f = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleTopResponse>
     final {
  public:
-  ::fidl_test_requestflexibleenvelope::FlexibleFoo f = {};
+  ::test_requestflexibleenvelope::FlexibleFoo f = {};
 };
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 class ProtocolRequestStrictResponseFlexibleTopResponse final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestStrictResponseFlexibleTopResponse> {
@@ -179,11 +179,11 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
  public:
   ProtocolRequestStrictResponseFlexibleTopResponse() = default;
   ProtocolRequestStrictResponseFlexibleTopResponse(
-      ::fidl_test_requestflexibleenvelope::FlexibleFoo f)
+      ::test_requestflexibleenvelope::FlexibleFoo f)
       : storage_({std::move(f)}) {}
   ProtocolRequestStrictResponseFlexibleTopResponse(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_requestflexibleenvelope::
+          ::test_requestflexibleenvelope::
               ProtocolRequestStrictResponseFlexibleTopResponse>
           storage)
       : storage_(std::move(storage)) {}
@@ -193,40 +193,40 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
   ProtocolRequestStrictResponseFlexibleTopResponse& operator=(
       ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
 
-  const ::fidl_test_requestflexibleenvelope::FlexibleFoo& f() const {
+  const ::test_requestflexibleenvelope::FlexibleFoo& f() const {
     return storage_.f;
   }
 
-  ::fidl_test_requestflexibleenvelope::FlexibleFoo& f() { return storage_.f; }
+  ::test_requestflexibleenvelope::FlexibleFoo& f() { return storage_.f; }
 
   ProtocolRequestStrictResponseFlexibleTopResponse& set_f(
-      ::fidl_test_requestflexibleenvelope::FlexibleFoo _value) {
+      ::test_requestflexibleenvelope::FlexibleFoo _value) {
     storage_.f = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestFlexibleResponseStrictRequest>
     final {
  public:
-  ::fidl_test_requestflexibleenvelope::FlexibleFoo s = {};
+  ::test_requestflexibleenvelope::FlexibleFoo s = {};
 };
 
-namespace fidl_test_requestflexibleenvelope {
+namespace test_requestflexibleenvelope {
 class ProtocolRequestFlexibleResponseStrictRequest final
     : public ::fidl::internal::CodableBase<
           ProtocolRequestFlexibleResponseStrictRequest> {
@@ -243,11 +243,11 @@ class ProtocolRequestFlexibleResponseStrictRequest final
  public:
   ProtocolRequestFlexibleResponseStrictRequest() = default;
   ProtocolRequestFlexibleResponseStrictRequest(
-      ::fidl_test_requestflexibleenvelope::FlexibleFoo s)
+      ::test_requestflexibleenvelope::FlexibleFoo s)
       : storage_({std::move(s)}) {}
   ProtocolRequestFlexibleResponseStrictRequest(
       ::fidl::internal::DesignatedInitializationProxy<
-          ::fidl_test_requestflexibleenvelope::
+          ::test_requestflexibleenvelope::
               ProtocolRequestFlexibleResponseStrictRequest>
           storage)
       : storage_(std::move(storage)) {}
@@ -257,52 +257,52 @@ class ProtocolRequestFlexibleResponseStrictRequest final
   ProtocolRequestFlexibleResponseStrictRequest& operator=(
       ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
 
-  const ::fidl_test_requestflexibleenvelope::FlexibleFoo& s() const {
+  const ::test_requestflexibleenvelope::FlexibleFoo& s() const {
     return storage_.s;
   }
 
-  ::fidl_test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
+  ::test_requestflexibleenvelope::FlexibleFoo& s() { return storage_.s; }
 
   ProtocolRequestFlexibleResponseStrictRequest& set_s(
-      ::fidl_test_requestflexibleenvelope::FlexibleFoo _value) {
+      ::test_requestflexibleenvelope::FlexibleFoo _value) {
     storage_.s = std::move(_value);
     return *this;
   }
 
  private:
   friend struct ::fidl::CodingTraits<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_requestflexibleenvelope
+}  // namespace test_requestflexibleenvelope
 namespace fidl {
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_requestflexibleenvelope::
+struct IsFidlType<::test_requestflexibleenvelope::
                       ProtocolRequestStrictResponseFlexibleRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+      &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_requestflexibleenvelope::
+struct CodingTraits<::test_requestflexibleenvelope::
                         ProtocolRequestStrictResponseFlexibleRequest> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
@@ -310,7 +310,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -323,7 +323,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_requestflexibleenvelope::
+                     ::test_requestflexibleenvelope::
                          ProtocolRequestStrictResponseFlexibleRequest* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
@@ -333,25 +333,25 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 template <>
-struct IsFidlType<::fidl_test_requestflexibleenvelope::
+struct IsFidlType<::test_requestflexibleenvelope::
                       ProtocolRequestFlexibleResponseStrictTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestFlexibleResponseStrictTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+      &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_requestflexibleenvelope::
+struct CodingTraits<::test_requestflexibleenvelope::
                         ProtocolRequestFlexibleResponseStrictTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
@@ -359,7 +359,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -373,7 +373,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictTopResponse* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.f, offset + 0);
@@ -383,25 +383,25 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+    test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 
 template <>
-struct IsFidlType<::fidl_test_requestflexibleenvelope::
+struct IsFidlType<::test_requestflexibleenvelope::
                       ProtocolRequestStrictResponseFlexibleTopResponse>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestStrictResponseFlexibleTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+      &test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_requestflexibleenvelope::
+struct CodingTraits<::test_requestflexibleenvelope::
                         ProtocolRequestStrictResponseFlexibleTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
@@ -409,7 +409,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -423,7 +423,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleTopResponse* value,
       size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.f, offset + 0);
@@ -433,25 +433,25 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
 
 #ifdef __Fuchsia__
 extern "C" const fidl_type_t
-    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+    test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_requestflexibleenvelope::
+struct IsFidlType<::test_requestflexibleenvelope::
                       ProtocolRequestFlexibleResponseStrictRequest>
     : public std::true_type {};
 
 template <>
 struct ::fidl::internal::TypeTraits<
-    ::fidl_test_requestflexibleenvelope::
+    ::test_requestflexibleenvelope::
         ProtocolRequestFlexibleResponseStrictRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+      &test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_requestflexibleenvelope::
+struct CodingTraits<::test_requestflexibleenvelope::
                         ProtocolRequestFlexibleResponseStrictRequest> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
@@ -459,7 +459,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
   template <class EncoderImpl>
   static void Encode(
       EncoderImpl* encoder,
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
@@ -472,7 +472,7 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_requestflexibleenvelope::
+                     ::test_requestflexibleenvelope::
                          ProtocolRequestFlexibleResponseStrictRequest* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
@@ -484,173 +484,167 @@ struct CodingTraits<::fidl_test_requestflexibleenvelope::
 }  // namespace fidl
 
 template <>
-class ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestStrictResponseFlexible>
+class ::fidl::Response<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final : public ::fidl::internal::MessageBase<
-                ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+                ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                      RequestStrictResponseFlexible>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::fidl_test_requestflexibleenvelope::
+  Response(::test_requestflexibleenvelope::
                ProtocolRequestStrictResponseFlexibleTopResponse payload)
       : payload_(std::move(payload)) {}
-  ::fidl_test_requestflexibleenvelope::
+  ::test_requestflexibleenvelope::
       ProtocolRequestStrictResponseFlexibleTopResponse*
       operator->() {
     return &payload_;
   }
-  const ::fidl_test_requestflexibleenvelope::
+  const ::test_requestflexibleenvelope::
       ProtocolRequestStrictResponseFlexibleTopResponse*
       operator->() const {
     return &payload_;
   }
-  ::fidl_test_requestflexibleenvelope::
+  ::test_requestflexibleenvelope::
       ProtocolRequestStrictResponseFlexibleTopResponse&
       operator*() {
     return payload_;
   }
-  const ::fidl_test_requestflexibleenvelope::
+  const ::test_requestflexibleenvelope::
       ProtocolRequestStrictResponseFlexibleTopResponse&
       operator*() const {
     return payload_;
   }
 
  private:
-  ::fidl_test_requestflexibleenvelope::
+  ::test_requestflexibleenvelope::
       ProtocolRequestStrictResponseFlexibleTopResponse payload_;
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
-                         RequestStrictResponseFlexible>>
+struct ::fidl::internal::MessageTraits<::fidl::Response<
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_requestflexibleenvelope::
+  using Payload = ::test_requestflexibleenvelope::
       ProtocolRequestStrictResponseFlexibleTopResponse;
 };
 namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestStrictResponseFlexible>
+    ::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
-      ::fitx::result<
-          ::fidl::Error,
-          ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestStrictResponseFlexible>>&)>;
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                          RequestStrictResponseFlexible>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                            RequestStrictResponseFlexible>&)>;
 };
 
 template <>
-class ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
-                           RequestFlexibleResponseStrict>
+class ::fidl::Response<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final : public ::fidl::internal::MessageBase<
-                ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+                ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                                      RequestFlexibleResponseStrict>> {
  public:
   Response() = default;
   ~Response() = default;
   Response(Response&&) noexcept = default;
   Response& operator=(Response&&) noexcept = default;
-  Response(::fidl_test_requestflexibleenvelope::
+  Response(::test_requestflexibleenvelope::
                ProtocolRequestFlexibleResponseStrictTopResponse payload)
       : payload_(std::move(payload)) {}
-  ::fidl_test_requestflexibleenvelope::
+  ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse*
       operator->() {
     return &payload_;
   }
-  const ::fidl_test_requestflexibleenvelope::
+  const ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse*
       operator->() const {
     return &payload_;
   }
-  ::fidl_test_requestflexibleenvelope::
+  ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse&
       operator*() {
     return payload_;
   }
-  const ::fidl_test_requestflexibleenvelope::
+  const ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse&
       operator*() const {
     return payload_;
   }
 
  private:
-  ::fidl_test_requestflexibleenvelope::
+  ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse payload_;
 };
 
 template <>
-struct ::fidl::internal::MessageTraits<
-    ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
-                         RequestFlexibleResponseStrict>>
+struct ::fidl::internal::MessageTraits<::fidl::Response<
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>>
     final {
  public:
   static constexpr bool kHasPayload = true;
-  using Payload = ::fidl_test_requestflexibleenvelope::
+  using Payload = ::test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse;
 };
 template <>
 class ::fidl::internal::ClientCallbackTraits<
-    ::fidl_test_requestflexibleenvelope::Protocol::
-        RequestFlexibleResponseStrict>
+    ::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>
     final {
  public:
   ClientCallbackTraits() = delete;
   using ResultCallback = ::fit::callback<void(
-      ::fitx::result<
-          ::fidl::Error,
-          ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
-                               RequestFlexibleResponseStrict>>&)>;
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::test_requestflexibleenvelope::Protocol::
+                                          RequestFlexibleResponseStrict>>&)>;
   using ResponseCallback = ::fit::callback<void(
-      ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::Response<::test_requestflexibleenvelope::Protocol::
                            RequestFlexibleResponseStrict>&)>;
 };
 
 template <>
 class ::fidl::internal::NaturalClientImpl<
-    ::fidl_test_requestflexibleenvelope::Protocol>
+    ::test_requestflexibleenvelope::Protocol>
     final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
   void RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest&& payload,
-      ::fidl::ClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                  RequestStrictResponseFlexible>&& _callback)
       const;
 
   void RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestStrictResponseFlexibleRequest&& payload,
-      ::fidl::ClientResponseCallback<
-          ::fidl_test_requestflexibleenvelope::Protocol::
-              RequestStrictResponseFlexible>&& _callback) const;
+      ::fidl::ClientResponseCallback<::test_requestflexibleenvelope::Protocol::
+                                         RequestStrictResponseFlexible>&&
+          _callback) const;
 
   void RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest&& payload,
-      ::fidl::ClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+      ::fidl::ClientCallback<::test_requestflexibleenvelope::Protocol::
                                  RequestFlexibleResponseStrict>&& _callback)
       const;
 
   void RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::
+      ::test_requestflexibleenvelope::
           ProtocolRequestFlexibleResponseStrictRequest&& payload,
-      ::fidl::ClientResponseCallback<
-          ::fidl_test_requestflexibleenvelope::Protocol::
-              RequestFlexibleResponseStrict>&& _callback) const;
+      ::fidl::ClientResponseCallback<::test_requestflexibleenvelope::Protocol::
+                                         RequestFlexibleResponseStrict>&&
+          _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

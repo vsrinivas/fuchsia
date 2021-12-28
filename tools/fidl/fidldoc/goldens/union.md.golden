@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.union
+# test.union
 
 
 
 ## **PROTOCOLS**
 
 ## TestProtocol {#TestProtocol}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=125)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=125)*
 
 
 
@@ -54,7 +54,7 @@
 ## **STRUCTS**
 
 ### Empty  {#Empty data-text="Empty"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=113)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=113)*
 
 
 
@@ -62,7 +62,7 @@
 &lt;EMPTY&gt;
 
 ### NullableUnionStruct  {#NullableUnionStruct data-text="NullableUnionStruct"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=66)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=66)*
 
 
 
@@ -80,7 +80,7 @@
 </table>
 
 ### Pasta  {#Pasta data-text="Pasta"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=7)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=7)*
 
 
 
@@ -98,7 +98,7 @@
 </table>
 
 ### Pizza  {#Pizza data-text="Pizza"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=3)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=3)*
 
 
 
@@ -116,7 +116,7 @@
 </table>
 
 ### StructWithNullableXUnion  {#StructWithNullableXUnion data-text="StructWithNullableXUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=134)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=134)*
 
 
 
@@ -134,7 +134,7 @@
 </table>
 
 ### UnionSandwich  {#UnionSandwich data-text="UnionSandwich"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=145)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=145)*
 
 
 
@@ -176,7 +176,7 @@
 ## **UNIONS**
 
 ### ExplicitFoo [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExplicitFoo data-text="ExplicitFoo"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=80)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=80)*
 
 
 
@@ -208,7 +208,7 @@
         </tr></table>
 
 ### ExplicitPizzaOrPasta [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExplicitPizzaOrPasta data-text="ExplicitPizzaOrPasta"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=16)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=16)*
 
 
 
@@ -248,7 +248,7 @@
         </tr></table>
 
 ### ExplicitStrictFoo [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExplicitStrictFoo data-text="ExplicitStrictFoo"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=86)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=86)*
 
 
 
@@ -280,7 +280,7 @@
         </tr></table>
 
 ### ExplicitUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExplicitUnion data-text="ExplicitUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=55)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=55)*
 
 
 
@@ -312,7 +312,7 @@
         </tr></table>
 
 ### ExplicitXUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExplicitXUnion data-text="ExplicitXUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=138)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=138)*
 
 
 
@@ -352,7 +352,7 @@
         </tr></table>
 
 ### FieldCollision [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FieldCollision data-text="FieldCollision"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=51)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=51)*
 
 
 
@@ -368,7 +368,7 @@
         </tr></table>
 
 ### FlexibleFoo [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FlexibleFoo data-text="FlexibleFoo"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=70)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=70)*
 
 
 
@@ -392,7 +392,7 @@
         </tr></table>
 
 ### FlexiblePizzaOrPasta [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FlexiblePizzaOrPasta data-text="FlexiblePizzaOrPasta"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=23)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=23)*
 
 
 
@@ -416,7 +416,7 @@
         </tr></table>
 
 ### FlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FlexibleUnion data-text="FlexibleUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=39)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=39)*
 
 
 
@@ -448,7 +448,7 @@
         </tr></table>
 
 ### NewerSimpleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#NewerSimpleUnion data-text="NewerSimpleUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=97)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=97)*
 
 
 
@@ -480,7 +480,7 @@
         </tr></table>
 
 ### OlderSimpleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#OlderSimpleUnion data-text="OlderSimpleUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=92)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=92)*
 
 
 
@@ -504,7 +504,7 @@
         </tr></table>
 
 ### PizzaOrPasta [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#PizzaOrPasta data-text="PizzaOrPasta"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=11)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=11)*
 
 
 
@@ -528,7 +528,7 @@
         </tr></table>
 
 ### ReverseOrdinalUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ReverseOrdinalUnion data-text="ReverseOrdinalUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=61)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=61)*
 
 
 
@@ -552,7 +552,7 @@
         </tr></table>
 
 ### StrictBoundedXUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictBoundedXUnion data-text="StrictBoundedXUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=121)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=121)*
 
 
 
@@ -568,7 +568,7 @@
         </tr></table>
 
 ### StrictFoo [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictFoo data-text="StrictFoo"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=75)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=75)*
 
 
 
@@ -592,7 +592,7 @@
         </tr></table>
 
 ### StrictPizzaOrPasta [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictPizzaOrPasta data-text="StrictPizzaOrPasta"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=28)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=28)*
 
 
 
@@ -616,7 +616,7 @@
         </tr></table>
 
 ### StrictSimpleXUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictSimpleXUnion data-text="StrictSimpleXUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=107)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=107)*
 
 
 
@@ -648,7 +648,7 @@
         </tr></table>
 
 ### StrictUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictUnion data-text="StrictUnion"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=45)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=45)*
 
 
 
@@ -680,7 +680,7 @@
         </tr></table>
 
 ### Union [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=33)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=33)*
 
 
 
@@ -712,7 +712,7 @@
         </tr></table>
 
 ### UnionWithAttributes [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionWithAttributes data-text="UnionWithAttributes"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=152)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=152)*
 
 
 
@@ -736,7 +736,7 @@
         </tr></table>
 
 ### XUnionContainingEmptyStruct [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#XUnionContainingEmptyStruct data-text="XUnionContainingEmptyStruct"}
-*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=115)*
+*Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=115)*
 
 
 

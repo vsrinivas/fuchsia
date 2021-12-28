@@ -2,7 +2,7 @@
 
 [TOC]
 
-# fidl.test.importedconstvalues
+# test.importedconstvalues
 
 
 
@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### MyStruct  {#MyStruct data-text="MyStruct"}
-*Defined in [fidl.test.importedconstvalues/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl;l=9)*
+*Defined in [test.importedconstvalues/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl;l=9)*
 
 
 

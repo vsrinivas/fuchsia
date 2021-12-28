@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
@@ -31,7 +30,7 @@ using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
+    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable;
 
 }  // namespace _internal
 class OnlyLibfuzzerAndDeps_RequestEncoder {
@@ -54,8 +53,8 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::bindingsdenylist::_internal::
-            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -64,7 +63,7 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
+    test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable;
 
 }  // namespace _internal
 class OnlyLibfuzzerAndDeps_ResponseEncoder {
@@ -87,8 +86,8 @@ class OnlyLibfuzzerAndDeps_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::bindingsdenylist::_internal::
-            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
+        &::test::bindingsdenylist::_internal::
+            test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -111,10 +110,12 @@ constexpr uint32_t AllBindings = 0u;
 
 }  // namespace bindingsdenylist
 }  // namespace test
+namespace fidl {
 
 //
 // Proxies and stubs declarations
 //
+}  // namespace fidl
 namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
@@ -131,7 +132,7 @@ class OnlyLibfuzzerAndDeps_SyncProxy;
 namespace internal {
 constexpr uint64_t
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
-        0x1c84a24d8d4e3d28lu;
+        0x2081e7454e06d536lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -155,11 +156,11 @@ class OnlyCppAndDeps_SyncProxy;
 
 class OnlyLibfuzzerAndDeps {
  public:
-  using Proxy_ = ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy;
-  using Stub_ = ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub;
+  using Proxy_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy;
+  using Stub_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub;
   using EventSender_ =
-      ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_EventSender;
-  using Sync_ = ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Sync;
+      ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_EventSender;
+  using Sync_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Sync;
   virtual ~OnlyLibfuzzerAndDeps();
   using LibfuzzerNeedsNonemptyProtocolCallback = fit::function<void()>;
 
@@ -190,7 +191,7 @@ class OnlyLibfuzzerAndDeps_EventSender {
 
 class OnlyLibfuzzerAndDeps_Sync {
  public:
-  using Proxy_ = ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_SyncProxy;
+  using Proxy_ = ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_SyncProxy;
   virtual ~OnlyLibfuzzerAndDeps_Sync();
   virtual zx_status_t LibfuzzerNeedsNonemptyProtocol() = 0;
 };
@@ -203,29 +204,27 @@ class OnlyLibfuzzerAndDeps_Proxy final : public ::fidl::internal::Proxy,
   ~OnlyLibfuzzerAndDeps_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
+  // cts-coverage-fidl-name:test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
   void LibfuzzerNeedsNonemptyProtocol(
       LibfuzzerNeedsNonemptyProtocolCallback callback) override;
 
  private:
   OnlyLibfuzzerAndDeps_Proxy(
-      const ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy&) =
-      delete;
+      const ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy&) = delete;
   OnlyLibfuzzerAndDeps_Proxy& operator=(
-      const ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy&) =
-      delete;
+      const ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class OnlyLibfuzzerAndDeps_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_EventSender {
+      public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_EventSender {
  public:
-  typedef class ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps
+  typedef class ::test::bindingsdenylist::OnlyLibfuzzerAndDeps
       OnlyLibfuzzerAndDeps_clazz;
   explicit OnlyLibfuzzerAndDeps_Stub(
-      ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub::
+      ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub::
           OnlyLibfuzzerAndDeps_clazz* impl);
   ~OnlyLibfuzzerAndDeps_Stub() override;
 
@@ -233,16 +232,16 @@ class OnlyLibfuzzerAndDeps_Stub final
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub::
+  ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Stub::
       OnlyLibfuzzerAndDeps_clazz* impl_;
 };
 
 class OnlyLibfuzzerAndDeps_SyncProxy
-    : public ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Sync {
+    : public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps_Sync {
  public:
   explicit OnlyLibfuzzerAndDeps_SyncProxy(::zx::channel channel);
   ~OnlyLibfuzzerAndDeps_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
+  // cts-coverage-fidl-name:test.bindingsdenylist/OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol
   zx_status_t LibfuzzerNeedsNonemptyProtocol() override;
 
  private:
@@ -257,7 +256,7 @@ class OnlyHlcpp final {
  public:
   class Handler;
 
-  static constexpr char Name[] = "fidl.test.bindingsdenylist.OnlyHlcpp";
+  static constexpr char Name[] = "test.bindingsdenylist.OnlyHlcpp";
 
   explicit OnlyHlcpp(std::unique_ptr<::fidl::ServiceConnector> service)
       : service_(std::move(service)) {}
@@ -282,11 +281,10 @@ class OnlyHlcpp::Handler final {
 
 class OnlyCppAndDeps {
  public:
-  using Proxy_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy;
-  using Stub_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub;
-  using EventSender_ =
-      ::fidl::test::bindingsdenylist::OnlyCppAndDeps_EventSender;
-  using Sync_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Sync;
+  using Proxy_ = ::test::bindingsdenylist::OnlyCppAndDeps_Proxy;
+  using Stub_ = ::test::bindingsdenylist::OnlyCppAndDeps_Stub;
+  using EventSender_ = ::test::bindingsdenylist::OnlyCppAndDeps_EventSender;
+  using Sync_ = ::test::bindingsdenylist::OnlyCppAndDeps_Sync;
   virtual ~OnlyCppAndDeps();
 };
 
@@ -311,7 +309,7 @@ class OnlyCppAndDeps_EventSender {
 
 class OnlyCppAndDeps_Sync {
  public:
-  using Proxy_ = ::fidl::test::bindingsdenylist::OnlyCppAndDeps_SyncProxy;
+  using Proxy_ = ::test::bindingsdenylist::OnlyCppAndDeps_SyncProxy;
   virtual ~OnlyCppAndDeps_Sync();
 };
 
@@ -324,22 +322,21 @@ class OnlyCppAndDeps_Proxy final : public ::fidl::internal::Proxy,
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
  private:
-  OnlyCppAndDeps_Proxy(
-      const ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy&) = delete;
+  OnlyCppAndDeps_Proxy(const ::test::bindingsdenylist::OnlyCppAndDeps_Proxy&) =
+      delete;
   OnlyCppAndDeps_Proxy& operator=(
-      const ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Proxy&) = delete;
+      const ::test::bindingsdenylist::OnlyCppAndDeps_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class OnlyCppAndDeps_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::bindingsdenylist::OnlyCppAndDeps_EventSender {
+      public ::test::bindingsdenylist::OnlyCppAndDeps_EventSender {
  public:
-  typedef class ::fidl::test::bindingsdenylist::OnlyCppAndDeps
-      OnlyCppAndDeps_clazz;
+  typedef class ::test::bindingsdenylist::OnlyCppAndDeps OnlyCppAndDeps_clazz;
   explicit OnlyCppAndDeps_Stub(
-      ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz*
+      ::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz*
           impl);
   ~OnlyCppAndDeps_Stub() override;
 
@@ -347,12 +344,11 @@ class OnlyCppAndDeps_Stub final
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz*
-      impl_;
+  ::test::bindingsdenylist::OnlyCppAndDeps_Stub::OnlyCppAndDeps_clazz* impl_;
 };
 
 class OnlyCppAndDeps_SyncProxy
-    : public ::fidl::test::bindingsdenylist::OnlyCppAndDeps_Sync {
+    : public ::test::bindingsdenylist::OnlyCppAndDeps_Sync {
  public:
   explicit OnlyCppAndDeps_SyncProxy(::zx::channel channel);
   ~OnlyCppAndDeps_SyncProxy() override;
@@ -365,4 +361,3 @@ class OnlyCppAndDeps_SyncProxy
 
 }  // namespace bindingsdenylist
 }  // namespace test
-}  // namespace fidl

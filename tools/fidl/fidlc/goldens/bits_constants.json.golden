@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.bitsconstants",
+  "name": "test.bitsconstants",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.bitsconstants/BitsType",
+      "name": "test.bitsconstants/BitsType",
       "naming_context": [
         "BitsType"
       ],
@@ -101,7 +101,7 @@
   ],
   "const_declarations": [
     {
-      "name": "fidl.test.bitsconstants/Const1",
+      "name": "test.bitsconstants/Const1",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
         "line": 9,
@@ -110,7 +110,7 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "fidl.test.bitsconstants/BitsType",
+        "identifier": "test.bitsconstants/BitsType",
         "nullable": false,
         "type_shape_v1": {
           "inline_size": 4,
@@ -135,11 +135,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "BitsType.A",
-        "identifier": "fidl.test.bitsconstants/BitsType.A"
+        "identifier": "test.bitsconstants/BitsType.A"
       }
     },
     {
-      "name": "fidl.test.bitsconstants/Const2",
+      "name": "test.bitsconstants/Const2",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
         "line": 10,
@@ -148,7 +148,7 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "fidl.test.bitsconstants/BitsType",
+        "identifier": "test.bitsconstants/BitsType",
         "nullable": false,
         "type_shape_v1": {
           "inline_size": 4,
@@ -176,7 +176,7 @@
       }
     },
     {
-      "name": "fidl.test.bitsconstants/Const3",
+      "name": "test.bitsconstants/Const3",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bits_constants.test.fidl",
         "line": 11,
@@ -185,7 +185,7 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "fidl.test.bitsconstants/BitsType",
+        "identifier": "test.bitsconstants/BitsType",
         "nullable": false,
         "type_shape_v1": {
           "inline_size": 4,
@@ -223,15 +223,15 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.bitsconstants/BitsType",
-    "fidl.test.bitsconstants/Const3",
-    "fidl.test.bitsconstants/Const2",
-    "fidl.test.bitsconstants/Const1"
+    "test.bitsconstants/BitsType",
+    "test.bitsconstants/Const3",
+    "test.bitsconstants/Const2",
+    "test.bitsconstants/Const1"
   ],
   "declarations": {
-    "fidl.test.bitsconstants/BitsType": "bits",
-    "fidl.test.bitsconstants/Const1": "const",
-    "fidl.test.bitsconstants/Const2": "const",
-    "fidl.test.bitsconstants/Const3": "const"
+    "test.bitsconstants/BitsType": "bits",
+    "test.bitsconstants/Const1": "const",
+    "test.bitsconstants/Const2": "const",
+    "test.bitsconstants/Const3": "const"
   }
 }

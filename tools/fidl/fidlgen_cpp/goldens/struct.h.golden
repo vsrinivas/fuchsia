@@ -2,24 +2,23 @@
 
 #pragma once
 
-#include <fidl/fidl.test.struct/cpp/wire.h>
-#include <fidl/test/struct/cpp/natural_types.h>
+#include <fidl/test.struct/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/struct/cpp/natural_types.h>
 
-namespace fidl_test_struct {
+namespace test_struct {
 class Simple;
 
 class BasicStruct;
 
-}  // namespace fidl_test_struct
+}  // namespace test_struct
 template <>
-struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_struct::Simple>
+struct ::fidl::internal::DesignatedInitializationProxy<::test_struct::Simple>
     final {
  public:
   uint8_t f1 = {};
@@ -27,7 +26,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   bool f2 = {};
 };
 
-namespace fidl_test_struct {
+namespace test_struct {
 class Simple final : public ::fidl::internal::CodableBase<Simple> {
  private:
   friend ::fidl::internal::CodableBase<Simple>;
@@ -41,8 +40,7 @@ class Simple final : public ::fidl::internal::CodableBase<Simple> {
  public:
   Simple() = default;
   Simple(uint8_t f1, bool f2) : storage_({f1, f2}) {}
-  Simple(::fidl::internal::DesignatedInitializationProxy<
-         ::fidl_test_struct::Simple>
+  Simple(::fidl::internal::DesignatedInitializationProxy<::test_struct::Simple>
              storage)
       : storage_(std::move(storage)) {}
   ~Simple() = default;
@@ -68,16 +66,16 @@ class Simple final : public ::fidl::internal::CodableBase<Simple> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_struct::Simple>;
+  friend struct ::fidl::CodingTraits<::test_struct::Simple>;
 
-  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_struct::Simple>
+  ::fidl::internal::DesignatedInitializationProxy<::test_struct::Simple>
       storage_ = {};
 };
 
-}  // namespace fidl_test_struct
+}  // namespace test_struct
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_struct::BasicStruct>
+    ::test_struct::BasicStruct>
     final {
  public:
   uint32_t x = {};
@@ -85,7 +83,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   ::std::string y = {};
 };
 
-namespace fidl_test_struct {
+namespace test_struct {
 class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
  private:
   friend ::fidl::internal::CodableBase<BasicStruct>;
@@ -100,7 +98,7 @@ class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
   BasicStruct() = default;
   BasicStruct(uint32_t x, ::std::string y) : storage_({x, std::move(y)}) {}
   BasicStruct(::fidl::internal::DesignatedInitializationProxy<
-              ::fidl_test_struct::BasicStruct>
+              ::test_struct::BasicStruct>
                   storage)
       : storage_(std::move(storage)) {}
   ~BasicStruct() = default;
@@ -126,36 +124,34 @@ class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
   }
 
  private:
-  friend struct ::fidl::CodingTraits<::fidl_test_struct::BasicStruct>;
+  friend struct ::fidl::CodingTraits<::test_struct::BasicStruct>;
 
-  ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_struct::BasicStruct>
+  ::fidl::internal::DesignatedInitializationProxy<::test_struct::BasicStruct>
       storage_ = {};
 };
 
-}  // namespace fidl_test_struct
+}  // namespace test_struct
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
+extern "C" const fidl_type_t test_struct_SimpleTable;
 
 template <>
-struct IsFidlType<::fidl_test_struct::Simple> : public std::true_type {};
+struct IsFidlType<::test_struct::Simple> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_struct::Simple> final {
+struct ::fidl::internal::TypeTraits<::test_struct::Simple> final {
  public:
-  static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_struct_SimpleTable;
+  static constexpr const fidl_type_t* kCodingTable = &test_struct_SimpleTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_struct::Simple> {
+struct CodingTraits<::test_struct::Simple> {
   static constexpr size_t inline_size_v1_no_ee = 2;
   static constexpr size_t inline_size_v2 = 2;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_struct::Simple* value, size_t offset,
+      EncoderImpl* encoder, ::test_struct::Simple* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -169,7 +165,7 @@ struct CodingTraits<::fidl_test_struct::Simple> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder, ::fidl_test_struct::Simple* value,
+  static void Decode(DecoderImpl* decoder, ::test_struct::Simple* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.f1, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.f2, offset + 1);
@@ -178,27 +174,26 @@ struct CodingTraits<::fidl_test_struct::Simple> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
+extern "C" const fidl_type_t test_struct_BasicStructTable;
 
 template <>
-struct IsFidlType<::fidl_test_struct::BasicStruct> : public std::true_type {};
+struct IsFidlType<::test_struct::BasicStruct> : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_struct::BasicStruct> final {
+struct ::fidl::internal::TypeTraits<::test_struct::BasicStruct> final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_struct_BasicStructTable;
+      &test_struct_BasicStructTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_struct::BasicStruct> {
+struct CodingTraits<::test_struct::BasicStruct> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 24;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_struct::BasicStruct* value,
-      size_t offset,
+      EncoderImpl* encoder, ::test_struct::BasicStruct* value, size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -212,8 +207,8 @@ struct CodingTraits<::fidl_test_struct::BasicStruct> {
   }
 
   template <typename DecoderImpl>
-  static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_struct::BasicStruct* value, size_t offset) {
+  static void Decode(DecoderImpl* decoder, ::test_struct::BasicStruct* value,
+                     size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.y, offset + 8);
   }

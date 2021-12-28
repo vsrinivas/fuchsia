@@ -1,4 +1,4 @@
-library fidl.test.padding;
+library test.padding;
 
 type Padding1ByteEnd = struct {
     a uint16;

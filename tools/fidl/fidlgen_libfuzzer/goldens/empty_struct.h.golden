@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/emptystruct/cpp/fidl.h>
+#include <test/emptystruct/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,7 +13,7 @@
 
 namespace fuzzing {
 
-using Empty = ::fidl::test::emptystruct::Empty;
+using Empty = ::test::emptystruct::Empty;
 
 template <>
 struct MinSize<Empty> {

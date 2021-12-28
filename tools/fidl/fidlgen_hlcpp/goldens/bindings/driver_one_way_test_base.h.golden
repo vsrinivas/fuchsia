@@ -2,4 +2,4 @@
 
 #pragma once
 
-#include <fidl/test/driveroneway/cpp/fidl.h>
+#include <test/driveroneway/cpp/fidl.h>

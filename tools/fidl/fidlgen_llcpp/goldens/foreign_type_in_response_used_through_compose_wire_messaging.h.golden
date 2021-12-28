@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
-#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/wire_types.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
+#include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,48 +16,48 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/bottom/cpp/wire_messaging.h>
-#include <fidl/middle/cpp/wire_messaging.h>
+#include <fidl/test.bottom/cpp/wire_messaging.h>
+#include <fidl/test.middle/cpp/wire_messaging.h>
 
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
+namespace test_foreigntypeinresponseusedthroughcompose {
 class Top;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
+    test_foreigntypeinresponseusedthroughcompose_TopGetFooRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+    test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+}  // namespace test_foreigntypeinresponseusedthroughcompose
 template <>
 struct ::fidl::internal::WireOrdinal<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final {
-  static constexpr uint64_t value = 7703637629648977298lu;
+  static constexpr uint64_t value = 4619180266423108403lu;
 };
 
-namespace fidl_test_foreigntypeinresponseusedthroughcompose {
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+namespace test_foreigntypeinresponseusedthroughcompose {
+}  // namespace test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {};
+    ::test_foreigntypeinresponseusedthroughcompose::Top> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
+      ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*
+          impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
   static void Dispatch(
-      ::fidl::WireServer<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>* impl,
+      ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*
+          impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
@@ -68,7 +68,7 @@ struct ::fidl::internal::WireServerDispatcher<
 
 template <>
 struct ::fidl::WireRequest<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
@@ -87,7 +87,7 @@ struct ::fidl::WireRequest<
   static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
       ::fidl::internal::TransactionalMessageKind::kRequest;
   using ResponseType = ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -100,20 +100,20 @@ struct ::fidl::WireRequest<
 };
 template <>
 struct ::fidl::WireResponse<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
-  ::bottom::wire::Foo foo;
+  ::test_bottom::wire::Foo foo;
 
-  explicit WireResponse(const ::bottom::wire::Foo& foo) : foo(foo) {
+  explicit WireResponse(const ::test_bottom::wire::Foo& foo) : foo(foo) {
     _InitHeader();
   }
   WireResponse() { _InitHeader(); }
 
   static constexpr const fidl_type_t* Type =
-      &::fidl_test_foreigntypeinresponseusedthroughcompose::
-          fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
+      &::test_foreigntypeinresponseusedthroughcompose::
+          test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseMessageTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 24;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -137,23 +137,21 @@ struct ::fidl::WireResponse<
 
 template <>
 class ::fidl::WireResult<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final : public ::fidl::Result {
  public:
+  WireResult(::fidl::UnownedClientEnd<
+                 ::test_foreigntypeinresponseusedthroughcompose::Top>
+                 client,
+             ::fidl::WireRequest<
+                 ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+                 request);
   WireResult(
       ::fidl::UnownedClientEnd<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+          ::test_foreigntypeinresponseusedthroughcompose::Top>
           client,
       ::fidl::WireRequest<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-          request);
-  WireResult(
-      ::fidl::UnownedClientEnd<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
-          client,
-      ::fidl::WireRequest<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-          request,
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request,
       zx_time_t _deadline);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
@@ -163,51 +161,51 @@ class ::fidl::WireResult<
   ~WireResult() = default;
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
         bytes_.data());
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
         bytes_.data());
   }
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   value() const {
     return *Unwrap();
   }
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   operator->() {
     return &value();
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   operator->() const {
     return &value();
   }
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   operator*() {
     return value();
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   operator*() const {
     return value();
   }
@@ -217,27 +215,27 @@ class ::fidl::WireResult<
 };
 template <>
 class ::fidl::WireUnownedResult<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     final : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
       ::fidl::UnownedClientEnd<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+          ::test_foreigntypeinresponseusedthroughcompose::Top>
           client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
       ::fidl::WireRequest<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
           request);
   explicit WireUnownedResult(
       ::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
           response)
       : bytes_(reinterpret_cast<uint8_t*>(response)) {}
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&&
+          ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&&
           decoded)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
@@ -254,51 +252,49 @@ class ::fidl::WireUnownedResult<
   ~WireUnownedResult() = default;
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   Unwrap() {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<::fidl::WireResponse<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
-        bytes_);
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(bytes_);
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   Unwrap() const {
     ZX_DEBUG_ASSERT(ok());
     return reinterpret_cast<const ::fidl::WireResponse<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(
-        bytes_);
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*>(bytes_);
   }
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   value() {
     return *Unwrap();
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   value() const {
     return *Unwrap();
   }
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   operator->() {
     return &value();
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
   operator->() const {
     return &value();
   }
 
   ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   operator*() {
     return value();
   }
   const ::fidl::WireResponse<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>&
   operator*() const {
     return value();
   }
@@ -308,7 +304,7 @@ class ::fidl::WireUnownedResult<
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+    ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
@@ -316,9 +312,9 @@ class ::fidl::internal::WireEventHandlerInterface<
 
 template <>
 class ::fidl::WireAsyncEventHandler<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>,
+          ::test_foreigntypeinresponseusedthroughcompose::Top>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
@@ -326,9 +322,9 @@ class ::fidl::WireAsyncEventHandler<
 
 template <>
 class ::fidl::WireSyncEventHandler<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+          ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   WireSyncEventHandler() = default;
 
@@ -341,21 +337,20 @@ class ::fidl::WireSyncEventHandler<
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
       ::fidl::UnownedClientEnd<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+          ::test_foreigntypeinresponseusedthroughcompose::Top>
           client_end);
 };
 
 template <>
 class ::fidl::internal::WireEventDispatcher<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     final : public ::fidl::internal::IncomingEventDispatcher<
                 ::fidl::WireAsyncEventHandler<
-                    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>> {
+                    ::test_foreigntypeinresponseusedthroughcompose::Top>> {
  public:
   explicit WireEventDispatcher(
       ::fidl::WireAsyncEventHandler<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>*
-          event_handler)
+          ::test_foreigntypeinresponseusedthroughcompose::Top>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -366,79 +361,76 @@ class ::fidl::internal::WireEventDispatcher<
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
 // const reference to a
-// |fidl::ClientEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>|,
+// |fidl::ClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     final : public ::fidl::internal::SyncEndpointManagedVeneer<
                 ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>> {
+                    ::test_foreigntypeinresponseusedthroughcompose::Top>> {
  public:
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo() {
     ::fidl::WireRequest<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
         _request{};
     return ::fidl::WireResult<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
         _client_end(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+  ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>
   _client_end() const {
     return ::fidl::UnownedClientEnd<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(_channel());
+        ::test_foreigntypeinresponseusedthroughcompose::Top>(_channel());
   }
 };
 
 template <>
 class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>> {
+                    ::test_foreigntypeinresponseusedthroughcompose::Top>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
   ::fidl::WireUnownedResult<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo() {
     ::fidl::WireRequest<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
         _request{};
     return ::fidl::WireUnownedResult<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
+        ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
         _client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+  ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>
   _client_end() const {
     return ::fidl::UnownedClientEnd<
-        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(_channel());
+        ::test_foreigntypeinresponseusedthroughcompose::Top>(_channel());
   }
 };
 template <>
 class ::fidl::WireSyncClient<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     final : public ::fidl::internal::WireSyncClientBase<
-                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+                ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
-      WireSyncClientBase;
+      ::test_foreigntypeinresponseusedthroughcompose::Top>::WireSyncClientBase;
 };
 
 template <>
 class ::fidl::internal::WireCompleterBase<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
     : public ::fidl::CompleterBase {
  public:
   // In the following methods, the return value indicates internal errors during
@@ -451,9 +443,9 @@ class ::fidl::internal::WireCompleterBase<
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(const ::bottom::wire::Foo& foo);
+  ::fidl::Result Reply(const ::test_bottom::wire::Foo& foo);
   ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                       const ::bottom::wire::Foo& foo);
+                       const ::test_bottom::wire::Foo& foo);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -461,17 +453,16 @@ class ::fidl::internal::WireCompleterBase<
 
 template <>
 struct ::fidl::internal::WireMethodTypes<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
 };
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+class ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
@@ -479,12 +470,12 @@ class ::fidl::WireServer<
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol =
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top;
+      ::test_foreigntypeinresponseusedthroughcompose::Top;
 
   using GetFooCompleter = ::fidl::internal::WireCompleter<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
   using GetFooRequestView = ::fidl::internal::WireRequestView<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 
   virtual void GetFoo(GetFooRequestView request,
                       GetFooCompleter::Sync& _completer) = 0;
@@ -500,78 +491,76 @@ namespace fidl {
 
 template <>
 struct IsFidlType<::fidl::WireRequest<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<::fidl::WireRequest<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
-           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>) ==
-    ::fidl::WireRequest<::fidl_test_foreigntypeinresponseusedthroughcompose::
-                            Top::GetFoo>::PrimarySize);
+           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>) ==
+    ::fidl::WireRequest<::test_foreigntypeinresponseusedthroughcompose::Top::
+                            GetFoo>::PrimarySize);
 
 template <>
 struct IsFidlType<::fidl::WireResponse<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
 template <>
 struct IsFidlMessage<::fidl::WireResponse<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
+    ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>
     : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
-           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>) ==
-    ::fidl::WireResponse<::fidl_test_foreigntypeinresponseusedthroughcompose::
-                             Top::GetFoo>::PrimarySize);
+           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>) ==
+    ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::
+                             GetFoo>::PrimarySize);
 static_assert(
-    offsetof(
-        ::fidl::WireResponse<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
-        foo) == 16);
+    offsetof(::fidl::WireResponse<
+                 ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>,
+             foo) == 16);
 
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
 class ::fidl::internal::WireClientImpl<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
     final : public ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Top.GetFoo()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   void GetFoo(::fidl::WireClientCallback<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
                   _cb);
 
-  void GetFoo(
-      ::fit::callback<void(
-          ::fidl::WireResponse<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
-              response)>
-          _cb);
+  void GetFoo(::fit::callback<
+              void(::fidl::WireResponse<
+                   ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+                       response)>
+                  _cb);
 
   // Asynchronous variant of |Top.GetFoo()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   void GetFoo(::fidl::WireResponseContext<
-              ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
                   _context);
 
   // Synchronous variant of |GetFoo.GetFoo()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo_Sync();
 
   // Synchronous variant of |GetFoo.GetFoo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
+      ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo_Sync(::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
 };
@@ -584,24 +573,22 @@ namespace fidl {
 // the Top protocol, and can send events in that protocol.
 template <>
 class ::fidl::WireEventSender<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+    ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+      ::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>
           server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>&
+  const ::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>&
   server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>&
+  ::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>&
   server_end() {
     return server_end_;
   }
@@ -613,13 +600,13 @@ class ::fidl::WireEventSender<
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
+  ::fidl::ServerEnd<::test_foreigntypeinresponseusedthroughcompose::Top>
       server_end_;
 };
 
 template <>
 class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
+    ::test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
@@ -627,9 +614,8 @@ class ::fidl::internal::WireWeakEventSender<
 
  private:
   friend ServerBindingRefImpl<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top,
-      typename ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
-          Transport>;
+      ::test_foreigntypeinresponseusedthroughcompose::Top,
+      typename ::test_foreigntypeinresponseusedthroughcompose::Top::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

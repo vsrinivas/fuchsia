@@ -10,167 +10,167 @@
 <thead><tr><th>Name</th><th>Description</th></tr></thead>
 <tbody class="list">
 <tr>
-    <td><a href="fidl.test.anonymous/index">fidl.test.anonymous</a></td>
+    <td><a href="test.anonymous/index">test.anonymous</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.arrays/index">fidl.test.arrays</a></td>
+    <td><a href="test.arrays/index">test.arrays</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.bindingsdenylist/index">fidl.test.bindingsdenylist</a></td>
+    <td><a href="test.bindingsdenylist/index">test.bindingsdenylist</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.bits/index">fidl.test.bits</a></td>
+    <td><a href="test.bits/index">test.bits</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.bitsconstants/index">fidl.test.bitsconstants</a></td>
+    <td><a href="test.bitsconstants/index">test.bitsconstants</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.byteandbytes/index">fidl.test.byteandbytes</a></td>
+    <td><a href="test.byteandbytes/index">test.byteandbytes</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.constants/index">fidl.test.constants</a></td>
+    <td><a href="test.constants/index">test.constants</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.consts/index">fidl.test.consts</a></td>
+    <td><a href="test.consts/index">test.consts</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.doccomments/index">fidl.test.doccomments</a></td>
+    <td><a href="test.doccomments/index">test.doccomments</a></td>
     <td> library comment #1</td>
 </tr>
 <tr>
-    <td><a href="fidl.test.driveroneway/index">fidl.test.driveroneway</a></td>
+    <td><a href="test.driveroneway/index">test.driveroneway</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.drivertwoway/index">fidl.test.drivertwoway</a></td>
+    <td><a href="test.drivertwoway/index">test.drivertwoway</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.emptystruct/index">fidl.test.emptystruct</a></td>
+    <td><a href="test.emptystruct/index">test.emptystruct</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.encapsulatedstructs/index">fidl.test.encapsulatedstructs</a></td>
+    <td><a href="test.encapsulatedstructs/index">test.encapsulatedstructs</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.enum/index">fidl.test.enum</a></td>
+    <td><a href="test.enum/index">test.enum</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.error/index">fidl.test.error</a></td>
+    <td><a href="test.error/index">test.error</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.errorsyntax/index">fidl.test.errorsyntax</a></td>
+    <td><a href="test.errorsyntax/index">test.errorsyntax</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.escaping/index">fidl.test.escaping</a></td>
+    <td><a href="test.escaping/index">test.escaping</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.experimentalmaybefromtypealias/index">fidl.test.experimentalmaybefromtypealias</a></td>
+    <td><a href="test.experimentalmaybefromtypealias/index">test.experimentalmaybefromtypealias</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.foreigntypeinresponseusedthroughcompose/index">fidl.test.foreigntypeinresponseusedthroughcompose</a></td>
+    <td><a href="test.foreigntypeinresponseusedthroughcompose/index">test.foreigntypeinresponseusedthroughcompose</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.handles/index">fidl.test.handles</a></td>
+    <td><a href="test.handles/index">test.handles</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.handlesintypes/index">fidl.test.handlesintypes</a></td>
+    <td><a href="test.handlesintypes/index">test.handlesintypes</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.importedconstvalues/index">fidl.test.importedconstvalues</a></td>
+    <td><a href="test.importedconstvalues/index">test.importedconstvalues</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.inheritance/index">fidl.test.inheritance</a></td>
+    <td><a href="test.inheritance/index">test.inheritance</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.inheritancewithrecursivedecl/index">fidl.test.inheritancewithrecursivedecl</a></td>
+    <td><a href="test.inheritancewithrecursivedecl/index">test.inheritancewithrecursivedecl</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.nullable/index">fidl.test.nullable</a></td>
+    <td><a href="test.nullable/index">test.nullable</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.padding/index">fidl.test.padding</a></td>
+    <td><a href="test.padding/index">test.padding</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.placementofattributes/index">fidl.test.placementofattributes</a></td>
+    <td><a href="test.placementofattributes/index">test.placementofattributes</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.protocolrequest/index">fidl.test.protocolrequest</a></td>
+    <td><a href="test.protocolrequest/index">test.protocolrequest</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.protocols/index">fidl.test.protocols</a></td>
+    <td><a href="test.protocols/index">test.protocols</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.requestflexibleenvelope/index">fidl.test.requestflexibleenvelope</a></td>
+    <td><a href="test.requestflexibleenvelope/index">test.requestflexibleenvelope</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.service/index">fidl.test.service</a></td>
+    <td><a href="test.service/index">test.service</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.struct/index">fidl.test.struct</a></td>
+    <td><a href="test.struct/index">test.struct</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.structdefaultvalueenumlibraryreference/index">fidl.test.structdefaultvalueenumlibraryreference</a></td>
+    <td><a href="test.structdefaultvalueenumlibraryreference/index">test.structdefaultvalueenumlibraryreference</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.table/index">fidl.test.table</a></td>
+    <td><a href="test.table/index">test.table</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.transitivedependencies/index">fidl.test.transitivedependencies</a></td>
+    <td><a href="test.transitivedependencies/index">test.transitivedependencies</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.transitivedependenciescompose/index">fidl.test.transitivedependenciescompose</a></td>
+    <td><a href="test.transitivedependenciescompose/index">test.transitivedependenciescompose</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.typealiases/index">fidl.test.typealiases</a></td>
+    <td><a href="test.typealiases/index">test.typealiases</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.union/index">fidl.test.union</a></td>
+    <td><a href="test.union/index">test.union</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.unionsandwich/index">fidl.test.unionsandwich</a></td>
+    <td><a href="test.unionsandwich/index">test.unionsandwich</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.vectors/index">fidl.test.vectors</a></td>
+    <td><a href="test.vectors/index">test.vectors</a></td>
     <td></td>
 </tr>
 <tr>
-    <td><a href="fidl.test.versions/index">fidl.test.versions</a></td>
+    <td><a href="test.versions/index">test.versions</a></td>
     <td></td>
 </tr>
 </tbody>

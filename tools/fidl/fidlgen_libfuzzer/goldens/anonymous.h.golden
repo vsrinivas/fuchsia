@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/anonymous/cpp/fidl.h>
+#include <test/anonymous/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,21 +13,21 @@
 
 namespace fuzzing {
 
-using UnionMember = ::fidl::test::anonymous::UnionMember;
-using TableData = ::fidl::test::anonymous::TableData;
-using TableMember = ::fidl::test::anonymous::TableMember;
+using UnionMember = ::test::anonymous::UnionMember;
+using TableData = ::test::anonymous::TableData;
+using TableMember = ::test::anonymous::TableMember;
 using SomeProtocol_SomeMethod_Error =
-    ::fidl::test::anonymous::SomeProtocol_SomeMethod_Error;
-using Op = ::fidl::test::anonymous::Op;
-using OverrideTest = ::fidl::test::anonymous::OverrideTest;
-using Flags = ::fidl::test::anonymous::Flags;
-using FunctionApplication = ::fidl::test::anonymous::FunctionApplication;
-using Expression = ::fidl::test::anonymous::Expression;
-using BitsMember = ::fidl::test::anonymous::BitsMember;
+    ::test::anonymous::SomeProtocol_SomeMethod_Error;
+using Op = ::test::anonymous::Op;
+using OverrideTest = ::test::anonymous::OverrideTest;
+using Flags = ::test::anonymous::Flags;
+using FunctionApplication = ::test::anonymous::FunctionApplication;
+using Expression = ::test::anonymous::Expression;
+using BitsMember = ::test::anonymous::BitsMember;
 using SomeProtocol_SomeMethod_Response =
-    ::fidl::test::anonymous::SomeProtocol_SomeMethod_Response;
+    ::test::anonymous::SomeProtocol_SomeMethod_Response;
 using SomeProtocol_SomeMethod_Result =
-    ::fidl::test::anonymous::SomeProtocol_SomeMethod_Result;
+    ::test::anonymous::SomeProtocol_SomeMethod_Result;
 
 template <>
 struct MinSize<UnionMember> {
@@ -77,7 +77,7 @@ struct Allocate<TableData> {
 template <>
 struct MinSize<TableMember> {
   operator size_t() {
-    return MinSize<::std::vector<::fidl::test::anonymous::TableData>>();
+    return MinSize<::std::vector<::test::anonymous::TableData>>();
   }
 };
 template <>
@@ -87,11 +87,10 @@ struct Allocate<TableMember> {
     TableMember out;
     const size_t slack_per_member = (*size - MinSize<TableMember>()) / 1;
     size_t out_size;
-    out_size = MinSize<::std::vector<::fidl::test::anonymous::TableData>>() +
+    out_size = MinSize<::std::vector<::test::anonymous::TableData>>() +
                slack_per_member;
-    out.set_table_data(
-        Allocate<::std::vector<::fidl::test::anonymous::TableData>>{}(
-            src, &out_size));
+    out.set_table_data(Allocate<::std::vector<::test::anonymous::TableData>>{}(
+        src, &out_size));
     return out;
   }
 };
@@ -151,9 +150,9 @@ struct Allocate<Op> {
 template <>
 struct MinSize<OverrideTest> {
   operator size_t() {
-    return MinSize<::fidl::test::anonymous::Op>() +
-           MinSize<::std::unique_ptr<::fidl::test::anonymous::Expression>>() +
-           MinSize<::std::unique_ptr<::fidl::test::anonymous::Expression>>();
+    return MinSize<::test::anonymous::Op>() +
+           MinSize<::std::unique_ptr<::test::anonymous::Expression>>() +
+           MinSize<::std::unique_ptr<::test::anonymous::Expression>>();
   }
 };
 template <>
@@ -163,20 +162,16 @@ struct Allocate<OverrideTest> {
     OverrideTest out;
     const size_t slack_per_member = (*size - MinSize<OverrideTest>()) / 3;
     size_t out_size;
-    out_size = MinSize<::fidl::test::anonymous::Op>() + slack_per_member;
-    out.op = Allocate<::fidl::test::anonymous::Op>{}(src, &out_size);
-    out_size =
-        MinSize<::std::unique_ptr<::fidl::test::anonymous::Expression>>() +
-        slack_per_member;
-    out.left =
-        Allocate<::std::unique_ptr<::fidl::test::anonymous::Expression>>{}(
-            src, &out_size);
-    out_size =
-        MinSize<::std::unique_ptr<::fidl::test::anonymous::Expression>>() +
-        slack_per_member;
-    out.right =
-        Allocate<::std::unique_ptr<::fidl::test::anonymous::Expression>>{}(
-            src, &out_size);
+    out_size = MinSize<::test::anonymous::Op>() + slack_per_member;
+    out.op = Allocate<::test::anonymous::Op>{}(src, &out_size);
+    out_size = MinSize<::std::unique_ptr<::test::anonymous::Expression>>() +
+               slack_per_member;
+    out.left = Allocate<::std::unique_ptr<::test::anonymous::Expression>>{}(
+        src, &out_size);
+    out_size = MinSize<::std::unique_ptr<::test::anonymous::Expression>>() +
+               slack_per_member;
+    out.right = Allocate<::std::unique_ptr<::test::anonymous::Expression>>{}(
+        src, &out_size);
     return out;
   }
 };
@@ -197,8 +192,8 @@ struct MinSize<FunctionApplication> {
   operator size_t() {
     return MinSize<::std::string>() +
            MinSize<::std::vector<
-               ::std::unique_ptr<::fidl::test::anonymous::Expression>>>() +
-           MinSize<::fidl::test::anonymous::Flags>();
+               ::std::unique_ptr<::test::anonymous::Expression>>>() +
+           MinSize<::test::anonymous::Flags>();
   }
 };
 template <>
@@ -211,14 +206,16 @@ struct Allocate<FunctionApplication> {
     size_t out_size;
     out_size = MinSize<::std::string>() + slack_per_member;
     out.set_func(Allocate<::std::string>{}(src, &out_size));
-    out_size = MinSize<::std::vector<
-                   ::std::unique_ptr<::fidl::test::anonymous::Expression>>>() +
-               slack_per_member;
-    out.set_args(Allocate<::std::vector<
-                     ::std::unique_ptr<::fidl::test::anonymous::Expression>>>{}(
-        src, &out_size));
-    out_size = MinSize<::fidl::test::anonymous::Flags>() + slack_per_member;
-    out.set_flags(Allocate<::fidl::test::anonymous::Flags>{}(src, &out_size));
+    out_size =
+        MinSize<
+            ::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>() +
+        slack_per_member;
+    out.set_args(
+        Allocate<
+            ::std::vector<::std::unique_ptr<::test::anonymous::Expression>>>{}(
+            src, &out_size));
+    out_size = MinSize<::test::anonymous::Flags>() + slack_per_member;
+    out.set_flags(Allocate<::test::anonymous::Flags>{}(src, &out_size));
     return out;
   }
 };
@@ -226,8 +223,8 @@ template <>
 struct MinSize<Expression> {
   operator size_t() {
     size_t sizes[] = {0, MinSize<uint64_t>(),
-                      MinSize<::fidl::test::anonymous::OverrideTest>(),
-                      MinSize<::fidl::test::anonymous::FunctionApplication>()};
+                      MinSize<::test::anonymous::OverrideTest>(),
+                      MinSize<::test::anonymous::FunctionApplication>()};
     return 1 + *std::max_element(sizes, sizes + 3 + 1);
   }
 };
@@ -249,14 +246,12 @@ struct Allocate<Expression> {
         break;
       }
       case 1: {
-        out.set_bin_op(
-            Allocate<::fidl::test::anonymous::OverrideTest>{}(src, size));
+        out.set_bin_op(Allocate<::test::anonymous::OverrideTest>{}(src, size));
         break;
       }
       case 2: {
         out.set_function_application(
-            Allocate<::fidl::test::anonymous::FunctionApplication>{}(src,
-                                                                     size));
+            Allocate<::test::anonymous::FunctionApplication>{}(src, size));
         break;
       }
     }
@@ -278,7 +273,7 @@ struct Allocate<BitsMember> {
 };
 template <>
 struct MinSize<SomeProtocol_SomeMethod_Response> {
-  operator size_t() { return MinSize<::fidl::test::anonymous::BitsMember>(); }
+  operator size_t() { return MinSize<::test::anonymous::BitsMember>(); }
 };
 template <>
 struct Allocate<SomeProtocol_SomeMethod_Response> {
@@ -288,10 +283,8 @@ struct Allocate<SomeProtocol_SomeMethod_Response> {
     const size_t slack_per_member =
         (*size - MinSize<SomeProtocol_SomeMethod_Response>()) / 1;
     size_t out_size;
-    out_size =
-        MinSize<::fidl::test::anonymous::BitsMember>() + slack_per_member;
-    out.bits_member =
-        Allocate<::fidl::test::anonymous::BitsMember>{}(src, &out_size);
+    out_size = MinSize<::test::anonymous::BitsMember>() + slack_per_member;
+    out.bits_member = Allocate<::test::anonymous::BitsMember>{}(src, &out_size);
     return out;
   }
 };
@@ -299,8 +292,8 @@ template <>
 struct MinSize<SomeProtocol_SomeMethod_Result> {
   operator size_t() {
     size_t sizes[] = {
-        0, MinSize<::fidl::test::anonymous::SomeProtocol_SomeMethod_Response>(),
-        MinSize<::fidl::test::anonymous::SomeProtocol_SomeMethod_Error>()};
+        0, MinSize<::test::anonymous::SomeProtocol_SomeMethod_Response>(),
+        MinSize<::test::anonymous::SomeProtocol_SomeMethod_Error>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -319,15 +312,14 @@ struct Allocate<SomeProtocol_SomeMethod_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<
-                ::fidl::test::anonymous::SomeProtocol_SomeMethod_Response>{}(
+            Allocate<::test::anonymous::SomeProtocol_SomeMethod_Response>{}(
                 src, size));
         break;
       }
       case 1: {
         out.set_err(
-            Allocate<::fidl::test::anonymous::SomeProtocol_SomeMethod_Error>{}(
-                src, size));
+            Allocate<::test::anonymous::SomeProtocol_SomeMethod_Error>{}(src,
+                                                                         size));
         break;
       }
     }

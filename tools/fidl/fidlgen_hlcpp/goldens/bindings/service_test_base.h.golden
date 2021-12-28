@@ -2,19 +2,18 @@
 
 #pragma once
 
-#include <fidl/test/service/cpp/fidl.h>
-namespace fidl {
+#include <test/service/cpp/fidl.h>
 namespace test {
 namespace service {
 namespace testing {
-class SecondProtocol_TestBase : public ::fidl::test::service::SecondProtocol {
+class SecondProtocol_TestBase : public ::test::service::SecondProtocol {
  public:
   virtual ~SecondProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
   void MethodOnSecond() override { NotImplemented_("MethodOnSecond"); }
 };
 
-class FirstProtocol_TestBase : public ::fidl::test::service::FirstProtocol {
+class FirstProtocol_TestBase : public ::test::service::FirstProtocol {
  public:
   virtual ~FirstProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -23,4 +22,3 @@ class FirstProtocol_TestBase : public ::fidl::test::service::FirstProtocol {
 }  // namespace testing
 }  // namespace service
 }  // namespace test
-}  // namespace fidl

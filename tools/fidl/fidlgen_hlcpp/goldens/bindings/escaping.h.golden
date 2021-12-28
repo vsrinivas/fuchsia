@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace escaping {
 class DocCommentWithQuotes;
@@ -31,9 +30,8 @@ class DocCommentWithQuotes final {
   zx_status_t Clone(DocCommentWithQuotes* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::escaping::DocCommentWithQuotes& _value,
-    ::fidl::test::escaping::DocCommentWithQuotes* _result) {
+inline zx_status_t Clone(const ::test::escaping::DocCommentWithQuotes& _value,
+                         ::test::escaping::DocCommentWithQuotes* _result) {
   return _value.Clone(_result);
 }
 
@@ -41,28 +39,27 @@ using DocCommentWithQuotesPtr = ::std::unique_ptr<DocCommentWithQuotes>;
 
 }  // namespace escaping
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::escaping::DocCommentWithQuotes>
-    : public EncodableCodingTraits<::fidl::test::escaping::DocCommentWithQuotes,
-                                   1, 1> {};
+struct CodingTraits<::test::escaping::DocCommentWithQuotes>
+    : public EncodableCodingTraits<::test::escaping::DocCommentWithQuotes, 1,
+                                   1> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::escaping::DocCommentWithQuotes>
+struct IsMemcpyCompatible<::test::escaping::DocCommentWithQuotes>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::escaping::DocCommentWithQuotes>::value &&
+          !HasPadding<::test::escaping::DocCommentWithQuotes>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::fidl::test::escaping::DocCommentWithQuotes& value,
-    ::fidl::test::escaping::DocCommentWithQuotes* result) {
-  return ::fidl::test::escaping::Clone(value, result);
+inline zx_status_t Clone(const ::test::escaping::DocCommentWithQuotes& value,
+                         ::test::escaping::DocCommentWithQuotes* result) {
+  return ::test::escaping::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::escaping::DocCommentWithQuotes> {
-  bool operator()(
-      const ::fidl::test::escaping::DocCommentWithQuotes& _lhs,
-      const ::fidl::test::escaping::DocCommentWithQuotes& _rhs) const {
+struct Equality<::test::escaping::DocCommentWithQuotes> {
+  bool operator()(const ::test::escaping::DocCommentWithQuotes& _lhs,
+                  const ::test::escaping::DocCommentWithQuotes& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }

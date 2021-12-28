@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_versions {
+namespace test_versions {
 
 class OtherProtocol final {
   OtherProtocol() = delete;
@@ -22,9 +22,9 @@ class Protocol final {
     Foo() = delete;
 
    public:
-    using Protocol = ::fidl_test_versions::Protocol;
+    using Protocol = ::test_versions::Protocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
   };
 };
-}  // namespace fidl_test_versions
+}  // namespace test_versions

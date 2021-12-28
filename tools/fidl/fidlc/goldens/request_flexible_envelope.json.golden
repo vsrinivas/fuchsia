@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.requestflexibleenvelope",
+  "name": "test.requestflexibleenvelope",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.requestflexibleenvelope/Protocol",
+      "name": "test.requestflexibleenvelope/Protocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
         "line": 13,
@@ -18,7 +18,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 4346871690266280218,
+          "ordinal": 700529454616207123,
           "name": "RequestStrictResponseFlexible",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
@@ -29,7 +29,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
+            "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -53,7 +53,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+            "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -78,7 +78,7 @@
           "has_error": false
         },
         {
-          "ordinal": 4374294377437089654,
+          "ordinal": 5191655763393883319,
           "name": "RequestFlexibleResponseStrict",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
@@ -89,7 +89,7 @@
           "has_request": true,
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
+            "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -113,7 +113,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+            "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -143,7 +143,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
+      "name": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
       "naming_context": [
         "Protocol",
         "RequestStrictResponseFlexible",
@@ -160,7 +160,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/StrictFoo",
+            "identifier": "test.requestflexibleenvelope/StrictFoo",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -219,7 +219,7 @@
       }
     },
     {
-      "name": "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+      "name": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
       "naming_context": [
         "Protocol",
         "RequestStrictResponseFlexible",
@@ -236,7 +236,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/FlexibleFoo",
+            "identifier": "test.requestflexibleenvelope/FlexibleFoo",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -295,7 +295,7 @@
       }
     },
     {
-      "name": "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
+      "name": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
       "naming_context": [
         "Protocol",
         "RequestFlexibleResponseStrict",
@@ -312,7 +312,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/FlexibleFoo",
+            "identifier": "test.requestflexibleenvelope/FlexibleFoo",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -371,7 +371,7 @@
       }
     },
     {
-      "name": "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+      "name": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
       "naming_context": [
         "Protocol",
         "RequestFlexibleResponseStrict",
@@ -388,7 +388,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.requestflexibleenvelope/StrictFoo",
+            "identifier": "test.requestflexibleenvelope/StrictFoo",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -451,7 +451,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.requestflexibleenvelope/FlexibleFoo",
+      "name": "test.requestflexibleenvelope/FlexibleFoo",
       "naming_context": [
         "FlexibleFoo"
       ],
@@ -551,7 +551,7 @@
       }
     },
     {
-      "name": "fidl.test.requestflexibleenvelope/StrictFoo",
+      "name": "test.requestflexibleenvelope/StrictFoo",
       "naming_context": [
         "StrictFoo"
       ],
@@ -653,21 +653,21 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.requestflexibleenvelope/StrictFoo",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
-    "fidl.test.requestflexibleenvelope/FlexibleFoo",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
-    "fidl.test.requestflexibleenvelope/Protocol"
+    "test.requestflexibleenvelope/StrictFoo",
+    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
+    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+    "test.requestflexibleenvelope/FlexibleFoo",
+    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
+    "test.requestflexibleenvelope/Protocol"
   ],
   "declarations": {
-    "fidl.test.requestflexibleenvelope/Protocol": "interface",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest": "struct",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse": "struct",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest": "struct",
-    "fidl.test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse": "struct",
-    "fidl.test.requestflexibleenvelope/FlexibleFoo": "union",
-    "fidl.test.requestflexibleenvelope/StrictFoo": "union"
+    "test.requestflexibleenvelope/Protocol": "interface",
+    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest": "struct",
+    "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse": "struct",
+    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest": "struct",
+    "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse": "struct",
+    "test.requestflexibleenvelope/FlexibleFoo": "union",
+    "test.requestflexibleenvelope/StrictFoo": "union"
   }
 }

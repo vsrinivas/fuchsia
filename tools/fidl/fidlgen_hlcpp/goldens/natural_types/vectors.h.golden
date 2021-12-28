@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace vectors {
 class ExampleUseOfVectors;
@@ -32,9 +31,8 @@ class ExampleUseOfVectors final {
   zx_status_t Clone(ExampleUseOfVectors* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::vectors::ExampleUseOfVectors& _value,
-    ::fidl::test::vectors::ExampleUseOfVectors* _result) {
+inline zx_status_t Clone(const ::test::vectors::ExampleUseOfVectors& _value,
+                         ::test::vectors::ExampleUseOfVectors* _result) {
   return _value.Clone(_result);
 }
 
@@ -42,33 +40,32 @@ using ExampleUseOfVectorsPtr = ::std::unique_ptr<ExampleUseOfVectors>;
 
 }  // namespace vectors
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::vectors::ExampleUseOfVectors>
-    : public EncodableCodingTraits<::fidl::test::vectors::ExampleUseOfVectors,
-                                   32, 32> {};
+struct CodingTraits<::test::vectors::ExampleUseOfVectors>
+    : public EncodableCodingTraits<::test::vectors::ExampleUseOfVectors, 32,
+                                   32> {};
 
 template <>
-struct HasPadding<::fidl::test::vectors::ExampleUseOfVectors>
+struct HasPadding<::test::vectors::ExampleUseOfVectors>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::vectors::ExampleUseOfVectors>
+struct IsMemcpyCompatible<::test::vectors::ExampleUseOfVectors>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::vectors::ExampleUseOfVectors>::value &&
+          !HasPadding<::test::vectors::ExampleUseOfVectors>::value &&
           IsMemcpyCompatible<::std::vector<::std::vector<bool>>>::value &&
           IsMemcpyCompatible<::std::vector<uint8_t>>::value> {};
 
-inline zx_status_t Clone(
-    const ::fidl::test::vectors::ExampleUseOfVectors& value,
-    ::fidl::test::vectors::ExampleUseOfVectors* result) {
-  return ::fidl::test::vectors::Clone(value, result);
+inline zx_status_t Clone(const ::test::vectors::ExampleUseOfVectors& value,
+                         ::test::vectors::ExampleUseOfVectors* result) {
+  return ::test::vectors::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::vectors::ExampleUseOfVectors> {
-  bool operator()(
-      const ::fidl::test::vectors::ExampleUseOfVectors& _lhs,
-      const ::fidl::test::vectors::ExampleUseOfVectors& _rhs) const {
+struct Equality<::test::vectors::ExampleUseOfVectors> {
+  bool operator()(const ::test::vectors::ExampleUseOfVectors& _lhs,
+                  const ::test::vectors::ExampleUseOfVectors& _rhs) const {
     if (!::fidl::Equals(_lhs.vector_of_uint8, _rhs.vector_of_uint8)) {
       return false;
     }

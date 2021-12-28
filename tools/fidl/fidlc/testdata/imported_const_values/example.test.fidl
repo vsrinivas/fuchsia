@@ -1,9 +1,9 @@
-library fidl.test.importedconstvalues;
+library test.importedconstvalues;
 
-using dependent;
+using test.dependent;
 
-@attr1(dependent.MY_STRING)
-@attr2(dependent.MY_ALIASED_STRING)
-@attr3(dependent.MY_TRUE)
-@attr4(dependent.MY_FALSE)
+@attr1(test.dependent.MY_STRING)
+@attr2(test.dependent.MY_ALIASED_STRING)
+@attr3(test.dependent.MY_TRUE)
+@attr4(test.dependent.MY_FALSE)
 type MyStruct = struct {};

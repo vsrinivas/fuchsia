@@ -1,12 +1,12 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.handlesintypes",
+  "name": "test.handlesintypes",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
   "enum_declarations": [
     {
-      "name": "fidl.test.handlesintypes/obj_type",
+      "name": "test.handlesintypes/obj_type",
       "naming_context": [
         "obj_type"
       ],
@@ -62,7 +62,7 @@
   ],
   "experimental_resource_declarations": [
     {
-      "name": "fidl.test.handlesintypes/handle",
+      "name": "test.handlesintypes/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
         "line": 11,
@@ -102,7 +102,7 @@
           },
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.handlesintypes/obj_type",
+            "identifier": "test.handlesintypes/obj_type",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -131,7 +131,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.handlesintypes/HandlesInTypes",
+      "name": "test.handlesintypes/HandlesInTypes",
       "naming_context": [
         "HandlesInTypes"
       ],
@@ -402,7 +402,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.handlesintypes/TableWithHandle",
+            "identifier": "test.handlesintypes/TableWithHandle",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -442,7 +442,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.handlesintypes/UnionWithHandle",
+            "identifier": "test.handlesintypes/UnionWithHandle",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -504,7 +504,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.handlesintypes/TableWithHandle",
+      "name": "test.handlesintypes/TableWithHandle",
       "naming_context": [
         "TableWithHandle"
       ],
@@ -576,7 +576,7 @@
   ],
   "union_declarations": [
     {
-      "name": "fidl.test.handlesintypes/UnionWithHandle",
+      "name": "test.handlesintypes/UnionWithHandle",
       "naming_context": [
         "UnionWithHandle"
       ],
@@ -648,17 +648,17 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.handlesintypes/obj_type",
-    "fidl.test.handlesintypes/handle",
-    "fidl.test.handlesintypes/UnionWithHandle",
-    "fidl.test.handlesintypes/TableWithHandle",
-    "fidl.test.handlesintypes/HandlesInTypes"
+    "test.handlesintypes/obj_type",
+    "test.handlesintypes/handle",
+    "test.handlesintypes/UnionWithHandle",
+    "test.handlesintypes/TableWithHandle",
+    "test.handlesintypes/HandlesInTypes"
   ],
   "declarations": {
-    "fidl.test.handlesintypes/obj_type": "enum",
-    "fidl.test.handlesintypes/handle": "experimental_resource",
-    "fidl.test.handlesintypes/HandlesInTypes": "struct",
-    "fidl.test.handlesintypes/TableWithHandle": "table",
-    "fidl.test.handlesintypes/UnionWithHandle": "union"
+    "test.handlesintypes/obj_type": "enum",
+    "test.handlesintypes/handle": "experimental_resource",
+    "test.handlesintypes/HandlesInTypes": "struct",
+    "test.handlesintypes/TableWithHandle": "table",
+    "test.handlesintypes/UnionWithHandle": "union"
   }
 }

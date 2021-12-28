@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/error/cpp/fidl.h>
+#include <test/error/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,8 +13,8 @@
 
 namespace fuzzing {
 
-using Example_foo_Response = ::fidl::test::error::Example_foo_Response;
-using Example_foo_Result = ::fidl::test::error::Example_foo_Result;
+using Example_foo_Response = ::test::error::Example_foo_Response;
+using Example_foo_Result = ::test::error::Example_foo_Result;
 
 template <>
 struct MinSize<Example_foo_Response> {
@@ -36,7 +36,7 @@ struct Allocate<Example_foo_Response> {
 template <>
 struct MinSize<Example_foo_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::fidl::test::error::Example_foo_Response>(),
+    size_t sizes[] = {0, MinSize<::test::error::Example_foo_Response>(),
                       MinSize<uint32_t>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
@@ -56,7 +56,7 @@ struct Allocate<Example_foo_Result> {
     switch (selector % 2) {
       case 0: {
         out.set_response(
-            Allocate<::fidl::test::error::Example_foo_Response>{}(src, size));
+            Allocate<::test::error::Example_foo_Response>{}(src, size));
         break;
       }
       case 1: {

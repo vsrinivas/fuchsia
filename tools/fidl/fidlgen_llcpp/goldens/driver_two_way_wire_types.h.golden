@@ -19,6 +19,6 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.drivertwoway/cpp/markers.h>
+#include <fidl/test.drivertwoway/cpp/markers.h>
 
 namespace fidl {}  // namespace fidl

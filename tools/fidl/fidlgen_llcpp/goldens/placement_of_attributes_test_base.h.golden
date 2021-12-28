@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.placementofattributes/cpp/wire.h>
-namespace fidl_test_placementofattributes {
+#include <fidl/test.placementofattributes/cpp/wire.h>
+namespace test_placementofattributes {
 namespace testing {
 
 class ExampleProtocol_TestBase
-    : public ::fidl::WireServer<
-          ::fidl_test_placementofattributes::ExampleProtocol> {
+    : public ::fidl::WireServer<::test_placementofattributes::ExampleProtocol> {
  public:
   virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -19,4 +18,4 @@ class ExampleProtocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_placementofattributes
+}  // namespace test_placementofattributes

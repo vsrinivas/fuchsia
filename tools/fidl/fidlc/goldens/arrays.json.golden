@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.arrays",
+  "name": "test.arrays",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.arrays/StructSmallArray",
+      "name": "test.arrays/StructSmallArray",
       "naming_context": [
         "StructSmallArray"
       ],
@@ -105,7 +105,7 @@
       }
     },
     {
-      "name": "fidl.test.arrays/StructLargeArray",
+      "name": "test.arrays/StructLargeArray",
       "naming_context": [
         "StructLargeArray"
       ],
@@ -203,7 +203,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.arrays/TableSmallArray",
+      "name": "test.arrays/TableSmallArray",
       "naming_context": [
         "TableSmallArray"
       ],
@@ -292,7 +292,7 @@
       }
     },
     {
-      "name": "fidl.test.arrays/TableLargeArray",
+      "name": "test.arrays/TableLargeArray",
       "naming_context": [
         "TableLargeArray"
       ],
@@ -383,7 +383,7 @@
   ],
   "union_declarations": [
     {
-      "name": "fidl.test.arrays/UnionSmallArray",
+      "name": "test.arrays/UnionSmallArray",
       "naming_context": [
         "UnionSmallArray"
       ],
@@ -472,7 +472,7 @@
       }
     },
     {
-      "name": "fidl.test.arrays/UnionLargeArray",
+      "name": "test.arrays/UnionLargeArray",
       "naming_context": [
         "UnionLargeArray"
       ],
@@ -563,19 +563,19 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.arrays/UnionSmallArray",
-    "fidl.test.arrays/UnionLargeArray",
-    "fidl.test.arrays/TableSmallArray",
-    "fidl.test.arrays/TableLargeArray",
-    "fidl.test.arrays/StructSmallArray",
-    "fidl.test.arrays/StructLargeArray"
+    "test.arrays/UnionSmallArray",
+    "test.arrays/UnionLargeArray",
+    "test.arrays/TableSmallArray",
+    "test.arrays/TableLargeArray",
+    "test.arrays/StructSmallArray",
+    "test.arrays/StructLargeArray"
   ],
   "declarations": {
-    "fidl.test.arrays/StructSmallArray": "struct",
-    "fidl.test.arrays/StructLargeArray": "struct",
-    "fidl.test.arrays/TableSmallArray": "table",
-    "fidl.test.arrays/TableLargeArray": "table",
-    "fidl.test.arrays/UnionSmallArray": "union",
-    "fidl.test.arrays/UnionLargeArray": "union"
+    "test.arrays/StructSmallArray": "struct",
+    "test.arrays/StructLargeArray": "struct",
+    "test.arrays/TableSmallArray": "table",
+    "test.arrays/TableLargeArray": "table",
+    "test.arrays/UnionSmallArray": "union",
+    "test.arrays/UnionLargeArray": "union"
   }
 }

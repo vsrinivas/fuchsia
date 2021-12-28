@@ -18,9 +18,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.arrays/cpp/markers.h>
+#include <fidl/test.arrays/cpp/markers.h>
 
-namespace fidl_test_arrays {
+namespace test_arrays {
 namespace wire {
 struct StructSmallArray;
 
@@ -35,9 +35,9 @@ class UnionSmallArray;
 class UnionLargeArray;
 
 }  // namespace wire
-}  // namespace fidl_test_arrays
+}  // namespace test_arrays
 template <>
-struct ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableSmallArray> final {
+struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
  public:
   WireTableFrame() = default;
   // In its intended usage, WireTableFrame will be referenced by an ObjectView.
@@ -52,12 +52,12 @@ struct ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableSmallArray> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
   ::fidl::Envelope<::fidl::Array<uint32_t, 2>> a_;
 
-  friend class ::fidl_test_arrays::wire::TableSmallArray;
+  friend class ::test_arrays::wire::TableSmallArray;
 };
 
-namespace fidl_test_arrays {
+namespace test_arrays {
 namespace wire {
-extern "C" const fidl_type_t fidl_test_arrays_TableSmallArrayTable;
+extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
 class TableSmallArray final {
  public:
@@ -101,17 +101,17 @@ class TableSmallArray final {
 
   TableSmallArray() = default;
   explicit TableSmallArray(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
-                       ::fidl_test_arrays::wire::TableSmallArray>>(allocator)) {
-  }
+      : frame_ptr_(
+            ::fidl::ObjectView<
+                ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(
+                allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
   explicit TableSmallArray(
       ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableSmallArray>>&&
-          frame)
+          ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableSmallArray() = default;
   TableSmallArray(const TableSmallArray& other) noexcept = default;
@@ -119,8 +119,7 @@ class TableSmallArray final {
   TableSmallArray(TableSmallArray&& other) noexcept = default;
   TableSmallArray& operator=(TableSmallArray&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_TableSmallArrayTable;
+  static constexpr const fidl_type_t* Type = &test_arrays_TableSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -131,11 +130,11 @@ class TableSmallArray final {
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableSmallArray>>(
+        ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>(
         allocator);
   }
   void Init(::fidl::ObjectView<::fidl::WireTableFrame<
-                ::fidl_test_arrays::wire::TableSmallArray>>&& frame_ptr) {
+                ::test_arrays::wire::TableSmallArray>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -147,14 +146,14 @@ class TableSmallArray final {
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableSmallArray>>
+      ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>>
       frame_ptr_;
 };
 
 }  // namespace wire
-}  // namespace fidl_test_arrays
+}  // namespace test_arrays
 template <>
-struct ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableLargeArray> final {
+struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
  public:
   WireTableFrame() = default;
   // In its intended usage, WireTableFrame will be referenced by an ObjectView.
@@ -169,12 +168,12 @@ struct ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableLargeArray> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
   ::fidl::Envelope<::fidl::Array<uint32_t, 100>> a_;
 
-  friend class ::fidl_test_arrays::wire::TableLargeArray;
+  friend class ::test_arrays::wire::TableLargeArray;
 };
 
-namespace fidl_test_arrays {
+namespace test_arrays {
 namespace wire {
-extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
+extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
 class TableLargeArray final {
  public:
@@ -219,17 +218,17 @@ class TableLargeArray final {
 
   TableLargeArray() = default;
   explicit TableLargeArray(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
-                       ::fidl_test_arrays::wire::TableLargeArray>>(allocator)) {
-  }
+      : frame_ptr_(
+            ::fidl::ObjectView<
+                ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(
+                allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
   explicit TableLargeArray(
       ::fidl::ObjectView<
-          ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableLargeArray>>&&
-          frame)
+          ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableLargeArray() = default;
   TableLargeArray(const TableLargeArray& other) noexcept = default;
@@ -237,8 +236,7 @@ class TableLargeArray final {
   TableLargeArray(TableLargeArray&& other) noexcept = default;
   TableLargeArray& operator=(TableLargeArray&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_TableLargeArrayTable;
+  static constexpr const fidl_type_t* Type = &test_arrays_TableLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -249,11 +247,11 @@ class TableLargeArray final {
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableLargeArray>>(
+        ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>(
         allocator);
   }
   void Init(::fidl::ObjectView<::fidl::WireTableFrame<
-                ::fidl_test_arrays::wire::TableLargeArray>>&& frame_ptr) {
+                ::test_arrays::wire::TableLargeArray>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -265,16 +263,16 @@ class TableLargeArray final {
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::fidl_test_arrays::wire::TableLargeArray>>
+      ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>>
       frame_ptr_;
 };
 
-extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
+extern "C" const fidl_type_t test_arrays_UnionSmallArrayTable;
 
 class UnionSmallArray {
  public:
   UnionSmallArray()
-      : ordinal_(::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
+      : ordinal_(::test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -288,12 +286,11 @@ class UnionSmallArray {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid;
+    return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::Invalid;
   }
 
   bool is_a() const {
-    return ordinal_ == ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+    return ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
   }
   static UnionSmallArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
@@ -311,35 +308,31 @@ class UnionSmallArray {
   }
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+    ordinal_ = ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
     envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
   void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+    ordinal_ = ::test_arrays::wire::UnionSmallArray::Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
         allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint32_t, 2>& mutable_a() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
+    ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
   }
   const ::fidl::Array<uint32_t, 2>& a() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
+    ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionSmallArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
   }
-  ::fidl_test_arrays::wire::UnionSmallArray::Tag which() const {
+  ::test_arrays::wire::UnionSmallArray::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_arrays::wire::UnionSmallArray::Tag>(
-        ordinal_);
+    return static_cast<::test_arrays::wire::UnionSmallArray::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_UnionSmallArrayTable;
+  static constexpr const fidl_type_t* Type = &test_arrays_UnionSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -358,17 +351,17 @@ class UnionSmallArray {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_arrays::wire::UnionSmallArray::Ordinal ordinal_;
+  ::test_arrays::wire::UnionSmallArray::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
+extern "C" const fidl_type_t test_arrays_UnionLargeArrayTable;
 
 class UnionLargeArray {
  public:
   UnionLargeArray()
-      : ordinal_(::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
+      : ordinal_(::test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -382,12 +375,11 @@ class UnionLargeArray {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid;
+    return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::Invalid;
   }
 
   bool is_a() const {
-    return ordinal_ == ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+    return ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
   }
   static UnionLargeArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
@@ -405,35 +397,31 @@ class UnionLargeArray {
   }
 
   void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+    ordinal_ = ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
     envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(std::move(elem));
   }
 
   template <typename... Args>
   void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+    ordinal_ = ::test_arrays::wire::UnionLargeArray::Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
         allocator, std::forward<Args>(args)...));
   }
 
   ::fidl::Array<uint32_t, 100>& mutable_a() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
+    ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
   }
   const ::fidl::Array<uint32_t, 100>& a() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
+    ZX_ASSERT(ordinal_ == ::test_arrays::wire::UnionLargeArray::Ordinal::kA);
     return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
   }
-  ::fidl_test_arrays::wire::UnionLargeArray::Tag which() const {
+  ::test_arrays::wire::UnionLargeArray::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_arrays::wire::UnionLargeArray::Tag>(
-        ordinal_);
+    return static_cast<::test_arrays::wire::UnionLargeArray::Tag>(ordinal_);
   }
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_UnionLargeArrayTable;
+  static constexpr const fidl_type_t* Type = &test_arrays_UnionLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -452,16 +440,15 @@ class UnionLargeArray {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_arrays::wire::UnionLargeArray::Ordinal ordinal_;
+  ::test_arrays::wire::UnionLargeArray::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
+extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 
 struct StructSmallArray {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_StructSmallArrayTable;
+  static constexpr const fidl_type_t* Type = &test_arrays_StructSmallArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   static constexpr uint32_t PrimarySizeV1 = 8;
@@ -476,11 +463,10 @@ struct StructSmallArray {
   class DecodedMessage;
 };
 
-extern "C" const fidl_type_t fidl_test_arrays_StructLargeArrayTable;
+extern "C" const fidl_type_t test_arrays_StructLargeArrayTable;
 
 struct StructLargeArray {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_StructLargeArrayTable;
+  static constexpr const fidl_type_t* Type = &test_arrays_StructLargeArrayTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 400;
   static constexpr uint32_t PrimarySizeV1 = 400;
@@ -496,67 +482,57 @@ struct StructLargeArray {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_arrays
+}  // namespace test_arrays
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::StructSmallArray>
+struct IsFidlType<::test_arrays::wire::StructSmallArray>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_arrays::wire::StructSmallArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::StructSmallArray>);
-static_assert(offsetof(::fidl_test_arrays::wire::StructSmallArray, a) == 0);
-static_assert(sizeof(::fidl_test_arrays::wire::StructSmallArray) ==
-              ::fidl_test_arrays::wire::StructSmallArray::PrimarySize);
+struct IsStruct<::test_arrays::wire::StructSmallArray> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_arrays::wire::StructSmallArray>);
+static_assert(offsetof(::test_arrays::wire::StructSmallArray, a) == 0);
+static_assert(sizeof(::test_arrays::wire::StructSmallArray) ==
+              ::test_arrays::wire::StructSmallArray::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::StructLargeArray>
+struct IsFidlType<::test_arrays::wire::StructLargeArray>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_arrays::wire::StructLargeArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::StructLargeArray>);
-static_assert(offsetof(::fidl_test_arrays::wire::StructLargeArray, a) == 0);
-static_assert(sizeof(::fidl_test_arrays::wire::StructLargeArray) ==
-              ::fidl_test_arrays::wire::StructLargeArray::PrimarySize);
+struct IsStruct<::test_arrays::wire::StructLargeArray> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_arrays::wire::StructLargeArray>);
+static_assert(offsetof(::test_arrays::wire::StructLargeArray, a) == 0);
+static_assert(sizeof(::test_arrays::wire::StructLargeArray) ==
+              ::test_arrays::wire::StructLargeArray::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::TableSmallArray>
+struct IsFidlType<::test_arrays::wire::TableSmallArray>
     : public std::true_type {};
 template <>
-struct IsTable<::fidl_test_arrays::wire::TableSmallArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::TableSmallArray>);
+struct IsTable<::test_arrays::wire::TableSmallArray> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_arrays::wire::TableSmallArray>);
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::TableLargeArray>
+struct IsFidlType<::test_arrays::wire::TableLargeArray>
     : public std::true_type {};
 template <>
-struct IsTable<::fidl_test_arrays::wire::TableLargeArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::TableLargeArray>);
+struct IsTable<::test_arrays::wire::TableLargeArray> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_arrays::wire::TableLargeArray>);
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::UnionSmallArray>
+struct IsFidlType<::test_arrays::wire::UnionSmallArray>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_arrays::wire::UnionSmallArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionSmallArray>);
+struct IsUnion<::test_arrays::wire::UnionSmallArray> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionSmallArray>);
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::UnionLargeArray>
+struct IsFidlType<::test_arrays::wire::UnionLargeArray>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_arrays::wire::UnionLargeArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionLargeArray>);
+struct IsUnion<::test_arrays::wire::UnionLargeArray> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_arrays::wire::UnionLargeArray>);
 
 }  // namespace fidl

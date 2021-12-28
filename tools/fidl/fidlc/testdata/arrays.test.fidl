@@ -1,4 +1,4 @@
-library fidl.test.arrays;
+library test.arrays;
 
 type StructSmallArray = struct {
     a array<uint32, 2>;

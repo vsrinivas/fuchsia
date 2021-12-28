@@ -2,30 +2,30 @@
 
 #pragma once
 
-#include <fidl/fidl.test.drivertwoway/cpp/wire.h>
-#include <fidl/test/drivertwoway/cpp/natural_types.h>
+#include <fidl/test.drivertwoway/cpp/wire.h>
 #include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
+#include <test/drivertwoway/cpp/natural_types.h>
 
-namespace fidl_test_drivertwoway {
+namespace test_drivertwoway {
 class TwoWayAddTopResponse;
 
 class TwoWayAddRequest;
 
-}  // namespace fidl_test_drivertwoway
+}  // namespace test_drivertwoway
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_drivertwoway::TwoWayAddTopResponse>
+    ::test_drivertwoway::TwoWayAddTopResponse>
     final {
  public:
   uint16_t sum = {};
 };
 
-namespace fidl_test_drivertwoway {
+namespace test_drivertwoway {
 class TwoWayAddTopResponse final
     : public ::fidl::internal::CodableBase<TwoWayAddTopResponse> {
  private:
@@ -41,7 +41,7 @@ class TwoWayAddTopResponse final
   TwoWayAddTopResponse() = default;
   TwoWayAddTopResponse(uint16_t sum) : storage_({sum}) {}
   TwoWayAddTopResponse(::fidl::internal::DesignatedInitializationProxy<
-                       ::fidl_test_drivertwoway::TwoWayAddTopResponse>
+                       ::test_drivertwoway::TwoWayAddTopResponse>
                            storage)
       : storage_(std::move(storage)) {}
   ~TwoWayAddTopResponse() = default;
@@ -58,18 +58,17 @@ class TwoWayAddTopResponse final
   }
 
  private:
-  friend struct ::fidl::CodingTraits<
-      ::fidl_test_drivertwoway::TwoWayAddTopResponse>;
+  friend struct ::fidl::CodingTraits<::test_drivertwoway::TwoWayAddTopResponse>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_drivertwoway::TwoWayAddTopResponse>
+      ::test_drivertwoway::TwoWayAddTopResponse>
       storage_ = {};
 };
 
-}  // namespace fidl_test_drivertwoway
+}  // namespace test_drivertwoway
 template <>
 struct ::fidl::internal::DesignatedInitializationProxy<
-    ::fidl_test_drivertwoway::TwoWayAddRequest>
+    ::test_drivertwoway::TwoWayAddRequest>
     final {
  public:
   uint16_t addend1 = {};
@@ -77,7 +76,7 @@ struct ::fidl::internal::DesignatedInitializationProxy<
   uint16_t addend2 = {};
 };
 
-namespace fidl_test_drivertwoway {
+namespace test_drivertwoway {
 class TwoWayAddRequest final
     : public ::fidl::internal::CodableBase<TwoWayAddRequest> {
  private:
@@ -94,7 +93,7 @@ class TwoWayAddRequest final
   TwoWayAddRequest(uint16_t addend1, uint16_t addend2)
       : storage_({addend1, addend2}) {}
   TwoWayAddRequest(::fidl::internal::DesignatedInitializationProxy<
-                   ::fidl_test_drivertwoway::TwoWayAddRequest>
+                   ::test_drivertwoway::TwoWayAddRequest>
                        storage)
       : storage_(std::move(storage)) {}
   ~TwoWayAddRequest() = default;
@@ -120,41 +119,39 @@ class TwoWayAddRequest final
   }
 
  private:
-  friend struct ::fidl::CodingTraits<
-      ::fidl_test_drivertwoway::TwoWayAddRequest>;
+  friend struct ::fidl::CodingTraits<::test_drivertwoway::TwoWayAddRequest>;
 
   ::fidl::internal::DesignatedInitializationProxy<
-      ::fidl_test_drivertwoway::TwoWayAddRequest>
+      ::test_drivertwoway::TwoWayAddRequest>
       storage_ = {};
 };
 
-}  // namespace fidl_test_drivertwoway
+}  // namespace test_drivertwoway
 namespace fidl {
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_drivertwoway_TwoWayAddTopResponseTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 
 template <>
-struct IsFidlType<::fidl_test_drivertwoway::TwoWayAddTopResponse>
+struct IsFidlType<::test_drivertwoway::TwoWayAddTopResponse>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<
-    ::fidl_test_drivertwoway::TwoWayAddTopResponse>
+struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddTopResponse>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_drivertwoway_TwoWayAddTopResponseTable;
+      &test_drivertwoway_TwoWayAddTopResponseTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_drivertwoway::TwoWayAddTopResponse> {
+struct CodingTraits<::test_drivertwoway::TwoWayAddTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder,
-      ::fidl_test_drivertwoway::TwoWayAddTopResponse* value, size_t offset,
+      EncoderImpl* encoder, ::test_drivertwoway::TwoWayAddTopResponse* value,
+      size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
     field_offset =
@@ -165,7 +162,7 @@ struct CodingTraits<::fidl_test_drivertwoway::TwoWayAddTopResponse> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_drivertwoway::TwoWayAddTopResponse* value,
+                     ::test_drivertwoway::TwoWayAddTopResponse* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.sum, offset + 0);
   }
@@ -173,28 +170,28 @@ struct CodingTraits<::fidl_test_drivertwoway::TwoWayAddTopResponse> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-extern "C" const fidl_type_t fidl_test_drivertwoway_TwoWayAddRequestTable;
+extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 
 template <>
-struct IsFidlType<::fidl_test_drivertwoway::TwoWayAddRequest>
+struct IsFidlType<::test_drivertwoway::TwoWayAddRequest>
     : public std::true_type {};
 
 template <>
-struct ::fidl::internal::TypeTraits<::fidl_test_drivertwoway::TwoWayAddRequest>
+struct ::fidl::internal::TypeTraits<::test_drivertwoway::TwoWayAddRequest>
     final {
  public:
   static constexpr const fidl_type_t* kCodingTable =
-      &fidl_test_drivertwoway_TwoWayAddRequestTable;
+      &test_drivertwoway_TwoWayAddRequestTable;
 };
 
 template <>
-struct CodingTraits<::fidl_test_drivertwoway::TwoWayAddRequest> {
+struct CodingTraits<::test_drivertwoway::TwoWayAddRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
   template <class EncoderImpl>
   static void Encode(
-      EncoderImpl* encoder, ::fidl_test_drivertwoway::TwoWayAddRequest* value,
+      EncoderImpl* encoder, ::test_drivertwoway::TwoWayAddRequest* value,
       size_t offset,
       cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
     [[maybe_unused]] uint32_t field_offset;
@@ -210,7 +207,7 @@ struct CodingTraits<::fidl_test_drivertwoway::TwoWayAddRequest> {
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
-                     ::fidl_test_drivertwoway::TwoWayAddRequest* value,
+                     ::test_drivertwoway::TwoWayAddRequest* value,
                      size_t offset) {
     ::fidl::Decode(decoder, &value->storage_.addend1, offset + 0);
     ::fidl::Decode(decoder, &value->storage_.addend2, offset + 2);

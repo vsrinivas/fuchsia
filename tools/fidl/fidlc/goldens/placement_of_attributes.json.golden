@@ -1,11 +1,11 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.placementofattributes",
+  "name": "test.placementofattributes",
   "library_dependencies": [
     {
-      "name": "exampleusing",
+      "name": "test.exampleusing",
       "declarations": {
-        "exampleusing/Empty": {
+        "test.exampleusing/Empty": {
           "kind": "struct",
           "resource": false
         }
@@ -14,7 +14,7 @@
   ],
   "bits_declarations": [
     {
-      "name": "fidl.test.placementofattributes/ExampleBits",
+      "name": "test.placementofattributes/ExampleBits",
       "naming_context": [
         "ExampleBits"
       ],
@@ -97,7 +97,7 @@
   ],
   "const_declarations": [
     {
-      "name": "fidl.test.placementofattributes/EXAMPLE_CONST",
+      "name": "test.placementofattributes/EXAMPLE_CONST",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 13,
@@ -152,7 +152,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "fidl.test.placementofattributes/ExampleEnum",
+      "name": "test.placementofattributes/ExampleEnum",
       "naming_context": [
         "ExampleEnum"
       ],
@@ -214,7 +214,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.placementofattributes/ExampleProtocol",
+      "name": "test.placementofattributes/ExampleProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 22,
@@ -236,7 +236,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 2341079615635566980,
+          "ordinal": 6023439637367187273,
           "name": "Method",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
@@ -259,7 +259,7 @@
           ],
           "maybe_request_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
+            "identifier": "test.placementofattributes/ExampleProtocolMethodRequest",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -290,7 +290,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
+      "name": "test.placementofattributes/ExampleProtocolMethodRequest",
       "naming_context": [
         "ExampleProtocol",
         "Method",
@@ -300,14 +300,14 @@
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 24,
         "column": 12,
-        "length": 46
+        "length": 51
       },
       "is_request_or_response": true,
       "members": [
         {
           "type": {
             "kind": "identifier",
-            "identifier": "exampleusing/Empty",
+            "identifier": "test.exampleusing/Empty",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -366,7 +366,7 @@
       }
     },
     {
-      "name": "fidl.test.placementofattributes/ExampleStruct",
+      "name": "test.placementofattributes/ExampleStruct",
       "naming_context": [
         "ExampleStruct"
       ],
@@ -466,7 +466,7 @@
   "external_struct_declarations": [],
   "table_declarations": [
     {
-      "name": "fidl.test.placementofattributes/ExampleTable",
+      "name": "test.placementofattributes/ExampleTable",
       "naming_context": [
         "ExampleTable"
       ],
@@ -559,7 +559,7 @@
   ],
   "union_declarations": [
     {
-      "name": "fidl.test.placementofattributes/ExampleUnion",
+      "name": "test.placementofattributes/ExampleUnion",
       "naming_context": [
         "ExampleUnion"
       ],
@@ -650,7 +650,7 @@
       }
     },
     {
-      "name": "fidl.test.placementofattributes/ExampleXUnion",
+      "name": "test.placementofattributes/ExampleXUnion",
       "naming_context": [
         "ExampleXUnion"
       ],
@@ -743,7 +743,7 @@
   ],
   "type_alias_declarations": [
     {
-      "name": "fidl.test.placementofattributes/TypeAlias",
+      "name": "test.placementofattributes/TypeAlias",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "line": 42,
@@ -770,27 +770,27 @@
     }
   ],
   "declaration_order": [
-    "fidl.test.placementofattributes/TypeAlias",
-    "fidl.test.placementofattributes/ExampleXUnion",
-    "fidl.test.placementofattributes/ExampleUnion",
-    "fidl.test.placementofattributes/ExampleTable",
-    "fidl.test.placementofattributes/ExampleStruct",
-    "fidl.test.placementofattributes/ExampleEnum",
-    "fidl.test.placementofattributes/ExampleBits",
-    "fidl.test.placementofattributes/EXAMPLE_CONST",
-    "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
-    "fidl.test.placementofattributes/ExampleProtocol"
+    "test.placementofattributes/TypeAlias",
+    "test.placementofattributes/ExampleXUnion",
+    "test.placementofattributes/ExampleUnion",
+    "test.placementofattributes/ExampleTable",
+    "test.placementofattributes/ExampleStruct",
+    "test.placementofattributes/ExampleEnum",
+    "test.placementofattributes/ExampleBits",
+    "test.placementofattributes/EXAMPLE_CONST",
+    "test.placementofattributes/ExampleProtocolMethodRequest",
+    "test.placementofattributes/ExampleProtocol"
   ],
   "declarations": {
-    "fidl.test.placementofattributes/ExampleBits": "bits",
-    "fidl.test.placementofattributes/EXAMPLE_CONST": "const",
-    "fidl.test.placementofattributes/ExampleEnum": "enum",
-    "fidl.test.placementofattributes/ExampleProtocol": "interface",
-    "fidl.test.placementofattributes/ExampleProtocolMethodRequest": "struct",
-    "fidl.test.placementofattributes/ExampleStruct": "struct",
-    "fidl.test.placementofattributes/ExampleTable": "table",
-    "fidl.test.placementofattributes/ExampleUnion": "union",
-    "fidl.test.placementofattributes/ExampleXUnion": "union",
-    "fidl.test.placementofattributes/TypeAlias": "type_alias"
+    "test.placementofattributes/ExampleBits": "bits",
+    "test.placementofattributes/EXAMPLE_CONST": "const",
+    "test.placementofattributes/ExampleEnum": "enum",
+    "test.placementofattributes/ExampleProtocol": "interface",
+    "test.placementofattributes/ExampleProtocolMethodRequest": "struct",
+    "test.placementofattributes/ExampleStruct": "struct",
+    "test.placementofattributes/ExampleTable": "table",
+    "test.placementofattributes/ExampleUnion": "union",
+    "test.placementofattributes/ExampleXUnion": "union",
+    "test.placementofattributes/TypeAlias": "type_alias"
   }
 }

@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.doccomments/cpp/wire.h>
-namespace fidl_test_doccomments {
+#include <fidl/test.doccomments/cpp/wire.h>
+namespace test_doccomments {
 namespace testing {
 
 class Interface_TestBase
-    : public ::fidl::WireServer<::fidl_test_doccomments::Interface> {
+    : public ::fidl::WireServer<::test_doccomments::Interface> {
  public:
   virtual ~Interface_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -18,4 +18,4 @@ class Interface_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_doccomments
+}  // namespace test_doccomments

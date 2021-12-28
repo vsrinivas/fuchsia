@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <fidl/test/errorsyntax/parent/cpp/natural_types.h>
+#include <test/errorsyntax/parent/cpp/natural_types.h>
 
 #include "lib/fidl/cpp/internal/natural_types_header.h"
 
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace errorsyntax {
 class ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
@@ -58,10 +57,10 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::errorsyntax::
+    const ::test::errorsyntax::
         ExampleUseOfErrorSyntax_CallWhichMayFail_Response& _value,
-    ::fidl::test::errorsyntax::
-        ExampleUseOfErrorSyntax_CallWhichMayFail_Response* _result) {
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response*
+        _result) {
   return _value.Clone(_result);
 }
 
@@ -81,8 +80,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
       ExampleUseOfErrorSyntax_CallWhichMayFail_Result&&);
 
   static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithResponse(
-      ::fidl::test::errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&);
+      ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&);
   static ExampleUseOfErrorSyntax_CallWhichMayFail_Result WithErr(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -112,38 +110,37 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
 
   bool is_response() const {
     return tag_ ==
-           ::fidl::test::errorsyntax::
+           ::test::errorsyntax::
                ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kResponse;
   }
 
-  ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response&
+  ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response&
   response() {
     EnsureStorageInitialized(
-        ::fidl::test::errorsyntax::
-            ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kResponse);
+        ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
+            Tag::kResponse);
     return response_;
   }
 
-  const ::fidl::test::errorsyntax::
-      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&
-      response() const {
+  const ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response&
+  response() const {
     ZX_ASSERT(is_response());
     return response_;
   }
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result& set_response(
-      ::fidl::test::errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Response value);
+      ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response
+          value);
 
   bool is_err() const {
     return tag_ ==
-           ::fidl::test::errorsyntax::
+           ::test::errorsyntax::
                ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kErr;
   }
 
   uint32_t& err() {
     EnsureStorageInitialized(
-        ::fidl::test::errorsyntax::
-            ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kErr);
+        ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
+            Tag::kErr);
     return err_;
   }
 
@@ -153,10 +150,9 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   }
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result& set_err(uint32_t value);
 
-  ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
-      Tag
-      Which() const {
-    return ::fidl::test::errorsyntax::
+  ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag
+  Which() const {
+    return ::test::errorsyntax::
         ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag(tag_);
   }
 
@@ -164,13 +160,13 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  friend ::fidl::Equality<::fidl::test::errorsyntax::
-                              ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
+  friend ::fidl::Equality<
+      ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>;
   ExampleUseOfErrorSyntax_CallWhichMayFail_Result(
       fpromise::result<int64_t, uint32_t>&& result) {
     ZX_ASSERT(!result.is_pending());
     if (result.is_ok()) {
-      set_response(::fidl::test::errorsyntax::
+      set_response(::test::errorsyntax::
                        ExampleUseOfErrorSyntax_CallWhichMayFail_Response{
                            result.take_value()});
     } else {
@@ -198,19 +194,19 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Result final {
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::Invalid);
+      ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
+          Tag::Invalid);
   union {
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response
         response_;
     uint32_t err_;
   };
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::errorsyntax::
-        ExampleUseOfErrorSyntax_CallWhichMayFail_Result& value,
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
+    const ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
+        value,
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
         result) {
   return value.Clone(result);
 }
@@ -222,10 +218,10 @@ using ExampleUseOfErrorSyntax_CallWhichMayFail_ResultPtr =
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable;
 
 }  // namespace _internal
 class ExampleUseOfErrorSyntax_RequestEncoder {
@@ -251,8 +247,8 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
+        &::test::errorsyntax::_internal::
+            test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -279,8 +275,8 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
+        &::test::errorsyntax::_internal::
+            test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -289,17 +285,17 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
+    test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
 
 }  // namespace _internal
 class ExampleUseOfErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ComposedCallWhichMayFail(
       ::fidl::Encoder* _encoder,
-      ::fidl::test::errorsyntax::parent::
+      ::test::errorsyntax::parent::
           ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result* result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
@@ -320,16 +316,16 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable,
+        &::test::errorsyntax::_internal::
+            test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage CallWhichMayFail(
       ::fidl::Encoder* _encoder,
-      ::fidl::test::errorsyntax::
-          ExampleUseOfErrorSyntax_CallWhichMayFail_Result* result) {
+      ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
+          result) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -349,8 +345,8 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::errorsyntax::_internal::
-            fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable,
+        &::test::errorsyntax::_internal::
+            test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -360,38 +356,39 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
 
 }  // namespace errorsyntax
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::errorsyntax::
-                        ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+struct CodingTraits<
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     : public EncodableCodingTraits<
-          ::fidl::test::errorsyntax::
+          ::test::errorsyntax::
               ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
           8, 8> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::errorsyntax::
-                              ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+struct IsMemcpyCompatible<
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
     : public internal::BoolConstant<
           !HasPadding<
-              ::fidl::test::errorsyntax::
+              ::test::errorsyntax::
                   ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::value &&
           IsMemcpyCompatible<int64_t>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::errorsyntax::
+    const ::test::errorsyntax::
         ExampleUseOfErrorSyntax_CallWhichMayFail_Response& value,
-    ::fidl::test::errorsyntax::
-        ExampleUseOfErrorSyntax_CallWhichMayFail_Response* result) {
-  return ::fidl::test::errorsyntax::Clone(value, result);
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response*
+        result) {
+  return ::test::errorsyntax::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+struct Equality<
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
   bool operator()(
-      const ::fidl::test::errorsyntax::
+      const ::test::errorsyntax::
           ExampleUseOfErrorSyntax_CallWhichMayFail_Response& _lhs,
-      const ::fidl::test::errorsyntax::
+      const ::test::errorsyntax::
           ExampleUseOfErrorSyntax_CallWhichMayFail_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.value, _rhs.value)) {
       return false;
@@ -401,28 +398,26 @@ struct Equality<::fidl::test::errorsyntax::
 };
 template <>
 struct IsFidlXUnion<
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
     : public std::true_type {};
 
 template <>
 struct CodingTraits<
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>
     : public EncodableCodingTraits<
-          ::fidl::test::errorsyntax::
-              ExampleUseOfErrorSyntax_CallWhichMayFail_Result,
+          ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result,
           24, 16> {};
 
 template <>
-struct CodingTraits<
-    std::unique_ptr<::fidl::test::errorsyntax::
-                        ExampleUseOfErrorSyntax_CallWhichMayFail_Result>> {
+struct CodingTraits<std::unique_ptr<
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
       Encoder* encoder,
-      std::unique_ptr<::fidl::test::errorsyntax::
-                          ExampleUseOfErrorSyntax_CallWhichMayFail_Result>*
+      std::unique_ptr<
+          ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>*
           value,
       size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
@@ -434,8 +429,8 @@ struct CodingTraits<
 
   static void Decode(
       Decoder* _decoder,
-      std::unique_ptr<::fidl::test::errorsyntax::
-                          ExampleUseOfErrorSyntax_CallWhichMayFail_Result>*
+      std::unique_ptr<
+          ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>*
           value,
       size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
@@ -444,29 +439,29 @@ struct CodingTraits<
       return;
     }
 
-    value->reset(new ::fidl::test::errorsyntax::
+    value->reset(new ::test::errorsyntax::
                      ExampleUseOfErrorSyntax_CallWhichMayFail_Result);
 
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
         Decode(_decoder, value->get(), offset);
   }
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::errorsyntax::
-        ExampleUseOfErrorSyntax_CallWhichMayFail_Result& value,
-    ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
+    const ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
+        value,
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result*
         result) {
-  return ::fidl::test::errorsyntax::Clone(value, result);
+  return ::test::errorsyntax::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::errorsyntax::
-                    ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
+struct Equality<
+    ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result> {
   bool operator()(
-      const ::fidl::test::errorsyntax::
+      const ::test::errorsyntax::
           ExampleUseOfErrorSyntax_CallWhichMayFail_Result& _lhs,
-      const ::fidl::test::errorsyntax::
+      const ::test::errorsyntax::
           ExampleUseOfErrorSyntax_CallWhichMayFail_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
@@ -474,13 +469,13 @@ struct Equality<::fidl::test::errorsyntax::
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::errorsyntax::
-              ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::Invalid):
+          ::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result::
+              Tag::Invalid):
         return true;
-      case ::fidl::test::errorsyntax::
+      case ::test::errorsyntax::
           ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kResponse:
         return ::fidl::Equals(_lhs.response_, _rhs.response_);
-      case ::fidl::test::errorsyntax::
+      case ::test::errorsyntax::
           ExampleUseOfErrorSyntax_CallWhichMayFail_Result::Tag::kErr:
         return ::fidl::Equals(_lhs.err_, _rhs.err_);
 

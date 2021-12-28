@@ -3,9 +3,9 @@
 #include <lib/fidl/internal.h>
 
 
-__LOCAL extern const struct FidlCodedStruct fidl_test_escaping_DocCommentWithQuotesTable;
+__LOCAL extern const struct FidlCodedStruct test_escaping_DocCommentWithQuotesTable;
 
 
 
-const struct FidlCodedStruct fidl_test_escaping_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="fidl.test.escaping/DocCommentWithQuotes"};
+const struct FidlCodedStruct test_escaping_DocCommentWithQuotesTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsEmpty, .elements=NULL, .element_count=0u, .size_v1=1u, .size_v2=1u, .name="test.escaping/DocCommentWithQuotes"};
 

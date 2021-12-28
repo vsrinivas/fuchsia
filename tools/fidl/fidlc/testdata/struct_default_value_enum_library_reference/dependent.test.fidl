@@ -1,4 +1,4 @@
-library dependent;
+library test.dependent;
 
 type MyEnum = strict enum : int32 {
     A = 1;

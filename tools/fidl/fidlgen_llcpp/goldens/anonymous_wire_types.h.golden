@@ -19,9 +19,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.anonymous/cpp/markers.h>
+#include <fidl/test.anonymous/cpp/markers.h>
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 namespace wire {
 // |Flags| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
@@ -78,46 +78,46 @@ class Flags final {
  private:
   uint16_t value_ = 0;
 };
-constexpr const ::fidl_test_anonymous::wire::Flags Flags::kInline =
-    ::fidl_test_anonymous::wire::Flags(1u);
-constexpr const ::fidl_test_anonymous::wire::Flags Flags::kMask =
-    ::fidl_test_anonymous::wire::Flags(1u);
+constexpr const ::test_anonymous::wire::Flags Flags::kInline =
+    ::test_anonymous::wire::Flags(1u);
+constexpr const ::test_anonymous::wire::Flags Flags::kMask =
+    ::test_anonymous::wire::Flags(1u);
 
-constexpr inline ::fidl_test_anonymous::wire::Flags Flags::operator~() const {
-  return ::fidl_test_anonymous::wire::Flags(
+constexpr inline ::test_anonymous::wire::Flags Flags::operator~() const {
+  return ::test_anonymous::wire::Flags(
       static_cast<uint16_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_anonymous::wire::Flags Flags::operator|(
-    const ::fidl_test_anonymous::wire::Flags& other) const {
-  return ::fidl_test_anonymous::wire::Flags(
+constexpr inline ::test_anonymous::wire::Flags Flags::operator|(
+    const ::test_anonymous::wire::Flags& other) const {
+  return ::test_anonymous::wire::Flags(
       static_cast<uint16_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_anonymous::wire::Flags Flags::operator&(
-    const ::fidl_test_anonymous::wire::Flags& other) const {
-  return ::fidl_test_anonymous::wire::Flags(
+constexpr inline ::test_anonymous::wire::Flags Flags::operator&(
+    const ::test_anonymous::wire::Flags& other) const {
+  return ::test_anonymous::wire::Flags(
       static_cast<uint16_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_anonymous::wire::Flags Flags::operator^(
-    const ::fidl_test_anonymous::wire::Flags& other) const {
-  return ::fidl_test_anonymous::wire::Flags(
+constexpr inline ::test_anonymous::wire::Flags Flags::operator^(
+    const ::test_anonymous::wire::Flags& other) const {
+  return ::test_anonymous::wire::Flags(
       static_cast<uint16_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void Flags::operator|=(
-    const ::fidl_test_anonymous::wire::Flags& other) {
+    const ::test_anonymous::wire::Flags& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void Flags::operator&=(
-    const ::fidl_test_anonymous::wire::Flags& other) {
+    const ::test_anonymous::wire::Flags& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void Flags::operator^=(
-    const ::fidl_test_anonymous::wire::Flags& other) {
+    const ::test_anonymous::wire::Flags& other) {
   this->value_ ^= other.value_;
 }
 
@@ -177,49 +177,49 @@ class BitsMember final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_anonymous::wire::BitsMember BitsMember::kBitOne =
-    ::fidl_test_anonymous::wire::BitsMember(1u);
-constexpr const ::fidl_test_anonymous::wire::BitsMember BitsMember::kBitTwo =
-    ::fidl_test_anonymous::wire::BitsMember(2u);
-constexpr const ::fidl_test_anonymous::wire::BitsMember BitsMember::kMask =
-    ::fidl_test_anonymous::wire::BitsMember(3u);
+constexpr const ::test_anonymous::wire::BitsMember BitsMember::kBitOne =
+    ::test_anonymous::wire::BitsMember(1u);
+constexpr const ::test_anonymous::wire::BitsMember BitsMember::kBitTwo =
+    ::test_anonymous::wire::BitsMember(2u);
+constexpr const ::test_anonymous::wire::BitsMember BitsMember::kMask =
+    ::test_anonymous::wire::BitsMember(3u);
 
-constexpr inline ::fidl_test_anonymous::wire::BitsMember BitsMember::operator~()
+constexpr inline ::test_anonymous::wire::BitsMember BitsMember::operator~()
     const {
-  return ::fidl_test_anonymous::wire::BitsMember(
+  return ::test_anonymous::wire::BitsMember(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_anonymous::wire::BitsMember BitsMember::operator|(
-    const ::fidl_test_anonymous::wire::BitsMember& other) const {
-  return ::fidl_test_anonymous::wire::BitsMember(
+constexpr inline ::test_anonymous::wire::BitsMember BitsMember::operator|(
+    const ::test_anonymous::wire::BitsMember& other) const {
+  return ::test_anonymous::wire::BitsMember(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_anonymous::wire::BitsMember BitsMember::operator&(
-    const ::fidl_test_anonymous::wire::BitsMember& other) const {
-  return ::fidl_test_anonymous::wire::BitsMember(
+constexpr inline ::test_anonymous::wire::BitsMember BitsMember::operator&(
+    const ::test_anonymous::wire::BitsMember& other) const {
+  return ::test_anonymous::wire::BitsMember(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_anonymous::wire::BitsMember BitsMember::operator^(
-    const ::fidl_test_anonymous::wire::BitsMember& other) const {
-  return ::fidl_test_anonymous::wire::BitsMember(
+constexpr inline ::test_anonymous::wire::BitsMember BitsMember::operator^(
+    const ::test_anonymous::wire::BitsMember& other) const {
+  return ::test_anonymous::wire::BitsMember(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void BitsMember::operator|=(
-    const ::fidl_test_anonymous::wire::BitsMember& other) {
+    const ::test_anonymous::wire::BitsMember& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void BitsMember::operator&=(
-    const ::fidl_test_anonymous::wire::BitsMember& other) {
+    const ::test_anonymous::wire::BitsMember& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void BitsMember::operator^=(
-    const ::fidl_test_anonymous::wire::BitsMember& other) {
+    const ::test_anonymous::wire::BitsMember& other) {
   this->value_ ^= other.value_;
 }
 
@@ -252,12 +252,12 @@ class SomeProtocolSomeMethodError final {
  private:
   uint32_t value_;
 };
-constexpr const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError
+constexpr const ::test_anonymous::wire::SomeProtocolSomeMethodError
     SomeProtocolSomeMethodError::kErrorOne =
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError(1u);
-constexpr const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError
+        ::test_anonymous::wire::SomeProtocolSomeMethodError(1u);
+constexpr const ::test_anonymous::wire::SomeProtocolSomeMethodError
     SomeProtocolSomeMethodError::kErrorTwo =
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError(2u);
+        ::test_anonymous::wire::SomeProtocolSomeMethodError(2u);
 
 class Op final {
  public:
@@ -289,12 +289,12 @@ class Op final {
  private:
   uint32_t value_;
 };
-constexpr const ::fidl_test_anonymous::wire::Op Op::kAdd =
-    ::fidl_test_anonymous::wire::Op(1u);
-constexpr const ::fidl_test_anonymous::wire::Op Op::kMul =
-    ::fidl_test_anonymous::wire::Op(2u);
-constexpr const ::fidl_test_anonymous::wire::Op Op::kDiv =
-    ::fidl_test_anonymous::wire::Op(3u);
+constexpr const ::test_anonymous::wire::Op Op::kAdd =
+    ::test_anonymous::wire::Op(1u);
+constexpr const ::test_anonymous::wire::Op Op::kMul =
+    ::test_anonymous::wire::Op(2u);
+constexpr const ::test_anonymous::wire::Op Op::kDiv =
+    ::test_anonymous::wire::Op(3u);
 
 struct TableData;
 
@@ -312,11 +312,10 @@ class Expression;
 
 class SomeProtocolSomeMethodResult;
 
-extern "C" const fidl_type_t fidl_test_anonymous_TableDataTable;
+extern "C" const fidl_type_t test_anonymous_TableDataTable;
 
 struct TableData {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_TableDataTable;
+  static constexpr const fidl_type_t* Type = &test_anonymous_TableDataTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   static constexpr uint32_t PrimarySizeV1 = 1;
@@ -332,20 +331,20 @@ struct TableData {
 };
 
 extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+    test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
 
 struct SomeProtocolSomeMethodResponse {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
+      &test_anonymous_SomeProtocol_SomeMethod_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 4;
   static constexpr uint32_t PrimarySizeV1 = 4;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
   static constexpr uint32_t MaxOutOfLineV1 = 0;
   static constexpr bool HasPointer = false;
-  using BitsMember = fidl_test_anonymous::wire::BitsMember;
+  using BitsMember = test_anonymous::wire::BitsMember;
 
-  ::fidl_test_anonymous::wire::BitsMember bits_member = {};
+  ::test_anonymous::wire::BitsMember bits_member = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -353,9 +352,9 @@ struct SomeProtocolSomeMethodResponse {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
-struct ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember> final {
+struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
  public:
   WireTableFrame() = default;
   // In its intended usage, WireTableFrame will be referenced by an ObjectView.
@@ -369,29 +368,29 @@ struct ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember> final {
   WireTableFrame(WireTableFrame&&) noexcept = default;
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
-  ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
+  ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::TableData>>
       table_data_;
 
-  friend class ::fidl_test_anonymous::wire::TableMember;
+  friend class ::test_anonymous::wire::TableMember;
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 namespace wire {
-extern "C" const fidl_type_t fidl_test_anonymous_TableMemberTable;
+extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
 class TableMember final {
  public:
-  using TableData = fidl_test_anonymous::wire::TableData;
+  using TableData = test_anonymous::wire::TableData;
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
 
-  const ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data()
+  const ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data()
       const {
     ZX_ASSERT(has_table_data());
     return frame_ptr_->table_data_.get_data();
   }
-  ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>& table_data() {
+  ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() {
     ZX_ASSERT(has_table_data());
     return frame_ptr_->table_data_.get_data();
   }
@@ -399,8 +398,7 @@ class TableMember final {
     return max_ordinal_ >= 2 && frame_ptr_->table_data_.has_data();
   }
   TableMember& set_table_data(
-      ::fidl::ObjectView<
-          ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>
+      ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>
           elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->table_data_.set_data(elem);
@@ -417,7 +415,7 @@ class TableMember final {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->table_data_.set_data(
         ::fidl::ObjectView<
-            ::fidl::VectorView<::fidl_test_anonymous::wire::TableData>>(
+            ::fidl::VectorView<::test_anonymous::wire::TableData>>(
             allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(2));
     return *this;
@@ -431,14 +429,16 @@ class TableMember final {
 
   TableMember() = default;
   explicit TableMember(::fidl::AnyArena& allocator)
-      : frame_ptr_(::fidl::ObjectView<::fidl::WireTableFrame<
-                       ::fidl_test_anonymous::wire::TableMember>>(allocator)) {}
+      : frame_ptr_(::fidl::ObjectView<
+                   ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(
+            allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
-  explicit TableMember(::fidl::ObjectView<::fidl::WireTableFrame<
-                           ::fidl_test_anonymous::wire::TableMember>>&& frame)
+  explicit TableMember(
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>&& frame)
       : frame_ptr_(std::move(frame)) {}
   ~TableMember() = default;
   TableMember(const TableMember& other) noexcept = default;
@@ -446,8 +446,7 @@ class TableMember final {
   TableMember(TableMember&& other) noexcept = default;
   TableMember& operator=(TableMember&& other) noexcept = default;
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_TableMemberTable;
+  static constexpr const fidl_type_t* Type = &test_anonymous_TableMemberTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -458,11 +457,10 @@ class TableMember final {
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<
-        ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember>>(
-        allocator);
+        ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>(allocator);
   }
   void Init(::fidl::ObjectView<::fidl::WireTableFrame<
-                ::fidl_test_anonymous::wire::TableMember>>&& frame_ptr) {
+                ::test_anonymous::wire::TableMember>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -474,14 +472,14 @@ class TableMember final {
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::fidl_test_anonymous::wire::TableMember>>
+      ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>>
       frame_ptr_;
 };
 
 }  // namespace wire
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 template <>
-struct ::fidl::WireTableFrame<::fidl_test_anonymous::wire::FunctionApplication>
+struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>
     final {
  public:
   WireTableFrame() = default;
@@ -497,20 +495,20 @@ struct ::fidl::WireTableFrame<::fidl_test_anonymous::wire::FunctionApplication>
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
   ::fidl::Envelope<::fidl::StringView> func_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
-  ::fidl::Envelope<::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
+  ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::Expression>>
       args_;
-  ::fidl::Envelope<::fidl_test_anonymous::wire::Flags> flags_;
+  ::fidl::Envelope<::test_anonymous::wire::Flags> flags_;
 
-  friend class ::fidl_test_anonymous::wire::FunctionApplication;
+  friend class ::test_anonymous::wire::FunctionApplication;
 };
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 namespace wire {
-extern "C" const fidl_type_t fidl_test_anonymous_FunctionApplicationTable;
+extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
 class FunctionApplication final {
  public:
-  using Flags = fidl_test_anonymous::wire::Flags;
+  using Flags = test_anonymous::wire::Flags;
 
   // Returns whether no field is set.
   bool IsEmpty() const { return max_ordinal_ == 0; }
@@ -552,12 +550,11 @@ class FunctionApplication final {
     return *this;
   }
 
-  const ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>& args()
-      const {
+  const ::fidl::VectorView<::test_anonymous::wire::Expression>& args() const {
     ZX_ASSERT(has_args());
     return frame_ptr_->args_.get_data();
   }
-  ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>& args() {
+  ::fidl::VectorView<::test_anonymous::wire::Expression>& args() {
     ZX_ASSERT(has_args());
     return frame_ptr_->args_.get_data();
   }
@@ -565,8 +562,7 @@ class FunctionApplication final {
     return max_ordinal_ >= 3 && frame_ptr_->args_.has_data();
   }
   FunctionApplication& set_args(
-      ::fidl::ObjectView<
-          ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>
+      ::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::Expression>>
           elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->args_.set_data(elem);
@@ -583,7 +579,7 @@ class FunctionApplication final {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->args_.set_data(
         ::fidl::ObjectView<
-            ::fidl::VectorView<::fidl_test_anonymous::wire::Expression>>(
+            ::fidl::VectorView<::test_anonymous::wire::Expression>>(
             allocator, std::forward<Args>(args)...));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(3));
     return *this;
@@ -595,18 +591,18 @@ class FunctionApplication final {
     return *this;
   }
 
-  const ::fidl_test_anonymous::wire::Flags& flags() const {
+  const ::test_anonymous::wire::Flags& flags() const {
     ZX_ASSERT(has_flags());
     return frame_ptr_->flags_.get_data();
   }
-  ::fidl_test_anonymous::wire::Flags& flags() {
+  ::test_anonymous::wire::Flags& flags() {
     ZX_ASSERT(has_flags());
     return frame_ptr_->flags_.get_data();
   }
   bool has_flags() const {
     return max_ordinal_ >= 4 && frame_ptr_->flags_.has_data();
   }
-  FunctionApplication& set_flags(::fidl_test_anonymous::wire::Flags elem) {
+  FunctionApplication& set_flags(::test_anonymous::wire::Flags elem) {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->flags_.set_data(std::move(elem));
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(4));
@@ -623,15 +619,15 @@ class FunctionApplication final {
   explicit FunctionApplication(::fidl::AnyArena& allocator)
       : frame_ptr_(
             ::fidl::ObjectView<::fidl::WireTableFrame<
-                ::fidl_test_anonymous::wire::FunctionApplication>>(allocator)) {
-  }
+                ::test_anonymous::wire::FunctionApplication>>(allocator)) {}
   // This constructor allows a user controlled allocation (not using a Arena).
   // It should only be used when performance is key.
   // As soon as the frame is given to the table, it must not be used directly or
   // for another table.
   explicit FunctionApplication(
-      ::fidl::ObjectView<::fidl::WireTableFrame<
-          ::fidl_test_anonymous::wire::FunctionApplication>>&& frame)
+      ::fidl::ObjectView<
+          ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>&&
+          frame)
       : frame_ptr_(std::move(frame)) {}
   ~FunctionApplication() = default;
   FunctionApplication(const FunctionApplication& other) noexcept = default;
@@ -642,7 +638,7 @@ class FunctionApplication final {
       default;
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_FunctionApplicationTable;
+      &test_anonymous_FunctionApplicationTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 16;
@@ -652,12 +648,12 @@ class FunctionApplication final {
 
   void Allocate(::fidl::AnyArena& allocator) {
     max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::ObjectView<::fidl::WireTableFrame<
-        ::fidl_test_anonymous::wire::FunctionApplication>>(allocator);
+    frame_ptr_ = ::fidl::ObjectView<
+        ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>(
+        allocator);
   }
-  void Init(
-      ::fidl::ObjectView<::fidl::WireTableFrame<
-          ::fidl_test_anonymous::wire::FunctionApplication>>&& frame_ptr) {
+  void Init(::fidl::ObjectView<::fidl::WireTableFrame<
+                ::test_anonymous::wire::FunctionApplication>>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -669,16 +665,16 @@ class FunctionApplication final {
  private:
   uint64_t max_ordinal_ = 0;
   ::fidl::ObjectView<
-      ::fidl::WireTableFrame<::fidl_test_anonymous::wire::FunctionApplication>>
+      ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>>
       frame_ptr_;
 };
 
-extern "C" const fidl_type_t fidl_test_anonymous_UnionMemberTable;
+extern "C" const fidl_type_t test_anonymous_UnionMemberTable;
 
 class UnionMember {
  public:
   UnionMember()
-      : ordinal_(::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid),
+      : ordinal_(::test_anonymous::wire::UnionMember::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -693,13 +689,11 @@ class UnionMember {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_anonymous::wire::UnionMember::Ordinal::Invalid;
+    return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::Invalid;
   }
 
   bool is_union_data() const {
-    return ordinal_ ==
-           ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    return ordinal_ == ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
   }
   static UnionMember WithUnionData(uint8_t val) {
     UnionMember result;
@@ -708,24 +702,23 @@ class UnionMember {
   }
 
   void set_union_data(uint8_t elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
+    ordinal_ = ::test_anonymous::wire::UnionMember::Ordinal::kUnionData;
     envelope_.As<uint8_t>().set_data(std::move(elem));
   }
 
   uint8_t& mutable_union_data() {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData);
+              ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
     return envelope_.As<uint8_t>().get_data();
   }
   const uint8_t& union_data() const {
     ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData);
+              ::test_anonymous::wire::UnionMember::Ordinal::kUnionData);
     return envelope_.As<uint8_t>().get_data();
   }
-  ::fidl_test_anonymous::wire::UnionMember::Tag which() const;
+  ::test_anonymous::wire::UnionMember::Tag which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_UnionMemberTable;
+  static constexpr const fidl_type_t* Type = &test_anonymous_UnionMemberTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -744,20 +737,20 @@ class UnionMember {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_anonymous::wire::UnionMember::Ordinal ordinal_;
+  ::test_anonymous::wire::UnionMember::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_anonymous_ExpressionTable;
+extern "C" const fidl_type_t test_anonymous_ExpressionTable;
 
 class Expression {
  public:
-  using FunctionApplication = fidl_test_anonymous::wire::FunctionApplication;
-  using BinOp = fidl_test_anonymous::wire::OverrideTest;
+  using FunctionApplication = test_anonymous::wire::FunctionApplication;
+  using BinOp = test_anonymous::wire::OverrideTest;
 
   Expression()
-      : ordinal_(::fidl_test_anonymous::wire::Expression::Ordinal::Invalid),
+      : ordinal_(::test_anonymous::wire::Expression::Ordinal::Invalid),
         envelope_ {}
   {}
 
@@ -774,12 +767,11 @@ class Expression {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_anonymous::wire::Expression::Ordinal::Invalid;
+    return ordinal_ == ::test_anonymous::wire::Expression::Ordinal::Invalid;
   }
 
   bool is_value() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
+    return ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue;
   }
   static Expression WithValue(::fidl::ObjectView<uint64_t> val) {
     Expression result;
@@ -796,33 +788,31 @@ class Expression {
   }
 
   void set_value(::fidl::ObjectView<uint64_t> elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
+    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kValue;
     envelope_.As<uint64_t>().set_data(std::move(elem));
   }
 
   template <typename... Args>
   void set_value(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
+    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kValue;
     set_value(
         ::fidl::ObjectView<uint64_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint64_t& mutable_value() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kValue);
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue);
     return envelope_.As<uint64_t>().get_data();
   }
   const uint64_t& value() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kValue);
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kValue);
     return envelope_.As<uint64_t>().get_data();
   }
 
   bool is_bin_op() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
+    return ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp;
   }
   static Expression WithBinOp(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> val) {
+      ::fidl::ObjectView<::test_anonymous::wire::OverrideTest> val) {
     Expression result;
     result.set_bin_op(val);
     return result;
@@ -831,44 +821,40 @@ class Expression {
   template <typename... Args>
   static Expression WithBinOp(::fidl::AnyArena& allocator, Args&&... args) {
     Expression result;
-    result.set_bin_op(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
-            allocator, std::forward<Args>(args)...));
+    result.set_bin_op(::fidl::ObjectView<::test_anonymous::wire::OverrideTest>(
+        allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_bin_op(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
-    envelope_.As<::fidl_test_anonymous::wire::OverrideTest>().set_data(
+      ::fidl::ObjectView<::test_anonymous::wire::OverrideTest> elem) {
+    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kBinOp;
+    envelope_.As<::test_anonymous::wire::OverrideTest>().set_data(
         std::move(elem));
   }
 
   template <typename... Args>
   void set_bin_op(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
-    set_bin_op(::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest>(
+    ordinal_ = ::test_anonymous::wire::Expression::Ordinal::kBinOp;
+    set_bin_op(::fidl::ObjectView<::test_anonymous::wire::OverrideTest>(
         allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_anonymous::wire::OverrideTest& mutable_bin_op() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
-    return envelope_.As<::fidl_test_anonymous::wire::OverrideTest>().get_data();
+  ::test_anonymous::wire::OverrideTest& mutable_bin_op() {
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp);
+    return envelope_.As<::test_anonymous::wire::OverrideTest>().get_data();
   }
-  const ::fidl_test_anonymous::wire::OverrideTest& bin_op() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp);
-    return envelope_.As<::fidl_test_anonymous::wire::OverrideTest>().get_data();
+  const ::test_anonymous::wire::OverrideTest& bin_op() const {
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::Expression::Ordinal::kBinOp);
+    return envelope_.As<::test_anonymous::wire::OverrideTest>().get_data();
   }
 
   bool is_function_application() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::
-                           kFunctionApplication;
+    return ordinal_ ==
+           ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
   }
   static Expression WithFunctionApplication(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
-          val) {
+      ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication> val) {
     Expression result;
     result.set_function_application(val);
     return result;
@@ -879,49 +865,46 @@ class Expression {
                                             Args&&... args) {
     Expression result;
     result.set_function_application(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>(
+        ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication>(
             allocator, std::forward<Args>(args)...));
     return result;
   }
 
   void set_function_application(
-      ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
-          elem) {
+      ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication> elem) {
     ordinal_ =
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
-    envelope_.As<::fidl_test_anonymous::wire::FunctionApplication>().set_data(
+        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
+    envelope_.As<::test_anonymous::wire::FunctionApplication>().set_data(
         std::move(elem));
   }
 
   template <typename... Args>
   void set_function_application(::fidl::AnyArena& allocator, Args&&... args) {
     ordinal_ =
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
+        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication;
     set_function_application(
-        ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>(
+        ::fidl::ObjectView<::test_anonymous::wire::FunctionApplication>(
             allocator, std::forward<Args>(args)...));
   }
 
-  ::fidl_test_anonymous::wire::FunctionApplication&
-  mutable_function_application() {
+  ::test_anonymous::wire::FunctionApplication& mutable_function_application() {
     ZX_ASSERT(
         ordinal_ ==
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
-    return envelope_.As<::fidl_test_anonymous::wire::FunctionApplication>()
+        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
+    return envelope_.As<::test_anonymous::wire::FunctionApplication>()
         .get_data();
   }
-  const ::fidl_test_anonymous::wire::FunctionApplication& function_application()
+  const ::test_anonymous::wire::FunctionApplication& function_application()
       const {
     ZX_ASSERT(
         ordinal_ ==
-        ::fidl_test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
-    return envelope_.As<::fidl_test_anonymous::wire::FunctionApplication>()
+        ::test_anonymous::wire::Expression::Ordinal::kFunctionApplication);
+    return envelope_.As<::test_anonymous::wire::FunctionApplication>()
         .get_data();
   }
-  ::fidl_test_anonymous::wire::Expression::Tag which() const;
+  ::test_anonymous::wire::Expression::Tag which() const;
 
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_ExpressionTable;
+  static constexpr const fidl_type_t* Type = &test_anonymous_ExpressionTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -942,22 +925,21 @@ class Expression {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_anonymous::wire::Expression::Ordinal ordinal_;
+  ::test_anonymous::wire::Expression::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t
-    fidl_test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ResultTable;
 
 class SomeProtocolSomeMethodResult {
  public:
-  using Err = fidl_test_anonymous::wire::SomeProtocolSomeMethodError;
-  using Response = fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse;
+  using Err = test_anonymous::wire::SomeProtocolSomeMethodError;
+  using Response = test_anonymous::wire::SomeProtocolSomeMethodResponse;
 
   SomeProtocolSomeMethodResult()
-      : ordinal_(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-                     Ordinal::Invalid),
+      : ordinal_(::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::
+                     Invalid),
         envelope_ {}
   {}
 
@@ -974,87 +956,85 @@ class SomeProtocolSomeMethodResult {
   };
 
   bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::
-                           SomeProtocolSomeMethodResult::Ordinal::Invalid;
+    return ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
+                           Ordinal::Invalid;
   }
 
   bool is_response() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::
-                           SomeProtocolSomeMethodResult::Ordinal::kResponse;
+    return ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
+                           Ordinal::kResponse;
   }
   static SomeProtocolSomeMethodResult WithResponse(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse val) {
+      ::test_anonymous::wire::SomeProtocolSomeMethodResponse val) {
     SomeProtocolSomeMethodResult result;
     result.set_response(std::move(val));
     return result;
   }
 
   void set_response(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kResponse;
-    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+      ::test_anonymous::wire::SomeProtocolSomeMethodResponse elem) {
+    ordinal_ = ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::
+        kResponse;
+    envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
         .set_data(std::move(elem));
   }
 
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse&
-  mutable_response() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kResponse);
+  ::test_anonymous::wire::SomeProtocolSomeMethodResponse& mutable_response() {
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
+                              Ordinal::kResponse);
     return envelope_
-        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
         .get_data();
   }
-  const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse& response()
+  const ::test_anonymous::wire::SomeProtocolSomeMethodResponse& response()
       const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kResponse);
+    ZX_ASSERT(ordinal_ == ::test_anonymous::wire::SomeProtocolSomeMethodResult::
+                              Ordinal::kResponse);
     return envelope_
-        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
+        .As<::test_anonymous::wire::SomeProtocolSomeMethodResponse>()
         .get_data();
   }
 
   bool is_err() const {
-    return ordinal_ == ::fidl_test_anonymous::wire::
-                           SomeProtocolSomeMethodResult::Ordinal::kErr;
+    return ordinal_ ==
+           ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr;
   }
   static SomeProtocolSomeMethodResult WithErr(
-      ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError val) {
+      ::test_anonymous::wire::SomeProtocolSomeMethodError val) {
     SomeProtocolSomeMethodResult result;
     result.set_err(std::move(val));
     return result;
   }
 
-  void set_err(::fidl_test_anonymous::wire::SomeProtocolSomeMethodError elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kErr;
-    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+  void set_err(::test_anonymous::wire::SomeProtocolSomeMethodError elem) {
+    ordinal_ =
+        ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr;
+    envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
         .set_data(std::move(elem));
   }
 
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kErr);
-    return envelope_
-        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+  ::test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {
+    ZX_ASSERT(
+        ordinal_ ==
+        ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr);
+    return envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
         .get_data();
   }
-  const ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& err() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_anonymous::wire::
-                              SomeProtocolSomeMethodResult::Ordinal::kErr);
-    return envelope_
-        .As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
+  const ::test_anonymous::wire::SomeProtocolSomeMethodError& err() const {
+    ZX_ASSERT(
+        ordinal_ ==
+        ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal::kErr);
+    return envelope_.As<::test_anonymous::wire::SomeProtocolSomeMethodError>()
         .get_data();
   }
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Tag which() const {
+  ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<
-        ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(
-        ordinal_);
+        ::test_anonymous::wire::SomeProtocolSomeMethodResult::Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_SomeProtocol_SomeMethod_ResultTable;
+      &test_anonymous_SomeProtocol_SomeMethod_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 16;
   static constexpr uint32_t PrimarySizeV1 = 24;
@@ -1074,29 +1054,28 @@ class SomeProtocolSomeMethodResult {
   };
 
   static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal ordinal_;
+  ::test_anonymous::wire::SomeProtocolSomeMethodResult::Ordinal ordinal_;
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
 
-extern "C" const fidl_type_t fidl_test_anonymous_OverrideTestTable;
+extern "C" const fidl_type_t test_anonymous_OverrideTestTable;
 
 struct OverrideTest {
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_anonymous_OverrideTestTable;
+  static constexpr const fidl_type_t* Type = &test_anonymous_OverrideTestTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 40;
   static constexpr uint32_t PrimarySizeV1 = 56;
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 4294967295;
   static constexpr uint32_t MaxOutOfLineV1 = 4294967295;
   static constexpr bool HasPointer = true;
-  using Op = fidl_test_anonymous::wire::Op;
+  using Op = test_anonymous::wire::Op;
 
-  ::fidl_test_anonymous::wire::Op op = {};
+  ::test_anonymous::wire::Op op = {};
 
-  ::fidl_test_anonymous::wire::Expression left = {};
+  ::test_anonymous::wire::Expression left = {};
 
-  ::fidl_test_anonymous::wire::Expression right = {};
+  ::test_anonymous::wire::Expression right = {};
 
   class UnownedEncodedMessage;
   class OwnedEncodedMessage;
@@ -1104,126 +1083,111 @@ struct OverrideTest {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::Flags> : public std::true_type {
+struct IsFidlType<::test_anonymous::wire::Flags> : public std::true_type {};
+template <>
+struct ContainsHandle<::test_anonymous::wire::Flags> : public std::false_type {
+};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::Flags>);
+static_assert(sizeof(::test_anonymous::wire::Flags) == sizeof(uint16_t));
+
+template <>
+struct IsFidlType<::test_anonymous::wire::BitsMember> : public std::true_type {
 };
 template <>
-struct ContainsHandle<::fidl_test_anonymous::wire::Flags>
+struct ContainsHandle<::test_anonymous::wire::BitsMember>
     : public std::false_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_anonymous::wire::Flags>);
-static_assert(sizeof(::fidl_test_anonymous::wire::Flags) == sizeof(uint16_t));
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::BitsMember>);
+static_assert(sizeof(::test_anonymous::wire::BitsMember) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::BitsMember>
-    : public std::true_type {};
+struct IsFidlType<::test_anonymous::wire::TableData> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_anonymous::wire::BitsMember>
-    : public std::false_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_anonymous::wire::BitsMember>);
-static_assert(sizeof(::fidl_test_anonymous::wire::BitsMember) ==
-              sizeof(uint32_t));
+struct IsStruct<::test_anonymous::wire::TableData> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableData>);
+static_assert(offsetof(::test_anonymous::wire::TableData, data) == 0);
+static_assert(sizeof(::test_anonymous::wire::TableData) ==
+              ::test_anonymous::wire::TableData::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::TableData>
+struct IsFidlType<::test_anonymous::wire::OverrideTest>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_anonymous::wire::TableData>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_anonymous::wire::TableData>);
-static_assert(offsetof(::fidl_test_anonymous::wire::TableData, data) == 0);
-static_assert(sizeof(::fidl_test_anonymous::wire::TableData) ==
-              ::fidl_test_anonymous::wire::TableData::PrimarySize);
+struct IsStruct<::test_anonymous::wire::OverrideTest> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::OverrideTest>);
+static_assert(offsetof(::test_anonymous::wire::OverrideTest, op) == 0);
+static_assert(offsetof(::test_anonymous::wire::OverrideTest, left) == 8);
+static_assert(offsetof(::test_anonymous::wire::OverrideTest, right) == 24);
+static_assert(sizeof(::test_anonymous::wire::OverrideTest) ==
+              ::test_anonymous::wire::OverrideTest::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::OverrideTest>
+struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodResponse>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_anonymous::wire::OverrideTest>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_anonymous::wire::OverrideTest>);
-static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, op) == 0);
-static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, left) == 8);
-static_assert(offsetof(::fidl_test_anonymous::wire::OverrideTest, right) == 24);
-static_assert(sizeof(::fidl_test_anonymous::wire::OverrideTest) ==
-              ::fidl_test_anonymous::wire::OverrideTest::PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
+struct IsStruct<::test_anonymous::wire::SomeProtocolSomeMethodResponse>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>);
+              ::test_anonymous::wire::SomeProtocolSomeMethodResponse>);
+static_assert(offsetof(::test_anonymous::wire::SomeProtocolSomeMethodResponse,
+                       bits_member) == 0);
 static_assert(
-    offsetof(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse,
-             bits_member) == 0);
-static_assert(
-    sizeof(::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse) ==
-    ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse::PrimarySize);
+    sizeof(::test_anonymous::wire::SomeProtocolSomeMethodResponse) ==
+    ::test_anonymous::wire::SomeProtocolSomeMethodResponse::PrimarySize);
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::TableMember>
-    : public std::true_type {};
+struct IsFidlType<::test_anonymous::wire::TableMember> : public std::true_type {
+};
 template <>
-struct IsTable<::fidl_test_anonymous::wire::TableMember>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_anonymous::wire::TableMember>);
+struct IsTable<::test_anonymous::wire::TableMember> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::TableMember>);
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::FunctionApplication>
+struct IsFidlType<::test_anonymous::wire::FunctionApplication>
     : public std::true_type {};
 template <>
-struct IsTable<::fidl_test_anonymous::wire::FunctionApplication>
+struct IsTable<::test_anonymous::wire::FunctionApplication>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_anonymous::wire::FunctionApplication>);
+
+template <>
+struct IsFidlType<::test_anonymous::wire::UnionMember> : public std::true_type {
+};
+template <>
+struct IsUnion<::test_anonymous::wire::UnionMember> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::UnionMember>);
+
+template <>
+struct IsFidlType<::test_anonymous::wire::Expression> : public std::true_type {
+};
+template <>
+struct IsUnion<::test_anonymous::wire::Expression> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test_anonymous::wire::Expression>);
+
+template <>
+struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodResult>
+    : public std::true_type {};
+template <>
+struct IsUnion<::test_anonymous::wire::SomeProtocolSomeMethodResult>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
-              ::fidl_test_anonymous::wire::FunctionApplication>);
+              ::test_anonymous::wire::SomeProtocolSomeMethodResult>);
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::UnionMember>
+struct IsFidlType<::test_anonymous::wire::SomeProtocolSomeMethodError>
     : public std::true_type {};
 template <>
-struct IsUnion<::fidl_test_anonymous::wire::UnionMember>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_anonymous::wire::UnionMember>);
-
-template <>
-struct IsFidlType<::fidl_test_anonymous::wire::Expression>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_anonymous::wire::Expression>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_anonymous::wire::Expression>);
-
-template <>
-struct IsFidlType<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult>);
-
-template <>
-struct IsFidlType<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
-    : public std::true_type {};
-template <>
-struct ContainsHandle<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
+struct ContainsHandle<::test_anonymous::wire::SomeProtocolSomeMethodError>
     : public std::false_type {};
 
 template <>
-struct IsFidlType<::fidl_test_anonymous::wire::Op> : public std::true_type {};
+struct IsFidlType<::test_anonymous::wire::Op> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_anonymous::wire::Op>
-    : public std::false_type {};
+struct ContainsHandle<::test_anonymous::wire::Op> : public std::false_type {};
 
 }  // namespace fidl

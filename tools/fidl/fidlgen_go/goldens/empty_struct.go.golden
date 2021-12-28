@@ -61,9 +61,9 @@ func (msg *emptyProtocolWithCtxSendAndReceiveResponse) Marshaler() _bindings.Mar
 }
 
 const (
-	EmptyProtocolSendOrdinal           uint64 = 0x1e4e78d0556b6f28
-	EmptyProtocolReceiveOrdinal        uint64 = 0x45bd261c537791e0
-	EmptyProtocolSendAndReceiveOrdinal uint64 = 0x56ca6bd78bac3571
+	EmptyProtocolSendOrdinal           uint64 = 0x132262fd8b200708
+	EmptyProtocolReceiveOrdinal        uint64 = 0x1ff0ccf9b710e23f
+	EmptyProtocolSendAndReceiveOrdinal uint64 = 0x76a931254962cea
 )
 
 type EmptyProtocolWithCtxInterface _bindings.ChannelProxy

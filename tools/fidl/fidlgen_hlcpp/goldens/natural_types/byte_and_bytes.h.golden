@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace byteandbytes {
 class ByteAndBytes;
@@ -36,8 +35,8 @@ class ByteAndBytes final {
   zx_status_t Clone(ByteAndBytes* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::byteandbytes::ByteAndBytes& _value,
-                         ::fidl::test::byteandbytes::ByteAndBytes* _result) {
+inline zx_status_t Clone(const ::test::byteandbytes::ByteAndBytes& _value,
+                         ::test::byteandbytes::ByteAndBytes* _result) {
   return _value.Clone(_result);
 }
 
@@ -45,32 +44,33 @@ using ByteAndBytesPtr = ::std::unique_ptr<ByteAndBytes>;
 
 }  // namespace byteandbytes
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::byteandbytes::ByteAndBytes>
-    : public EncodableCodingTraits<::fidl::test::byteandbytes::ByteAndBytes, 56,
-                                   56> {};
+struct CodingTraits<::test::byteandbytes::ByteAndBytes>
+    : public EncodableCodingTraits<::test::byteandbytes::ByteAndBytes, 56, 56> {
+};
 
 template <>
-struct HasPadding<::fidl::test::byteandbytes::ByteAndBytes>
-    : public std::true_type {};
+struct HasPadding<::test::byteandbytes::ByteAndBytes> : public std::true_type {
+};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::byteandbytes::ByteAndBytes>
+struct IsMemcpyCompatible<::test::byteandbytes::ByteAndBytes>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::byteandbytes::ByteAndBytes>::value &&
+          !HasPadding<::test::byteandbytes::ByteAndBytes>::value &&
           IsMemcpyCompatible<::fidl::VectorPtr<uint8_t>>::value &&
           IsMemcpyCompatible<::std::vector<uint8_t>>::value &&
           IsMemcpyCompatible<uint8_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::byteandbytes::ByteAndBytes& value,
-                         ::fidl::test::byteandbytes::ByteAndBytes* result) {
-  return ::fidl::test::byteandbytes::Clone(value, result);
+inline zx_status_t Clone(const ::test::byteandbytes::ByteAndBytes& value,
+                         ::test::byteandbytes::ByteAndBytes* result) {
+  return ::test::byteandbytes::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::byteandbytes::ByteAndBytes> {
-  bool operator()(const ::fidl::test::byteandbytes::ByteAndBytes& _lhs,
-                  const ::fidl::test::byteandbytes::ByteAndBytes& _rhs) const {
+struct Equality<::test::byteandbytes::ByteAndBytes> {
+  bool operator()(const ::test::byteandbytes::ByteAndBytes& _lhs,
+                  const ::test::byteandbytes::ByteAndBytes& _rhs) const {
     if (!::fidl::Equals(_lhs.single_byte, _rhs.single_byte)) {
       return false;
     }

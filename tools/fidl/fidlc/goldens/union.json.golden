@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.union",
+  "name": "test.union",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -8,7 +8,7 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.union/TestProtocol",
+      "name": "test.union/TestProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
         "line": 125,
@@ -18,7 +18,7 @@
       "composed_protocols": [],
       "methods": [
         {
-          "ordinal": 8393311445612289086,
+          "ordinal": 582913180652179677,
           "name": "StrictXUnionHenceResponseMayBeStackAllocated",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
@@ -30,7 +30,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+            "identifier": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -55,7 +55,7 @@
           "has_error": false
         },
         {
-          "ordinal": 6296412872266712530,
+          "ordinal": 7698084639218919941,
           "name": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union.test.fidl",
@@ -67,7 +67,7 @@
           "has_response": true,
           "maybe_response_payload": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+            "identifier": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -97,7 +97,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+      "name": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
       "naming_context": [
         "TestProtocol",
         "StrictXUnionHenceResponseMayBeStackAllocated",
@@ -114,7 +114,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/StrictBoundedXUnion",
+            "identifier": "test.union/StrictBoundedXUnion",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -173,7 +173,7 @@
       }
     },
     {
-      "name": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+      "name": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
       "naming_context": [
         "TestProtocol",
         "FlexibleXUnionHenceResponseMustBeHeapAllocated",
@@ -190,7 +190,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/OlderSimpleUnion",
+            "identifier": "test.union/OlderSimpleUnion",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -249,7 +249,7 @@
       }
     },
     {
-      "name": "fidl.test.union/Pizza",
+      "name": "test.union/Pizza",
       "naming_context": [
         "Pizza"
       ],
@@ -345,7 +345,7 @@
       }
     },
     {
-      "name": "fidl.test.union/Pasta",
+      "name": "test.union/Pasta",
       "naming_context": [
         "Pasta"
       ],
@@ -419,7 +419,7 @@
       }
     },
     {
-      "name": "fidl.test.union/NullableUnionStruct",
+      "name": "test.union/NullableUnionStruct",
       "naming_context": [
         "NullableUnionStruct"
       ],
@@ -434,7 +434,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Union",
+            "identifier": "test.union/Union",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 24,
@@ -493,7 +493,7 @@
       }
     },
     {
-      "name": "fidl.test.union/Empty",
+      "name": "test.union/Empty",
       "naming_context": [
         "Empty"
       ],
@@ -526,7 +526,7 @@
       }
     },
     {
-      "name": "fidl.test.union/StructWithNullableXUnion",
+      "name": "test.union/StructWithNullableXUnion",
       "naming_context": [
         "StructWithNullableXUnion"
       ],
@@ -541,7 +541,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/OlderSimpleUnion",
+            "identifier": "test.union/OlderSimpleUnion",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 24,
@@ -600,7 +600,7 @@
       }
     },
     {
-      "name": "fidl.test.union/UnionSandwich",
+      "name": "test.union/UnionSandwich",
       "naming_context": [
         "UnionSandwich"
       ],
@@ -654,7 +654,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/ExplicitXUnion",
+            "identifier": "test.union/ExplicitXUnion",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -756,7 +756,7 @@
   "table_declarations": [],
   "union_declarations": [
     {
-      "name": "fidl.test.union/PizzaOrPasta",
+      "name": "test.union/PizzaOrPasta",
       "naming_context": [
         "PizzaOrPasta"
       ],
@@ -773,7 +773,7 @@
           "name": "pizza",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pizza",
+            "identifier": "test.union/Pizza",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -807,7 +807,7 @@
           "name": "pasta",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pasta",
+            "identifier": "test.union/Pasta",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -858,7 +858,7 @@
       }
     },
     {
-      "name": "fidl.test.union/ExplicitPizzaOrPasta",
+      "name": "test.union/ExplicitPizzaOrPasta",
       "naming_context": [
         "ExplicitPizzaOrPasta"
       ],
@@ -895,7 +895,7 @@
           "name": "pizza",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pizza",
+            "identifier": "test.union/Pizza",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -929,7 +929,7 @@
           "name": "pasta",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pasta",
+            "identifier": "test.union/Pasta",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -980,7 +980,7 @@
       }
     },
     {
-      "name": "fidl.test.union/FlexiblePizzaOrPasta",
+      "name": "test.union/FlexiblePizzaOrPasta",
       "naming_context": [
         "FlexiblePizzaOrPasta"
       ],
@@ -997,7 +997,7 @@
           "name": "pizza",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pizza",
+            "identifier": "test.union/Pizza",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1031,7 +1031,7 @@
           "name": "pasta",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pasta",
+            "identifier": "test.union/Pasta",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1082,7 +1082,7 @@
       }
     },
     {
-      "name": "fidl.test.union/StrictPizzaOrPasta",
+      "name": "test.union/StrictPizzaOrPasta",
       "naming_context": [
         "StrictPizzaOrPasta"
       ],
@@ -1099,7 +1099,7 @@
           "name": "pizza",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pizza",
+            "identifier": "test.union/Pizza",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1133,7 +1133,7 @@
           "name": "pasta",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Pasta",
+            "identifier": "test.union/Pasta",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -1184,7 +1184,7 @@
       }
     },
     {
-      "name": "fidl.test.union/Union",
+      "name": "test.union/Union",
       "naming_context": [
         "Union"
       ],
@@ -1339,7 +1339,7 @@
       }
     },
     {
-      "name": "fidl.test.union/FlexibleUnion",
+      "name": "test.union/FlexibleUnion",
       "naming_context": [
         "FlexibleUnion"
       ],
@@ -1494,7 +1494,7 @@
       }
     },
     {
-      "name": "fidl.test.union/StrictUnion",
+      "name": "test.union/StrictUnion",
       "naming_context": [
         "StrictUnion"
       ],
@@ -1649,7 +1649,7 @@
       }
     },
     {
-      "name": "fidl.test.union/FieldCollision",
+      "name": "test.union/FieldCollision",
       "naming_context": [
         "FieldCollision"
       ],
@@ -1716,7 +1716,7 @@
       }
     },
     {
-      "name": "fidl.test.union/ExplicitUnion",
+      "name": "test.union/ExplicitUnion",
       "naming_context": [
         "ExplicitUnion"
       ],
@@ -1826,7 +1826,7 @@
       }
     },
     {
-      "name": "fidl.test.union/ReverseOrdinalUnion",
+      "name": "test.union/ReverseOrdinalUnion",
       "naming_context": [
         "ReverseOrdinalUnion"
       ],
@@ -1926,7 +1926,7 @@
       }
     },
     {
-      "name": "fidl.test.union/FlexibleFoo",
+      "name": "test.union/FlexibleFoo",
       "naming_context": [
         "FlexibleFoo"
       ],
@@ -2026,7 +2026,7 @@
       }
     },
     {
-      "name": "fidl.test.union/StrictFoo",
+      "name": "test.union/StrictFoo",
       "naming_context": [
         "StrictFoo"
       ],
@@ -2126,7 +2126,7 @@
       }
     },
     {
-      "name": "fidl.test.union/ExplicitFoo",
+      "name": "test.union/ExplicitFoo",
       "naming_context": [
         "ExplicitFoo"
       ],
@@ -2236,7 +2236,7 @@
       }
     },
     {
-      "name": "fidl.test.union/ExplicitStrictFoo",
+      "name": "test.union/ExplicitStrictFoo",
       "naming_context": [
         "ExplicitStrictFoo"
       ],
@@ -2346,7 +2346,7 @@
       }
     },
     {
-      "name": "fidl.test.union/OlderSimpleUnion",
+      "name": "test.union/OlderSimpleUnion",
       "naming_context": [
         "OlderSimpleUnion"
       ],
@@ -2446,7 +2446,7 @@
       }
     },
     {
-      "name": "fidl.test.union/NewerSimpleUnion",
+      "name": "test.union/NewerSimpleUnion",
       "naming_context": [
         "NewerSimpleUnion"
       ],
@@ -2601,7 +2601,7 @@
       }
     },
     {
-      "name": "fidl.test.union/StrictSimpleXUnion",
+      "name": "test.union/StrictSimpleXUnion",
       "naming_context": [
         "StrictSimpleXUnion"
       ],
@@ -2734,7 +2734,7 @@
       }
     },
     {
-      "name": "fidl.test.union/XUnionContainingEmptyStruct",
+      "name": "test.union/XUnionContainingEmptyStruct",
       "naming_context": [
         "XUnionContainingEmptyStruct"
       ],
@@ -2751,7 +2751,7 @@
           "name": "empty",
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.union/Empty",
+            "identifier": "test.union/Empty",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 1,
@@ -2802,7 +2802,7 @@
       }
     },
     {
-      "name": "fidl.test.union/StrictBoundedXUnion",
+      "name": "test.union/StrictBoundedXUnion",
       "naming_context": [
         "StrictBoundedXUnion"
       ],
@@ -2892,7 +2892,7 @@
       }
     },
     {
-      "name": "fidl.test.union/ExplicitXUnion",
+      "name": "test.union/ExplicitXUnion",
       "naming_context": [
         "ExplicitXUnion"
       ],
@@ -3012,7 +3012,7 @@
       }
     },
     {
-      "name": "fidl.test.union/UnionWithAttributes",
+      "name": "test.union/UnionWithAttributes",
       "naming_context": [
         "UnionWithAttributes"
       ],
@@ -3127,67 +3127,67 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.union/UnionWithAttributes",
-    "fidl.test.union/Union",
-    "fidl.test.union/StructWithNullableXUnion",
-    "fidl.test.union/StrictUnion",
-    "fidl.test.union/StrictSimpleXUnion",
-    "fidl.test.union/StrictFoo",
-    "fidl.test.union/StrictBoundedXUnion",
-    "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
-    "fidl.test.union/ReverseOrdinalUnion",
-    "fidl.test.union/Pizza",
-    "fidl.test.union/Pasta",
-    "fidl.test.union/StrictPizzaOrPasta",
-    "fidl.test.union/PizzaOrPasta",
-    "fidl.test.union/FlexiblePizzaOrPasta",
-    "fidl.test.union/ExplicitPizzaOrPasta",
-    "fidl.test.union/OlderSimpleUnion",
-    "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
-    "fidl.test.union/TestProtocol",
-    "fidl.test.union/NullableUnionStruct",
-    "fidl.test.union/NewerSimpleUnion",
-    "fidl.test.union/FlexibleUnion",
-    "fidl.test.union/FlexibleFoo",
-    "fidl.test.union/FieldCollision",
-    "fidl.test.union/ExplicitXUnion",
-    "fidl.test.union/UnionSandwich",
-    "fidl.test.union/ExplicitUnion",
-    "fidl.test.union/ExplicitStrictFoo",
-    "fidl.test.union/ExplicitFoo",
-    "fidl.test.union/Empty",
-    "fidl.test.union/XUnionContainingEmptyStruct"
+    "test.union/UnionWithAttributes",
+    "test.union/Union",
+    "test.union/StructWithNullableXUnion",
+    "test.union/StrictUnion",
+    "test.union/StrictSimpleXUnion",
+    "test.union/StrictFoo",
+    "test.union/StrictBoundedXUnion",
+    "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+    "test.union/ReverseOrdinalUnion",
+    "test.union/Pizza",
+    "test.union/Pasta",
+    "test.union/StrictPizzaOrPasta",
+    "test.union/PizzaOrPasta",
+    "test.union/FlexiblePizzaOrPasta",
+    "test.union/ExplicitPizzaOrPasta",
+    "test.union/OlderSimpleUnion",
+    "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+    "test.union/TestProtocol",
+    "test.union/NullableUnionStruct",
+    "test.union/NewerSimpleUnion",
+    "test.union/FlexibleUnion",
+    "test.union/FlexibleFoo",
+    "test.union/FieldCollision",
+    "test.union/ExplicitXUnion",
+    "test.union/UnionSandwich",
+    "test.union/ExplicitUnion",
+    "test.union/ExplicitStrictFoo",
+    "test.union/ExplicitFoo",
+    "test.union/Empty",
+    "test.union/XUnionContainingEmptyStruct"
   ],
   "declarations": {
-    "fidl.test.union/TestProtocol": "interface",
-    "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse": "struct",
-    "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse": "struct",
-    "fidl.test.union/Pizza": "struct",
-    "fidl.test.union/Pasta": "struct",
-    "fidl.test.union/NullableUnionStruct": "struct",
-    "fidl.test.union/Empty": "struct",
-    "fidl.test.union/StructWithNullableXUnion": "struct",
-    "fidl.test.union/UnionSandwich": "struct",
-    "fidl.test.union/PizzaOrPasta": "union",
-    "fidl.test.union/ExplicitPizzaOrPasta": "union",
-    "fidl.test.union/FlexiblePizzaOrPasta": "union",
-    "fidl.test.union/StrictPizzaOrPasta": "union",
-    "fidl.test.union/Union": "union",
-    "fidl.test.union/FlexibleUnion": "union",
-    "fidl.test.union/StrictUnion": "union",
-    "fidl.test.union/FieldCollision": "union",
-    "fidl.test.union/ExplicitUnion": "union",
-    "fidl.test.union/ReverseOrdinalUnion": "union",
-    "fidl.test.union/FlexibleFoo": "union",
-    "fidl.test.union/StrictFoo": "union",
-    "fidl.test.union/ExplicitFoo": "union",
-    "fidl.test.union/ExplicitStrictFoo": "union",
-    "fidl.test.union/OlderSimpleUnion": "union",
-    "fidl.test.union/NewerSimpleUnion": "union",
-    "fidl.test.union/StrictSimpleXUnion": "union",
-    "fidl.test.union/XUnionContainingEmptyStruct": "union",
-    "fidl.test.union/StrictBoundedXUnion": "union",
-    "fidl.test.union/ExplicitXUnion": "union",
-    "fidl.test.union/UnionWithAttributes": "union"
+    "test.union/TestProtocol": "interface",
+    "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse": "struct",
+    "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse": "struct",
+    "test.union/Pizza": "struct",
+    "test.union/Pasta": "struct",
+    "test.union/NullableUnionStruct": "struct",
+    "test.union/Empty": "struct",
+    "test.union/StructWithNullableXUnion": "struct",
+    "test.union/UnionSandwich": "struct",
+    "test.union/PizzaOrPasta": "union",
+    "test.union/ExplicitPizzaOrPasta": "union",
+    "test.union/FlexiblePizzaOrPasta": "union",
+    "test.union/StrictPizzaOrPasta": "union",
+    "test.union/Union": "union",
+    "test.union/FlexibleUnion": "union",
+    "test.union/StrictUnion": "union",
+    "test.union/FieldCollision": "union",
+    "test.union/ExplicitUnion": "union",
+    "test.union/ReverseOrdinalUnion": "union",
+    "test.union/FlexibleFoo": "union",
+    "test.union/StrictFoo": "union",
+    "test.union/ExplicitFoo": "union",
+    "test.union/ExplicitStrictFoo": "union",
+    "test.union/OlderSimpleUnion": "union",
+    "test.union/NewerSimpleUnion": "union",
+    "test.union/StrictSimpleXUnion": "union",
+    "test.union/XUnionContainingEmptyStruct": "union",
+    "test.union/StrictBoundedXUnion": "union",
+    "test.union/ExplicitXUnion": "union",
+    "test.union/UnionWithAttributes": "union"
   }
 }

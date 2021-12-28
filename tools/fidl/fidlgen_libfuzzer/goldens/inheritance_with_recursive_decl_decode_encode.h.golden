@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/fidl.test.inheritancewithrecursivedecl/cpp/wire.h>
+#include <fidl/test.inheritancewithrecursivedecl/cpp/wire.h>
 
 // For ::fidl::fuzzing::DecoderEncoderImpl.
 #include <lib/fidl/cpp/fuzzing/decoder_encoder.h>
@@ -10,32 +10,32 @@
 namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
-    fidl_test_inheritancewithrecursivedecl_decoder_encoders = {
+    test_inheritancewithrecursivedecl_decoder_encoders = {
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
+            .fidl_type_name = "::fidl::WireRequest<::test_"
                               "inheritancewithrecursivedecl::Parent::First>",
             .has_flexible_envelope = false,
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::fidl_test_inheritancewithrecursivedecl::Parent::First>>,
+                    ::test_inheritancewithrecursivedecl::Parent::First>>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
+            .fidl_type_name = "::fidl::WireRequest<::test_"
                               "inheritancewithrecursivedecl::Child::First>",
             .has_flexible_envelope = false,
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::fidl_test_inheritancewithrecursivedecl::Child::First>>,
+                    ::test_inheritancewithrecursivedecl::Child::First>>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::WireRequest<::fidl_test_"
+            .fidl_type_name = "::fidl::WireRequest<::test_"
                               "inheritancewithrecursivedecl::Child::Second>",
             .has_flexible_envelope = false,
             .decoder_encoder =
                 ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
-                    ::fidl_test_inheritancewithrecursivedecl::Child::Second>>,
+                    ::test_inheritancewithrecursivedecl::Child::Second>>,
         },
 };
 

@@ -18,18 +18,18 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/dependent/cpp/wire_types.h>
-#include <fidl/fidl.test.importedconstvalues/cpp/markers.h>
+#include <fidl/test.dependent/cpp/wire_types.h>
+#include <fidl/test.importedconstvalues/cpp/markers.h>
 
-namespace fidl_test_importedconstvalues {
+namespace test_importedconstvalues {
 namespace wire {
 struct MyStruct;
 
-extern "C" const fidl_type_t fidl_test_importedconstvalues_MyStructTable;
+extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;
 
 struct MyStruct {
   static constexpr const fidl_type_t* Type =
-      &fidl_test_importedconstvalues_MyStructTable;
+      &test_importedconstvalues_MyStructTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   static constexpr uint32_t PrimarySizeV1 = 1;
@@ -45,20 +45,20 @@ struct MyStruct {
 };
 
 }  // namespace wire
-}  // namespace fidl_test_importedconstvalues
+}  // namespace test_importedconstvalues
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_importedconstvalues::wire::MyStruct>
+struct IsFidlType<::test_importedconstvalues::wire::MyStruct>
     : public std::true_type {};
 template <>
-struct IsStruct<::fidl_test_importedconstvalues::wire::MyStruct>
+struct IsStruct<::test_importedconstvalues::wire::MyStruct>
     : public std::true_type {};
 static_assert(
-    std::is_standard_layout_v<::fidl_test_importedconstvalues::wire::MyStruct>);
-static_assert(offsetof(::fidl_test_importedconstvalues::wire::MyStruct,
+    std::is_standard_layout_v<::test_importedconstvalues::wire::MyStruct>);
+static_assert(offsetof(::test_importedconstvalues::wire::MyStruct,
                        __reserved) == 0);
-static_assert(sizeof(::fidl_test_importedconstvalues::wire::MyStruct) ==
-              ::fidl_test_importedconstvalues::wire::MyStruct::PrimarySize);
+static_assert(sizeof(::test_importedconstvalues::wire::MyStruct) ==
+              ::test_importedconstvalues::wire::MyStruct::PrimarySize);
 
 }  // namespace fidl

@@ -2,14 +2,13 @@
 
 #pragma once
 
-#include <bottom/cpp/fidl.h>
-#include <fidl/test/transitivedependenciescompose/cpp/fidl.h>
-#include <middle/cpp/fidl.h>
-namespace fidl {
+#include <test/bottom/cpp/fidl.h>
+#include <test/middle/cpp/fidl.h>
+#include <test/transitivedependenciescompose/cpp/fidl.h>
 namespace test {
 namespace transitivedependenciescompose {
 namespace testing {
-class Top_TestBase : public ::fidl::test::transitivedependenciescompose::Top {
+class Top_TestBase : public ::test::transitivedependenciescompose::Top {
  public:
   virtual ~Top_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -18,4 +17,3 @@ class Top_TestBase : public ::fidl::test::transitivedependenciescompose::Top {
 }  // namespace testing
 }  // namespace transitivedependenciescompose
 }  // namespace test
-}  // namespace fidl

@@ -2,20 +2,20 @@
 
 #pragma once
 
-#include <exampleusing/cpp/fidl.h>
-#include <fidl/test/placementofattributes/cpp/fidl.h>
-namespace fidl {
+#include <test/exampleusing/cpp/fidl.h>
+#include <test/placementofattributes/cpp/fidl.h>
 namespace test {
 namespace placementofattributes {
 namespace testing {
 class ExampleProtocol_TestBase
-    : public ::fidl::test::placementofattributes::ExampleProtocol {
+    : public ::test::placementofattributes::ExampleProtocol {
  public:
   virtual ~ExampleProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void Method(::exampleusing::Empty arg) override { NotImplemented_("Method"); }
+  void Method(::test::exampleusing::Empty arg) override {
+    NotImplemented_("Method");
+  }
 };
 }  // namespace testing
 }  // namespace placementofattributes
 }  // namespace test
-}  // namespace fidl

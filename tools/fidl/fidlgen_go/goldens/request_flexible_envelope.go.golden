@@ -178,8 +178,8 @@ func StrictFooWithI(i int32) StrictFoo {
 }
 
 const (
-	ProtocolRequestStrictResponseFlexibleOrdinal uint64 = 0x3c5330c58686011a
-	ProtocolRequestFlexibleResponseStrictOrdinal uint64 = 0x3cb49d8f6e204f76
+	ProtocolRequestStrictResponseFlexibleOrdinal uint64 = 0x9b8c7d3d118df13
+	ProtocolRequestFlexibleResponseStrictOrdinal uint64 = 0x480c77690533acb7
 )
 
 type ProtocolWithCtxInterface _bindings.ChannelProxy

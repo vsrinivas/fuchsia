@@ -1,10 +1,10 @@
-library middle;
+library test.middle;
 
-using bottom;
+using test.bottom;
 
 // TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
 // single component library names.
 @bindings_denylist("cpp")
 type Bar = struct {
-    f bottom.Foo;
+    f test.bottom.Foo;
 };

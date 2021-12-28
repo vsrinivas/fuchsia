@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.inheritancewithrecursivedecl/cpp/wire.h>
-namespace fidl_test_inheritancewithrecursivedecl {
+#include <fidl/test.inheritancewithrecursivedecl/cpp/wire.h>
+namespace test_inheritancewithrecursivedecl {
 namespace testing {
 
-class Parent_TestBase : public ::fidl::WireServer<
-                            ::fidl_test_inheritancewithrecursivedecl::Parent> {
+class Parent_TestBase
+    : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -18,8 +18,8 @@ class Parent_TestBase : public ::fidl::WireServer<
   }
 };
 
-class Child_TestBase : public ::fidl::WireServer<
-                           ::fidl_test_inheritancewithrecursivedecl::Child> {
+class Child_TestBase
+    : public ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -34,4 +34,4 @@ class Child_TestBase : public ::fidl::WireServer<
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_inheritancewithrecursivedecl
+}  // namespace test_inheritancewithrecursivedecl

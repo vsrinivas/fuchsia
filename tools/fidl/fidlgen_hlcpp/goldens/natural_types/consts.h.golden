@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace consts {
 
@@ -18,8 +17,8 @@ enum class EnumType : int32_t {
   true_ = 2u,
 };
 
-inline zx_status_t Clone(::fidl::test::consts::EnumType value,
-                         ::fidl::test::consts::EnumType* result) {
+inline zx_status_t Clone(::test::consts::EnumType value,
+                         ::test::consts::EnumType* result) {
   *result = value;
   return ZX_OK;
 }
@@ -33,51 +32,51 @@ enum class BitsType : uint32_t {
 
 const static BitsType BitsTypeMask = static_cast<BitsType>(3u);
 
-constexpr inline ::fidl::test::consts::BitsType operator|(
-    ::fidl::test::consts::BitsType _lhs, ::fidl::test::consts::BitsType _rhs) {
-  return static_cast<::fidl::test::consts::BitsType>(
-      static_cast<uint32_t>(_lhs) | static_cast<uint32_t>(_rhs));
+constexpr inline ::test::consts::BitsType operator|(
+    ::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
+  return static_cast<::test::consts::BitsType>(static_cast<uint32_t>(_lhs) |
+                                               static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::consts::BitsType& operator|=(
-    ::fidl::test::consts::BitsType& _lhs, ::fidl::test::consts::BitsType _rhs) {
+constexpr inline ::test::consts::BitsType& operator|=(
+    ::test::consts::BitsType& _lhs, ::test::consts::BitsType _rhs) {
   _lhs = _lhs | _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::consts::BitsType operator&(
-    ::fidl::test::consts::BitsType _lhs, ::fidl::test::consts::BitsType _rhs) {
-  return static_cast<::fidl::test::consts::BitsType>(
-      static_cast<uint32_t>(_lhs) & static_cast<uint32_t>(_rhs));
+constexpr inline ::test::consts::BitsType operator&(
+    ::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
+  return static_cast<::test::consts::BitsType>(static_cast<uint32_t>(_lhs) &
+                                               static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::consts::BitsType& operator&=(
-    ::fidl::test::consts::BitsType& _lhs, ::fidl::test::consts::BitsType _rhs) {
+constexpr inline ::test::consts::BitsType& operator&=(
+    ::test::consts::BitsType& _lhs, ::test::consts::BitsType _rhs) {
   _lhs = _lhs & _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::consts::BitsType operator^(
-    ::fidl::test::consts::BitsType _lhs, ::fidl::test::consts::BitsType _rhs) {
-  return static_cast<::fidl::test::consts::BitsType>(
-      static_cast<uint32_t>(_lhs) ^ static_cast<uint32_t>(_rhs));
+constexpr inline ::test::consts::BitsType operator^(
+    ::test::consts::BitsType _lhs, ::test::consts::BitsType _rhs) {
+  return static_cast<::test::consts::BitsType>(static_cast<uint32_t>(_lhs) ^
+                                               static_cast<uint32_t>(_rhs));
 }
 
-constexpr inline ::fidl::test::consts::BitsType& operator^=(
-    ::fidl::test::consts::BitsType& _lhs, ::fidl::test::consts::BitsType _rhs) {
+constexpr inline ::test::consts::BitsType& operator^=(
+    ::test::consts::BitsType& _lhs, ::test::consts::BitsType _rhs) {
   _lhs = _lhs ^ _rhs;
   return _lhs;
 }
 
-constexpr inline ::fidl::test::consts::BitsType operator~(
-    ::fidl::test::consts::BitsType _value) {
-  return static_cast<::fidl::test::consts::BitsType>(
+constexpr inline ::test::consts::BitsType operator~(
+    ::test::consts::BitsType _value) {
+  return static_cast<::test::consts::BitsType>(
       ~static_cast<uint32_t>(_value) &
-      static_cast<uint32_t>(::fidl::test::consts::BitsTypeMask));
+      static_cast<uint32_t>(::test::consts::BitsTypeMask));
 }
 
-inline zx_status_t Clone(::fidl::test::consts::BitsType value,
-                         ::fidl::test::consts::BitsType* result) {
+inline zx_status_t Clone(::test::consts::BitsType value,
+                         ::test::consts::BitsType* result) {
   *result = value;
   return ZX_OK;
 }
@@ -92,15 +91,13 @@ constexpr float MIN_TEMP = -273.15f;
 
 constexpr uint64_t FUCHSIA = 4054509061583223046u;
 
-constexpr ::fidl::test::consts::EnumType enumVal =
-    ::fidl::test::consts::EnumType::VALUE;
+constexpr ::test::consts::EnumType enumVal = ::test::consts::EnumType::VALUE;
 
-constexpr ::fidl::test::consts::EnumType enumTrue =
-    ::fidl::test::consts::EnumType::true_;
+constexpr ::test::consts::EnumType enumTrue = ::test::consts::EnumType::true_;
 
-constexpr int32_t enumPrimitiveVal = ::fidl::test::consts::EnumType::VALUE;
+constexpr int32_t enumPrimitiveVal = ::test::consts::EnumType::VALUE;
 
-constexpr int32_t enumPrimitiveTrue = ::fidl::test::consts::EnumType::true_;
+constexpr int32_t enumPrimitiveTrue = ::test::consts::EnumType::true_;
 
 constexpr bool ENABLED_FLAG = true;
 
@@ -108,15 +105,13 @@ constexpr uint64_t DIAMOND = 1746410393481133080u;
 
 constexpr double CONVERSION_FACTOR = 1.41421;
 
-constexpr ::fidl::test::consts::BitsType bitsVal =
-    ::fidl::test::consts::BitsType::VALUE;
+constexpr ::test::consts::BitsType bitsVal = ::test::consts::BitsType::VALUE;
 
-constexpr ::fidl::test::consts::BitsType bitsTrue =
-    ::fidl::test::consts::BitsType::true_;
+constexpr ::test::consts::BitsType bitsTrue = ::test::consts::BitsType::true_;
 
-constexpr int32_t bitsPrimitiveVal = ::fidl::test::consts::BitsType::VALUE;
+constexpr int32_t bitsPrimitiveVal = ::test::consts::BitsType::VALUE;
 
-constexpr int32_t bitsPrimitiveTrue = ::fidl::test::consts::BitsType::true_;
+constexpr int32_t bitsPrimitiveTrue = ::test::consts::BitsType::true_;
 
 constexpr uint16_t ANSWER_IN_BINARY = 42u;
 
@@ -124,73 +119,70 @@ constexpr uint16_t ANSWER = 42u;
 
 }  // namespace consts
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::consts::EnumType> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::consts::EnumType);
+struct CodingTraits<::test::consts::EnumType> {
+  static constexpr size_t inline_size_old = sizeof(::test::consts::EnumType);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::consts::EnumType);
-  static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::consts::EnumType);
+      sizeof(::test::consts::EnumType);
+  static constexpr size_t inline_size_v2 = sizeof(::test::consts::EnumType);
   static void Encode(
-      Encoder* encoder, ::fidl::test::consts::EnumType* value, size_t offset,
+      Encoder* encoder, ::test::consts::EnumType* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     int32_t underlying = static_cast<int32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::consts::EnumType* value,
+  static void Decode(Decoder* decoder, ::test::consts::EnumType* value,
                      size_t offset) {
     int32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::consts::EnumType>(underlying);
+    *value = static_cast<::test::consts::EnumType>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::consts::EnumType value,
-                         ::fidl::test::consts::EnumType* result) {
-  return ::fidl::test::consts::Clone(value, result);
+inline zx_status_t Clone(::test::consts::EnumType value,
+                         ::test::consts::EnumType* result) {
+  return ::test::consts::Clone(value, result);
 }
 template <>
-struct Equality<::fidl::test::consts::EnumType> {
-  bool operator()(const ::fidl::test::consts::EnumType& _lhs,
-                  const ::fidl::test::consts::EnumType& _rhs) const {
+struct Equality<::test::consts::EnumType> {
+  bool operator()(const ::test::consts::EnumType& _lhs,
+                  const ::test::consts::EnumType& _rhs) const {
     return _lhs == _rhs;
   }
 };
 
 template <>
-struct CodingTraits<::fidl::test::consts::BitsType> {
-  static constexpr size_t inline_size_old =
-      sizeof(::fidl::test::consts::BitsType);
+struct CodingTraits<::test::consts::BitsType> {
+  static constexpr size_t inline_size_old = sizeof(::test::consts::BitsType);
   static constexpr size_t inline_size_v1_no_ee =
-      sizeof(::fidl::test::consts::BitsType);
-  static constexpr size_t inline_size_v2 =
-      sizeof(::fidl::test::consts::BitsType);
+      sizeof(::test::consts::BitsType);
+  static constexpr size_t inline_size_v2 = sizeof(::test::consts::BitsType);
   static void Encode(
-      Encoder* encoder, ::fidl::test::consts::BitsType* value, size_t offset,
+      Encoder* encoder, ::test::consts::BitsType* value, size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     ZX_DEBUG_ASSERT(!maybe_handle_info);
     uint32_t underlying = static_cast<uint32_t>(*value);
     ::fidl::Encode(encoder, &underlying, offset);
   }
-  static void Decode(Decoder* decoder, ::fidl::test::consts::BitsType* value,
+  static void Decode(Decoder* decoder, ::test::consts::BitsType* value,
                      size_t offset) {
     uint32_t underlying = {};
     ::fidl::Decode(decoder, &underlying, offset);
-    *value = static_cast<::fidl::test::consts::BitsType>(underlying);
+    *value = static_cast<::test::consts::BitsType>(underlying);
   }
 };
 
-inline zx_status_t Clone(::fidl::test::consts::BitsType value,
-                         ::fidl::test::consts::BitsType* result) {
-  return ::fidl::test::consts::Clone(value, result);
+inline zx_status_t Clone(::test::consts::BitsType value,
+                         ::test::consts::BitsType* result) {
+  return ::test::consts::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::consts::BitsType> {
-  bool operator()(const ::fidl::test::consts::BitsType& _lhs,
-                  const ::fidl::test::consts::BitsType& _rhs) const {
+struct Equality<::test::consts::BitsType> {
+  bool operator()(const ::test::consts::BitsType& _lhs,
+                  const ::test::consts::BitsType& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
     return ::fidl::Equals(_lhs_underlying, _rhs_underlying);

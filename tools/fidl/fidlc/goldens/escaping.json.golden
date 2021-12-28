@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.escaping",
+  "name": "test.escaping",
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],
@@ -10,7 +10,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.escaping/DocCommentWithQuotes",
+      "name": "test.escaping/DocCommentWithQuotes",
       "naming_context": [
         "DocCommentWithQuotes"
       ],
@@ -81,9 +81,9 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.escaping/DocCommentWithQuotes"
+    "test.escaping/DocCommentWithQuotes"
   ],
   "declarations": {
-    "fidl.test.escaping/DocCommentWithQuotes": "struct"
+    "test.escaping/DocCommentWithQuotes": "struct"
   }
 }

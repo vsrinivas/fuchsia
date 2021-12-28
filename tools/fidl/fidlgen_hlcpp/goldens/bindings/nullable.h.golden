@@ -9,7 +9,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace nullable {
 class StructWithNullableVector;
@@ -55,8 +54,8 @@ class StructWithNullableVector final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableVector& _value,
-    ::fidl::test::nullable::StructWithNullableVector* _result) {
+    const ::test::nullable::StructWithNullableVector& _value,
+    ::test::nullable::StructWithNullableVector* _result) {
   return _value.Clone(_result);
 }
 
@@ -66,7 +65,7 @@ class StructWithNullableUnion final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<::fidl::test::nullable::SimpleUnion> val{};
+  ::std::unique_ptr<::test::nullable::SimpleUnion> val{};
 
   static inline ::std::unique_ptr<StructWithNullableUnion> New() {
     return ::std::make_unique<StructWithNullableUnion>();
@@ -81,8 +80,8 @@ class StructWithNullableUnion final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableUnion& _value,
-    ::fidl::test::nullable::StructWithNullableUnion* _result) {
+    const ::test::nullable::StructWithNullableUnion& _value,
+    ::test::nullable::StructWithNullableUnion* _result) {
   return _value.Clone(_result);
 }
 
@@ -92,7 +91,7 @@ class StructWithNullableStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<::fidl::test::nullable::Int32Wrapper> val{};
+  ::std::unique_ptr<::test::nullable::Int32Wrapper> val{};
 
   static inline ::std::unique_ptr<StructWithNullableStruct> New() {
     return ::std::make_unique<StructWithNullableStruct>();
@@ -107,8 +106,8 @@ class StructWithNullableStruct final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableStruct& _value,
-    ::fidl::test::nullable::StructWithNullableStruct* _result) {
+    const ::test::nullable::StructWithNullableStruct& _value,
+    ::test::nullable::StructWithNullableStruct* _result) {
   return _value.Clone(_result);
 }
 
@@ -133,8 +132,8 @@ class StructWithNullableString final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableString& _value,
-    ::fidl::test::nullable::StructWithNullableString* _result) {
+    const ::test::nullable::StructWithNullableString& _value,
+    ::test::nullable::StructWithNullableString* _result) {
   return _value.Clone(_result);
 }
 
@@ -146,7 +145,7 @@ class StructWithNullableRequest final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::InterfaceRequest<::fidl::test::nullable::SimpleProtocol> val{};
+  ::fidl::InterfaceRequest<::test::nullable::SimpleProtocol> val{};
 
   static inline ::std::unique_ptr<StructWithNullableRequest> New() {
     return ::std::make_unique<StructWithNullableRequest>();
@@ -161,8 +160,8 @@ class StructWithNullableRequest final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableRequest& _value,
-    ::fidl::test::nullable::StructWithNullableRequest* _result) {
+    const ::test::nullable::StructWithNullableRequest& _value,
+    ::test::nullable::StructWithNullableRequest* _result) {
   return _value.Clone(_result);
 }
 
@@ -176,7 +175,7 @@ class StructWithNullableProtocol final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::InterfaceHandle<::fidl::test::nullable::SimpleProtocol> val{};
+  ::fidl::InterfaceHandle<::test::nullable::SimpleProtocol> val{};
 
   static inline ::std::unique_ptr<StructWithNullableProtocol> New() {
     return ::std::make_unique<StructWithNullableProtocol>();
@@ -191,8 +190,8 @@ class StructWithNullableProtocol final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableProtocol& _value,
-    ::fidl::test::nullable::StructWithNullableProtocol* _result) {
+    const ::test::nullable::StructWithNullableProtocol& _value,
+    ::test::nullable::StructWithNullableProtocol* _result) {
   return _value.Clone(_result);
 }
 
@@ -221,8 +220,8 @@ class StructWithNullableHandle final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableHandle& _value,
-    ::fidl::test::nullable::StructWithNullableHandle* _result) {
+    const ::test::nullable::StructWithNullableHandle& _value,
+    ::test::nullable::StructWithNullableHandle* _result) {
   return _value.Clone(_result);
 }
 
@@ -262,12 +261,10 @@ class SimpleUnion final {
 
   bool has_invalid_tag() const { return tag_ == Invalid; }
 
-  bool is_a() const {
-    return tag_ == ::fidl::test::nullable::SimpleUnion::Tag::kA;
-  }
+  bool is_a() const { return tag_ == ::test::nullable::SimpleUnion::Tag::kA; }
 
   int32_t& a() {
-    EnsureStorageInitialized(::fidl::test::nullable::SimpleUnion::Tag::kA);
+    EnsureStorageInitialized(::test::nullable::SimpleUnion::Tag::kA);
     return a_;
   }
 
@@ -277,12 +274,10 @@ class SimpleUnion final {
   }
   SimpleUnion& set_a(int32_t value);
 
-  bool is_b() const {
-    return tag_ == ::fidl::test::nullable::SimpleUnion::Tag::kB;
-  }
+  bool is_b() const { return tag_ == ::test::nullable::SimpleUnion::Tag::kB; }
 
   float& b() {
-    EnsureStorageInitialized(::fidl::test::nullable::SimpleUnion::Tag::kB);
+    EnsureStorageInitialized(::test::nullable::SimpleUnion::Tag::kB);
     return b_;
   }
 
@@ -292,30 +287,30 @@ class SimpleUnion final {
   }
   SimpleUnion& set_b(float value);
 
-  ::fidl::test::nullable::SimpleUnion::Tag Which() const {
-    return ::fidl::test::nullable::SimpleUnion::Tag(tag_);
+  ::test::nullable::SimpleUnion::Tag Which() const {
+    return ::test::nullable::SimpleUnion::Tag(tag_);
   }
 
   // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
   // only when you need access to the raw integral ordinal value.
   fidl_xunion_tag_t Ordinal() const { return tag_; }
 
-  friend ::fidl::Equality<::fidl::test::nullable::SimpleUnion>;
+  friend ::fidl::Equality<::test::nullable::SimpleUnion>;
 
  private:
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
-      ::fidl::test::nullable::SimpleUnion::Tag::Invalid);
+      ::test::nullable::SimpleUnion::Tag::Invalid);
   union {
     int32_t a_;
     float b_;
   };
 };
 
-inline zx_status_t Clone(const ::fidl::test::nullable::SimpleUnion& value,
-                         ::fidl::test::nullable::SimpleUnion* result) {
+inline zx_status_t Clone(const ::test::nullable::SimpleUnion& value,
+                         ::test::nullable::SimpleUnion* result) {
   return value.Clone(result);
 }
 
@@ -325,7 +320,7 @@ using SimpleUnionPtr = ::std::unique_ptr<SimpleUnion>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_nullable_SimpleProtocolAddRequestMessageTable;
+    test_nullable_SimpleProtocolAddRequestMessageTable;
 
 }  // namespace _internal
 class SimpleProtocol_RequestEncoder {
@@ -354,8 +349,8 @@ class SimpleProtocol_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::nullable::_internal::
-                   fidl_test_nullable_SimpleProtocolAddRequestMessageTable,
+               &::test::nullable::_internal::
+                   test_nullable_SimpleProtocolAddRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -364,7 +359,7 @@ class SimpleProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_nullable_SimpleProtocolAddResponseMessageTable;
+    test_nullable_SimpleProtocolAddResponseMessageTable;
 
 }  // namespace _internal
 class SimpleProtocol_ResponseEncoder {
@@ -389,8 +384,8 @@ class SimpleProtocol_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::nullable::_internal::
-                   fidl_test_nullable_SimpleProtocolAddResponseMessageTable,
+               &::test::nullable::_internal::
+                   test_nullable_SimpleProtocolAddResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -416,8 +411,8 @@ class Int32Wrapper final {
   zx_status_t Clone(Int32Wrapper* result) const;
 };
 
-inline zx_status_t Clone(const ::fidl::test::nullable::Int32Wrapper& _value,
-                         ::fidl::test::nullable::Int32Wrapper* _result) {
+inline zx_status_t Clone(const ::test::nullable::Int32Wrapper& _value,
+                         ::test::nullable::Int32Wrapper* _result) {
   return _value.Clone(_result);
 }
 
@@ -425,33 +420,33 @@ using Int32WrapperPtr = ::std::unique_ptr<Int32Wrapper>;
 
 }  // namespace nullable
 }  // namespace test
+namespace fidl {
 template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableVector>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableVector, 16, 16> {};
+struct CodingTraits<::test::nullable::StructWithNullableVector>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableVector,
+                                   16, 16> {};
 
 template <>
-struct HasPadding<::fidl::test::nullable::StructWithNullableVector>
+struct HasPadding<::test::nullable::StructWithNullableVector>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableVector>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableVector>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::nullable::StructWithNullableVector>::value &&
+          !HasPadding<::test::nullable::StructWithNullableVector>::value &&
           IsMemcpyCompatible<::fidl::VectorPtr<int32_t>>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableVector& value,
-    ::fidl::test::nullable::StructWithNullableVector* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+    const ::test::nullable::StructWithNullableVector& value,
+    ::test::nullable::StructWithNullableVector* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::StructWithNullableVector> {
+struct Equality<::test::nullable::StructWithNullableVector> {
   bool operator()(
-      const ::fidl::test::nullable::StructWithNullableVector& _lhs,
-      const ::fidl::test::nullable::StructWithNullableVector& _rhs) const {
+      const ::test::nullable::StructWithNullableVector& _lhs,
+      const ::test::nullable::StructWithNullableVector& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -459,33 +454,63 @@ struct Equality<::fidl::test::nullable::StructWithNullableVector> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableUnion>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableUnion, 24, 16> {};
+struct CodingTraits<::test::nullable::StructWithNullableUnion>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableUnion,
+                                   24, 16> {};
 
 template <>
-struct HasPadding<::fidl::test::nullable::StructWithNullableUnion>
+struct HasPadding<::test::nullable::StructWithNullableUnion>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableUnion>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableUnion>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::nullable::StructWithNullableUnion>::value &&
+          !HasPadding<::test::nullable::StructWithNullableUnion>::value &&
           IsMemcpyCompatible<
-              ::std::unique_ptr<::fidl::test::nullable::SimpleUnion>>::value> {
+              ::std::unique_ptr<::test::nullable::SimpleUnion>>::value> {};
+
+inline zx_status_t Clone(const ::test::nullable::StructWithNullableUnion& value,
+                         ::test::nullable::StructWithNullableUnion* result) {
+  return ::test::nullable::Clone(value, result);
+}
+
+template <>
+struct Equality<::test::nullable::StructWithNullableUnion> {
+  bool operator()(const ::test::nullable::StructWithNullableUnion& _lhs,
+                  const ::test::nullable::StructWithNullableUnion& _rhs) const {
+    if (!::fidl::Equals(_lhs.val, _rhs.val)) {
+      return false;
+    }
+    return true;
+  }
 };
+template <>
+struct CodingTraits<::test::nullable::StructWithNullableStruct>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableStruct,
+                                   8, 8> {};
+
+template <>
+struct HasPadding<::test::nullable::StructWithNullableStruct>
+    : public std::true_type {};
+
+template <>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableStruct>
+    : public internal::BoolConstant<
+          !HasPadding<::test::nullable::StructWithNullableStruct>::value &&
+          IsMemcpyCompatible<
+              ::std::unique_ptr<::test::nullable::Int32Wrapper>>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableUnion& value,
-    ::fidl::test::nullable::StructWithNullableUnion* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+    const ::test::nullable::StructWithNullableStruct& value,
+    ::test::nullable::StructWithNullableStruct* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::StructWithNullableUnion> {
+struct Equality<::test::nullable::StructWithNullableStruct> {
   bool operator()(
-      const ::fidl::test::nullable::StructWithNullableUnion& _lhs,
-      const ::fidl::test::nullable::StructWithNullableUnion& _rhs) const {
+      const ::test::nullable::StructWithNullableStruct& _lhs,
+      const ::test::nullable::StructWithNullableStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -493,67 +518,31 @@ struct Equality<::fidl::test::nullable::StructWithNullableUnion> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableStruct>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableStruct, 8, 8> {};
+struct CodingTraits<::test::nullable::StructWithNullableString>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableString,
+                                   16, 16> {};
 
 template <>
-struct HasPadding<::fidl::test::nullable::StructWithNullableStruct>
+struct HasPadding<::test::nullable::StructWithNullableString>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableStruct>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableString>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::nullable::StructWithNullableStruct>::value &&
-          IsMemcpyCompatible<
-              ::std::unique_ptr<::fidl::test::nullable::Int32Wrapper>>::value> {
-};
-
-inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableStruct& value,
-    ::fidl::test::nullable::StructWithNullableStruct* result) {
-  return ::fidl::test::nullable::Clone(value, result);
-}
-
-template <>
-struct Equality<::fidl::test::nullable::StructWithNullableStruct> {
-  bool operator()(
-      const ::fidl::test::nullable::StructWithNullableStruct& _lhs,
-      const ::fidl::test::nullable::StructWithNullableStruct& _rhs) const {
-    if (!::fidl::Equals(_lhs.val, _rhs.val)) {
-      return false;
-    }
-    return true;
-  }
-};
-template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableString>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableString, 16, 16> {};
-
-template <>
-struct HasPadding<::fidl::test::nullable::StructWithNullableString>
-    : public std::true_type {};
-
-template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableString>
-    : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::nullable::StructWithNullableString>::value &&
+          !HasPadding<::test::nullable::StructWithNullableString>::value &&
           IsMemcpyCompatible<::fidl::StringPtr>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableString& value,
-    ::fidl::test::nullable::StructWithNullableString* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+    const ::test::nullable::StructWithNullableString& value,
+    ::test::nullable::StructWithNullableString* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::StructWithNullableString> {
+struct Equality<::test::nullable::StructWithNullableString> {
   bool operator()(
-      const ::fidl::test::nullable::StructWithNullableString& _lhs,
-      const ::fidl::test::nullable::StructWithNullableString& _rhs) const {
+      const ::test::nullable::StructWithNullableString& _lhs,
+      const ::test::nullable::StructWithNullableString& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -563,29 +552,28 @@ struct Equality<::fidl::test::nullable::StructWithNullableString> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableRequest>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableRequest, 4, 4> {};
+struct CodingTraits<::test::nullable::StructWithNullableRequest>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableRequest,
+                                   4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableRequest>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableRequest>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::nullable::StructWithNullableRequest>::value &&
+          !HasPadding<::test::nullable::StructWithNullableRequest>::value &&
           IsMemcpyCompatible<::fidl::InterfaceRequest<
-              ::fidl::test::nullable::SimpleProtocol>>::value> {};
+              ::test::nullable::SimpleProtocol>>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableRequest& value,
-    ::fidl::test::nullable::StructWithNullableRequest* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+    const ::test::nullable::StructWithNullableRequest& value,
+    ::test::nullable::StructWithNullableRequest* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::StructWithNullableRequest> {
+struct Equality<::test::nullable::StructWithNullableRequest> {
   bool operator()(
-      const ::fidl::test::nullable::StructWithNullableRequest& _lhs,
-      const ::fidl::test::nullable::StructWithNullableRequest& _rhs) const {
+      const ::test::nullable::StructWithNullableRequest& _lhs,
+      const ::test::nullable::StructWithNullableRequest& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -597,29 +585,28 @@ struct Equality<::fidl::test::nullable::StructWithNullableRequest> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableProtocol>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableProtocol, 4, 4> {};
+struct CodingTraits<::test::nullable::StructWithNullableProtocol>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableProtocol,
+                                   4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableProtocol>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableProtocol>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::nullable::StructWithNullableProtocol>::value &&
+          !HasPadding<::test::nullable::StructWithNullableProtocol>::value &&
           IsMemcpyCompatible<::fidl::InterfaceHandle<
-              ::fidl::test::nullable::SimpleProtocol>>::value> {};
+              ::test::nullable::SimpleProtocol>>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableProtocol& value,
-    ::fidl::test::nullable::StructWithNullableProtocol* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+    const ::test::nullable::StructWithNullableProtocol& value,
+    ::test::nullable::StructWithNullableProtocol* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::StructWithNullableProtocol> {
+struct Equality<::test::nullable::StructWithNullableProtocol> {
   bool operator()(
-      const ::fidl::test::nullable::StructWithNullableProtocol& _lhs,
-      const ::fidl::test::nullable::StructWithNullableProtocol& _rhs) const {
+      const ::test::nullable::StructWithNullableProtocol& _lhs,
+      const ::test::nullable::StructWithNullableProtocol& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -631,28 +618,27 @@ struct Equality<::fidl::test::nullable::StructWithNullableProtocol> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::nullable::StructWithNullableHandle>
-    : public EncodableCodingTraits<
-          ::fidl::test::nullable::StructWithNullableHandle, 4, 4> {};
+struct CodingTraits<::test::nullable::StructWithNullableHandle>
+    : public EncodableCodingTraits<::test::nullable::StructWithNullableHandle,
+                                   4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::StructWithNullableHandle>
+struct IsMemcpyCompatible<::test::nullable::StructWithNullableHandle>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::nullable::StructWithNullableHandle>::value &&
+          !HasPadding<::test::nullable::StructWithNullableHandle>::value &&
           IsMemcpyCompatible<::zx::vmo>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::nullable::StructWithNullableHandle& value,
-    ::fidl::test::nullable::StructWithNullableHandle* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+    const ::test::nullable::StructWithNullableHandle& value,
+    ::test::nullable::StructWithNullableHandle* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::StructWithNullableHandle> {
+struct Equality<::test::nullable::StructWithNullableHandle> {
   bool operator()(
-      const ::fidl::test::nullable::StructWithNullableHandle& _lhs,
-      const ::fidl::test::nullable::StructWithNullableHandle& _rhs) const {
+      const ::test::nullable::StructWithNullableHandle& _lhs,
+      const ::test::nullable::StructWithNullableHandle& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -662,22 +648,19 @@ struct Equality<::fidl::test::nullable::StructWithNullableHandle> {
 #endif  // __Fuchsia__
 
 template <>
-struct IsFidlXUnion<::fidl::test::nullable::SimpleUnion>
-    : public std::true_type {};
+struct IsFidlXUnion<::test::nullable::SimpleUnion> : public std::true_type {};
 
 template <>
-struct CodingTraits<::fidl::test::nullable::SimpleUnion>
-    : public EncodableCodingTraits<::fidl::test::nullable::SimpleUnion, 24,
-                                   16> {};
+struct CodingTraits<::test::nullable::SimpleUnion>
+    : public EncodableCodingTraits<::test::nullable::SimpleUnion, 24, 16> {};
 
 template <>
-struct CodingTraits<std::unique_ptr<::fidl::test::nullable::SimpleUnion>> {
+struct CodingTraits<std::unique_ptr<::test::nullable::SimpleUnion>> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
   static void Encode(
-      Encoder* encoder,
-      std::unique_ptr<::fidl::test::nullable::SimpleUnion>* value,
+      Encoder* encoder, std::unique_ptr<::test::nullable::SimpleUnion>* value,
       size_t offset,
       cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
     auto&& p_xunion = *value;
@@ -686,42 +669,41 @@ struct CodingTraits<std::unique_ptr<::fidl::test::nullable::SimpleUnion>> {
     }
   }
 
-  static void Decode(
-      Decoder* _decoder,
-      std::unique_ptr<::fidl::test::nullable::SimpleUnion>* value,
-      size_t offset) {
+  static void Decode(Decoder* _decoder,
+                     std::unique_ptr<::test::nullable::SimpleUnion>* value,
+                     size_t offset) {
     fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
     if (encoded->tag == 0) {
       value->reset(nullptr);
       return;
     }
 
-    value->reset(new ::fidl::test::nullable::SimpleUnion);
+    value->reset(new ::test::nullable::SimpleUnion);
 
-    ::fidl::test::nullable::SimpleUnion::Decode(_decoder, value->get(), offset);
+    ::test::nullable::SimpleUnion::Decode(_decoder, value->get(), offset);
   }
 };
 
-inline zx_status_t Clone(const ::fidl::test::nullable::SimpleUnion& value,
-                         ::fidl::test::nullable::SimpleUnion* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+inline zx_status_t Clone(const ::test::nullable::SimpleUnion& value,
+                         ::test::nullable::SimpleUnion* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::SimpleUnion> {
-  bool operator()(const ::fidl::test::nullable::SimpleUnion& _lhs,
-                  const ::fidl::test::nullable::SimpleUnion& _rhs) const {
+struct Equality<::test::nullable::SimpleUnion> {
+  bool operator()(const ::test::nullable::SimpleUnion& _lhs,
+                  const ::test::nullable::SimpleUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
 
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(
-          ::fidl::test::nullable::SimpleUnion::Tag::Invalid):
+          ::test::nullable::SimpleUnion::Tag::Invalid):
         return true;
-      case ::fidl::test::nullable::SimpleUnion::Tag::kA:
+      case ::test::nullable::SimpleUnion::Tag::kA:
         return ::fidl::Equals(_lhs.a_, _rhs.a_);
-      case ::fidl::test::nullable::SimpleUnion::Tag::kB:
+      case ::test::nullable::SimpleUnion::Tag::kB:
         return ::fidl::Equals(_lhs.b_, _rhs.b_);
 
       default:
@@ -730,25 +712,24 @@ struct Equality<::fidl::test::nullable::SimpleUnion> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::nullable::Int32Wrapper>
-    : public EncodableCodingTraits<::fidl::test::nullable::Int32Wrapper, 4, 4> {
-};
+struct CodingTraits<::test::nullable::Int32Wrapper>
+    : public EncodableCodingTraits<::test::nullable::Int32Wrapper, 4, 4> {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::nullable::Int32Wrapper>
+struct IsMemcpyCompatible<::test::nullable::Int32Wrapper>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::nullable::Int32Wrapper>::value &&
+          !HasPadding<::test::nullable::Int32Wrapper>::value &&
           IsMemcpyCompatible<int32_t>::value> {};
 
-inline zx_status_t Clone(const ::fidl::test::nullable::Int32Wrapper& value,
-                         ::fidl::test::nullable::Int32Wrapper* result) {
-  return ::fidl::test::nullable::Clone(value, result);
+inline zx_status_t Clone(const ::test::nullable::Int32Wrapper& value,
+                         ::test::nullable::Int32Wrapper* result) {
+  return ::test::nullable::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::nullable::Int32Wrapper> {
-  bool operator()(const ::fidl::test::nullable::Int32Wrapper& _lhs,
-                  const ::fidl::test::nullable::Int32Wrapper& _rhs) const {
+struct Equality<::test::nullable::Int32Wrapper> {
+  bool operator()(const ::test::nullable::Int32Wrapper& _lhs,
+                  const ::test::nullable::Int32Wrapper& _rhs) const {
     if (!::fidl::Equals(_lhs.val, _rhs.val)) {
       return false;
     }
@@ -759,6 +740,7 @@ struct Equality<::fidl::test::nullable::Int32Wrapper> {
 //
 // Proxies and stubs declarations
 //
+}  // namespace fidl
 namespace test {
 namespace nullable {
 #ifdef __Fuchsia__
@@ -772,7 +754,7 @@ using SimpleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
 class SimpleProtocol_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x113010d7832f175dlu;
+constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x7ee19cf19ae30276lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -780,10 +762,10 @@ constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x113010d7832f175dlu;
 
 class SimpleProtocol {
  public:
-  using Proxy_ = ::fidl::test::nullable::SimpleProtocol_Proxy;
-  using Stub_ = ::fidl::test::nullable::SimpleProtocol_Stub;
-  using EventSender_ = ::fidl::test::nullable::SimpleProtocol_EventSender;
-  using Sync_ = ::fidl::test::nullable::SimpleProtocol_Sync;
+  using Proxy_ = ::test::nullable::SimpleProtocol_Proxy;
+  using Stub_ = ::test::nullable::SimpleProtocol_Stub;
+  using EventSender_ = ::test::nullable::SimpleProtocol_EventSender;
+  using Sync_ = ::test::nullable::SimpleProtocol_Sync;
   virtual ~SimpleProtocol();
   using AddCallback = fit::function<void(int32_t)>;
 
@@ -813,7 +795,7 @@ class SimpleProtocol_EventSender {
 
 class SimpleProtocol_Sync {
  public:
-  using Proxy_ = ::fidl::test::nullable::SimpleProtocol_SyncProxy;
+  using Proxy_ = ::test::nullable::SimpleProtocol_SyncProxy;
   virtual ~SimpleProtocol_Sync();
   virtual zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) = 0;
 };
@@ -825,40 +807,38 @@ class SimpleProtocol_Proxy final : public ::fidl::internal::Proxy,
   ~SimpleProtocol_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.nullable/SimpleProtocol.Add
+  // cts-coverage-fidl-name:test.nullable/SimpleProtocol.Add
   void Add(int32_t a, int32_t b, AddCallback callback) override;
 
  private:
-  SimpleProtocol_Proxy(const ::fidl::test::nullable::SimpleProtocol_Proxy&) =
-      delete;
+  SimpleProtocol_Proxy(const ::test::nullable::SimpleProtocol_Proxy&) = delete;
   SimpleProtocol_Proxy& operator=(
-      const ::fidl::test::nullable::SimpleProtocol_Proxy&) = delete;
+      const ::test::nullable::SimpleProtocol_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
 class SimpleProtocol_Stub final
     : public ::fidl::internal::Stub,
-      public ::fidl::test::nullable::SimpleProtocol_EventSender {
+      public ::test::nullable::SimpleProtocol_EventSender {
  public:
-  typedef class ::fidl::test::nullable::SimpleProtocol SimpleProtocol_clazz;
+  typedef class ::test::nullable::SimpleProtocol SimpleProtocol_clazz;
   explicit SimpleProtocol_Stub(
-      ::fidl::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl);
+      ::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl);
   ~SimpleProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl_;
+  ::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl_;
 };
 
-class SimpleProtocol_SyncProxy
-    : public ::fidl::test::nullable::SimpleProtocol_Sync {
+class SimpleProtocol_SyncProxy : public ::test::nullable::SimpleProtocol_Sync {
  public:
   explicit SimpleProtocol_SyncProxy(::zx::channel channel);
   ~SimpleProtocol_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.nullable/SimpleProtocol.Add
+  // cts-coverage-fidl-name:test.nullable/SimpleProtocol.Add
   zx_status_t Add(int32_t a, int32_t b, int32_t* out_sum) override;
 
  private:
@@ -869,4 +849,3 @@ class SimpleProtocol_SyncProxy
 
 }  // namespace nullable
 }  // namespace test
-}  // namespace fidl

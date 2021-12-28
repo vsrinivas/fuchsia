@@ -2,13 +2,12 @@
 
 #pragma once
 
-#include <fidl/test/bindingsdenylist/cpp/fidl.h>
-namespace fidl {
+#include <test/bindingsdenylist/cpp/fidl.h>
 namespace test {
 namespace bindingsdenylist {
 namespace testing {
 class OnlyLibfuzzerAndDeps_TestBase
-    : public ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
+    : public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
  public:
   virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -19,7 +18,7 @@ class OnlyLibfuzzerAndDeps_TestBase
 };
 
 class OnlyCppAndDeps_TestBase
-    : public ::fidl::test::bindingsdenylist::OnlyCppAndDeps {
+    : public ::test::bindingsdenylist::OnlyCppAndDeps {
  public:
   virtual ~OnlyCppAndDeps_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -27,4 +26,3 @@ class OnlyCppAndDeps_TestBase
 }  // namespace testing
 }  // namespace bindingsdenylist
 }  // namespace test
-}  // namespace fidl

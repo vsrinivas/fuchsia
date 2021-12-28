@@ -1,8 +1,5 @@
-library bottom;
+library test.bottom;
 
-// TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
-// single component library names.
-@bindings_denylist("cpp")
 type Foo = struct {
     a int32;
 };

@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_anonymous {
+namespace test_anonymous {
 
 class SomeProtocol final {
   SomeProtocol() = delete;
@@ -15,9 +15,9 @@ class SomeProtocol final {
     SomeMethod() = delete;
 
    public:
-    using Protocol = ::fidl_test_anonymous::SomeProtocol;
+    using Protocol = ::test_anonymous::SomeProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
 };
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous

@@ -1,4 +1,4 @@
-library fidl.test.bitsconstants;
+library test.bitsconstants;
 
 type BitsType = strict bits : uint32 {
     A = 0x00000001;

@@ -64,7 +64,7 @@ impl Super_SynchronousProxy {
         Super_Event::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
+        let _value: (i64,) = self.client.send_query(&mut (s), 0x68a61c2a230db8b8, ___deadline)?;
         Ok(_value.0)
     }
 }
@@ -116,7 +116,7 @@ impl Super_ProxyInterface for Super_Proxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x45602cf3b581d6ab);
+        let send_result = self.client.call_send_raw_query(&mut (s), 0x68a61c2a230db8b8);
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -246,9 +246,9 @@ impl futures::Stream for Super_RequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x45602cf3b581d6ab => {
+                0x68a61c2a230db8b8 => {
                     let mut req: (String,) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -303,10 +303,10 @@ impl Super_Encoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -318,11 +318,11 @@ impl Super_Encoder {
         tx_id: u32,
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
         let mut body = ((in_y),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -411,7 +411,7 @@ impl Super_FooResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/superFooResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/superFooResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -463,7 +463,7 @@ impl SubSynchronousProxy {
         SubEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(&mut (s), 0x45602cf3b581d6ab, ___deadline)?;
+        let _value: (i64,) = self.client.send_query(&mut (s), 0x68a61c2a230db8b8, ___deadline)?;
         Ok(_value.0)
     }
 }
@@ -515,7 +515,7 @@ impl SubProxyInterface for SubProxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(&mut (s), 0x45602cf3b581d6ab);
+        let send_result = self.client.call_send_raw_query(&mut (s), 0x68a61c2a230db8b8);
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
                 res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
@@ -645,9 +645,9 @@ impl futures::Stream for SubRequestStream {
             }
 
             std::task::Poll::Ready(Some(match header.ordinal() {
-                0x45602cf3b581d6ab => {
+                0x68a61c2a230db8b8 => {
                     let mut req: (String,) = fidl::encoding::Decodable::new_empty();
-                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooRequest");
+                    fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooRequest");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
                     fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -702,10 +702,10 @@ impl SubEncoder {
         tx_id: u32,
         mut in_s: &str,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
         let mut body = ((in_s),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooRequest");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooRequest");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -717,11 +717,11 @@ impl SubEncoder {
         tx_id: u32,
         mut in_y: i64,
     ) -> Result<(), fidl::Error> {
-        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x45602cf3b581d6ab);
+        let header = fidl::encoding::TransactionHeader::new(tx_id, 0x68a61c2a230db8b8);
         let mut body = ((in_y),);
         let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 
-        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooResponse");
+        fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooResponse");
         fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
         fidl::trace_blob!("fidl:blob", "encode", out_bytes.as_slice());
         fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => out_bytes.len() as u32, "handle_count" => out_handles.len() as u32);
@@ -810,7 +810,7 @@ impl SubFooResponder {
         };
 
         fidl::encoding::with_tls_encode_buf(|bytes, handles| {
-            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "fidl.test.inheritance/subFooResponse");
+            fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.inheritance/subFooResponse");
             fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
             fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
             fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);

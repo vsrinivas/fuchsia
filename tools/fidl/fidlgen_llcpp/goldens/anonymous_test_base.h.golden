@@ -2,12 +2,12 @@
 
 #pragma once
 
-#include <fidl/fidl.test.anonymous/cpp/wire.h>
-namespace fidl_test_anonymous {
+#include <fidl/test.anonymous/cpp/wire.h>
+namespace test_anonymous {
 namespace testing {
 
 class SomeProtocol_TestBase
-    : public ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol> {
+    : public ::fidl::WireServer<::test_anonymous::SomeProtocol> {
  public:
   virtual ~SomeProtocol_TestBase() {}
   virtual void NotImplemented_(const std::string& name,
@@ -18,4 +18,4 @@ class SomeProtocol_TestBase
   }
 };
 }  // namespace testing
-}  // namespace fidl_test_anonymous
+}  // namespace test_anonymous

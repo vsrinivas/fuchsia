@@ -2,40 +2,36 @@
 
 #pragma once
 
-#include <fidl/test/inheritancewithrecursivedecl/cpp/fidl.h>
-namespace fidl {
+#include <test/inheritancewithrecursivedecl/cpp/fidl.h>
 namespace test {
 namespace inheritancewithrecursivedecl {
 namespace testing {
-class Parent_TestBase
-    : public ::fidl::test::inheritancewithrecursivedecl::Parent {
+class Parent_TestBase : public ::test::inheritancewithrecursivedecl::Parent {
  public:
   virtual ~Parent_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void First(::fidl::InterfaceRequest<
-             ::fidl::test::inheritancewithrecursivedecl::Parent>
-                 request) override {
+  void First(
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
+          request) override {
     NotImplemented_("First");
   }
 };
 
-class Child_TestBase
-    : public ::fidl::test::inheritancewithrecursivedecl::Child {
+class Child_TestBase : public ::test::inheritancewithrecursivedecl::Child {
  public:
   virtual ~Child_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
-  void First(::fidl::InterfaceRequest<
-             ::fidl::test::inheritancewithrecursivedecl::Parent>
-                 request) override {
+  void First(
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
+          request) override {
     NotImplemented_("First");
   }
-  void Second(::fidl::InterfaceRequest<
-              ::fidl::test::inheritancewithrecursivedecl::Parent>
-                  request) override {
+  void Second(
+      ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>
+          request) override {
     NotImplemented_("Second");
   }
 };
 }  // namespace testing
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
-}  // namespace fidl

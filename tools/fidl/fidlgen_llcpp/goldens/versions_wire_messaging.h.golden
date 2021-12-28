@@ -2,8 +2,8 @@
 
 #pragma once
 
-#include <fidl/fidl.test.versions/cpp/markers.h>
-#include <fidl/fidl.test.versions/cpp/wire_types.h>
+#include <fidl/test.versions/cpp/markers.h>
+#include <fidl/test.versions/cpp/wire_types.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 
 #ifdef __Fuchsia__
@@ -16,34 +16,31 @@
 
 #endif  // __Fuchsia__
 
-namespace fidl_test_versions {
+namespace test_versions {
 class OtherProtocol;
 
 class Protocol;
 
 class Service;
 
-}  // namespace fidl_test_versions
+}  // namespace test_versions
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<::fidl_test_versions::OtherProtocol> {
-};
+struct ::fidl::internal::ProtocolDetails<::test_versions::OtherProtocol> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<
-    ::fidl_test_versions::OtherProtocol>
+struct ::fidl::internal::WireServerDispatcher<::test_versions::OtherProtocol>
     final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_versions::OtherProtocol>* impl,
+      ::fidl::WireServer<::test_versions::OtherProtocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static void Dispatch(
-      ::fidl::WireServer<::fidl_test_versions::OtherProtocol>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::test_versions::OtherProtocol>* impl,
+                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -55,25 +52,25 @@ struct ::fidl::internal::WireServerDispatcher<
 
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_versions::OtherProtocol> {
+    ::test_versions::OtherProtocol> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_versions::OtherProtocol>
+class ::fidl::WireAsyncEventHandler<::test_versions::OtherProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_versions::OtherProtocol>,
+          ::test_versions::OtherProtocol>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_versions::OtherProtocol>
+class ::fidl::WireSyncEventHandler<::test_versions::OtherProtocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_versions::OtherProtocol> {
+          ::test_versions::OtherProtocol> {
  public:
   WireSyncEventHandler() = default;
 
@@ -85,17 +82,16 @@ class ::fidl::WireSyncEventHandler<::fidl_test_versions::OtherProtocol>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_versions::OtherProtocol> client_end);
+      ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> client_end);
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::fidl_test_versions::OtherProtocol>
-    final
-    : public ::fidl::internal::IncomingEventDispatcher<
-          ::fidl::WireAsyncEventHandler<::fidl_test_versions::OtherProtocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_versions::OtherProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::WireAsyncEventHandler<::test_versions::OtherProtocol>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_versions::OtherProtocol>*
+      ::fidl::WireAsyncEventHandler<::test_versions::OtherProtocol>*
           event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
@@ -106,57 +102,52 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_versions::OtherProtocol>
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_versions::OtherProtocol>|,
+// const reference to a |fidl::ClientEnd<::test_versions::OtherProtocol>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_versions::OtherProtocol>
-    final : public ::fidl::internal::SyncEndpointManagedVeneer<
-                ::fidl::internal::WireSyncClientImpl<
-                    ::fidl_test_versions::OtherProtocol>> {
+class ::fidl::internal::WireSyncClientImpl<::test_versions::OtherProtocol> final
+    : public ::fidl::internal::SyncEndpointManagedVeneer<
+          ::fidl::internal::WireSyncClientImpl<
+              ::test_versions::OtherProtocol>> {
  public:
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_versions::OtherProtocol> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_versions::OtherProtocol>(
-        _channel());
+  ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_versions::OtherProtocol>(_channel());
   }
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<
-    ::fidl_test_versions::OtherProtocol>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_versions::OtherProtocol>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_versions::OtherProtocol>> {
+                    ::test_versions::OtherProtocol>> {
  public:
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_versions::OtherProtocol> _client_end()
-      const {
-    return ::fidl::UnownedClientEnd<::fidl_test_versions::OtherProtocol>(
-        _channel());
+  ::fidl::UnownedClientEnd<::test_versions::OtherProtocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_versions::OtherProtocol>(_channel());
   }
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_versions::OtherProtocol> final
+class ::fidl::WireSyncClient<::test_versions::OtherProtocol> final
     : public ::fidl::internal::WireSyncClientBase<
-          ::fidl_test_versions::OtherProtocol> {
+          ::test_versions::OtherProtocol> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_versions::OtherProtocol>::WireSyncClientBase;
+      ::test_versions::OtherProtocol>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::fidl_test_versions::OtherProtocol>
+class ::fidl::WireServer<::test_versions::OtherProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
 
   // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_versions::OtherProtocol;
+  using _EnclosingProtocol = ::test_versions::OtherProtocol;
 
  private:
   void dispatch_message(
@@ -165,36 +156,34 @@ class ::fidl::WireServer<::fidl_test_versions::OtherProtocol>
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_versions {
+namespace test_versions {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_versions_ProtocolFooRequestMessageTable;
+    test_versions_ProtocolFooRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_versions_ProtocolFooResponseMessageTable;
-}  // namespace fidl_test_versions
+    test_versions_ProtocolFooResponseMessageTable;
+}  // namespace test_versions
 template <>
-struct ::fidl::internal::WireOrdinal<::fidl_test_versions::Protocol::Foo>
-    final {
-  static constexpr uint64_t value = 7892886356712658659lu;
+struct ::fidl::internal::WireOrdinal<::test_versions::Protocol::Foo> final {
+  static constexpr uint64_t value = 6231434419097198905lu;
 };
 
-namespace fidl_test_versions {}  // namespace fidl_test_versions
+namespace test_versions {}  // namespace test_versions
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::ProtocolDetails<::fidl_test_versions::Protocol> {};
+struct ::fidl::internal::ProtocolDetails<::test_versions::Protocol> {};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 template <>
-struct ::fidl::internal::WireServerDispatcher<::fidl_test_versions::Protocol>
-    final {
+struct ::fidl::internal::WireServerDispatcher<::test_versions::Protocol> final {
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
-      ::fidl::WireServer<::fidl_test_versions::Protocol>* impl,
+      ::fidl::WireServer<::test_versions::Protocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::fidl_test_versions::Protocol>* impl,
+  static void Dispatch(::fidl::WireServer<::test_versions::Protocol>* impl,
                        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
 
  private:
@@ -204,7 +193,7 @@ struct ::fidl::internal::WireServerDispatcher<::fidl_test_versions::Protocol>
 #endif  // __Fuchsia__
 
 template <>
-struct ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo> final {
+struct ::fidl::WireRequest<::test_versions::Protocol::Foo> final {
   FIDL_ALIGNDECL
   fidl_message_header_t _hdr;
 
@@ -234,11 +223,11 @@ struct ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo> final {
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResult<::fidl_test_versions::Protocol::Foo> final
+class ::fidl::WireResult<::test_versions::Protocol::Foo> final
     : public ::fidl::Result {
  public:
-  WireResult(::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> client,
-             ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>* request);
+  WireResult(::fidl::UnownedClientEnd<::test_versions::Protocol> client,
+             ::fidl::WireRequest<::test_versions::Protocol::Foo>* request);
   explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
@@ -249,13 +238,13 @@ class ::fidl::WireResult<::fidl_test_versions::Protocol::Foo> final
  private:
 };
 template <>
-class ::fidl::WireUnownedResult<::fidl_test_versions::Protocol::Foo> final
+class ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> final
     : public ::fidl::Result {
  public:
   explicit WireUnownedResult(
-      ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> client_end,
+      ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end,
       ::fidl::internal::AnyBufferAllocator& allocator,
-      ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>* request);
+      ::fidl::WireRequest<::test_versions::Protocol::Foo>* request);
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
@@ -265,26 +254,25 @@ class ::fidl::WireUnownedResult<::fidl_test_versions::Protocol::Foo> final
   ~WireUnownedResult() = default;
 };
 template <>
-class ::fidl::internal::WireEventHandlerInterface<
-    ::fidl_test_versions::Protocol> {
+class ::fidl::internal::WireEventHandlerInterface<::test_versions::Protocol> {
  public:
   WireEventHandlerInterface() = default;
   virtual ~WireEventHandlerInterface() = default;
 };
 
 template <>
-class ::fidl::WireAsyncEventHandler<::fidl_test_versions::Protocol>
+class ::fidl::WireAsyncEventHandler<::test_versions::Protocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_versions::Protocol>,
+          ::test_versions::Protocol>,
       public ::fidl::internal::AsyncEventHandler {
  public:
   WireAsyncEventHandler() = default;
 };
 
 template <>
-class ::fidl::WireSyncEventHandler<::fidl_test_versions::Protocol>
+class ::fidl::WireSyncEventHandler<::test_versions::Protocol>
     : public ::fidl::internal::WireEventHandlerInterface<
-          ::fidl_test_versions::Protocol> {
+          ::test_versions::Protocol> {
  public:
   WireSyncEventHandler() = default;
 
@@ -296,17 +284,16 @@ class ::fidl::WireSyncEventHandler<::fidl_test_versions::Protocol>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> client_end);
+      ::fidl::UnownedClientEnd<::test_versions::Protocol> client_end);
 };
 
 template <>
-class ::fidl::internal::WireEventDispatcher<::fidl_test_versions::Protocol>
-    final : public ::fidl::internal::IncomingEventDispatcher<
-                ::fidl::WireAsyncEventHandler<::fidl_test_versions::Protocol>> {
+class ::fidl::internal::WireEventDispatcher<::test_versions::Protocol> final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::test_versions::Protocol>> {
  public:
   explicit WireEventDispatcher(
-      ::fidl::WireAsyncEventHandler<::fidl_test_versions::Protocol>*
-          event_handler)
+      ::fidl::WireAsyncEventHandler<::test_versions::Protocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
  private:
@@ -316,73 +303,71 @@ class ::fidl::internal::WireEventDispatcher<::fidl_test_versions::Protocol>
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<::fidl_test_versions::Protocol>|,
+// const reference to a |fidl::ClientEnd<::test_versions::Protocol>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireSyncClientImpl<::fidl_test_versions::Protocol> final
+class ::fidl::internal::WireSyncClientImpl<::test_versions::Protocol> final
     : public ::fidl::internal::SyncEndpointManagedVeneer<
-          ::fidl::internal::WireSyncClientImpl<
-              ::fidl_test_versions::Protocol>> {
+          ::fidl::internal::WireSyncClientImpl<::test_versions::Protocol>> {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_versions::Protocol::Foo> Foo() {
-    ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo> _request{};
-    return ::fidl::WireResult<::fidl_test_versions::Protocol::Foo>(
-        _client_end(), &_request);
+  ::fidl::WireResult<::test_versions::Protocol::Foo> Foo() {
+    ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
+    return ::fidl::WireResult<::test_versions::Protocol::Foo>(_client_end(),
+                                                              &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol>(_channel());
+  ::fidl::UnownedClientEnd<::test_versions::Protocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_versions::Protocol>(_channel());
   }
 };
 
 template <>
-class ::fidl::internal::WireSyncBufferClientImpl<::fidl_test_versions::Protocol>
+class ::fidl::internal::WireSyncBufferClientImpl<::test_versions::Protocol>
     final : public ::fidl::internal::SyncEndpointBufferVeneer<
                 ::fidl::internal::WireSyncBufferClientImpl<
-                    ::fidl_test_versions::Protocol>> {
+                    ::test_versions::Protocol>> {
  public:
   // Caller provides the backing storage for FIDL message via an argument to
   // `.buffer()`.
-  ::fidl::WireUnownedResult<::fidl_test_versions::Protocol::Foo> Foo() {
-    ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo> _request{};
-    return ::fidl::WireUnownedResult<::fidl_test_versions::Protocol::Foo>(
+  ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> Foo() {
+    ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
+    return ::fidl::WireUnownedResult<::test_versions::Protocol::Foo>(
         _client_end(), _allocator(), &_request);
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> _client_end() const {
-    return ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol>(_channel());
+  ::fidl::UnownedClientEnd<::test_versions::Protocol> _client_end() const {
+    return ::fidl::UnownedClientEnd<::test_versions::Protocol>(_channel());
   }
 };
 template <>
-class ::fidl::WireSyncClient<::fidl_test_versions::Protocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::fidl_test_versions::Protocol> {
+class ::fidl::WireSyncClient<::test_versions::Protocol> final
+    : public ::fidl::internal::WireSyncClientBase<::test_versions::Protocol> {
  public:
   using ::fidl::internal::WireSyncClientBase<
-      ::fidl_test_versions::Protocol>::WireSyncClientBase;
+      ::test_versions::Protocol>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
 // and |fidl::ServerEnd<SomeProtocol>|).
 template <>
-class ::fidl::WireServer<::fidl_test_versions::Protocol>
+class ::fidl::WireServer<::test_versions::Protocol>
     : public ::fidl::internal::IncomingMessageDispatcher {
  public:
   WireServer() = default;
   virtual ~WireServer() = default;
 
   // The FIDL protocol type that is implemented by this server.
-  using _EnclosingProtocol = ::fidl_test_versions::Protocol;
+  using _EnclosingProtocol = ::test_versions::Protocol;
 
   using FooCompleter =
-      ::fidl::internal::WireCompleter<::fidl_test_versions::Protocol::Foo>;
+      ::fidl::internal::WireCompleter<::test_versions::Protocol::Foo>;
   using FooRequestView =
-      ::fidl::internal::WireRequestView<::fidl_test_versions::Protocol::Foo>;
+      ::fidl::internal::WireRequestView<::test_versions::Protocol::Foo>;
 
   virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
 
@@ -393,13 +378,13 @@ class ::fidl::WireServer<::fidl_test_versions::Protocol>
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_versions {
+namespace test_versions {
 
 class Service final {
   Service() = default;
 
  public:
-  static constexpr char Name[] = "fidl.test.versions.Service";
+  static constexpr char Name[] = "test.versions.Service";
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -411,7 +396,7 @@ class Service final {
         : dir_(std::move(dir)), connect_func_(connect_func) {}
 
     // Connects to the member protocol "p".
-    // Returns a |fidl::ClientEnd<::fidl_test_versions::Protocol>| on success,
+    // Returns a |fidl::ClientEnd<::test_versions::Protocol>| on success,
     // which can be used with |fidl::BindSyncClient| to create a synchronous
     // client, or |fidl::WireClient| or |fidl::WireSharedClient| to create a
     // client that supports both asynchronous and synchronous operations.
@@ -425,10 +410,8 @@ class Service final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end
     // will not result in a failure of this method. Any errors sent by the
     // remote will appear on the |ClientEnd| returned from this method.
-    ::zx::status<::fidl::ClientEnd<::fidl_test_versions::Protocol>>
-    connect_p() {
-      auto endpoints =
-          ::fidl::CreateEndpoints<::fidl_test_versions::Protocol>();
+    ::zx::status<::fidl::ClientEnd<::test_versions::Protocol>> connect_p() {
+      auto endpoints = ::fidl::CreateEndpoints<::test_versions::Protocol>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -461,7 +444,7 @@ class Service final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::status<> add_p(::fidl::ServiceHandlerInterface::MemberHandler<
-                         ::fidl_test_versions::Protocol>
+                         ::test_versions::Protocol>
                              handler) {
       return service_handler_->AddMember("p", std::move(handler));
     }
@@ -471,24 +454,23 @@ class Service final {
   };
 };
 
-}  // namespace fidl_test_versions
+}  // namespace test_versions
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>>
+struct IsFidlType<::fidl::WireRequest<::test_versions::Protocol::Foo>>
     : public std::true_type {};
 template <>
-struct IsFidlMessage<::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>>
+struct IsFidlMessage<::fidl::WireRequest<::test_versions::Protocol::Foo>>
     : public std::true_type {};
-static_assert(
-    sizeof(::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>) ==
-    ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>::PrimarySize);
+static_assert(sizeof(::fidl::WireRequest<::test_versions::Protocol::Foo>) ==
+              ::fidl::WireRequest<::test_versions::Protocol::Foo>::PrimarySize);
 
 #ifdef __Fuchsia__
 }  // namespace fidl
 template <>
-class ::fidl::internal::WireClientImpl<::fidl_test_versions::OtherProtocol>
-    final : public ::fidl::internal::ClientBase {
+class ::fidl::internal::WireClientImpl<::test_versions::OtherProtocol> final
+    : public ::fidl::internal::ClientBase {
  public:
   WireClientImpl() = default;
 };
@@ -500,21 +482,20 @@ namespace fidl {
 // |EventSender| owns a server endpoint of a channel speaking
 // the OtherProtocol protocol, and can send events in that protocol.
 template <>
-class ::fidl::WireEventSender<::fidl_test_versions::OtherProtocol> {
+class ::fidl::WireEventSender<::test_versions::OtherProtocol> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_versions::OtherProtocol> server_end)
+      ::fidl::ServerEnd<::test_versions::OtherProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_versions::OtherProtocol>& server_end()
-      const {
+  const ::fidl::ServerEnd<::test_versions::OtherProtocol>& server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_versions::OtherProtocol>& server_end() {
+  ::fidl::ServerEnd<::test_versions::OtherProtocol>& server_end() {
     return server_end_;
   }
 
@@ -525,12 +506,11 @@ class ::fidl::WireEventSender<::fidl_test_versions::OtherProtocol> {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<::fidl_test_versions::OtherProtocol> server_end_;
+  ::fidl::ServerEnd<::test_versions::OtherProtocol> server_end_;
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<
-    ::fidl_test_versions::OtherProtocol> {
+class ::fidl::internal::WireWeakEventSender<::test_versions::OtherProtocol> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
@@ -538,8 +518,8 @@ class ::fidl::internal::WireWeakEventSender<
 
  private:
   friend ServerBindingRefImpl<
-      ::fidl_test_versions::OtherProtocol,
-      typename ::fidl_test_versions::OtherProtocol::Transport>;
+      ::test_versions::OtherProtocol,
+      typename ::test_versions::OtherProtocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -548,7 +528,7 @@ class ::fidl::internal::WireWeakEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::internal::WireClientImpl<::fidl_test_versions::Protocol> final
+class ::fidl::internal::WireClientImpl<::test_versions::Protocol> final
     : public ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
@@ -562,20 +542,20 @@ class ::fidl::internal::WireClientImpl<::fidl_test_versions::Protocol> final
 // |EventSender| owns a server endpoint of a channel speaking
 // the Protocol protocol, and can send events in that protocol.
 template <>
-class ::fidl::WireEventSender<::fidl_test_versions::Protocol> {
+class ::fidl::WireEventSender<::test_versions::Protocol> {
  public:
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
   explicit WireEventSender(
-      ::fidl::ServerEnd<::fidl_test_versions::Protocol> server_end)
+      ::fidl::ServerEnd<::test_versions::Protocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<::fidl_test_versions::Protocol>& server_end() const {
+  const ::fidl::ServerEnd<::test_versions::Protocol>& server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<::fidl_test_versions::Protocol>& server_end() {
+  ::fidl::ServerEnd<::test_versions::Protocol>& server_end() {
     return server_end_;
   }
 
@@ -586,20 +566,19 @@ class ::fidl::WireEventSender<::fidl_test_versions::Protocol> {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<::fidl_test_versions::Protocol> server_end_;
+  ::fidl::ServerEnd<::test_versions::Protocol> server_end_;
 };
 
 template <>
-class ::fidl::internal::WireWeakEventSender<::fidl_test_versions::Protocol> {
+class ::fidl::internal::WireWeakEventSender<::test_versions::Protocol> {
  public:
   WireWeakEventSender(
       std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRefImpl<
-      ::fidl_test_versions::Protocol,
-      typename ::fidl_test_versions::Protocol::Transport>;
+  friend ServerBindingRefImpl<::test_versions::Protocol,
+                              typename ::test_versions::Protocol::Transport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

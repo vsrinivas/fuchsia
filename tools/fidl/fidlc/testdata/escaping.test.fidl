@@ -1,4 +1,4 @@
-library fidl.test.escaping;
+library test.escaping;
 
 /// "pleaseescapethisdocommentproperly"
 type DocCommentWithQuotes = struct {};

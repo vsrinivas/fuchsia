@@ -2,12 +2,11 @@
 
 #pragma once
 
-#include <fidl/test/inheritance/cpp/fidl.h>
-namespace fidl {
+#include <test/inheritance/cpp/fidl.h>
 namespace test {
 namespace inheritance {
 namespace testing {
-class super_TestBase : public ::fidl::test::inheritance::super {
+class super_TestBase : public ::test::inheritance::super {
  public:
   virtual ~super_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -16,7 +15,7 @@ class super_TestBase : public ::fidl::test::inheritance::super {
   }
 };
 
-class sub_TestBase : public ::fidl::test::inheritance::sub {
+class sub_TestBase : public ::test::inheritance::sub {
  public:
   virtual ~sub_TestBase() {}
   virtual void NotImplemented_(const std::string& name) = 0;
@@ -27,4 +26,3 @@ class sub_TestBase : public ::fidl::test::inheritance::sub {
 }  // namespace testing
 }  // namespace inheritance
 }  // namespace test
-}  // namespace fidl

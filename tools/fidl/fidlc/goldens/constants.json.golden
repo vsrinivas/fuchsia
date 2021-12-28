@@ -1,10 +1,10 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.constants",
+  "name": "test.constants",
   "library_dependencies": [],
   "bits_declarations": [
     {
-      "name": "fidl.test.constants/BitsType",
+      "name": "test.constants/BitsType",
       "naming_context": [
         "BitsType"
       ],
@@ -99,7 +99,7 @@
       "strict": true
     },
     {
-      "name": "fidl.test.constants/Bits",
+      "name": "test.constants/Bits",
       "naming_context": [
         "Bits"
       ],
@@ -158,7 +158,7 @@
   ],
   "const_declarations": [
     {
-      "name": "fidl.test.constants/UINT8",
+      "name": "test.constants/UINT8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 3,
@@ -199,7 +199,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/UINT16",
+      "name": "test.constants/UINT16",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 4,
@@ -240,7 +240,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/UINT32",
+      "name": "test.constants/UINT32",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 5,
@@ -281,7 +281,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/UINT64",
+      "name": "test.constants/UINT64",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 6,
@@ -322,7 +322,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/INT8",
+      "name": "test.constants/INT8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 7,
@@ -363,7 +363,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/INT16",
+      "name": "test.constants/INT16",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 8,
@@ -404,7 +404,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/INT32",
+      "name": "test.constants/INT32",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 9,
@@ -445,7 +445,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/INT64",
+      "name": "test.constants/INT64",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 10,
@@ -486,7 +486,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/FLOAT32",
+      "name": "test.constants/FLOAT32",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 11,
@@ -527,7 +527,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/FLOAT64",
+      "name": "test.constants/FLOAT64",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 12,
@@ -568,7 +568,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/BOOL",
+      "name": "test.constants/BOOL",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 13,
@@ -609,7 +609,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/STRING",
+      "name": "test.constants/STRING",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 14,
@@ -650,7 +650,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/enumVal",
+      "name": "test.constants/enumVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 19,
@@ -659,7 +659,7 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "fidl.test.constants/EnumType",
+        "identifier": "test.constants/EnumType",
         "nullable": false,
         "type_shape_v1": {
           "inline_size": 4,
@@ -684,11 +684,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "EnumType.VALUE",
-        "identifier": "fidl.test.constants/EnumType.VALUE"
+        "identifier": "test.constants/EnumType.VALUE"
       }
     },
     {
-      "name": "fidl.test.constants/enumPrimitiveVal",
+      "name": "test.constants/enumPrimitiveVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 20,
@@ -721,11 +721,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "EnumType.VALUE",
-        "identifier": "fidl.test.constants/EnumType.VALUE"
+        "identifier": "test.constants/EnumType.VALUE"
       }
     },
     {
-      "name": "fidl.test.constants/bitsVal",
+      "name": "test.constants/bitsVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 27,
@@ -734,7 +734,7 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "fidl.test.constants/BitsType",
+        "identifier": "test.constants/BitsType",
         "nullable": false,
         "type_shape_v1": {
           "inline_size": 4,
@@ -759,11 +759,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "BitsType.VALUE",
-        "identifier": "fidl.test.constants/BitsType.VALUE"
+        "identifier": "test.constants/BitsType.VALUE"
       }
     },
     {
-      "name": "fidl.test.constants/bitsPrimitiveVal",
+      "name": "test.constants/bitsPrimitiveVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 28,
@@ -796,11 +796,11 @@
         "kind": "identifier",
         "value": "1",
         "expression": "BitsType.VALUE",
-        "identifier": "fidl.test.constants/BitsType.VALUE"
+        "identifier": "test.constants/BitsType.VALUE"
       }
     },
     {
-      "name": "fidl.test.constants/orResult",
+      "name": "test.constants/orResult",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 30,
@@ -809,7 +809,7 @@
       },
       "type": {
         "kind": "identifier",
-        "identifier": "fidl.test.constants/BitsType",
+        "identifier": "test.constants/BitsType",
         "nullable": false,
         "type_shape_v1": {
           "inline_size": 4,
@@ -837,7 +837,7 @@
       }
     },
     {
-      "name": "fidl.test.constants/orResultPrimitiveVal",
+      "name": "test.constants/orResultPrimitiveVal",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
         "line": 31,
@@ -875,7 +875,7 @@
   ],
   "enum_declarations": [
     {
-      "name": "fidl.test.constants/EnumType",
+      "name": "test.constants/EnumType",
       "naming_context": [
         "EnumType"
       ],
@@ -910,7 +910,7 @@
       "strict": true
     },
     {
-      "name": "fidl.test.constants/Enum",
+      "name": "test.constants/Enum",
       "naming_context": [
         "Enum"
       ],
@@ -950,7 +950,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.constants/Struct",
+      "name": "test.constants/Struct",
       "naming_context": [
         "Struct"
       ],
@@ -1112,7 +1112,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.constants/Enum",
+            "identifier": "test.constants/Enum",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1144,7 +1144,7 @@
             "kind": "identifier",
             "value": "170",
             "expression": "Enum.E",
-            "identifier": "fidl.test.constants/Enum.E"
+            "identifier": "test.constants/Enum.E"
           },
           "field_shape_v1": {
             "offset": 28,
@@ -1158,7 +1158,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.constants/Bits",
+            "identifier": "test.constants/Bits",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -1190,7 +1190,7 @@
             "kind": "identifier",
             "value": "8",
             "expression": "Bits.B",
-            "identifier": "fidl.test.constants/Bits.B"
+            "identifier": "test.constants/Bits.B"
           },
           "field_shape_v1": {
             "offset": 32,
@@ -1228,53 +1228,53 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.constants/UINT8",
-    "fidl.test.constants/UINT64",
-    "fidl.test.constants/UINT32",
-    "fidl.test.constants/UINT16",
-    "fidl.test.constants/STRING",
-    "fidl.test.constants/INT8",
-    "fidl.test.constants/INT64",
-    "fidl.test.constants/INT32",
-    "fidl.test.constants/INT16",
-    "fidl.test.constants/FLOAT64",
-    "fidl.test.constants/FLOAT32",
-    "fidl.test.constants/EnumType",
-    "fidl.test.constants/enumVal",
-    "fidl.test.constants/enumPrimitiveVal",
-    "fidl.test.constants/Enum",
-    "fidl.test.constants/BitsType",
-    "fidl.test.constants/orResultPrimitiveVal",
-    "fidl.test.constants/orResult",
-    "fidl.test.constants/bitsVal",
-    "fidl.test.constants/bitsPrimitiveVal",
-    "fidl.test.constants/Bits",
-    "fidl.test.constants/Struct",
-    "fidl.test.constants/BOOL"
+    "test.constants/UINT8",
+    "test.constants/UINT64",
+    "test.constants/UINT32",
+    "test.constants/UINT16",
+    "test.constants/STRING",
+    "test.constants/INT8",
+    "test.constants/INT64",
+    "test.constants/INT32",
+    "test.constants/INT16",
+    "test.constants/FLOAT64",
+    "test.constants/FLOAT32",
+    "test.constants/EnumType",
+    "test.constants/enumVal",
+    "test.constants/enumPrimitiveVal",
+    "test.constants/Enum",
+    "test.constants/BitsType",
+    "test.constants/orResultPrimitiveVal",
+    "test.constants/orResult",
+    "test.constants/bitsVal",
+    "test.constants/bitsPrimitiveVal",
+    "test.constants/Bits",
+    "test.constants/Struct",
+    "test.constants/BOOL"
   ],
   "declarations": {
-    "fidl.test.constants/BitsType": "bits",
-    "fidl.test.constants/Bits": "bits",
-    "fidl.test.constants/UINT8": "const",
-    "fidl.test.constants/UINT16": "const",
-    "fidl.test.constants/UINT32": "const",
-    "fidl.test.constants/UINT64": "const",
-    "fidl.test.constants/INT8": "const",
-    "fidl.test.constants/INT16": "const",
-    "fidl.test.constants/INT32": "const",
-    "fidl.test.constants/INT64": "const",
-    "fidl.test.constants/FLOAT32": "const",
-    "fidl.test.constants/FLOAT64": "const",
-    "fidl.test.constants/BOOL": "const",
-    "fidl.test.constants/STRING": "const",
-    "fidl.test.constants/enumVal": "const",
-    "fidl.test.constants/enumPrimitiveVal": "const",
-    "fidl.test.constants/bitsVal": "const",
-    "fidl.test.constants/bitsPrimitiveVal": "const",
-    "fidl.test.constants/orResult": "const",
-    "fidl.test.constants/orResultPrimitiveVal": "const",
-    "fidl.test.constants/EnumType": "enum",
-    "fidl.test.constants/Enum": "enum",
-    "fidl.test.constants/Struct": "struct"
+    "test.constants/BitsType": "bits",
+    "test.constants/Bits": "bits",
+    "test.constants/UINT8": "const",
+    "test.constants/UINT16": "const",
+    "test.constants/UINT32": "const",
+    "test.constants/UINT64": "const",
+    "test.constants/INT8": "const",
+    "test.constants/INT16": "const",
+    "test.constants/INT32": "const",
+    "test.constants/INT64": "const",
+    "test.constants/FLOAT32": "const",
+    "test.constants/FLOAT64": "const",
+    "test.constants/BOOL": "const",
+    "test.constants/STRING": "const",
+    "test.constants/enumVal": "const",
+    "test.constants/enumPrimitiveVal": "const",
+    "test.constants/bitsVal": "const",
+    "test.constants/bitsPrimitiveVal": "const",
+    "test.constants/orResult": "const",
+    "test.constants/orResultPrimitiveVal": "const",
+    "test.constants/EnumType": "enum",
+    "test.constants/Enum": "enum",
+    "test.constants/Struct": "struct"
   }
 }

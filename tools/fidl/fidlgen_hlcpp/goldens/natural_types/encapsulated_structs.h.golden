@@ -9,7 +9,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace encapsulatedstructs {
 class NonInlineStructTestStruct;
@@ -30,7 +29,7 @@ class NonInlineStructTestStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::unique_ptr<::fidl::test::encapsulatedstructs::Int16Int8> element{};
+  ::std::unique_ptr<::test::encapsulatedstructs::Int16Int8> element{};
 
   ::zx::handle h{};
 
@@ -47,8 +46,8 @@ class NonInlineStructTestStruct final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct& _value,
-    ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct* _result) {
+    const ::test::encapsulatedstructs::NonInlineStructTestStruct& _value,
+    ::test::encapsulatedstructs::NonInlineStructTestStruct* _result) {
   return _value.Clone(_result);
 }
 
@@ -76,9 +75,8 @@ class Int8Int32 final {
   zx_status_t Clone(Int8Int32* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::Int8Int32& _value,
-    ::fidl::test::encapsulatedstructs::Int8Int32* _result) {
+inline zx_status_t Clone(const ::test::encapsulatedstructs::Int8Int32& _value,
+                         ::test::encapsulatedstructs::Int8Int32* _result) {
   return _value.Clone(_result);
 }
 
@@ -104,9 +102,8 @@ class Int16Int8 final {
   zx_status_t Clone(Int16Int8* result) const;
 };
 
-inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::Int16Int8& _value,
-    ::fidl::test::encapsulatedstructs::Int16Int8* _result) {
+inline zx_status_t Clone(const ::test::encapsulatedstructs::Int16Int8& _value,
+                         ::test::encapsulatedstructs::Int16Int8* _result) {
   return _value.Clone(_result);
 }
 
@@ -116,7 +113,7 @@ class ArrayInt16Int8 final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::std::array<::fidl::test::encapsulatedstructs::Int16Int8, 3> arr{};
+  ::std::array<::test::encapsulatedstructs::Int16Int8, 3> arr{};
 
   static inline ::std::unique_ptr<ArrayInt16Int8> New() {
     return ::std::make_unique<ArrayInt16Int8>();
@@ -131,8 +128,8 @@ class ArrayInt16Int8 final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::ArrayInt16Int8& _value,
-    ::fidl::test::encapsulatedstructs::ArrayInt16Int8* _result) {
+    const ::test::encapsulatedstructs::ArrayInt16Int8& _value,
+    ::test::encapsulatedstructs::ArrayInt16Int8* _result) {
   return _value.Clone(_result);
 }
 
@@ -142,11 +139,11 @@ class StructPaddingTestStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::test::encapsulatedstructs::Int16Int8 trailing{};
+  ::test::encapsulatedstructs::Int16Int8 trailing{};
 
-  ::fidl::test::encapsulatedstructs::Int8Int32 inner{};
+  ::test::encapsulatedstructs::Int8Int32 inner{};
 
-  ::fidl::test::encapsulatedstructs::ArrayInt16Int8 array{};
+  ::test::encapsulatedstructs::ArrayInt16Int8 array{};
 
   static inline ::std::unique_ptr<StructPaddingTestStruct> New() {
     return ::std::make_unique<StructPaddingTestStruct>();
@@ -161,8 +158,8 @@ class StructPaddingTestStruct final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::StructPaddingTestStruct& _value,
-    ::fidl::test::encapsulatedstructs::StructPaddingTestStruct* _result) {
+    const ::test::encapsulatedstructs::StructPaddingTestStruct& _value,
+    ::test::encapsulatedstructs::StructPaddingTestStruct* _result) {
   return _value.Clone(_result);
 }
 
@@ -174,9 +171,9 @@ class TopLevelStruct final {
  public:
   static const fidl_type_t* FidlType;
 
-  ::fidl::test::encapsulatedstructs::StructPaddingTestStruct a{};
+  ::test::encapsulatedstructs::StructPaddingTestStruct a{};
 
-  ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct b{};
+  ::test::encapsulatedstructs::NonInlineStructTestStruct b{};
 
   static inline ::std::unique_ptr<TopLevelStruct> New() {
     return ::std::make_unique<TopLevelStruct>();
@@ -191,8 +188,8 @@ class TopLevelStruct final {
 };
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::TopLevelStruct& _value,
-    ::fidl::test::encapsulatedstructs::TopLevelStruct* _result) {
+    const ::test::encapsulatedstructs::TopLevelStruct& _value,
+    ::test::encapsulatedstructs::TopLevelStruct* _result) {
   return _value.Clone(_result);
 }
 
@@ -201,40 +198,39 @@ using TopLevelStructPtr = ::std::unique_ptr<TopLevelStruct>;
 
 }  // namespace encapsulatedstructs
 }  // namespace test
+namespace fidl {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<
-    ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
+struct CodingTraits<::test::encapsulatedstructs::NonInlineStructTestStruct>
     : public EncodableCodingTraits<
-          ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct, 16,
-          16> {};
+          ::test::encapsulatedstructs::NonInlineStructTestStruct, 16, 16> {};
 
 template <>
-struct HasPadding<::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
+struct HasPadding<::test::encapsulatedstructs::NonInlineStructTestStruct>
     : public std::true_type {};
 
 template <>
 struct IsMemcpyCompatible<
-    ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct>
+    ::test::encapsulatedstructs::NonInlineStructTestStruct>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::encapsulatedstructs::
-                          NonInlineStructTestStruct>::value &&
+          !HasPadding<
+              ::test::encapsulatedstructs::NonInlineStructTestStruct>::value &&
           IsMemcpyCompatible<::std::unique_ptr<
-              ::fidl::test::encapsulatedstructs::Int16Int8>>::value &&
+              ::test::encapsulatedstructs::Int16Int8>>::value &&
           IsMemcpyCompatible<::zx::handle>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct& value,
-    ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct* result) {
-  return ::fidl::test::encapsulatedstructs::Clone(value, result);
+    const ::test::encapsulatedstructs::NonInlineStructTestStruct& value,
+    ::test::encapsulatedstructs::NonInlineStructTestStruct* result) {
+  return ::test::encapsulatedstructs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::encapsulatedstructs::NonInlineStructTestStruct> {
+struct Equality<::test::encapsulatedstructs::NonInlineStructTestStruct> {
   bool operator()(
-      const ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct& _lhs,
-      const ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct& _rhs)
+      const ::test::encapsulatedstructs::NonInlineStructTestStruct& _lhs,
+      const ::test::encapsulatedstructs::NonInlineStructTestStruct& _rhs)
       const {
     if (!::fidl::Equals(_lhs.element, _rhs.element)) {
       return false;
@@ -248,32 +244,30 @@ struct Equality<::fidl::test::encapsulatedstructs::NonInlineStructTestStruct> {
 #endif  // __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::encapsulatedstructs::Int8Int32>
-    : public EncodableCodingTraits<::fidl::test::encapsulatedstructs::Int8Int32,
-                                   8, 8> {};
+struct CodingTraits<::test::encapsulatedstructs::Int8Int32>
+    : public EncodableCodingTraits<::test::encapsulatedstructs::Int8Int32, 8,
+                                   8> {};
 
 template <>
-struct HasPadding<::fidl::test::encapsulatedstructs::Int8Int32>
+struct HasPadding<::test::encapsulatedstructs::Int8Int32>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::encapsulatedstructs::Int8Int32>
+struct IsMemcpyCompatible<::test::encapsulatedstructs::Int8Int32>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::encapsulatedstructs::Int8Int32>::value &&
+          !HasPadding<::test::encapsulatedstructs::Int8Int32>::value &&
           IsMemcpyCompatible<int32_t>::value &&
           IsMemcpyCompatible<int8_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::Int8Int32& value,
-    ::fidl::test::encapsulatedstructs::Int8Int32* result) {
-  return ::fidl::test::encapsulatedstructs::Clone(value, result);
+inline zx_status_t Clone(const ::test::encapsulatedstructs::Int8Int32& value,
+                         ::test::encapsulatedstructs::Int8Int32* result) {
+  return ::test::encapsulatedstructs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::encapsulatedstructs::Int8Int32> {
-  bool operator()(
-      const ::fidl::test::encapsulatedstructs::Int8Int32& _lhs,
-      const ::fidl::test::encapsulatedstructs::Int8Int32& _rhs) const {
+struct Equality<::test::encapsulatedstructs::Int8Int32> {
+  bool operator()(const ::test::encapsulatedstructs::Int8Int32& _lhs,
+                  const ::test::encapsulatedstructs::Int8Int32& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -284,32 +278,30 @@ struct Equality<::fidl::test::encapsulatedstructs::Int8Int32> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::encapsulatedstructs::Int16Int8>
-    : public EncodableCodingTraits<::fidl::test::encapsulatedstructs::Int16Int8,
-                                   4, 4> {};
+struct CodingTraits<::test::encapsulatedstructs::Int16Int8>
+    : public EncodableCodingTraits<::test::encapsulatedstructs::Int16Int8, 4,
+                                   4> {};
 
 template <>
-struct HasPadding<::fidl::test::encapsulatedstructs::Int16Int8>
+struct HasPadding<::test::encapsulatedstructs::Int16Int8>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::encapsulatedstructs::Int16Int8>
+struct IsMemcpyCompatible<::test::encapsulatedstructs::Int16Int8>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::encapsulatedstructs::Int16Int8>::value &&
+          !HasPadding<::test::encapsulatedstructs::Int16Int8>::value &&
           IsMemcpyCompatible<int16_t>::value &&
           IsMemcpyCompatible<int8_t>::value> {};
 
-inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::Int16Int8& value,
-    ::fidl::test::encapsulatedstructs::Int16Int8* result) {
-  return ::fidl::test::encapsulatedstructs::Clone(value, result);
+inline zx_status_t Clone(const ::test::encapsulatedstructs::Int16Int8& value,
+                         ::test::encapsulatedstructs::Int16Int8* result) {
+  return ::test::encapsulatedstructs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::encapsulatedstructs::Int16Int8> {
-  bool operator()(
-      const ::fidl::test::encapsulatedstructs::Int16Int8& _lhs,
-      const ::fidl::test::encapsulatedstructs::Int16Int8& _rhs) const {
+struct Equality<::test::encapsulatedstructs::Int16Int8> {
+  bool operator()(const ::test::encapsulatedstructs::Int16Int8& _lhs,
+                  const ::test::encapsulatedstructs::Int16Int8& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -320,33 +312,33 @@ struct Equality<::fidl::test::encapsulatedstructs::Int16Int8> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::encapsulatedstructs::ArrayInt16Int8>
-    : public EncodableCodingTraits<
-          ::fidl::test::encapsulatedstructs::ArrayInt16Int8, 12, 12> {};
+struct CodingTraits<::test::encapsulatedstructs::ArrayInt16Int8>
+    : public EncodableCodingTraits<::test::encapsulatedstructs::ArrayInt16Int8,
+                                   12, 12> {};
 
 template <>
-struct HasPadding<::fidl::test::encapsulatedstructs::ArrayInt16Int8>
+struct HasPadding<::test::encapsulatedstructs::ArrayInt16Int8>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::encapsulatedstructs::ArrayInt16Int8>
+struct IsMemcpyCompatible<::test::encapsulatedstructs::ArrayInt16Int8>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::encapsulatedstructs::ArrayInt16Int8>::value &&
-          IsMemcpyCompatible<::std::array<
-              ::fidl::test::encapsulatedstructs::Int16Int8, 3>>::value> {};
+          !HasPadding<::test::encapsulatedstructs::ArrayInt16Int8>::value &&
+          IsMemcpyCompatible<
+              ::std::array<::test::encapsulatedstructs::Int16Int8, 3>>::value> {
+};
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::ArrayInt16Int8& value,
-    ::fidl::test::encapsulatedstructs::ArrayInt16Int8* result) {
-  return ::fidl::test::encapsulatedstructs::Clone(value, result);
+    const ::test::encapsulatedstructs::ArrayInt16Int8& value,
+    ::test::encapsulatedstructs::ArrayInt16Int8* result) {
+  return ::test::encapsulatedstructs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::encapsulatedstructs::ArrayInt16Int8> {
+struct Equality<::test::encapsulatedstructs::ArrayInt16Int8> {
   bool operator()(
-      const ::fidl::test::encapsulatedstructs::ArrayInt16Int8& _lhs,
-      const ::fidl::test::encapsulatedstructs::ArrayInt16Int8& _rhs) const {
+      const ::test::encapsulatedstructs::ArrayInt16Int8& _lhs,
+      const ::test::encapsulatedstructs::ArrayInt16Int8& _rhs) const {
     if (!::fidl::Equals(_lhs.arr, _rhs.arr)) {
       return false;
     }
@@ -354,40 +346,35 @@ struct Equality<::fidl::test::encapsulatedstructs::ArrayInt16Int8> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::encapsulatedstructs::StructPaddingTestStruct>
+struct CodingTraits<::test::encapsulatedstructs::StructPaddingTestStruct>
     : public EncodableCodingTraits<
-          ::fidl::test::encapsulatedstructs::StructPaddingTestStruct, 24, 24> {
-};
+          ::test::encapsulatedstructs::StructPaddingTestStruct, 24, 24> {};
 
 template <>
-struct HasPadding<::fidl::test::encapsulatedstructs::StructPaddingTestStruct>
+struct HasPadding<::test::encapsulatedstructs::StructPaddingTestStruct>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<
-    ::fidl::test::encapsulatedstructs::StructPaddingTestStruct>
+struct IsMemcpyCompatible<::test::encapsulatedstructs::StructPaddingTestStruct>
     : public internal::BoolConstant<
-          !HasPadding<::fidl::test::encapsulatedstructs::
-                          StructPaddingTestStruct>::value &&
+          !HasPadding<
+              ::test::encapsulatedstructs::StructPaddingTestStruct>::value &&
           IsMemcpyCompatible<
-              ::fidl::test::encapsulatedstructs::ArrayInt16Int8>::value &&
-          IsMemcpyCompatible<
-              ::fidl::test::encapsulatedstructs::Int16Int8>::value &&
-          IsMemcpyCompatible<
-              ::fidl::test::encapsulatedstructs::Int8Int32>::value> {};
+              ::test::encapsulatedstructs::ArrayInt16Int8>::value &&
+          IsMemcpyCompatible<::test::encapsulatedstructs::Int16Int8>::value &&
+          IsMemcpyCompatible<::test::encapsulatedstructs::Int8Int32>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::StructPaddingTestStruct& value,
-    ::fidl::test::encapsulatedstructs::StructPaddingTestStruct* result) {
-  return ::fidl::test::encapsulatedstructs::Clone(value, result);
+    const ::test::encapsulatedstructs::StructPaddingTestStruct& value,
+    ::test::encapsulatedstructs::StructPaddingTestStruct* result) {
+  return ::test::encapsulatedstructs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::encapsulatedstructs::StructPaddingTestStruct> {
+struct Equality<::test::encapsulatedstructs::StructPaddingTestStruct> {
   bool operator()(
-      const ::fidl::test::encapsulatedstructs::StructPaddingTestStruct& _lhs,
-      const ::fidl::test::encapsulatedstructs::StructPaddingTestStruct& _rhs)
-      const {
+      const ::test::encapsulatedstructs::StructPaddingTestStruct& _lhs,
+      const ::test::encapsulatedstructs::StructPaddingTestStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.trailing, _rhs.trailing)) {
       return false;
     }
@@ -403,35 +390,34 @@ struct Equality<::fidl::test::encapsulatedstructs::StructPaddingTestStruct> {
 #ifdef __Fuchsia__
 
 template <>
-struct CodingTraits<::fidl::test::encapsulatedstructs::TopLevelStruct>
-    : public EncodableCodingTraits<
-          ::fidl::test::encapsulatedstructs::TopLevelStruct, 40, 40> {};
+struct CodingTraits<::test::encapsulatedstructs::TopLevelStruct>
+    : public EncodableCodingTraits<::test::encapsulatedstructs::TopLevelStruct,
+                                   40, 40> {};
 
 template <>
-struct HasPadding<::fidl::test::encapsulatedstructs::TopLevelStruct>
+struct HasPadding<::test::encapsulatedstructs::TopLevelStruct>
     : public std::true_type {};
 
 template <>
-struct IsMemcpyCompatible<::fidl::test::encapsulatedstructs::TopLevelStruct>
+struct IsMemcpyCompatible<::test::encapsulatedstructs::TopLevelStruct>
     : public internal::BoolConstant<
-          !HasPadding<
-              ::fidl::test::encapsulatedstructs::TopLevelStruct>::value &&
-          IsMemcpyCompatible<::fidl::test::encapsulatedstructs::
-                                 NonInlineStructTestStruct>::value &&
-          IsMemcpyCompatible<::fidl::test::encapsulatedstructs::
-                                 StructPaddingTestStruct>::value> {};
+          !HasPadding<::test::encapsulatedstructs::TopLevelStruct>::value &&
+          IsMemcpyCompatible<
+              ::test::encapsulatedstructs::NonInlineStructTestStruct>::value &&
+          IsMemcpyCompatible<
+              ::test::encapsulatedstructs::StructPaddingTestStruct>::value> {};
 
 inline zx_status_t Clone(
-    const ::fidl::test::encapsulatedstructs::TopLevelStruct& value,
-    ::fidl::test::encapsulatedstructs::TopLevelStruct* result) {
-  return ::fidl::test::encapsulatedstructs::Clone(value, result);
+    const ::test::encapsulatedstructs::TopLevelStruct& value,
+    ::test::encapsulatedstructs::TopLevelStruct* result) {
+  return ::test::encapsulatedstructs::Clone(value, result);
 }
 
 template <>
-struct Equality<::fidl::test::encapsulatedstructs::TopLevelStruct> {
+struct Equality<::test::encapsulatedstructs::TopLevelStruct> {
   bool operator()(
-      const ::fidl::test::encapsulatedstructs::TopLevelStruct& _lhs,
-      const ::fidl::test::encapsulatedstructs::TopLevelStruct& _rhs) const {
+      const ::test::encapsulatedstructs::TopLevelStruct& _lhs,
+      const ::test::encapsulatedstructs::TopLevelStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }

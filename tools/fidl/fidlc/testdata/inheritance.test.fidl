@@ -1,4 +1,4 @@
-library fidl.test.inheritance;
+library test.inheritance;
 
 protocol super {
     foo(struct {

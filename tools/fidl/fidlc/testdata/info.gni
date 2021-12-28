@@ -48,7 +48,7 @@ import("//build/fidl/toolchain.gni")
 fidl_testdata_info = [
   {
     name = "anonymous"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.anonymous"
+    target = "//tools/fidl/fidlc/testdata:test.anonymous"
     build_denylist = [
       # TODO(fxbug.dev/7644): Dart does not support recursive types
       "fidlgen_dart",
@@ -66,7 +66,7 @@ fidl_testdata_info = [
   },
   {
     name = "arrays"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.arrays"
+    target = "//tools/fidl/fidlc/testdata:test.arrays"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -74,7 +74,7 @@ fidl_testdata_info = [
   },
   {
     name = "bindings_denylist"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.bindingsdenylist"
+    target = "//tools/fidl/fidlc/testdata:test.bindingsdenylist"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -88,7 +88,7 @@ fidl_testdata_info = [
   },
   {
     name = "bits"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.bits"
+    target = "//tools/fidl/fidlc/testdata:test.bits"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -96,7 +96,7 @@ fidl_testdata_info = [
   },
   {
     name = "byte_and_bytes"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.byteandbytes"
+    target = "//tools/fidl/fidlc/testdata:test.byteandbytes"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -104,7 +104,7 @@ fidl_testdata_info = [
   },
   {
     name = "consts"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.consts"
+    target = "//tools/fidl/fidlc/testdata:test.consts"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -125,7 +125,7 @@ fidl_testdata_info = [
   },
   {
     name = "constants"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.constants"
+    target = "//tools/fidl/fidlc/testdata:test.constants"
     denylist = [
       # TODO(fxbug.dev/45006): Implement const expressions in fidlgen.
       "fidlgen_dart",
@@ -141,11 +141,11 @@ fidl_testdata_info = [
   },
   {
     name = "bits_constants"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.bitsconstants"
+    target = "//tools/fidl/fidlc/testdata:test.bitsconstants"
   },
   {
     name = "doc_comments"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.doccomments"
+    target = "//tools/fidl/fidlc/testdata:test.doccomments"
     build_denylist = [
       # TODO(fxbug.dev/62523): Make protocol named "Interface" compile.
       "fidlgen_llcpp",
@@ -164,15 +164,15 @@ fidl_testdata_info = [
   },
   {
     name = "driver_one_way"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.driveroneway"
+    target = "//tools/fidl/fidlc/testdata:test.driveroneway"
   },
   {
     name = "driver_two_way"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.drivertwoway"
+    target = "//tools/fidl/fidlc/testdata:test.drivertwoway"
   },
   {
     name = "empty_struct"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.emptystruct"
+    target = "//tools/fidl/fidlc/testdata:test.emptystruct"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -186,7 +186,7 @@ fidl_testdata_info = [
   },
   {
     name = "encapsulated_structs"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.encapsulatedstructs"
+    target = "//tools/fidl/fidlc/testdata:test.encapsulatedstructs"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -194,7 +194,7 @@ fidl_testdata_info = [
   },
   {
     name = "enum"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.enum"
+    target = "//tools/fidl/fidlc/testdata:test.enum"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -204,7 +204,7 @@ fidl_testdata_info = [
   # TODO(fxbug.dev/64992): Remove, use only error_syntax example.
   {
     name = "error"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.error"
+    target = "//tools/fidl/fidlc/testdata:test.error"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -218,11 +218,11 @@ fidl_testdata_info = [
   },
   {
     name = "error_syntax"
-    target = "//tools/fidl/fidlc/testdata/error_syntax:fidl.test.errorsyntax"
+    target = "//tools/fidl/fidlc/testdata/error_syntax:test.errorsyntax"
   },
   {
     name = "escaping"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.escaping"
+    target = "//tools/fidl/fidlc/testdata:test.escaping"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -230,8 +230,7 @@ fidl_testdata_info = [
   },
   {
     name = "experimental_maybe_from_type_alias"
-    target =
-        "//tools/fidl/fidlc/testdata:fidl.test.experimentalmaybefromtypealias"
+    target = "//tools/fidl/fidlc/testdata:test.experimentalmaybefromtypealias"
     denylist = [
       # TODO(fxbug.dev/62533): Fix many issues.
       "fidlgen_hlcpp",
@@ -242,7 +241,7 @@ fidl_testdata_info = [
   },
   {
     name = "foreign_type_in_response_used_through_compose"
-    target = "//tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose:fidl.test.foreigntypeinresponseusedthroughcompose"
+    target = "//tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose:test.foreigntypeinresponseusedthroughcompose"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -256,7 +255,7 @@ fidl_testdata_info = [
   },
   {
     name = "handles"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.handles"
+    target = "//tools/fidl/fidlc/testdata:test.handles"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -285,7 +284,7 @@ fidl_testdata_info = [
   },
   {
     name = "handles_in_types"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.handlesintypes"
+    target = "//tools/fidl/fidlc/testdata:test.handlesintypes"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -293,11 +292,11 @@ fidl_testdata_info = [
   },
   {
     name = "imported_const_values"
-    target = "//tools/fidl/fidlc/testdata/imported_const_values:fidl.test.importedconstvalues"
+    target = "//tools/fidl/fidlc/testdata/imported_const_values:test.importedconstvalues"
   },
   {
     name = "inheritance"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.inheritance"
+    target = "//tools/fidl/fidlc/testdata:test.inheritance"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -311,8 +310,7 @@ fidl_testdata_info = [
   },
   {
     name = "inheritance_with_recursive_decl"
-    target =
-        "//tools/fidl/fidlc/testdata:fidl.test.inheritancewithrecursivedecl"
+    target = "//tools/fidl/fidlc/testdata:test.inheritancewithrecursivedecl"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -326,7 +324,7 @@ fidl_testdata_info = [
   },
   {
     name = "nullable"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.nullable"
+    target = "//tools/fidl/fidlc/testdata:test.nullable"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -337,7 +335,7 @@ fidl_testdata_info = [
   },
   {
     name = "padding"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.padding"
+    target = "//tools/fidl/fidlc/testdata:test.padding"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -345,7 +343,7 @@ fidl_testdata_info = [
   },
   {
     name = "placement_of_attributes"
-    target = "//tools/fidl/fidlc/testdata/placement_of_attributes:fidl.test.placementofattributes"
+    target = "//tools/fidl/fidlc/testdata/placement_of_attributes:test.placementofattributes"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -359,7 +357,7 @@ fidl_testdata_info = [
   },
   {
     name = "protocol_request"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.protocolrequest"
+    target = "//tools/fidl/fidlc/testdata:test.protocolrequest"
     build_denylist = [
       # TODO(fxbug.dev/62532): Fix many issues.
       "fidlgen_llcpp",
@@ -383,7 +381,7 @@ fidl_testdata_info = [
   },
   {
     name = "protocols"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.protocols"
+    target = "//tools/fidl/fidlc/testdata:test.protocols"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -397,7 +395,7 @@ fidl_testdata_info = [
   },
   {
     name = "request_flexible_envelope"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.requestflexibleenvelope"
+    target = "//tools/fidl/fidlc/testdata:test.requestflexibleenvelope"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -408,7 +406,7 @@ fidl_testdata_info = [
   },
   {
     name = "service"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.service"
+    target = "//tools/fidl/fidlc/testdata:test.service"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -422,7 +420,7 @@ fidl_testdata_info = [
   },
   {
     name = "struct"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.struct"
+    target = "//tools/fidl/fidlc/testdata:test.struct"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -430,7 +428,7 @@ fidl_testdata_info = [
   },
   {
     name = "struct_default_value_enum_library_reference"
-    target = "//tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference:fidl.test.structdefaultvalueenumlibraryreference"
+    target = "//tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference:test.structdefaultvalueenumlibraryreference"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -446,7 +444,7 @@ fidl_testdata_info = [
   },
   {
     name = "table"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.table"
+    target = "//tools/fidl/fidlc/testdata:test.table"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -454,7 +452,7 @@ fidl_testdata_info = [
   },
   {
     name = "transitive_dependencies"
-    target = "//tools/fidl/fidlc/testdata/transitive_dependencies:fidl.test.transitivedependencies"
+    target = "//tools/fidl/fidlc/testdata/transitive_dependencies:test.transitivedependencies"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -462,7 +460,7 @@ fidl_testdata_info = [
   },
   {
     name = "transitive_dependencies_compose"
-    target = "//tools/fidl/fidlc/testdata/transitive_dependencies_compose:fidl.test.transitivedependenciescompose"
+    target = "//tools/fidl/fidlc/testdata/transitive_dependencies_compose:test.transitivedependenciescompose"
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
@@ -476,7 +474,7 @@ fidl_testdata_info = [
   },
   {
     name = "type_aliases"
-    target = "//tools/fidl/fidlc/testdata/type_aliases:fidl.test.typealiases"
+    target = "//tools/fidl/fidlc/testdata/type_aliases:test.typealiases"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -484,7 +482,7 @@ fidl_testdata_info = [
   },
   {
     name = "union"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.union"
+    target = "//tools/fidl/fidlc/testdata:test.union"
     build_denylist = [
       # TODO(fxbug.dev/55889): Escape "union" keyword.
       "fidlgen_llcpp",
@@ -503,7 +501,7 @@ fidl_testdata_info = [
   },
   {
     name = "union_sandwich"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.unionsandwich"
+    target = "//tools/fidl/fidlc/testdata:test.unionsandwich"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -518,7 +516,7 @@ fidl_testdata_info = [
   },
   {
     name = "vectors"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.vectors"
+    target = "//tools/fidl/fidlc/testdata:test.vectors"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -526,7 +524,7 @@ fidl_testdata_info = [
   },
   {
     name = "versions"
-    target = "//tools/fidl/fidlc/testdata:fidl.test.versions"
+    target = "//tools/fidl/fidlc/testdata:test.versions"
     denylist = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
@@ -552,7 +550,7 @@ foreach(info, _fidl_testdata_info) {
 
   # Enforce consistent naming. This also ensures that subdirectories are only
   # used for wiring up dependencies, not for categorization (see README.md).
-  desired_target_name = "fidl.test." + string_replace(info.name, "_", "")
+  desired_target_name = "test." + string_replace(info.name, "_", "")
   assert(info.target_name == desired_target_name,
          "Expected ${info.target} to have name $desired_target_name")
   dir_name = get_path_info(get_label_info(info.target, "dir"), "file")

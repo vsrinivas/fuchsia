@@ -2,14 +2,14 @@
 
 [TOC]
 
-# fidl.test.transitivedependenciescompose
+# test.transitivedependenciescompose
 
 
 
 ## **PROTOCOLS**
 
 ## Top {#Top}
-*Defined in [fidl.test.transitivedependenciescompose/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl;l=8)*
+*Defined in [test.transitivedependenciescompose/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl;l=8)*
 
 
 
@@ -27,7 +27,7 @@
     <tr>
             <td><code>foo</code></td>
             <td>
-                <code><a class='link' href='../bottom/'>bottom</a>/<a class='link' href='../bottom/#Foo'>Foo</a></code>
+                <code><a class='link' href='../test.bottom/'>test.bottom</a>/<a class='link' href='../test.bottom/#Foo'>Foo</a></code>
             </td>
         </tr></table>
 

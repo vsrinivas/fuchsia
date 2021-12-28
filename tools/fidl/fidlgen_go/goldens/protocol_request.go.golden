@@ -79,10 +79,10 @@ func (s_ *ChildWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Me
 type ChildEventProxy _bindings.ChannelProxy
 
 const (
-	ParentGetChildOrdinal         uint64 = 0x6e0c789be8dbb77e
-	ParentGetChildRequestOrdinal  uint64 = 0x193e7d6949a9df98
-	ParentTakeChildOrdinal        uint64 = 0x5311bd7214c0f6e
-	ParentTakeChildRequestOrdinal uint64 = 0x15dae312bad5a9cc
+	ParentGetChildOrdinal         uint64 = 0xc3cd963aafc873b
+	ParentGetChildRequestOrdinal  uint64 = 0xf38d08d64f71c79
+	ParentTakeChildOrdinal        uint64 = 0x3e08fd7ca04b2290
+	ParentTakeChildRequestOrdinal uint64 = 0x2063f76b1bb45f87
 )
 
 type ParentWithCtxInterface _bindings.ChannelProxy

@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <fidl/test/service/cpp/fidl.h>
+#include <test/service/cpp/fidl.h>
 
 #include "lib/fidl/cpp/fuzzing/traits.h"
 #include "lib/fidl/cpp/internal/header.h"
@@ -13,11 +13,11 @@
 
 namespace fuzzing {
 
-using SingleMemberService = ::fidl::test::service::SingleMemberService;
+using SingleMemberService = ::test::service::SingleMemberService;
 using MultiHomogeneousMemberService =
-    ::fidl::test::service::MultiHomogeneousMemberService;
+    ::test::service::MultiHomogeneousMemberService;
 using MultiHeterogeneousMemberService =
-    ::fidl::test::service::MultiHeterogeneousMemberService;
-using EmptyService = ::fidl::test::service::EmptyService;
+    ::test::service::MultiHeterogeneousMemberService;
+using EmptyService = ::test::service::EmptyService;
 
 }  // namespace fuzzing

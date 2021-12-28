@@ -1,4 +1,4 @@
-library bottom;
+library test.bottom;
 
 // TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
 // single component library names.
@@ -14,7 +14,7 @@ protocol Bottom {
     GetFoo() -> (
             // TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
             // single component library names.
-            @bindings_denylist("cpp") struct {
+    @bindings_denylist("cpp") struct {
         foo Foo;
     });
 };

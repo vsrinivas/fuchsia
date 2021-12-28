@@ -7,7 +7,6 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
-namespace fidl {
 namespace test {
 namespace protocolrequest {
 #ifdef __Fuchsia__
@@ -26,16 +25,16 @@ using ChildHandle = ::fidl::InterfaceHandle<Child>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestMessageTable;
+    test_protocolrequest_ParentGetChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable;
+    test_protocolrequest_ParentGetChildRequestRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
+    test_protocolrequest_ParentTakeChildRequestRequestMessageTable;
 
 }  // namespace _internal
 class Parent_RequestEncoder {
@@ -56,8 +55,8 @@ class Parent_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocolrequest::_internal::
-                   fidl_test_protocolrequest_ParentGetChildRequestMessageTable,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentGetChildRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -81,8 +80,8 @@ class Parent_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentGetChildRequestRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -90,7 +89,7 @@ class Parent_RequestEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage TakeChild(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* c) {
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -117,8 +116,8 @@ class Parent_RequestEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocolrequest::_internal::
-                   fidl_test_protocolrequest_ParentTakeChildRequestMessageTable,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentTakeChildRequestMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
 
@@ -126,7 +125,7 @@ class Parent_RequestEncoder {
   }
   static ::fidl::HLCPPOutgoingMessage TakeChildRequest(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -154,8 +153,8 @@ class Parent_RequestEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
 
@@ -164,17 +163,17 @@ class Parent_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildResponseMessageTable;
+    test_protocolrequest_ParentGetChildResponseMessageTable;
 
 __LOCAL extern "C" const fidl_type_t
-    fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable;
+    test_protocolrequest_ParentGetChildRequestResponseMessageTable;
 
 }  // namespace _internal
 class Parent_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* c) {
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -201,15 +200,15 @@ class Parent_ResponseEncoder {
     }
 
     fidl_trace(DidHLCPPEncode,
-               &::fidl::test::protocolrequest::_internal::
-                   fidl_test_protocolrequest_ParentGetChildResponseMessageTable,
+               &::test::protocolrequest::_internal::
+                   test_protocolrequest_ParentGetChildResponseMessageTable,
                _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
                _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
   static ::fidl::HLCPPOutgoingMessage GetChildRequest(
       ::fidl::Encoder* _encoder,
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* r) {
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>* r) {
     fidl_trace(WillHLCPPEncode);
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1:
@@ -237,8 +236,8 @@ class Parent_ResponseEncoder {
 
     fidl_trace(
         DidHLCPPEncode,
-        &::fidl::test::protocolrequest::_internal::
-            fidl_test_protocolrequest_ParentGetChildRequestResponseMessageTable,
+        &::test::protocolrequest::_internal::
+            test_protocolrequest_ParentGetChildRequestResponseMessageTable,
         _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
@@ -259,10 +258,12 @@ class Child_ResponseEncoder {
 
 }  // namespace protocolrequest
 }  // namespace test
+namespace fidl {
 
 //
 // Proxies and stubs declarations
 //
+}  // namespace fidl
 namespace test {
 namespace protocolrequest {
 #ifdef __Fuchsia__
@@ -276,10 +277,10 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 
 namespace internal {
-constexpr uint64_t kParent_GetChild_Ordinal = 0x6e0c789be8dbb77elu;
-constexpr uint64_t kParent_GetChildRequest_Ordinal = 0x193e7d6949a9df98lu;
-constexpr uint64_t kParent_TakeChild_Ordinal = 0x5311bd7214c0f6elu;
-constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x15dae312bad5a9cclu;
+constexpr uint64_t kParent_GetChild_Ordinal = 0xc3cd963aafc873blu;
+constexpr uint64_t kParent_GetChildRequest_Ordinal = 0xf38d08d64f71c79lu;
+constexpr uint64_t kParent_TakeChild_Ordinal = 0x3e08fd7ca04b2290lu;
+constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x2063f76b1bb45f87lu;
 }  // namespace internal
 #endif  // __Fuchsia__
 
@@ -299,25 +300,25 @@ class Child_SyncProxy;
 
 class Parent {
  public:
-  using Proxy_ = ::fidl::test::protocolrequest::Parent_Proxy;
-  using Stub_ = ::fidl::test::protocolrequest::Parent_Stub;
-  using EventSender_ = ::fidl::test::protocolrequest::Parent_EventSender;
-  using Sync_ = ::fidl::test::protocolrequest::Parent_Sync;
+  using Proxy_ = ::test::protocolrequest::Parent_Proxy;
+  using Stub_ = ::test::protocolrequest::Parent_Stub;
+  using EventSender_ = ::test::protocolrequest::Parent_EventSender;
+  using Sync_ = ::test::protocolrequest::Parent_Sync;
   virtual ~Parent();
   using GetChildCallback = fit::function<void(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>)>;
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>)>;
 
   virtual void GetChild(GetChildCallback callback) = 0;
   using GetChildRequestCallback = fit::function<void(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>)>;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>)>;
 
   virtual void GetChildRequest(GetChildRequestCallback callback) = 0;
 
   virtual void TakeChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) = 0;
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) = 0;
 
   virtual void TakeChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r) = 0;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) = 0;
 };
 
 class Parent_RequestDecoder {
@@ -328,9 +329,9 @@ class Parent_RequestDecoder {
   virtual void GetChild() = 0;
   virtual void GetChildRequest() = 0;
   virtual void TakeChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) = 0;
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) = 0;
   virtual void TakeChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r) = 0;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) = 0;
 };
 
 class Parent_ResponseDecoder {
@@ -339,9 +340,9 @@ class Parent_ResponseDecoder {
   virtual ~Parent_ResponseDecoder() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
   virtual void GetChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) = 0;
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) = 0;
   virtual void GetChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r) = 0;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) = 0;
 };
 
 class Parent_EventSender {
@@ -351,17 +352,16 @@ class Parent_EventSender {
 
 class Parent_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocolrequest::Parent_SyncProxy;
+  using Proxy_ = ::test::protocolrequest::Parent_SyncProxy;
   virtual ~Parent_Sync();
   virtual zx_status_t GetChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* out_c) = 0;
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>* out_c) = 0;
   virtual zx_status_t GetChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>*
-          out_r) = 0;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>* out_r) = 0;
   virtual zx_status_t TakeChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) = 0;
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) = 0;
   virtual zx_status_t TakeChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r) = 0;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) = 0;
 };
 
 class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
@@ -370,61 +370,56 @@ class Parent_Proxy final : public ::fidl::internal::Proxy, public Parent {
   ~Parent_Proxy() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChild
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.GetChild
   void GetChild(GetChildCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChildRequest
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.GetChildRequest
   void GetChildRequest(GetChildRequestCallback callback) override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChild
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.TakeChild
   void TakeChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChildRequest
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) override;
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.TakeChildRequest
   void TakeChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r)
-      override;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) override;
 
  private:
-  Parent_Proxy(const ::fidl::test::protocolrequest::Parent_Proxy&) = delete;
-  Parent_Proxy& operator=(const ::fidl::test::protocolrequest::Parent_Proxy&) =
+  Parent_Proxy(const ::test::protocolrequest::Parent_Proxy&) = delete;
+  Parent_Proxy& operator=(const ::test::protocolrequest::Parent_Proxy&) =
       delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Parent_Stub final
-    : public ::fidl::internal::Stub,
-      public ::fidl::test::protocolrequest::Parent_EventSender {
+class Parent_Stub final : public ::fidl::internal::Stub,
+                          public ::test::protocolrequest::Parent_EventSender {
  public:
-  typedef class ::fidl::test::protocolrequest::Parent Parent_clazz;
+  typedef class ::test::protocolrequest::Parent Parent_clazz;
   explicit Parent_Stub(
-      ::fidl::test::protocolrequest::Parent_Stub::Parent_clazz* impl);
+      ::test::protocolrequest::Parent_Stub::Parent_clazz* impl);
   ~Parent_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocolrequest::Parent_Stub::Parent_clazz* impl_;
+  ::test::protocolrequest::Parent_Stub::Parent_clazz* impl_;
 };
 
-class Parent_SyncProxy : public ::fidl::test::protocolrequest::Parent_Sync {
+class Parent_SyncProxy : public ::test::protocolrequest::Parent_Sync {
  public:
   explicit Parent_SyncProxy(::zx::channel channel);
   ~Parent_SyncProxy() override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChild
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.GetChild
   zx_status_t GetChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>* out_c)
-      override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.GetChildRequest
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child>* out_c) override;
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.GetChildRequest
   zx_status_t GetChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>* out_r)
-      override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChild
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child>* out_r) override;
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.TakeChild
   zx_status_t TakeChild(
-      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c) override;
-  // cts-coverage-fidl-name:fidl.test.protocolrequest/Parent.TakeChildRequest
+      ::fidl::InterfaceHandle<::test::protocolrequest::Child> c) override;
+  // cts-coverage-fidl-name:test.protocolrequest/Parent.TakeChildRequest
   zx_status_t TakeChildRequest(
-      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r)
-      override;
+      ::fidl::InterfaceRequest<::test::protocolrequest::Child> r) override;
 
  private:
   ::fidl::internal::SynchronousProxy proxy_;
@@ -436,10 +431,10 @@ class Parent_SyncProxy : public ::fidl::test::protocolrequest::Parent_Sync {
 
 class Child {
  public:
-  using Proxy_ = ::fidl::test::protocolrequest::Child_Proxy;
-  using Stub_ = ::fidl::test::protocolrequest::Child_Stub;
-  using EventSender_ = ::fidl::test::protocolrequest::Child_EventSender;
-  using Sync_ = ::fidl::test::protocolrequest::Child_Sync;
+  using Proxy_ = ::test::protocolrequest::Child_Proxy;
+  using Stub_ = ::test::protocolrequest::Child_Stub;
+  using EventSender_ = ::test::protocolrequest::Child_EventSender;
+  using Sync_ = ::test::protocolrequest::Child_Sync;
   virtual ~Child();
 };
 
@@ -464,7 +459,7 @@ class Child_EventSender {
 
 class Child_Sync {
  public:
-  using Proxy_ = ::fidl::test::protocolrequest::Child_SyncProxy;
+  using Proxy_ = ::test::protocolrequest::Child_SyncProxy;
   virtual ~Child_Sync();
 };
 
@@ -476,30 +471,27 @@ class Child_Proxy final : public ::fidl::internal::Proxy, public Child {
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
  private:
-  Child_Proxy(const ::fidl::test::protocolrequest::Child_Proxy&) = delete;
-  Child_Proxy& operator=(const ::fidl::test::protocolrequest::Child_Proxy&) =
-      delete;
+  Child_Proxy(const ::test::protocolrequest::Child_Proxy&) = delete;
+  Child_Proxy& operator=(const ::test::protocolrequest::Child_Proxy&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class Child_Stub final
-    : public ::fidl::internal::Stub,
-      public ::fidl::test::protocolrequest::Child_EventSender {
+class Child_Stub final : public ::fidl::internal::Stub,
+                         public ::test::protocolrequest::Child_EventSender {
  public:
-  typedef class ::fidl::test::protocolrequest::Child Child_clazz;
-  explicit Child_Stub(
-      ::fidl::test::protocolrequest::Child_Stub::Child_clazz* impl);
+  typedef class ::test::protocolrequest::Child Child_clazz;
+  explicit Child_Stub(::test::protocolrequest::Child_Stub::Child_clazz* impl);
   ~Child_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ::fidl::test::protocolrequest::Child_Stub::Child_clazz* impl_;
+  ::test::protocolrequest::Child_Stub::Child_clazz* impl_;
 };
 
-class Child_SyncProxy : public ::fidl::test::protocolrequest::Child_Sync {
+class Child_SyncProxy : public ::test::protocolrequest::Child_Sync {
  public:
   explicit Child_SyncProxy(::zx::channel channel);
   ~Child_SyncProxy() override;
@@ -512,4 +504,3 @@ class Child_SyncProxy : public ::fidl::test::protocolrequest::Child_Sync {
 
 }  // namespace protocolrequest
 }  // namespace test
-}  // namespace fidl

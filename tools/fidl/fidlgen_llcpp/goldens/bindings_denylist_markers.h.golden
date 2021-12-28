@@ -4,7 +4,7 @@
 
 #include <lib/fidl/llcpp/internal/transport.h>
 
-namespace fidl_test_bindingsdenylist {
+namespace test_bindingsdenylist {
 
 class OnlyLibfuzzerAndDeps final {
   OnlyLibfuzzerAndDeps() = delete;
@@ -15,7 +15,7 @@ class OnlyLibfuzzerAndDeps final {
     LibfuzzerNeedsNonemptyProtocol() = delete;
 
    public:
-    using Protocol = ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps;
+    using Protocol = ::test_bindingsdenylist::OnlyLibfuzzerAndDeps;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
@@ -27,4 +27,4 @@ class OnlyCppAndDeps final {
  public:
   using Transport = ::fidl::internal::ChannelTransport;
 };
-}  // namespace fidl_test_bindingsdenylist
+}  // namespace test_bindingsdenylist

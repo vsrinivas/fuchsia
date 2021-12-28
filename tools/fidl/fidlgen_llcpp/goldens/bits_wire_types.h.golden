@@ -18,9 +18,9 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/fidl.test.bits/cpp/markers.h>
+#include <fidl/test.bits/cpp/markers.h>
 
-namespace fidl_test_bits {
+namespace test_bits {
 namespace wire {
 // |StrictBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
@@ -73,49 +73,48 @@ class StrictBits final {
  private:
   uint64_t value_ = 0;
 };
-constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::kSmallest =
-    ::fidl_test_bits::wire::StrictBits(1u);
-constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::kBiggest =
-    ::fidl_test_bits::wire::StrictBits(9223372036854775808u);
-constexpr const ::fidl_test_bits::wire::StrictBits StrictBits::kMask =
-    ::fidl_test_bits::wire::StrictBits(9223372036854775809u);
+constexpr const ::test_bits::wire::StrictBits StrictBits::kSmallest =
+    ::test_bits::wire::StrictBits(1u);
+constexpr const ::test_bits::wire::StrictBits StrictBits::kBiggest =
+    ::test_bits::wire::StrictBits(9223372036854775808u);
+constexpr const ::test_bits::wire::StrictBits StrictBits::kMask =
+    ::test_bits::wire::StrictBits(9223372036854775809u);
 
-constexpr inline ::fidl_test_bits::wire::StrictBits StrictBits::operator~()
-    const {
-  return ::fidl_test_bits::wire::StrictBits(
+constexpr inline ::test_bits::wire::StrictBits StrictBits::operator~() const {
+  return ::test_bits::wire::StrictBits(
       static_cast<uint64_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::StrictBits StrictBits::operator|(
-    const ::fidl_test_bits::wire::StrictBits& other) const {
-  return ::fidl_test_bits::wire::StrictBits(
+constexpr inline ::test_bits::wire::StrictBits StrictBits::operator|(
+    const ::test_bits::wire::StrictBits& other) const {
+  return ::test_bits::wire::StrictBits(
       static_cast<uint64_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::StrictBits StrictBits::operator&(
-    const ::fidl_test_bits::wire::StrictBits& other) const {
-  return ::fidl_test_bits::wire::StrictBits(
+constexpr inline ::test_bits::wire::StrictBits StrictBits::operator&(
+    const ::test_bits::wire::StrictBits& other) const {
+  return ::test_bits::wire::StrictBits(
       static_cast<uint64_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::StrictBits StrictBits::operator^(
-    const ::fidl_test_bits::wire::StrictBits& other) const {
-  return ::fidl_test_bits::wire::StrictBits(
+constexpr inline ::test_bits::wire::StrictBits StrictBits::operator^(
+    const ::test_bits::wire::StrictBits& other) const {
+  return ::test_bits::wire::StrictBits(
       static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void StrictBits::operator|=(
-    const ::fidl_test_bits::wire::StrictBits& other) {
+    const ::test_bits::wire::StrictBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void StrictBits::operator&=(
-    const ::fidl_test_bits::wire::StrictBits& other) {
+    const ::test_bits::wire::StrictBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void StrictBits::operator^=(
-    const ::fidl_test_bits::wire::StrictBits& other) {
+    const ::test_bits::wire::StrictBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -171,50 +170,50 @@ class MyBits final {
  private:
   uint32_t value_ = 0;
 };
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMyFirstBit =
-    ::fidl_test_bits::wire::MyBits(1u);
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMyOtherBit =
-    ::fidl_test_bits::wire::MyBits(2u);
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMask_ =
-    ::fidl_test_bits::wire::MyBits(4u);
-constexpr const ::fidl_test_bits::wire::MyBits MyBits::kMask =
-    ::fidl_test_bits::wire::MyBits(7u);
+constexpr const ::test_bits::wire::MyBits MyBits::kMyFirstBit =
+    ::test_bits::wire::MyBits(1u);
+constexpr const ::test_bits::wire::MyBits MyBits::kMyOtherBit =
+    ::test_bits::wire::MyBits(2u);
+constexpr const ::test_bits::wire::MyBits MyBits::kMask_ =
+    ::test_bits::wire::MyBits(4u);
+constexpr const ::test_bits::wire::MyBits MyBits::kMask =
+    ::test_bits::wire::MyBits(7u);
 
-constexpr inline ::fidl_test_bits::wire::MyBits MyBits::operator~() const {
-  return ::fidl_test_bits::wire::MyBits(
+constexpr inline ::test_bits::wire::MyBits MyBits::operator~() const {
+  return ::test_bits::wire::MyBits(
       static_cast<uint32_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::MyBits MyBits::operator|(
-    const ::fidl_test_bits::wire::MyBits& other) const {
-  return ::fidl_test_bits::wire::MyBits(
+constexpr inline ::test_bits::wire::MyBits MyBits::operator|(
+    const ::test_bits::wire::MyBits& other) const {
+  return ::test_bits::wire::MyBits(
       static_cast<uint32_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::MyBits MyBits::operator&(
-    const ::fidl_test_bits::wire::MyBits& other) const {
-  return ::fidl_test_bits::wire::MyBits(
+constexpr inline ::test_bits::wire::MyBits MyBits::operator&(
+    const ::test_bits::wire::MyBits& other) const {
+  return ::test_bits::wire::MyBits(
       static_cast<uint32_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::MyBits MyBits::operator^(
-    const ::fidl_test_bits::wire::MyBits& other) const {
-  return ::fidl_test_bits::wire::MyBits(
+constexpr inline ::test_bits::wire::MyBits MyBits::operator^(
+    const ::test_bits::wire::MyBits& other) const {
+  return ::test_bits::wire::MyBits(
       static_cast<uint32_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void MyBits::operator|=(
-    const ::fidl_test_bits::wire::MyBits& other) {
+    const ::test_bits::wire::MyBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void MyBits::operator&=(
-    const ::fidl_test_bits::wire::MyBits& other) {
+    const ::test_bits::wire::MyBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void MyBits::operator^=(
-    const ::fidl_test_bits::wire::MyBits& other) {
+    const ::test_bits::wire::MyBits& other) {
   this->value_ ^= other.value_;
 }
 
@@ -275,80 +274,77 @@ class FlexibleBits final {
  private:
   uint64_t value_ = 0;
 };
-constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::kSmallest =
-    ::fidl_test_bits::wire::FlexibleBits(1u);
-constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::kBiggest =
-    ::fidl_test_bits::wire::FlexibleBits(9223372036854775808u);
-constexpr const ::fidl_test_bits::wire::FlexibleBits FlexibleBits::kMask =
-    ::fidl_test_bits::wire::FlexibleBits(9223372036854775809u);
+constexpr const ::test_bits::wire::FlexibleBits FlexibleBits::kSmallest =
+    ::test_bits::wire::FlexibleBits(1u);
+constexpr const ::test_bits::wire::FlexibleBits FlexibleBits::kBiggest =
+    ::test_bits::wire::FlexibleBits(9223372036854775808u);
+constexpr const ::test_bits::wire::FlexibleBits FlexibleBits::kMask =
+    ::test_bits::wire::FlexibleBits(9223372036854775809u);
 
-constexpr inline ::fidl_test_bits::wire::FlexibleBits FlexibleBits::operator~()
+constexpr inline ::test_bits::wire::FlexibleBits FlexibleBits::operator~()
     const {
-  return ::fidl_test_bits::wire::FlexibleBits(
+  return ::test_bits::wire::FlexibleBits(
       static_cast<uint64_t>(~this->value_ & kMask.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::FlexibleBits FlexibleBits::operator|(
-    const ::fidl_test_bits::wire::FlexibleBits& other) const {
-  return ::fidl_test_bits::wire::FlexibleBits(
+constexpr inline ::test_bits::wire::FlexibleBits FlexibleBits::operator|(
+    const ::test_bits::wire::FlexibleBits& other) const {
+  return ::test_bits::wire::FlexibleBits(
       static_cast<uint64_t>(this->value_ | other.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::FlexibleBits FlexibleBits::operator&(
-    const ::fidl_test_bits::wire::FlexibleBits& other) const {
-  return ::fidl_test_bits::wire::FlexibleBits(
+constexpr inline ::test_bits::wire::FlexibleBits FlexibleBits::operator&(
+    const ::test_bits::wire::FlexibleBits& other) const {
+  return ::test_bits::wire::FlexibleBits(
       static_cast<uint64_t>(this->value_ & other.value_));
 }
 
-constexpr inline ::fidl_test_bits::wire::FlexibleBits FlexibleBits::operator^(
-    const ::fidl_test_bits::wire::FlexibleBits& other) const {
-  return ::fidl_test_bits::wire::FlexibleBits(
+constexpr inline ::test_bits::wire::FlexibleBits FlexibleBits::operator^(
+    const ::test_bits::wire::FlexibleBits& other) const {
+  return ::test_bits::wire::FlexibleBits(
       static_cast<uint64_t>(this->value_ ^ other.value_));
 }
 
 constexpr inline void FlexibleBits::operator|=(
-    const ::fidl_test_bits::wire::FlexibleBits& other) {
+    const ::test_bits::wire::FlexibleBits& other) {
   this->value_ |= other.value_;
 }
 
 constexpr inline void FlexibleBits::operator&=(
-    const ::fidl_test_bits::wire::FlexibleBits& other) {
+    const ::test_bits::wire::FlexibleBits& other) {
   this->value_ &= other.value_;
 }
 
 constexpr inline void FlexibleBits::operator^=(
-    const ::fidl_test_bits::wire::FlexibleBits& other) {
+    const ::test_bits::wire::FlexibleBits& other) {
   this->value_ ^= other.value_;
 }
 
 }  // namespace wire
-}  // namespace fidl_test_bits
+}  // namespace test_bits
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_bits::wire::StrictBits> : public std::true_type {
-};
+struct IsFidlType<::test_bits::wire::StrictBits> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_bits::wire::StrictBits>
-    : public std::false_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::StrictBits>);
-static_assert(sizeof(::fidl_test_bits::wire::StrictBits) == sizeof(uint64_t));
+struct ContainsHandle<::test_bits::wire::StrictBits> : public std::false_type {
+};
+static_assert(std::is_standard_layout_v<::test_bits::wire::StrictBits>);
+static_assert(sizeof(::test_bits::wire::StrictBits) == sizeof(uint64_t));
 
 template <>
-struct IsFidlType<::fidl_test_bits::wire::MyBits> : public std::true_type {};
+struct IsFidlType<::test_bits::wire::MyBits> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_bits::wire::MyBits> : public std::false_type {
-};
-static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::MyBits>);
-static_assert(sizeof(::fidl_test_bits::wire::MyBits) == sizeof(uint32_t));
+struct ContainsHandle<::test_bits::wire::MyBits> : public std::false_type {};
+static_assert(std::is_standard_layout_v<::test_bits::wire::MyBits>);
+static_assert(sizeof(::test_bits::wire::MyBits) == sizeof(uint32_t));
 
 template <>
-struct IsFidlType<::fidl_test_bits::wire::FlexibleBits>
-    : public std::true_type {};
+struct IsFidlType<::test_bits::wire::FlexibleBits> : public std::true_type {};
 template <>
-struct ContainsHandle<::fidl_test_bits::wire::FlexibleBits>
+struct ContainsHandle<::test_bits::wire::FlexibleBits>
     : public std::false_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::FlexibleBits>);
-static_assert(sizeof(::fidl_test_bits::wire::FlexibleBits) == sizeof(uint64_t));
+static_assert(std::is_standard_layout_v<::test_bits::wire::FlexibleBits>);
+static_assert(sizeof(::test_bits::wire::FlexibleBits) == sizeof(uint64_t));
 
 }  // namespace fidl

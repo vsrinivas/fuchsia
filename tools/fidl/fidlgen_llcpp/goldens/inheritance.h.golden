@@ -2,6 +2,6 @@
 
 #pragma once
 
-#include <fidl/fidl.test.inheritance/cpp/markers.h>
-#include <fidl/fidl.test.inheritance/cpp/wire_messaging.h>
-#include <fidl/fidl.test.inheritance/cpp/wire_types.h>
+#include <fidl/test.inheritance/cpp/markers.h>
+#include <fidl/test.inheritance/cpp/wire_messaging.h>
+#include <fidl/test.inheritance/cpp/wire_types.h>

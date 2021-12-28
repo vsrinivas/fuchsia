@@ -1,6 +1,6 @@
 {
   "version": "0.0.1",
-  "name": "fidl.test.encapsulatedstructs",
+  "name": "test.encapsulatedstructs",
   "library_dependencies": [
     {
       "name": "zx",
@@ -91,7 +91,7 @@
   "service_declarations": [],
   "struct_declarations": [
     {
-      "name": "fidl.test.encapsulatedstructs/Int8Int32",
+      "name": "test.encapsulatedstructs/Int8Int32",
       "naming_context": [
         "Int8Int32"
       ],
@@ -203,7 +203,7 @@
       }
     },
     {
-      "name": "fidl.test.encapsulatedstructs/Int16Int8",
+      "name": "test.encapsulatedstructs/Int16Int8",
       "naming_context": [
         "Int16Int8"
       ],
@@ -315,7 +315,7 @@
       }
     },
     {
-      "name": "fidl.test.encapsulatedstructs/ArrayInt16Int8",
+      "name": "test.encapsulatedstructs/ArrayInt16Int8",
       "naming_context": [
         "ArrayInt16Int8"
       ],
@@ -332,7 +332,7 @@
             "kind": "array",
             "element_type": {
               "kind": "identifier",
-              "identifier": "fidl.test.encapsulatedstructs/Int16Int8",
+              "identifier": "test.encapsulatedstructs/Int16Int8",
               "nullable": false,
               "type_shape_v1": {
                 "inline_size": 4,
@@ -411,7 +411,7 @@
       }
     },
     {
-      "name": "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
+      "name": "test.encapsulatedstructs/StructPaddingTestStruct",
       "naming_context": [
         "StructPaddingTestStruct"
       ],
@@ -426,7 +426,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.encapsulatedstructs/Int16Int8",
+            "identifier": "test.encapsulatedstructs/Int16Int8",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 4,
@@ -466,7 +466,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.encapsulatedstructs/Int8Int32",
+            "identifier": "test.encapsulatedstructs/Int8Int32",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 8,
@@ -506,7 +506,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.encapsulatedstructs/ArrayInt16Int8",
+            "identifier": "test.encapsulatedstructs/ArrayInt16Int8",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 12,
@@ -565,7 +565,7 @@
       }
     },
     {
-      "name": "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
+      "name": "test.encapsulatedstructs/NonInlineStructTestStruct",
       "naming_context": [
         "NonInlineStructTestStruct"
       ],
@@ -580,7 +580,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.encapsulatedstructs/Int16Int8",
+            "identifier": "test.encapsulatedstructs/Int16Int8",
             "nullable": true,
             "type_shape_v1": {
               "inline_size": 8,
@@ -681,7 +681,7 @@
       }
     },
     {
-      "name": "fidl.test.encapsulatedstructs/TopLevelStruct",
+      "name": "test.encapsulatedstructs/TopLevelStruct",
       "naming_context": [
         "TopLevelStruct"
       ],
@@ -696,7 +696,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
+            "identifier": "test.encapsulatedstructs/StructPaddingTestStruct",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 24,
@@ -736,7 +736,7 @@
         {
           "type": {
             "kind": "identifier",
-            "identifier": "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
+            "identifier": "test.encapsulatedstructs/NonInlineStructTestStruct",
             "nullable": false,
             "type_shape_v1": {
               "inline_size": 16,
@@ -800,19 +800,19 @@
   "union_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.encapsulatedstructs/NonInlineStructTestStruct",
-    "fidl.test.encapsulatedstructs/Int8Int32",
-    "fidl.test.encapsulatedstructs/Int16Int8",
-    "fidl.test.encapsulatedstructs/ArrayInt16Int8",
-    "fidl.test.encapsulatedstructs/StructPaddingTestStruct",
-    "fidl.test.encapsulatedstructs/TopLevelStruct"
+    "test.encapsulatedstructs/NonInlineStructTestStruct",
+    "test.encapsulatedstructs/Int8Int32",
+    "test.encapsulatedstructs/Int16Int8",
+    "test.encapsulatedstructs/ArrayInt16Int8",
+    "test.encapsulatedstructs/StructPaddingTestStruct",
+    "test.encapsulatedstructs/TopLevelStruct"
   ],
   "declarations": {
-    "fidl.test.encapsulatedstructs/Int8Int32": "struct",
-    "fidl.test.encapsulatedstructs/Int16Int8": "struct",
-    "fidl.test.encapsulatedstructs/ArrayInt16Int8": "struct",
-    "fidl.test.encapsulatedstructs/StructPaddingTestStruct": "struct",
-    "fidl.test.encapsulatedstructs/NonInlineStructTestStruct": "struct",
-    "fidl.test.encapsulatedstructs/TopLevelStruct": "struct"
+    "test.encapsulatedstructs/Int8Int32": "struct",
+    "test.encapsulatedstructs/Int16Int8": "struct",
+    "test.encapsulatedstructs/ArrayInt16Int8": "struct",
+    "test.encapsulatedstructs/StructPaddingTestStruct": "struct",
+    "test.encapsulatedstructs/NonInlineStructTestStruct": "struct",
+    "test.encapsulatedstructs/TopLevelStruct": "struct"
   }
 }
