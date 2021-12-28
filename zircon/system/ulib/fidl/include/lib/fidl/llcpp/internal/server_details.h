@@ -125,11 +125,11 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
                                                 fidl::ServerEnd<Protocol> server_end,
                                                 IncomingMessageDispatcher* interface,
                                                 internal::AnyOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncServerBinding::Create(
-      dispatcher, internal::MakeAnyTransport(server_end.TakeHandle()), interface,
-      std::move(on_unbound));
-  auto binding_ref = fidl::ServerBindingRef<Protocol>(internal_binding);
-  auto* binding_ptr = internal_binding.get();
+  std::shared_ptr<AsyncServerBinding> internal_binding =
+      AsyncServerBinding::Create(dispatcher, internal::MakeAnyTransport(server_end.TakeHandle()),
+                                 interface, std::move(on_unbound));
+  fidl::ServerBindingRef<Protocol> binding_ref(internal_binding);
+  AsyncServerBinding* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the
   // shared pointer here is fine.
   internal_binding.reset();
