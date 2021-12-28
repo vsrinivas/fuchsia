@@ -15,6 +15,7 @@ package stack
 
 import (
 	"fmt"
+	"io"
 
 	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/sync"
@@ -26,11 +27,18 @@ import (
 type headerType int
 
 const (
-	linkHeader headerType = iota
+	virtioNetHeader headerType = iota
+	linkHeader
 	networkHeader
 	transportHeader
 	numHeaderType
 )
+
+var pkPool = sync.Pool{
+	New: func() interface{} {
+		return &PacketBuffer{}
+	},
+}
 
 // PacketBufferOptions specifies options for PacketBuffer creation.
 type PacketBufferOptions struct {
@@ -85,8 +93,12 @@ type PacketBufferOptions struct {
 // `consumed` value is stored for each header, and it gets incremented by the
 // consumed length. PacketBuffer adds this value to `reserved` to compute the
 // starting offset of each header in `buf`.
+//
+// +stateify savable
 type PacketBuffer struct {
 	_ sync.NoCopy
+
+	packetBufferRefs
 
 	// PacketBufferEntry is used to build an intrusive list of
 	// PacketBuffers.
@@ -126,13 +138,13 @@ type PacketBuffer struct {
 	EgressRoute RouteInfo
 	GSOOptions  GSO
 
-	// SNATDone indicates if the packet's source has been manipulated as per
+	// snatDone indicates if the packet's source has been manipulated as per
 	// iptables NAT table.
-	SNATDone bool
+	snatDone bool
 
-	// DNATDone indicates if the packet's destination has been manipulated as per
+	// dnatDone indicates if the packet's destination has been manipulated as per
 	// iptables NAT table.
-	DNATDone bool
+	dnatDone bool
 
 	// PktType indicates the SockAddrLink.PacketType of the packet as defined in
 	// https://www.man7.org/linux/man-pages/man7/packet.7.html.
@@ -149,13 +161,15 @@ type PacketBuffer struct {
 	NetworkPacketInfo NetworkPacketInfo
 
 	tuple *tuple
+
+	preserveObject bool
 }
 
 // NewPacketBuffer creates a new PacketBuffer with opts.
 func NewPacketBuffer(opts PacketBufferOptions) *PacketBuffer {
-	pk := &PacketBuffer{
-		buf: &buffer.Buffer{},
-	}
+	pk := pkPool.Get().(*PacketBuffer)
+	pk.reset()
+	pk.buf = &buffer.Buffer{}
 	if opts.ReserveHeaderBytes != 0 {
 		pk.buf.AppendOwned(make([]byte, opts.ReserveHeaderBytes))
 		pk.reserved = opts.ReserveHeaderBytes
@@ -166,7 +180,29 @@ func NewPacketBuffer(opts PacketBufferOptions) *PacketBuffer {
 	if opts.IsForwardedPacket {
 		pk.NetworkPacketInfo.IsForwardedPacket = opts.IsForwardedPacket
 	}
+	pk.InitRefs()
 	return pk
+}
+
+// PreserveObject marks this PacketBuffer so it is not recycled by internal
+// pooling.
+func (pk *PacketBuffer) PreserveObject() {
+	pk.preserveObject = true
+}
+
+// DecRef decrements the PacketBuffer's refcount. If the refcount is
+// decremented to zero, the PacketBuffer is returned to the PacketBuffer
+// pool.
+func (pk *PacketBuffer) DecRef() {
+	pk.packetBufferRefs.DecRef(func() {
+		if pk.packetBufferRefs.refCount == 0 && !pk.preserveObject {
+			pkPool.Put(pk)
+		}
+	})
+}
+
+func (pk *PacketBuffer) reset() {
+	*pk = PacketBuffer{}
 }
 
 // ReservedHeaderBytes returns the number of bytes initially reserved for
@@ -179,6 +215,14 @@ func (pk *PacketBuffer) ReservedHeaderBytes() int {
 // headers. This is relevant to PacketHeader.Push method only.
 func (pk *PacketBuffer) AvailableHeaderBytes() int {
 	return pk.reserved - pk.pushed
+}
+
+// VirtioNetHeader returns the handle to virtio-layer header.
+func (pk *PacketBuffer) VirtioNetHeader() PacketHeader {
+	return PacketHeader{
+		pk:  pk,
+		typ: virtioNetHeader,
+	}
 }
 
 // LinkHeader returns the handle to link-layer header.
@@ -291,26 +335,27 @@ func (pk *PacketBuffer) headerView(typ headerType) tcpipbuffer.View {
 // Clone makes a semi-deep copy of pk. The underlying packet payload is
 // shared. Hence, no modifications is done to underlying packet payload.
 func (pk *PacketBuffer) Clone() *PacketBuffer {
-	return &PacketBuffer{
-		PacketBufferEntry:            pk.PacketBufferEntry,
-		buf:                          pk.buf.Clone(),
-		reserved:                     pk.reserved,
-		pushed:                       pk.pushed,
-		consumed:                     pk.consumed,
-		headers:                      pk.headers,
-		Hash:                         pk.Hash,
-		Owner:                        pk.Owner,
-		GSOOptions:                   pk.GSOOptions,
-		NetworkProtocolNumber:        pk.NetworkProtocolNumber,
-		DNATDone:                     pk.DNATDone,
-		SNATDone:                     pk.SNATDone,
-		TransportProtocolNumber:      pk.TransportProtocolNumber,
-		PktType:                      pk.PktType,
-		NICID:                        pk.NICID,
-		RXTransportChecksumValidated: pk.RXTransportChecksumValidated,
-		NetworkPacketInfo:            pk.NetworkPacketInfo,
-		tuple:                        pk.tuple,
-	}
+	newPk := pkPool.Get().(*PacketBuffer)
+	newPk.PacketBufferEntry = pk.PacketBufferEntry
+	newPk.buf = pk.buf.Clone()
+	newPk.reserved = pk.reserved
+	newPk.pushed = pk.pushed
+	newPk.consumed = pk.consumed
+	newPk.headers = pk.headers
+	newPk.Hash = pk.Hash
+	newPk.Owner = pk.Owner
+	newPk.GSOOptions = pk.GSOOptions
+	newPk.NetworkProtocolNumber = pk.NetworkProtocolNumber
+	newPk.dnatDone = pk.dnatDone
+	newPk.snatDone = pk.snatDone
+	newPk.TransportProtocolNumber = pk.TransportProtocolNumber
+	newPk.PktType = pk.PktType
+	newPk.NICID = pk.NICID
+	newPk.RXTransportChecksumValidated = pk.RXTransportChecksumValidated
+	newPk.NetworkPacketInfo = pk.NetworkPacketInfo
+	newPk.tuple = pk.tuple
+	newPk.InitRefs()
+	return newPk
 }
 
 // Network returns the network header as a header.Network.
@@ -333,12 +378,13 @@ func (pk *PacketBuffer) Network() header.Network {
 // See PacketBuffer.Data for details about how a packet buffer holds an inbound
 // packet.
 func (pk *PacketBuffer) CloneToInbound() *PacketBuffer {
-	newPk := &PacketBuffer{
-		buf: pk.buf.Clone(),
-		// Treat unfilled header portion as reserved.
-		reserved: pk.AvailableHeaderBytes(),
-		tuple:    pk.tuple,
-	}
+	newPk := pkPool.Get().(*PacketBuffer)
+	newPk.reset()
+	newPk.buf = pk.buf.Clone()
+	newPk.InitRefs()
+	// Treat unfilled header portion as reserved.
+	newPk.reserved = pk.AvailableHeaderBytes()
+	newPk.tuple = pk.tuple
 	return newPk
 }
 
@@ -375,7 +421,31 @@ func (pk *PacketBuffer) DeepCopyForForwarding(reservedHeaderBytes int) *PacketBu
 	return newPk
 }
 
+// IncRef increases the reference count on each PacketBuffer
+// stored in the PacketBufferList.
+func (pk *PacketBufferList) IncRef() {
+	for pb := pk.Front(); pb != nil; pb = pb.Next() {
+		pb.IncRef()
+	}
+}
+
+// DecRef decreases the reference count on each PacketBuffer
+// stored in the PacketBufferList.
+func (pk *PacketBufferList) DecRef() {
+	// Using a while-loop here (instead of for-loop) because DecRef() can cause
+	// the pb to be recycled. If it is recycled during execution of this loop,
+	// there is a possibility of a data race during a call to pb.Next().
+	pb := pk.Front()
+	for pb != nil {
+		next := pb.Next()
+		pb.DecRef()
+		pb = next
+	}
+}
+
 // headerInfo stores metadata about a header in a packet.
+//
+// +stateify savable
 type headerInfo struct {
 	// offset is the offset of the header in pk.buf relative to
 	// pk.buf[pk.reserved]. See the PacketBuffer struct for details.
@@ -413,6 +483,8 @@ func (h PacketHeader) Consume(size int) (v tcpipbuffer.View, consumed bool) {
 }
 
 // PacketData represents the data portion of a PacketBuffer.
+//
+// +stateify savable
 type PacketData struct {
 	pk *PacketBuffer
 }
@@ -431,6 +503,28 @@ func (d PacketData) Consume(size int) (tcpipbuffer.View, bool) {
 		d.pk.consumed += size
 	}
 	return v, ok
+}
+
+// ReadTo reads bytes from d to dst. It also removes these bytes from d
+// unless peek is true.
+func (d PacketData) ReadTo(dst io.Writer, peek bool) (int, error) {
+	var err error
+	done := 0
+	for _, v := range d.Views() {
+		var n int
+		n, err = dst.Write(v)
+		done += n
+		if err != nil {
+			break
+		}
+		if n != len(v) {
+			panic(fmt.Sprintf("io.Writer.Write succeeded with incomplete write: %d != %d", n, len(v)))
+		}
+	}
+	if !peek {
+		d.pk.buf.TrimFront(int64(done))
+	}
+	return done, err
 }
 
 // CapLength reduces d to at most length bytes.
@@ -460,7 +554,7 @@ func (d PacketData) AppendView(v tcpipbuffer.View) {
 	d.pk.buf.AppendOwned(v)
 }
 
-// MergeFragment appends the data portion of frag to dst. It takes ownership of
+// MergeFragment appends the data portion of frag to dst. It modifies
 // frag and frag should not be used again.
 func MergeFragment(dst, frag *PacketBuffer) {
 	frag.buf.TrimFront(int64(frag.dataOffset()))

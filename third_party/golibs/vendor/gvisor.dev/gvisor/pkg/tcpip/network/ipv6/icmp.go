@@ -525,6 +525,7 @@ func (e *endpoint) handleICMP(pkt *stack.PacketBuffer, hasFragmentHeader bool, r
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(r.MaxHeaderLength()) + neighborAdvertSize,
 		})
+		defer pkt.DecRef()
 		pkt.TransportProtocolNumber = header.ICMPv6ProtocolNumber
 		packet := header.ICMPv6(pkt.TransportHeader().Push(neighborAdvertSize))
 		packet.SetType(header.ICMPv6NeighborAdvert)
@@ -675,6 +676,7 @@ func (e *endpoint) handleICMP(pkt *stack.PacketBuffer, hasFragmentHeader bool, r
 			ReserveHeaderBytes: int(r.MaxHeaderLength()) + header.ICMPv6EchoMinimumSize,
 			Data:               pkt.Data().ExtractVV(),
 		})
+		defer replyPkt.DecRef()
 		icmp := header.ICMPv6(replyPkt.TransportHeader().Push(header.ICMPv6EchoMinimumSize))
 		pkt.TransportProtocolNumber = header.ICMPv6ProtocolNumber
 		copy(icmp, h)
@@ -926,9 +928,6 @@ func (*endpoint) ResolveStaticAddress(addr tcpip.Address) (tcpip.LinkAddress, bo
 // icmpReason is a marker interface for IPv6 specific ICMP errors.
 type icmpReason interface {
 	isICMPReason()
-	// isForwarding indicates whether or not the error arose while attempting to
-	// forward a packet.
-	isForwarding() bool
 	// respondToMulticast indicates whether this error falls under the exception
 	// outlined by RFC 4443 section 2.4 point e.3 exception 2:
 	//
@@ -956,15 +955,10 @@ type icmpReasonParameterProblem struct {
 	//                  in the maximum size of an ICMPv6 error message.
 	pointer uint32
 
-	forwarding bool
-
 	respondToMulticast bool
 }
 
 func (*icmpReasonParameterProblem) isICMPReason() {}
-func (p *icmpReasonParameterProblem) isForwarding() bool {
-	return p.forwarding
-}
 
 func (p *icmpReasonParameterProblem) respondsToMulticast() bool {
 	return p.respondToMulticast
@@ -976,10 +970,6 @@ type icmpReasonPortUnreachable struct{}
 
 func (*icmpReasonPortUnreachable) isICMPReason() {}
 
-func (*icmpReasonPortUnreachable) isForwarding() bool {
-	return false
-}
-
 func (*icmpReasonPortUnreachable) respondsToMulticast() bool {
 	return false
 }
@@ -990,16 +980,6 @@ type icmpReasonNetUnreachable struct{}
 
 func (*icmpReasonNetUnreachable) isICMPReason() {}
 
-func (*icmpReasonNetUnreachable) isForwarding() bool {
-	// If we hit a Network Unreachable error, then we also know we are
-	// operating as a router. As per RFC 4443 section 3.1:
-	//
-	//   If the reason for the failure to deliver is lack of a matching
-	//   entry in the forwarding node's routing table, the Code field is
-	//   set to 0 (Network Unreachable).
-	return true
-}
-
 func (*icmpReasonNetUnreachable) respondsToMulticast() bool {
 	return false
 }
@@ -1009,16 +989,6 @@ func (*icmpReasonNetUnreachable) respondsToMulticast() bool {
 type icmpReasonHostUnreachable struct{}
 
 func (*icmpReasonHostUnreachable) isICMPReason() {}
-func (*icmpReasonHostUnreachable) isForwarding() bool {
-	// If we hit a Host Unreachable error, then we know we are operating as a
-	// router. As per RFC 4443 page 8, Destination Unreachable Message,
-	//
-	//   If the reason for the failure to deliver cannot be mapped to any of
-	//   other codes, the Code field is set to 3.  Example of such cases are
-	//   an inability to resolve the IPv6 destination address into a
-	//   corresponding link address, or a link-specific problem of some sort.
-	return true
-}
 
 func (*icmpReasonHostUnreachable) respondsToMulticast() bool {
 	return false
@@ -1030,16 +1000,6 @@ type icmpReasonPacketTooBig struct{}
 
 func (*icmpReasonPacketTooBig) isICMPReason() {}
 
-func (*icmpReasonPacketTooBig) isForwarding() bool {
-	// If we hit a Packet Too Big error, then we know we are operating as a router.
-	// As per RFC 4443 section 3.2:
-	//
-	//   A Packet Too Big MUST be sent by a router in response to a packet that it
-	//   cannot forward because the packet is larger than the MTU of the outgoing
-	//   link.
-	return true
-}
-
 func (*icmpReasonPacketTooBig) respondsToMulticast() bool {
 	return true
 }
@@ -1049,18 +1009,6 @@ func (*icmpReasonPacketTooBig) respondsToMulticast() bool {
 type icmpReasonHopLimitExceeded struct{}
 
 func (*icmpReasonHopLimitExceeded) isICMPReason() {}
-
-func (*icmpReasonHopLimitExceeded) isForwarding() bool {
-	// If we hit a Hop Limit Exceeded error, then we know we are operating
-	// as a router. As per RFC 4443 section 3.3:
-	//
-	//   If a router receives a packet with a Hop Limit of zero, or if a
-	//   router decrements a packet's Hop Limit to zero, it MUST discard
-	//   the packet and originate an ICMPv6 Time Exceeded message with Code
-	//   0 to the source of the packet.  This indicates either a routing
-	//   loop or too small an initial Hop Limit value.
-	return true
-}
 
 func (*icmpReasonHopLimitExceeded) respondsToMulticast() bool {
 	return false
@@ -1073,17 +1021,13 @@ type icmpReasonReassemblyTimeout struct{}
 
 func (*icmpReasonReassemblyTimeout) isICMPReason() {}
 
-func (*icmpReasonReassemblyTimeout) isForwarding() bool {
-	return false
-}
-
 func (*icmpReasonReassemblyTimeout) respondsToMulticast() bool {
 	return false
 }
 
 // returnError takes an error descriptor and generates the appropriate ICMP
 // error packet for IPv6 and sends it.
-func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip.Error {
+func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer, deliveredLocally bool) tcpip.Error {
 	origIPHdr := header.IPv6(pkt.NetworkHeader().View())
 	origIPHdrSrc := origIPHdr.SourceAddress()
 	origIPHdrDst := origIPHdr.DestinationAddress()
@@ -1115,7 +1059,7 @@ func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip
 		return nil
 	}
 
-	// If we are operating as a router, do not use the packet's destination
+	// If the packet wasn't delivered locally, do not use the packet's destination
 	// address as the response's source address as we should not own the
 	// destination address of a packet we are forwarding.
 	//
@@ -1124,7 +1068,7 @@ func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip
 	// packet as "multicast addresses must not be used as source addresses in IPv6
 	// packets", as per RFC 4291 section 2.7.
 	localAddr := origIPHdrDst
-	if reason.isForwarding() || isOrigDstMulticast {
+	if !deliveredLocally || isOrigDstMulticast {
 		localAddr = ""
 	}
 	// Even if we were able to receive a packet from some remote, we may not have
@@ -1213,6 +1157,7 @@ func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip
 		ReserveHeaderBytes: int(route.MaxHeaderLength()) + header.ICMPv6ErrorHeaderSize,
 		Data:               payload,
 	})
+	defer newPkt.DecRef()
 	newPkt.TransportProtocolNumber = header.ICMPv6ProtocolNumber
 
 	icmpHdr := header.ICMPv6(newPkt.TransportHeader().Push(header.ICMPv6DstUnreachableMinimumSize))
@@ -1252,6 +1197,6 @@ func (p *protocol) OnReassemblyTimeout(pkt *stack.PacketBuffer) {
 	//   been received, an ICMP Time Exceeded -- Fragment Reassembly Time Exceeded
 	//   message should be sent to the source of that fragment.
 	if pkt != nil {
-		p.returnError(&icmpReasonReassemblyTimeout{}, pkt)
+		p.returnError(&icmpReasonReassemblyTimeout{}, pkt, true /* deliveredLocally */)
 	}
 }

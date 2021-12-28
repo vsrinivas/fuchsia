@@ -430,8 +430,8 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 			t.Fatalf("GetLocalAddress() = %s", err)
 		}
 
-		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-		listener.wq.EventRegister(&waitEntry, waiter.EventIn)
+		waitEntry, notifyCh := waiter.NewChannelEntry(waiter.EventIn)
+		listener.wq.EventRegister(&waitEntry)
 		defer listener.wq.EventUnregister(&waitEntry)
 
 		switch err := client.ep.Connect(connectAddr); err.(type) {
@@ -568,10 +568,10 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	eps := createEP(t, ns, &wq)
 
 	events := make(chan waiter.EventMask)
-	waitEntry := waiter.Entry{Callback: callback(func(_ *waiter.Entry, m waiter.EventMask) {
+	waitEntry := waiter.NewFunctionEntry(math.MaxUint64, func(m waiter.EventMask) {
 		events <- m
-	})}
-	wq.EventRegister(&waitEntry, math.MaxUint64)
+	})
+	wq.EventRegister(&waitEntry)
 	defer wq.EventUnregister(&waitEntry)
 
 	switch err := eps.ep.Connect(destination); err.(type) {
@@ -620,8 +620,8 @@ func TestTCPEndpointMapClosing(t *testing.T) {
 	}
 	client := createEP(t, ns, new(waiter.Queue))
 
-	waitEntry, inCh := waiter.NewChannelEntry(nil)
-	listener.wq.EventRegister(&waitEntry, waiter.EventIn)
+	waitEntry, inCh := waiter.NewChannelEntry(waiter.EventIn)
+	listener.wq.EventRegister(&waitEntry)
 	defer listener.wq.EventUnregister(&waitEntry)
 
 	switch err := client.ep.Connect(connectAddr); err.(type) {

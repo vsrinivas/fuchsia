@@ -16,6 +16,7 @@ package stack
 
 import (
 	"fmt"
+	"math"
 
 	"gvisor.dev/gvisor/pkg/log"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -118,7 +119,7 @@ func (rt *DNATTarget) Action(pkt *PacketBuffer, hook Hook, r *Route, addressEP A
 		panic(fmt.Sprintf("%s unrecognized", hook))
 	}
 
-	return natAction(pkt, hook, r, rt.Port, rt.Addr, true /* dnat */)
+	return dnatAction(pkt, hook, r, rt.Port, rt.Addr)
 
 }
 
@@ -161,7 +162,7 @@ func (rt *RedirectTarget) Action(pkt *PacketBuffer, hook Hook, r *Route, address
 		panic("redirect target is supported only on output and prerouting hooks")
 	}
 
-	return natAction(pkt, hook, r, rt.Port, address, true /* dnat */)
+	return dnatAction(pkt, hook, r, rt.Port, address)
 }
 
 // SNATTarget modifies the source port/IP in the outgoing packets.
@@ -174,32 +175,62 @@ type SNATTarget struct {
 	NetworkProtocol tcpip.NetworkProtocolNumber
 }
 
-func natAction(pkt *PacketBuffer, hook Hook, r *Route, port uint16, address tcpip.Address, dnat bool) (RuleVerdict, int) {
+func dnatAction(pkt *PacketBuffer, hook Hook, r *Route, port uint16, address tcpip.Address) (RuleVerdict, int) {
+	return natAction(pkt, hook, r, portOrIdentRange{start: port, size: 1}, address, true /* dnat */)
+}
+
+func targetPortRangeForTCPAndUDP(originalSrcPort uint16) portOrIdentRange {
+	// As per iptables(8),
+	//
+	//   If no port range is specified, then source ports below 512 will be
+	//   mapped to other ports below 512: those between 512 and 1023 inclusive
+	//   will be mapped to ports below 1024, and other ports will be mapped to
+	//   1024 or above.
+	switch {
+	case originalSrcPort < 512:
+		return portOrIdentRange{start: 1, size: 511}
+	case originalSrcPort < 1024:
+		return portOrIdentRange{start: 1, size: 1023}
+	default:
+		return portOrIdentRange{start: 1024, size: math.MaxUint16 - 1023}
+	}
+}
+
+func snatAction(pkt *PacketBuffer, hook Hook, r *Route, port uint16, address tcpip.Address) (RuleVerdict, int) {
+	portsOrIdents := portOrIdentRange{start: port, size: 1}
+
+	switch pkt.TransportProtocolNumber {
+	case header.UDPProtocolNumber:
+		if port == 0 {
+			portsOrIdents = targetPortRangeForTCPAndUDP(header.UDP(pkt.TransportHeader().View()).SourcePort())
+		}
+	case header.TCPProtocolNumber:
+		if port == 0 {
+			portsOrIdents = targetPortRangeForTCPAndUDP(header.TCP(pkt.TransportHeader().View()).SourcePort())
+		}
+	case header.ICMPv4ProtocolNumber, header.ICMPv6ProtocolNumber:
+		// Allow NAT-ing to any 16-bit value for ICMP's Ident field to match Linux
+		// behaviour.
+		//
+		// https://github.com/torvalds/linux/blob/58e1100fdc5990b0cc0d4beaf2562a92e621ac7d/net/netfilter/nf_nat_core.c#L391
+		portsOrIdents = portOrIdentRange{start: 0, size: math.MaxUint16 + 1}
+	}
+
+	return natAction(pkt, hook, r, portsOrIdents, address, false /* dnat */)
+}
+
+func natAction(pkt *PacketBuffer, hook Hook, r *Route, portsOrIdents portOrIdentRange, address tcpip.Address, dnat bool) (RuleVerdict, int) {
 	// Drop the packet if network and transport header are not set.
 	if pkt.NetworkHeader().View().IsEmpty() || pkt.TransportHeader().View().IsEmpty() {
 		return RuleDrop, 0
 	}
 
-	t := pkt.tuple
-	if t == nil {
-		return RuleDrop, 0
+	if t := pkt.tuple; t != nil {
+		t.conn.performNAT(pkt, hook, r, portsOrIdents, address, dnat)
+		return RuleAccept, 0
 	}
 
-	// TODO(https://gvisor.dev/issue/5773): If the port is in use, pick a
-	// different port.
-	if port == 0 {
-		switch protocol := pkt.TransportProtocolNumber; protocol {
-		case header.UDPProtocolNumber:
-			port = header.UDP(pkt.TransportHeader().View()).SourcePort()
-		case header.TCPProtocolNumber:
-			port = header.TCP(pkt.TransportHeader().View()).SourcePort()
-		default:
-			panic(fmt.Sprintf("unsupported transport protocol = %d", pkt.TransportProtocolNumber))
-		}
-	}
-
-	t.conn.performNAT(pkt, hook, r, port, address, dnat)
-	return RuleAccept, 0
+	return RuleDrop, 0
 }
 
 // Action implements Target.Action.
@@ -219,7 +250,7 @@ func (st *SNATTarget) Action(pkt *PacketBuffer, hook Hook, r *Route, _ Addressab
 		panic(fmt.Sprintf("%s unrecognized", hook))
 	}
 
-	return natAction(pkt, hook, r, st.Port, st.Addr, false /* dnat */)
+	return snatAction(pkt, hook, r, st.Port, st.Addr)
 }
 
 // MasqueradeTarget modifies the source port/IP in the outgoing packets.
@@ -255,25 +286,63 @@ func (mt *MasqueradeTarget) Action(pkt *PacketBuffer, hook Hook, r *Route, addre
 
 	address := ep.AddressWithPrefix().Address
 	ep.DecRef()
-	return natAction(pkt, hook, r, 0 /* port */, address, false /* dnat */)
+	return snatAction(pkt, hook, r, 0 /* port */, address)
 }
 
-func rewritePacket(n header.Network, t header.ChecksummableTransport, updateSRCFields, fullChecksum, updatePseudoHeader bool, newPort uint16, newAddr tcpip.Address) {
-	if updateSRCFields {
-		if fullChecksum {
-			t.SetSourcePortWithChecksumUpdate(newPort)
+func rewritePacket(n header.Network, t header.Transport, updateSRCFields, fullChecksum, updatePseudoHeader bool, newPortOrIdent uint16, newAddr tcpip.Address) {
+	switch t := t.(type) {
+	case header.ChecksummableTransport:
+		if updateSRCFields {
+			if fullChecksum {
+				t.SetSourcePortWithChecksumUpdate(newPortOrIdent)
+			} else {
+				t.SetSourcePort(newPortOrIdent)
+			}
 		} else {
-			t.SetSourcePort(newPort)
+			if fullChecksum {
+				t.SetDestinationPortWithChecksumUpdate(newPortOrIdent)
+			} else {
+				t.SetDestinationPort(newPortOrIdent)
+			}
 		}
-	} else {
-		if fullChecksum {
-			t.SetDestinationPortWithChecksumUpdate(newPort)
-		} else {
-			t.SetDestinationPort(newPort)
-		}
-	}
 
-	if updatePseudoHeader {
+		if updatePseudoHeader {
+			var oldAddr tcpip.Address
+			if updateSRCFields {
+				oldAddr = n.SourceAddress()
+			} else {
+				oldAddr = n.DestinationAddress()
+			}
+
+			t.UpdateChecksumPseudoHeaderAddress(oldAddr, newAddr, fullChecksum)
+		}
+	case header.ICMPv4:
+		switch icmpType := t.Type(); icmpType {
+		case header.ICMPv4Echo:
+			if updateSRCFields {
+				t.SetIdentWithChecksumUpdate(newPortOrIdent)
+			}
+		case header.ICMPv4EchoReply:
+			if !updateSRCFields {
+				t.SetIdentWithChecksumUpdate(newPortOrIdent)
+			}
+		default:
+			panic(fmt.Sprintf("unexpected ICMPv4 type = %d", icmpType))
+		}
+	case header.ICMPv6:
+		switch icmpType := t.Type(); icmpType {
+		case header.ICMPv6EchoRequest:
+			if updateSRCFields {
+				t.SetIdentWithChecksumUpdate(newPortOrIdent)
+			}
+		case header.ICMPv6EchoReply:
+			if !updateSRCFields {
+				t.SetIdentWithChecksumUpdate(newPortOrIdent)
+			}
+		default:
+			panic(fmt.Sprintf("unexpected ICMPv4 type = %d", icmpType))
+		}
+
 		var oldAddr tcpip.Address
 		if updateSRCFields {
 			oldAddr = n.SourceAddress()
@@ -281,7 +350,9 @@ func rewritePacket(n header.Network, t header.ChecksummableTransport, updateSRCF
 			oldAddr = n.DestinationAddress()
 		}
 
-		t.UpdateChecksumPseudoHeaderAddress(oldAddr, newAddr, fullChecksum)
+		t.UpdateChecksumPseudoHeaderAddress(oldAddr, newAddr)
+	default:
+		panic(fmt.Sprintf("unhandled transport = %#v", t))
 	}
 
 	if checksummableNetHeader, ok := n.(header.ChecksummableNetwork); ok {

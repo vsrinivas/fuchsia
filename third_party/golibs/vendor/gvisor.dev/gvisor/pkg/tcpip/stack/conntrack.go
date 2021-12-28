@@ -17,7 +17,10 @@ package stack
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
+	"math/rand"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -68,31 +71,64 @@ func (t *tuple) id() tupleID {
 	return t.tupleID
 }
 
-// tupleID uniquely identifies a connection in one direction. It currently
-// contains enough information to distinguish between any TCP or UDP
-// connection, and will need to be extended to support other protocols.
+// tupleID uniquely identifies a trackable connection in one direction.
 //
 // +stateify savable
 type tupleID struct {
-	srcAddr    tcpip.Address
-	srcPort    uint16
-	dstAddr    tcpip.Address
-	dstPort    uint16
-	transProto tcpip.TransportProtocolNumber
-	netProto   tcpip.NetworkProtocolNumber
+	srcAddr tcpip.Address
+	// The source port of a packet in the original direction is overloaded with
+	// the ident of an Echo Request packet.
+	//
+	// This also matches the behaviour of sending packets on Linux where the
+	// socket's source port value is used for the source port of outgoing packets
+	// for TCP/UDP and the ident field for outgoing Echo Requests on Ping sockets:
+	//
+	//   IPv4: https://github.com/torvalds/linux/blob/c5c17547b778975b3d83a73c8d84e8fb5ecf3ba5/net/ipv4/ping.c#L810
+	//   IPv6: https://github.com/torvalds/linux/blob/c5c17547b778975b3d83a73c8d84e8fb5ecf3ba5/net/ipv6/ping.c#L133
+	srcPortOrEchoRequestIdent uint16
+	dstAddr                   tcpip.Address
+	// The opposite of srcPortOrEchoRequestIdent; the destination port of a packet
+	// in the reply direction is overloaded with the ident of an Echo Reply.
+	dstPortOrEchoReplyIdent uint16
+	transProto              tcpip.TransportProtocolNumber
+	netProto                tcpip.NetworkProtocolNumber
 }
 
 // reply creates the reply tupleID.
 func (ti tupleID) reply() tupleID {
 	return tupleID{
-		srcAddr:    ti.dstAddr,
-		srcPort:    ti.dstPort,
-		dstAddr:    ti.srcAddr,
-		dstPort:    ti.srcPort,
-		transProto: ti.transProto,
-		netProto:   ti.netProto,
+		srcAddr:                   ti.dstAddr,
+		srcPortOrEchoRequestIdent: ti.dstPortOrEchoReplyIdent,
+		dstAddr:                   ti.srcAddr,
+		dstPortOrEchoReplyIdent:   ti.srcPortOrEchoRequestIdent,
+		transProto:                ti.transProto,
+		netProto:                  ti.netProto,
 	}
 }
+
+type manipType int
+
+const (
+	// manipNotPerformed indicates that NAT has not been performed.
+	manipNotPerformed manipType = iota
+
+	// manipPerformed indicates that NAT was performed.
+	manipPerformed
+
+	// manipPerformedNoop indicates that NAT was performed but it was a no-op.
+	manipPerformedNoop
+)
+
+type finalizeResult uint32
+
+const (
+	// A finalizeResult must be explicitly set so we don't make use of the zero
+	// value.
+	_ finalizeResult = iota
+
+	finalizeResultSuccess
+	finalizeResultConflict
+)
 
 // conn is a tracked connection.
 //
@@ -106,19 +142,21 @@ type conn struct {
 	// reply is the tuple in reply direction.
 	reply tuple
 
+	finalizeOnce sync.Once
+	// Holds a finalizeResult.
+	//
+	// +checkatomics
+	finalizeResult uint32
+
 	mu sync.RWMutex `state:"nosave"`
-	// Indicates that the connection has been finalized and may handle replies.
+	// sourceManip indicates the source manipulation type.
 	//
 	// +checklocks:mu
-	finalized bool
-	// sourceManip indicates the packet's source is manipulated.
+	sourceManip manipType
+	// destinationManip indicates the destination's manipulation type.
 	//
 	// +checklocks:mu
-	sourceManip bool
-	// destinationManip indicates the packet's destination is manipulated.
-	//
-	// +checklocks:mu
-	destinationManip bool
+	destinationManip manipType
 
 	stateMu sync.RWMutex `state:"nosave"`
 	// tcb is TCB control block. It is used to keep track of states
@@ -148,9 +186,13 @@ func (cn *conn) timedOut(now tcpip.MonotonicTime) bool {
 }
 
 // update the connection tracking state.
-//
-// +checklocks:cn.stateMu
-func (cn *conn) updateLocked(pkt *PacketBuffer, reply bool) {
+func (cn *conn) update(pkt *PacketBuffer, reply bool) {
+	cn.stateMu.Lock()
+	defer cn.stateMu.Unlock()
+
+	// Mark the connection as having been used recently so it isn't reaped.
+	cn.lastUsed = cn.ct.clock.NowMonotonic()
+
 	if pkt.TransportProtocolNumber != header.TCPProtocolNumber {
 		return
 	}
@@ -161,14 +203,14 @@ func (cn *conn) updateLocked(pkt *PacketBuffer, reply bool) {
 	// client. However, we only need to know whether the connection is
 	// established or not, so the client/server distinction isn't important.
 	if cn.tcb.IsEmpty() {
-		cn.tcb.Init(tcpHeader)
+		cn.tcb.Init(tcpHeader, pkt.Data().Size())
 		return
 	}
 
 	if reply {
-		cn.tcb.UpdateStateReply(tcpHeader)
+		cn.tcb.UpdateStateReply(tcpHeader, pkt.Data().Size())
 	} else {
-		cn.tcb.UpdateStateOriginal(tcpHeader)
+		cn.tcb.UpdateStateOriginal(tcpHeader, pkt.Data().Size())
 	}
 }
 
@@ -195,6 +237,7 @@ type ConnTrack struct {
 
 	// clock provides timing used to determine conntrack reapings.
 	clock tcpip.Clock
+	rand  *rand.Rand
 
 	mu sync.RWMutex `state:"nosave"`
 	// mu protects the buckets slice, but not buckets' contents. Only take
@@ -251,17 +294,32 @@ func getEmbeddedNetAndTransHeaders(pkt *PacketBuffer, netHdrLength int, getNetAn
 	return nil, nil, false
 }
 
-func getHeaders(pkt *PacketBuffer) (netHdr header.Network, transHdr header.ChecksummableTransport, isICMPError bool, ok bool) {
+func getHeaders(pkt *PacketBuffer) (netHdr header.Network, transHdr header.Transport, isICMPError bool, ok bool) {
 	switch pkt.TransportProtocolNumber {
 	case header.TCPProtocolNumber:
 		if tcpHeader := header.TCP(pkt.TransportHeader().View()); len(tcpHeader) >= header.TCPMinimumSize {
 			return pkt.Network(), tcpHeader, false, true
 		}
+		return nil, nil, false, false
 	case header.UDPProtocolNumber:
 		if udpHeader := header.UDP(pkt.TransportHeader().View()); len(udpHeader) >= header.UDPMinimumSize {
 			return pkt.Network(), udpHeader, false, true
 		}
+		return nil, nil, false, false
 	case header.ICMPv4ProtocolNumber:
+		icmpHeader := header.ICMPv4(pkt.TransportHeader().View())
+		if len(icmpHeader) < header.ICMPv4MinimumSize {
+			return nil, nil, false, false
+		}
+
+		switch icmpType := icmpHeader.Type(); icmpType {
+		case header.ICMPv4Echo, header.ICMPv4EchoReply:
+			return pkt.Network(), icmpHeader, false, true
+		case header.ICMPv4DstUnreachable, header.ICMPv4TimeExceeded, header.ICMPv4ParamProblem:
+		default:
+			panic(fmt.Sprintf("unexpected ICMPv4 type = %d", icmpType))
+		}
+
 		h, ok := pkt.Data().PullUp(header.IPv4MinimumSize)
 		if !ok {
 			panic(fmt.Sprintf("should have a valid IPv4 packet; only have %d bytes, want at least %d bytes", pkt.Data().Size(), header.IPv4MinimumSize))
@@ -275,7 +333,21 @@ func getHeaders(pkt *PacketBuffer) (netHdr header.Network, transHdr header.Check
 		if netHdr, transHdr, ok := getEmbeddedNetAndTransHeaders(pkt, header.IPv4MinimumSize, v4NetAndTransHdr, pkt.tuple.id().transProto); ok {
 			return netHdr, transHdr, true, true
 		}
+		return nil, nil, false, false
 	case header.ICMPv6ProtocolNumber:
+		icmpHeader := header.ICMPv6(pkt.TransportHeader().View())
+		if len(icmpHeader) < header.ICMPv6MinimumSize {
+			return nil, nil, false, false
+		}
+
+		switch icmpType := icmpHeader.Type(); icmpType {
+		case header.ICMPv6EchoRequest, header.ICMPv6EchoReply:
+			return pkt.Network(), icmpHeader, false, true
+		case header.ICMPv6DstUnreachable, header.ICMPv6PacketTooBig, header.ICMPv6TimeExceeded, header.ICMPv6ParamProblem:
+		default:
+			panic(fmt.Sprintf("unexpected ICMPv6 type = %d", icmpType))
+		}
+
 		h, ok := pkt.Data().PullUp(header.IPv6MinimumSize)
 		if !ok {
 			panic(fmt.Sprintf("should have a valid IPv6 packet; only have %d bytes, want at least %d bytes", pkt.Data().Size(), header.IPv6MinimumSize))
@@ -293,97 +365,141 @@ func getHeaders(pkt *PacketBuffer) (netHdr header.Network, transHdr header.Check
 		if netHdr, transHdr, ok := getEmbeddedNetAndTransHeaders(pkt, header.IPv6MinimumSize, v6NetAndTransHdr, transProto); ok {
 			return netHdr, transHdr, true, true
 		}
+		return nil, nil, false, false
+	default:
+		panic(fmt.Sprintf("unexpected transport protocol = %d", pkt.TransportProtocolNumber))
 	}
-
-	return nil, nil, false, false
 }
 
 func getTupleIDForRegularPacket(netHdr header.Network, netProto tcpip.NetworkProtocolNumber, transHdr header.Transport, transProto tcpip.TransportProtocolNumber) tupleID {
 	return tupleID{
-		srcAddr:    netHdr.SourceAddress(),
-		srcPort:    transHdr.SourcePort(),
-		dstAddr:    netHdr.DestinationAddress(),
-		dstPort:    transHdr.DestinationPort(),
-		transProto: transProto,
-		netProto:   netProto,
+		srcAddr:                   netHdr.SourceAddress(),
+		srcPortOrEchoRequestIdent: transHdr.SourcePort(),
+		dstAddr:                   netHdr.DestinationAddress(),
+		dstPortOrEchoReplyIdent:   transHdr.DestinationPort(),
+		transProto:                transProto,
+		netProto:                  netProto,
 	}
 }
 
 func getTupleIDForPacketInICMPError(pkt *PacketBuffer, getNetAndTransHdr netAndTransHeadersFunc, netProto tcpip.NetworkProtocolNumber, netLen int, transProto tcpip.TransportProtocolNumber) (tupleID, bool) {
 	if netHdr, transHdr, ok := getEmbeddedNetAndTransHeaders(pkt, netLen, getNetAndTransHdr, transProto); ok {
 		return tupleID{
-			srcAddr:    netHdr.DestinationAddress(),
-			srcPort:    transHdr.DestinationPort(),
-			dstAddr:    netHdr.SourceAddress(),
-			dstPort:    transHdr.SourcePort(),
-			transProto: transProto,
-			netProto:   netProto,
+			srcAddr:                   netHdr.DestinationAddress(),
+			srcPortOrEchoRequestIdent: transHdr.DestinationPort(),
+			dstAddr:                   netHdr.SourceAddress(),
+			dstPortOrEchoReplyIdent:   transHdr.SourcePort(),
+			transProto:                transProto,
+			netProto:                  netProto,
 		}, true
 	}
 
 	return tupleID{}, false
 }
 
-func getTupleID(pkt *PacketBuffer) (tid tupleID, isICMPError bool, ok bool) {
+type getTupleIDDisposition int
+
+const (
+	getTupleIDNotOK getTupleIDDisposition = iota
+	getTupleIDOKAndAllowNewConn
+	getTupleIDOKAndDontAllowNewConn
+)
+
+func getTupleIDForEchoPacket(pkt *PacketBuffer, ident uint16, request bool) tupleID {
+	netHdr := pkt.Network()
+	tid := tupleID{
+		srcAddr:    netHdr.SourceAddress(),
+		dstAddr:    netHdr.DestinationAddress(),
+		transProto: pkt.TransportProtocolNumber,
+		netProto:   pkt.NetworkProtocolNumber,
+	}
+
+	if request {
+		tid.srcPortOrEchoRequestIdent = ident
+	} else {
+		tid.dstPortOrEchoReplyIdent = ident
+	}
+
+	return tid
+}
+
+func getTupleID(pkt *PacketBuffer) (tupleID, getTupleIDDisposition) {
 	switch pkt.TransportProtocolNumber {
 	case header.TCPProtocolNumber:
 		if transHeader := header.TCP(pkt.TransportHeader().View()); len(transHeader) >= header.TCPMinimumSize {
-			return getTupleIDForRegularPacket(pkt.Network(), pkt.NetworkProtocolNumber, transHeader, pkt.TransportProtocolNumber), false, true
+			return getTupleIDForRegularPacket(pkt.Network(), pkt.NetworkProtocolNumber, transHeader, pkt.TransportProtocolNumber), getTupleIDOKAndAllowNewConn
 		}
 	case header.UDPProtocolNumber:
 		if transHeader := header.UDP(pkt.TransportHeader().View()); len(transHeader) >= header.UDPMinimumSize {
-			return getTupleIDForRegularPacket(pkt.Network(), pkt.NetworkProtocolNumber, transHeader, pkt.TransportProtocolNumber), false, true
+			return getTupleIDForRegularPacket(pkt.Network(), pkt.NetworkProtocolNumber, transHeader, pkt.TransportProtocolNumber), getTupleIDOKAndAllowNewConn
 		}
 	case header.ICMPv4ProtocolNumber:
 		icmp := header.ICMPv4(pkt.TransportHeader().View())
 		if len(icmp) < header.ICMPv4MinimumSize {
-			return tupleID{}, false, false
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		switch icmp.Type() {
+		case header.ICMPv4Echo:
+			return getTupleIDForEchoPacket(pkt, icmp.Ident(), true /* request */), getTupleIDOKAndAllowNewConn
+		case header.ICMPv4EchoReply:
+			// Do not create a new connection in response to a reply packet as only
+			// the first packet of a connection should create a conntrack entry but
+			// a reply is never the first packet sent for a connection.
+			return getTupleIDForEchoPacket(pkt, icmp.Ident(), false /* request */), getTupleIDOKAndDontAllowNewConn
 		case header.ICMPv4DstUnreachable, header.ICMPv4TimeExceeded, header.ICMPv4ParamProblem:
 		default:
-			return tupleID{}, false, false
+			// Unsupported ICMP type for NAT-ing.
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		h, ok := pkt.Data().PullUp(header.IPv4MinimumSize)
 		if !ok {
-			return tupleID{}, false, false
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		ipv4 := header.IPv4(h)
 		if ipv4.HeaderLength() > header.IPv4MinimumSize {
 			// TODO(https://gvisor.dev/issue/6765): Handle IPv4 options.
-			return tupleID{}, false, false
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		if tid, ok := getTupleIDForPacketInICMPError(pkt, v4NetAndTransHdr, header.IPv4ProtocolNumber, header.IPv4MinimumSize, ipv4.TransportProtocol()); ok {
-			return tid, true, true
+			// Do not create a new connection in response to an ICMP error.
+			return tid, getTupleIDOKAndDontAllowNewConn
 		}
 	case header.ICMPv6ProtocolNumber:
 		icmp := header.ICMPv6(pkt.TransportHeader().View())
 		if len(icmp) < header.ICMPv6MinimumSize {
-			return tupleID{}, false, false
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		switch icmp.Type() {
+		case header.ICMPv6EchoRequest:
+			return getTupleIDForEchoPacket(pkt, icmp.Ident(), true /* request */), getTupleIDOKAndAllowNewConn
+		case header.ICMPv6EchoReply:
+			// Do not create a new connection in response to a reply packet as only
+			// the first packet of a connection should create a conntrack entry but
+			// a reply is never the first packet sent for a connection.
+			return getTupleIDForEchoPacket(pkt, icmp.Ident(), false /* request */), getTupleIDOKAndDontAllowNewConn
 		case header.ICMPv6DstUnreachable, header.ICMPv6PacketTooBig, header.ICMPv6TimeExceeded, header.ICMPv6ParamProblem:
 		default:
-			return tupleID{}, false, false
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		h, ok := pkt.Data().PullUp(header.IPv6MinimumSize)
 		if !ok {
-			return tupleID{}, false, false
+			return tupleID{}, getTupleIDNotOK
 		}
 
 		// TODO(https://gvisor.dev/issue/6789): Handle extension headers.
 		if tid, ok := getTupleIDForPacketInICMPError(pkt, v6NetAndTransHdr, header.IPv6ProtocolNumber, header.IPv6MinimumSize, header.IPv6(h).TransportProtocol()); ok {
-			return tid, true, true
+			// Do not create a new connection in response to an ICMP error.
+			return tid, getTupleIDOKAndDontAllowNewConn
 		}
 	}
 
-	return tupleID{}, false, false
+	return tupleID{}, getTupleIDNotOK
 }
 
 func (ct *ConnTrack) init() {
@@ -392,60 +508,79 @@ func (ct *ConnTrack) init() {
 	ct.buckets = make([]bucket, numBuckets)
 }
 
-func (ct *ConnTrack) getConnOrMaybeInsertNoop(pkt *PacketBuffer) *tuple {
-	tid, isICMPError, ok := getTupleID(pkt)
-	if !ok {
-		return nil
+// getConnAndUpdate attempts to get a connection or creates one if no
+// connection exists for the packet and packet's protocol is trackable.
+//
+// If the packet's protocol is trackable, the connection's state is updated to
+// match the contents of the packet.
+func (ct *ConnTrack) getConnAndUpdate(pkt *PacketBuffer) *tuple {
+	// Get or (maybe) create a connection.
+	t := func() *tuple {
+		var allowNewConn bool
+		tid, res := getTupleID(pkt)
+		switch res {
+		case getTupleIDNotOK:
+			return nil
+		case getTupleIDOKAndAllowNewConn:
+			allowNewConn = true
+		case getTupleIDOKAndDontAllowNewConn:
+			allowNewConn = false
+		default:
+			panic(fmt.Sprintf("unhandled %[1]T = %[1]d", res))
+		}
+
+		bktID := ct.bucket(tid)
+
+		ct.mu.RLock()
+		bkt := &ct.buckets[bktID]
+		ct.mu.RUnlock()
+
+		now := ct.clock.NowMonotonic()
+		if t := bkt.connForTID(tid, now); t != nil {
+			return t
+		}
+
+		if !allowNewConn {
+			return nil
+		}
+
+		bkt.mu.Lock()
+		defer bkt.mu.Unlock()
+
+		// Make sure a connection wasn't added between when we last checked the
+		// bucket and acquired the bucket's write lock.
+		if t := bkt.connForTIDRLocked(tid, now); t != nil {
+			return t
+		}
+
+		// This is the first packet we're seeing for the connection. Create an entry
+		// for this new connection.
+		conn := &conn{
+			ct:       ct,
+			original: tuple{tupleID: tid},
+			reply:    tuple{tupleID: tid.reply(), reply: true},
+			lastUsed: now,
+		}
+		conn.original.conn = conn
+		conn.reply.conn = conn
+
+		// For now, we only map an entry for the packet's original tuple as NAT may be
+		// performed on this connection. Until the packet goes through all the hooks
+		// and its final address/port is known, we cannot know what the response
+		// packet's addresses/ports will look like.
+		//
+		// This is okay because the destination cannot send its response until it
+		// receives the packet; the packet will only be received once all the hooks
+		// have been performed.
+		//
+		// See (*conn).finalize.
+		bkt.tuples.PushFront(&conn.original)
+		return &conn.original
+	}()
+	if t != nil {
+		t.conn.update(pkt, t.reply)
 	}
-
-	bktID := ct.bucket(tid)
-
-	ct.mu.RLock()
-	bkt := &ct.buckets[bktID]
-	ct.mu.RUnlock()
-
-	now := ct.clock.NowMonotonic()
-	if t := bkt.connForTID(tid, now); t != nil {
-		return t
-	}
-
-	if isICMPError {
-		// Do not create a noop entry in response to an ICMP error.
-		return nil
-	}
-
-	bkt.mu.Lock()
-	defer bkt.mu.Unlock()
-
-	// Make sure a connection wasn't added between when we last checked the
-	// bucket and acquired the bucket's write lock.
-	if t := bkt.connForTIDRLocked(tid, now); t != nil {
-		return t
-	}
-
-	// This is the first packet we're seeing for the connection. Create an entry
-	// for this new connection.
-	conn := &conn{
-		ct:       ct,
-		original: tuple{tupleID: tid},
-		reply:    tuple{tupleID: tid.reply(), reply: true},
-		lastUsed: now,
-	}
-	conn.original.conn = conn
-	conn.reply.conn = conn
-
-	// For now, we only map an entry for the packet's original tuple as NAT may be
-	// performed on this connection. Until the packet goes through all the hooks
-	// and its final address/port is known, we cannot know what the response
-	// packet's addresses/ports will look like.
-	//
-	// This is okay because the destination cannot send its response until it
-	// receives the packet; the packet will only be received once all the hooks
-	// have been performed.
-	//
-	// See (*conn).finalize.
-	bkt.tuples.PushFront(&conn.original)
-	return &conn.original
+	return t
 }
 
 func (ct *ConnTrack) connForTID(tid tupleID) *tuple {
@@ -474,89 +609,205 @@ func (bkt *bucket) connForTIDRLocked(tid tupleID, now tcpip.MonotonicTime) *tupl
 	return nil
 }
 
-func (ct *ConnTrack) finalize(cn *conn) {
-	tid := cn.reply.id()
-	id := ct.bucket(tid)
-
+func (ct *ConnTrack) finalize(cn *conn) finalizeResult {
 	ct.mu.RLock()
-	bkt := &ct.buckets[id]
+	buckets := ct.buckets
 	ct.mu.RUnlock()
 
-	bkt.mu.Lock()
-	defer bkt.mu.Unlock()
-
-	if t := bkt.connForTIDRLocked(tid, ct.clock.NowMonotonic()); t != nil {
-		// Another connection for the reply already exists. We can't do much about
-		// this so we leave the connection cn represents in a state where it can
-		// send packets but its responses will be mapped to some other connection.
-		// This may be okay if the connection only expects to send packets without
-		// any responses.
-		return
-	}
-
-	bkt.tuples.PushFront(&cn.reply)
-}
-
-func (cn *conn) finalize() {
 	{
-		cn.mu.RLock()
-		finalized := cn.finalized
-		cn.mu.RUnlock()
-		if finalized {
-			return
+		tid := cn.reply.id()
+		id := ct.bucket(tid)
+
+		bkt := &buckets[id]
+		bkt.mu.Lock()
+		t := bkt.connForTIDRLocked(tid, ct.clock.NowMonotonic())
+		if t == nil {
+			bkt.tuples.PushFront(&cn.reply)
+			bkt.mu.Unlock()
+			return finalizeResultSuccess
+		}
+		bkt.mu.Unlock()
+
+		if t.conn == cn {
+			// We already have an entry for the reply tuple.
+			//
+			// This can occur when the source address/port is the same as the
+			// destination address/port. In this scenario, tid == tid.reply().
+			return finalizeResultSuccess
 		}
 	}
 
-	cn.mu.Lock()
-	finalized := cn.finalized
-	cn.finalized = true
-	cn.mu.Unlock()
-	if finalized {
-		return
-	}
+	// Another connection for the reply already exists. Remove the original and
+	// let the caller know we failed.
+	//
+	// TODO(https://gvisor.dev/issue/6850): Investigate handling this clash
+	// better.
 
-	cn.ct.finalize(cn)
+	tid := cn.original.id()
+	id := ct.bucket(tid)
+	bkt := &buckets[id]
+	bkt.mu.Lock()
+	defer bkt.mu.Unlock()
+	bkt.tuples.Remove(&cn.original)
+	return finalizeResultConflict
 }
 
-// performNAT setups up the connection for the specified NAT.
+func (cn *conn) getFinalizeResult() finalizeResult {
+	return finalizeResult(atomic.LoadUint32(&cn.finalizeResult))
+}
+
+// finalize attempts to finalize the connection and returns true iff the
+// connection was successfully finalized.
 //
-// Generally, only the first packet of a connection reaches this method; other
-// other packets will be manipulated without needing to modify the connection.
-func (cn *conn) performNAT(pkt *PacketBuffer, hook Hook, r *Route, port uint16, address tcpip.Address, dnat bool) {
-	cn.performNATIfNoop(port, address, dnat)
-	cn.handlePacket(pkt, hook, r)
+// If the connection failed to finalize, the caller should drop the packet
+// associated with the connection.
+//
+// If multiple goroutines attempt to finalize at the same time, only one
+// goroutine will perform the work to finalize the connection, but all
+// goroutines will block until the finalizing goroutine finishes finalizing.
+func (cn *conn) finalize() bool {
+	cn.finalizeOnce.Do(func() {
+		atomic.StoreUint32(&cn.finalizeResult, uint32(cn.ct.finalize(cn)))
+	})
+
+	switch res := cn.getFinalizeResult(); res {
+	case finalizeResultSuccess:
+		return true
+	case finalizeResultConflict:
+		return false
+	default:
+		panic(fmt.Sprintf("unhandled result = %d", res))
+	}
 }
 
-func (cn *conn) performNATIfNoop(port uint16, address tcpip.Address, dnat bool) {
+func (cn *conn) maybePerformNoopNAT(dnat bool) {
 	cn.mu.Lock()
 	defer cn.mu.Unlock()
 
-	if cn.finalized {
-		return
+	var manip *manipType
+	if dnat {
+		manip = &cn.destinationManip
+	} else {
+		manip = &cn.sourceManip
 	}
 
-	if dnat {
-		if cn.destinationManip {
-			return
-		}
-		cn.destinationManip = true
-	} else {
-		if cn.sourceManip {
-			return
-		}
-		cn.sourceManip = true
+	if *manip == manipNotPerformed {
+		*manip = manipPerformedNoop
 	}
+}
+
+type portOrIdentRange struct {
+	start uint16
+	size  uint32
+}
+
+// performNAT setups up the connection for the specified NAT and rewrites the
+// packet.
+//
+// If NAT has already been performed on the connection, then the packet will
+// be rewritten with the NAT performed on the connection, ignoring the passed
+// address and port range.
+//
+// Generally, only the first packet of a connection reaches this method; other
+// packets will be manipulated without needing to modify the connection.
+func (cn *conn) performNAT(pkt *PacketBuffer, hook Hook, r *Route, portsOrIdents portOrIdentRange, natAddress tcpip.Address, dnat bool) {
+	lastPortOrIdent := func() uint16 {
+		lastPortOrIdent := uint32(portsOrIdents.start) + portsOrIdents.size - 1
+		if lastPortOrIdent > math.MaxUint16 {
+			panic(fmt.Sprintf("got lastPortOrIdent = %d, want <= MaxUint16(=%d); portsOrIdents=%#v", lastPortOrIdent, math.MaxUint16, portsOrIdents))
+		}
+		return uint16(lastPortOrIdent)
+	}()
+
+	// Make sure the packet is re-written after performing NAT.
+	defer func() {
+		// handlePacket returns true if the packet may skip the NAT table as the
+		// connection is already NATed, but if we reach this point we must be in the
+		// NAT table, so the return value is useless for us.
+		_ = cn.handlePacket(pkt, hook, r)
+	}()
+
+	cn.mu.Lock()
+	defer cn.mu.Unlock()
 
 	cn.reply.mu.Lock()
 	defer cn.reply.mu.Unlock()
 
+	var manip *manipType
+	var address *tcpip.Address
+	var portOrIdent *uint16
 	if dnat {
-		cn.reply.tupleID.srcAddr = address
-		cn.reply.tupleID.srcPort = port
+		manip = &cn.destinationManip
+		address = &cn.reply.tupleID.srcAddr
+		portOrIdent = &cn.reply.tupleID.srcPortOrEchoRequestIdent
 	} else {
-		cn.reply.tupleID.dstAddr = address
-		cn.reply.tupleID.dstPort = port
+		manip = &cn.sourceManip
+		address = &cn.reply.tupleID.dstAddr
+		portOrIdent = &cn.reply.tupleID.dstPortOrEchoReplyIdent
 	}
+
+	if *manip != manipNotPerformed {
+		return
+	}
+	*manip = manipPerformed
+	*address = natAddress
+
+	// Does the current port/ident fit in the range?
+	if portsOrIdents.start <= *portOrIdent && *portOrIdent <= lastPortOrIdent {
+		// Yes, is the current reply tuple unique?
+		if other := cn.ct.connForTID(cn.reply.tupleID); other == nil {
+			// Yes! No need to change the port.
+			return
+		}
+	}
+
+	// Try our best to find a port/ident that results in a unique reply tuple.
+	//
+	// We limit the number of attempts to find a unique tuple to not waste a lot
+	// of time looking for a unique tuple.
+	//
+	// Matches linux behaviour introduced in
+	// https://github.com/torvalds/linux/commit/a504b703bb1da526a01593da0e4be2af9d9f5fa8.
+	const maxAttemptsForInitialRound uint32 = 128
+	const minAttemptsToContinue = 16
+
+	allowedInitialAttempts := maxAttemptsForInitialRound
+	if allowedInitialAttempts > portsOrIdents.size {
+		allowedInitialAttempts = portsOrIdents.size
+	}
+
+	for maxAttempts := allowedInitialAttempts; ; maxAttempts /= 2 {
+		// Start reach round with a random initial port/ident offset.
+		randOffset := cn.ct.rand.Uint32()
+
+		for i := uint32(0); i < maxAttempts; i++ {
+			newPortOrIdentU32 := uint32(portsOrIdents.start) + (randOffset+i)%portsOrIdents.size
+			if newPortOrIdentU32 > math.MaxUint16 {
+				panic(fmt.Sprintf("got newPortOrIdentU32 = %d, want <= MaxUint16(=%d); portsOrIdents=%#v, randOffset=%d", newPortOrIdentU32, math.MaxUint16, portsOrIdents, randOffset))
+			}
+
+			*portOrIdent = uint16(newPortOrIdentU32)
+
+			if other := cn.ct.connForTID(cn.reply.tupleID); other == nil {
+				// We found a unique tuple!
+				return
+			}
+		}
+
+		if maxAttempts == portsOrIdents.size {
+			// We already tried all the ports/idents in the range so no need to keep
+			// trying.
+			return
+		}
+
+		if maxAttempts < minAttemptsToContinue {
+			return
+		}
+	}
+
+	// We did not find a unique tuple, use the last used port anyways.
+	// TODO(https://gvisor.dev/issue/6850): Handle not finding a unique tuple
+	// better (e.g. remove the connection and drop the packet).
 }
 
 // handlePacket attempts to handle a packet and perform NAT if the connection
@@ -571,7 +822,7 @@ func (cn *conn) handlePacket(pkt *PacketBuffer, hook Hook, rt *Route) bool {
 
 	fullChecksum := false
 	updatePseudoHeader := false
-	natDone := &pkt.SNATDone
+	natDone := &pkt.snatDone
 	dnat := false
 	switch hook {
 	case Prerouting:
@@ -580,13 +831,13 @@ func (cn *conn) handlePacket(pkt *PacketBuffer, hook Hook, rt *Route) bool {
 		fullChecksum = true
 		updatePseudoHeader = true
 
-		natDone = &pkt.DNATDone
+		natDone = &pkt.dnatDone
 		dnat = true
 	case Input:
 	case Forward:
 		panic("should not handle packet in the forwarding hook")
 	case Output:
-		natDone = &pkt.DNATDone
+		natDone = &pkt.dnatDone
 		dnat = true
 		fallthrough
 	case Postrouting:
@@ -610,50 +861,40 @@ func (cn *conn) handlePacket(pkt *PacketBuffer, hook Hook, rt *Route) bool {
 
 	reply := pkt.tuple.reply
 
-	cn.stateMu.Lock()
-	// Mark the connection as having been used recently so it isn't reaped.
-	cn.lastUsed = cn.ct.clock.NowMonotonic()
-	// Update connection state.
-	cn.updateLocked(pkt, reply)
-	cn.stateMu.Unlock()
-
-	tid, performManip := func() (tupleID, bool) {
+	tid, manip := func() (tupleID, manipType) {
 		cn.mu.RLock()
 		defer cn.mu.RUnlock()
 
-		var tuple *tuple
 		if reply {
-			if dnat {
-				if !cn.sourceManip {
-					return tupleID{}, false
-				}
-			} else if !cn.destinationManip {
-				return tupleID{}, false
-			}
+			tid := cn.original.id()
 
-			tuple = &cn.original
-		} else {
 			if dnat {
-				if !cn.destinationManip {
-					return tupleID{}, false
-				}
-			} else if !cn.sourceManip {
-				return tupleID{}, false
+				return tid, cn.sourceManip
 			}
-
-			tuple = &cn.reply
+			return tid, cn.destinationManip
 		}
 
-		return tuple.id(), true
+		tid := cn.reply.id()
+		if dnat {
+			return tid, cn.destinationManip
+		}
+		return tid, cn.sourceManip
 	}()
-	if !performManip {
+	switch manip {
+	case manipNotPerformed:
 		return false
+	case manipPerformedNoop:
+		*natDone = true
+		return true
+	case manipPerformed:
+	default:
+		panic(fmt.Sprintf("unhandled manip = %d", manip))
 	}
 
-	newPort := tid.dstPort
+	newPort := tid.dstPortOrEchoReplyIdent
 	newAddr := tid.dstAddr
 	if dnat {
-		newPort = tid.srcPort
+		newPort = tid.srcPortOrEchoRequestIdent
 		newAddr = tid.srcAddr
 	}
 
@@ -726,9 +967,9 @@ func (ct *ConnTrack) bucket(id tupleID) int {
 	h.Write([]byte(id.srcAddr))
 	h.Write([]byte(id.dstAddr))
 	shortBuf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(shortBuf, id.srcPort)
+	binary.LittleEndian.PutUint16(shortBuf, id.srcPortOrEchoRequestIdent)
 	h.Write([]byte(shortBuf))
-	binary.LittleEndian.PutUint16(shortBuf, id.dstPort)
+	binary.LittleEndian.PutUint16(shortBuf, id.dstPortOrEchoReplyIdent)
 	h.Write([]byte(shortBuf))
 	binary.LittleEndian.PutUint16(shortBuf, uint16(id.transProto))
 	h.Write([]byte(shortBuf))
@@ -820,9 +1061,7 @@ func (ct *ConnTrack) reapTupleLocked(reapingTuple *tuple, bktID int, bkt *bucket
 	}
 
 	otherTupleBktID := ct.bucket(otherTuple.id())
-	reapingTuple.conn.mu.RLock()
-	replyTupleInserted := reapingTuple.conn.finalized
-	reapingTuple.conn.mu.RUnlock()
+	replyTupleInserted := reapingTuple.conn.getFinalizeResult() == finalizeResultSuccess
 
 	// To maintain lock order, we can only reap both tuples if the tuple for the
 	// other direction appears later in the table.
@@ -855,12 +1094,12 @@ func (ct *ConnTrack) originalDst(epID TransportEndpointID, netProto tcpip.Networ
 	// Lookup the connection. The reply's original destination
 	// describes the original address.
 	tid := tupleID{
-		srcAddr:    epID.LocalAddress,
-		srcPort:    epID.LocalPort,
-		dstAddr:    epID.RemoteAddress,
-		dstPort:    epID.RemotePort,
-		transProto: transProto,
-		netProto:   netProto,
+		srcAddr:                   epID.LocalAddress,
+		srcPortOrEchoRequestIdent: epID.LocalPort,
+		dstAddr:                   epID.RemoteAddress,
+		dstPortOrEchoReplyIdent:   epID.RemotePort,
+		transProto:                transProto,
+		netProto:                  netProto,
 	}
 	t := ct.connForTID(tid)
 	if t == nil {
@@ -870,11 +1109,11 @@ func (ct *ConnTrack) originalDst(epID TransportEndpointID, netProto tcpip.Networ
 
 	t.conn.mu.RLock()
 	defer t.conn.mu.RUnlock()
-	if !t.conn.destinationManip {
+	if t.conn.destinationManip == manipNotPerformed {
 		// Unmanipulated destination.
 		return "", 0, &tcpip.ErrInvalidOptionValue{}
 	}
 
 	id := t.conn.original.id()
-	return id.dstAddr, id.dstPort, nil
+	return id.dstAddr, id.dstPortOrEchoReplyIdent, nil
 }

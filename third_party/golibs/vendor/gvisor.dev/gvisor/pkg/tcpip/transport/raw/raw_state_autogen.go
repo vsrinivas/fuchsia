@@ -64,7 +64,8 @@ func (e *endpoint) StateFields() []string {
 		"rcvList",
 		"rcvBufSize",
 		"rcvClosed",
-		"frozen",
+		"rcvDisabled",
+		"icmpv6Filter",
 	}
 }
 
@@ -81,7 +82,8 @@ func (e *endpoint) StateSave(stateSinkObject state.Sink) {
 	stateSinkObject.Save(7, &e.rcvList)
 	stateSinkObject.Save(8, &e.rcvBufSize)
 	stateSinkObject.Save(9, &e.rcvClosed)
-	stateSinkObject.Save(10, &e.frozen)
+	stateSinkObject.Save(10, &e.rcvDisabled)
+	stateSinkObject.Save(11, &e.icmpv6Filter)
 }
 
 // +checklocksignore
@@ -96,7 +98,8 @@ func (e *endpoint) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(7, &e.rcvList)
 	stateSourceObject.Load(8, &e.rcvBufSize)
 	stateSourceObject.Load(9, &e.rcvClosed)
-	stateSourceObject.Load(10, &e.frozen)
+	stateSourceObject.Load(10, &e.rcvDisabled)
+	stateSourceObject.Load(11, &e.icmpv6Filter)
 	stateSourceObject.AfterLoad(e.afterLoad)
 }
 

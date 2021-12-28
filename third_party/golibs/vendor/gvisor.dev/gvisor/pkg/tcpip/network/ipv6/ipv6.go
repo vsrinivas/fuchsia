@@ -286,7 +286,7 @@ func (e *endpoint) HandleLinkResolutionFailure(pkt *stack.PacketBuffer) {
 	if pkt.NetworkPacketInfo.IsForwardedPacket {
 		// TODO(gvisor.dev/issue/6005): Propagate asynchronously generated ICMP
 		// errors to local endpoints.
-		e.protocol.returnError(&icmpReasonHostUnreachable{}, pkt)
+		e.protocol.returnError(&icmpReasonHostUnreachable{}, pkt, false /* deliveredLocally */)
 		e.stats.ip.Forwarding.Errors.Increment()
 		e.stats.ip.Forwarding.HostUnreachable.Increment()
 		return
@@ -296,6 +296,7 @@ func (e *endpoint) HandleLinkResolutionFailure(pkt *stack.PacketBuffer) {
 	pkt = stack.NewPacketBuffer(stack.PacketBufferOptions{
 		Data: buffer.NewVectorisedView(pkt.Size(), pkt.Views()),
 	})
+	defer pkt.DecRef()
 	pkt.NICID = e.nic.ID()
 	pkt.NetworkProtocolNumber = ProtocolNumber
 	e.handleControl(&icmpv6DestinationAddressUnreachableSockError{}, pkt)
@@ -741,7 +742,8 @@ func (e *endpoint) handleFragments(r *stack.Route, networkMTU uint32, pkt *stack
 
 // WritePacket writes a packet to the given destination address and protocol.
 func (e *endpoint) WritePacket(r *stack.Route, params stack.NetworkHeaderParams, pkt *stack.PacketBuffer) tcpip.Error {
-	if err := addIPHeader(r.LocalAddress(), r.RemoteAddress(), pkt, params, nil /* extensionHeaders */); err != nil {
+	dstAddr := r.RemoteAddress()
+	if err := addIPHeader(r.LocalAddress(), dstAddr, pkt, params, nil /* extensionHeaders */); err != nil {
 		return err
 	}
 
@@ -754,15 +756,14 @@ func (e *endpoint) WritePacket(r *stack.Route, params stack.NetworkHeaderParams,
 		return nil
 	}
 
-	// If the packet is manipulated as per NAT Output rules, handle packet
+	// If the packet is manipulated as per DNAT Output rules, handle packet
 	// based on destination address and do not send the packet to link
 	// layer.
 	//
-	// We should do this for every packet, rather than only NATted packets, but
+	// We should do this for every packet, rather than only DNATted packets, but
 	// removing this check short circuits broadcasts before they are sent out to
 	// other hosts.
-	if pkt.DNATDone {
-		netHeader := header.IPv6(pkt.NetworkHeader().View())
+	if netHeader := header.IPv6(pkt.NetworkHeader().View()); dstAddr != netHeader.DestinationAddress() {
 		if ep := e.protocol.findEndpointWithAddress(netHeader.DestinationAddress()); ep != nil {
 			// Since we rewrote the packet but it is being routed back to us, we
 			// can safely assume the checksum is valid.
@@ -829,90 +830,6 @@ func (e *endpoint) writePacket(r *stack.Route, pkt *stack.PacketBuffer, protocol
 	return nil
 }
 
-// WritePackets implements stack.NetworkEndpoint.
-func (e *endpoint) WritePackets(r *stack.Route, pkts stack.PacketBufferList, params stack.NetworkHeaderParams) (int, tcpip.Error) {
-	if r.Loop()&stack.PacketLoop != 0 {
-		panic("not implemented")
-	}
-	if r.Loop()&stack.PacketOut == 0 {
-		return pkts.Len(), nil
-	}
-
-	stats := e.stats.ip
-	linkMTU := e.nic.MTU()
-	for pb := pkts.Front(); pb != nil; pb = pb.Next() {
-		if err := addIPHeader(r.LocalAddress(), r.RemoteAddress(), pb, params, nil /* extensionHeaders */); err != nil {
-			return 0, err
-		}
-
-		networkMTU, err := calculateNetworkMTU(linkMTU, uint32(pb.NetworkHeader().View().Size()))
-		if err != nil {
-			stats.OutgoingPacketErrors.IncrementBy(uint64(pkts.Len()))
-			return 0, err
-		}
-		if packetMustBeFragmented(pb, networkMTU) {
-			// Keep track of the packet that is about to be fragmented so it can be
-			// removed once the fragmentation is done.
-			originalPkt := pb
-			if _, _, err := e.handleFragments(r, networkMTU, pb, params.Protocol, func(fragPkt *stack.PacketBuffer) tcpip.Error {
-				// Modify the packet list in place with the new fragments.
-				pkts.InsertAfter(pb, fragPkt)
-				pb = fragPkt
-				return nil
-			}); err != nil {
-				stats.OutgoingPacketErrors.IncrementBy(uint64(pkts.Len()))
-				return 0, err
-			}
-			// Remove the packet that was just fragmented and process the rest.
-			pkts.Remove(originalPkt)
-		}
-	}
-
-	// iptables filtering. All packets that reach here are locally
-	// generated.
-	outNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
-	outputDropped, natPkts := e.protocol.stack.IPTables().CheckOutputPackets(pkts, r, outNicName)
-	stats.IPTablesOutputDropped.IncrementBy(uint64(len(outputDropped)))
-	for pkt := range outputDropped {
-		pkts.Remove(pkt)
-	}
-
-	// The NAT-ed packets may now be destined for us.
-	locallyDelivered := 0
-	for pkt := range natPkts {
-		ep := e.protocol.findEndpointWithAddress(header.IPv6(pkt.NetworkHeader().View()).DestinationAddress())
-		if ep == nil {
-			// The NAT-ed packet is still destined for some remote node.
-			continue
-		}
-
-		// Do not send the locally destined packet out the NIC.
-		pkts.Remove(pkt)
-
-		// Deliver the packet locally.
-		ep.handleLocalPacket(pkt, true /* canSkipRXChecksum */)
-		locallyDelivered++
-	}
-
-	// We ignore the list of NAT-ed packets here because Postrouting NAT can only
-	// change the source address, and does not alter the route or outgoing
-	// interface of the packet.
-	postroutingDropped, _ := e.protocol.stack.IPTables().CheckPostroutingPackets(pkts, r, e, outNicName)
-	stats.IPTablesPostroutingDropped.IncrementBy(uint64(len(postroutingDropped)))
-	for pkt := range postroutingDropped {
-		pkts.Remove(pkt)
-	}
-
-	// The rest of the packets can be delivered to the NIC as a batch.
-	pktsLen := pkts.Len()
-	written, err := e.nic.WritePackets(r, pkts, ProtocolNumber)
-	stats.PacketsSent.IncrementBy(uint64(written))
-	stats.OutgoingPacketErrors.IncrementBy(uint64(pktsLen - written))
-
-	// Dropped packets aren't errors, so include them in the return value.
-	return locallyDelivered + written + len(outputDropped) + len(postroutingDropped), err
-}
-
 // WriteHeaderIncludedPacket implements stack.NetworkEndpoint.
 func (e *endpoint) WriteHeaderIncludedPacket(r *stack.Route, pkt *stack.PacketBuffer) tcpip.Error {
 	// The packet already has an IP header, but there are a few required checks.
@@ -974,7 +891,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 		// We return the original error rather than the result of returning
 		// the ICMP packet because the original error is more relevant to
 		// the caller.
-		_ = e.protocol.returnError(&icmpReasonHopLimitExceeded{}, pkt)
+		_ = e.protocol.returnError(&icmpReasonHopLimitExceeded{}, pkt, false /* deliveredLocally */)
 		return &ip.ErrTTLExceeded{}
 	}
 
@@ -1006,7 +923,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 	case *tcpip.ErrNoRoute, *tcpip.ErrNetworkUnreachable:
 		// We return the original error rather than the result of returning the
 		// ICMP packet because the original error is more relevant to the caller.
-		_ = e.protocol.returnError(&icmpReasonNetUnreachable{}, pkt)
+		_ = e.protocol.returnError(&icmpReasonNetUnreachable{}, pkt, false /* deliveredLocally */)
 		return &ip.ErrNoRoute{}
 	default:
 		return &ip.ErrOther{Err: err}
@@ -1025,6 +942,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 	// WriteHeaderIncludedPacket takes ownership of the packet buffer, but we do
 	// not own it.
 	newPkt := pkt.DeepCopyForForwarding(int(r.MaxHeaderLength()))
+	defer newPkt.DecRef()
 	newHdr := header.IPv6(newPkt.NetworkHeader().View())
 
 	// As per RFC 8200 section 3,
@@ -1047,7 +965,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 		//   A Packet Too Big MUST be sent by a router in response to a packet that
 		//   it cannot forward because the packet is larger than the MTU of the
 		//   outgoing link.
-		_ = e.protocol.returnError(&icmpReasonPacketTooBig{}, pkt)
+		_ = e.protocol.returnError(&icmpReasonPacketTooBig{}, pkt, false /* deliveredLocally */)
 		return &ip.ErrMessageTooLong{}
 	default:
 		return &ip.ErrOther{Err: err}
@@ -1118,6 +1036,7 @@ func (e *endpoint) handleLocalPacket(pkt *stack.PacketBuffer, canSkipRXChecksum 
 	stats.PacketsReceived.Increment()
 
 	pkt = pkt.CloneToInbound()
+	defer pkt.DecRef()
 	pkt.RXTransportChecksumValidated = canSkipRXChecksum
 
 	h, ok := e.protocol.parseAndValidate(pkt)
@@ -1254,10 +1173,9 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 			// restricted to appear immediately after an IPv6 fixed header.
 			if previousHeaderStart != 0 {
 				_ = e.protocol.returnError(&icmpReasonParameterProblem{
-					code:       header.ICMPv6UnknownHeader,
-					pointer:    previousHeaderStart,
-					forwarding: forwarding,
-				}, pkt)
+					code:    header.ICMPv6UnknownHeader,
+					pointer: previousHeaderStart,
+				}, pkt, !forwarding /* deliveredLocally */)
 				return fmt.Errorf("found Hop-by-Hop header = %#v with non-zero previous header offset = %d", extHdr, previousHeaderStart)
 			}
 
@@ -1308,8 +1226,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 							code:               header.ICMPv6UnknownOption,
 							pointer:            it.ParseOffset() + optsIt.OptionOffset(),
 							respondToMulticast: true,
-							forwarding:         forwarding,
-						}, pkt)
+						}, pkt, !forwarding /* deliveredLocally */)
 						return fmt.Errorf("found unknown hop-by-hop header option = %#v with discard action", opt)
 					default:
 						panic(fmt.Sprintf("unrecognized action for an unrecognized Hop By Hop extension header option = %#v", opt))
@@ -1334,12 +1251,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 				_ = e.protocol.returnError(&icmpReasonParameterProblem{
 					code:    header.ICMPv6ErroneousHeader,
 					pointer: it.ParseOffset(),
-					// For the sake of consistency, we're using the value of `forwarding`
-					// here, even though it should always be false if we've reached this
-					// point. If `forwarding` is true here, we're executing undefined
-					// behavior no matter what.
-					forwarding: forwarding,
-				}, pkt)
+				}, pkt, true /* deliveredLocally */)
 				return fmt.Errorf("found unrecognized routing type with non-zero segments left in header = %#v", extHdr)
 			}
 
@@ -1429,7 +1341,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 				_ = e.protocol.returnError(&icmpReasonParameterProblem{
 					code:    header.ICMPv6ErroneousHeader,
 					pointer: header.IPv6PayloadLenOffset,
-				}, pkt)
+				}, pkt, true /* deliveredLocally */)
 				return fmt.Errorf("found fragment length = %d that is not a multiple of 8 octets", fragmentPayloadLen)
 			}
 
@@ -1451,7 +1363,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 				_ = e.protocol.returnError(&icmpReasonParameterProblem{
 					code:    header.ICMPv6ErroneousHeader,
 					pointer: fragmentFieldOffset,
-				}, pkt)
+				}, pkt, true /* deliveredLocally */)
 				return fmt.Errorf("determined that reassembled packet length = %d would exceed allowed length = %d", lengthAfterReassembly, header.IPv6MaximumPayloadSize)
 			}
 
@@ -1526,7 +1438,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 						code:               header.ICMPv6UnknownOption,
 						pointer:            it.ParseOffset() + optsIt.OptionOffset(),
 						respondToMulticast: true,
-					}, pkt)
+					}, pkt, true /* deliveredLocally */)
 					return fmt.Errorf("found unknown destination header option %#v with discard action", opt)
 				default:
 					panic(fmt.Sprintf("unrecognized action for an unrecognized Destination extension header option = %#v", opt))
@@ -1574,7 +1486,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 					//   message with Code 4 in response to a packet for which the
 					//   transport protocol (e.g., UDP) has no listener, if that transport
 					//   protocol has no alternative means to inform the sender.
-					_ = e.protocol.returnError(&icmpReasonPortUnreachable{}, pkt)
+					_ = e.protocol.returnError(&icmpReasonPortUnreachable{}, pkt, true /* deliveredLocally */)
 					return fmt.Errorf("destination port unreachable")
 				case stack.TransportPacketProtocolUnreachable:
 					// As per RFC 8200 section 4. (page 7):
@@ -1606,7 +1518,7 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 					_ = e.protocol.returnError(&icmpReasonParameterProblem{
 						code:    header.ICMPv6UnknownHeader,
 						pointer: prevHdrIDOffset,
-					}, pkt)
+					}, pkt, true /* deliveredLocally */)
 					return fmt.Errorf("transport protocol unreachable")
 				default:
 					panic(fmt.Sprintf("unrecognized result from DeliverTransportPacket = %d", res))

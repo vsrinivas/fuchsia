@@ -4,7 +4,7 @@
 
 #![cfg(test)]
 
-use std::{collections::HashMap, num::NonZeroU16};
+use std::{collections::HashMap, convert::TryFrom as _, num::NonZeroU16};
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::testing::TreeAssertion;
@@ -24,7 +24,7 @@ use netstack_testing_macros::variants_test;
 use nonzero_ext::nonzero;
 use packet::{ParsablePacket as _, Serializer as _};
 use packet_formats::{
-    ethernet::{EtherType, EthernetFrameBuilder},
+    ethernet::{testutil::ETHERNET_HDR_LEN_NO_TAG, EtherType, EthernetFrameBuilder},
     ipv4::{Ipv4Header as _, Ipv4PacketBuilder},
     udp::{UdpPacketBuilder, UdpParseArgs},
 };
@@ -108,11 +108,14 @@ async fn inspect_nic() {
     const ETH_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:01:02:03:04:05");
     const NETDEV_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
 
+    let max_frame_size = netemul::DEFAULT_MTU
+        + u16::try_from(ETHERNET_HDR_LEN_NO_TAG)
+            .expect("should fit ethernet header length in a u16");
     let eth = realm
         .join_network_with(
             &network,
             "eth-ep",
-            netemul::Ethernet::make_config(netemul::DEFAULT_MTU, Some(ETH_MAC)),
+            netemul::Ethernet::make_config(max_frame_size, Some(ETH_MAC)),
             &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.1/24")),
         )
         .await
@@ -121,7 +124,7 @@ async fn inspect_nic() {
         .join_network_with(
             &network,
             "netdev-ep",
-            netemul::NetworkDevice::make_config(netemul::DEFAULT_MTU, Some(NETDEV_MAC)),
+            netemul::NetworkDevice::make_config(max_frame_size, Some(NETDEV_MAC)),
             &netemul::InterfaceConfig::StaticIp(fidl_subnet!("192.168.0.2/24")),
         )
         .await
@@ -207,7 +210,7 @@ async fn inspect_nic() {
             AdminUp: "true",
             Promiscuous: "false",
             Up: "true",
-            MTU: 65536u64,
+            MTU: 65522u64,
             NICID: loopback_props.id.to_string(),
             Running: "true",
             "DHCP enabled": "false",
@@ -892,6 +895,7 @@ async fn inspect_stat_counters() {
             SegmentsAckedWithDSACK: AnyProperty,
             SegmentsSent: AnyProperty,
             SlowStartRetransmits: AnyProperty,
+            SpuriousRTORecovery: AnyProperty,
             SpuriousRecovery: AnyProperty,
             TLPRecovery: AnyProperty,
             Timeouts: AnyProperty,
