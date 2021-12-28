@@ -12,7 +12,6 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::io1::DerivedConnection,
             dirents_sink::AppendResult,
             entry::{DirectoryEntry, EntryInfo},
             traversal_position::TraversalPosition,
@@ -69,22 +68,14 @@ impl Error {
 /// Serves a package directory for the package with hash `meta_far` on `server_end`.
 /// The connection rights are set by `flags`, used the same as the `flags` parameter of
 ///   fuchsia.io/Directory.Open.
-pub async fn serve(
+pub fn serve(
     scope: vfs::execution_scope::ExecutionScope,
     blobfs: blobfs::Client,
     meta_far: fuchsia_hash::Hash,
     flags: u32,
     server_end: ServerEnd<DirectoryMarker>,
-) -> Result<(), Error> {
-    let () = vfs::directory::immutable::connection::io1::ImmutableConnection::create_connection(
-        scope,
-        vfs::directory::connection::util::OpenDirectory::new(Arc::new(
-            RootDir::new(blobfs, meta_far).await?,
-        )),
-        flags,
-        server_end.into_channel().into(),
-    );
-    Ok(())
+) -> impl futures::Future<Output = Result<(), Error>> {
+    serve_path(scope, blobfs, meta_far, flags, 0, VfsPath::dot(), server_end.into_channel().into())
 }
 
 /// Serves a sub-`path` of a package directory for the package with hash `meta_far` on `server_end`.
