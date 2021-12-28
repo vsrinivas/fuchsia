@@ -2333,68 +2333,21 @@ pub(crate) mod testutil {
 
         // Start of server discovery should send a solicit and schedule a
         // retransmission timer.
-        let buf = match &actions[..] {
+        let mut buf = match &actions[..] {
             [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
                 buf
             }
             actions => panic!("unexpected actions {:?}", actions),
         };
 
-        let mut buf = &buf[..];
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
-
-        // The solicit should contain the expected options.
-        let (mut non_ia_opts, ia_opts, other) = msg.options().fold(
-            (Vec::new(), Vec::new(), Vec::new()),
-            |(mut non_ia_opts, mut ia_opts, mut other), opt| {
-                match opt {
-                    v6::ParsedDhcpOption::ClientId(_)
-                    | v6::ParsedDhcpOption::ElapsedTime(_)
-                    | v6::ParsedDhcpOption::Oro(_) => non_ia_opts.push(opt),
-                    v6::ParsedDhcpOption::Iana(iana_data) => ia_opts.push(iana_data),
-                    opt => other.push(opt),
-                }
-                (non_ia_opts, ia_opts, other)
-            },
+        assert_outgoing_stateful_message(
+            &mut buf,
+            v6::MessageType::Solicit,
+            &client_id,
+            None,
+            &options_to_request,
+            &configured_addresses,
         );
-        let option_sorter: fn(
-            &v6::ParsedDhcpOption<'_>,
-            &v6::ParsedDhcpOption<'_>,
-        ) -> std::cmp::Ordering =
-            |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
-
-        non_ia_opts.sort_by(option_sorter);
-        let mut expected_oro = vec![v6::OptionCode::SolMaxRt];
-        expected_oro.extend_from_slice(&options_to_request);
-        let mut expected_non_ia_opts = vec![
-            v6::ParsedDhcpOption::ClientId(&client_id),
-            v6::ParsedDhcpOption::ElapsedTime(0),
-            v6::ParsedDhcpOption::Oro(expected_oro),
-        ];
-        expected_non_ia_opts.sort_by(option_sorter);
-        assert_eq!(non_ia_opts, expected_non_ia_opts);
-
-        let mut solicited_addresses = HashMap::new();
-        for iana_data in ia_opts.iter() {
-            if iana_data.iter_options().count() == 0 {
-                assert_eq!(solicited_addresses.insert(iana_data.iaid(), None), None);
-                continue;
-            }
-            for iana_option in iana_data.iter_options() {
-                match iana_option {
-                    v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                        assert_eq!(
-                            solicited_addresses.insert(iana_data.iaid(), Some(iaaddr_data.addr())),
-                            None
-                        );
-                    }
-                    option => panic!("unexpected option {:?}", option),
-                }
-            }
-        }
-        assert_eq!(solicited_addresses, configured_addresses);
-        assert_eq!(&other, &[]);
 
         client
     }
@@ -2621,6 +2574,94 @@ pub(crate) mod testutil {
             v6::TimeValue::Finite(t) => t.get(),
             v6::TimeValue::Infinity => INFINITY,
         }
+    }
+
+    /// Checks that the buffer contains the expected type and options for an
+    /// outgoing message in stateful mode.
+    ///
+    /// # Panics
+    ///
+    /// `assert_outgoing_stateful_message` panics if the message cannot be
+    /// parsed, or does not contain the expected options.
+    pub(crate) fn assert_outgoing_stateful_message(
+        mut buf: &[u8],
+        expected_msg_type: v6::MessageType,
+        expected_client_id: &[u8; CLIENT_ID_LEN],
+        expected_server_id: Option<&Vec<u8>>,
+        expected_oro: &[v6::OptionCode],
+        expected_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+    ) {
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_eq!(msg.msg_type(), expected_msg_type);
+
+        let (mut non_ia_opts, ia_opts, other) = msg.options().fold(
+            (Vec::new(), Vec::new(), Vec::new()),
+            |(mut non_ia_opts, mut ia_opts, mut other), opt| {
+                match opt {
+                    v6::ParsedDhcpOption::ClientId(_)
+                    | v6::ParsedDhcpOption::ElapsedTime(_)
+                    | v6::ParsedDhcpOption::Oro(_) => non_ia_opts.push(opt),
+                    v6::ParsedDhcpOption::ServerId(_) if expected_server_id.is_some() => {
+                        non_ia_opts.push(opt)
+                    }
+                    v6::ParsedDhcpOption::Iana(iana_data) => ia_opts.push(iana_data),
+                    opt => other.push(opt),
+                }
+                (non_ia_opts, ia_opts, other)
+            },
+        );
+        let option_sorter: fn(
+            &v6::ParsedDhcpOption<'_>,
+            &v6::ParsedDhcpOption<'_>,
+        ) -> std::cmp::Ordering =
+            |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
+
+        // Check that the non-IA options are correct.
+        non_ia_opts.sort_by(option_sorter);
+        let expected_non_ia_opts = {
+            let oro = std::iter::once(v6::OptionCode::SolMaxRt)
+                .chain(expected_oro.iter().copied())
+                .collect();
+            let mut expected_non_ia_opts = vec![
+                v6::ParsedDhcpOption::ClientId(expected_client_id),
+                v6::ParsedDhcpOption::ElapsedTime(0),
+                v6::ParsedDhcpOption::Oro(oro),
+            ];
+            if let Some(server_id) = expected_server_id {
+                expected_non_ia_opts.push(v6::ParsedDhcpOption::ServerId(server_id));
+            }
+            expected_non_ia_opts.sort_by(option_sorter);
+            expected_non_ia_opts
+        };
+        assert_eq!(non_ia_opts, expected_non_ia_opts);
+
+        // Check that the IA options are correct.
+        let sent_addresses = {
+            let mut sent_addresses: HashMap<u32, Option<Ipv6Addr>> = HashMap::new();
+            for iana_data in ia_opts.iter() {
+                if iana_data.iter_options().count() == 0 {
+                    assert_eq!(sent_addresses.insert(iana_data.iaid(), None), None);
+                    continue;
+                }
+                for iana_option in iana_data.iter_options() {
+                    match iana_option {
+                        v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
+                            assert_eq!(
+                                sent_addresses.insert(iana_data.iaid(), Some(iaaddr_data.addr())),
+                                None
+                            );
+                        }
+                        option => panic!("unexpected option {:?}", option),
+                    }
+                }
+            }
+            sent_addresses
+        };
+        assert_eq!(&sent_addresses, expected_addresses);
+
+        // Check that there are no other options besides the expected non-IA and
+        // IA options.
+        assert_eq!(&other, &[]);
     }
 }
 
@@ -3227,8 +3268,9 @@ mod tests {
             std_ip_v6!("::ffff:c00a:2ff"),
             std_ip_v6!("::ffff:c00a:3ff"),
         ];
+        let server_id = v6::duid_uuid();
         let selected_advertise = AdvertiseMessage::new_default(
-            vec![1, 2, 3],
+            server_id.to_vec(),
             &advertised_addresses,
             &[],
             &configured_addresses,
@@ -3261,54 +3303,21 @@ mod tests {
                 solicit_max_rt: _,
             })
         );
-        let buf = match &actions[..] {
+        let mut buf = match &actions[..] {
             [Action::CancelTimer(ClientTimerType::Retransmission), Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)] => {
                 buf
             }
             actions => panic!("unexpected actions {:?}", actions),
         };
-        let mut buf = &buf[..];
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_eq!(msg.msg_type(), v6::MessageType::Request);
-
-        // The request should contain the expected options.
-        assert_eq!(
-            vec![v6::ParsedDhcpOption::ClientId(&client_id)],
-            msg.options()
-                .filter(|opt| { opt.code() == v6::OptionCode::ClientId })
-                .collect::<Vec<_>>()
-        );
-        assert_eq!(
-            vec![v6::ParsedDhcpOption::ElapsedTime(0)],
-            msg.options()
-                .filter(|opt| { opt.code() == v6::OptionCode::ElapsedTime })
-                .collect::<Vec<_>>()
-        );
-        assert_eq!(
-            vec![v6::ParsedDhcpOption::Oro(vec![v6::OptionCode::SolMaxRt])],
-            msg.options().filter(|opt| { opt.code() == v6::OptionCode::Oro }).collect::<Vec<_>>()
-        );
-
-        let iana_options =
-            msg.options().filter(|opt| opt.code() == v6::OptionCode::Iana).collect::<Vec<_>>();
-        let mut requested_addresses: HashMap<u32, Ipv6Addr> = HashMap::new();
-        for option in iana_options {
-            if let v6::ParsedDhcpOption::Iana(iana_data) = option {
-                for iana_option in iana_data.iter_options() {
-                    if let v6::ParsedDhcpOption::IaAddr(iaaddr_data) = iana_option {
-                        assert_eq!(
-                            None,
-                            requested_addresses.insert(iana_data.iaid(), iaaddr_data.addr())
-                        );
-                        // Each IANA option should have exactly one IA Address option.
-                        break;
-                    }
-                }
-            }
-        }
-        assert_eq!(
-            (0..).zip(advertised_addresses).collect::<HashMap<u32, Ipv6Addr>>(),
-            requested_addresses
+        let expected_addresses =
+            (0..).zip(advertised_addresses.map(Some)).collect::<HashMap<u32, Option<Ipv6Addr>>>();
+        testutil::assert_outgoing_stateful_message(
+            &mut buf,
+            v6::MessageType::Request,
+            &client_id,
+            Some(&server_id.to_vec()),
+            &options_to_request,
+            &expected_addresses,
         );
     }
 
