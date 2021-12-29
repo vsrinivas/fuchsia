@@ -200,7 +200,8 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   return res;
 }
 
-void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
+void DisplayDevice::ApplyConfiguration(const display_config_t* config,
+                                       const config_stamp_t* config_stamp) {
   ZX_ASSERT(config);
 
   if (CheckNeedsModeset(&config->mode)) {
@@ -213,7 +214,8 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     PipeConfigEpilogue(info_, pipe_->pipe(), pipe_->transcoder());
   }
 
-  pipe_->ApplyConfiguration(config, fit::bind_member<&Controller::SetupGttImage>(controller_));
+  pipe_->ApplyConfiguration(config, config_stamp,
+                            fit::bind_member<&Controller::SetupGttImage>(controller_));
 }
 
 void DisplayDevice::GetStateNormalized(GetStateNormalizedRequestView request,

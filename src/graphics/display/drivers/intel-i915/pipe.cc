@@ -8,6 +8,7 @@
 #include <lib/zx/vmo.h>
 #include <math.h>
 
+#include <cstdint>
 #include <memory>
 
 #include "display-device.h"
@@ -178,9 +179,19 @@ void Pipe::LoadActiveMode(display_mode_t* mode) {
   pipe_size.WriteTo(mmio_space_);
 }
 
-void Pipe::ApplyConfiguration(const display_config_t* config,
+void Pipe::ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp,
                               const SetupGttImageFunc& get_gtt_region_fn) {
   ZX_ASSERT(config);
+  ZX_ASSERT(config_stamp);
+
+  if (config_stamps_.empty()) {
+    // Initialize the seqno for the first configuration applied to the pipe.
+    constexpr uint64_t kInitialConfigStampSeqno = 1ul;
+    config_stamps_front_seqno_.emplace(kInitialConfigStampSeqno);
+  }
+  config_stamps_.push_back(*config_stamp);
+
+  auto current_config_stamp_seqno = *config_stamps_front_seqno_ + config_stamps_.size() - 1;
 
   registers::pipe_arming_regs_t regs;
   registers::PipeRegs pipe_regs(pipe_);
@@ -249,14 +260,14 @@ void Pipe::ApplyConfiguration(const display_config_t* config,
       }
     }
     ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed, &regs,
-                          get_gtt_region_fn);
+                          current_config_stamp_seqno, get_gtt_region_fn);
   }
   cursor_layer_t* cursor = nullptr;
   if (config->layer_count &&
       config->layer_list[config->layer_count - 1]->type == LAYER_TYPE_CURSOR) {
     cursor = &config->layer_list[config->layer_count - 1]->cfg.cursor;
   }
-  ConfigureCursorPlane(cursor, !!config->cc_flags, &regs);
+  ConfigureCursorPlane(cursor, !!config->cc_flags, &regs, current_config_stamp_seqno);
 
   pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space_);
   pipe_regs.PipeBottomColor().FromValue(regs.pipe_bottom_color).WriteTo(mmio_space_);
@@ -273,7 +284,7 @@ void Pipe::ApplyConfiguration(const display_config_t* config,
 
 void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
                                  bool enable_csc, bool* scaler_1_claimed,
-                                 registers::pipe_arming_regs_t* regs,
+                                 registers::pipe_arming_regs_t* regs, uint64_t config_stamp_seqno,
                                  const SetupGttImageFunc& setup_gtt_image) {
   registers::PipeRegs pipe_regs(pipe());
 
@@ -426,10 +437,12 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space_);
   plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
   regs->plane_surf[plane_num] = plane_surface.reg_value();
+
+  latest_config_seqno_of_image_[image->handle] = config_stamp_seqno;
 }
 
 void Pipe::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
-                                registers::pipe_arming_regs_t* regs) {
+                                registers::pipe_arming_regs_t* regs, uint64_t config_stamp_seqno) {
   registers::PipeRegs pipe_regs(pipe());
 
   auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space_);
@@ -473,6 +486,52 @@ void Pipe::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
   auto cursor_base = pipe_regs.CursorBase().ReadFrom(mmio_space_);
   cursor_base.set_cursor_base(base_address >> cursor_base.kPageShift);
   regs->cur_base = cursor_base.reg_value();
+
+  latest_config_seqno_of_image_[cursor->image.handle] = config_stamp_seqno;
+}
+
+std::optional<config_stamp_t> Pipe::GetVsyncConfigStamp(
+    const std::vector<uint64_t>& image_handles) {
+  uint64_t min_config_seqno = std::numeric_limits<uint64_t>::max();
+  for (const uint64_t handle : image_handles) {
+    auto config_it = latest_config_seqno_of_image_.find(handle);
+    if (config_it == latest_config_seqno_of_image_.end()) {
+      continue;
+    }
+    min_config_seqno = std::min(min_config_seqno, config_it->second);
+  }
+
+  if (min_config_seqno == std::numeric_limits<uint64_t>::max()) {
+    // Display device may carry garbage contents in the registers, for example
+    // if the driver restarted. In that case none of the images stored in the
+    // device register will be recognized by the driver, so we just return a
+    // null config stamp to ignore it.
+    zxlogf(DEBUG, "%s: NO valid images for the display.", __func__);
+    return std::nullopt;
+  }
+  if (config_stamps_.empty() || !config_stamps_front_seqno_.has_value()) {
+    // Vsync signals could be sent to the driver before the first
+    // ApplyConfiguration() is called. In that case the Vsync signal should be
+    // just ignored by the driver, so we return a null config stamp.
+    zxlogf(DEBUG, "%s: No config has been applied.", __func__);
+    return std::nullopt;
+  }
+  if (config_stamps_front_seqno_ > min_config_seqno) {
+    zxlogf(ERROR, "%s: Device returns a config with seqno (%lu) that is already evicted.", __func__,
+           min_config_seqno);
+    return std::nullopt;
+  }
+
+  // Since config stamps in the linked list have consecutive seqnos, we can just
+  // remove the first |min_config_seqno - *config_stamps_front_seqno_| elements
+  // to evict all config stamps older than that with seqno |min_config_seqno|.
+  config_stamps_.erase(
+      config_stamps_.begin(),
+      std::next(config_stamps_.begin(), min_config_seqno - *config_stamps_front_seqno_));
+  config_stamps_front_seqno_.emplace(min_config_seqno);
+
+  ZX_DEBUG_ASSERT(!config_stamps_.empty());
+  return config_stamps_.front();
 }
 
 void Pipe::SetColorConversionOffsets(bool preoffsets, const float vals[3]) {

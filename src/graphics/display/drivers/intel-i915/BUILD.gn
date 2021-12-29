@@ -80,10 +80,12 @@ test("intel-i915-test") {
     "gtt-unittest.cc",
     "intel-i915-test.cc",
     "interrupts-unittest.cc",
+    "pipe-unittest.cc",
   ]
   deps = [
     ":common_srcs",
     "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/mock-ddk",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

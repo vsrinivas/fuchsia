@@ -237,30 +237,36 @@ void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
   }
 
   uint64_t id = INVALID_DISPLAY_ID;
-  // Plane 3 and the cursor are mutually exclusive, so this won't overflow.
-  uint64_t handles[3];
-  size_t handle_count = 0;
+
+  std::optional<config_stamp_t> vsync_config_stamp = std::nullopt;
+
   if (pipes_[pipe].in_use()) {
     id = pipes_[pipe].attached_display_id();
 
     registers::PipeRegs regs(pipe);
+    std::vector<uint64_t> handles;
     for (int i = 0; i < 3; i++) {
       auto live_surface = regs.PlaneSurfaceLive(i).ReadFrom(mmio_space());
       uint64_t handle = live_surface.surface_base_addr() << live_surface.kPageShift;
+
       if (handle) {
-        handles[handle_count++] = handle;
+        handles.push_back(handle);
       }
     }
 
     auto live_surface = regs.CursorSurfaceLive().ReadFrom(mmio_space());
     uint64_t handle = live_surface.surface_base_addr() << live_surface.kPageShift;
+
     if (handle) {
-      handles[handle_count++] = handle;
+      handles.push_back(handle);
     }
+
+    vsync_config_stamp = pipes_[pipe].GetVsyncConfigStamp(handles);
   }
 
-  if (id != INVALID_DISPLAY_ID && handle_count) {
-    dc_intf_.OnDisplayVsync(id, timestamp, handles, handle_count);
+  if (id != INVALID_DISPLAY_ID) {
+    dc_intf_.OnDisplayVsync2(id, timestamp,
+                             vsync_config_stamp.has_value() ? &*vsync_config_stamp : nullptr);
   }
 }
 
@@ -1709,7 +1715,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
     const display_config_t* config = find_config(display->id(), display_config, display_count);
 
     if (config != nullptr) {
-      display->ApplyConfiguration(config);
+      display->ApplyConfiguration(config, config_stamp);
     } else {
       if (display->pipe()) {
         ResetPipe(display->pipe()->pipe());
@@ -1727,7 +1733,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
   if (dc_intf_.is_valid()) {
     zx_time_t now = fake_vsync_count ? zx_clock_get_monotonic() : 0;
     for (unsigned i = 0; i < fake_vsync_count; i++) {
-      dc_intf_.OnDisplayVsync(fake_vsyncs[i], now, nullptr, 0);
+      dc_intf_.OnDisplayVsync2(fake_vsyncs[i], now, config_stamp);
     }
   }
 }
