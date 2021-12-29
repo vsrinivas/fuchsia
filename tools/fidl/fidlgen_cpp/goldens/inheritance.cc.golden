@@ -70,6 +70,18 @@ void fidl::internal::NaturalClientImpl<::test_inheritance::Super>::foo(
 namespace test_inheritance {
 #endif  // __Fuchsia__
 
+}  // namespace test_inheritance
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_inheritance::Super>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_inheritance {
 [[maybe_unused]] constexpr inline uint64_t ksub_foo_Ordinal =
     7540745593380780216lu;
 
@@ -108,3 +120,12 @@ namespace test_inheritance {
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritance
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

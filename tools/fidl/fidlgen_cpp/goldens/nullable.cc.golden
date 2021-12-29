@@ -209,3 +209,12 @@ namespace test_nullable {
 #endif  // __Fuchsia__
 
 }  // namespace test_nullable
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_nullable::SimpleProtocol>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

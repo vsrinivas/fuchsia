@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/message.h>
@@ -28,7 +29,7 @@ class TestProtocol {
 namespace fidl {
 
 template <>
-class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
 
 }  // namespace fidl
 
@@ -59,7 +60,7 @@ class FakeClientImpl : public fidl::internal::ClientBase {
 };
 
 class FakeWireEventDispatcher
-    : public fidl::internal::IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>> {
+    : public fidl::internal::IncomingEventDispatcher<fidl::AsyncEventHandler<TestProtocol>> {
  public:
   FakeWireEventDispatcher() : IncomingEventDispatcher(nullptr) {}
 

@@ -58,3 +58,13 @@ namespace test_placementofattributes {
 #endif  // __Fuchsia__
 
 }  // namespace test_placementofattributes
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
+    ::test_placementofattributes::ExampleProtocol>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

@@ -5,3 +5,14 @@
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
+    ::test_bindingsdenylist::OnlyCppAndDeps>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

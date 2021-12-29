@@ -25,8 +25,44 @@ class ::fidl::internal::NaturalClientImpl<::test_service::SecondProtocol> final
 namespace fidl {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_service::SecondProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_service::SecondProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_service::SecondProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_service::SecondProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_service::SecondProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_service::SecondProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final
     : public ::fidl::internal::NaturalClientBase {
@@ -34,7 +70,39 @@ class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> MethodOnFirst() const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_service::FirstProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_service::FirstProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_service::FirstProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_service::FirstProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_service::FirstProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_service::FirstProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

@@ -184,8 +184,27 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChild(
 namespace test_protocolrequest {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocolrequest
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocolrequest::Parent>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
 
-}  // namespace test_protocolrequest
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocolrequest::Child>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

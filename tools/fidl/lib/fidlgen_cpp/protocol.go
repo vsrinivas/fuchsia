@@ -92,22 +92,34 @@ func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 var (
 	NaturalRequest                = fidlNs.member("Request")
 	NaturalResponse               = fidlNs.member("Response")
+	NaturalEvent                  = fidlNs.member("Event")
 	MessageTraits                 = internalNs.member("MessageTraits")
 	MessageBase                   = internalNs.member("MessageBase")
 	NaturalClientImpl             = internalNs.member("NaturalClientImpl")
 	NaturalClientCallbackTraits   = internalNs.member("ClientCallbackTraits")
 	NaturalClientCallback         = fidlNs.member("ClientCallback")
 	NaturalClientResponseCallback = fidlNs.member("ClientResponseCallback")
+	NaturalAsyncEventHandler      = fidlNs.member("AsyncEventHandler")
+
+	// NaturalEventHandlerInterface is shared between sync and async event handling.
+	NaturalEventHandlerInterface = internalNs.member("NaturalEventHandlerInterface")
+	NaturalEventDispatcher       = internalNs.member("NaturalEventDispatcher")
 )
 
 type unifiedMessagingDetails struct {
-	NaturalClientImpl name
+	NaturalClientImpl            name
+	NaturalAsyncEventHandler     name
+	NaturalEventHandlerInterface name
+	NaturalEventDispatcher       name
 }
 
 func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol) unifiedMessagingDetails {
 	p := protocol.Wire
 	return unifiedMessagingDetails{
-		NaturalClientImpl: NaturalClientImpl.template(p),
+		NaturalClientImpl:            NaturalClientImpl.template(p),
+		NaturalAsyncEventHandler:     NaturalAsyncEventHandler.template(p),
+		NaturalEventHandlerInterface: NaturalEventHandlerInterface.template(p),
+		NaturalEventDispatcher:       NaturalEventDispatcher.template(p),
 	}
 }
 
@@ -413,6 +425,9 @@ type unifiedMethod struct {
 	NaturalResponse            name
 	ResponseMessageTraits      name
 	ResponseMessageBase        name
+	NaturalEvent               name
+	EventMessageTraits         name
+	EventMessageBase           name
 	ClientCallbackTraits       name
 	ClientResponseCallbackType name
 	RequestMessageTraits       name
@@ -421,10 +436,14 @@ type unifiedMethod struct {
 func newUnifiedMethod(methodMarker name) unifiedMethod {
 	naturalRequest := NaturalRequest.template(methodMarker)
 	naturalResponse := NaturalResponse.template(methodMarker)
+	naturalEvent := NaturalEvent.template(methodMarker)
 	return unifiedMethod{
 		NaturalResponse:            naturalResponse,
 		ResponseMessageTraits:      MessageTraits.template(naturalResponse),
 		ResponseMessageBase:        MessageBase.template(naturalResponse),
+		NaturalEvent:               naturalEvent,
+		EventMessageTraits:         MessageTraits.template(naturalEvent),
+		EventMessageBase:           MessageBase.template(naturalEvent),
 		NaturalRequest:             naturalRequest,
 		ClientCallbackTraits:       NaturalClientCallbackTraits.template(methodMarker),
 		ClientResponseCallbackType: NaturalClientResponseCallback.template(methodMarker),

@@ -261,8 +261,43 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Super> final
 namespace fidl {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_inheritance::Super> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_inheritance::Super>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_inheritance::Super>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::AsyncEventHandler<::test_inheritance::Super>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_inheritance::Super>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Response<::test_inheritance::Sub::Foo> final
@@ -296,7 +331,6 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritance::SuperFooTopResponse;
 };
-namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<::test_inheritance::Sub::Foo>
     final {
@@ -322,7 +356,38 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final
            ::fidl::ClientResponseCallback<::test_inheritance::Sub::Foo>&&
                _callback) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_inheritance::Sub>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_inheritance::Sub>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::AsyncEventHandler<::test_inheritance::Sub>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_inheritance::Sub>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

@@ -29,9 +29,23 @@ int main(int argc, const char** argv) {
   auto client_end = service::ConnectAt<fuchsia_examples::Echo>(*svc);
   ZX_ASSERT(client_end.status_value() == ZX_OK);
 
-  // TODO(fxbug.dev/60240): Event handler.
+  // Define the event handler for the client. The OnString event handler prints the event.
+  class EventHandler : public fidl::AsyncEventHandler<fuchsia_examples::Echo> {
+   public:
+    explicit EventHandler(async::Loop& loop) : loop_(loop) {}
+
+    void OnString(fidl::Event<::fuchsia_examples::Echo::OnString>& event) override {
+      std::cout << "(Natural types) got event: " << event->response() << std::endl;
+      loop_.Quit();
+    }
+
+   private:
+    async::Loop& loop_;
+  };
+  EventHandler event_handler{loop};
+
   // Create a client to the Echo protocol.
-  fidl::Client client(std::move(*client_end), dispatcher);
+  fidl::Client client(std::move(*client_end), dispatcher, &event_handler);
 
   // [START two_way_natural_result]
   // Make an EchoString call with natural types and result callback.
@@ -120,15 +134,16 @@ int main(int argc, const char** argv) {
   fitx::result<::fidl::Error> result = client->SendString({"hello"});
   ZX_ASSERT(result.is_ok());
   // [END one_way_natural]
+  loop.Run();
+  loop.ResetQuit();
 
   // [START one_way_wire]
   // Make an EchoString call with wire types.
   fidl::Result wire_result = client.wire()->SendString("hello");
   ZX_ASSERT(wire_result.ok());
   // [END one_way_wire]
-
-  // TODO(fxbug.dev/60240): Once we have event handler support, wait for the
-  // corresponding event that the server will send after the one way call.
+  loop.Run();
+  loop.ResetQuit();
 
   return 0;
 }

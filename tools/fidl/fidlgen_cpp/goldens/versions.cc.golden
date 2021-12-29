@@ -20,6 +20,16 @@ void ::test_versions::Struct::EncodeWithoutValidating(::fidl::Encoder& encoder,
 
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_versions::OtherProtocol>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
 namespace test_versions {
 [[maybe_unused]] constexpr inline uint64_t kProtocol_Foo_Ordinal =
     6231434419097198905lu;
@@ -39,3 +49,12 @@ namespace test_versions {
 #endif  // __Fuchsia__
 
 }  // namespace test_versions
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_versions::Protocol>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

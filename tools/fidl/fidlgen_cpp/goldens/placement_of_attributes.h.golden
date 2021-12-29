@@ -240,3 +240,40 @@ namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_placementofattributes::ExampleProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_placementofattributes::ExampleProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_placementofattributes::ExampleProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<
+                    ::test_placementofattributes::ExampleProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_placementofattributes::ExampleProtocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

@@ -37,6 +37,8 @@ do not support them in the bindings. */}}
 {{ "" }}
   {{- template "ClientDefinition" $protocol }}
 {{ "" }}
+  {{- template "ProtocolEventHandlerDefinition" $protocol }}
+{{ "" }}
   {{- /* TODO(fxbug.dev/60240): Add more */}}
 {{- end }}
 {{- end }}

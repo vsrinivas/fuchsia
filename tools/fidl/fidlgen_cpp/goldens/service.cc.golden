@@ -21,6 +21,18 @@ namespace test_service {
 namespace test_service {
 #endif  // __Fuchsia__
 
+}  // namespace test_service
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_service::SecondProtocol>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_service {
 [[maybe_unused]] constexpr inline uint64_t
     kFirstProtocol_MethodOnFirst_Ordinal = 6352548393671797041lu;
 
@@ -40,3 +52,12 @@ namespace test_service {
 #endif  // __Fuchsia__
 
 }  // namespace test_service
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_service::FirstProtocol>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

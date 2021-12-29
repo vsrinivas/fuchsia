@@ -22,6 +22,10 @@
 {{- define "ClientDeclaration" }}
 {{- IfdefFuchsia -}}
 
+{{- range .Events }}
+{{- template "MethodEventDeclaration" . }}
+{{- end }}
+
 {{- range .TwoWayMethods }}
 
 {{- template "MethodResponseDeclaration" . }}
@@ -66,6 +70,10 @@ class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBas
 
 {{- define "ClientDefinition" }}
 {{- IfdefFuchsia }}
+
+{{- range .Events }}
+{{- template "MethodEventDefinition" . }}
+{{- end }}
 
 {{- range .TwoWayMethods }}
 
@@ -114,5 +122,8 @@ void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
   return ::fidl::internal::ToFitxResult(result);
 }
 {{ end }}
+
+
+
 {{- EndifFuchsia }}
 {{- end }}

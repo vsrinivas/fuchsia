@@ -264,8 +264,47 @@ class ::fidl::internal::NaturalClientImpl<
 namespace fidl {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_inheritancewithrecursivedecl::Parent> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_inheritancewithrecursivedecl::Parent>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_inheritancewithrecursivedecl::Parent>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<
+                    ::test_inheritancewithrecursivedecl::Parent>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Parent>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::NaturalClientImpl<
     ::test_inheritancewithrecursivedecl::Child>
@@ -278,7 +317,42 @@ class ::fidl::internal::NaturalClientImpl<
   ::fitx::result<::fidl::Error> Second(
       ::test_inheritancewithrecursivedecl::ChildSecondRequest&& payload) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_inheritancewithrecursivedecl::Child> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_inheritancewithrecursivedecl::Child>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_inheritancewithrecursivedecl::Child>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<
+                    ::test_inheritancewithrecursivedecl::Child>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_inheritancewithrecursivedecl::Child>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

@@ -814,6 +814,38 @@ void fidl::internal::NaturalClientImpl<::test_protocols::HandleRightsProtocol>::
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>>
+          decoded =
+              ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>::
+                  DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->AnEvent(decoded.value());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
         5413654872775949227lu;
@@ -1072,6 +1104,57 @@ void fidl::internal::NaturalClientImpl<
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::WithAndWithoutRequestResponse>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::test_protocols::
+        kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Event<
+              ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
+          decoded = ::fidl::Event<
+              ::test_protocols::WithAndWithoutRequestResponse::
+                  OnEmptyResponse>::DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->OnEmptyResponse(decoded.value());
+      }
+      return std::nullopt;
+    }
+    case ::test_protocols::
+        kWithAndWithoutRequestResponse_OnWithResponse_Ordinal: {
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Event<
+              ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
+          decoded = ::fidl::Event<
+              ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>::
+              DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->OnWithResponse(decoded.value());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t kTransitional_Request_Ordinal =
     5849263021838298888lu;
 [[maybe_unused]] constexpr inline uint64_t kTransitional_OneWay_Ordinal =
@@ -1129,6 +1212,35 @@ fidl::internal::NaturalClientImpl<::test_protocols::Transitional>::OneWay(
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocols::Transitional>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::test_protocols::kTransitional_Event_Ordinal: {
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Event<::test_protocols::Transitional::Event>>
+          decoded = ::fidl::Event<::test_protocols::Transitional::Event>::
+              DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->Event(decoded.value());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kMethodWithUnion_UnionMethod_Ordinal = 4124874338266649112lu;
 
@@ -1149,6 +1261,18 @@ namespace test_protocols {
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocols::MethodWithUnion>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kWithProtocolEnds_ClientEnds_Ordinal = 5870448041025163330lu;
 [[maybe_unused]] constexpr inline uint64_t
@@ -1281,6 +1405,18 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>::
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocols::WithProtocolEnds>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t kManyParameters_Fifteen_Ordinal =
     6423043252952467815lu;
 
@@ -1300,6 +1436,18 @@ fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>::Fifteen(
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocols::ManyParameters>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kWithErrorSyntax_ResponseAsStruct_Ordinal = 268248568430741139lu;
 [[maybe_unused]] constexpr inline uint64_t
@@ -1453,6 +1601,18 @@ void fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>::
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocols::WithErrorSyntax>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t
     kDiscoverableProtocol_Method_Ordinal = 3455873048082739435lu;
 
@@ -1471,6 +1631,19 @@ namespace test_protocols {
 namespace test_protocols {
 #endif  // __Fuchsia__
 
+}  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_protocols::DiscoverableProtocol>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_protocols {
 [[maybe_unused]] constexpr inline uint64_t kChannelProtocol_MethodA_Ordinal =
     3155008840945527714lu;
 [[maybe_unused]] constexpr inline uint64_t kChannelProtocol_EventA_Ordinal =
@@ -1611,3 +1784,29 @@ namespace test_protocols {
 #endif  // __Fuchsia__
 
 }  // namespace test_protocols
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_protocols::ChannelProtocol>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::test_protocols::kChannelProtocol_EventA_Ordinal: {
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Event<::test_protocols::ChannelProtocol::EventA>>
+          decoded = ::fidl::Event<::test_protocols::ChannelProtocol::EventA>::
+              DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->EventA(decoded.value());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

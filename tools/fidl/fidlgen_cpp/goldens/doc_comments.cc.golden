@@ -38,3 +38,29 @@ namespace test_doccomments {
 #endif  // __Fuchsia__
 
 }  // namespace test_doccomments
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  switch (msg.header()->ordinal) {
+    case ::test_doccomments::kInterface_OnEvent_Ordinal: {
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Event<::test_doccomments::Interface::OnEvent>>
+          decoded = ::fidl::Event<::test_doccomments::Interface::OnEvent>::
+              DecodeTransactional(std::move(msg));
+      if (decoded.is_error()) {
+        return ::fidl::UnbindInfo(decoded.error_value());
+      }
+      if (event_handler()) {
+        event_handler()->OnEvent(decoded.value());
+      }
+      return std::nullopt;
+    }
+    default:
+      break;
+  }
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

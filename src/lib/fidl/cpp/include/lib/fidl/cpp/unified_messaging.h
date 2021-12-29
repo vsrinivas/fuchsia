@@ -20,20 +20,33 @@
 // definitions from FIDL protocols in the schema.
 namespace fidl {
 
-// |Response| represents the response of a FIDL method call or event, using
-// natural types. See |WireResponse| for the equivalent using wire types.
+// |Response| represents the response of a FIDL method call, using natural
+// types. See |WireResponse| for the equivalent using wire types.
 //
 // When |Method| response has a payload, |Response| will expose the following
 // operators for the user to access the payload:
 //
-// MethodResponse& operator*();
-// MethodResponse* operator->();
+//     MethodResponse& operator*();
+//     MethodResponse* operator->();
 //
 // When |Method| response has no payload, those operators will be absent.
 //
 // When |Method| has no response (one-way), this class will be undefined.
 template <typename Method>
 class Response;
+
+// |Event| represents an incoming FIDL event using natural types. See
+// |WireEvent| for the equivalent using wire types.
+//
+// When |Method| has a payload, |Event| will expose the following operators for
+// the user to access the payload:
+//
+//     EventPayload& operator*();
+//     EventPayload* operator->();
+//
+// When |Method| has no payload, those operators will be absent.
+template <typename Method>
+class Event;
 
 namespace internal {
 
@@ -130,13 +143,15 @@ class NaturalClientImpl;
 template <typename Method>
 class ClientCallbackTraits;
 
-}  // namespace internal
+// |NaturalEventHandlerInterface| contains handlers for each event inside
+// the protocol |FidlProtocol|.
+template <typename FidlProtocol>
+class NaturalEventHandlerInterface;
 
-// |AsyncEventHandler| is used by asynchronous clients to handle events using
-// natural types. It also adds a callback for handling errors.
-// TODO(fxbug.dev/60240): Generate this interface.
-template <typename Protocol>
-class AsyncEventHandler;
+template <typename FidlProtocol>
+class NaturalEventDispatcher;
+
+}  // namespace internal
 
 // |ClientCallback| is the async callback type used in the |fidl::Client| for
 // the FIDL method |Method| that propagates errors, that works with natural
@@ -159,6 +174,11 @@ using ClientCallback = typename internal::ClientCallbackTraits<Method>::ResultCa
 //
 template <typename Method>
 using ClientResponseCallback = typename internal::ClientCallbackTraits<Method>::ResponseCallback;
+
+// |AsyncEventHandler| is used by asynchronous clients to handle events using
+// natural types. It also adds a callback for handling errors.
+template <typename Protocol>
+class AsyncEventHandler;
 
 }  // namespace fidl
 

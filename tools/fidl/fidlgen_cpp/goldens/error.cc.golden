@@ -84,3 +84,12 @@ namespace test_error {
 #endif  // __Fuchsia__
 
 }  // namespace test_error
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo>
+fidl::internal::NaturalEventDispatcher<::test_error::Example>::DispatchEvent(
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

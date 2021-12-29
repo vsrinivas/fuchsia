@@ -25,11 +25,8 @@ class TestProtocol {
 // Fake client implementations.
 namespace fidl {
 
-// TODO(fxbug.dev/60240): Switch to |fidl::AsyncEventHandler|.
 template <>
-class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
-template <>
-class AsyncEventHandler<TestProtocol> : public WireAsyncEventHandler<TestProtocol> {};
+class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
 
 namespace internal {
 
@@ -52,10 +49,10 @@ class WireClientImpl<TestProtocol> : public ClientBase {
 };
 
 template <>
-class WireEventDispatcher<TestProtocol>
-    : public IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>> {
+class NaturalEventDispatcher<TestProtocol>
+    : public IncomingEventDispatcher<fidl::AsyncEventHandler<TestProtocol>> {
  public:
-  using IncomingEventDispatcher<fidl::WireAsyncEventHandler<TestProtocol>>::IncomingEventDispatcher;
+  using IncomingEventDispatcher<fidl::AsyncEventHandler<TestProtocol>>::IncomingEventDispatcher;
 
  private:
   std::optional<UnbindInfo> DispatchEvent(

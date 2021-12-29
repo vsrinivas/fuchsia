@@ -1044,3 +1044,37 @@ namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_union::TestProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_union::TestProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_union::TestProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_union::TestProtocol> final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::AsyncEventHandler<::test_union::TestProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_union::TestProtocol>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

@@ -62,6 +62,19 @@ namespace test_inheritancewithrecursivedecl {
 namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
+}  // namespace test_inheritancewithrecursivedecl
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
+    ::test_inheritancewithrecursivedecl::Parent>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+namespace test_inheritancewithrecursivedecl {
 [[maybe_unused]] constexpr inline uint64_t kChild_First_Ordinal =
     3973163707930985819lu;
 [[maybe_unused]] constexpr inline uint64_t kChild_Second_Ordinal =
@@ -100,3 +113,13 @@ namespace test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritancewithrecursivedecl
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::NaturalEventDispatcher<
+    ::test_inheritancewithrecursivedecl::Child>::
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__

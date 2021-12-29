@@ -159,6 +159,28 @@ struct CodingTraits<::test_doccomments::Struct> {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
+template <>
+class ::fidl::Event<::test_doccomments::Interface::OnEvent> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Event<::test_doccomments::Interface::OnEvent>> {
+ public:
+  Event() = default;
+  ~Event() = default;
+  Event(Event&&) noexcept = default;
+  Event& operator=(Event&&) noexcept = default;
+
+ private:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Event<::test_doccomments::Interface::OnEvent>>
+    final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final
     : public ::fidl::internal::NaturalClientBase {
@@ -173,3 +195,42 @@ namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_doccomments::Interface> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  /// event comment #1
+  ///
+  /// event comment #3
+  virtual void OnEvent(::fidl::Event<::test_doccomments::Interface::OnEvent>&) {
+  }
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_doccomments::Interface>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_doccomments::Interface>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_doccomments::Interface>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_doccomments::Interface>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

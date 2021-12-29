@@ -44,4 +44,9 @@ protocol Interop {
     OneWay(struct {
         node Node;
     });
+
+    /// [`OnNode`] tests events.
+    -> OnNode(struct {
+        node Node;
+    });
 };

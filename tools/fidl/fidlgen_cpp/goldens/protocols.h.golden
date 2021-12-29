@@ -4684,6 +4684,48 @@ struct CodingTraits<::test_protocols::ChannelProtocolEventARequest> {
 }  // namespace fidl
 
 template <>
+class ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>> {
+ public:
+  Event() = default;
+  ~Event() = default;
+  Event(Event&&) noexcept = default;
+  Event& operator=(Event&&) noexcept = default;
+  Event(::test_protocols::HandleRightsProtocolAnEventRequest payload)
+      : payload_(std::move(payload)) {}
+  Event(const Event&) noexcept = delete;
+  Event& operator=(const Event&) noexcept = delete;
+  ::test_protocols::HandleRightsProtocolAnEventRequest* operator->() {
+    return &payload_;
+  }
+  const ::test_protocols::HandleRightsProtocolAnEventRequest* operator->()
+      const {
+    return &payload_;
+  }
+  ::test_protocols::HandleRightsProtocolAnEventRequest& operator*() {
+    return payload_;
+  }
+  const ::test_protocols::HandleRightsProtocolAnEventRequest& operator*()
+      const {
+    return payload_;
+  }
+
+ private:
+  ::test_protocols::HandleRightsProtocolAnEventRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::HandleRightsProtocolAnEventRequest;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
 class ::fidl::Response<::test_protocols::HandleRightsProtocol::ResponseMethod>
     final : public ::fidl::internal::MessageBase<::fidl::Response<
                 ::test_protocols::HandleRightsProtocol::ResponseMethod>> {
@@ -4767,8 +4809,116 @@ class ::fidl::internal::NaturalClientImpl<
 namespace fidl {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
 }  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::HandleRightsProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  virtual void AnEvent(
+      ::fidl::Event<::test_protocols::HandleRightsProtocol::AnEvent>&) {}
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::HandleRightsProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::HandleRightsProtocol>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::HandleRightsProtocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Event<
+    ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
+    final
+    : public ::fidl::internal::MessageBase<::fidl::Event<
+          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>> {
+ public:
+  Event() = default;
+  ~Event() = default;
+  Event(Event&&) noexcept = default;
+  Event& operator=(Event&&) noexcept = default;
+
+ private:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Event<
+    ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
+    final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+
+template <>
+class ::fidl::Event<
+    ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
+    final
+    : public ::fidl::internal::MessageBase<::fidl::Event<
+          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>> {
+ public:
+  Event() = default;
+  ~Event() = default;
+  Event(Event&&) noexcept = default;
+  Event& operator=(Event&&) noexcept = default;
+  Event(::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest
+            payload)
+      : payload_(std::move(payload)) {}
+  ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
+  operator->() {
+    return &payload_;
+  }
+  const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
+  operator->() const {
+    return &payload_;
+  }
+  ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest&
+  operator*() {
+    return payload_;
+  }
+  const ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest&
+  operator*() const {
+    return payload_;
+  }
+
+ private:
+  ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Event<
+    ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest;
+};
 
 template <>
 class ::fidl::Response<
@@ -4793,7 +4943,6 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>
@@ -5040,11 +5189,86 @@ class ::fidl::internal::NaturalClientImpl<
           WithAndWithoutRequestResponseWithRequestNoResponseRequest&& payload)
       const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::WithAndWithoutRequestResponse> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  virtual void OnEmptyResponse(
+      ::fidl::Event<
+          ::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>&) {}
+  virtual void OnWithResponse(
+      ::fidl::Event<
+          ::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>&) {}
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::WithAndWithoutRequestResponse>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<
+                    ::test_protocols::WithAndWithoutRequestResponse>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<
+          ::test_protocols::WithAndWithoutRequestResponse>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Event<::test_protocols::Transitional::Event> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Event<::test_protocols::Transitional::Event>> {
+ public:
+  Event() = default;
+  ~Event() = default;
+  Event(Event&&) noexcept = default;
+  Event& operator=(Event&&) noexcept = default;
+  Event(::test_protocols::TransitionalEventRequest payload)
+      : payload_(std::move(payload)) {}
+  ::test_protocols::TransitionalEventRequest* operator->() { return &payload_; }
+  const ::test_protocols::TransitionalEventRequest* operator->() const {
+    return &payload_;
+  }
+  ::test_protocols::TransitionalEventRequest& operator*() { return payload_; }
+  const ::test_protocols::TransitionalEventRequest& operator*() const {
+    return payload_;
+  }
+
+ private:
+  ::test_protocols::TransitionalEventRequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Event<::test_protocols::Transitional::Event>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::TransitionalEventRequest;
+};
 
 template <>
 class ::fidl::Response<::test_protocols::Transitional::Request> final
@@ -5082,7 +5306,6 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::TransitionalRequestTopResponse;
 };
-namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_protocols::Transitional::Request>
@@ -5114,11 +5337,46 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::Transitional> final
   ::fitx::result<::fidl::Error> OneWay(
       ::test_protocols::TransitionalOneWayRequest&& payload) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::Transitional> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  virtual void Event(::fidl::Event<::test_protocols::Transitional::Event>&) {}
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::Transitional>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::Transitional>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_protocols::Transitional>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::Transitional>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>
     final : public ::fidl::internal::NaturalClientBase {
@@ -5127,11 +5385,46 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::MethodWithUnion>
   ::fitx::result<::fidl::Error> UnionMethod(
       ::test_protocols::MethodWithUnionUnionMethodRequest&& payload) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::MethodWithUnion> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::MethodWithUnion>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::MethodWithUnion>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::MethodWithUnion>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Response<::test_protocols::WithProtocolEnds::ClientEnds> final
@@ -5173,7 +5466,6 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::WithProtocolEndsClientEndsTopResponse;
 };
-namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_protocols::WithProtocolEnds::ClientEnds>
@@ -5338,11 +5630,47 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::WithProtocolEnds>
           ::test_protocols::WithProtocolEnds::StructContainingEnds>&& _callback)
       const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::WithProtocolEnds> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::WithProtocolEnds>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::WithProtocolEnds>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::WithProtocolEnds>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>
     final : public ::fidl::internal::NaturalClientBase {
@@ -5351,11 +5679,45 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::ManyParameters>
   ::fitx::result<::fidl::Error> Fifteen(
       ::test_protocols::ManyParametersFifteenRequest&& payload) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::ManyParameters> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::ManyParameters>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ManyParameters>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::ManyParameters>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 template <>
 class ::fidl::Response<::test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -5395,7 +5757,6 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
 };
-namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -5605,11 +5966,47 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::WithErrorSyntax>
       ::fidl::ClientResponseCallback<
           ::test_protocols::WithErrorSyntax::HandleInResult>&& _callback) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::WithErrorSyntax> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::WithErrorSyntax>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::WithErrorSyntax>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::WithErrorSyntax>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 template <>
 class ::fidl::internal::NaturalClientImpl<
     ::test_protocols::DiscoverableProtocol>
@@ -5618,11 +6015,84 @@ class ::fidl::internal::NaturalClientImpl<
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Method() const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-}  // namespace fidl
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::DiscoverableProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::DiscoverableProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::DiscoverableProtocol>
+    final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::DiscoverableProtocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::Event<::test_protocols::ChannelProtocol::EventA> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Event<::test_protocols::ChannelProtocol::EventA>> {
+ public:
+  Event() = default;
+  ~Event() = default;
+  Event(Event&&) noexcept = default;
+  Event& operator=(Event&&) noexcept = default;
+  Event(::test_protocols::ChannelProtocolEventARequest payload)
+      : payload_(std::move(payload)) {}
+  ::test_protocols::ChannelProtocolEventARequest* operator->() {
+    return &payload_;
+  }
+  const ::test_protocols::ChannelProtocolEventARequest* operator->() const {
+    return &payload_;
+  }
+  ::test_protocols::ChannelProtocolEventARequest& operator*() {
+    return payload_;
+  }
+  const ::test_protocols::ChannelProtocolEventARequest& operator*() const {
+    return payload_;
+  }
+
+ private:
+  ::test_protocols::ChannelProtocolEventARequest payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Event<::test_protocols::ChannelProtocol::EventA>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::test_protocols::ChannelProtocolEventARequest;
+};
 
 template <>
 class ::fidl::Response<::test_protocols::ChannelProtocol::MethodB> final
@@ -5661,7 +6131,6 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocols::ChannelProtocolMethodBTopResponse;
 };
-namespace fidl {}  // namespace fidl
 template <>
 class ::fidl::internal::ClientCallbackTraits<
     ::test_protocols::ChannelProtocol::MethodB>
@@ -5802,7 +6271,43 @@ class ::fidl::internal::NaturalClientImpl<::test_protocols::ChannelProtocol>
   ::fitx::result<::fidl::Error> MethodA(
       ::test_protocols::ChannelProtocolMethodARequest&& payload) const;
 };
-namespace fidl {
 #endif  // __Fuchsia__
 
-}  // namespace fidl
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::NaturalEventHandlerInterface<
+    ::test_protocols::ChannelProtocol> {
+ public:
+  NaturalEventHandlerInterface() = default;
+  virtual ~NaturalEventHandlerInterface() = default;
+  virtual void EventA(
+      ::fidl::Event<::test_protocols::ChannelProtocol::EventA>&) {}
+};
+
+template <>
+class ::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::NaturalEventHandlerInterface<
+          ::test_protocols::ChannelProtocol>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  AsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::internal::NaturalEventDispatcher<
+    ::test_protocols::ChannelProtocol>
+    final : public ::fidl::internal::IncomingEventDispatcher<
+                ::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>> {
+ public:
+  explicit NaturalEventDispatcher(
+      ::fidl::AsyncEventHandler<::test_protocols::ChannelProtocol>*
+          event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context) override;
+};
+#endif  // __Fuchsia__

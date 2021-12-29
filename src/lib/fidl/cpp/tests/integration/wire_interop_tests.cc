@@ -29,24 +29,18 @@ class TestBase : public fidl::WireServer<fidl_cpp_wire_interop_test::Interop> {
 
 // Test fixture to simplify creating endpoints and a unified client to talk to
 // a wire domain object server.
-class UnifiedClientToWireServer : public zxtest::Test {
+class UnifiedClientToWireServerBase : public zxtest::Test {
  public:
-  UnifiedClientToWireServer() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
-
-  class FailOnClientError
-      : public fidl::WireAsyncEventHandler<fidl_cpp_wire_interop_test::Interop> {
-    // We should not observe any terminal error from the client during these tests.
-    void on_fidl_error(fidl::UnbindInfo info) final {
-      ADD_FATAL_FAILURE("Detected client error during test: %s", info.FormatDescription().c_str());
-    }
-  };
+  UnifiedClientToWireServerBase() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() final {
     zx::status client_end =
         fidl::CreateEndpoints<fidl_cpp_wire_interop_test::Interop>(&server_end_);
     ASSERT_OK(client_end.status_value());
-    client_.Bind(std::move(*client_end), loop_.dispatcher(), &event_handler_);
+    client_.Bind(std::move(*client_end), loop_.dispatcher(), GetEventHandler());
   }
+
+  virtual fidl::AsyncEventHandler<fidl_cpp_wire_interop_test::Interop>* GetEventHandler() = 0;
 
   async::Loop& loop() { return loop_; }
   fidl::ServerEnd<fidl_cpp_wire_interop_test::Interop>& server_end() { return server_end_; }
@@ -66,7 +60,6 @@ class UnifiedClientToWireServer : public zxtest::Test {
  private:
   async::Loop loop_;
   fidl::ServerEnd<fidl_cpp_wire_interop_test::Interop> server_end_;
-  FailOnClientError event_handler_;
   fidl::Client<fidl_cpp_wire_interop_test::Interop> client_;
 
   // Mock data.
@@ -75,11 +68,11 @@ class UnifiedClientToWireServer : public zxtest::Test {
   static const char kDirName[8];
 };
 
-const char UnifiedClientToWireServer::kFileName[9] = "foo file";
-std::vector<uint8_t> UnifiedClientToWireServer::kFileContent = {1, 2, 3};
-const char UnifiedClientToWireServer::kDirName[8] = "bar dir";
+const char UnifiedClientToWireServerBase::kFileName[9] = "foo file";
+std::vector<uint8_t> UnifiedClientToWireServerBase::kFileContent = {1, 2, 3};
+const char UnifiedClientToWireServerBase::kDirName[8] = "bar dir";
 
-fidl_cpp_wire_interop_test::Node UnifiedClientToWireServer::MakeNaturalFile() {
+fidl_cpp_wire_interop_test::Node UnifiedClientToWireServerBase::MakeNaturalFile() {
   fidl_cpp_wire_interop_test::Node node;
   node.set_name(kFileName);
   fidl_cpp_wire_interop_test::Kind kind;
@@ -88,7 +81,7 @@ fidl_cpp_wire_interop_test::Node UnifiedClientToWireServer::MakeNaturalFile() {
   return node;
 }
 
-fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServer::MakeWireFile(
+fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServerBase::MakeWireFile(
     fidl::AnyArena& arena) {
   fidl_cpp_wire_interop_test::wire::Node node(arena);
   node.set_name(arena, kFileName);
@@ -99,7 +92,7 @@ fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServer::MakeWireFile(
   return node;
 }
 
-void UnifiedClientToWireServer::CheckNaturalFile(const fidl_cpp_wire_interop_test::Node& node) {
+void UnifiedClientToWireServerBase::CheckNaturalFile(const fidl_cpp_wire_interop_test::Node& node) {
   EXPECT_TRUE(node.has_name());
   EXPECT_EQ(kFileName, node.name());
   EXPECT_TRUE(node.has_kind());
@@ -107,7 +100,8 @@ void UnifiedClientToWireServer::CheckNaturalFile(const fidl_cpp_wire_interop_tes
   EXPECT_EQ(kFileContent, node.kind().file().content);
 }
 
-void UnifiedClientToWireServer::CheckWireFile(const fidl_cpp_wire_interop_test::wire::Node& node) {
+void UnifiedClientToWireServerBase::CheckWireFile(
+    const fidl_cpp_wire_interop_test::wire::Node& node) {
   EXPECT_TRUE(node.has_name());
   EXPECT_EQ(fidl::StringView{kFileName}.get(), node.name().get());
   EXPECT_TRUE(node.has_kind());
@@ -117,7 +111,7 @@ void UnifiedClientToWireServer::CheckWireFile(const fidl_cpp_wire_interop_test::
   EXPECT_EQ(kFileContent, content);
 }
 
-fidl_cpp_wire_interop_test::Node UnifiedClientToWireServer::MakeNaturalDir() {
+fidl_cpp_wire_interop_test::Node UnifiedClientToWireServerBase::MakeNaturalDir() {
   fidl_cpp_wire_interop_test::Node node;
   node.set_name(kDirName);
   fidl_cpp_wire_interop_test::Kind kind;
@@ -130,7 +124,7 @@ fidl_cpp_wire_interop_test::Node UnifiedClientToWireServer::MakeNaturalDir() {
   return node;
 }
 
-fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServer::MakeWireDir(
+fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServerBase::MakeWireDir(
     fidl::AnyArena& arena) {
   fidl_cpp_wire_interop_test::wire::Node node(arena);
   node.set_name(arena, kDirName);
@@ -145,7 +139,7 @@ fidl_cpp_wire_interop_test::wire::Node UnifiedClientToWireServer::MakeWireDir(
   return node;
 }
 
-void UnifiedClientToWireServer::CheckNaturalDir(const fidl_cpp_wire_interop_test::Node& node) {
+void UnifiedClientToWireServerBase::CheckNaturalDir(const fidl_cpp_wire_interop_test::Node& node) {
   EXPECT_TRUE(node.has_name());
   EXPECT_EQ(kDirName, node.name());
   EXPECT_TRUE(node.has_kind());
@@ -157,7 +151,8 @@ void UnifiedClientToWireServer::CheckNaturalDir(const fidl_cpp_wire_interop_test
   CheckNaturalFile(child);
 }
 
-void UnifiedClientToWireServer::CheckWireDir(const fidl_cpp_wire_interop_test::wire::Node& node) {
+void UnifiedClientToWireServerBase::CheckWireDir(
+    const fidl_cpp_wire_interop_test::wire::Node& node) {
   EXPECT_TRUE(node.has_name());
   EXPECT_EQ(fidl::StringView{kDirName}.get(), node.name().get());
   EXPECT_TRUE(node.has_kind());
@@ -167,6 +162,24 @@ void UnifiedClientToWireServer::CheckWireDir(const fidl_cpp_wire_interop_test::w
   const fidl_cpp_wire_interop_test::wire::Node& child = dir.children->elements[0];
   CheckWireFile(child);
 }
+
+// Test fixture that does not care about events (besides the fact that there
+// should not be any errors).
+class UnifiedClientToWireServer : public UnifiedClientToWireServerBase {
+ private:
+  fidl::AsyncEventHandler<fidl_cpp_wire_interop_test::Interop>* GetEventHandler() final {
+    return &event_handler_;
+  }
+
+  class FailOnClientError : public fidl::AsyncEventHandler<fidl_cpp_wire_interop_test::Interop> {
+    // We should not observe any terminal error from the client during these tests.
+    void on_fidl_error(fidl::UnbindInfo info) final {
+      ADD_FATAL_FAILURE("Detected client error during test: %s", info.FormatDescription().c_str());
+    }
+  };
+
+  FailOnClientError event_handler_;
+};
 
 // Test round-tripping a file node.
 TEST_F(UnifiedClientToWireServer, RoundTrip) {
@@ -343,6 +356,57 @@ TEST_F(UnifiedClientToWireServer, OneWay) {
     ASSERT_OK(loop().RunUntilIdle());
     EXPECT_EQ(2, server.num_calls);
   }
+}
+
+// Test fixture that checks events.
+class UnifiedClientToWireServerWithEventHandler : public UnifiedClientToWireServerBase {
+ public:
+  int num_events() const { return event_handler_.num_events(); }
+
+ private:
+  class ExpectOnNodeEvent : public fidl::AsyncEventHandler<fidl_cpp_wire_interop_test::Interop> {
+   public:
+    int num_events() const { return num_events_; }
+
+   private:
+    // We should not observe any terminal error from the client during these tests.
+    void on_fidl_error(fidl::UnbindInfo info) final {
+      ADD_FATAL_FAILURE("Detected client error during test: %s", info.FormatDescription().c_str());
+    }
+
+    void OnNode(fidl::Event<fidl_cpp_wire_interop_test::Interop::OnNode>& event) final {
+      CheckNaturalDir(event->node());
+      num_events_++;
+    }
+
+    int num_events_ = 0;
+  };
+
+  fidl::AsyncEventHandler<fidl_cpp_wire_interop_test::Interop>* GetEventHandler() final {
+    return &event_handler_;
+  }
+
+  ExpectOnNodeEvent event_handler_;
+};
+
+TEST_F(UnifiedClientToWireServerWithEventHandler, OnNode) {
+  class Server : public TestBase {};
+  Server server;
+  auto binding = fidl::BindServer(loop().dispatcher(), std::move(server_end()), &server);
+
+  EXPECT_EQ(0, num_events());
+
+  // Send an event.
+  fidl::Arena arena;
+  auto node = MakeWireDir(arena);
+  fidl::Result result = binding->OnNode(node);
+  ASSERT_OK(result.status());
+
+  // Test receiving natural domain objects.
+  ASSERT_OK(loop().RunUntilIdle());
+  EXPECT_EQ(1, num_events());
+
+  // TODO(fxbug.dev/60240): Send an event using natural objects.
 }
 
 }  // namespace
