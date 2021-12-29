@@ -12,9 +12,9 @@ use {
     fuchsia_async as fasync,
     futures::{
         channel::mpsc,
-        future::{BoxFuture, Either},
+        future::{Either, TryFutureExt},
         prelude::*,
-        stream::LocalBoxStream,
+        stream::FuturesUnordered,
         StreamExt,
     },
     log::{error, warn},
@@ -548,7 +548,6 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
     Ok(SuiteRunResult { url: running_suite.url().to_string(), outcome })
 }
 
-type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, RunTestSuiteError>>;
 type SuiteEventStream = std::pin::Pin<
     Box<dyn Stream<Item = Result<ftest_manager::SuiteEvent, RunTestSuiteError>> + Send>,
 >;
@@ -641,8 +640,8 @@ async fn run_test<'a, F: 'a + Future<Output = ()>>(
     min_severity_logs: Option<Severity>,
     run_reporter: &'a mut RunReporter,
     cancel_fut: F,
-) -> Result<SuiteResults<'a>, RunTestSuiteError> {
-    let mut suite_start_futs = vec![];
+) -> Result<Outcome, RunTestSuiteError> {
+    let mut suite_start_futs = FuturesUnordered::new();
     let mut suite_reporters = HashMap::new();
     for (suite_id_raw, params) in test_params.into_iter().enumerate() {
         let timeout: Option<i64> = match params.timeout {
@@ -673,131 +672,83 @@ async fn run_test<'a, F: 'a + Future<Output = ()>>(
             params.test_url.clone(),
             params.max_severity_logs,
         )
-        .map(move |running_suite| (running_suite, suite_id))
-        .boxed();
+        .map(move |running_suite| (running_suite, suite_id));
         suite_start_futs.push(suite_and_id_fut);
         builder_proxy.add_suite(&params.test_url, run_options.into(), suite_server_end)?;
     }
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
+    let run_controller_ref = &run_controller;
     builder_proxy.build(run_server_end)?;
+    let cancel_fut = cancel_fut.shared();
 
-    struct FoldArgs<'a, F: 'a + Future<Output = ()>> {
-        suite_start_futs: Vec<BoxFuture<'a, (RunningSuite, SuiteId)>>,
-        run_controller: ftest_manager::RunControllerProxy,
-        suite_reporters: HashMap<SuiteId, SuiteReporter<'a>>,
-        min_severity_logs: Option<Severity>,
-        run_params: RunParams,
-        num_failed: u16,
-        cancel_fut: futures::future::Shared<F>,
-    }
+    let handle_suite_fut = async move {
+        let mut num_failed = 0;
+        let mut final_outcome = None;
+        // for now, we assume that suites are run serially.
+        while let Some((running_suite, suite_id)) = suite_start_futs.next().await {
+            let suite_reporter = suite_reporters.remove(&suite_id).unwrap();
 
-    let args = FoldArgs {
-        suite_start_futs,
-        run_controller,
-        suite_reporters,
-        min_severity_logs,
-        run_params,
-        num_failed: 0,
-        cancel_fut: cancel_fut.shared(),
+            let log_options = diagnostics::LogCollectionOptions {
+                min_severity: min_severity_logs,
+                max_severity: running_suite.max_severity_logs(),
+            };
+
+            let result = run_suite_and_collect_logs(
+                running_suite,
+                &suite_reporter,
+                log_options.clone(),
+                cancel_fut.clone(),
+            )
+            .await;
+            // We should always persist results, even if something failed.
+            suite_reporter.finished().await?;
+            let result = result?;
+
+            num_failed = match result.outcome {
+                Outcome::Passed => num_failed,
+                _ => num_failed + 1,
+            };
+            let stop_due_to_timeout = match run_params.timeout_behavior {
+                TimeoutBehavior::TerminateRemaining => result.outcome == Outcome::Timedout,
+                TimeoutBehavior::Continue => false,
+            };
+            let stop_due_to_failures = match run_params.stop_after_failures.as_ref() {
+                Some(threshold) => num_failed >= threshold.get(),
+                None => false,
+            };
+            let stop_due_to_cancellation = matches!(&result.outcome, Outcome::Cancelled);
+
+            if stop_due_to_timeout || stop_due_to_failures || stop_due_to_cancellation {
+                run_controller_ref.stop()?;
+                // Drop remaining controllers, which is the same as calling kill on
+                // each controller.
+                suite_start_futs.clear();
+                for (_id, reporter) in suite_reporters.drain() {
+                    reporter.finished().await?;
+                }
+            }
+            final_outcome = match (final_outcome.take(), result.outcome) {
+                (None, first_outcome) => Some(first_outcome),
+                (Some(outcome), Outcome::Passed) => Some(outcome),
+                (Some(_), failing_outcome) => Some(failing_outcome),
+            };
+        }
+        Ok(final_outcome.unwrap_or(Outcome::Passed))
     };
 
-    // Handle suite events. Note this assumes that suites are run in serial - it waits to
-    // find a suite that is started and drains the events before polling the next one.
-    let stream = futures::stream::try_unfold(args, |mut args| async move {
-        match args.suite_start_futs.is_empty() {
-            false => {
-                let ((running_suite, suite_id), _idx, mut unstarted_suites) =
-                    futures::future::select_all(args.suite_start_futs).await;
-                let suite_reporter = args.suite_reporters.remove(&suite_id).unwrap();
-
-                let log_options = diagnostics::LogCollectionOptions {
-                    min_severity: args.min_severity_logs,
-                    max_severity: running_suite.max_severity_logs(),
-                };
-
-                let result = run_suite_and_collect_logs(
-                    running_suite,
-                    &suite_reporter,
-                    log_options.clone(),
-                    args.cancel_fut.clone(),
-                )
-                .await;
-                // We should always persist results, even if something failed.
-                suite_reporter.finished().await?;
-                let result = result?;
-
-                let accumulated_failures = match result.outcome {
-                    Outcome::Passed => args.num_failed,
-                    _ => args.num_failed + 1,
-                };
-                let stop_due_to_timeout = match args.run_params.timeout_behavior {
-                    TimeoutBehavior::TerminateRemaining => result.outcome == Outcome::Timedout,
-                    TimeoutBehavior::Continue => false,
-                };
-                let stop_due_to_failures = match args.run_params.stop_after_failures.as_ref() {
-                    Some(threshold) => accumulated_failures >= threshold.get(),
-                    None => false,
-                };
-                let stop_due_to_cancellation = matches!(&result.outcome, Outcome::Cancelled);
-
-                if stop_due_to_timeout || stop_due_to_failures || stop_due_to_cancellation {
-                    args.run_controller.stop()?;
-                    // Drop remaining controllers, which is the same as calling kill on
-                    // each controller.
-                    unstarted_suites = vec![];
-                    for (_id, reporter) in args.suite_reporters.drain() {
-                        reporter.finished().await?;
-                    }
-                }
-                let next_args = FoldArgs {
-                    suite_start_futs: unstarted_suites,
-                    num_failed: accumulated_failures,
-                    ..args
-                };
-                Ok(Some((result, next_args)))
+    let handle_run_events_fut = async move {
+        loop {
+            let events = run_controller_ref.get_events().await?;
+            if events.len() == 0 {
+                return Ok(());
             }
-            true => {
-                // No suites left to poll.
-                loop {
-                    let events = args.run_controller.get_events().await?;
-                    if events.len() == 0 {
-                        break;
-                    }
-                    println!("WARN: Discarding run events: {:?}", events);
-                }
-                Ok(None)
-            }
+            println!("WARN: Discarding run events: {:?}", events);
         }
-    });
+    };
 
-    Ok(stream.boxed_local())
-}
-
-async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
-    let mut i: u16 = 1;
-    let mut final_outcome = Outcome::Passed;
-
-    loop {
-        match stream.try_next().await {
-            Err(e) => {
-                println!("Test suite encountered error trying to run tests: {}", e);
-                return Outcome::error(e);
-            }
-            Ok(Some(SuiteRunResult { outcome, .. })) => {
-                i = i + 1;
-                if i > 2 {
-                    if outcome != Outcome::Passed {
-                        final_outcome = Outcome::Failed;
-                    }
-                } else {
-                    final_outcome = outcome;
-                }
-            }
-            Ok(None) => {
-                return final_outcome;
-            }
-        }
-    }
+    futures::future::try_join(handle_suite_fut, handle_run_events_fut)
+        .map_ok(|(outcome, ())| outcome)
+        .await
 }
 
 /// Runs the test and reports results to the reporter.
@@ -811,7 +762,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     mut run_reporter: RunReporter,
     cancel_fut: F,
 ) -> Outcome {
-    let result_stream = match run_test(
+    let test_outcome = match run_test(
         builder_proxy,
         test_params,
         run_params,
@@ -827,8 +778,6 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
             return Outcome::error(e);
         }
     };
-
-    let test_outcome = collect_results(result_stream).await;
 
     if test_outcome != Outcome::Passed {
         println!("One or more test runs failed.");
