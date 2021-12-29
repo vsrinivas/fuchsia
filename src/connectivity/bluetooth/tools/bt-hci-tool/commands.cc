@@ -31,10 +31,9 @@ namespace {
       [complete_cb = std::move(complete_cb), cb = std::move(cb)](
           ::bt::hci::CommandChannel::TransactionId id, const ::bt::hci::EventPacket& event) {
         if (event.event_code() == ::bt::hci_spec::kCommandStatusEventCode) {
-          auto status = event.ToStatus();
-          std::cout << "  Command Status: " << status.ToString() << " (id=" << id << ")"
-                    << std::endl;
-          if (status) {
+          auto status = event.ToResult();
+          std::cout << "  Command Status: " << bt_str(status) << " (id=" << id << ")" << std::endl;
+          if (status.is_ok()) {
             complete_cb();
           }
           return;
