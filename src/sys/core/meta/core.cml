@@ -958,7 +958,6 @@
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.logger.Log",
                 "fuchsia.process.Launcher",
                 "fuchsia.sysinfo.SysInfo",
             ],
