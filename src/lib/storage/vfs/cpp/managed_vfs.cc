@@ -26,6 +26,7 @@ bool ManagedVfs::NoMoreClients() const {
 // Asynchronously drop all connections.
 void ManagedVfs::Shutdown(ShutdownCallback handler) {
   ZX_DEBUG_ASSERT(handler);
+  ZX_DEBUG_ASSERT(!is_shutting_down_.load());
   zx_status_t status =
       async::PostTask(dispatcher(), [this, closure = std::move(handler)]() mutable {
         std::lock_guard lock(lock_);
@@ -118,6 +119,10 @@ void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
   // other references (like async callbacks) have completed.
   connections_.erase(*connection);
   MaybeAsyncFinishShutdown();
+
+  if (connections_.is_empty()) {
+    OnNoConnections();
+  }
 
   // |closer| will call the callback here if it's the last connection to be closed.
 }

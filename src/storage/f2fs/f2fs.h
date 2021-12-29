@@ -128,6 +128,7 @@ class F2fs : public fs::Vfs {
 
   void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
+  void OnNoConnections() final;
 
   void SetQueryService(fbl::RefPtr<fs::QueryService> svc) { query_svc_ = std::move(svc); }
   void SetAdminService(fbl::RefPtr<AdminService> svc) { admin_svc_ = std::move(svc); }

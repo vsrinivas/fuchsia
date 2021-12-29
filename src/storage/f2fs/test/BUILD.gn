@@ -31,6 +31,7 @@ test("f2fs_unit") {
     "unit/node.cc",
     "unit/orphan.cc",
     "unit/segment.cc",
+    "unit/teardown.cc",
     "unit/unit_lib.cc",
     "unit/vnode.cc",
     "unit/vnode_cache.cc",

@@ -62,7 +62,7 @@ class VnodeF2fs : public fs::Vnode,
   ino_t GetKey() const { return ino_; }
 
 #ifdef __Fuchsia__
-  void Sync(SyncCallback closure) final;
+  void Sync(SyncCallback closure) override;
 #endif  // __Fuchsia__
   zx_status_t SyncFile(loff_t start, loff_t end, int datasync);
   bool NeedToSyncDir();
