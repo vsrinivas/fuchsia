@@ -692,14 +692,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         _channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_requestflexibleenvelope::Protocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_requestflexibleenvelope::Protocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_requestflexibleenvelope::Protocol>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<

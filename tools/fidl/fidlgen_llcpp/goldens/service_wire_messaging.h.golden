@@ -230,14 +230,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_service::SecondProtocol>
     return ::fidl::UnownedClientEnd<::test_service::SecondProtocol>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_service::SecondProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_service::SecondProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_service::SecondProtocol>::WireSyncClientBase;
-};
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -465,14 +457,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_service::FirstProtocol>
   ::fidl::UnownedClientEnd<::test_service::FirstProtocol> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_service::FirstProtocol>(_channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_service::FirstProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_service::FirstProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_service::FirstProtocol>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.

@@ -331,13 +331,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Super>
     return ::fidl::UnownedClientEnd<::test_inheritance::Super>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_inheritance::Super> final
-    : public ::fidl::internal::WireSyncClientBase<::test_inheritance::Super> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_inheritance::Super>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<::test_inheritance::Super::Foo>
@@ -697,13 +690,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritance::Sub> final
   ::fidl::UnownedClientEnd<::test_inheritance::Sub> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_inheritance::Sub>(_channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_inheritance::Sub> final
-    : public ::fidl::internal::WireSyncClientBase<::test_inheritance::Sub> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_inheritance::Sub>::WireSyncClientBase;
 };
 
 template <>

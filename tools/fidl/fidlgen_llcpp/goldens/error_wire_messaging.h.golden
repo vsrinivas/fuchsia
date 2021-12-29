@@ -325,13 +325,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_error::Example> final
     return ::fidl::UnownedClientEnd<::test_error::Example>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_error::Example> final
-    : public ::fidl::internal::WireSyncClientBase<::test_error::Example> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_error::Example>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<::test_error::Example::Foo>

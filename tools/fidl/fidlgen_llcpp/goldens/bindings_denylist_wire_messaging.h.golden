@@ -406,14 +406,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    final : public ::fidl::internal::WireSyncClientBase<
-                ::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -594,14 +586,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>(
         _channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_bindingsdenylist::OnlyCppAndDeps> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_bindingsdenylist::OnlyCppAndDeps> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_bindingsdenylist::OnlyCppAndDeps>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.

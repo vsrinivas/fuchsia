@@ -588,24 +588,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         _channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_protocols::HandleRightsProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::HandleRightsProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::HandleRightsProtocol>::WireSyncClientBase;
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method defined in |SyncEventHandler|. The return
-  // status of the handler function is folded with any transport-level errors
-  // and returned.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<::test_protocols::HandleRightsProtocol>&
-          event_handler) const {
-    return event_handler.HandleOneEvent(client_end());
-  }
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -2168,25 +2150,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         ::test_protocols::WithAndWithoutRequestResponse>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_protocols::WithAndWithoutRequestResponse>
-    final : public ::fidl::internal::WireSyncClientBase<
-                ::test_protocols::WithAndWithoutRequestResponse> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::WithAndWithoutRequestResponse>::WireSyncClientBase;
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method defined in |SyncEventHandler|. The return
-  // status of the handler function is folded with any transport-level errors
-  // and returned.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<
-          ::test_protocols::WithAndWithoutRequestResponse>& event_handler)
-      const {
-    return event_handler.HandleOneEvent(client_end());
-  }
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -2840,24 +2803,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::Transitional>
     return ::fidl::UnownedClientEnd<::test_protocols::Transitional>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_protocols::Transitional> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::Transitional> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::Transitional>::WireSyncClientBase;
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method defined in |SyncEventHandler|. The return
-  // status of the handler function is folded with any transport-level errors
-  // and returned.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<::test_protocols::Transitional>&
-          event_handler) const {
-    return event_handler.HandleOneEvent(client_end());
-  }
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -3140,14 +3085,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion>(
         _channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_protocols::MethodWithUnion> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::MethodWithUnion> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::MethodWithUnion>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -4109,14 +4046,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         _channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_protocols::WithProtocolEnds> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::WithProtocolEnds> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::WithProtocolEnds>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -4498,14 +4427,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::test_protocols::ManyParameters>(
         _channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_protocols::ManyParameters> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::ManyParameters> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::ManyParameters>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -5646,14 +5567,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         _channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_protocols::WithErrorSyntax> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::WithErrorSyntax> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::WithErrorSyntax>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -6067,14 +5980,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::test_protocols::DiscoverableProtocol>(
         _channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_protocols::DiscoverableProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::DiscoverableProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::DiscoverableProtocol>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.
@@ -7080,24 +6985,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
       const {
     return ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol>(
         _channel());
-  }
-};
-template <>
-class ::fidl::WireSyncClient<::test_protocols::ChannelProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocols::ChannelProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocols::ChannelProtocol>::WireSyncClientBase;
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method defined in |SyncEventHandler|. The return
-  // status of the handler function is folded with any transport-level errors
-  // and returned.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<::test_protocols::ChannelProtocol>&
-          event_handler) const {
-    return event_handler.HandleOneEvent(client_end());
   }
 };
 

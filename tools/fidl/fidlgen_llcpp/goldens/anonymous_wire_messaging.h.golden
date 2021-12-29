@@ -370,14 +370,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_anonymous::SomeProtocol>
     return ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_anonymous::SomeProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_anonymous::SomeProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_anonymous::SomeProtocol>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<

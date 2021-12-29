@@ -40,18 +40,6 @@ template <typename FidlMethod>
 struct WireResponse;
 
 #ifdef __Fuchsia__
-// WireSyncClient owns a client endpoint and exposes synchronous FIDL calls.
-template <typename FidlProtocol>
-class WireSyncClient;
-
-template <typename FidlProtocol>
-WireSyncClient(fidl::ClientEnd<FidlProtocol>) -> WireSyncClient<FidlProtocol>;
-
-// WireClient implements a client and exposes both synchronous and asynchronous
-// calls.
-template <typename FidlProtocol>
-class WireClient;
-
 // WireSyncEventHandler is used by synchronous clients to handle events for the
 // given protocol.
 template <typename FidlProtocol>

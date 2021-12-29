@@ -262,14 +262,42 @@ class SyncEndpointVeneer final {
   zx::unowned_channel channel_;
 };
 
-// |WireSyncClientBase| supplies the common methods and fields in a
-// |fidl::WireSyncClient<P>|.
+}  // namespace internal
+
+// |fidl::WireSyncClient| owns a client endpoint and exposes synchronous FIDL
+// calls. Prefer using this owning class over |fidl::WireCall| unless one has to
+// interface with very low-level functionality (such as making a call over a raw
+// zx_handle_t).
 //
-// TODO(fxbug.dev/85688): After migrating calls to the arrow syntax, this class
-// can be renamed to |fidl::WireSyncClient|, such that we don't need to generate
-// separate sync client classes anymore - similar to |fidl::WireClient|.
+// Generated FIDL APIs are accessed by 'dereferencing' the client value:
+//
+//     // Creates a sync client that speaks over |client_end|.
+//     fidl::WireSyncClient client(std::move(client_end));
+//
+//     // Call the |Foo| method synchronously, obtaining the results from the
+//     // return value.
+//     fidl::WireResult result = client->Foo(args);
+//
+// |fidl::WireSyncClient| is suitable for code without access to an async
+// dispatcher.
+//
+// ## Thread safety
+//
+// |WireSyncClient| is generally thread-safe with a few caveats:
+//
+// - Client objects can be safely sent between threads.
+// - One may invoke many FIDL methods in parallel on the same client. However,
+//   FIDL method calls must be synchronized with operations that consume or
+//   mutate the client object itself:
+//
+//     - Calling `Bind` or `TakeClientEnd`.
+//     - Assigning a new value to the |WireSyncClient| variable.
+//     - Moving the |WireSyncClient| to a different location.
+//     - Destroying the |WireSyncClient|.
+//
+// - There can be at most one `HandleOneEvent` call going on at the same time.
 template <typename FidlProtocol>
-class WireSyncClientBase {
+class WireSyncClient {
  public:
   // Creates an uninitialized client that is not bound to a client endpoint.
   //
@@ -279,7 +307,7 @@ class WireSyncClientBase {
   // example, if the client is an instance variable).
   //
   // The client may be initialized later via |Bind|.
-  WireSyncClientBase() = default;
+  WireSyncClient() = default;
 
   // Creates an initialized client. FIDL calls will be made on |client_end|.
   //
@@ -289,14 +317,14 @@ class WireSyncClientBase {
   // be valid, use the |fidl::WireCall(client_end)| helper. We may extend
   // |fidl::WireSyncClient<P>| with richer features hinging on having a valid
   // endpoint in the future.
-  explicit WireSyncClientBase(::fidl::ClientEnd<FidlProtocol> client_end)
+  explicit WireSyncClient(::fidl::ClientEnd<FidlProtocol> client_end)
       : client_end_(std::move(client_end)) {
     ZX_ASSERT(is_valid());
   }
 
-  ~WireSyncClientBase() = default;
-  WireSyncClientBase(WireSyncClientBase&&) noexcept = default;
-  WireSyncClientBase& operator=(WireSyncClientBase&&) noexcept = default;
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) noexcept = default;
+  WireSyncClient& operator=(WireSyncClient&&) noexcept = default;
 
   // Whether the client is initialized.
   bool is_valid() const { return client_end_.is_valid(); }
@@ -349,11 +377,21 @@ class WireSyncClientBase {
         internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
   }
 
+  // Handle all possible events defined in this protocol.
+  //
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method defined in |event_handler|. The return status of the handler function is folded with
+  // any transport-level errors and returned.
+  ::fidl::Result HandleOneEvent(fidl::WireSyncEventHandler<FidlProtocol>& event_handler) const {
+    return event_handler.HandleOneEvent(client_end());
+  }
+
  private:
   ::fidl::ClientEnd<FidlProtocol> client_end_;
 };
 
-}  // namespace internal
+template <typename FidlProtocol>
+WireSyncClient(fidl::ClientEnd<FidlProtocol>) -> WireSyncClient<FidlProtocol>;
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
 // without having to set up a client. Call it like:

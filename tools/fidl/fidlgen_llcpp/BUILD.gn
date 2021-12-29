@@ -48,7 +48,6 @@ if (is_host) {
       "codegen/fragment_protocol_event_handler.tmpl",
       "codegen/fragment_protocol_event_sender.tmpl",
       "codegen/fragment_protocol_interface.tmpl",
-      "codegen/fragment_protocol_sync_client.tmpl",
       "codegen/fragment_service.tmpl",
       "codegen/fragment_struct.tmpl",
       "codegen/fragment_table.tmpl",

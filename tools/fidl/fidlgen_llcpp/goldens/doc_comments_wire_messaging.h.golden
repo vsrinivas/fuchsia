@@ -262,24 +262,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_doccomments::Interface>
     return ::fidl::UnownedClientEnd<::test_doccomments::Interface>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_doccomments::Interface> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_doccomments::Interface> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_doccomments::Interface>::WireSyncClientBase;
-  // Handle all possible events defined in this protocol.
-  // Blocks to consume exactly one message from the channel, then call the
-  // corresponding virtual method defined in |SyncEventHandler|. The return
-  // status of the handler function is folded with any transport-level errors
-  // and returned.
-  ::fidl::Result HandleOneEvent(
-      ::fidl::WireSyncEventHandler<::test_doccomments::Interface>&
-          event_handler) const {
-    return event_handler.HandleOneEvent(client_end());
-  }
-};
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|

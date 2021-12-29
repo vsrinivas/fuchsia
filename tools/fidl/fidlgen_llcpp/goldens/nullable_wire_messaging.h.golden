@@ -353,14 +353,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         _channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_nullable::SimpleProtocol> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_nullable::SimpleProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_nullable::SimpleProtocol>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<::test_nullable::SimpleProtocol::Add>

@@ -75,7 +75,6 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
 {{- end }}
 {{- if .Transport.HasSyncClient }}
 {{- template "Protocol:Caller:MessagingHeader" . }}
-{{- template "Protocol:SyncClient:MessagingHeader" . }}
 {{- end }}
 {{- template "Protocol:Interface:MessagingHeader" . }}
 {{- EndifFuchsia -}}

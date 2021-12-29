@@ -382,14 +382,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         _channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_transitivedependenciescompose::Top> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_transitivedependenciescompose::Top> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_transitivedependenciescompose::Top>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<

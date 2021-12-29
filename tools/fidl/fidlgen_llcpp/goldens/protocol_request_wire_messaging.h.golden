@@ -824,14 +824,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Parent>
     return ::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_protocolrequest::Parent> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocolrequest::Parent> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocolrequest::Parent>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
@@ -1047,14 +1039,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child>
   ::fidl::UnownedClientEnd<::test_protocolrequest::Child> _client_end() const {
     return ::fidl::UnownedClientEnd<::test_protocolrequest::Child>(_channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_protocolrequest::Child> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_protocolrequest::Child> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_protocolrequest::Child>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.

@@ -248,14 +248,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         ::test_placementofattributes::ExampleProtocol>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_placementofattributes::ExampleProtocol>
-    final : public ::fidl::internal::WireSyncClientBase<
-                ::test_placementofattributes::ExampleProtocol> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_placementofattributes::ExampleProtocol>::WireSyncClientBase;
-};
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|

@@ -254,14 +254,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         ::test_inheritancewithrecursivedecl::Parent>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<::test_inheritancewithrecursivedecl::Parent> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_inheritancewithrecursivedecl::Parent> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_inheritancewithrecursivedecl::Parent>::WireSyncClientBase;
-};
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -638,14 +630,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
     return ::fidl::UnownedClientEnd<::test_inheritancewithrecursivedecl::Child>(
         _channel());
   }
-};
-template <>
-class ::fidl::WireSyncClient<::test_inheritancewithrecursivedecl::Child> final
-    : public ::fidl::internal::WireSyncClientBase<
-          ::test_inheritancewithrecursivedecl::Child> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_inheritancewithrecursivedecl::Child>::WireSyncClientBase;
 };
 
 // Pure-virtual interface to be implemented by a server.

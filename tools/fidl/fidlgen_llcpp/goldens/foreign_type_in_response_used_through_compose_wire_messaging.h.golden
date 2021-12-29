@@ -418,15 +418,6 @@ class ::fidl::internal::WireSyncBufferClientImpl<
         ::test_foreigntypeinresponseusedthroughcompose::Top>(_channel());
   }
 };
-template <>
-class ::fidl::WireSyncClient<
-    ::test_foreigntypeinresponseusedthroughcompose::Top>
-    final : public ::fidl::internal::WireSyncClientBase<
-                ::test_foreigntypeinresponseusedthroughcompose::Top> {
- public:
-  using ::fidl::internal::WireSyncClientBase<
-      ::test_foreigntypeinresponseusedthroughcompose::Top>::WireSyncClientBase;
-};
 
 template <>
 class ::fidl::internal::WireCompleterBase<
