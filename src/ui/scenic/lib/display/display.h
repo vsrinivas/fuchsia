@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_
 #define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_
 
+#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <zircon/pixelformat.h>
@@ -33,6 +34,10 @@ class Display {
   using VsyncCallback = fit::function<void(zx::time timestamp, std::vector<uint64_t> images)>;
   void SetVsyncCallback(VsyncCallback callback) { vsync_callback_ = std::move(callback); }
 
+  using Vsync2Callback = fit::function<void(
+      zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp)>;
+  void SetVsync2Callback(Vsync2Callback callback) { vsync2_callback_ = std::move(callback); }
+
   std::shared_ptr<const scheduling::VsyncTiming> vsync_timing() { return vsync_timing_; }
 
   // Claiming a display means that no other display renderer can use it.
@@ -54,12 +59,14 @@ class Display {
 
   // Called by DisplayManager, other users of Display should probably not call this.  Except tests.
   void OnVsync(zx::time timestamp, std::vector<uint64_t> images);
+  void OnVsync2(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
 
  protected:
   std::shared_ptr<scheduling::VsyncTiming> vsync_timing_;
 
  private:
   VsyncCallback vsync_callback_;
+  Vsync2Callback vsync2_callback_;
 
   // The maximum vsync interval we would ever expect.
   static constexpr zx::duration kMaximumVsyncInterval = zx::msec(100);

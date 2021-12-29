@@ -114,6 +114,7 @@ class DisplaySwapchain : public Swapchain {
   void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
 
   void OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids);
+  void OnVsync2(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
 
   // Sets the config which will be used for all imported images.
   void SetImageConfig(uint64_t layer_id, int32_t width, int32_t height, zx_pixel_format_t format);
@@ -153,6 +154,9 @@ class DisplaySwapchain : public Swapchain {
   size_t presented_frame_idx_ = 0;
   size_t outstanding_frame_count_ = 0;
   bool use_protected_memory_ = false;
+
+  fuchsia::hardware::display::ConfigStamp latest_applied_config_stamp_ = {
+      .value = fuchsia::hardware::display::INVALID_CONFIG_STAMP_VALUE};
 
   BufferPool swapchain_buffers_;
   // Optionally generated on the fly.

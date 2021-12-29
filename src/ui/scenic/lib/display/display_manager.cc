@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/display/display_manager.h"
 
+#include <fuchsia/hardware/display/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -39,6 +40,8 @@ void DisplayManager::BindDefaultDisplayController(
   // Set up callback to handle Vsync notifications, and ask controller to send these notifications.
   default_display_controller_listener_->SetOnVsyncCallback(
       fit::bind_member(this, &DisplayManager::OnVsync));
+  default_display_controller_listener_->SetOnVsync2Callback(
+      fit::bind_member(this, &DisplayManager::OnVsync2));
   zx_status_t vsync_status = (*default_display_controller_)->EnableVsync(true);
   if (vsync_status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to enable vsync, status: " << vsync_status;
@@ -111,6 +114,13 @@ void DisplayManager::SetVsyncCallback(VsyncCallback callback) {
   vsync_callback_ = std::move(callback);
 }
 
+void DisplayManager::SetVsync2Callback(Vsync2Callback callback) {
+  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync_callback_)))
+      << "cannot stomp vsync callback.";
+
+  vsync2_callback_ = std::move(callback);
+}
+
 void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
                              std::vector<uint64_t> image_ids, uint64_t cookie) {
   if (cookie) {
@@ -128,6 +138,25 @@ void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
     return;
   }
   default_display_->OnVsync(zx::time(timestamp), std::move(image_ids));
+}
+
+void DisplayManager::OnVsync2(uint64_t display_id, uint64_t timestamp,
+                              fuchsia::hardware::display::ConfigStamp applied_config_stamp,
+                              uint64_t cookie) {
+  // TODO(fxbug.dev/72588): Acknowledge the Vsync here once we remove
+  // "OnVsync()".
+
+  if (vsync2_callback_) {
+    vsync2_callback_(display_id, zx::time(timestamp), applied_config_stamp);
+  }
+
+  if (!default_display_) {
+    return;
+  }
+  if (default_display_->display_id() != display_id) {
+    return;
+  }
+  default_display_->OnVsync2(zx::time(timestamp), applied_config_stamp);
 }
 
 }  // namespace display

@@ -58,5 +58,17 @@ void Display::OnVsync(zx::time timestamp, std::vector<uint64_t> images) {
   }
 }
 
+void Display::OnVsync2(zx::time timestamp,
+                       fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
+  // TODO(fxbug.dev/72588): Resolve vsync timing here once we finish migration
+  // to OnVsync2().
+  TRACE_INSTANT("gfx", "Display::OnVsync2", TRACE_SCOPE_PROCESS, "Timestamp", timestamp.get(),
+                "Vsync interval", vsync_timing_->vsync_interval().get());
+
+  if (vsync2_callback_) {
+    vsync2_callback_(timestamp, applied_config_stamp);
+  }
+}
+
 }  // namespace display
 }  // namespace scenic_impl

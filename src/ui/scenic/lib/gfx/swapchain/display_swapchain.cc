@@ -59,6 +59,7 @@ DisplaySwapchain::DisplaySwapchain(
     }
 
     display_->SetVsyncCallback(fit::bind_member(this, &DisplaySwapchain::OnVsync));
+    display_->SetVsync2Callback(fit::bind_member(this, &DisplaySwapchain::OnVsync2));
 
     InitializeFrameRecords();
 
@@ -103,6 +104,7 @@ DisplaySwapchain::~DisplaySwapchain() {
   }
 
   display_->SetVsyncCallback(nullptr);
+  display_->SetVsync2Callback(nullptr);
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
   // callback; OnFrameDropped will clean up and make the state consistent.
@@ -388,6 +390,12 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
     record->frame_timings->OnFrameRendered(record->swapchain_index, render_finished_time);
     // See ::OnVsync for comment about finalization.
   }
+}
+
+void DisplaySwapchain::OnVsync2(zx::time timestamp,
+                                fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
+  // TODO(fxbug.dev/72588): Wire gfx to OnVsync2().
+  latest_applied_config_stamp_ = applied_config_stamp;
 }
 
 void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids) {

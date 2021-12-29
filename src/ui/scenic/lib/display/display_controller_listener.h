@@ -25,6 +25,9 @@ class DisplayControllerListener {
   using OnClientOwnershipChangeCallback = std::function<void(bool has_ownership)>;
   using OnVsyncCallback = std::function<void(uint64_t display_id, uint64_t timestamp,
                                              std::vector<uint64_t> images, uint64_t cookie)>;
+  using OnVsync2Callback = std::function<void(
+      uint64_t display_id, uint64_t timestamp,
+      fuchsia::hardware::display::ConfigStamp applied_config_stamp, uint64_t cookie)>;
 
   // Binds to a Display fuchsia::hardware::display::Controller with channels |device| and
   // with display controller |controller|. |controller_handle| is the raw handle wrapped by
@@ -48,6 +51,8 @@ class DisplayControllerListener {
   void ClearCallbacks();
 
   void SetOnVsyncCallback(OnVsyncCallback vsync_callback);
+
+  void SetOnVsync2Callback(OnVsync2Callback vsync2_callback);
 
   // Whether the connection to the display controller driver is still valid.
   bool valid() { return valid_; }

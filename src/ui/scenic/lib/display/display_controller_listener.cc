@@ -72,6 +72,7 @@ void DisplayControllerListener::ClearCallbacks() {
   event_dispatcher->OnDisplaysChanged = nullptr;
   event_dispatcher->OnClientOwnershipChange = nullptr;
   event_dispatcher->OnVsync = nullptr;
+  event_dispatcher->OnVsync2 = nullptr;
   on_invalid_cb_ = nullptr;
 }
 
@@ -80,6 +81,13 @@ void DisplayControllerListener::SetOnVsyncCallback(OnVsyncCallback on_vsync_cb) 
   auto event_dispatcher =
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
   event_dispatcher->OnVsync = std::move(on_vsync_cb);
+}
+
+void DisplayControllerListener::SetOnVsync2Callback(OnVsync2Callback on_vsync2_cb) {
+  // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
+  auto event_dispatcher =
+      static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
+  event_dispatcher->OnVsync2 = std::move(on_vsync2_cb);
 }
 
 void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher,
