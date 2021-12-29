@@ -146,7 +146,7 @@ fn main() {
 /// mangle a fidl type name into a test's name. we don't snake/lowercase the ident so that it's
 /// easy to copy/paste from terminal output to the list of types to test
 fn test_name(name: &str) -> Ident {
-    format_ident!("roundtrip_persistent_{}", name.replace("/", "_"))
+    format_ident!("roundtrip_persistent_{}", name.replace(".", "_").replace("/", "_"))
 }
 
 /// returns the rust module path for a given fidl type name
@@ -159,6 +159,7 @@ fn domain_value_module_path(name: &str) -> TokenStream {
             .expect("must have a library name before a slash")
             .to_snake_case()
             .to_lowercase()
+            .replace(".", "_")
     );
     let ty_name = format_ident!("{}", parts.next().expect("must have a type name after a slash"));
     quote!(#library :: #ty_name)

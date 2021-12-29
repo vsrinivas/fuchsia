@@ -19,7 +19,7 @@ import (
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
-#include <fidl/{{ .FidlLibrary }}/cpp/wire.h>
+#include <fidl/test.{{ .FidlLibrary }}/cpp/wire.h>
 #include <perftest/perftest.h>
 #include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
 
@@ -99,7 +99,7 @@ func libraryName(librarySuffix string) string {
 }
 
 func llcppBenchmarkType(librarySuffix string, value gidlir.Value) string {
-	return fmt.Sprintf("%s::wire::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
+	return fmt.Sprintf("test_%s::wire::%s", libraryName(librarySuffix), gidlir.TypeFromValue(value))
 }
 
 func benchmarkName(gidlName string) string {

@@ -15,8 +15,8 @@
 #include <utility>
 #include <vector>
 
-#include <conformance/cpp/libfuzzer_decode_encode.h>
 #include <fuzzer/FuzzedDataProvider.h>
+#include <test/conformance/cpp/libfuzzer_decode_encode.h>
 
 namespace {
 
@@ -235,7 +235,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   const DecoderEncoderInput decoder_encoder_input(remaining_data, remaining_size);
 
-  for (auto decoder_encoder_for_type : fuzzing::conformance_decoder_encoders) {
+  for (auto decoder_encoder_for_type : fuzzing::test_conformance_decoder_encoders) {
     // Decode/encode require non-const data pointer: Copy remaining data into (non-const) vector.
     std::vector<uint8_t> message(decoder_encoder_input.data(),
                                  decoder_encoder_input.data() + decoder_encoder_input.size());

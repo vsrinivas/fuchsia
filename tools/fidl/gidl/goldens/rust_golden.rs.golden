@@ -5,7 +5,7 @@
 use {
 	fidl::{AsHandleRef, Error, Handle, HandleDisposition, HandleInfo, HandleOp, ObjectType, Rights, UnknownData},
 	fidl::encoding::{Context, Decodable, Decoder, Encoder, WireFormatVersion},
-	fidl_conformance as conformance,
+	fidl_test_conformance as test_conformance,
 	fuchsia_zircon_status::Status,
 	gidl_util::{HandleDef, HandleSubtype, create_handles, copy_handle, copy_handles_at, disown_vec, get_info_handle_valid},
 	matches::assert_matches,
@@ -17,7 +17,7 @@ const _V2_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion:
 
 #[test]
 fn test_golden_bool_struct_v1_encode() {
-	let value = &mut conformance::GoldenBoolStruct { v: true };
+	let value = &mut test_conformance::GoldenBoolStruct { v: true };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -30,7 +30,7 @@ fn test_golden_bool_struct_v1_encode() {
 
 #[test]
 fn test_golden_bool_struct_v2_encode() {
-	let value = &mut conformance::GoldenBoolStruct { v: true };
+	let value = &mut test_conformance::GoldenBoolStruct { v: true };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -43,7 +43,7 @@ fn test_golden_bool_struct_v2_encode() {
 
 #[test]
 fn test_golden_int_struct_v1_encode() {
-	let value = &mut conformance::GoldenIntStruct { v: 1i16 };
+	let value = &mut test_conformance::GoldenIntStruct { v: 1i16 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -56,7 +56,7 @@ fn test_golden_int_struct_v1_encode() {
 
 #[test]
 fn test_golden_int_struct_v2_encode() {
-	let value = &mut conformance::GoldenIntStruct { v: 1i16 };
+	let value = &mut test_conformance::GoldenIntStruct { v: 1i16 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -69,7 +69,7 @@ fn test_golden_int_struct_v2_encode() {
 
 #[test]
 fn test_golden_uint_struct_v1_encode() {
-	let value = &mut conformance::GoldenUintStruct { v: 1u16 };
+	let value = &mut test_conformance::GoldenUintStruct { v: 1u16 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -82,7 +82,7 @@ fn test_golden_uint_struct_v1_encode() {
 
 #[test]
 fn test_golden_uint_struct_v2_encode() {
-	let value = &mut conformance::GoldenUintStruct { v: 1u16 };
+	let value = &mut test_conformance::GoldenUintStruct { v: 1u16 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -95,7 +95,7 @@ fn test_golden_uint_struct_v2_encode() {
 
 #[test]
 fn test_golden_float_struct_v1_encode() {
-	let value = &mut conformance::GoldenFloatStruct { v: 0f32 };
+	let value = &mut test_conformance::GoldenFloatStruct { v: 0f32 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -108,7 +108,7 @@ fn test_golden_float_struct_v1_encode() {
 
 #[test]
 fn test_golden_float_struct_v2_encode() {
-	let value = &mut conformance::GoldenFloatStruct { v: 0f32 };
+	let value = &mut test_conformance::GoldenFloatStruct { v: 0f32 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -121,7 +121,7 @@ fn test_golden_float_struct_v2_encode() {
 
 #[test]
 fn test_golden_double_struct_v1_encode() {
-	let value = &mut conformance::GoldenDoubleStruct { v: 0f64 };
+	let value = &mut test_conformance::GoldenDoubleStruct { v: 0f64 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -134,7 +134,7 @@ fn test_golden_double_struct_v1_encode() {
 
 #[test]
 fn test_golden_double_struct_v2_encode() {
-	let value = &mut conformance::GoldenDoubleStruct { v: 0f64 };
+	let value = &mut test_conformance::GoldenDoubleStruct { v: 0f64 };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -147,7 +147,7 @@ fn test_golden_double_struct_v2_encode() {
 
 #[test]
 fn test_golden_string_struct_v1_encode() {
-	let value = &mut conformance::GoldenStringStruct { v: String::from("abcd") };
+	let value = &mut test_conformance::GoldenStringStruct { v: String::from("abcd") };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -162,7 +162,7 @@ fn test_golden_string_struct_v1_encode() {
 
 #[test]
 fn test_golden_string_struct_v2_encode() {
-	let value = &mut conformance::GoldenStringStruct { v: String::from("abcd") };
+	let value = &mut test_conformance::GoldenStringStruct { v: String::from("abcd") };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -177,7 +177,7 @@ fn test_golden_string_struct_v2_encode() {
 
 #[test]
 fn test_golden_nullable_string_struct_non_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) };
+	let value = &mut test_conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -192,7 +192,7 @@ fn test_golden_nullable_string_struct_non_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_string_struct_non_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) };
+	let value = &mut test_conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -207,7 +207,7 @@ fn test_golden_nullable_string_struct_non_null_v2_encode() {
 
 #[test]
 fn test_golden_nullable_string_struct_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableStringStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableStringStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -221,7 +221,7 @@ fn test_golden_nullable_string_struct_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_string_struct_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableStringStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableStringStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -235,7 +235,7 @@ fn test_golden_nullable_string_struct_null_v2_encode() {
 
 #[test]
 fn test_golden_enum_struct_v1_encode() {
-	let value = &mut conformance::GoldenEnumStruct { v: conformance::GoldenEnum::from_primitive(1u16).unwrap() };
+	let value = &mut test_conformance::GoldenEnumStruct { v: test_conformance::GoldenEnum::from_primitive(1u16).unwrap() };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -248,7 +248,7 @@ fn test_golden_enum_struct_v1_encode() {
 
 #[test]
 fn test_golden_enum_struct_v2_encode() {
-	let value = &mut conformance::GoldenEnumStruct { v: conformance::GoldenEnum::from_primitive(1u16).unwrap() };
+	let value = &mut test_conformance::GoldenEnumStruct { v: test_conformance::GoldenEnum::from_primitive(1u16).unwrap() };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -261,7 +261,7 @@ fn test_golden_enum_struct_v2_encode() {
 
 #[test]
 fn test_golden_bits_struct_v1_encode() {
-	let value = &mut conformance::GoldenBitsStruct { v: unsafe { conformance::GoldenBits::from_bits_unchecked(1u16) } };
+	let value = &mut test_conformance::GoldenBitsStruct { v: unsafe { test_conformance::GoldenBits::from_bits_unchecked(1u16) } };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -274,7 +274,7 @@ fn test_golden_bits_struct_v1_encode() {
 
 #[test]
 fn test_golden_bits_struct_v2_encode() {
-	let value = &mut conformance::GoldenBitsStruct { v: unsafe { conformance::GoldenBits::from_bits_unchecked(1u16) } };
+	let value = &mut test_conformance::GoldenBitsStruct { v: unsafe { test_conformance::GoldenBits::from_bits_unchecked(1u16) } };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -287,7 +287,7 @@ fn test_golden_bits_struct_v2_encode() {
 
 #[test]
 fn test_golden_table_struct_v1_encode() {
-	let value = &mut conformance::GoldenTableStruct { v: conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..conformance::GoldenTable::EMPTY } };
+	let value = &mut test_conformance::GoldenTableStruct { v: test_conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..test_conformance::GoldenTable::EMPTY } };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -304,7 +304,7 @@ fn test_golden_table_struct_v1_encode() {
 
 #[test]
 fn test_golden_table_struct_v2_encode() {
-	let value = &mut conformance::GoldenTableStruct { v: conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..conformance::GoldenTable::EMPTY } };
+	let value = &mut test_conformance::GoldenTableStruct { v: test_conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..test_conformance::GoldenTable::EMPTY } };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -319,7 +319,7 @@ fn test_golden_table_struct_v2_encode() {
 
 #[test]
 fn test_golden_union_struct_v1_encode() {
-	let value = &mut conformance::GoldenUnionStruct { v: conformance::GoldenUnion::V(1i16) };
+	let value = &mut test_conformance::GoldenUnionStruct { v: test_conformance::GoldenUnion::V(1i16) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -335,7 +335,7 @@ fn test_golden_union_struct_v1_encode() {
 
 #[test]
 fn test_golden_union_struct_v2_encode() {
-	let value = &mut conformance::GoldenUnionStruct { v: conformance::GoldenUnion::V(1i16) };
+	let value = &mut test_conformance::GoldenUnionStruct { v: test_conformance::GoldenUnion::V(1i16) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -349,7 +349,7 @@ fn test_golden_union_struct_v2_encode() {
 
 #[test]
 fn test_golden_nullable_union_struct_non_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableUnionStruct { v: Some(Box::new(conformance::GoldenUnion::V(1i16))) };
+	let value = &mut test_conformance::GoldenNullableUnionStruct { v: Some(Box::new(test_conformance::GoldenUnion::V(1i16))) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -365,7 +365,7 @@ fn test_golden_nullable_union_struct_non_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_union_struct_non_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableUnionStruct { v: Some(Box::new(conformance::GoldenUnion::V(1i16))) };
+	let value = &mut test_conformance::GoldenNullableUnionStruct { v: Some(Box::new(test_conformance::GoldenUnion::V(1i16))) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -379,7 +379,7 @@ fn test_golden_nullable_union_struct_non_null_v2_encode() {
 
 #[test]
 fn test_golden_nullable_union_struct_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableUnionStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableUnionStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -394,7 +394,7 @@ fn test_golden_nullable_union_struct_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_union_struct_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableUnionStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableUnionStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -408,7 +408,7 @@ fn test_golden_nullable_union_struct_null_v2_encode() {
 
 #[test]
 fn test_golden_byte_array_struct_v1_encode() {
-	let value = &mut conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] };
+	let value = &mut test_conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -421,7 +421,7 @@ fn test_golden_byte_array_struct_v1_encode() {
 
 #[test]
 fn test_golden_byte_array_struct_v2_encode() {
-	let value = &mut conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] };
+	let value = &mut test_conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -434,7 +434,7 @@ fn test_golden_byte_array_struct_v2_encode() {
 
 #[test]
 fn test_golden_struct_array_struct_v1_encode() {
-	let value = &mut conformance::GoldenStructArrayStruct { v: [conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] };
+	let value = &mut test_conformance::GoldenStructArrayStruct { v: [test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -447,7 +447,7 @@ fn test_golden_struct_array_struct_v1_encode() {
 
 #[test]
 fn test_golden_struct_array_struct_v2_encode() {
-	let value = &mut conformance::GoldenStructArrayStruct { v: [conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] };
+	let value = &mut test_conformance::GoldenStructArrayStruct { v: [test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -460,7 +460,7 @@ fn test_golden_struct_array_struct_v2_encode() {
 
 #[test]
 fn test_golden_byte_vector_struct_v1_encode() {
-	let value = &mut conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] };
+	let value = &mut test_conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -476,7 +476,7 @@ fn test_golden_byte_vector_struct_v1_encode() {
 
 #[test]
 fn test_golden_byte_vector_struct_v2_encode() {
-	let value = &mut conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] };
+	let value = &mut test_conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -492,7 +492,7 @@ fn test_golden_byte_vector_struct_v2_encode() {
 
 #[test]
 fn test_golden_byte_nullable_vector_struct_non_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) };
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -507,7 +507,7 @@ fn test_golden_byte_nullable_vector_struct_non_null_v1_encode() {
 
 #[test]
 fn test_golden_byte_nullable_vector_struct_non_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) };
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -522,7 +522,7 @@ fn test_golden_byte_nullable_vector_struct_non_null_v2_encode() {
 
 #[test]
 fn test_golden_nullable_byte_vector_struct_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableByteVectorStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -536,7 +536,7 @@ fn test_golden_nullable_byte_vector_struct_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_byte_vector_struct_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableByteVectorStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -550,7 +550,7 @@ fn test_golden_nullable_byte_vector_struct_null_v2_encode() {
 
 #[test]
 fn test_golden_struct_vector_struct_v1_encode() {
-	let value = &mut conformance::GoldenStructVectorStruct { v: vec![conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] };
+	let value = &mut test_conformance::GoldenStructVectorStruct { v: vec![test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -565,7 +565,7 @@ fn test_golden_struct_vector_struct_v1_encode() {
 
 #[test]
 fn test_golden_struct_vector_struct_v2_encode() {
-	let value = &mut conformance::GoldenStructVectorStruct { v: vec![conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] };
+	let value = &mut test_conformance::GoldenStructVectorStruct { v: vec![test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -580,7 +580,7 @@ fn test_golden_struct_vector_struct_v2_encode() {
 
 #[test]
 fn test_golden_nullable_struct_non_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableStruct { v: Some(Box::new(conformance::GoldenBoolStruct { v: true })) };
+	let value = &mut test_conformance::GoldenNullableStruct { v: Some(Box::new(test_conformance::GoldenBoolStruct { v: true })) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -594,7 +594,7 @@ fn test_golden_nullable_struct_non_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_struct_non_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableStruct { v: Some(Box::new(conformance::GoldenBoolStruct { v: true })) };
+	let value = &mut test_conformance::GoldenNullableStruct { v: Some(Box::new(test_conformance::GoldenBoolStruct { v: true })) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -608,7 +608,7 @@ fn test_golden_nullable_struct_non_null_v2_encode() {
 
 #[test]
 fn test_golden_nullable_struct_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -621,7 +621,7 @@ fn test_golden_nullable_struct_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_struct_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -646,7 +646,7 @@ HandleDef{
 	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
 0,])) };
 	let expected_handles = expected_handles.as_ref();
-	let value = &mut conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
+	let value = &mut test_conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -675,7 +675,7 @@ HandleDef{
 	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
 0,])) };
 	let expected_handles = expected_handles.as_ref();
-	let value = &mut conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
+	let value = &mut test_conformance::GoldenHandleBasicRightsStruct { v: unsafe { copy_handle(&handle_defs[0]) } };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -704,7 +704,7 @@ HandleDef{
 	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
 0,])) };
 	let expected_handles = expected_handles.as_ref();
-	let value = &mut conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) };
+	let value = &mut test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -733,7 +733,7 @@ HandleDef{
 	let expected_handles = unsafe { disown_vec(copy_handles_at(handle_defs, &[
 0,])) };
 	let expected_handles = expected_handles.as_ref();
-	let value = &mut conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) };
+	let value = &mut test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -750,7 +750,7 @@ HandleDef{
 
 #[test]
 fn test_golden_nullable_handle_struct_null_v1_encode() {
-	let value = &mut conformance::GoldenNullableHandleStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableHandleStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -763,7 +763,7 @@ fn test_golden_nullable_handle_struct_null_v1_encode() {
 
 #[test]
 fn test_golden_nullable_handle_struct_null_v2_encode() {
-	let value = &mut conformance::GoldenNullableHandleStruct { v: None };
+	let value = &mut test_conformance::GoldenNullableHandleStruct { v: None };
 	let bytes = &mut Vec::new();
 	let handle_dispositions = &mut Vec::new();
 	bytes.resize(65536, 0xcd); // fill with junk data
@@ -793,9 +793,9 @@ fn test_golden_bool_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenBoolStruct::new_empty();
+	let value = &mut test_conformance::GoldenBoolStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenBoolStruct { v: true });
+	assert_eq!(value, &test_conformance::GoldenBoolStruct { v: true });
 }
 
 #[test]
@@ -815,9 +815,9 @@ fn test_golden_bool_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenBoolStruct::new_empty();
+	let value = &mut test_conformance::GoldenBoolStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenBoolStruct { v: true });
+	assert_eq!(value, &test_conformance::GoldenBoolStruct { v: true });
 }
 
 #[test]
@@ -837,9 +837,9 @@ fn test_golden_int_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenIntStruct::new_empty();
+	let value = &mut test_conformance::GoldenIntStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenIntStruct { v: 1i16 });
+	assert_eq!(value, &test_conformance::GoldenIntStruct { v: 1i16 });
 }
 
 #[test]
@@ -859,9 +859,9 @@ fn test_golden_int_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenIntStruct::new_empty();
+	let value = &mut test_conformance::GoldenIntStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenIntStruct { v: 1i16 });
+	assert_eq!(value, &test_conformance::GoldenIntStruct { v: 1i16 });
 }
 
 #[test]
@@ -881,9 +881,9 @@ fn test_golden_uint_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenUintStruct::new_empty();
+	let value = &mut test_conformance::GoldenUintStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenUintStruct { v: 1u16 });
+	assert_eq!(value, &test_conformance::GoldenUintStruct { v: 1u16 });
 }
 
 #[test]
@@ -903,9 +903,9 @@ fn test_golden_uint_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenUintStruct::new_empty();
+	let value = &mut test_conformance::GoldenUintStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenUintStruct { v: 1u16 });
+	assert_eq!(value, &test_conformance::GoldenUintStruct { v: 1u16 });
 }
 
 #[test]
@@ -925,9 +925,9 @@ fn test_golden_float_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenFloatStruct::new_empty();
+	let value = &mut test_conformance::GoldenFloatStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenFloatStruct { v: 0f32 });
+	assert_eq!(value, &test_conformance::GoldenFloatStruct { v: 0f32 });
 }
 
 #[test]
@@ -947,9 +947,9 @@ fn test_golden_float_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenFloatStruct::new_empty();
+	let value = &mut test_conformance::GoldenFloatStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenFloatStruct { v: 0f32 });
+	assert_eq!(value, &test_conformance::GoldenFloatStruct { v: 0f32 });
 }
 
 #[test]
@@ -969,9 +969,9 @@ fn test_golden_double_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenDoubleStruct::new_empty();
+	let value = &mut test_conformance::GoldenDoubleStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenDoubleStruct { v: 0f64 });
+	assert_eq!(value, &test_conformance::GoldenDoubleStruct { v: 0f64 });
 }
 
 #[test]
@@ -991,9 +991,9 @@ fn test_golden_double_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenDoubleStruct::new_empty();
+	let value = &mut test_conformance::GoldenDoubleStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenDoubleStruct { v: 0f64 });
+	assert_eq!(value, &test_conformance::GoldenDoubleStruct { v: 0f64 });
 }
 
 #[test]
@@ -1015,9 +1015,9 @@ fn test_golden_string_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenStringStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenStringStruct { v: String::from("abcd") });
+	assert_eq!(value, &test_conformance::GoldenStringStruct { v: String::from("abcd") });
 }
 
 #[test]
@@ -1039,9 +1039,9 @@ fn test_golden_string_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenStringStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenStringStruct { v: String::from("abcd") });
+	assert_eq!(value, &test_conformance::GoldenStringStruct { v: String::from("abcd") });
 }
 
 #[test]
@@ -1063,9 +1063,9 @@ fn test_golden_nullable_string_struct_non_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStringStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) });
+	assert_eq!(value, &test_conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) });
 }
 
 #[test]
@@ -1087,9 +1087,9 @@ fn test_golden_nullable_string_struct_non_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStringStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) });
+	assert_eq!(value, &test_conformance::GoldenNullableStringStruct { v: Some(String::from("abcd")) });
 }
 
 #[test]
@@ -1110,9 +1110,9 @@ fn test_golden_nullable_string_struct_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStringStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStringStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableStringStruct { v: None });
 }
 
 #[test]
@@ -1133,9 +1133,9 @@ fn test_golden_nullable_string_struct_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStringStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStringStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableStringStruct { v: None });
 }
 
 #[test]
@@ -1155,9 +1155,9 @@ fn test_golden_enum_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenEnumStruct::new_empty();
+	let value = &mut test_conformance::GoldenEnumStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenEnumStruct { v: conformance::GoldenEnum::from_primitive(1u16).unwrap() });
+	assert_eq!(value, &test_conformance::GoldenEnumStruct { v: test_conformance::GoldenEnum::from_primitive(1u16).unwrap() });
 }
 
 #[test]
@@ -1177,9 +1177,9 @@ fn test_golden_enum_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenEnumStruct::new_empty();
+	let value = &mut test_conformance::GoldenEnumStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenEnumStruct { v: conformance::GoldenEnum::from_primitive(1u16).unwrap() });
+	assert_eq!(value, &test_conformance::GoldenEnumStruct { v: test_conformance::GoldenEnum::from_primitive(1u16).unwrap() });
 }
 
 #[test]
@@ -1199,9 +1199,9 @@ fn test_golden_bits_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenBitsStruct::new_empty();
+	let value = &mut test_conformance::GoldenBitsStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenBitsStruct { v: unsafe { conformance::GoldenBits::from_bits_unchecked(1u16) } });
+	assert_eq!(value, &test_conformance::GoldenBitsStruct { v: unsafe { test_conformance::GoldenBits::from_bits_unchecked(1u16) } });
 }
 
 #[test]
@@ -1221,9 +1221,9 @@ fn test_golden_bits_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenBitsStruct::new_empty();
+	let value = &mut test_conformance::GoldenBitsStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenBitsStruct { v: unsafe { conformance::GoldenBits::from_bits_unchecked(1u16) } });
+	assert_eq!(value, &test_conformance::GoldenBitsStruct { v: unsafe { test_conformance::GoldenBits::from_bits_unchecked(1u16) } });
 }
 
 #[test]
@@ -1247,9 +1247,9 @@ fn test_golden_table_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenTableStruct::new_empty();
+	let value = &mut test_conformance::GoldenTableStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenTableStruct { v: conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..conformance::GoldenTable::EMPTY } });
+	assert_eq!(value, &test_conformance::GoldenTableStruct { v: test_conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..test_conformance::GoldenTable::EMPTY } });
 }
 
 #[test]
@@ -1271,9 +1271,9 @@ fn test_golden_table_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenTableStruct::new_empty();
+	let value = &mut test_conformance::GoldenTableStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenTableStruct { v: conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..conformance::GoldenTable::EMPTY } });
+	assert_eq!(value, &test_conformance::GoldenTableStruct { v: test_conformance::GoldenTable { v: Some(1i16), unknown_data: None, ..test_conformance::GoldenTable::EMPTY } });
 }
 
 #[test]
@@ -1296,9 +1296,9 @@ fn test_golden_union_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenUnionStruct::new_empty();
+	let value = &mut test_conformance::GoldenUnionStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenUnionStruct { v: conformance::GoldenUnion::V(1i16) });
+	assert_eq!(value, &test_conformance::GoldenUnionStruct { v: test_conformance::GoldenUnion::V(1i16) });
 }
 
 #[test]
@@ -1319,9 +1319,9 @@ fn test_golden_union_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenUnionStruct::new_empty();
+	let value = &mut test_conformance::GoldenUnionStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenUnionStruct { v: conformance::GoldenUnion::V(1i16) });
+	assert_eq!(value, &test_conformance::GoldenUnionStruct { v: test_conformance::GoldenUnion::V(1i16) });
 }
 
 #[test]
@@ -1344,9 +1344,9 @@ fn test_golden_nullable_union_struct_non_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableUnionStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableUnionStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableUnionStruct { v: Some(Box::new(conformance::GoldenUnion::V(1i16))) });
+	assert_eq!(value, &test_conformance::GoldenNullableUnionStruct { v: Some(Box::new(test_conformance::GoldenUnion::V(1i16))) });
 }
 
 #[test]
@@ -1367,9 +1367,9 @@ fn test_golden_nullable_union_struct_non_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableUnionStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableUnionStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableUnionStruct { v: Some(Box::new(conformance::GoldenUnion::V(1i16))) });
+	assert_eq!(value, &test_conformance::GoldenNullableUnionStruct { v: Some(Box::new(test_conformance::GoldenUnion::V(1i16))) });
 }
 
 #[test]
@@ -1391,9 +1391,9 @@ fn test_golden_nullable_union_struct_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableUnionStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableUnionStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableUnionStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableUnionStruct { v: None });
 }
 
 #[test]
@@ -1414,9 +1414,9 @@ fn test_golden_nullable_union_struct_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableUnionStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableUnionStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableUnionStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableUnionStruct { v: None });
 }
 
 #[test]
@@ -1436,9 +1436,9 @@ fn test_golden_byte_array_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenByteArrayStruct::new_empty();
+	let value = &mut test_conformance::GoldenByteArrayStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] });
+	assert_eq!(value, &test_conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] });
 }
 
 #[test]
@@ -1458,9 +1458,9 @@ fn test_golden_byte_array_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenByteArrayStruct::new_empty();
+	let value = &mut test_conformance::GoldenByteArrayStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] });
+	assert_eq!(value, &test_conformance::GoldenByteArrayStruct { v: [1u8, 2u8, 3u8, 4u8] });
 }
 
 #[test]
@@ -1480,9 +1480,9 @@ fn test_golden_struct_array_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStructArrayStruct::new_empty();
+	let value = &mut test_conformance::GoldenStructArrayStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenStructArrayStruct { v: [conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] });
+	assert_eq!(value, &test_conformance::GoldenStructArrayStruct { v: [test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] });
 }
 
 #[test]
@@ -1502,9 +1502,9 @@ fn test_golden_struct_array_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStructArrayStruct::new_empty();
+	let value = &mut test_conformance::GoldenStructArrayStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenStructArrayStruct { v: [conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] });
+	assert_eq!(value, &test_conformance::GoldenStructArrayStruct { v: [test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] });
 }
 
 #[test]
@@ -1527,9 +1527,9 @@ fn test_golden_byte_vector_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenByteVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenByteVectorStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] });
+	assert_eq!(value, &test_conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] });
 }
 
 #[test]
@@ -1552,9 +1552,9 @@ fn test_golden_byte_vector_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenByteVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenByteVectorStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] });
+	assert_eq!(value, &test_conformance::GoldenByteVectorStruct { v: vec![1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8, 1u8, 2u8, 3u8, 4u8] });
 }
 
 #[test]
@@ -1576,9 +1576,9 @@ fn test_golden_byte_nullable_vector_struct_non_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableByteVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) });
+	assert_eq!(value, &test_conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) });
 }
 
 #[test]
@@ -1600,9 +1600,9 @@ fn test_golden_byte_nullable_vector_struct_non_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableByteVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) });
+	assert_eq!(value, &test_conformance::GoldenNullableByteVectorStruct { v: Some(vec![1u8, 2u8, 3u8, 4u8]) });
 }
 
 #[test]
@@ -1623,9 +1623,9 @@ fn test_golden_nullable_byte_vector_struct_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableByteVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableByteVectorStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableByteVectorStruct { v: None });
 }
 
 #[test]
@@ -1646,9 +1646,9 @@ fn test_golden_nullable_byte_vector_struct_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableByteVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableByteVectorStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableByteVectorStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableByteVectorStruct { v: None });
 }
 
 #[test]
@@ -1670,9 +1670,9 @@ fn test_golden_struct_vector_struct_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStructVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenStructVectorStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenStructVectorStruct { v: vec![conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] });
+	assert_eq!(value, &test_conformance::GoldenStructVectorStruct { v: vec![test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] });
 }
 
 #[test]
@@ -1694,9 +1694,9 @@ fn test_golden_struct_vector_struct_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStructVectorStruct::new_empty();
+	let value = &mut test_conformance::GoldenStructVectorStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenStructVectorStruct { v: vec![conformance::GoldenIntStruct { v: 1i16 }, conformance::GoldenIntStruct { v: 2i16 }] });
+	assert_eq!(value, &test_conformance::GoldenStructVectorStruct { v: vec![test_conformance::GoldenIntStruct { v: 1i16 }, test_conformance::GoldenIntStruct { v: 2i16 }] });
 }
 
 #[test]
@@ -1717,9 +1717,9 @@ fn test_golden_nullable_struct_non_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStruct { v: Some(Box::new(conformance::GoldenBoolStruct { v: true })) });
+	assert_eq!(value, &test_conformance::GoldenNullableStruct { v: Some(Box::new(test_conformance::GoldenBoolStruct { v: true })) });
 }
 
 #[test]
@@ -1740,9 +1740,9 @@ fn test_golden_nullable_struct_non_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStruct { v: Some(Box::new(conformance::GoldenBoolStruct { v: true })) });
+	assert_eq!(value, &test_conformance::GoldenNullableStruct { v: Some(Box::new(test_conformance::GoldenBoolStruct { v: true })) });
 }
 
 #[test]
@@ -1762,9 +1762,9 @@ fn test_golden_nullable_struct_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableStruct { v: None });
 }
 
 #[test]
@@ -1784,9 +1784,9 @@ fn test_golden_nullable_struct_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableStruct { v: None });
 }
 #[cfg(target_os = "fuchsia")]
 #[test]
@@ -1816,17 +1816,17 @@ HandleDef{
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableHandleStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableHandleStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
 	// Forget handles before dropping the expected value, to avoid double closing them.
-	struct ForgetHandles(conformance::GoldenNullableHandleStruct);
+	struct ForgetHandles(test_conformance::GoldenNullableHandleStruct);
 	impl std::ops::Drop for ForgetHandles {
 		#[allow(unused_parens)]
 		fn drop(&mut self) {
 			std::mem::forget(std::mem::replace((&mut self.0.v), Handle::invalid().into()));
 		}
 	}
-	let expected_value = ForgetHandles(conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
+	let expected_value = ForgetHandles(test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
 	assert_eq!(value, &expected_value.0);
 }
 #[cfg(target_os = "fuchsia")]
@@ -1857,17 +1857,17 @@ HandleDef{
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableHandleStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableHandleStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
 	// Forget handles before dropping the expected value, to avoid double closing them.
-	struct ForgetHandles(conformance::GoldenNullableHandleStruct);
+	struct ForgetHandles(test_conformance::GoldenNullableHandleStruct);
 	impl std::ops::Drop for ForgetHandles {
 		#[allow(unused_parens)]
 		fn drop(&mut self) {
 			std::mem::forget(std::mem::replace((&mut self.0.v), Handle::invalid().into()));
 		}
 	}
-	let expected_value = ForgetHandles(conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
+	let expected_value = ForgetHandles(test_conformance::GoldenNullableHandleStruct { v: Some(unsafe { copy_handle(&handle_defs[0]) }) });
 	assert_eq!(value, &expected_value.0);
 }
 
@@ -1888,9 +1888,9 @@ fn test_golden_nullable_handle_struct_null_v1_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableHandleStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableHandleStruct::new_empty();
 	Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableHandleStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableHandleStruct { v: None });
 }
 
 #[test]
@@ -1910,9 +1910,9 @@ fn test_golden_nullable_handle_struct_null_v2_decode() {
 			rights: hd.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenNullableHandleStruct::new_empty();
+	let value = &mut test_conformance::GoldenNullableHandleStruct::new_empty();
 	Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value).unwrap();
-	assert_eq!(value, &conformance::GoldenNullableHandleStruct { v: None });
+	assert_eq!(value, &test_conformance::GoldenNullableHandleStruct { v: None });
 }
 
 
@@ -1934,7 +1934,7 @@ fn test_golden_string_struct_null_body_v1_decode_failure() {
 			rights: info.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenStringStruct::new_empty();
 	match Decoder::decode_with_context(_V1_CONTEXT, bytes, &mut handle_infos, value) {
 		Err(err) => assert_matches!(err, Error::UnexpectedNullRef { .. }),
 		Ok(_) => panic!("unexpected successful decoding"),
@@ -1956,7 +1956,7 @@ fn test_golden_string_struct_null_body_v2_decode_failure() {
 			rights: info.rights,
 		}
 	}).collect();
-	let value = &mut conformance::GoldenStringStruct::new_empty();
+	let value = &mut test_conformance::GoldenStringStruct::new_empty();
 	match Decoder::decode_with_context(_V2_CONTEXT, bytes, &mut handle_infos, value) {
 		Err(err) => assert_matches!(err, Error::UnexpectedNullRef { .. }),
 		Ok(_) => panic!("unexpected successful decoding"),

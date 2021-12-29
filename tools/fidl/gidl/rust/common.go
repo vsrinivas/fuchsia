@@ -174,15 +174,9 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 // TODO(fxbug.dev/39407): Move into a common library outside GIDL.
 func identifierName(qualifiedName string) string {
 	parts := strings.Split(qualifiedName, "/")
-	lastPartsIndex := len(parts) - 1
-	for i, part := range parts {
-		if i == lastPartsIndex {
-			parts[i] = fidlgen.ToUpperCamelCase(part)
-		} else {
-			parts[i] = fidlgen.ToSnakeCase(part)
-		}
-	}
-	return strings.Join(parts, "::")
+	library_parts := strings.Split(parts[0], ".")
+	return fmt.Sprintf("%s::%s", strings.Join(library_parts, "_"),
+		fidlgen.ToUpperCamelCase(parts[1]))
 }
 
 func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {

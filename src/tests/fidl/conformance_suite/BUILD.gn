@@ -5,7 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("conformance_fidl") {
-  name = "conformance"
+  name = "test.conformance"
 
   testonly = true
   host_llcpp = true

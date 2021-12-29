@@ -24,7 +24,7 @@ use {
 		handle::Handle, handle::HandleDisposition, handle::HandleInfo, handle::HandleOp,
 		ObjectType, Rights, UnknownData,
 	},
-	fidl_benchmarkfidl{{ .CrateSuffix }} as benchmarkfidl{{ .CrateSuffix }},
+	fidl_test_benchmarkfidl{{ .CrateSuffix }} as test_benchmarkfidl{{ .CrateSuffix }},
 	fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
 	fuchsia_async::futures::{future, stream::StreamExt},
 	fuchsia_zircon as zx,

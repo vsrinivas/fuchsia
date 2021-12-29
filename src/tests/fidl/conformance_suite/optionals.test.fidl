@@ -6,7 +6,7 @@
 // using "Foo foo;" vs "std::unique_ptr<Foo> foo;" for optional (nullable)
 // fields, "object.foo()" vs "object->foo()" vs "object.set_foo()", etc.
 
-library conformance;
+library test.conformance;
 
 type TableWithEmptyStruct = table {
     1: s EmptyStruct;

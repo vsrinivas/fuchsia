@@ -18,7 +18,7 @@ import (
 var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <zxtest/zxtest.h>
 
-#include <conformance/cpp/natural_types.h>
+#include <test/conformance/cpp/natural_types.h>
 #include <cts/tests/pkg/fidl/cpp/test/test_util.h>
 
 #ifdef __Fuchsia__
@@ -346,5 +346,5 @@ func cppErrorCode(code gidlir.ErrorCode) string {
 }
 
 func cppConformanceType(gidlTypeString string) string {
-	return "conformance::" + gidlTypeString
+	return "test::conformance::" + gidlTypeString
 }

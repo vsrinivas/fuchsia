@@ -10,13 +10,13 @@ import("//tools/fidl/gidl/gidl.gni")
 
 fidl("benchmark_suite_fidl") {
   testonly = true
-  name = "benchmarkfidl"
+  name = "test.benchmarkfidl"
   sources = benchmark_suite_fidl_files
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
 template("benchmark_fidl") {
-  library_name = "benchmarkfidl${invoker.fidl_library_suffix}"
+  library_name = "test.benchmarkfidl${invoker.fidl_library_suffix}"
 
   copy_target = "${target_name}__copy_replace"
 

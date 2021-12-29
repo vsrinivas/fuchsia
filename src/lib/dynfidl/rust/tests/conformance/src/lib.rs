@@ -43,15 +43,15 @@ impl AllIntoBytes for Vec<String> {
     }
 }
 #[test]
-fn roundtrip_persistent_conformance_Bounded32NonnullableString() {
+fn roundtrip_persistent_test_conformance_Bounded32NonnullableString() {
     let s0 = String::from("hello, world!");
-    let domain_value = fidl_conformance::Bounded32NonnullableString { s0: s0.clone() };
+    let domain_value = fidl_test_conformance::Bounded32NonnullableString { s0: s0.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt8Vector(s0.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Bounded32NonnullableVectorOfUint32s() {
+fn roundtrip_persistent_test_conformance_Bounded32NonnullableVectorOfUint32s() {
     let vu0 = {
         let mut _vec_ = vec![];
         _vec_.push(4u32);
@@ -61,49 +61,51 @@ fn roundtrip_persistent_conformance_Bounded32NonnullableVectorOfUint32s() {
         _vec_.push(4u32);
         _vec_
     };
-    let domain_value = fidl_conformance::Bounded32NonnullableVectorOfUint32s { vu0: vu0.clone() };
+    let domain_value =
+        fidl_test_conformance::Bounded32NonnullableVectorOfUint32s { vu0: vu0.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt32Vector(vu0)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_EmptyStruct() {
-    let domain_value = fidl_conformance::EmptyStruct {};
+fn roundtrip_persistent_test_conformance_EmptyStruct() {
+    let domain_value = fidl_test_conformance::EmptyStruct {};
     let dynfidl_structure = Structure::default();
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_FidlvizStruct1() {
-    let domain_value = fidl_conformance::FidlvizStruct1 {};
+fn roundtrip_persistent_test_conformance_FidlvizStruct1() {
+    let domain_value = fidl_test_conformance::FidlvizStruct1 {};
     let dynfidl_structure = Structure::default();
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_FidlvizStruct2() {
+fn roundtrip_persistent_test_conformance_FidlvizStruct2() {
     let x = 5u64;
-    let domain_value = fidl_conformance::FidlvizStruct2 { x: x.clone() };
+    let domain_value = fidl_test_conformance::FidlvizStruct2 { x: x.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt64(x)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_FiveByte() {
+fn roundtrip_persistent_test_conformance_FiveByte() {
     let elem1 = 4u32;
     let elem2 = 2u8;
-    let domain_value = fidl_conformance::FiveByte { elem1: elem1.clone(), elem2: elem2.clone() };
+    let domain_value =
+        fidl_test_conformance::FiveByte { elem1: elem1.clone(), elem2: elem2.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::UInt32(elem1)))
         .field(Field::Basic(BasicField::UInt8(elem2)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_GoldenBoolStruct() {
+fn roundtrip_persistent_test_conformance_GoldenBoolStruct() {
     let v = true;
-    let domain_value = fidl_conformance::GoldenBoolStruct { v: v.clone() };
+    let domain_value = fidl_test_conformance::GoldenBoolStruct { v: v.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Bool(v)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_GoldenByteVectorStruct() {
+fn roundtrip_persistent_test_conformance_GoldenByteVectorStruct() {
     let v = {
         let mut _vec_ = vec![];
         _vec_.push(2u8);
@@ -113,58 +115,58 @@ fn roundtrip_persistent_conformance_GoldenByteVectorStruct() {
         _vec_.push(2u8);
         _vec_
     };
-    let domain_value = fidl_conformance::GoldenByteVectorStruct { v: v.clone() };
+    let domain_value = fidl_test_conformance::GoldenByteVectorStruct { v: v.clone() };
     let dynfidl_structure = Structure::default().field(Field::Vector(VectorField::UInt8Vector(v)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_GoldenIntStruct() {
+fn roundtrip_persistent_test_conformance_GoldenIntStruct() {
     let v = 7i16;
-    let domain_value = fidl_conformance::GoldenIntStruct { v: v.clone() };
+    let domain_value = fidl_test_conformance::GoldenIntStruct { v: v.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int16(v)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_GoldenStringStruct() {
+fn roundtrip_persistent_test_conformance_GoldenStringStruct() {
     let v = String::from("hello, world!");
-    let domain_value = fidl_conformance::GoldenStringStruct { v: v.clone() };
+    let domain_value = fidl_test_conformance::GoldenStringStruct { v: v.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt8Vector(v.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_GoldenStringWithMaxSize2() {
+fn roundtrip_persistent_test_conformance_GoldenStringWithMaxSize2() {
     let s = String::from("hello, world!");
-    let domain_value = fidl_conformance::GoldenStringWithMaxSize2 { s: s.clone() };
+    let domain_value = fidl_test_conformance::GoldenStringWithMaxSize2 { s: s.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt8Vector(s.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_GoldenUintStruct() {
+fn roundtrip_persistent_test_conformance_GoldenUintStruct() {
     let v = 3u16;
-    let domain_value = fidl_conformance::GoldenUintStruct { v: v.clone() };
+    let domain_value = fidl_test_conformance::GoldenUintStruct { v: v.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt16(v)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Int64Struct() {
+fn roundtrip_persistent_test_conformance_Int64Struct() {
     let x = 9i64;
-    let domain_value = fidl_conformance::Int64Struct { x: x.clone() };
+    let domain_value = fidl_test_conformance::Int64Struct { x: x.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int64(x)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Length2StringWrapper() {
+fn roundtrip_persistent_test_conformance_Length2StringWrapper() {
     let length_2_string = String::from("hello, world!");
     let domain_value =
-        fidl_conformance::Length2StringWrapper { length_2_string: length_2_string.clone() };
+        fidl_test_conformance::Length2StringWrapper { length_2_string: length_2_string.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Vector(VectorField::UInt8Vector(length_2_string.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_LotsOfVectors() {
+fn roundtrip_persistent_test_conformance_LotsOfVectors() {
     let v1 = {
         let mut _vec_ = vec![];
         _vec_.push(3u16);
@@ -246,7 +248,7 @@ fn roundtrip_persistent_conformance_LotsOfVectors() {
         _vec_.push(true);
         _vec_
     };
-    let domain_value = fidl_conformance::LotsOfVectors {
+    let domain_value = fidl_test_conformance::LotsOfVectors {
         v1: v1.clone(),
         v2: v2.clone(),
         v3: v3.clone(),
@@ -270,18 +272,18 @@ fn roundtrip_persistent_conformance_LotsOfVectors() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MultipleNonnullableStrings() {
+fn roundtrip_persistent_test_conformance_MultipleNonnullableStrings() {
     let s0 = String::from("hello, world!");
     let s1 = String::from("hello, world!");
     let domain_value =
-        fidl_conformance::MultipleNonnullableStrings { s0: s0.clone(), s1: s1.clone() };
+        fidl_test_conformance::MultipleNonnullableStrings { s0: s0.clone(), s1: s1.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Vector(VectorField::UInt8Vector(s0.into_bytes())))
         .field(Field::Vector(VectorField::UInt8Vector(s1.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MultipleBoundedNonnullableVectorsOfUint32s() {
+fn roundtrip_persistent_test_conformance_MultipleBoundedNonnullableVectorsOfUint32s() {
     let vu0 = {
         let mut _vec_ = vec![];
         _vec_.push(4u32);
@@ -300,7 +302,7 @@ fn roundtrip_persistent_conformance_MultipleBoundedNonnullableVectorsOfUint32s()
         _vec_.push(4u32);
         _vec_
     };
-    let domain_value = fidl_conformance::MultipleBoundedNonnullableVectorsOfUint32s {
+    let domain_value = fidl_test_conformance::MultipleBoundedNonnullableVectorsOfUint32s {
         vu0: vu0.clone(),
         vu1: vu1.clone(),
     };
@@ -310,7 +312,7 @@ fn roundtrip_persistent_conformance_MultipleBoundedNonnullableVectorsOfUint32s()
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MultipleNonnullableVectorsOfUint32s() {
+fn roundtrip_persistent_test_conformance_MultipleNonnullableVectorsOfUint32s() {
     let vu0 = {
         let mut _vec_ = vec![];
         _vec_.push(4u32);
@@ -329,7 +331,7 @@ fn roundtrip_persistent_conformance_MultipleNonnullableVectorsOfUint32s() {
         _vec_.push(4u32);
         _vec_
     };
-    let domain_value = fidl_conformance::MultipleNonnullableVectorsOfUint32s {
+    let domain_value = fidl_test_conformance::MultipleNonnullableVectorsOfUint32s {
         vu0: vu0.clone(),
         vu1: vu1.clone(),
     };
@@ -339,99 +341,99 @@ fn roundtrip_persistent_conformance_MultipleNonnullableVectorsOfUint32s() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MultipleShortNonnullableStrings() {
+fn roundtrip_persistent_test_conformance_MultipleShortNonnullableStrings() {
     let s0 = String::from("hello, world!");
     let s1 = String::from("hello, world!");
     let domain_value =
-        fidl_conformance::MultipleShortNonnullableStrings { s0: s0.clone(), s1: s1.clone() };
+        fidl_test_conformance::MultipleShortNonnullableStrings { s0: s0.clone(), s1: s1.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Vector(VectorField::UInt8Vector(s0.into_bytes())))
         .field(Field::Vector(VectorField::UInt8Vector(s1.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MultipleShortNullableStrings() {
+fn roundtrip_persistent_test_conformance_MultipleShortNullableStrings() {
     let s0 = String::from("hello, world!");
     let s1 = String::from("hello, world!");
     let domain_value =
-        fidl_conformance::MultipleShortNullableStrings { s0: s0.clone(), s1: s1.clone() };
+        fidl_test_conformance::MultipleShortNullableStrings { s0: s0.clone(), s1: s1.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Vector(VectorField::UInt8Vector(s0.into_bytes())))
         .field(Field::Vector(VectorField::UInt8Vector(s1.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyBool() {
+fn roundtrip_persistent_test_conformance_MyBool() {
     let value = true;
-    let domain_value = fidl_conformance::MyBool { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyBool { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Bool(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyByte() {
+fn roundtrip_persistent_test_conformance_MyByte() {
     let value = 2u8;
-    let domain_value = fidl_conformance::MyByte { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyByte { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt8(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyInt16() {
+fn roundtrip_persistent_test_conformance_MyInt16() {
     let value = 7i16;
-    let domain_value = fidl_conformance::MyInt16 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyInt16 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int16(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyInt32() {
+fn roundtrip_persistent_test_conformance_MyInt32() {
     let value = 8i32;
-    let domain_value = fidl_conformance::MyInt32 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyInt32 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int32(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyInt64() {
+fn roundtrip_persistent_test_conformance_MyInt64() {
     let value = 9i64;
-    let domain_value = fidl_conformance::MyInt64 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyInt64 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int64(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyInt8() {
+fn roundtrip_persistent_test_conformance_MyInt8() {
     let value = 6i8;
-    let domain_value = fidl_conformance::MyInt8 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyInt8 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int8(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyUint16() {
+fn roundtrip_persistent_test_conformance_MyUint16() {
     let value = 3u16;
-    let domain_value = fidl_conformance::MyUint16 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyUint16 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt16(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyUint32() {
+fn roundtrip_persistent_test_conformance_MyUint32() {
     let value = 4u32;
-    let domain_value = fidl_conformance::MyUint32 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyUint32 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt32(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyUint64() {
+fn roundtrip_persistent_test_conformance_MyUint64() {
     let value = 5u64;
-    let domain_value = fidl_conformance::MyUint64 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyUint64 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt64(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_MyUint8() {
+fn roundtrip_persistent_test_conformance_MyUint8() {
     let value = 2u8;
-    let domain_value = fidl_conformance::MyUint8 { value: value.clone() };
+    let domain_value = fidl_test_conformance::MyUint8 { value: value.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt8(value)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_NodeAttributes() {
+fn roundtrip_persistent_test_conformance_NodeAttributes() {
     let mode = 4u32;
     let id = 5u64;
     let content_size = 5u64;
@@ -439,7 +441,7 @@ fn roundtrip_persistent_conformance_NodeAttributes() {
     let link_count = 5u64;
     let creation_time = 5u64;
     let modification_time = 5u64;
-    let domain_value = fidl_conformance::NodeAttributes {
+    let domain_value = fidl_test_conformance::NodeAttributes {
         mode: mode.clone(),
         id: id.clone(),
         content_size: content_size.clone(),
@@ -459,80 +461,80 @@ fn roundtrip_persistent_conformance_NodeAttributes() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_PaddingBetweenFieldsInt16Int32() {
+fn roundtrip_persistent_test_conformance_PaddingBetweenFieldsInt16Int32() {
     let a = 7i16;
     let b = 8i32;
     let domain_value =
-        fidl_conformance::PaddingBetweenFieldsInt16Int32 { a: a.clone(), b: b.clone() };
+        fidl_test_conformance::PaddingBetweenFieldsInt16Int32 { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int16(a)))
         .field(Field::Basic(BasicField::Int32(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_PaddingBetweenFieldsInt16Int64() {
+fn roundtrip_persistent_test_conformance_PaddingBetweenFieldsInt16Int64() {
     let a = 7i16;
     let b = 9i64;
     let domain_value =
-        fidl_conformance::PaddingBetweenFieldsInt16Int64 { a: a.clone(), b: b.clone() };
+        fidl_test_conformance::PaddingBetweenFieldsInt16Int64 { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int16(a)))
         .field(Field::Basic(BasicField::Int64(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_PaddingBetweenFieldsInt32Int64() {
+fn roundtrip_persistent_test_conformance_PaddingBetweenFieldsInt32Int64() {
     let a = 8i32;
     let b = 9i64;
     let domain_value =
-        fidl_conformance::PaddingBetweenFieldsInt32Int64 { a: a.clone(), b: b.clone() };
+        fidl_test_conformance::PaddingBetweenFieldsInt32Int64 { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int32(a)))
         .field(Field::Basic(BasicField::Int64(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_PaddingBetweenFieldsInt8Int16() {
+fn roundtrip_persistent_test_conformance_PaddingBetweenFieldsInt8Int16() {
     let a = 6i8;
     let b = 7i16;
     let domain_value =
-        fidl_conformance::PaddingBetweenFieldsInt8Int16 { a: a.clone(), b: b.clone() };
+        fidl_test_conformance::PaddingBetweenFieldsInt8Int16 { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int8(a)))
         .field(Field::Basic(BasicField::Int16(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_PaddingBetweenFieldsInt8Int32() {
+fn roundtrip_persistent_test_conformance_PaddingBetweenFieldsInt8Int32() {
     let a = 6i8;
     let b = 8i32;
     let domain_value =
-        fidl_conformance::PaddingBetweenFieldsInt8Int32 { a: a.clone(), b: b.clone() };
+        fidl_test_conformance::PaddingBetweenFieldsInt8Int32 { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int8(a)))
         .field(Field::Basic(BasicField::Int32(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_PaddingBetweenFieldsInt8Int64() {
+fn roundtrip_persistent_test_conformance_PaddingBetweenFieldsInt8Int64() {
     let a = 6i8;
     let b = 9i64;
     let domain_value =
-        fidl_conformance::PaddingBetweenFieldsInt8Int64 { a: a.clone(), b: b.clone() };
+        fidl_test_conformance::PaddingBetweenFieldsInt8Int64 { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int8(a)))
         .field(Field::Basic(BasicField::Int64(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Regression1() {
+fn roundtrip_persistent_test_conformance_Regression1() {
     let f1 = 2u8;
     let f2 = 4u32;
     let f3 = 2u8;
     let f4 = 3u16;
     let f5 = 5u64;
     let f6 = 2u8;
-    let domain_value = fidl_conformance::Regression1 {
+    let domain_value = fidl_test_conformance::Regression1 {
         f1: f1.clone(),
         f2: f2.clone(),
         f3: f3.clone(),
@@ -550,87 +552,89 @@ fn roundtrip_persistent_conformance_Regression1() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Size5Alignment4() {
+fn roundtrip_persistent_test_conformance_Size5Alignment4() {
     let four = 4u32;
     let one = 2u8;
-    let domain_value = fidl_conformance::Size5Alignment4 { four: four.clone(), one: one.clone() };
+    let domain_value =
+        fidl_test_conformance::Size5Alignment4 { four: four.clone(), one: one.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::UInt32(four)))
         .field(Field::Basic(BasicField::UInt8(one)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Size8Align8() {
+fn roundtrip_persistent_test_conformance_Size8Align8() {
     let data = 5u64;
-    let domain_value = fidl_conformance::Size8Align8 { data: data.clone() };
+    let domain_value = fidl_test_conformance::Size8Align8 { data: data.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt64(data)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_StringWrapper() {
+fn roundtrip_persistent_test_conformance_StringWrapper() {
     let str = String::from("hello, world!");
-    let domain_value = fidl_conformance::StringWrapper { str: str.clone() };
+    let domain_value = fidl_test_conformance::StringWrapper { str: str.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt8Vector(str.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct1Byte() {
+fn roundtrip_persistent_test_conformance_Struct1Byte() {
     let a = 6i8;
-    let domain_value = fidl_conformance::Struct1Byte { a: a.clone() };
+    let domain_value = fidl_test_conformance::Struct1Byte { a: a.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int8(a)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct2Byte() {
+fn roundtrip_persistent_test_conformance_Struct2Byte() {
     let a = 7i16;
-    let domain_value = fidl_conformance::Struct2Byte { a: a.clone() };
+    let domain_value = fidl_test_conformance::Struct2Byte { a: a.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int16(a)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct3Byte() {
+fn roundtrip_persistent_test_conformance_Struct3Byte() {
     let a = 7i16;
     let b = 6i8;
-    let domain_value = fidl_conformance::Struct3Byte { a: a.clone(), b: b.clone() };
+    let domain_value = fidl_test_conformance::Struct3Byte { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int16(a)))
         .field(Field::Basic(BasicField::Int8(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct4Byte() {
+fn roundtrip_persistent_test_conformance_Struct4Byte() {
     let a = 8i32;
-    let domain_value = fidl_conformance::Struct4Byte { a: a.clone() };
+    let domain_value = fidl_test_conformance::Struct4Byte { a: a.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int32(a)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct5Byte() {
+fn roundtrip_persistent_test_conformance_Struct5Byte() {
     let a = 8i32;
     let b = 6i8;
-    let domain_value = fidl_conformance::Struct5Byte { a: a.clone(), b: b.clone() };
+    let domain_value = fidl_test_conformance::Struct5Byte { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int32(a)))
         .field(Field::Basic(BasicField::Int8(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct6Byte() {
+fn roundtrip_persistent_test_conformance_Struct6Byte() {
     let a = 8i32;
     let b = 7i16;
-    let domain_value = fidl_conformance::Struct6Byte { a: a.clone(), b: b.clone() };
+    let domain_value = fidl_test_conformance::Struct6Byte { a: a.clone(), b: b.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int32(a)))
         .field(Field::Basic(BasicField::Int16(b)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct7Byte() {
+fn roundtrip_persistent_test_conformance_Struct7Byte() {
     let a = 8i32;
     let b = 7i16;
     let c = 6i8;
-    let domain_value = fidl_conformance::Struct7Byte { a: a.clone(), b: b.clone(), c: c.clone() };
+    let domain_value =
+        fidl_test_conformance::Struct7Byte { a: a.clone(), b: b.clone(), c: c.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::Int32(a)))
         .field(Field::Basic(BasicField::Int16(b)))
@@ -638,45 +642,45 @@ fn roundtrip_persistent_conformance_Struct7Byte() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Struct8Byte() {
+fn roundtrip_persistent_test_conformance_Struct8Byte() {
     let a = 9i64;
-    let domain_value = fidl_conformance::Struct8Byte { a: a.clone() };
+    let domain_value = fidl_test_conformance::Struct8Byte { a: a.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int64(a)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_StructSize16Align8() {
+fn roundtrip_persistent_test_conformance_StructSize16Align8() {
     let f1 = 5u64;
     let f2 = 5u64;
-    let domain_value = fidl_conformance::StructSize16Align8 { f1: f1.clone(), f2: f2.clone() };
+    let domain_value = fidl_test_conformance::StructSize16Align8 { f1: f1.clone(), f2: f2.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::UInt64(f1)))
         .field(Field::Basic(BasicField::UInt64(f2)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_StructSize3Align2() {
+fn roundtrip_persistent_test_conformance_StructSize3Align2() {
     let f1 = 3u16;
     let f2 = 2u8;
-    let domain_value = fidl_conformance::StructSize3Align2 { f1: f1.clone(), f2: f2.clone() };
+    let domain_value = fidl_test_conformance::StructSize3Align2 { f1: f1.clone(), f2: f2.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Basic(BasicField::UInt16(f1)))
         .field(Field::Basic(BasicField::UInt8(f2)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_StructWithInt() {
+fn roundtrip_persistent_test_conformance_StructWithInt() {
     let x = 8i32;
-    let domain_value = fidl_conformance::StructWithInt { x: x.clone() };
+    let domain_value = fidl_test_conformance::StructWithInt { x: x.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::Int32(x)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_ThreeByte() {
+fn roundtrip_persistent_test_conformance_ThreeByte() {
     let elem1 = 2u8;
     let elem2 = 2u8;
     let elem3 = 2u8;
-    let domain_value = fidl_conformance::ThreeByte {
+    let domain_value = fidl_test_conformance::ThreeByte {
         elem1: elem1.clone(),
         elem2: elem2.clone(),
         elem3: elem3.clone(),
@@ -688,39 +692,39 @@ fn roundtrip_persistent_conformance_ThreeByte() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_TransformerEmptyStruct() {
-    let domain_value = fidl_conformance::TransformerEmptyStruct {};
+fn roundtrip_persistent_test_conformance_TransformerEmptyStruct() {
+    let domain_value = fidl_test_conformance::TransformerEmptyStruct {};
     let dynfidl_structure = Structure::default();
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Uint16Struct() {
+fn roundtrip_persistent_test_conformance_Uint16Struct() {
     let val = 3u16;
-    let domain_value = fidl_conformance::Uint16Struct { val: val.clone() };
+    let domain_value = fidl_test_conformance::Uint16Struct { val: val.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt16(val)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Uint32Struct() {
+fn roundtrip_persistent_test_conformance_Uint32Struct() {
     let val = 4u32;
-    let domain_value = fidl_conformance::Uint32Struct { val: val.clone() };
+    let domain_value = fidl_test_conformance::Uint32Struct { val: val.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt32(val)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Uint64Struct() {
+fn roundtrip_persistent_test_conformance_Uint64Struct() {
     let val = 5u64;
-    let domain_value = fidl_conformance::Uint64Struct { val: val.clone() };
+    let domain_value = fidl_test_conformance::Uint64Struct { val: val.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt64(val)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Uint64Uint32Uint16Uint8() {
+fn roundtrip_persistent_test_conformance_Uint64Uint32Uint16Uint8() {
     let f1 = 5u64;
     let f2 = 4u32;
     let f3 = 3u16;
     let f4 = 2u8;
-    let domain_value = fidl_conformance::Uint64Uint32Uint16Uint8 {
+    let domain_value = fidl_test_conformance::Uint64Uint32Uint16Uint8 {
         f1: f1.clone(),
         f2: f2.clone(),
         f3: f3.clone(),
@@ -734,19 +738,19 @@ fn roundtrip_persistent_conformance_Uint64Uint32Uint16Uint8() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Uint8Struct() {
+fn roundtrip_persistent_test_conformance_Uint8Struct() {
     let val = 2u8;
-    let domain_value = fidl_conformance::Uint8Struct { val: val.clone() };
+    let domain_value = fidl_test_conformance::Uint8Struct { val: val.clone() };
     let dynfidl_structure = Structure::default().field(Field::Basic(BasicField::UInt8(val)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_Uint8Uint16Uint32Uint64() {
+fn roundtrip_persistent_test_conformance_Uint8Uint16Uint32Uint64() {
     let f1 = 2u8;
     let f2 = 3u16;
     let f3 = 4u32;
     let f4 = 5u64;
-    let domain_value = fidl_conformance::Uint8Uint16Uint32Uint64 {
+    let domain_value = fidl_test_conformance::Uint8Uint16Uint32Uint64 {
         f1: f1.clone(),
         f2: f2.clone(),
         f3: f3.clone(),
@@ -760,15 +764,15 @@ fn roundtrip_persistent_conformance_Uint8Uint16Uint32Uint64() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_UnboundedNonnullableString() {
+fn roundtrip_persistent_test_conformance_UnboundedNonnullableString() {
     let s0 = String::from("hello, world!");
-    let domain_value = fidl_conformance::UnboundedNonnullableString { s0: s0.clone() };
+    let domain_value = fidl_test_conformance::UnboundedNonnullableString { s0: s0.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt8Vector(s0.into_bytes())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_UnboundedNonnullableVectorOfUint32s() {
+fn roundtrip_persistent_test_conformance_UnboundedNonnullableVectorOfUint32s() {
     let vu0 = {
         let mut _vec_ = vec![];
         _vec_.push(4u32);
@@ -778,16 +782,17 @@ fn roundtrip_persistent_conformance_UnboundedNonnullableVectorOfUint32s() {
         _vec_.push(4u32);
         _vec_
     };
-    let domain_value = fidl_conformance::UnboundedNonnullableVectorOfUint32s { vu0: vu0.clone() };
+    let domain_value =
+        fidl_test_conformance::UnboundedNonnullableVectorOfUint32s { vu0: vu0.clone() };
     let dynfidl_structure =
         Structure::default().field(Field::Vector(VectorField::UInt32Vector(vu0)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_UpdatePolicy() {
+fn roundtrip_persistent_test_conformance_UpdatePolicy() {
     let fetch_if_absent = true;
     let allow_old_versions = true;
-    let domain_value = fidl_conformance::UpdatePolicy {
+    let domain_value = fidl_test_conformance::UpdatePolicy {
         fetch_if_absent: fetch_if_absent.clone(),
         allow_old_versions: allow_old_versions.clone(),
     };
@@ -797,7 +802,7 @@ fn roundtrip_persistent_conformance_UpdatePolicy() {
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_VectorOfStrings() {
+fn roundtrip_persistent_test_conformance_VectorOfStrings() {
     let v = {
         let mut _vec_ = vec![];
         _vec_.push(String::from("hello, world!"));
@@ -807,13 +812,13 @@ fn roundtrip_persistent_conformance_VectorOfStrings() {
         _vec_.push(String::from("hello, world!"));
         _vec_
     };
-    let domain_value = fidl_conformance::VectorOfStrings { v: v.clone() };
+    let domain_value = fidl_test_conformance::VectorOfStrings { v: v.clone() };
     let dynfidl_structure = Structure::default()
         .field(Field::Vector(VectorField::UInt8VectorVector(v.into_bytes_for_each())));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_VectorWithLimit() {
+fn roundtrip_persistent_test_conformance_VectorWithLimit() {
     let v = {
         let mut _vec_ = vec![];
         _vec_.push(2u8);
@@ -823,12 +828,12 @@ fn roundtrip_persistent_conformance_VectorWithLimit() {
         _vec_.push(2u8);
         _vec_
     };
-    let domain_value = fidl_conformance::VectorWithLimit { v: v.clone() };
+    let domain_value = fidl_test_conformance::VectorWithLimit { v: v.clone() };
     let dynfidl_structure = Structure::default().field(Field::Vector(VectorField::UInt8Vector(v)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }
 #[test]
-fn roundtrip_persistent_conformance_VectorWrapper() {
+fn roundtrip_persistent_test_conformance_VectorWrapper() {
     let v = {
         let mut _vec_ = vec![];
         _vec_.push(2u8);
@@ -838,7 +843,7 @@ fn roundtrip_persistent_conformance_VectorWrapper() {
         _vec_.push(2u8);
         _vec_
     };
-    let domain_value = fidl_conformance::VectorWrapper { v: v.clone() };
+    let domain_value = fidl_test_conformance::VectorWrapper { v: v.clone() };
     let dynfidl_structure = Structure::default().field(Field::Vector(VectorField::UInt8Vector(v)));
     test_persistent_roundtrip(domain_value, dynfidl_structure);
 }

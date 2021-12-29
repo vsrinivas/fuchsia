@@ -19,7 +19,7 @@ import (
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
-#include <fidl/benchmarkfidl/cpp/wire.h>
+#include <fidl/test.benchmarkfidl/cpp/wire.h>
 
 namespace benchmark_suite {
 
@@ -71,7 +71,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 }
 
 func llcppBenchmarkType(value gidlir.Value) string {
-	return fmt.Sprintf("benchmarkfidl::wire::%s", gidlir.TypeFromValue(value))
+	return fmt.Sprintf("test_benchmarkfidl::wire::%s", gidlir.TypeFromValue(value))
 }
 
 func benchmarkName(gidlName string) string {

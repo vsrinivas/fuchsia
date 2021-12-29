@@ -24,7 +24,7 @@ import (
 	"sync"
 	"testing"
 
-	"fidl/benchmarkfidl"
+	"fidl/test/benchmarkfidl"
 
 	"syscall/zx"
 	"syscall/zx/fidl"

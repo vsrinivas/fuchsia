@@ -25,7 +25,7 @@ import (
 	"runtime"
 	"testing"
 
-	"fidl/conformance"
+	"fidl/test/conformance"
 
 	"syscall/zx"
 	"syscall/zx/fidl"

@@ -23,7 +23,7 @@ var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
 #include <utility>
 #include <vector>
 
-#include <fidl/conformance/cpp/wire.h>
+#include <fidl/test.conformance/cpp/wire.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fidl/llcpp/tests/conformance/conformance_utils.h"

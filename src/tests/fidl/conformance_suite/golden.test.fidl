@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 // This file contains FIDL definitions used in GIDL goldens.
 
-library conformance;
+library test.conformance;
 
 type GoldenBoolStruct = struct {
     v bool;

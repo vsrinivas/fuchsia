@@ -325,7 +325,8 @@ func typeName(decl gidlmixer.Declaration) string {
 
 func declName(decl gidlmixer.NamedDeclaration) string {
 	parts := strings.Split(decl.Name(), "/")
-	return strings.Join(parts, "::")
+	library_parts := strings.Split(parts[0], ".")
+	return strings.Join(append(library_parts, parts[1]), "::")
 }
 
 func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {

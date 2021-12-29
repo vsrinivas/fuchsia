@@ -4,8 +4,8 @@
 
 #include <lib/fidl/coding.h>
 
-#include <benchmarkfidl/cpp/fidl.h>
 #include <perftest/perftest.h>
+#include <test/benchmarkfidl/cpp/fidl.h>
 
 #include "data.h"
 

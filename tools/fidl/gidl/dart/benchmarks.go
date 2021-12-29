@@ -28,7 +28,7 @@ import 'dart:io' hide exit;
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_benchmarkfidl/fidl_async.dart';
+import 'package:fidl_test_benchmarkfidl/fidl_async.dart';
 import 'package:fuchsia/fuchsia.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';

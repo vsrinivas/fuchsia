@@ -18,7 +18,7 @@ import (
 )
 
 var conformanceTmpl = template.Must(template.New("tmpl").Parse(`
-#include <fidl/conformance/cpp/wire.h>
+#include <fidl/test.conformance/cpp/wire.h>
 
 #include <vector>
 

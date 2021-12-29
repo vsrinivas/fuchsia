@@ -14,12 +14,12 @@ namespace {
 
 bool EncodePaddedStructTree(void* value, const char** error,
                             fit::function<void(const uint8_t*, size_t)> callback) {
-  uint8_t buf[sizeof(benchmarkfidl::wire::PaddedStructTree8)];
+  uint8_t buf[sizeof(test_benchmarkfidl::wire::PaddedStructTree8)];
 
   uint64_t mask = 0xffffffff000000ff;
   uint64_t* in = reinterpret_cast<uint64_t*>(value);
   uint64_t* in_end = reinterpret_cast<uint64_t*>(
-      reinterpret_cast<benchmarkfidl::wire::PaddedStructTree8*>(value) + 1);
+      reinterpret_cast<test_benchmarkfidl::wire::PaddedStructTree8*>(value) + 1);
   uint64_t* out = reinterpret_cast<uint64_t*>(buf);
   for (; in < in_end; ++in, ++out) {
     // Note: padding bytes are blindly zeroed rather than checking that existing padding data is
@@ -40,7 +40,7 @@ bool DecodePaddedStructTree(uint8_t* bytes, size_t bytes_size, zx_handle_t* hand
   uint64_t mask = 0x00000000ffffff00;
   uint64_t* cur = reinterpret_cast<uint64_t*>(bytes);
   uint64_t* end =
-      reinterpret_cast<uint64_t*>(bytes + sizeof(benchmarkfidl::wire::PaddedStructTree8));
+      reinterpret_cast<uint64_t*>(bytes + sizeof(test_benchmarkfidl::wire::PaddedStructTree8));
   for (; cur < end; ++cur) {
     if ((*cur & mask) != 0) {
       *error = "non-zero padding byte";

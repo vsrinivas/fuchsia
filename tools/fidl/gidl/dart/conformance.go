@@ -25,7 +25,7 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart' as fidl;
-import 'package:fidl_conformance/fidl_async.dart';
+import 'package:fidl_test_conformance/fidl_async.dart';
 import 'package:test/test.dart';
 import 'package:sdk.dart.lib.gidl/gidl.dart';
 import 'package:sdk.dart.lib.gidl/handles.dart';

@@ -66,12 +66,12 @@ func typeNameIgnoreNullable(decl gidlmixer.Declaration) string {
 func declName(decl gidlmixer.NamedDeclaration) string {
 	// Note: only works for domain objects (not protocols & services)
 	parts := strings.SplitN(decl.Name(), "/", 2)
-	return fmt.Sprintf("%s::wire::%s", parts[0], fidlgen.ToUpperCamelCase(parts[1]))
+	return fmt.Sprintf("%s::wire::%s", strings.ReplaceAll(parts[0], ".", "_"), fidlgen.ToUpperCamelCase(parts[1]))
 }
 
 func ConformanceType(gidlTypeString string) string {
 	// Note: only works for domain objects (not protocols & services)
-	return "conformance::wire::" + fidlgen.ToUpperCamelCase(gidlTypeString)
+	return "test_conformance::wire::" + fidlgen.ToUpperCamelCase(gidlTypeString)
 }
 
 func LlcppErrorCode(code gidlir.ErrorCode) string {

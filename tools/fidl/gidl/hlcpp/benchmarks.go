@@ -17,7 +17,7 @@ import (
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
-#include <{{ .FidlLibrary }}/cpp/fidl.h>
+#include <{{ .FidlInclude }}>
 #include <cts/tests/pkg/fidl/cpp/test/handle_util.h>
 #include <perftest/perftest.h>
 
@@ -116,6 +116,7 @@ type benchmark struct {
 
 type benchmarkTmplInput struct {
 	FidlLibrary string
+	FidlInclude string
 	Benchmarks  []benchmark
 }
 
@@ -124,6 +125,7 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 	schema := gidlmixer.BuildSchema(fidl)
 	tmplInput := benchmarkTmplInput{
 		FidlLibrary: libraryName(config.CppBenchmarksFidlLibrary),
+		FidlInclude: libraryInclude(config.CppBenchmarksFidlLibrary),
 	}
 	for _, gidlBenchmark := range gidl.Benchmark {
 		decl, err := schema.ExtractDeclaration(gidlBenchmark.Value, gidlBenchmark.HandleDefs)
@@ -153,8 +155,13 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.Ge
 	return buf.Bytes(), nil
 }
 
+func libraryInclude(librarySuffix string) string {
+	return fmt.Sprintf("test/benchmarkfidl%s/cpp/fidl.h", strings.ReplaceAll(librarySuffix, " ", ""))
+
+}
+
 func libraryName(librarySuffix string) string {
-	return fmt.Sprintf("benchmarkfidl%s", strings.ReplaceAll(librarySuffix, " ", ""))
+	return fmt.Sprintf("test::benchmarkfidl%s", strings.ReplaceAll(librarySuffix, " ", ""))
 }
 
 func benchmarkTypeFromValue(librarySuffix string, value gidlir.Value) string {
