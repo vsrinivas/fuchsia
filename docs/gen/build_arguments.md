@@ -1311,18 +1311,6 @@ Enable f2fs_roll_forward
 
 From //src/storage/f2fs/BUILD.gn:14
 
-### fake_display_uses_vsync2
-Used to control the type of Vsync events emitted by the FakeDisplay driver
-created by fake-hdcp components. If it is true, the fake display driver
-will emit OnDisplayVsync2() events with config sequence numbers; otherwise
-it will emit OnDisplayVsync() events with image handles.
-TODO(fxbug.dev/72588): Remove once we completely migrate display core and
-drivers to use OnVsync2/OnDisplayVsync2.
-
-**Current value (from the default):** `true`
-
-From //src/ui/bin/hardware_display_controller_provider/BUILD.gn:14
-
 ### fastboot_product
 
 **Current value (from the default):** `""`
