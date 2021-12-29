@@ -24,17 +24,17 @@ FuchsiaGuestInteractionService::FuchsiaGuestInteractionService(zx::socket socket
         return fd.release();
       }()),
       dispatcher_(dispatcher) {
-  thrd_create_with_name(
-      &guest_interaction_service_thread_,
-      [](void* ctx) {
-        FuchsiaGuestInteractionService& self = *static_cast<FuchsiaGuestInteractionService*>(ctx);
-        self.Run();
-        return 0;
-      },
-      this, "gRPC run");
+  int ret = client_.Start(guest_interaction_service_thread_);
+  ZX_ASSERT_MSG(ret == thrd_success, "thread creation failed: %d", ret);
 }
 
-FuchsiaGuestInteractionService::~FuchsiaGuestInteractionService() { Stop(); }
+FuchsiaGuestInteractionService::~FuchsiaGuestInteractionService() {
+  client_.Stop();
+  int32_t ret_code;
+  int ret = thrd_join(guest_interaction_service_thread_, &ret_code);
+  ZX_ASSERT_MSG(ret == thrd_success, "thread joining failed: %d", ret);
+  ZX_ASSERT_MSG(ret_code == 0, "thread exited non-zero: %d", ret_code);
+}
 
 void FuchsiaGuestInteractionService::PutFile(fidl::InterfaceHandle<fuchsia::io::File> local_file,
                                              std::string remote_path,
@@ -74,12 +74,4 @@ void FuchsiaGuestInteractionService::ExecuteCommand(
 void FuchsiaGuestInteractionService::AddBinding(
     fidl::InterfaceRequest<fuchsia::netemul::guest::GuestInteraction> request) {
   bindings_.AddBinding(this, std::move(request), dispatcher_);
-}
-
-void FuchsiaGuestInteractionService::Run() { client_.Run(); }
-
-void FuchsiaGuestInteractionService::Stop() {
-  client_.Stop();
-  int32_t ret_code;
-  thrd_join(guest_interaction_service_thread_, &ret_code);
 }

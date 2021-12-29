@@ -43,12 +43,6 @@ std::string drain_socket(zx::socket socket) {
   return out_string;
 }
 
-static int run_grpc_client(void* client_to_run) {
-  auto client_impl = static_cast<ClientImpl<PosixPlatform>*>(client_to_run);
-  client_impl->Run();
-  return 0;
-}
-
 static void ConvertSocketToNonBlockingFd(zx::socket socket, fbl::unique_fd& fd) {
   ASSERT_OK(fdio_fd_create(socket.release(), fd.reset_and_get_address()));
   int result;
@@ -147,20 +141,28 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
               std::move(stderr_writer), listener.NewRequest(), dispatcher());
 
   // Ensure that the process started cleanly.
-  thrd_t client_run_thread;
-  thrd_create_with_name(&client_run_thread, run_grpc_client, &client, "gRPC run");
-  RunLoopUntil([&exec_started] { return exec_started.has_value(); });
-  int32_t thread_ret_code;
-  thrd_join(client_run_thread, &thread_ret_code);
+  {
+    thrd_t client_run_thread;
+    ASSERT_EQ(client.Start(client_run_thread), thrd_success);
+    RunLoopUntil([&exec_started] { return exec_started.has_value(); });
+    int32_t thread_ret_code;
+    ASSERT_EQ(thrd_join(client_run_thread, &thread_ret_code), thrd_success);
+    ASSERT_EQ(thread_ret_code, 0);
+  }
 
   ASSERT_TRUE(exec_started.has_value());
   ASSERT_OK(exec_started.value());
 
   // Ensure the gRPC operation completed successfully and validate the stdout
   // and stderr.
-  thrd_create_with_name(&client_run_thread, run_grpc_client, &client, "gRPC run");
-  RunLoopUntil([&exec_terminated] { return exec_terminated.has_value(); });
-  thrd_join(client_run_thread, &thread_ret_code);
+  {
+    thrd_t client_run_thread;
+    ASSERT_EQ(client.Start(client_run_thread), thrd_success);
+    RunLoopUntil([&exec_terminated] { return exec_terminated.has_value(); });
+    int32_t thread_ret_code;
+    ASSERT_EQ(thrd_join(client_run_thread, &thread_ret_code), thrd_success);
+    ASSERT_EQ(thread_ret_code, 0);
+  }
 
   ASSERT_TRUE(exec_terminated.has_value());
   ASSERT_OK(exec_terminated.value());

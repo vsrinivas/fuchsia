@@ -27,8 +27,6 @@ class FuchsiaGuestInteractionService final : public fuchsia::netemul::guest::Gue
       zx::socket std_in, zx::socket std_out, zx::socket std_err,
       fidl::InterfaceRequest<fuchsia::netemul::guest::CommandListener> req) override;
   void AddBinding(fidl::InterfaceRequest<fuchsia::netemul::guest::GuestInteraction> request);
-  void Run();
-  void Stop();
 
  private:
   ClientImpl<PosixPlatform> client_;

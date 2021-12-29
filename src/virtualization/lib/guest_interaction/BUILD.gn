@@ -229,6 +229,7 @@ executable("server_daemon_test") {
     "//src/virtualization/tests:guest_console",
   ]
 
+  # Enables thrd_create_with_name in <threads.h>.
   configs += [ "//build/config:all_source" ]
 }
 

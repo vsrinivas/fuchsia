@@ -26,41 +26,24 @@ class ClientImpl {
             grpc::CreateInsecureChannelFromFd("vsock", vsock_fd))) {}
 
   void Run() {
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      running_ = true;
-    }
-
-    void* tag;
-    bool ok;
-    constexpr gpr_timespec deadline = {
-        .tv_nsec = 100 * 1000,  // 100ms.
-        .clock_type = GPR_TIMESPAN,
-    };
-
-    auto running = [this]() {
-      std::lock_guard<std::mutex> lock(mutex_);
-      return running_;
-    };
-
-    while (running()) {
-      switch (cq_.AsyncNext(&tag, &ok, deadline)) {
-        case grpc::CompletionQueue::SHUTDOWN:
-          FX_LOGS(FATAL) << "completion queue shutdown";
-          break;
-        case grpc::CompletionQueue::GOT_EVENT:
-          static_cast<CallData*>(tag)->Proceed(ok);
-          break;
-        case grpc::CompletionQueue::TIMEOUT:
-          break;
-      };
-    }
+    running_ = true;
+    run();
   }
 
-  void Stop() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    running_ = false;
+  [[nodiscard]] int Start(thrd_t& thread) {
+    running_ = true;
+
+    return thrd_create_with_name(
+        &thread,
+        [](void* ctx) {
+          ClientImpl& self = *static_cast<ClientImpl*>(ctx);
+          self.run();
+          return 0;
+        },
+        this, "ClientImpl");
   }
+
+  void Stop() { running_ = false; }
 
   void Get(const std::string& source, fidl::InterfaceHandle<fuchsia::io::File> local_file,
            TransferCallback callback) {
@@ -129,11 +112,32 @@ class ClientImpl {
   }
 
  private:
+  void run() {
+    void* tag;
+    bool ok;
+    constexpr gpr_timespec deadline = {
+        .tv_nsec = 100 * 1000,  // 100ms.
+        .clock_type = GPR_TIMESPAN,
+    };
+
+    while (running_) {
+      switch (cq_.AsyncNext(&tag, &ok, deadline)) {
+        case grpc::CompletionQueue::SHUTDOWN:
+          FX_LOGS(FATAL) << "completion queue shutdown";
+          break;
+        case grpc::CompletionQueue::GOT_EVENT:
+          static_cast<CallData*>(tag)->Proceed(ok);
+          break;
+        case grpc::CompletionQueue::TIMEOUT:
+          break;
+      };
+    }
+  }
+
   grpc::CompletionQueue cq_;
   const std::unique_ptr<GuestInteractionService::Stub> stub_;
 
-  std::mutex mutex_;
-  bool running_ __TA_GUARDED(mutex_);
+  std::atomic<bool> running_;
 };
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_IMPL_H_
