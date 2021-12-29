@@ -1483,7 +1483,7 @@ TEST(ConvertToFvmMetadataTest, WithsMultiplePartitionsAndSlicesIsOk) {
 
   std::vector<fvm_sparse_internal::PartitionEntry> entries;
 
-  auto get_expected_partition_name = [](int index) {
+  auto get_expected_partition_name = [](auto index) {
     return std::string("partition") + std::to_string(index);
   };
 

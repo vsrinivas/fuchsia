@@ -71,8 +71,9 @@ class DecompressionHelper {
           if (result.is_error()) {
             return result.take_error_result();
           }
-          compressed_buffer_.erase(compressed_buffer_.begin(),
-                                   compressed_buffer_.begin() + result.value().read_bytes);
+          compressed_buffer_.erase(
+              compressed_buffer_.begin(),
+              compressed_buffer_.begin() + static_cast<ptrdiff_t>(result.value().read_bytes));
           if (result.value().hint == 0) {
             decompressor_.Finalize();
             compressed_buffer_.clear();
@@ -89,7 +90,8 @@ class DecompressionHelper {
       // Copy from the decompression buffer into the caller's buffer.
       some = std::min(buffer.size() - done, decompressed_buffer_.size());
       memcpy(buffer.data() + done, decompressed_buffer_.data(), some);
-      decompressed_buffer_.erase(decompressed_buffer_.begin(), decompressed_buffer_.begin() + some);
+      decompressed_buffer_.erase(decompressed_buffer_.begin(),
+                                 decompressed_buffer_.begin() + static_cast<ptrdiff_t>(some));
       uncompressed_offset_ += some;
     }
     return fpromise::ok();
@@ -188,7 +190,7 @@ fpromise::result<Partition, std::string> OpenSparseImage(
     }
     offset += sizeof(partition_descriptor);
 
-    int allocated_slices = 0;
+    uint64_t allocated_slices = 0;
 
     // For all extents within the partition...
     for (uint32_t i = 0; i < partition_descriptor.extent_count; ++i) {

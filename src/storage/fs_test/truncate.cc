@@ -165,7 +165,7 @@ TEST_P(TruncateTest, ShrinkRace) {
   const uint32_t page_size = zx_system_get_page_size();
   const uint32_t offset = page_size - 2;
   const char data[] = "hello";
-  const ssize_t len = strlen(data);
+  const ssize_t len = static_cast<ssize_t>(strlen(data));
   const uint32_t end = offset + len;
   std::vector<uint8_t> zero(offset);
   for (int i = 0; i < 100; ++i) {
@@ -181,7 +181,7 @@ TEST_P(TruncateTest, ShrinkRace) {
       std::random_device random;
       std::uniform_int_distribution distribution(0, 1000);
       usleep(distribution(random));
-      const int buf_size = page_size * 2 + 100;
+      const size_t buf_size = page_size * 2 + 100;
       char buf[buf_size];
       ssize_t result = read(fd.get(), buf, buf_size);
       EXPECT_TRUE(result == end || result == 0) << errno;

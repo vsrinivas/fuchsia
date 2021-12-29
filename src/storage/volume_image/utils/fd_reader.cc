@@ -14,7 +14,7 @@
 #include <iostream>
 
 #include <fbl/unique_fd.h>
-#include <safemath/safe_conversions.h>
+#include <safemath/safe_math.h>
 
 namespace storage::volume_image {
 
@@ -45,7 +45,7 @@ fpromise::result<void, std::string> FdReader::Read(uint64_t offset,
   while (bytes_read < buffer.size()) {
     uint8_t* destination = buffer.data() + bytes_read;
     size_t remaining_bytes = buffer.size() - bytes_read;
-    off_t source_offset = offset + bytes_read;
+    off_t source_offset = safemath::CheckAdd(offset, bytes_read).Cast<off_t>().ValueOrDie();
     ssize_t result = pread(fd_.get(), destination, remaining_bytes, source_offset);
 
     if (result < 0) {

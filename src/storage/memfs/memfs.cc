@@ -24,9 +24,10 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
+#include <safemath/safe_math.h>
 
-#include "dnode.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/storage/memfs/dnode.h"
 
 namespace memfs {
 
@@ -64,7 +65,7 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
 zx::status<fs::FilesystemInfo> Vfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
-  info.block_size = static_cast<uint32_t>(GetPageSize());
+  info.block_size = safemath::checked_cast<uint32_t>(GetPageSize());
   info.max_filename_size = kDnodeNameMax;
   info.fs_type = VFS_TYPE_MEMFS;
   info.SetFsId(fs_id_);

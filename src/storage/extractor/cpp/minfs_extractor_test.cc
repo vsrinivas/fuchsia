@@ -93,7 +93,8 @@ void VerifyExtractedImage(int input_fd, uint64_t data_blocks, int output_fd) {
   struct stat stats;
   ASSERT_EQ(fstat(output_fd, &stats), 0);
 
-  ssize_t expected = EmptyFilesystemImageSize(info) + (data_blocks * info.BlockSize());
+  ssize_t expected =
+      static_cast<ssize_t>(EmptyFilesystemImageSize(info) + (data_blocks * info.BlockSize()));
   ASSERT_EQ(expected, stats.st_size);
 }
 

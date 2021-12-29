@@ -38,6 +38,7 @@ zx_library("memfs-cpp") {
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

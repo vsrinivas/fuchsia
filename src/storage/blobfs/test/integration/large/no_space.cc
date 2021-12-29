@@ -32,7 +32,7 @@ TEST_P(NoSpaceTest, NoSpace) {
 
     fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
     ASSERT_TRUE(fd) << "Failed to create blob";
-    int r = ftruncate(fd.get(), info->size_data);
+    int r = ftruncate(fd.get(), static_cast<off_t>(info->size_data));
     ASSERT_EQ(r, 0);
     r = StreamAll(write, fd.get(), info->data.get(), info->size_data);
     if (r < 0) {
@@ -43,7 +43,7 @@ TEST_P(NoSpaceTest, NoSpace) {
       ASSERT_EQ(unlink(last_info->path), 0) << "Unlinking old blob";
       fd.reset(open(info->path, O_CREAT | O_RDWR));
       ASSERT_TRUE(fd);
-      int r = ftruncate(fd.get(), info->size_data);
+      int r = ftruncate(fd.get(), static_cast<off_t>(info->size_data));
       ASSERT_EQ(r, 0);
       ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
           << "Did not free enough space";

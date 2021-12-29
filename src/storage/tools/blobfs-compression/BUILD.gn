@@ -9,7 +9,10 @@ static_library("common") {
   public = [ "blobfs-compression.h" ]
   sources = [ "common.cc" ]
   deps = [ "//src/storage/blobfs" ]
-  public_deps = [ "//src/lib/chunked-compression" ]
+  public_deps = [
+    "//src/lib/chunked-compression",
+    "//zircon/third_party/ulib/safemath",
+  ]
 }
 
 executable("blobfs-compression") {

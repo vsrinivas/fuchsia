@@ -178,7 +178,7 @@ TEST_P(BlobfsExtractionTest, TestNodeMap) {
   std::unique_ptr<blobfs::Inode[]> inode_table;
   inode_table =
       std::make_unique<blobfs::Inode[]>(NodeMapBlocks(info) * blobfs::kBlobfsInodesPerBlock);
-  ssize_t size = blobfs::NodeMapBlocks(info) * blobfs::kBlobfsBlockSize;
+  auto size = static_cast<ssize_t>(blobfs::NodeMapBlocks(info) * blobfs::kBlobfsBlockSize);
   ASSERT_EQ(pread(input_fd.get(), inode_table.get(), size,
                   blobfs::kBlobfsBlockSize * blobfs::NodeMapStartBlock(info)),
             size);
@@ -201,7 +201,7 @@ TEST_P(BlobfsExtractionTest, TestBlockMap) {
 
   VerifyOutputSuperblock(&info, output_fd);
 
-  ssize_t size = blobfs::BlockMapBlocks(info) * blobfs::kBlobfsBlockSize;
+  auto size = static_cast<ssize_t>(blobfs::BlockMapBlocks(info) * blobfs::kBlobfsBlockSize);
   char block_bitmap[size];
   ASSERT_EQ(pread(input_fd.get(), block_bitmap, size,
                   blobfs::kBlobfsBlockSize * blobfs::BlockMapStartBlock(info)),
@@ -226,7 +226,7 @@ TEST_P(BlobfsExtractionTest, TestJournal) {
 
   VerifyOutputSuperblock(&info, output_fd);
 
-  ssize_t size = blobfs::JournalBlocks(info) * blobfs::kBlobfsBlockSize;
+  auto size = static_cast<ssize_t>(blobfs::JournalBlocks(info) * blobfs::kBlobfsBlockSize);
   std::unique_ptr<char[]> journal(new char[size]);
   ASSERT_EQ(pread(input_fd.get(), journal.get(), size,
                   blobfs::kBlobfsBlockSize * blobfs::JournalStartBlock(info)),
@@ -250,7 +250,7 @@ TEST_P(BlobfsExtractionTest, TestCorruptBlob) {
   std::unique_ptr<blobfs::Inode[]> inode_table;
   inode_table =
       std::make_unique<blobfs::Inode[]>(NodeMapBlocks(info) * blobfs::kBlobfsInodesPerBlock);
-  ssize_t nodemap_size = blobfs::NodeMapBlocks(info) * blobfs::kBlobfsBlockSize;
+  auto nodemap_size = static_cast<ssize_t>(blobfs::NodeMapBlocks(info) * blobfs::kBlobfsBlockSize);
   ASSERT_EQ(nodemap_size, pread(input_fd.get(), inode_table.get(), nodemap_size,
                                 blobfs::kBlobfsBlockSize * blobfs::NodeMapStartBlock(info)));
   uint64_t input_datablock_offset = 0;
@@ -270,9 +270,9 @@ TEST_P(BlobfsExtractionTest, TestCorruptBlob) {
   ASSERT_EQ(found_allocated_inode, true);
   char corrupt_block[blobfs::kBlobfsBlockSize] = {'C'};
   // Assuming here that merkle tree is at the beginning and only takes up one block woo
-  ssize_t r = pwrite(
-      input_fd.get(), corrupt_block, sizeof(corrupt_block),
-      (blobfs::DataStartBlock(info) + input_datablock_offset + 1) * blobfs::kBlobfsBlockSize);
+  auto offset = static_cast<off_t>((blobfs::DataStartBlock(info) + input_datablock_offset + 1)) *
+                static_cast<off_t>(blobfs::kBlobfsBlockSize);
+  ssize_t r = pwrite(input_fd.get(), corrupt_block, sizeof(corrupt_block), offset);
   ASSERT_EQ(r, (ssize_t)sizeof(corrupt_block));
 
   Extract(input_fd, output_fd, false);
@@ -294,9 +294,9 @@ TEST_P(BlobfsExtractionTest, TestCorruptBlob) {
                    size_of_data - (2 * blobfs::kBlobfsBlockSize)),
             0);
 
-  ssize_t r1 = pwrite(
-      input_fd.get(), blob_info->data.get(), sizeof(corrupt_block),
-      (blobfs::DataStartBlock(info) + input_datablock_offset + 1) * blobfs::kBlobfsBlockSize);
+  offset = static_cast<off_t>((blobfs::DataStartBlock(info) + input_datablock_offset + 1)) *
+           static_cast<off_t>(blobfs::kBlobfsBlockSize);
+  ssize_t r1 = pwrite(input_fd.get(), blob_info->data.get(), sizeof(corrupt_block), offset);
 
   ASSERT_GE(r1, 0) << "errno: " << strerror(errno) << std::endl;
 }

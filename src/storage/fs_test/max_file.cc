@@ -70,8 +70,8 @@ TEST_P(MaxFileTest, ReadAfterWriteMaxFileSucceeds) {
       break;
     }
 
-    const int offset = sz % sizeof(data_a);
-    const int len = sizeof(data_a) - offset;
+    const auto offset = static_cast<ptrdiff_t>(sz % sizeof(data_a));
+    const auto len = static_cast<ptrdiff_t>(sizeof(data_a)) - offset;
     if ((r = write(fd.get(), data + offset, len)) < 0) {
       std::cout << "bigfile received error: " << strerror(errno) << std::endl;
       if ((errno == EFBIG) || (errno == ENOSPC)) {
@@ -195,8 +195,8 @@ TEST_P(MaxFileTest, ReadAfterNonContiguousWritesSuceeds) {
       break;
     }
 
-    const int offset = *sz % sizeof(data_a);
-    const int len = sizeof(data_a) - offset;
+    const auto offset = static_cast<ptrdiff_t>(*sz % sizeof(data_a));
+    const auto len = static_cast<ptrdiff_t>(sizeof(data_a)) - offset;
     if ((r = write(fd, data + offset, len)) <= 0) {
       std::cout << "bigfile received error: " << strerror(errno);
       // Either the file should be too big (EFBIG) or the file should

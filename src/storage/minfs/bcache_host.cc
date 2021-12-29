@@ -35,10 +35,10 @@ zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& o
     ssize_t result;
     if (operation.op.type == storage::OperationType::kRead) {
       result = pread(fd_.get(), data, operation.op.length * kMinfsBlockSize,
-                     operation.op.dev_offset * kMinfsBlockSize);
+                     static_cast<off_t>(operation.op.dev_offset * kMinfsBlockSize));
     } else {
       result = pwrite(fd_.get(), data, operation.op.length * kMinfsBlockSize,
-                      operation.op.dev_offset * kMinfsBlockSize);
+                      static_cast<off_t>(operation.op.dev_offset * kMinfsBlockSize));
     }
 
     if (result != static_cast<ssize_t>(operation.op.length * kMinfsBlockSize)) {

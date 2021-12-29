@@ -138,8 +138,8 @@ TEST_P(RwFullDiskTest, PartialWriteSucceedsForFullDisk) {
   std::generate(data.begin(), data.end(), [&]() { return distribution(random); });
   off_t done = 0;
   for (;;) {
-    const int offset = done % kBufSize;
-    int len = kBufSize - offset;
+    const off_t offset = done % kBufSize;
+    ssize_t len = kBufSize - offset;
     // We should always hit ENOSPC on a power of 2; make sure that we'll always have a short write
     // at the end.
     if (done + len % 2 == 0) {
@@ -160,8 +160,8 @@ TEST_P(RwFullDiskTest, PartialWriteSucceedsForFullDisk) {
   std::vector<uint8_t> read_buf(kBufSize);
   off_t verified = 0;
   for (;;) {
-    const int offset = verified % kBufSize;
-    int len = kBufSize - offset;
+    const off_t offset = verified % kBufSize;
+    ssize_t len = kBufSize - offset;
     ssize_t r = read(fd.get(), read_buf.data(), len);
     ASSERT_GE(r, 0) << errno;
     if (r == 0) {
@@ -178,7 +178,7 @@ using RwSparseTest = FilesystemTest;
 
 TEST_P(RwSparseTest, MaxFileSize) {
   constexpr std::string_view kTestData = "hello";
-  off_t offset = fs().GetTraits().max_file_size - kTestData.size();
+  auto offset = static_cast<off_t>(fs().GetTraits().max_file_size - kTestData.size());
   const std::string foo = GetPath("foo");
   {
     fbl::unique_fd fd(open(foo.c_str(), O_RDWR | O_CREAT, 0644));

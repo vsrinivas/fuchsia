@@ -50,17 +50,18 @@ TEST_P(AttrTest, SetModificationTime) {
 
   std::timespec ts[2];
   ts[0].tv_nsec = UTIME_OMIT;
-  ts[1].tv_sec = (long)(now / ZX_SEC(1));
-  ts[1].tv_nsec = (long)(now % ZX_SEC(1));
+  ts[1].tv_sec = static_cast<time_t>(now / ZX_SEC(1));
+  ts[1].tv_nsec = static_cast<time_t>(now % ZX_SEC(1));
 
   // make sure we get back "now" from stat()
   ASSERT_EQ(futimens(fd1, ts), 0);
   struct stat statb1;
   ASSERT_EQ(fstat(fd1, &statb1), 0);
-  now = fbl::round_down(static_cast<uint64_t>(now),
-                        static_cast<uint64_t>(fs().GetTraits().timestamp_granularity.to_nsecs()));
-  ASSERT_EQ(statb1.st_mtim.tv_sec, (long)(now / ZX_SEC(1)));
-  ASSERT_EQ(statb1.st_mtim.tv_nsec, (long)(now % ZX_SEC(1)));
+  now = static_cast<zx_time_t>(
+      fbl::round_down(static_cast<uint64_t>(now),
+                      static_cast<uint64_t>(fs().GetTraits().timestamp_granularity.to_nsecs())));
+  ASSERT_EQ(statb1.st_mtim.tv_sec, static_cast<time_t>(now / ZX_SEC(1)));
+  ASSERT_EQ(statb1.st_mtim.tv_nsec, static_cast<time_t>(now % ZX_SEC(1)));
   ASSERT_EQ(close(fd1), 0);
 
   ASSERT_EQ(unlink(file.c_str()), 0);

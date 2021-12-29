@@ -50,6 +50,7 @@ source_set("paver-core") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",

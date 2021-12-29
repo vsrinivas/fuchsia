@@ -45,7 +45,7 @@ void SimpleReadTest(int fd, size_t data_index) {
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
   char buf[1024];
   memset(buf, 0, sizeof(buf));
-  ssize_t len = kStringData[data_index].size();
+  auto len = static_cast<ssize_t>(kStringData[data_index].size());
   ASSERT_EQ(read(fd, buf, len), static_cast<ssize_t>(len));
   ASSERT_EQ(memcmp(kStringData[data_index].data(), buf, len), 0);
 }
@@ -53,7 +53,7 @@ void SimpleReadTest(int fd, size_t data_index) {
 void SimpleWriteTest(int fd, size_t data_index) {
   ASSERT_EQ(ftruncate(fd, 0), 0);
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-  ssize_t len = kStringData[data_index].size();
+  auto len = static_cast<ssize_t>(kStringData[data_index].size());
   ASSERT_EQ(write(fd, kStringData[data_index].data(), len), static_cast<ssize_t>(len));
   SimpleReadTest(fd, data_index);
 }

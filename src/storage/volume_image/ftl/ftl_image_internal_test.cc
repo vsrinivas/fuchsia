@@ -109,7 +109,8 @@ class PageWriter final : public Writer {
       return fpromise::error("PageWriter write failed: Bad offset.");
     }
 
-    ssize_t delta = static_cast<ssize_t>(offset) - block_start_ - pages_.size();
+    auto delta = static_cast<ssize_t>(offset) - static_cast<ssize_t>(block_start_) -
+                 static_cast<ssize_t>(pages_.size());
     if (delta > 0) {
       std::fill_n(std::back_inserter(pages_), delta, 0xFF);
     }

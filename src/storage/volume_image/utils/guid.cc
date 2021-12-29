@@ -24,13 +24,19 @@ namespace {
 // Offsets and lengths are defined with respect to the byte sequence.
 struct GuidSection {
   // Returns the offset of the first element in the section.
-  constexpr int8_t begin() const { return multiplier * (reversed ? start + length - 1 : start); }
+  constexpr ptrdiff_t begin() const {
+    return static_cast<ptrdiff_t>(multiplier) * (reversed ? start + length - 1 : start);
+  }
 
   // Returns the offset of the last element in the section.
-  constexpr int8_t end() const { return multiplier * (reversed ? start - 1 : start + length); }
+  constexpr ptrdiff_t end() const {
+    return static_cast<ptrdiff_t>(multiplier) * (reversed ? start - 1 : start + length);
+  }
 
   // Returns the distance between two consecutive elements in the section, measured in bytes.
-  constexpr int8_t next() const { return static_cast<int8_t>(multiplier * (reversed ? -1 : +1)); }
+  constexpr ptrdiff_t next() const {
+    return static_cast<ptrdiff_t>(multiplier) * (reversed ? -1 : +1);
+  }
 
   // Start of the section.
   uint8_t start;

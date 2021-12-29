@@ -38,7 +38,7 @@ zx::status<> BindFvm(int fd) {
   return zx::ok();
 }
 
-zx::status<std::string> CreateFvmInstance(const std::string& device_path, int slice_size) {
+zx::status<std::string> CreateFvmInstance(const std::string& device_path, size_t slice_size) {
   fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not open test disk";
@@ -62,7 +62,7 @@ zx::status<std::string> CreateFvmInstance(const std::string& device_path, int sl
   return zx::ok(fvm_disk_path);
 }
 
-zx::status<std::string> CreateFvmPartition(const std::string& device_path, int slice_size,
+zx::status<std::string> CreateFvmPartition(const std::string& device_path, size_t slice_size,
                                            const FvmOptions& options) {
   if (options.name.size() >= BLOCK_NAME_LEN)
     return zx::error(ZX_ERR_INVALID_ARGS);

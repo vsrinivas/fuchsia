@@ -274,7 +274,14 @@ zx::status<> FsWalker::WalkSegments() const {
 }
 
 zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
-  if (pread(input_fd_.get(), &info_, sizeof(info_), start_offset) != sizeof(info_)) {
+  off_t pread_offset;
+  if (!safemath::MakeCheckedNum<uint64_t>(start_offset)
+           .Cast<off_t>()
+           .AssignIfValid(&pread_offset)) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  if (pread(input_fd_.get(), &info_, sizeof(info_), pread_offset) != sizeof(info_)) {
     return zx::error(ZX_ERR_IO);
   }
 

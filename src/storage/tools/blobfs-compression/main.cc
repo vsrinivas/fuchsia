@@ -11,6 +11,7 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
+#include <safemath/safe_math.h>
 #include <src/lib/digest/merkle-tree.h>
 
 #include "src/lib/chunked-compression/chunked-compressor.h"
@@ -34,7 +35,8 @@ const auto kCliOptions = std::set<std::string>({
 
 void usage(const char* fname) {
   fprintf(stderr, "Usage: %s [--option1=value --option2 ...]\n\n", fname);
-  fprintf(stderr,
+  fprintf(
+      stderr,
       "The tool will output the maximum possible compressed file size using the exact same \n"
       "compression implementation in blobfs. The merkle tree used here is a non-compact merkle \n"
       "tree as it contributes to a bigger size than a compact merkle tree.\n\n");
@@ -56,7 +58,12 @@ void usage(const char* fname) {
 // This method can fail only with user-input-irrelevant errors.
 zx_status_t MapFileForWriting(const fbl::unique_fd& fd, const char* file, size_t write_size,
                               uint8_t** out_write_buf) {
-  if (ftruncate(fd.get(), write_size)) {
+  off_t trunc_size;
+  if (!safemath::MakeCheckedNum<size_t>(write_size).Cast<off_t>().AssignIfValid(&trunc_size)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (ftruncate(fd.get(), trunc_size)) {
     fprintf(stderr, "Failed to truncate '%s': %s\n", file, strerror(errno));
     return ZX_ERR_NO_SPACE;
   }
@@ -168,7 +175,14 @@ int main(int argc, char** argv) {
   }
 
   if (!options.compressed_file.empty()) {
-    ftruncate(options.compressed_file_fd.get(), compressed_size);
+    off_t trunc_size;
+    if (!safemath::MakeCheckedNum<size_t>(compressed_size)
+             .Cast<off_t>()
+             .AssignIfValid(&trunc_size)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    ftruncate(options.compressed_file_fd.get(), trunc_size);
   }
   return ZX_OK;
 }

@@ -24,7 +24,7 @@ void DiskStruct::AddField(std::string key, FieldType type, uint64_t field_offset
                           std::unique_ptr<DiskStruct> disk_struct) {
   ZX_DEBUG_ASSERT(fields_.find(key) == fields_.end());
   FieldInfo info;
-  info.count = count;
+  info.count = static_cast<int64_t>(count);
   info.offset = field_offset;
   switch (type) {
     case FieldType::kUint8: {
@@ -76,7 +76,7 @@ zx_status_t DiskStruct::WriteField(void* position, std::vector<std::string> keys
   ZX_DEBUG_ASSERT(!indices.empty());
   std::string key = keys[0];
   keys.erase(keys.begin());
-  int64_t index = indices[0];
+  uint64_t index = indices[0];
   indices.erase(indices.begin());
   auto field = fields_.find(key);
   if (field == fields_.end()) {
@@ -92,7 +92,7 @@ zx_status_t DiskStruct::WriteField(void* position, std::vector<std::string> keys
     FX_LOGS(ERROR) << "Index (" << index << ") for field " << key << " should be 0.";
     return ZX_ERR_INVALID_ARGS;
   }
-  if (info.count > 0 && index >= info.count) {
+  if (info.count > 0 && index >= static_cast<uint64_t>(info.count)) {
     FX_LOGS(ERROR) << "Field " << key << " index " << index << " greater than number of elements "
                    << info.count;
     return ZX_ERR_INVALID_ARGS;

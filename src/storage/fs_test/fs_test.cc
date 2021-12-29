@@ -410,14 +410,14 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
                                                .device_block_count = 196'608,
                                                .filesystem = filesystem.get()});
     } else {
-      for (size_t i = 0; i < iter->value.Size(); ++i) {
-        const auto& opt = iter->value[static_cast<rapidjson::SizeType>(i)];
+      for (rapidjson::SizeType i = 0; i < iter->value.Size(); ++i) {
+        const auto& opt = iter->value[i];
         options->push_back(TestFilesystemOptions{
             .description = opt["description"].GetString(),
             .use_fvm = opt["use_fvm"].GetBool(),
             .has_min_volume_size = ConfigGetOrDefault<bool>(opt, "has_min_volume_size", false),
-            .device_block_size = ConfigGetOrDefault<int64_t>(opt, "device_block_size", 512),
-            .device_block_count = ConfigGetOrDefault<int64_t>(opt, "device_block_count", 196'608),
+            .device_block_size = ConfigGetOrDefault<uint64_t>(opt, "device_block_size", 512),
+            .device_block_count = ConfigGetOrDefault<uint64_t>(opt, "device_block_count", 196'608),
             .fvm_slice_size = 32'768,
             .filesystem = filesystem.get()});
       }

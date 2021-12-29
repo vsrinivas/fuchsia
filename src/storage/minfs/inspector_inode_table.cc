@@ -5,6 +5,7 @@
 #include "src/storage/minfs/inspector_inode_table.h"
 
 #include <disk_inspector/common_types.h>
+#include <safemath/safe_math.h>
 
 #include "src/storage/minfs/inspector_inode.h"
 #include "src/storage/minfs/inspector_private.h"
@@ -25,7 +26,7 @@ std::unique_ptr<disk_inspector::DiskObject> InodeTableObject::GetElementAt(uint3
 std::unique_ptr<disk_inspector::DiskObject> InodeTableObject::GetInode(
     uint32_t element_index) const {
   Inode inode_obj;
-  int32_t inode_index = allocated_inode_indices[element_index];
+  auto inode_index = safemath::strict_cast<ino_t>(allocated_inode_indices[element_index]);
   inode_table_->Load(inode_index, &inode_obj);
   return std::make_unique<InodeObject>(element_index, inode_index, inode_obj);
 }

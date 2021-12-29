@@ -109,7 +109,7 @@ zx::status<> VbootClient::ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* on
 zx::status<> VbootClient::WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
                                       uint8_t one_shot_recovery) {
   gpt::GptDevice* gpt = gpt_->GetGpt();
-  int max_prio = std::max(a->priority, b->priority);
+  uint8_t max_prio = std::max(a->priority, b->priority);
   bool seen_a = false;
   bool seen_b = false;
   for (uint64_t i = 0; i < gpt->EntryCount(); i++) {

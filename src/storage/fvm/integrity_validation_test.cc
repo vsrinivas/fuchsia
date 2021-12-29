@@ -137,7 +137,8 @@ TEST(IntegrityValidationTest, ValidatesMetadataSizeNotCapacity) {
 
   // Set the unused portions of the primary partition to 1. This is not taken into account when
   // validating the metadata header, we only check the data we are actually using.
-  std::fill(metadata.primary_buffer.begin() + metadata.primary->GetMetadataUsedBytes(),
+  std::fill(metadata.primary_buffer.begin() +
+                static_cast<ptrdiff_t>(metadata.primary->GetMetadataUsedBytes()),
             metadata.primary_buffer.end(), 1);
 
   auto result = metadata.ValidateHeader();

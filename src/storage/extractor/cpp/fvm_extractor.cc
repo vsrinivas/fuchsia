@@ -19,7 +19,7 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <safemath/checked_math.h>
+#include <safemath/safe_math.h>
 
 #include "src/storage/extractor/c/extractor.h"
 #include "src/storage/extractor/cpp/extractor.h"
@@ -156,8 +156,13 @@ zx::status<> FvmWalker::WalkSegments() const {
 }
 
 zx::status<> FvmWalker::TryLoadSuperblock(uint64_t start_offset) {
+  off_t pread_offset;
+  if (!safemath::MakeCheckedNum(start_offset).Cast<off_t>().AssignIfValid(&pread_offset)) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
   char buffer[fvm::kBlockSize];
-  pread(input_fd_.get(), buffer, fvm::kBlockSize, start_offset);
+  pread(input_fd_.get(), buffer, fvm::kBlockSize, pread_offset);
   memcpy(&info_, buffer, sizeof(info_));
   if (info_.magic == fvm::kMagic) {
     return zx::ok();

@@ -33,7 +33,7 @@ struct GrowParams {
   unsigned int seed;
 
   // Target size of the ramdisk.
-  int64_t target_size;
+  uint64_t target_size;
 
   // The expected format info at each step.
   Header format;

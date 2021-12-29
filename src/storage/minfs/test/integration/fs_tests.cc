@@ -525,8 +525,8 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FullOperations) {
   //       copy-on-write truncation.
   struct stat s;
   ASSERT_EQ(fstat(big_fd.get(), &s), 0);
-  ssize_t truncate_size =
-      fbl::round_up(static_cast<uint64_t>(s.st_size / 2), minfs::kMinfsBlockSize);
+  auto truncate_size = static_cast<ssize_t>(
+      fbl::round_up(static_cast<uint64_t>(s.st_size / 2), minfs::kMinfsBlockSize));
   ASSERT_EQ(ftruncate(big_fd.get(), truncate_size), 0);
 
   // Attempt to remount. Without block reservation, an additional block from the previously

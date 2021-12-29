@@ -70,7 +70,7 @@ fpromise::result<TempFile, std::string> CreateFvmBlockImage(
 
   if (length.has_value()) {
     if (truncate(block_image_or.value().path().data(),
-                 fvm_descriptor.options().target_volume_size.value()) != 0) {
+                 static_cast<off_t>(fvm_descriptor.options().target_volume_size.value())) != 0) {
       return fpromise::error("Failed to truncate image to final size.");
     }
   }

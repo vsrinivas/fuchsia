@@ -147,8 +147,8 @@ TEST(FvmExtractorTest, TestMetadata) {
   fvm::Header info;
   VerifyInputSuperblock(input_fd, &info);
   VerifyOutputSuperblock(info, output_fd);
-  ssize_t used_size = 2 * info.GetMetadataUsedBytes();
-  ssize_t allocated_size = 2 * info.GetMetadataAllocatedBytes();
+  ssize_t used_size = static_cast<ssize_t>(2 * info.GetMetadataUsedBytes());
+  ssize_t allocated_size = static_cast<ssize_t>(2 * info.GetMetadataAllocatedBytes());
   std::unique_ptr<char[]> metadata(new char[allocated_size]);
   ASSERT_EQ(pread(input_fd.get(), metadata.get(), allocated_size, 0), allocated_size);
   std::unique_ptr<char[]> read_buffer_nodemap(new char[used_size]);

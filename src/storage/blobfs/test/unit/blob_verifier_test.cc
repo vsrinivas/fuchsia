@@ -19,7 +19,8 @@ namespace {
 
 struct BlockMerkleTreeInfo {
   fzl::OwnedVmoMapper blocks;
-  char* merkle_data = nullptr;  // Points into |blocks|, will be offset according to blob format.
+  // Points into |blocks|, will be offset according to blob format.
+  uint8_t* merkle_data = nullptr;
   uint64_t merkle_tree_size = 0;
   Digest root;
 };
@@ -65,7 +66,7 @@ class BlobVerifierTest : public testing::TestWithParam<BlobLayoutFormat> {
     auto start_offset = layout.MerkleTreeOffsetWithinBlockOffset();
     EXPECT_LE(normal_info->merkle_tree_size + start_offset, block_info.blocks.size());
 
-    block_info.merkle_data = &static_cast<char*>(block_info.blocks.start())[start_offset];
+    block_info.merkle_data = &static_cast<uint8_t*>(block_info.blocks.start())[start_offset];
     block_info.merkle_tree_size = normal_info->merkle_tree_size;
     memcpy(block_info.merkle_data, normal_info->merkle_tree.get(), block_info.merkle_tree_size);
 

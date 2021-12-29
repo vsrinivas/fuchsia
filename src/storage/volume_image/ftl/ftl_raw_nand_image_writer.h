@@ -48,10 +48,10 @@ class FtlRawNandImageWriter final : public Writer {
   fpromise::result<void, std::string> Write(uint64_t offset, cpp20::span<const uint8_t> data) final;
 
   // Returns a scalar describing how pages are coalesced to meet the upper layer requirements.
-  constexpr int scale_factor() const { return scale_factor_; }
+  constexpr uint32_t scale_factor() const { return scale_factor_; }
 
  private:
-  explicit FtlRawNandImageWriter(const RawNandOptions& device_options, int scale_factor,
+  explicit FtlRawNandImageWriter(const RawNandOptions& device_options, uint32_t scale_factor,
                                  Writer* writer)
       : options_(device_options), scale_factor_(scale_factor), writer_(writer) {}
 
@@ -60,7 +60,7 @@ class FtlRawNandImageWriter final : public Writer {
 
   // Represents how pages are merged together to meet the minimum number of OOB Bytes required for
   // the FTL.
-  int scale_factor_ = 1;
+  uint32_t scale_factor_ = 1;
 
   // Wrapped writer.
   Writer* writer_ = nullptr;

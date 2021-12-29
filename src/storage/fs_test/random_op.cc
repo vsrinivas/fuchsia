@@ -424,7 +424,7 @@ class RandomOpTest : public FilesystemTest {
     // for some big number of operations
     // do an operation and yield, repeat
     for (int i = 0; i < kMaxOperations; i++) {
-      int idx = rand_r(&w->seed) % env.operations().size();
+      int idx = rand_r(&w->seed) % static_cast<int>(env.operations().size());
       const RandomOp& op = env.operations()[idx];
 
       if (op.fn(w) != kDone) {

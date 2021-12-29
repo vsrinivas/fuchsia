@@ -66,7 +66,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         return 0;
       }
       case Operation::kCreate: {
-        int index = fuzzed_data.ConsumeIntegralInRange<int>(0, files.size() - 1);
+        int index = static_cast<int>(fuzzed_data.ConsumeIntegralInRange<int>(0, files.size() - 1));
         std::string name = fuzzed_data.ConsumeRandomLengthString(NAME_MAX + 2);
         uint32_t mode = fuzzed_data.ConsumeIntegral<uint32_t>();
         if (files[index])

@@ -18,7 +18,7 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <safemath/checked_math.h>
+#include <safemath/safe_math.h>
 
 #include "src/storage/extractor/c/extractor.h"
 #include "src/storage/extractor/cpp/extractor.h"
@@ -42,8 +42,12 @@ class FsWalker {
 
  private:
   zx::status<> ReadBlock(uint64_t block_number, uint8_t* buf) const {
-    if (pread(input_fd_.get(), buf, Info().block_size, block_number * Info().block_size) !=
-        Info().block_size) {
+    off_t offset;
+    if (!safemath::CheckMul(block_number, Info().block_size).AssignIfValid(&offset)) {
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
+
+    if (pread(input_fd_.get(), buf, Info().block_size, offset) != Info().block_size) {
       return zx::error(ZX_ERR_IO);
     }
     return zx::ok();
@@ -365,7 +369,14 @@ zx::status<> FsWalker::WalkSegments() const {
 }
 
 zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
-  if (pread(input_fd_.get(), &info_, sizeof(info_), start_offset) != sizeof(info_)) {
+  off_t pread_offset;
+  if (!safemath::MakeCheckedNum<uint64_t>(start_offset)
+           .Cast<off_t>()
+           .AssignIfValid(&pread_offset)) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  if (pread(input_fd_.get(), &info_, sizeof(info_), pread_offset) != sizeof(info_)) {
     return zx::error(ZX_ERR_IO);
   }
 
@@ -397,9 +408,10 @@ zx::status<> FsWalker::LoadSuperblock() {
 zx::status<> FsWalker::LoadInodeTable() {
   inode_table_ =
       std::make_unique<minfs::Inode[]>(InodeBlocks(Info()) * minfs::kMinfsInodesPerBlock);
-  ssize_t size = InodeBlocks(Info()) * Info().BlockSize();
+  auto size = safemath::checked_cast<ssize_t>(InodeBlocks(Info()) * Info().BlockSize());
   if (pread(input_fd_.get(), inode_table_.get(), size,
-            info_.InodeTableStartBlock() * Info().BlockSize()) != size) {
+            safemath::checked_cast<off_t>(info_.InodeTableStartBlock() * Info().BlockSize())) !=
+      size) {
     return zx::error(ZX_ERR_IO);
   }
   return zx::ok();

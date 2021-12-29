@@ -12,6 +12,7 @@
 #include <cstdlib>
 
 #include <fbl/unique_fd.h>
+#include <safemath/safe_math.h>
 
 namespace storage::volume_image {
 
@@ -35,7 +36,7 @@ fpromise::result<void, std::string> FdWriter::Write(uint64_t offset,
   while (bytes_written < buffer.size()) {
     const uint8_t* source = buffer.data() + bytes_written;
     size_t remaining_bytes = buffer.size() - bytes_written;
-    off_t target_offset = offset + bytes_written;
+    off_t target_offset = safemath::CheckAdd(offset, bytes_written).Cast<off_t>().ValueOrDie();
     ssize_t result = pwrite(fd_.get(), source, remaining_bytes, target_offset);
 
     if (result < 0) {

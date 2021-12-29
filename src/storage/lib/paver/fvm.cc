@@ -31,6 +31,7 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
+#include <safemath/safe_math.h>
 
 #include "pave-logging.h"
 #include "src/lib/storage/block_client/cpp/client.h"
@@ -106,7 +107,8 @@ struct PartitionInfo {
 };
 
 ptrdiff_t GetExtentOffset(size_t extent) {
-  return sizeof(fvm::PartitionDescriptor) + extent * sizeof(fvm::ExtentDescriptor);
+  return safemath::checked_cast<ptrdiff_t>(sizeof(fvm::PartitionDescriptor) +
+                                           extent * sizeof(fvm::ExtentDescriptor));
 }
 
 fvm::ExtentDescriptor GetExtent(fvm::PartitionDescriptor* pd, size_t extent) {

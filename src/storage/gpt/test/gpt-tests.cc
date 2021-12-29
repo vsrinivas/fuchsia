@@ -1806,14 +1806,14 @@ TEST(GetPartitionNameTest, LongName) {
   // of 0xEF, 0xBF, 0xBF repeated.
   std::array<char, kMaxUtf8NameLen> expected_result{};
   for (size_t i = 0; i < expected_result.size() - 1; ++i)
-    expected_result[i] = (i % 3) ? 0xBF : 0xEF;
+    expected_result[i] = static_cast<char>((i % 3) ? 0xBF : 0xEF);
 
   std::array<char, kMaxUtf8NameLen> partition_name{};
   gpt_entry_t partition_entry = {};
   std::fill(std::begin(partition_entry.name), std::end(partition_entry.name), 0xFF);
   ASSERT_OK(gpt::GetPartitionName(partition_entry, partition_name.data(), partition_name.size())
                 .status_value());
-  ASSERT_EQ(partition_name, expected_result);
+  ASSERT_EQ(expected_result, partition_name);
 }
 
 }  // namespace gpt

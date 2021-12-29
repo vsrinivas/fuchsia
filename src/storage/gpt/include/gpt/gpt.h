@@ -207,7 +207,7 @@ class GptDevice {
   // Return device's block size
   uint64_t BlockSize() const { return blocksize_; }
 
-  uint64_t EntryCount() const {
+  uint32_t EntryCount() const {
     if (!valid_) {
       return kPartitionCount;
     }

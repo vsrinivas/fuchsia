@@ -237,7 +237,8 @@ fpromise::result<void, std::string> Create(const CreateParams& params) {
 
   // If is not embedded then truncate the file.
   if (!params.is_output_embedded && params.fvm_options.target_volume_size.has_value()) {
-    if (ftruncate(output_fd.get(), params.fvm_options.target_volume_size.value()) == -1) {
+    if (ftruncate(output_fd.get(),
+                  static_cast<off_t>(params.fvm_options.target_volume_size.value())) == -1) {
       return fpromise::error("Failed to truncate " + params.output_path + " to length " +
                              std::to_string(params.fvm_options.target_volume_size.value()) +
                              ". More specifically: " + Errno() + ".");

@@ -279,7 +279,7 @@ int main(int argc, const char** argv) {
 
   if (options.input_skip != 0 && !in_is_skip_block) {
     // Try seeking first; if that doesn't work, try reading to an input buffer.
-    if (lseek(in, options.input_skip, SEEK_SET) != (off_t)options.input_skip) {
+    if (lseek(in, (off_t)options.input_skip, SEEK_SET) != (off_t)options.input_skip) {
       while (options.input_skip) {
         if (read(in, buf, options.input_bs) != (ssize_t)options.input_bs) {
           fprintf(stderr, "Couldn't read from input\n");
@@ -291,7 +291,7 @@ int main(int argc, const char** argv) {
   }
 
   if (options.output_seek != 0 && !out_is_skip_block) {
-    if (lseek(out, options.output_seek, SEEK_SET) != (off_t)options.output_seek) {
+    if (lseek(out, (off_t)options.output_seek, SEEK_SET) != (off_t)options.output_seek) {
       fprintf(stderr, "Failed to seek on output\n");
       goto done;
     }
@@ -348,7 +348,7 @@ int main(int argc, const char** argv) {
         if (options.pad) {
           memset(buf + rout, 0, options.input_bs - rout);
           records_in++;
-          rout = options.input_bs;
+          rout = (ssize_t)options.input_bs;
         } else {
           record_in_partial = rout;
         }

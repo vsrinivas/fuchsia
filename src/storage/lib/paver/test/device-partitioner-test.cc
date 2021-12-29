@@ -237,7 +237,7 @@ uint8_t* GetRandomGuid() {
 
 void utf16_to_cstring(char* dst, const uint8_t* src, size_t charcount) {
   while (charcount > 0) {
-    *dst++ = *src;
+    *dst++ = static_cast<char>(*src);
     src += 2;
     charcount -= 2;
   }

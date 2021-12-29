@@ -145,7 +145,7 @@ TEST(FtlRawNandImageWriterTest, CreateWithValidOptionsAndWriterIsOkAndProducesCo
 
   auto [raw_image_writer, ftl_options] = writer_or.take_value();
 
-  ASSERT_EQ(raw_image_writer.scale_factor(), 2);
+  ASSERT_EQ(raw_image_writer.scale_factor(), 2u);
 
   EXPECT_EQ(ftl_options.oob_bytes_size,
             device_options.oob_bytes_size * raw_image_writer.scale_factor());

@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/param.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>  // for zx_cprng_draw
 
 #include <algorithm>
@@ -63,7 +64,7 @@ void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c
 
 // Write a block to device "fd", writing "size" bytes followed by zero-byte padding to the next
 // block size.
-zx_status_t write_partial_block(int fd, void* data, size_t size, size_t offset, size_t blocksize) {
+zx_status_t write_partial_block(int fd, void* data, size_t size, off_t offset, size_t blocksize) {
   // If input block is already rounded to blocksize, just directly write from our buffer.
   if (size % blocksize == 0) {
     ssize_t ret = pwrite(fd, data, size, offset);
@@ -99,17 +100,30 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
 
 zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
                              gpt_partition_t* ptable) {
-  // write partition table first
-  off_t offset = header->entries * blocksize;
-  size_t ptable_size = header->entries_count * header->entries_size;
-  zx_status_t status = write_partial_block(fd, ptable, ptable_size, offset, blocksize);
+  // Check all offset calculations are valid
+  off_t table_offset;
+  if (!safemath::CheckMul(header->entries, blocksize).Cast<off_t>().AssignIfValid(&table_offset)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  size_t ptable_size;
+  if (!safemath::CheckMul(header->entries_count, header->entries_size)
+           .Cast<size_t>()
+           .AssignIfValid(&ptable_size)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+  off_t header_offset;
+  if (!safemath::CheckMul(header->current, blocksize).Cast<off_t>().AssignIfValid(&header_offset)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // Write partition table first
+  zx_status_t status = write_partial_block(fd, ptable, ptable_size, table_offset, blocksize);
   if (status != ZX_OK) {
     return status;
   }
 
-  // then write the header
-  offset = header->current * blocksize;
-  return write_partial_block(fd, header, sizeof(*header), offset, blocksize);
+  // Then write the header
+  return write_partial_block(fd, header, sizeof(*header), header_offset, blocksize);
 }
 
 int compare(const void* ls, const void* rs) {
@@ -195,7 +209,7 @@ char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
   size_t i = 0;
   char* ptr = dst;
   while (i < len) {
-    char c = src[i++] & 0x7f;
+    char c = static_cast<char>(src[i++] & 0x7f);
     *ptr++ = c;
     if (!c) {
       break;
@@ -783,7 +797,7 @@ zx_status_t GptDevice::AddPartition(const char* name, const uint8_t* type, const
 
   // check for overlap
   uint32_t i;
-  int tail = -1;
+  std::optional<uint32_t> tail;
   for (i = 0; i < kPartitionCount; i++) {
     if (!partitions_[i]) {
       tail = i;
@@ -794,7 +808,7 @@ zx_status_t GptDevice::AddPartition(const char* name, const uint8_t* type, const
       return ZX_ERR_OUT_OF_RANGE;
     }
   }
-  if (tail == -1) {
+  if (!tail) {
     G_PRINTF("too many partitions\n");
     return ZX_ERR_OUT_OF_RANGE;
   }
@@ -811,7 +825,7 @@ zx_status_t GptDevice::AddPartition(const char* name, const uint8_t* type, const
 
   // insert the new element into the list
   partition_init(part, name, type, guid, first, last, flags);
-  partitions_[tail] = part;
+  partitions_[tail.value()] = part;
   return ZX_OK;
 }
 
@@ -838,8 +852,12 @@ zx_status_t GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
   memset(zero, 0, sizeof(zero));
 
   for (size_t i = first; i <= last; i++) {
-    if (pwrite(fd_.get(), zero, sizeof(zero), blocksize_ * i) !=
-        static_cast<ssize_t>(sizeof(zero))) {
+    off_t offset;
+    if (!safemath::CheckMul(blocksize_, i).Cast<off_t>().AssignIfValid(&offset)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    if (pwrite(fd_.get(), zero, sizeof(zero), offset) != static_cast<ssize_t>(sizeof(zero))) {
       G_PRINTF("Failed to write to block %zu; errno: %d\n", i, errno);
       return ZX_ERR_IO;
     }

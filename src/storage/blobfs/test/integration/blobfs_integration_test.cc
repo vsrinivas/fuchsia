@@ -580,7 +580,7 @@ TEST_P(BlobfsIntegrationTest, WriteAfterRead) {
     ASSERT_LT(write(fd.get(), info->data.get(), 1), 0)
         << "After being written, the blob should refuse writes";
 
-    off_t seek_pos = (rand() % info->size_data);
+    off_t seek_pos = static_cast<off_t>(rand() % info->size_data);
     ASSERT_EQ(seek_pos, lseek(fd.get(), seek_pos, SEEK_SET));
     ASSERT_LT(write(fd.get(), info->data.get(), 1), 0)
         << "After being written, the blob should refuse writes";
@@ -617,13 +617,13 @@ TEST_P(BlobfsIntegrationTest, ReadTooLarge) {
     std::unique_ptr<char[]> buffer(new char[info->size_data]);
 
     // Try read beyond end of blob.
-    off_t end_off = info->size_data;
+    off_t end_off = static_cast<off_t>(info->size_data);
     ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
     ASSERT_EQ(0, read(fd.get(), buffer.get(), 1)) << "Expected empty read beyond end of file";
 
     // Try some reads which straddle the end of the blob.
     for (ssize_t j = 1; j < static_cast<ssize_t>(info->size_data); j *= 2) {
-      end_off = info->size_data - j;
+      end_off = static_cast<off_t>(info->size_data - j);
       ASSERT_EQ(end_off, lseek(fd.get(), end_off, SEEK_SET));
       ASSERT_EQ(j, read(fd.get(), buffer.get(), j * 2))
           << "Expected to only read one byte at end of file";
@@ -1308,7 +1308,7 @@ TEST_P(BlobfsIntegrationTest, FailedWrite) {
 
   // On an FVM, truncate may either succeed or fail. If an FVM extend call is necessary,
   // it will fail since the ramdisk is asleep; otherwise, it will pass.
-  ftruncate(fd.get(), info->size_data);
+  ftruncate(fd.get(), static_cast<off_t>(info->size_data));
 
   // Since the ramdisk is asleep and our blobfs is aware of it due to the sync, write should fail.
   // TODO(smklein): Implement support for "failed write propagates to the client before

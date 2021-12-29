@@ -63,7 +63,7 @@ class File {
 std::unique_ptr<Blobfs> CreateBlobfs(
     uint64_t block_count, const FilesystemOptions& options = DefaultFilesystemOptions()) {
   File fs_file(tmpfile());
-  if (ftruncate(fs_file.fd(), block_count * kBlobfsBlockSize) == -1) {
+  if (ftruncate(fs_file.fd(), static_cast<off_t>(block_count * kBlobfsBlockSize)) == -1) {
     ADD_FAILURE() << "Failed to resize the file for " << block_count << " blocks";
     return nullptr;
   }
@@ -105,7 +105,7 @@ void FillFileWithRandomContent(File& file, size_t size, unsigned int* seed) {
     b = static_cast<uint8_t>(rand_r(seed) % std::numeric_limits<uint8_t>::max());
   }
 
-  int written = 0;
+  ssize_t written = 0;
   ssize_t write_result = 0;
   while ((write_result = write(file.fd(), file_contents.data() + written,
                                file_contents.size() - written)) > 0) {
@@ -316,7 +316,7 @@ void CheckBlobContents(File& blob, cpp20::span<const uint8_t> contents) {
   std::vector<uint8_t> buffer(kBlobfsBlockSize);
 
   ssize_t read_result = 0;
-  int read_bytes = 0;
+  ssize_t read_bytes = 0;
   lseek(blob.fd(), 0, SEEK_SET);
   while ((read_result = read(blob.fd(), buffer.data(), buffer.size())) >= 0) {
     ASSERT_LE(static_cast<unsigned int>(read_bytes + read_result), contents.size());
@@ -399,7 +399,7 @@ TEST(BlobfsHostTest, VisitBlobsForwardsVisitorErrors) {
 std::vector<uint8_t> ReadFileContents(int fd) {
   std::vector<uint8_t> data(1);
   std::vector<uint8_t> buffer(kBlobfsBlockSize);
-  int read_bytes = 0;
+  ssize_t read_bytes = 0;
   ssize_t read_result = 0;
   while ((read_result = read(fd, buffer.data(), buffer.size())) > 0) {
     data.resize(read_bytes + read_result);

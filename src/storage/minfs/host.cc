@@ -39,10 +39,10 @@ zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
   if (status == ZX_OK) {
     memset(s, 0, sizeof(struct stat));
     s->st_mode = static_cast<mode_t>(a.mode);
-    s->st_size = a.content_size;
+    s->st_size = static_cast<off_t>(a.content_size);
     s->st_ino = a.inode;
-    s->st_ctime = a.creation_time;
-    s->st_mtime = a.modification_time;
+    s->st_ctime = static_cast<time_t>(a.creation_time);
+    s->st_mtime = static_cast<time_t>(a.modification_time);
   }
   return status;
 }
@@ -394,7 +394,7 @@ off_t emu_lseek(int fd, off_t offset, int whence) {
       FAIL(EINVAL);
     }
   }
-  return f->off;
+  return static_cast<off_t>(f->off);
 }
 
 int emu_fstat(int fd, struct stat* s) {

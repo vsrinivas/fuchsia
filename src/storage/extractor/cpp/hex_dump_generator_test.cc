@@ -152,7 +152,7 @@ TEST(HexDumpGenerator, WithChecksum) {
   ASSERT_EQ(hex->GetNextLine().error_value(), ZX_ERR_STOP);
 }
 
-std::string BuildLine(const std::string& hex_string, off_t start, off_t end, bool dump_offset,
+std::string BuildLine(const std::string& hex_string, size_t start, size_t end, bool dump_offset,
                       const std::string& tag) {
   std::stringstream line;
 
@@ -185,8 +185,8 @@ std::string BuildChecksumLine(const std::vector<uint8_t>& data, bool dump_checks
   return line.str();
 }
 
-void DuplicateLineTestHelper(int line_count, bool test_duplicate_lines, int duplicate_start,
-                             int duplicate_end) {
+void DuplicateLineTestHelper(size_t line_count, bool test_duplicate_lines, size_t duplicate_start,
+                             size_t duplicate_end) {
   const HexDumpGeneratorOptions kOptions = {
       .tag = kTag,
       .bytes_per_line = kBytesPerLine,
@@ -196,7 +196,7 @@ void DuplicateLineTestHelper(int line_count, bool test_duplicate_lines, int dupl
   std::vector<uint8_t> data;
   std::stringstream lines;
   const std::array<uint8_t, kBytesPerLine>* current_data = nullptr;
-  for (int i = 0; i < line_count; i++) {
+  for (size_t i = 0; i < line_count; i++) {
     auto start = i * kBytesPerLine;
     auto end = start + kBytesPerLine - 1;
 

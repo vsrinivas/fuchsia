@@ -14,7 +14,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>
-#include <safemath/checked_math.h>
+#include <safemath/safe_math.h>
 
 #include "src/storage/fvm/driver/vpartition_manager.h"
 
@@ -164,7 +164,7 @@ void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
     uint64_t mapped_pslice;
     return SliceGetLocked(vslice, &mapped_pslice) && mapped_pslice == pslice;
   }()));
-  AddBlocksLocked((mgr_->slice_size() / info_.block_size));
+  AddBlocksLocked(safemath::checked_cast<ssize_t>(mgr_->slice_size() / info_.block_size));
 
   // Merge with the next contiguous extent (if any)
   auto next_extent = slice_map_.upper_bound(vslice);
@@ -190,7 +190,7 @@ void VPartition::SliceFreeLocked(uint64_t vslice) {
     slice_map_.erase(*extent);
   }
 
-  AddBlocksLocked(-(mgr_->slice_size() / info_.block_size));
+  AddBlocksLocked(-safemath::checked_cast<ssize_t>(mgr_->slice_size() / info_.block_size));
 }
 
 size_t VPartition::NumSlicesLocked() TA_REQ(lock_) {
@@ -205,9 +205,11 @@ void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
   ZX_ASSERT(vslice < mgr_->VSliceMax());
   ZX_ASSERT(SliceCanFree(vslice));
   auto extent = --slice_map_.upper_bound(vslice);
-  size_t length = extent->size();
+  safemath::CheckedNumeric<size_t> length = extent->size();
   slice_map_.erase(*extent);
-  AddBlocksLocked(-((length * mgr_->slice_size()) / info_.block_size));
+
+  ssize_t nblocks = (length * mgr_->slice_size() / info_.block_size).Cast<ssize_t>().ValueOrDie();
+  AddBlocksLocked(-nblocks);
 }
 
 // Device protocol (VPartition)
