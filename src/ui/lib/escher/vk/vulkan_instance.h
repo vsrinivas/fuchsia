@@ -42,6 +42,8 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
     ProcAddrs(vk::Instance instance, bool requires_surface);
     ProcAddrs() = default;
 
+    constexpr static int getVkHeaderVersion() { return VK_HEADER_VERSION; }
+
     PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
     PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;

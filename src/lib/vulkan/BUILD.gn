@@ -76,10 +76,12 @@ group("vulkaninfo") {
 }
 
 config("vulkan_hpp") {
-  defines = [
-    "VULKAN_HPP_ASSERT(expr)=do {} while(0)",
-    "VULKAN_HPP_NO_EXCEPTIONS",
-  ]
+  defines = [ "VULKAN_HPP_NO_EXCEPTIONS" ]
+  if (is_debug) {
+    defines += [ "VULKAN_HPP_ASSERT(expr)=((void)(expr))" ]
+  } else {
+    defines += [ "VULKAN_HPP_ASSERT(expr)=do {} while(0)" ]
+  }
 }
 
 import("//src/lib/vulkan/compact_image/sdk_atom_info.gni")
