@@ -302,7 +302,7 @@ If you're working on changes that affect `fdio` and `third_party/go`, add:
 [commit_guidelines]: https://www.git-scm.com/book/en/v2/Distributed-Git-Contributing-to-a-Project#_commit_guidelines
 [commit_log-message-integration]: https://chromium.googlesource.com/infra/infra/+/HEAD/appengine/monorail/doc/userguide/power-users.md#commit_log-message-integration
 [flutter_philosophy]: https://github.com/flutter/flutter/wiki/Style-guide-for-Flutter-repo#philosophy
-[testability_rubrics]: /docs/concepts/testing/testability_rubric.md
+[testability_rubrics]: /docs/development/testing/testability_rubric.md
 [tests_as_components]: /docs/development/testing/run_fuchsia_tests.md
 [netemul]: /src/connectivity/network/testing/netemul/README.md
 [change_detector_tests]: https://testing.googleblog.com/2015/01/testing-on-toilet-change-detector-tests.html

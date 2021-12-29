@@ -11,7 +11,7 @@ The `bt-host` driver implements most of the Bluetooth Core Specification v5.2,
 Volume 3 (Host Subsystem).
 
 The Fuchsia project places a
-[strong emphasis on automated testing](/docs/concepts/testing/testability_rubric.md)
+[strong emphasis on automated testing](/docs/development/testing/testability_rubric.md)
 and the Bluetooth team strives to be
 [leaders of testing culture](/src/connectivity/bluetooth/README.md#tests).
 

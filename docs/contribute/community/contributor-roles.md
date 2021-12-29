@@ -70,7 +70,7 @@ of the affected files or receive approval from an Owner of the affected files.
 Committers are responsible for the following:
 
 *   Ensuring that the code submitted to Fuchsia by Committers is tested
-according to the [Testability Rubrics](/docs/concepts/testing/testability_rubric.md).
+according to the [Testability Rubrics](/docs/development/testing/testability_rubric.md).
 *   Ensuring that the code submitted to Fuchsia by Committers follows testing
 best practices.
 

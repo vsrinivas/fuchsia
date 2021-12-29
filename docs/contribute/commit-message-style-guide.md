@@ -171,7 +171,7 @@ Test: Manually tested that [...]. Automated testing needs US-XXXX.
 Developers are responsible for high-quality automated testing of their code.
 Reviewers are responsible for pushing back on changes that do not include
 sufficient tests. See
-[Fuchsia testability rubrics](/docs/concepts/testing/testability_rubric.md) for
+[Fuchsia testability rubrics](/docs/development/testing/testability_rubric.md) for
 more information on how to introduce testable and tested code in the Fuchsia
 project.
 

@@ -54,3 +54,5 @@ toc:
   section:
   - title: "Writing unit tests for the C++ bt-host driver"
     path: /docs/development/testing/bt_host_unittesting.md
+- title: "Testability rubrics"
+  path: /docs/development/testing/testability_rubric.md

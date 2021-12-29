@@ -24,7 +24,5 @@ toc:
   path:  /docs/concepts/testing/sanitizers.md
 - title: "Policy"
   section:
-  - title: "Testability rubrics"
-    path: /docs/concepts/testing/testability_rubric.md
   - title: "Flaky test policy"
     path: /docs/concepts/testing/test_flake_policy.md
