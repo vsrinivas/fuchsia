@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fence.h"
+#include "src/graphics/display/drivers/display/fence.h"
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
+#include <zircon/assert.h>
 
 #include <utility>
 
-#include "client.h"
-#include "zircon/assert.h"
+#include "src/graphics/display/drivers/display/client.h"
 
 namespace display {
 

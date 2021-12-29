@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "image.h"
+#include "src/graphics/display/drivers/display/image.h"
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
@@ -13,7 +13,7 @@
 
 #include <fbl/string_printf.h>
 
-#include "controller.h"
+#include "src/graphics/display/drivers/display/controller.h"
 
 namespace display {
 

@@ -39,16 +39,16 @@
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/ring_buffer.h>
 #include <fbl/vector.h>
 
-#include "controller.h"
-#include "fbl/ref_ptr.h"
-#include "fbl/ring_buffer.h"
-#include "fence.h"
-#include "id-map.h"
-#include "image.h"
-#include "layer.h"
-#include "util.h"
+#include "src/graphics/display/drivers/display/controller.h"
+#include "src/graphics/display/drivers/display/fence.h"
+#include "src/graphics/display/drivers/display/id-map.h"
+#include "src/graphics/display/drivers/display/image.h"
+#include "src/graphics/display/drivers/display/layer.h"
+#include "src/graphics/display/drivers/display/util.h"
 
 namespace display {
 

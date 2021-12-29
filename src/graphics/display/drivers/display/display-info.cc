@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "display-info.h"
+#include "src/graphics/display/drivers/display/display-info.h"
 
 #include <audio-proto-utils/format-utils.h>
 #include <pretty/hexdump.h>
@@ -46,8 +46,7 @@ void DisplayInfo::InitializeInspect(inspect::Node* parent_node) {
   size_t i = 0;
   for (const auto& t : edid->timings) {
     auto child = node.CreateChild(fbl::StringPrintf("timing-parameters-%lu", ++i).c_str());
-    child.CreateDouble("vsync-hz", static_cast<double>(t.vertical_refresh_e2) / 100.0,
-                       &properties);
+    child.CreateDouble("vsync-hz", static_cast<double>(t.vertical_refresh_e2) / 100.0, &properties);
     child.CreateUint("pixel-clock-khz", t.pixel_freq_10khz * 10, &properties);
     child.CreateUint("horizontal-pixels", t.horizontal_addressable, &properties);
     child.CreateUint("horizontal-blanking", t.horizontal_blanking, &properties);
@@ -62,8 +61,8 @@ void DisplayInfo::InitializeInspect(inspect::Node* parent_node) {
 }
 
 // static
-zx::status<fbl::RefPtr<DisplayInfo>> DisplayInfo::Create(
-    const added_display_args_t& info, ddk::I2cImplProtocolClient* i2c) {
+zx::status<fbl::RefPtr<DisplayInfo>> DisplayInfo::Create(const added_display_args_t& info,
+                                                         ddk::I2cImplProtocolClient* i2c) {
   fbl::AllocChecker ac;
   fbl::RefPtr<DisplayInfo> out = fbl::AdoptRef(new (&ac) DisplayInfo);
   if (!ac.check()) {
@@ -88,7 +87,8 @@ zx::status<fbl::RefPtr<DisplayInfo>> DisplayInfo::Create(
   }
   memcpy(out->pixel_formats.data(), info.pixel_format_list,
          out->pixel_formats.size() * sizeof(zx_pixel_format_t));
-  memcpy(out->cursor_infos.data(), info.cursor_info_list, out->cursor_infos.size() * sizeof(cursor_info_t));
+  memcpy(out->cursor_infos.data(), info.cursor_info_list,
+         out->cursor_infos.size() * sizeof(cursor_info_t));
   if (!info.edid_present) {
     out->params = info.panel.params;
     return zx::ok(std::move(out));

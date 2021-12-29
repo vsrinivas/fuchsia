@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "client.h"
+#include "src/graphics/display/drivers/display/client.h"
 
 #include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
@@ -11,9 +11,12 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/edid/edid.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fit/defer.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <math.h>
 #include <string.h>
 #include <threads.h>
@@ -35,9 +38,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
 
-#include "lib/fidl/llcpp/server.h"
-#include "lib/zx/clock.h"
-#include "lib/zx/time.h"
 #include "src/graphics/display/drivers/display/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 

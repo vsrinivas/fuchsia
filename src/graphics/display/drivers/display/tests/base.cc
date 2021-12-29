@@ -9,9 +9,9 @@
 
 #include <memory>
 
-#include "../../fake/fake-display.h"
-#include "../controller.h"
 #include "src/devices/sysmem/drivers/sysmem/device.h"
+#include "src/graphics/display/drivers/display/controller.h"
+#include "src/graphics/display/drivers/fake/fake-display.h"
 
 namespace display {
 

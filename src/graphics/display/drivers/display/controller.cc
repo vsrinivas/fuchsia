@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "controller.h"
+#include "src/graphics/display/drivers/display/controller.h"
 
 #include <fuchsia/hardware/display/capture/c/banjo.h>
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
+#include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
@@ -30,10 +31,9 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 
-#include "client.h"
-#include "eld.h"
-#include "fuchsia/hardware/display/controller/c/banjo.h"
+#include "src/graphics/display/drivers/display/client.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
+#include "src/graphics/display/drivers/display/eld.h"
 #include "src/graphics/display/drivers/display/util.h"
 
 namespace fidl_display = fuchsia_hardware_display;
@@ -1038,5 +1038,4 @@ static constexpr zx_driver_ops_t display_controller_ops = []() {
   return ops;
 }();
 
-// clang-format off
 ZIRCON_DRIVER(display_controller, display_controller_ops, "zircon", "0.1");

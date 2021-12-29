@@ -2,18 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../layer.h"
+#include "src/graphics/display/drivers/display/layer.h"
 
 #include <zircon/pixelformat.h>
 
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
-#include "../../fake/fake-display.h"
-#include "../controller.h"
-#include "../fence.h"
-#include "../image.h"
-#include "base.h"
+#include "src/graphics/display/drivers/display/controller.h"
+#include "src/graphics/display/drivers/display/fence.h"
+#include "src/graphics/display/drivers/display/image.h"
+#include "src/graphics/display/drivers/display/tests/base.h"
+#include "src/graphics/display/drivers/fake/fake-display.h"
 
 namespace fhd = fuchsia_hardware_display;
 

@@ -17,7 +17,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-#include "base.h"
+#include "src/graphics/display/drivers/display/tests/base.h"
 
 namespace display {
 

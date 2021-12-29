@@ -5,13 +5,8 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 
-// NOTE: this header is included first on purpose to avoid clashing with
-// Banjo-generated ones below.
-// clang-format off
 #include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
-// clang-format on
-
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/vmo.h>
 #include <zircon/listnode.h>

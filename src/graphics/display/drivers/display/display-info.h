@@ -5,15 +5,10 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_DISPLAY_INFO_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_DISPLAY_INFO_H_
 
-// NOTE: this header is included first on purpose to avoid clashing with
-// Banjo-generated ones below.
-// clang-format off
 #include <fidl/fuchsia.hardware.display/cpp/wire.h>
-
 #include <fuchsia/hardware/audiotypes/c/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
-// clang-format on
 #include <lib/ddk/debug.h>
 #include <lib/edid/edid.h>
 #include <lib/fidl-utils/bind.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "layer.h"
+#include "src/graphics/display/drivers/display/layer.h"
 
 #include <lib/ddk/debug.h>
 
@@ -10,7 +10,7 @@
 
 #include <fbl/auto_lock.h>
 
-#include "fence.h"
+#include "src/graphics/display/drivers/display/fence.h"
 
 namespace fhd = fuchsia_hardware_display;
 

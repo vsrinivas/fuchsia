@@ -18,7 +18,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
-#include "id-map.h"
+#include "src/graphics/display/drivers/display/id-map.h"
 
 namespace display {
 

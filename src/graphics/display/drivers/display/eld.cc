@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "eld.h"
+#include "src/graphics/display/drivers/display/eld.h"
 
 #include <src/lib/eld/eld.h>
 

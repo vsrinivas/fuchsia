@@ -14,7 +14,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_ptr.h>
 
-#include "image.h"
+#include "src/graphics/display/drivers/display/image.h"
 #include "src/graphics/display/drivers/display/util.h"
 
 namespace display {
