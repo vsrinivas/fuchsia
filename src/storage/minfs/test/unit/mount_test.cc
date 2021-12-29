@@ -83,9 +83,8 @@ TEST(MountTest, VersionLoggedWithCobalt) {
   {
     zx::channel mount_channel, remote_mount_channel;
     ASSERT_EQ(zx::channel::create(0, &mount_channel, &remote_mount_channel), ZX_OK);
-    auto fs_or = MountAndServe(
-        options, loop.dispatcher(), std::move(bcache_or.value()), std::move(mount_channel), [] {},
-        ServeLayout::kExportDirectory);
+    auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache_or.value()),
+                               std::move(mount_channel), [] {});
     ASSERT_EQ(fs_or.status_value(), ZX_OK);
     fs = std::move(fs_or).value();
   }

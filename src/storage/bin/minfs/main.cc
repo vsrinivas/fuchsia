@@ -43,38 +43,10 @@ int Fsck(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions& options) 
   return minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true}).status_value();
 }
 
-using minfs::ServeLayout;
-
 // Run the filesystem server on top of the block device |device|.
 // This function blocks until the filesystem server is instructed to exit via an
 // |fuchsia.io/DirectoryAdmin.Unmount| command.
 int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& options) {
-  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  // TODO(fxbug.dev/34531): this currently supports both the old (data root only) and the new
-  // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
-  // delete the old one.
-  zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
-
-  if (outgoing_server.is_valid() && root_server.is_valid()) {
-    FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
-                      "other.";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  zx::channel export_root;
-  minfs::ServeLayout serve_layout;
-  if (outgoing_server.is_valid()) {
-    export_root = std::move(outgoing_server);
-    serve_layout = minfs::ServeLayout::kExportDirectory;
-  } else if (root_server.is_valid()) {
-    export_root = std::move(root_server);
-    serve_layout = minfs::ServeLayout::kDataRootOnly;
-  } else {
-    // neither provided? or we can't access them for some reason.
-    FX_LOGS(ERROR) << "could not get startup handle to serve on";
-    return ZX_ERR_BAD_STATE;
-  }
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
 
@@ -83,8 +55,9 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
     FX_LOGS(WARNING) << "Unmounted";
   };
 
-  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache), std::move(export_root),
-                             std::move(on_unmount), serve_layout);
+  auto fs_or = MountAndServe(options, loop.dispatcher(), std::move(bcache),
+                             zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)),
+                             std::move(on_unmount));
   if (fs_or.is_error()) {
     if (options.verbose) {
       FX_LOGS(ERROR) << "Failed to mount: " << fs_or.status_string();

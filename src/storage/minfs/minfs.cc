@@ -1448,8 +1448,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
                                                           async_dispatcher_t* dispatcher,
                                                           std::unique_ptr<minfs::Bcache> bcache,
                                                           zx::channel mount_channel,
-                                                          fbl::Closure on_unmount,
-                                                          ServeLayout serve_layout) {
+                                                          fbl::Closure on_unmount) {
   TRACE_DURATION("minfs", "MountAndServe");
 
   fbl::RefPtr<VnodeMinfs> data_root;
@@ -1483,30 +1482,19 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
         return ZX_OK;
       });
 
-  fbl::RefPtr<fs::Vnode> export_root;
-  switch (serve_layout) {
-    case ServeLayout::kDataRootOnly:
-      export_root = std::move(data_root);
-      break;
-    case ServeLayout::kExportDirectory:
+  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+  outgoing->AddEntry("root", std::move(data_root));
 
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-      outgoing->AddEntry("root", std::move(data_root));
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+  outgoing->AddEntry("diagnostics", diagnostics_dir);
+  diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-      outgoing->AddEntry("diagnostics", diagnostics_dir);
-      diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+  outgoing->AddEntry("svc", svc_dir);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                    fbl::MakeRefCounted<AdminService>(fs->dispatcher(), *fs));
 
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
-      outgoing->AddEntry("svc", svc_dir);
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                        fbl::MakeRefCounted<AdminService>(fs->dispatcher(), *fs));
-
-      export_root = std::move(outgoing);
-      break;
-  }
-
-  zx_status_t status = fs->ServeDirectory(std::move(export_root), std::move(mount_channel));
+  zx_status_t status = fs->ServeDirectory(std::move(outgoing), std::move(mount_channel));
   if (status != ZX_OK) {
     return zx::error(status);
   }

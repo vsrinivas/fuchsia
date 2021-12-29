@@ -52,18 +52,6 @@ enum class UpdateBackupSuperblock {
   kUpdate,
 };
 
-// Determines the kind of directory layout the filesystem server should expose to the outside world.
-// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since
-// only |kExportDirectory| would be used.
-enum class ServeLayout {
-  // The root of the filesystem is exposed directly.
-  kDataRootOnly,
-
-  // Expose a pseudo-directory with the filesystem root located at "svc/root".
-  // TODO(fxbug.dev/34531): Also expose an administration service under "svc/fuchsia.fs.Admin".
-  kExportDirectory
-};
-
 struct MountOptions {
   // When true, no changes are made to the file-system, including marking the volume as clean. This
   // differs from readonly_after_initialization which might replay the journal and mark the volume
@@ -128,8 +116,7 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& op
                                                           async_dispatcher_t* dispatcher,
                                                           std::unique_ptr<minfs::Bcache> bcache,
                                                           zx::channel mount_channel,
-                                                          fbl::Closure on_unmount,
-                                                          ServeLayout serve_layout);
+                                                          fbl::Closure on_unmount);
 #endif
 
 }  // namespace minfs

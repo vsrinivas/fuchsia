@@ -120,10 +120,9 @@ class MountTestTemplate : public testing::Test {
 
   async::Loop& loop() { return loop_; }
 
-  zx_status_t MountAndServe(minfs::ServeLayout serve_layout) {
-    auto fs_or = minfs::MountAndServe(
-        mount_options(), loop().dispatcher(), bcache(), std::move(root_server_end()),
-        [this]() { loop().Quit(); }, serve_layout);
+  zx_status_t MountAndServe() {
+    auto fs_or = minfs::MountAndServe(mount_options(), loop().dispatcher(), bcache(),
+                                      std::move(root_server_end()), [this]() { loop().Quit(); });
     if (fs_or.is_error()) {
       return fs_or.error_value();
     }
@@ -144,30 +143,8 @@ class MountTestTemplate : public testing::Test {
 
 using MountTest = MountTestTemplate<false>;
 
-TEST_F(MountTest, ServeDataRootCheckInode) {
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kDataRootOnly), ZX_OK);
-
-  // Verify that |root_client_end| corresponds to the root of the filesystem.
-  auto attr_result = fidl::WireCall<fio::Node>(zx::unowned_channel(root_client_end()))->GetAttr();
-  ASSERT_EQ(attr_result.status(), ZX_OK);
-  ASSERT_EQ(attr_result->s, ZX_OK);
-  EXPECT_EQ(attr_result->attributes.id, minfs::kMinfsRootIno);
-}
-
-TEST_F(MountTest, ServeDataRootAllowFileCreationInRoot) {
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kDataRootOnly), ZX_OK);
-
-  // Adding a file is allowed here...
-  fbl::unique_fd root_fd = clone_root_as_fd();
-  ASSERT_TRUE(root_fd.is_valid());
-  {
-    fbl::unique_fd foo_fd(openat(root_fd.get(), "foo", O_CREAT));
-    EXPECT_TRUE(foo_fd.is_valid());
-  }
-}
-
 TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
+  ASSERT_EQ(MountAndServe(), ZX_OK);
   fbl::unique_fd root_fd = clone_root_as_fd();
   ASSERT_TRUE(root_fd.is_valid());
 
@@ -193,7 +170,7 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
 }
 
 TEST_F(MountTest, ServeExportDirectoryDisallowFileCreationInExportRoot) {
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
+  ASSERT_EQ(MountAndServe(), ZX_OK);
   fbl::unique_fd root_fd = clone_root_as_fd();
   ASSERT_TRUE(root_fd.is_valid());
 
@@ -203,7 +180,7 @@ TEST_F(MountTest, ServeExportDirectoryDisallowFileCreationInExportRoot) {
 }
 
 TEST_F(MountTest, ServeExportDirectoryAllowFileCreationInDataRoot) {
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
+  ASSERT_EQ(MountAndServe(), ZX_OK);
   fbl::unique_fd root_fd = clone_root_as_fd();
   ASSERT_TRUE(root_fd.is_valid());
 
@@ -221,7 +198,7 @@ TEST_F(RepairableMountTest, SyncDuringMount) {
   minfs::Superblock info;
   ReadSuperblock(&info);
   ASSERT_EQ(minfs::kMinfsFlagClean & info.flags, minfs::kMinfsFlagClean);
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
+  ASSERT_EQ(MountAndServe(), ZX_OK);
 
   // Reading raw device after mount should get us superblock with clean bit
   // unset.
@@ -233,7 +210,7 @@ TEST_F(RepairableMountTest, SyncDuringMount) {
 // to the disk. Reading superblock from raw disk should return set clean bit.
 TEST_F(RepairableMountTest, SyncDuringUnmount) {
   minfs::Superblock info;
-  ASSERT_EQ(MountAndServe(minfs::ServeLayout::kExportDirectory), ZX_OK);
+  ASSERT_EQ(MountAndServe(), ZX_OK);
 
   // Reading raw device after mount should get us superblock with clean bit
   // unset.
