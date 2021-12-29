@@ -1462,9 +1462,9 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
   fs->SetMetrics(mount_options.metrics);
   fs->SetUnmountCallback(std::move(on_unmount));
 
-  // At time of writing the Cobalt client has certain requirements around which thread you
-  // interact with it on, so we interact with it by positing to the dispatcher.  See
-  // fxbug.dev/74396 for more details.
+  // At time of writing the Cobalt client has certain requirements around which thread you interact
+  // with it on, so we interact with it by posting to the dispatcher.  See fxbug.dev/74396 for more
+  // details.
   async::PostTask(dispatcher, [&fs = *fs] { fs.LogMountMetrics(); });
 
   // Specify to fall back to DeepCopy mode instead of Live mode (the default) on failures to send

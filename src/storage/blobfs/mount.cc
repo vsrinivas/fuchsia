@@ -19,8 +19,7 @@
 namespace blobfs {
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& options,
-                  fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout,
-                  zx::resource vmex_resource) {
+                  fidl::ServerEnd<fuchsia_io::Directory> root, zx::resource vmex_resource) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
@@ -28,7 +27,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
   if (runner_or.is_error())
     return runner_or.error_value();
 
-  if (zx_status_t status = runner_or.value()->ServeRoot(std::move(root), layout); status != ZX_OK) {
+  if (zx_status_t status = runner_or.value()->ServeRoot(std::move(root)); status != ZX_OK) {
     return status;
   }
   loop.Run();

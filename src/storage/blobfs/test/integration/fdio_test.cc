@@ -44,8 +44,7 @@ void FdioTest::SetUp() {
   ASSERT_TRUE(runner_or.is_ok());
   runner_ = std::move(runner_or.value());
   ASSERT_EQ(
-      runner_->ServeRoot(fidl::ServerEnd<fuchsia_io::Directory>(export_root_server.TakeChannel()),
-                         ServeLayout::kExportDirectory),
+      runner_->ServeRoot(fidl::ServerEnd<fuchsia_io::Directory>(export_root_server.TakeChannel())),
       ZX_OK);
   ASSERT_EQ(loop_->StartThread("blobfs test dispatcher"), ZX_OK);
 

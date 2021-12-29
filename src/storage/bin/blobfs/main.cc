@@ -52,32 +52,6 @@ zx::resource AttemptToGetVmexResource() {
 }
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
-  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  // TODO(fxbug.dev/34531): this currently supports both the old (data root only) and the new
-  // (outgoing directory) behaviors. once all clients are moved over to using the new behavior,
-  // delete the old one.
-  zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
-
-  if (outgoing_server.is_valid() && root_server.is_valid()) {
-    FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
-                      "other.";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  fidl::ServerEnd<fuchsia_io::Directory> export_root;
-  blobfs::ServeLayout layout;
-  if (outgoing_server.is_valid()) {
-    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
-    layout = blobfs::ServeLayout::kExportDirectory;
-  } else if (root_server.is_valid()) {
-    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(root_server));
-    layout = blobfs::ServeLayout::kDataRootOnly;
-  } else {
-    // neither provided? or we can't access them for some reason.
-    FX_LOGS(ERROR) << "could not get startup handle to serve on";
-    return ZX_ERR_BAD_STATE;
-  }
-
   // Try and get a ZX_RSRC_SYSTEM_BASE_VMEX resource if the fuchsia.kernel.VmexResource service is
   // available, which will only be the case if this is launched by fshost. This is non-fatal because
   // blobfs can still otherwise work but will not support executable blobs.
@@ -86,7 +60,9 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
     FX_LOGS(WARNING) << "VMEX resource unavailable, executable blobs are unsupported";
   }
 
-  return blobfs::Mount(std::move(device), options.mount_options, std::move(export_root), layout,
+  return blobfs::Mount(std::move(device), options.mount_options,
+                       fidl::ServerEnd<fuchsia_io::Directory>(
+                           zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST))),
                        std::move(vmex));
 }
 

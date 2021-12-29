@@ -65,7 +65,7 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 
 zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return blobfs_->GetFilesystemInfo(); }
 
-zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
+zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = blobfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
@@ -88,40 +88,30 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
         return ZX_OK;
       });
 
-  fbl::RefPtr<fs::Vnode> export_root;
-  switch (layout) {
-    case ServeLayout::kDataRootOnly:
-      export_root = std::move(vn);
-      break;
-    case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(this);
-      outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
+  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
 
-      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
-      outgoing->AddEntry("diagnostics", diagnostics_dir);
-      diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
+  auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  outgoing->AddEntry("diagnostics", diagnostics_dir);
+  diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
-      outgoing->AddEntry("svc", svc_dir);
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  outgoing->AddEntry("svc", svc_dir);
 
-      query_svc_ = fbl::MakeRefCounted<fs::QueryService>(this);
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+  query_svc_ = fbl::MakeRefCounted<fs::QueryService>(this);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
 
-      health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_);
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
-                        health_check_svc_);
+  health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_->dispatcher(), *blobfs_);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
+                    health_check_svc_);
 
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                        fbl::MakeRefCounted<AdminService>(
-                            blobfs_->dispatcher(), [this](fs::FuchsiaVfs::ShutdownCallback cb) {
-                              this->Shutdown(std::move(cb));
-                            }));
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                    fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),
+                                                      [this](fs::FuchsiaVfs::ShutdownCallback cb) {
+                                                        this->Shutdown(std::move(cb));
+                                                      }));
 
-      export_root = std::move(outgoing);
-      break;
-  }
-
-  status = ServeDirectory(std::move(export_root), std::move(root));
+  status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mount failed; could not serve root directory";
     return status;

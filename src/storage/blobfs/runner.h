@@ -41,7 +41,7 @@ class Runner : public fs::PagedVfs {
 
   // Serves the root directory of the filesystem using |root| as the server-end of an IPC
   // connection.
-  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
+  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
 
  private:
   explicit Runner(async::Loop* loop, int32_t paging_threads = 1);
