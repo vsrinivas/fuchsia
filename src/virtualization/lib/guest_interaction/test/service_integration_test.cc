@@ -10,6 +10,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/predicates/status.h"
@@ -170,15 +171,20 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlExecScriptTest) {
 
   // Verify the contents that were communicated through stdin.
   std::string output_string;
-  char output_buf[100];
-  int fd = open(kHostOuputCopyLocation, O_RDONLY);
-  while (true) {
-    size_t read_size = read(fd, output_buf, 100);
-    if (read_size <= 0)
-      break;
-    output_string.append(std::string(output_buf, read_size));
+  {
+    fbl::unique_fd fd;
+    ASSERT_TRUE(fd = fbl::unique_fd(open(kHostOuputCopyLocation, O_RDONLY))) << strerror(errno);
+
+    char output_buf[100];
+    while (true) {
+      ssize_t read_size = read(fd.get(), output_buf, sizeof(output_buf));
+      ASSERT_GE(read_size, 0) << strerror(errno);
+      if (read_size == 0) {
+        break;
+      }
+      output_string.append(std::string(output_buf, read_size));
+    }
   }
-  close(fd);
 
   ASSERT_EQ(output_string, std::string(kTestScriptInput));
 }
@@ -187,21 +193,25 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlPutGetTest) {
   fuchsia::netemul::guest::GuestInteractionPtr gis = guest_interaction();
 
   // Write a file of gibberish that the test can send over to the guest.
-  char test_file[] = "/data/test_file.txt";
-  char guest_destination[] = "/root/new/directory/test_file.txt";
-  char host_verification_file[] = "/data/verification_file.txt";
+  constexpr char test_file[] = "/tmp/test_file.txt";
+  constexpr char guest_destination[] = "/root/new/directory/test_file.txt";
+  constexpr char host_verification_file[] = "/tmp/verification_file.txt";
 
   std::string file_contents;
   for (int i = 0; i < 2 * CHUNK_SIZE; i++) {
     file_contents.push_back(static_cast<char>(i % (('z' - 'A') + 'A')));
   }
-  int fd = open(test_file, O_WRONLY | O_TRUNC | O_CREAT);
-  uint32_t bytes_written = 0;
-  while (bytes_written < file_contents.size()) {
-    ssize_t write_size =
-        write(fd, file_contents.c_str() + bytes_written, file_contents.size() - bytes_written);
-    ASSERT_TRUE(write_size > 0);
-    bytes_written += write_size;
+  {
+    fbl::unique_fd fd;
+    ASSERT_TRUE(fd = fbl::unique_fd(open(test_file, O_WRONLY | O_TRUNC | O_CREAT)))
+        << strerror(errno);
+    uint32_t bytes_written = 0;
+    while (bytes_written < file_contents.size()) {
+      ssize_t write_size = write(fd.get(), file_contents.c_str() + bytes_written,
+                                 file_contents.size() - bytes_written);
+      ASSERT_GT(write_size, 0);
+      bytes_written += write_size;
+    }
   }
 
   // Push the file to the guest
@@ -214,7 +224,6 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlPutGetTest) {
   gis->PutFile(std::move(put_file), guest_destination,
                [&status](zx_status_t put_result) { status = put_result; });
   RunLoopUntil([&status]() { return status.has_value(); });
-  close(fd);
   ASSERT_TRUE(status.has_value());
   ASSERT_OK(status.value());
 
@@ -235,13 +244,19 @@ TEST_F(GuestInteractionTestWithDiscovery, FidlPutGetTest) {
 
   // Verify the contents that were communicated through stdin.
   std::string output_string;
-  char output_buf[100];
-  fd = open(host_verification_file, O_RDONLY);
-  while (true) {
-    size_t read_size = read(fd, output_buf, 100);
-    if (read_size <= 0)
-      break;
-    output_string.append(std::string(output_buf, read_size));
+  {
+    fbl::unique_fd fd;
+    ASSERT_TRUE(fd = fbl::unique_fd(open(host_verification_file, O_RDONLY))) << strerror(errno);
+
+    char output_buf[100];
+    while (true) {
+      ssize_t read_size = read(fd.get(), output_buf, sizeof(output_buf));
+      ASSERT_GE(read_size, 0) << strerror(errno);
+      if (read_size == 0) {
+        break;
+      }
+      output_string.append(std::string(output_buf, read_size));
+    }
   }
 
   ASSERT_EQ(output_string, file_contents);

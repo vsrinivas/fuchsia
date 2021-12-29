@@ -6,11 +6,7 @@
         "binary": "bin/guest_discovery_service"
     },
     "sandbox": {
-        "features": [
-            "isolated-persistent-storage"
-        ],
         "services": [
-            "fuchsia.netemul.guest.GuestInteractionService",
             "fuchsia.netemul.network.Endpoint",
             "fuchsia.virtualization.Manager",
             "fuchsia.virtualization.Realm"

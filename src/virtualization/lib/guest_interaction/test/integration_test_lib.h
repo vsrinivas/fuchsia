@@ -26,7 +26,7 @@ static constexpr char kTestStdout[] = "stdout";
 static constexpr char kTestStderr[] = "stderr";
 static constexpr char kTestScriptInput[] = "hello world\n";
 static constexpr char kGuestFileOutputLocation[] = "/root/output/script_output.txt";
-static constexpr char kHostOuputCopyLocation[] = "/data/copy";
+static constexpr char kHostOuputCopyLocation[] = "/tmp/copy";
 
 class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
  protected:
