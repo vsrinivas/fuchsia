@@ -488,7 +488,7 @@ void Display::DisplayControllerImplReleaseImage(image_t* image) {
       for (const auto& kv : *map) {
         if (kv.second.color_buffer == color_buffer) {
           map->at(kv.first).color_buffer = nullptr;
-          map->at(kv.first).config_stamp = {.value = INVALID_CONFIG_STAMP};
+          map->at(kv.first).config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
         }
       }
     }

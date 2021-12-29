@@ -254,7 +254,8 @@ class Osd {
   size_t end_index_used_ TA_GUARDED(rdma_lock_) = 0;
 
   bool rdma_active_ TA_GUARDED(rdma_lock_) = false;
-  config_stamp_t latest_applied_config_ TA_GUARDED(rdma_lock_) = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t latest_applied_config_ TA_GUARDED(rdma_lock_) = {
+      .value = INVALID_CONFIG_STAMP_VALUE};
 
   RdmaChannelContainer rdma_chnl_container_[kNumberOfTables];
 

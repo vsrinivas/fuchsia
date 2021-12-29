@@ -24,6 +24,7 @@
 
 #include "fence.h"
 #include "id-map.h"
+#include "util.h"
 
 namespace display {
 
@@ -124,7 +125,7 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   uint32_t stride_px_;
 
   // Stamp of the latest display configuration that uses this image.
-  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t latest_config_stamp_ = INVALID_CONFIG_STAMP_BANJO;
   Controller* const controller_;
 
   // z_index is set/read by controller.cpp under its lock

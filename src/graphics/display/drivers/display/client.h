@@ -47,6 +47,7 @@
 #include "id-map.h"
 #include "image.h"
 #include "layer.h"
+#include "util.h"
 
 namespace display {
 

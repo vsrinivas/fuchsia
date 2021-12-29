@@ -130,7 +130,7 @@ class Display : public DisplayType,
 
     // The |config_stamp| value of the ApplyConfiguration() call to which this
     // DisplayConfig corresponds.
-    config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP};
+    config_stamp_t config_stamp = {.value = INVALID_CONFIG_STAMP_VALUE};
   };
   // TODO(fxbug.dev/81211): Remove these pipe IO functions and use
   // //src/devices/lib/goldfish/pipe_io instead.
@@ -175,7 +175,7 @@ class Display : public DisplayType,
 
   std::map<uint64_t, DisplayConfig> current_config_;
   std::map<uint64_t, DisplayConfig> pending_config_;
-  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP_VALUE};
 
   zx::event pipe_event_;
 

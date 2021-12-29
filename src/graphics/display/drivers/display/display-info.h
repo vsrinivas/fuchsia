@@ -96,7 +96,10 @@ class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
   // Set when a layer change occurs on this display and cleared in vsync
   // when the new layers are all active.
   bool pending_layer_change;
-  std::optional<uint64_t> pending_layer_change_client_stamp;
+  // If a configuration applied by Controller has layer change to occur on the
+  // display (i.e. |pending_layer_change| is true), this stores the Controller's
+  // config stamp for that configuration; otherwise it stores an invalid stamp.
+  config_stamp_t pending_layer_change_controller_config_stamp;
 
   // Flag indicating that a new configuration was delayed during a layer change
   // and should be reapplied after the layer change completes.

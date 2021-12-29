@@ -34,6 +34,7 @@
 #include "eld.h"
 #include "fuchsia/hardware/display/controller/c/banjo.h"
 #include "src/graphics/display/drivers/display/display-bind.h"
+#include "src/graphics/display/drivers/display/util.h"
 
 namespace fidl_display = fuchsia_hardware_display;
 
@@ -308,7 +309,7 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
 }
 
 void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                                                          const config_stamp_t* config_stamp) {
+                                                          const config_stamp_t* config_stamp_ptr) {
   // Emit an event called "VSYNC", which is by convention the event
   // that Trace Viewer looks for in its "Highlight VSync" feature.
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
@@ -333,17 +334,18 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     return;
   }
 
-  uint64_t config_stamp_value = config_stamp ? config_stamp->value : INVALID_CONFIG_STAMP;
+  config_stamp_t controller_config_stamp =
+      config_stamp_ptr ? *config_stamp_ptr : INVALID_CONFIG_STAMP_BANJO;
 
   // See ::ApplyConfig for more explanation of how vsync image tracking works.
   //
   // If there's a pending layer change, don't process any present/retire actions
   // until the change is complete.
   if (info->pending_layer_change) {
-    bool done = config_stamp_value >= (*info->pending_layer_change_client_stamp);
+    bool done = controller_config_stamp >= info->pending_layer_change_controller_config_stamp;
     if (done) {
       info->pending_layer_change = false;
-      info->pending_layer_change_client_stamp = std::nullopt;
+      info->pending_layer_change_controller_config_stamp = INVALID_CONFIG_STAMP_BANJO;
       info->switching_client = false;
 
       if (active_client_ && info->delayed_apply) {
@@ -361,7 +363,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     image_node_t* cur;
     image_node_t* tmp;
     list_for_every_entry_safe (&info->images, cur, tmp, image_node_t, link) {
-      bool should_retire = cur->self->latest_config_stamp().value < config_stamp_value;
+      bool should_retire = cur->self->latest_config_stamp() < controller_config_stamp;
 
       // Retire any images for which we don't already have a z-match, since
       // those are older than whatever is currently in their layer.
@@ -385,12 +387,12 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   // logic and only return config seqnos in OnVsync() events instead.
   std::vector<uint64_t> primary_images, virtcon_images;
 
-  if (config_stamp_value != INVALID_CONFIG_STAMP) {
+  if (controller_config_stamp != INVALID_CONFIG_STAMP_BANJO) {
     auto& config_image_queue = info->config_image_queue;
 
     // Evict retired configurations from the queue.
     while (!config_image_queue.empty() &&
-           config_image_queue.front().config_stamp.value < config_stamp_value) {
+           config_image_queue.front().config_stamp < controller_config_stamp) {
       config_image_queue.pop();
     }
 
@@ -402,7 +404,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     // Otherwise, we'll get the list of images used at ApplyConfig() with
     // the given |config_stamp|.
     if (!config_image_queue.empty() &&
-        config_image_queue.front().config_stamp.value == config_stamp_value) {
+        config_image_queue.front().config_stamp == controller_config_stamp) {
       for (const auto& image : config_image_queue.front().images) {
         // End of the flow for the image going to be presented.
         //
@@ -521,7 +523,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
       display->switching_client = switching_client;
       display->pending_layer_change = config->apply_layer_change();
       if (display->pending_layer_change) {
-        display->pending_layer_change_client_stamp = client_stamp;
+        display->pending_layer_change_controller_config_stamp = controller_stamp_;
       }
       display->vsync_layer_count = config->vsync_layer_count();
       display->delayed_apply = false;

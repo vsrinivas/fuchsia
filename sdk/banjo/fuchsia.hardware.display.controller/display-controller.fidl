@@ -40,13 +40,13 @@ type Image = struct {
 
 const INVALID_DISPLAY_ID uint32 = 0;
 const INVALID_ID uint32 = 0;
-const INVALID_CONFIG_STAMP uint64 = 0;
+const INVALID_CONFIG_STAMP_VALUE uint64 = 0;
 
 /// A unique stamp representing a unique set of display configuration
 /// in ApplyConfiguration().
 type ConfigStamp = struct {
     /// For valid configurations, the value should not be equal to
-    /// `INVALID_CONFIG_STAMP`.
+    /// `INVALID_CONFIG_STAMP_VALUE`.
     value uint64;
 };
 

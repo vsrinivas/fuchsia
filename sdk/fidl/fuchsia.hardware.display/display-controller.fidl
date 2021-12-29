@@ -199,6 +199,17 @@ const APPLY_CONFIG_MAX_DISPLAYS uint64 = 32;
 /// Maximum number of `signal_fences` supported in an ApplyConfig2() call.
 const APPLY_CONFIG_MAX_SIGNAL_FENCES uint64 = 32;
 
+/// Each set of configurations in ApplyConfig() call corresponds to a
+/// |ConfigStamp| value; the value will be referred in Vsync events to indicate
+/// that a configuration is fully applied.
+type ConfigStamp = resource struct {
+    /// The value of config stamp. Valid configurations should have a stamp
+    /// not equal to `INVALID_CONFIG_STAMP_VALUE`.
+    value uint64;
+};
+
+const INVALID_CONFIG_STAMP_VALUE uint64 = 0;
+
 /// Provider for display controllers.
 ///
 /// The driver supports two simultaneous clients - a primary client and a virtcon

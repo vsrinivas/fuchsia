@@ -85,7 +85,7 @@ class SimpleDisplay : public DeviceType,
   // A lock is required to ensure the atomicity when setting |config_stamp| in
   // |ApplyConfiguration()| and passing |&config_stamp_| to |OnDisplayVsync()|.
   fbl::Mutex mtx_;
-  config_stamp_t config_stamp_ TA_GUARDED(mtx_) = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t config_stamp_ TA_GUARDED(mtx_) = {.value = INVALID_CONFIG_STAMP_VALUE};
 
   const ddk::MmioBuffer framebuffer_mmio_;
   const uint32_t width_;

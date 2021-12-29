@@ -47,6 +47,7 @@ source_set("shared") {
     "fence.cc",
     "image.cc",
     "layer.cc",
+    "util.cc",
   ]
   public_deps = [
     ":display_bind",

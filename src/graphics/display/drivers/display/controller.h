@@ -40,6 +40,7 @@
 #include "display-info.h"
 #include "id-map.h"
 #include "image.h"
+#include "src/graphics/display/drivers/display/util.h"
 #include "src/lib/async-watchdog/watchdog.h"
 
 namespace display {
@@ -193,7 +194,7 @@ class Controller : public ControllerParent,
   inspect::UintProperty last_valid_apply_config_timestamp_ns_property_;
   inspect::UintProperty last_valid_apply_config_interval_ns_property_;
 
-  config_stamp_t controller_stamp_ = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t controller_stamp_ = INVALID_CONFIG_STAMP_BANJO;
 };
 
 }  // namespace display

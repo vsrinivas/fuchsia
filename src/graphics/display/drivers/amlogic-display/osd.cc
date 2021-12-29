@@ -263,7 +263,7 @@ void Osd::Disable(void) {
   StopRdma();
   Osd1CtrlStatReg::Get().ReadFrom(&(*vpu_mmio_)).set_blk_en(0).WriteTo(&(*vpu_mmio_));
   fbl::AutoLock lock(&rdma_lock_);
-  latest_applied_config_ = {.value = INVALID_CONFIG_STAMP};
+  latest_applied_config_ = {.value = INVALID_CONFIG_STAMP_VALUE};
 }
 
 void Osd::Enable(void) {

@@ -148,7 +148,8 @@ class FakeDisplay : public DeviceType,
 
   uint64_t current_image_ TA_GUARDED(display_lock_);
   bool current_image_valid_ TA_GUARDED(display_lock_);
-  config_stamp_t current_config_stamp_ TA_GUARDED(display_lock_) = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t current_config_stamp_ TA_GUARDED(display_lock_) = {
+      .value = INVALID_CONFIG_STAMP_VALUE};
 
   // Capture complete is signaled at vsync time. This counter introduces a bit of delay
   // for signal capture complete

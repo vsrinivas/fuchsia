@@ -122,8 +122,8 @@ class GpuDevice : public Device,
 
   struct imported_image* latest_fb_ = nullptr;
   struct imported_image* displayed_fb_ = nullptr;
-  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
-  config_stamp_t displayed_config_stamp_ = {.value = INVALID_CONFIG_STAMP};
+  config_stamp_t latest_config_stamp_ = {.value = INVALID_CONFIG_STAMP_VALUE};
+  config_stamp_t displayed_config_stamp_ = {.value = INVALID_CONFIG_STAMP_VALUE};
 
   zx_pixel_format_t supported_formats_ = ZX_PIXEL_FORMAT_RGB_x888;
 };
