@@ -8,6 +8,7 @@
 #include <lib/async/default.h>
 #include <lib/trace/event.h>
 
+#include "lib/fidl/cpp/comparison.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/flib/fence.h"
 #include "src/ui/lib/escher/impl/naive_image.h"
@@ -222,7 +223,7 @@ void DisplaySwapchain::ResetFrameRecord(const std::unique_ptr<FrameRecord>& fram
   }
 
   // Reset presented flag
-  frame_record->presented = false;
+  frame_record->completed = false;
 }
 
 void DisplaySwapchain::UpdateFrameRecord(const std::unique_ptr<FrameRecord>& frame_record,
@@ -258,7 +259,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   // an error in the FrameScheduler logic (or somewhere similar), which should
   // not have scheduled another frame when there are no framebuffers available.
   auto& frame_record = frame_records_[next_frame_index_];
-  FX_DCHECK(frame_record->presented);
+  FX_DCHECK(frame_record->completed);
 
   // Reset frame record.
   ResetFrameRecord(frame_record);
@@ -278,9 +279,6 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   // Bump the ring head.
   next_frame_index_ = (next_frame_index_ + 1) % swapchain_image_count_;
 
-  // Running total.
-  outstanding_frame_count_++;
-
   // Render the scene.
   {
     TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() draw");
@@ -291,8 +289,7 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
   // When the image is completely rendered, present it.
   TRACE_DURATION("gfx", "DisplaySwapchain::DrawAndPresent() present");
 
-  Flip(primary_layer_id_, frame_record->buffer->id, frame_record->render_finished_event_id,
-       frame_record->retired_event_id);
+  Flip(primary_layer_id_, frame_record.get());
 
   return true;
 }
@@ -394,75 +391,63 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
 
 void DisplaySwapchain::OnVsync2(zx::time timestamp,
                                 fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
-  // TODO(fxbug.dev/72588): Wire gfx to OnVsync2().
-  latest_applied_config_stamp_ = applied_config_stamp;
-}
-
-void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids) {
-  if (image_ids.empty()) {
+  // Don't double-report a frame as presented if a frame is shown twice
+  // due to the next frame missing its deadline.
+  if (last_presented_frame_.has_value() &&
+      fidl::Equals(applied_config_stamp, last_presented_frame_->config_stamp)) {
     return;
   }
 
-  // Currently, only a single layer is ever used
-  FX_CHECK(image_ids.size() == 1);
-  uint64_t image_id = image_ids[0];
+  // Verify if the configuration from Vsync is in the [pending_frames_] queue.
+  auto vsync_frame_it =
+      std::find_if(pending_frame_.begin(), pending_frame_.end(),
+                   [applied_config_stamp](const FrameInfo& frame_info) {
+                     return fidl::Equals(frame_info.config_stamp, applied_config_stamp);
+                   });
 
-  // It is possible that the image ID doesn't match any images imported by
-  // this DisplaySwapchain instance, for example, it could be from another
-  // DisplayCompositor. Thus we just ignore these OnVsync events with "invalid"
-  // image handles.
-  if (frame_buffer_ids_.find(image_id) == frame_buffer_ids_.end()) {
-    FX_LOGS(INFO) << "The image id " << image_id << " doesn't contain frame buffers from current "
-                  << "display swapchain. Vsync event skipped.";
+  // It is possible that the config stamp doesn't match any config applied by
+  // this |DisplaySwapchain| instance, for example, it could be from another
+  // |DisplayCompositor|. Thus we just ignore these |OnVsync| events with
+  // "invalid" config stamps.
+  if (vsync_frame_it == pending_frame_.end()) {
+    FX_LOGS(INFO) << "The config stamp <" << applied_config_stamp.value << "> was not generated "
+                  << "by current display swapchain. Vsync event skipped.";
     return;
   }
 
-  bool match = false;
-  size_t matches_checked = 0;
-  while (outstanding_frame_count_ && !match) {
-    ++matches_checked;
-    auto& record = frame_records_[presented_frame_idx_];
-    match = record->buffer->id == image_id;
-
-    // Don't double-report a frame as presented if a frame is shown twice
-    // due to the next frame missing its deadline.
-    if (!record->presented) {
-      record->presented = true;
-
-      if (match && record->frame_timings) {
-        record->frame_timings->OnFramePresented(record->swapchain_index, timestamp);
-      } else {
-        record->frame_timings->OnFrameDropped(record->swapchain_index);
-      }
+  // Handle skipped frames.
+  auto it = pending_frame_.begin();
+  while (it != vsync_frame_it) {
+    auto* record = it->frame_record;
+    FX_DCHECK(!record->completed);
+    record->completed = true;
+    if (record->frame_timings) {
+      record->frame_timings->OnFrameDropped(record->swapchain_index);
     }
-
-    // Retaining the currently displayed frame allows us to differentiate
-    // between a frame being dropped and a frame being displayed twice
-    // without having to look ahead in the queue, so only update the queue
-    // when we know that the display controller has progressed to the next
-    // frame.
-    //
-    // Since there is no guaranteed order between a frame being retired here
-    // and OnFrameRendered() for a given frame, and since both must be called
-    // for the FrameTimings to be finalized, we don't immediately destroy the
-    // FrameRecord. It will eventually be replaced by DrawAndPresentFrame(),
-    // when a new frame is rendered into this index.
-    if (!match) {
-      presented_frame_idx_ = (presented_frame_idx_ + 1) % swapchain_image_count_;
-      outstanding_frame_count_--;
-    }
+    it = pending_frame_.erase(it);
   }
 
-  FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id
-                   << " matches_checked=" << matches_checked
-                   << " presented_frame_idx_=" << presented_frame_idx_;
+  // Handle the new presented frame.
+  auto* record = vsync_frame_it->frame_record;
+  FX_DCHECK(!record->completed);
+  record->completed = true;
+  if (record->frame_timings) {
+    record->frame_timings->OnFramePresented(record->swapchain_index, timestamp);
+  }
+  last_presented_frame_ = std::move(*vsync_frame_it);
+  pending_frame_.pop_front();
 }
 
-void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,
-                            uint64_t signal_event_id) {
+void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids) {}
+
+void DisplaySwapchain::Flip(uint64_t layer_id, FrameRecord* frame_record) {
+  const uint64_t framebuffer_id = frame_record->buffer->id;
+  uint64_t wait_event_id = frame_record->render_finished_event_id;
+  uint64_t signal_event_id = frame_record->retired_event_id;
+
   zx_status_t status =
       (*display_controller_)
-          ->SetLayerImage(layer_id, buffer, render_finished_event_id, signal_event_id);
+          ->SetLayerImage(layer_id, framebuffer_id, wait_event_id, signal_event_id);
   // TODO(fxbug.dev/23490): handle this more robustly.
   FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed";
 
@@ -473,6 +458,15 @@ void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_
   // TODO(fxbug.dev/23490): handle this more robustly.
   FX_CHECK(status == ZX_OK) << "DisplaySwapchain::Flip failed. Waited "
                             << (zx::clock::get_monotonic() - before).to_msecs() << "msecs";
+
+  fuchsia::hardware::display::ConfigStamp pending_config_stamp;
+  status = (*display_controller_)->GetLatestAppliedConfigStamp(&pending_config_stamp);
+  FX_CHECK(status == ZX_OK) << "GetLatestAppliedConfigStamp() failed: " << status;
+
+  pending_frame_.push_back({
+      .config_stamp = pending_config_stamp,
+      .frame_record = frame_record,
+  });
 }
 
 }  // namespace gfx

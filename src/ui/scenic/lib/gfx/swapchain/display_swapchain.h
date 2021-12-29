@@ -84,7 +84,7 @@ class DisplaySwapchain : public Swapchain {
     // us to detect whether we are attempting to recycle an "in-flight" record, i.e. one which has
     // not yet been presented.  In order to maintain this invariant, we initialize new records to be
     // "already presented".
-    bool presented = true;
+    bool completed = true;
     BufferPool::Framebuffer* buffer = nullptr;
     bool use_protected_memory = false;
     // clang-format on
@@ -123,13 +123,15 @@ class DisplaySwapchain : public Swapchain {
   // it. Returns an id that can be used to refer to the collection.
   uint64_t ImportBufferCollection(fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
 
-  // Displays |buffer| on |display|. Will wait for |render_finished_event_id| to be signaled before
-  // presenting. Will signal |frame_signal_event_id| when the image is retired.
+  // Displays the given |FrameRecord| on |display|.
+  //
+  // It will use the frame buffer stored in |frame_record->buffer|, wait for
+  // |frame_record->render_finished_event| to be signaled before presenting, and
+  // signal |frame_record->retire_event| when the image is retired.
   //
   // fuchsia::hardware::display::INVALID_DISP_ID can be passed for any of the event_ids if there is
   // no corresponding event to signal.
-  void Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,
-            uint64_t frame_signal_event_id);
+  void Flip(uint64_t layer_id, FrameRecord* frame_record);
 
   // A nullable Escher (good for testing) means some resources must be accessed
   // through its (valid) pointer.
@@ -151,12 +153,7 @@ class DisplaySwapchain : public Swapchain {
   uint64_t next_buffer_collection_id_ = fuchsia::hardware::display::INVALID_DISP_ID + 1;
 
   size_t next_frame_index_ = 0;
-  size_t presented_frame_idx_ = 0;
-  size_t outstanding_frame_count_ = 0;
   bool use_protected_memory_ = false;
-
-  fuchsia::hardware::display::ConfigStamp latest_applied_config_stamp_ = {
-      .value = fuchsia::hardware::display::INVALID_CONFIG_STAMP_VALUE};
 
   BufferPool swapchain_buffers_;
   // Optionally generated on the fly.
@@ -168,6 +165,20 @@ class DisplaySwapchain : public Swapchain {
   // DisplaySwapchain / DisplayCompositor so that we can distinguish if Vsync
   // events should be handled by this DisplaySwapchain instance.
   std::unordered_set<uint64_t> frame_buffer_ids_;
+
+  struct FrameInfo {
+    fuchsia::hardware::display::ConfigStamp config_stamp;
+    FrameRecord* frame_record;
+  };
+  // A list storing all display frame configurations that are applied but not
+  // yet shown on the display device. Elements are sorted in chronological
+  // order, i.e. |config_stamp| are in ascending order.
+  std::list<FrameInfo> pending_frame_;
+
+  // Stores the config and frame information of the latest frame shown on the
+  // display. If no frame has been presented by this DisplaySwapchain instance,
+  // its value will be nullopt.
+  std::optional<FrameInfo> last_presented_frame_ = std::nullopt;
 
   vk::Device device_;
   vk::Queue queue_;
