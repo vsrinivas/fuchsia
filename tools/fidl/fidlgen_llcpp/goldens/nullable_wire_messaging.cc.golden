@@ -241,8 +241,8 @@ fidl::WireSyncEventHandler<::test_nullable::SimpleProtocol>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_nullable::SimpleProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -293,7 +293,7 @@ void fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol>::
 }
 void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_nullable::SimpleProtocol>::Dispatch(this, std::move(msg), txn);
 }

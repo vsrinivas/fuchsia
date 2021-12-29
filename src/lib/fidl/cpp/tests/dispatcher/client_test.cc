@@ -59,7 +59,7 @@ class WireEventDispatcher<TestProtocol>
 
  private:
   std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) override {
+      fidl::IncomingMessage& msg, internal::IncomingTransportContext transport_context) override {
     ZX_PANIC("Not used in this test");
   }
 };

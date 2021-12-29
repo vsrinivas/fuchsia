@@ -137,11 +137,11 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // or error, unless the dispatcher is shut down, in which case it will be
   // called synchronously.
   virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& result, internal::IncomingTransportContext* transport_context) = 0;
+      ::fidl::IncomingMessage&& result, internal::IncomingTransportContext transport_context) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
   void OnError(::fidl::Result error) {
-    OnRawResult(::fidl::IncomingMessage::Create(error), nullptr);
+    OnRawResult(fidl::IncomingMessage::Create(error), internal::IncomingTransportContext());
   }
 
  private:
@@ -172,7 +172,7 @@ class WireResponseContext : public internal::ResponseContext {
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override {
+      internal::IncomingTransportContext transport_context) override {
     if (unlikely(!msg.ok())) {
       ::fidl::WireUnownedResult<FidlMethod> result{msg.error()};
       OnResult(result);
@@ -298,7 +298,7 @@ class ClientBase {
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                     internal::IncomingTransportContext* transport_context);
+                                     internal::IncomingTransportContext transport_context);
 
  private:
   // Handles errors in sending one-way or two-way FIDL requests. This may lead

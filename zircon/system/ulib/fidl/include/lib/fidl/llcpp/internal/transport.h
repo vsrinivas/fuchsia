@@ -20,26 +20,84 @@
 #endif
 
 namespace fidl {
+
 namespace internal {
-// Placeholder type for transport specific context type in the outgoing direction.
-// reinterpret_cast into the appropriate type for the transport.
-struct OutgoingTransportContext;
-// Placeholder type for transport specific context type in the incoming direction.
-// reinterpret_cast into the appropriate type for the transport.
-struct IncomingTransportContext;
+struct TransportVTable;
+
+class TransportContextBase {
+ public:
+  TransportContextBase() = default;
+  TransportContextBase(TransportContextBase&&) = default;
+  TransportContextBase(const TransportContextBase&) = default;
+  TransportContextBase& operator=(TransportContextBase&&) = default;
+  TransportContextBase& operator=(const TransportContextBase&) = default;
+
+ protected:
+  TransportContextBase(fidl_transport_type type, void* data) : type_(type), data_(data) {}
+
+  void* get(fidl_transport_type type) const {
+    ZX_ASSERT(type == type_);
+    return data_;
+  }
+
+ private:
+  fidl_transport_type type_ = FIDL_TRANSPORT_TYPE_INVALID;
+  void* data_ = nullptr;
+};
+
+class IncomingTransportContext final : public TransportContextBase {
+ public:
+  using TransportContextBase::TransportContextBase;
+
+  template <typename Transport>
+  static IncomingTransportContext Create(typename Transport::IncomingTransportContextType* value) {
+    return IncomingTransportContext(Transport::VTable.type, value);
+  }
+
+  template <typename Transport>
+  typename Transport::IncomingTransportContextType* get() const {
+    return static_cast<typename Transport::IncomingTransportContextType*>(
+        TransportContextBase::get(Transport::VTable.type));
+  }
+
+ private:
+  IncomingTransportContext(fidl_transport_type type, void* data)
+      : TransportContextBase(type, data) {}
+};
+
+class OutgoingTransportContext final : public TransportContextBase {
+ public:
+  using TransportContextBase::TransportContextBase;
+
+  template <typename Transport>
+  static OutgoingTransportContext Create(typename Transport::OutgoingTransportContextType* value) {
+    return OutgoingTransportContext(Transport::VTable.type, value);
+  }
+
+  template <typename Transport>
+  typename Transport::OutgoingTransportContextType* get() const {
+    return static_cast<typename Transport::OutgoingTransportContextType*>(
+        TransportContextBase::get(Transport::VTable.type));
+  }
+
+ private:
+  OutgoingTransportContext(fidl_transport_type type, void* data)
+      : TransportContextBase(type, data) {}
+};
+
 }  // namespace internal
 
 // Options passed from the user-facing write API to transport write().
 struct WriteOptions {
   // Transport specific context.
-  internal::OutgoingTransportContext* outgoing_transport_context;
+  internal::OutgoingTransportContext outgoing_transport_context;
 };
 
 // Options passed from the user-facing read API to transport read().
 struct ReadOptions {
   bool discardable = false;
   // Transport specific context populated by read.
-  internal::IncomingTransportContext** out_incoming_transport_context;
+  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 // Options passed from the user-facing call API to transport call().
@@ -47,9 +105,9 @@ struct CallOptions {
   zx_time_t deadline = ZX_TIME_INFINITE;
 
   // Transport specific context.
-  internal::OutgoingTransportContext* outgoing_transport_context;
+  internal::OutgoingTransportContext outgoing_transport_context;
   // Transport specific context populated by call.
-  internal::IncomingTransportContext** out_incoming_transport_context;
+  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 class IncomingMessage;
@@ -112,7 +170,7 @@ using AnyTransportWaiter = NonMovableAny<TransportWaiter, /* kCapacity= */ 256ul
 
 // Function receiving notification of successful waits on a TransportWaiter.
 using TransportWaitSuccessHandler =
-    fit::inline_function<void(fidl::IncomingMessage&, IncomingTransportContext* transport_context)>;
+    fit::inline_function<void(fidl::IncomingMessage&, IncomingTransportContext transport_context)>;
 
 // Function receiving notification of failing waits on a TransportWaiter.
 using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;

@@ -514,8 +514,9 @@ fidl::WireSyncEventHandler<::test_requestflexibleenvelope::Protocol>::
 
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireEventDispatcher<::test_requestflexibleenvelope::Protocol>::
-    DispatchEvent(fidl::IncomingMessage& msg,
-                  internal::IncomingTransportContext* transport_context) {
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -595,7 +596,7 @@ void fidl::internal::
 void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_requestflexibleenvelope::Protocol>::Dispatch(this, std::move(msg),
                                                           txn);

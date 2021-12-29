@@ -85,7 +85,7 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
   if (!msg.ok()) {
     return failure_handler_(fidl::UnbindInfo{msg});
   }
-  return success_handler_(msg, nullptr);
+  return success_handler_(msg, internal::IncomingTransportContext());
 }
 
 const CodingConfig SocketTransport::EncodingConfiguration = {};

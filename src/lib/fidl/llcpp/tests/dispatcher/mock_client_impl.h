@@ -52,7 +52,7 @@ class ::fidl::internal::WireEventDispatcher<fidl_testing::TestProtocol>
  private:
   // For each event, increment the event count.
   std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) override {
+      fidl::IncomingMessage& msg, internal::IncomingTransportContext transport_context) override {
     event_handler()->LogEvent();
     return {};
   }
@@ -115,7 +115,7 @@ class TestResponseContext : public fidl::internal::ResponseContext {
       : fidl::internal::ResponseContext(0), client_(client) {}
   cpp17::optional<fidl::UnbindInfo> OnRawResult(
       fidl::IncomingMessage&& msg,
-      fidl::internal::IncomingTransportContext* transport_context) override {
+      fidl::internal::IncomingTransportContext transport_context) override {
     client_->EraseTxid(this);
     return cpp17::nullopt;
   }

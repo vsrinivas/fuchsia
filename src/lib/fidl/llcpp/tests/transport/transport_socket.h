@@ -22,6 +22,8 @@ struct SocketTransport {
   using OwnedType = zx::socket;
   using UnownedType = zx::unowned_socket;
   using HandleMetadata = SocketHandleMetadata;
+  using IncomingTransportContextType = struct {};
+  using OutgoingTransportContextType = struct {};
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;

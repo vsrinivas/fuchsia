@@ -17,7 +17,7 @@ namespace internal {
 //
 
 std::optional<DispatchError> SyncTransaction::Dispatch(
-    fidl::IncomingMessage&& msg, internal::IncomingTransportContext* transport_context) {
+    fidl::IncomingMessage&& msg, internal::IncomingTransportContext transport_context) {
   ZX_ASSERT(binding_);
   binding_->interface()->dispatch_message(std::move(msg), this, transport_context);
   return error_;

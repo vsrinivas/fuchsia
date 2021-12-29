@@ -136,7 +136,7 @@ void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::
 }
 void fidl::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(
       this, std::move(msg), txn);
 }

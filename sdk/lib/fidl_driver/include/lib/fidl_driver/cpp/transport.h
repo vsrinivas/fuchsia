@@ -21,6 +21,8 @@ struct DriverTransport {
   using OwnedType = fdf::Channel;
   using UnownedType = fdf::UnownedChannel;
   using HandleMetadata = DriverHandleMetadata;
+  using IncomingTransportContextType = fdf_arena_t;
+  using OutgoingTransportContextType = fdf_arena_t;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;

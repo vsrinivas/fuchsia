@@ -225,8 +225,8 @@ fidl::WireSyncEventHandler<::test_error::Example>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireEventDispatcher<::test_error::Example>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext* transport_context) {
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -278,7 +278,7 @@ void fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(
 }
 void fidl::WireServer<::test_error::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(
       this, std::move(msg), txn);
 }

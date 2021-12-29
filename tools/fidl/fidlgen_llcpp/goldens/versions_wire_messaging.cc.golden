@@ -57,8 +57,8 @@ fidl::WireSyncEventHandler<::test_versions::OtherProtocol>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_versions::OtherProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -89,7 +89,7 @@ void fidl::internal::WireServerDispatcher<::test_versions::OtherProtocol>::
 }
 void fidl::WireServer<::test_versions::OtherProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_versions::OtherProtocol>::Dispatch(this, std::move(msg), txn);
 }
@@ -187,8 +187,8 @@ fidl::WireSyncEventHandler<::test_versions::Protocol>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireEventDispatcher<::test_versions::Protocol>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext* transport_context) {
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -235,7 +235,7 @@ void fidl::internal::WireServerDispatcher<::test_versions::Protocol>::Dispatch(
 }
 void fidl::WireServer<::test_versions::Protocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_versions::Protocol>::Dispatch(
       this, std::move(msg), txn);
 }

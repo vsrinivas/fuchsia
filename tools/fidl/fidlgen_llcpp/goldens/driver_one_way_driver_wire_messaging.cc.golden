@@ -85,7 +85,7 @@ void fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>::
 }
 void fidl::WireServer<::test_driveroneway::OneWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>::Dispatch(
       this, std::move(msg), txn);
 }

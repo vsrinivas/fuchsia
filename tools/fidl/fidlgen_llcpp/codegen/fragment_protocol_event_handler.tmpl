@@ -51,7 +51,7 @@ class {{ .WireEventDispatcher }} final :
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -124,8 +124,8 @@ class {{ .WireEventDispatcher }} final :
 
 std::optional<::fidl::UnbindInfo>
 {{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext* transport_context) {
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
   {{- range .Events }}
     case {{ .OrdinalName }}:

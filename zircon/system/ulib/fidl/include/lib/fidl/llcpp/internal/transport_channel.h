@@ -22,6 +22,8 @@ struct ChannelTransport {
   using UnownedType = zx::unowned_channel;
 #endif
   using HandleMetadata = fidl_channel_handle_metadata_t;
+  using IncomingTransportContextType = struct {};
+  using OutgoingTransportContextType = struct {};
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;

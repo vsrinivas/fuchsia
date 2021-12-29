@@ -259,8 +259,8 @@ fidl::WireSyncEventHandler<::test_anonymous::SomeProtocol>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_anonymous::SomeProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -311,7 +311,7 @@ void fidl::internal::WireServerDispatcher<::test_anonymous::SomeProtocol>::
 }
 void fidl::WireServer<::test_anonymous::SomeProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_anonymous::SomeProtocol>::Dispatch(this, std::move(msg), txn);
 }

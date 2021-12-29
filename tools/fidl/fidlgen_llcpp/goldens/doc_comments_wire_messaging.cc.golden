@@ -117,8 +117,8 @@ fidl::WireSyncEventHandler<::test_doccomments::Interface>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
       ::fidl::DecodedMessage<
@@ -177,7 +177,7 @@ void fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::
 }
 void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_doccomments::Interface>::Dispatch(this, std::move(msg), txn);
 }

@@ -172,7 +172,7 @@ void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status
   }
   fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes.data(), msg.byte_actual(),
              msg.handle_actual());
-  return success_handler_(msg, nullptr);
+  return success_handler_(msg, IncomingTransportContext());
 }
 #endif
 

@@ -24,7 +24,7 @@ ResponseContext* MakeResponseContext(uint64_t ordinal, CallbackType&& callback) 
    private:
     ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
         ::fidl::IncomingMessage&& result,
-        ::fidl::internal::IncomingTransportContext* transport_context) override {
+        ::fidl::internal::IncomingTransportContext transport_context) override {
       using IsResultCallback =
           std::is_invocable<CallbackType, ::fitx::result<::fidl::Error, NaturalResponse>&>;
       struct DeleteSelf {

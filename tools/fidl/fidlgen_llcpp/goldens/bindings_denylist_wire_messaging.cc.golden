@@ -235,8 +235,9 @@ fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
-    DispatchEvent(fidl::IncomingMessage& msg,
-                  internal::IncomingTransportContext* transport_context) {
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -289,7 +290,7 @@ void fidl::internal::WireServerDispatcher<
 void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this,
                                                                std::move(msg),
@@ -391,8 +392,8 @@ fidl::WireSyncEventHandler<::test_bindingsdenylist::OnlyCppAndDeps>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -425,7 +426,7 @@ void fidl::internal::
 void fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, std::move(msg),
                                                          txn);

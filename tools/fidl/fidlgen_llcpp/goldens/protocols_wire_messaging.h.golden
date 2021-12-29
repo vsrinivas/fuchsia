@@ -504,7 +504,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -651,7 +651,7 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -1960,7 +1960,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -2339,7 +2339,7 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -2739,7 +2739,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::Transitional>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -2868,7 +2868,7 @@ class ::fidl::WireServer<::test_protocols::Transitional>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -3031,7 +3031,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::MethodWithUnion>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -3111,7 +3111,7 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -3945,7 +3945,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithProtocolEnds>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -4182,7 +4182,7 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -4372,7 +4372,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ManyParameters>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -4453,7 +4453,7 @@ class ::fidl::WireServer<::test_protocols::ManyParameters>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -5446,7 +5446,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithErrorSyntax>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -5759,7 +5759,7 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -5925,7 +5925,7 @@ class ::fidl::internal::WireEventDispatcher<
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -6006,7 +6006,7 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -6869,7 +6869,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol>
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      internal::IncomingTransportContext* transport_context) override;
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
@@ -7121,7 +7121,7 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      internal::IncomingTransportContext* transport_context) final;
+      ::fidl::internal::IncomingTransportContext transport_context) final;
 };
 #endif  // __Fuchsia__
 

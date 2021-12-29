@@ -18,6 +18,7 @@ test("fidl_llcpp_transport_tests_bin") {
   output_name = "fidl_llcpp_transport_tests"
   sources = [
     "coding_test.cc",
+    "context_test.cc",
     "waiter_test.cc",
   ]
   deps = [

@@ -365,8 +365,8 @@ fidl::WireSyncEventHandler<::test_emptystruct::EmptyProtocol>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo> fidl::internal::
     WireEventDispatcher<::test_emptystruct::EmptyProtocol>::DispatchEvent(
-        fidl::IncomingMessage& msg,
-        internal::IncomingTransportContext* transport_context) {
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
       ::fidl::DecodedMessage<
@@ -449,7 +449,7 @@ void fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::
 }
 void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_emptystruct::EmptyProtocol>::Dispatch(this, std::move(msg), txn);
 }

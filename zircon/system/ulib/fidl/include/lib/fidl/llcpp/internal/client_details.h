@@ -84,7 +84,7 @@ class IncomingEventDispatcherBase {
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
   virtual std::optional<UnbindInfo> DispatchEvent(
-      fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) = 0;
+      fidl::IncomingMessage& msg, internal::IncomingTransportContext transport_context) = 0;
 
   AsyncEventHandler* event_handler() const { return event_handler_; }
 

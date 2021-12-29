@@ -66,7 +66,7 @@ class FakeWireEventDispatcher
  private:
   std::optional<fidl::UnbindInfo> DispatchEvent(
       fidl::IncomingMessage& msg,
-      fidl::internal::IncomingTransportContext* transport_context) override {
+      fidl::internal::IncomingTransportContext transport_context) override {
     ZX_PANIC("Never used in this test");
   }
 };
@@ -80,7 +80,7 @@ class MockResponseContext : public fidl::internal::ResponseContext {
 
   cpp17::optional<fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg,
-      fidl::internal::IncomingTransportContext* transport_context) override {
+      fidl::internal::IncomingTransportContext transport_context) override {
     if (msg.ok()) {
       // We never get a response from the server in this test.
       ZX_PANIC("Never used in this test");

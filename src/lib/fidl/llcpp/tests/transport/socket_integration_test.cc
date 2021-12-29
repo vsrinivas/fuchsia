@@ -75,7 +75,7 @@ class MockEventDispatcher : public fidl::internal::IncomingEventDispatcherBase {
  private:
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
-      fidl::internal::IncomingTransportContext* incoming_transport_context) override {
+      fidl::internal::IncomingTransportContext incoming_transport_context) override {
     ZX_PANIC("unexpected event");
   }
 };
@@ -100,7 +100,7 @@ class TestClient : public fidl::internal::ClientBase {
      private:
       cpp17::optional<fidl::UnbindInfo> OnRawResult(
           ::fidl::IncomingMessage&& result,
-          fidl::internal::IncomingTransportContext* incoming_transport_context) override {
+          fidl::internal::IncomingTransportContext incoming_transport_context) override {
         ZX_ASSERT(result.ok());
         fidl::DecodedMessage<TwoWayResponse, fidl::internal::SocketTransport> decoded(
             std::move(result));
@@ -127,7 +127,7 @@ class TestServer : public fidl::internal::IncomingMessageDispatcher {
 
  private:
   void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-                        fidl::internal::IncomingTransportContext* transport_context) override {
+                        fidl::internal::IncomingTransportContext transport_context) override {
     ZX_ASSERT(msg.ok());
     fidl::DecodedMessage<TwoWayRequest, fidl::internal::SocketTransport> decoded(std::move(msg));
     ZX_ASSERT(decoded.PrimaryObject()->payload == kRequestPayload);

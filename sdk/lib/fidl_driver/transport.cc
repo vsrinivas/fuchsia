@@ -28,7 +28,7 @@ zx_status_t driver_write(fidl_handle_t handle, const WriteOptions& write_options
   ZX_ASSERT(handle_metadata == nullptr);
 
   const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(data)[0];
-  fdf_arena_t* arena = reinterpret_cast<fdf_arena_t*>(write_options.outgoing_transport_context);
+  fdf_arena_t* arena = write_options.outgoing_transport_context.get<internal::DriverTransport>();
   void* arena_data = fdf_arena_allocate(arena, iovec.capacity);
   memcpy(arena_data, const_cast<void*>(iovec.buffer), iovec.capacity);
 
@@ -69,7 +69,7 @@ zx_status_t driver_read(fidl_handle_t handle, const ReadOptions& read_options, v
   *out_handles_actual_count = out_num_handles;
 
   *read_options.out_incoming_transport_context =
-      reinterpret_cast<internal::IncomingTransportContext*>(out_arena);
+      internal::IncomingTransportContext::Create<internal::DriverTransport>(out_arena);
 
   return ZX_OK;
 }
@@ -108,7 +108,7 @@ zx_status_t DriverWaiter::Begin() {
 
         FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
         FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-        internal::IncomingTransportContext* incoming_transport_context;
+        internal::IncomingTransportContext incoming_transport_context;
         fidl::ReadOptions read_options = {
             .out_incoming_transport_context = &incoming_transport_context,
         };

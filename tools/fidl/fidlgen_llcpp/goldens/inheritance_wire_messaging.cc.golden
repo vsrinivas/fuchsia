@@ -231,8 +231,8 @@ fidl::WireSyncEventHandler<::test_inheritance::Super>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireEventDispatcher<::test_inheritance::Super>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext* transport_context) {
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -283,7 +283,7 @@ void fidl::internal::WireServerDispatcher<::test_inheritance::Super>::Dispatch(
 }
 void fidl::WireServer<::test_inheritance::Super>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_inheritance::Super>::Dispatch(
       this, std::move(msg), txn);
 }
@@ -546,8 +546,8 @@ fidl::WireSyncEventHandler<::test_inheritance::Sub>::HandleOneEvent(
 
 std::optional<::fidl::UnbindInfo>
 fidl::internal::WireEventDispatcher<::test_inheritance::Sub>::DispatchEvent(
-    fidl::IncomingMessage& msg,
-    internal::IncomingTransportContext* transport_context) {
+    ::fidl::IncomingMessage& msg,
+    ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -598,7 +598,7 @@ void fidl::internal::WireServerDispatcher<::test_inheritance::Sub>::Dispatch(
 }
 void fidl::WireServer<::test_inheritance::Sub>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_inheritance::Sub>::Dispatch(
       this, std::move(msg), txn);
 }

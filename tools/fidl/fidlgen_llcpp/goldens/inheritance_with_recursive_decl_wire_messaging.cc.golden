@@ -147,8 +147,9 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Parent>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     ::test_inheritancewithrecursivedecl::Parent>::
-    DispatchEvent(fidl::IncomingMessage& msg,
-                  internal::IncomingTransportContext* transport_context) {
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -204,7 +205,7 @@ void fidl::internal::
 void fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_inheritancewithrecursivedecl::Parent>::Dispatch(this,
                                                              std::move(msg),
@@ -460,8 +461,9 @@ fidl::WireSyncEventHandler<::test_inheritancewithrecursivedecl::Child>::
 
 std::optional<::fidl::UnbindInfo> fidl::internal::WireEventDispatcher<
     ::test_inheritancewithrecursivedecl::Child>::
-    DispatchEvent(fidl::IncomingMessage& msg,
-                  internal::IncomingTransportContext* transport_context) {
+    DispatchEvent(
+        ::fidl::IncomingMessage& msg,
+        ::fidl::internal::IncomingTransportContext transport_context) {
   switch (msg.header()->ordinal) {
     default:
       break;
@@ -538,7 +540,7 @@ void fidl::internal::
 void fidl::WireServer<::test_inheritancewithrecursivedecl::Child>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::test_inheritancewithrecursivedecl::Child>::Dispatch(this,
                                                             std::move(msg),
