@@ -87,8 +87,9 @@ TEST_F(DisplayManagerMockTest, DisplayVsyncCallback) {
         ++num_vsync_acknowledgement;
       });
 
-  display_manager()->default_display()->SetVsyncCallback(
-      [&num_vsync_display_received](zx::time timestamp, std::vector<uint64_t> images) {
+  display_manager()->default_display()->SetVsync2Callback(
+      [&num_vsync_display_received](zx::time timestamp,
+                                    fuchsia::hardware::display::ConfigStamp stamp) {
         ++num_vsync_display_received;
       });
 
@@ -97,8 +98,8 @@ TEST_F(DisplayManagerMockTest, DisplayVsyncCallback) {
     uint64_t cookie = (vsync_id % kAcknowledgeRate == 0) ? vsync_id : 0;
 
     test_loop().AdvanceTimeByEpsilon();
-    mock_display_controller.events().OnVsync(kDisplayId, /* timestamp */ test_loop().Now().get(),
-                                             /* images */ {}, cookie);
+    mock_display_controller.events().OnVsync2(kDisplayId, /* timestamp */ test_loop().Now().get(),
+                                              {.value = 1u}, cookie);
     if (cookie) {
       cookies_sent.insert(cookie);
     }

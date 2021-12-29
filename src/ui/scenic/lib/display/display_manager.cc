@@ -123,10 +123,6 @@ void DisplayManager::SetVsync2Callback(Vsync2Callback callback) {
 
 void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
                              std::vector<uint64_t> image_ids, uint64_t cookie) {
-  if (cookie) {
-    (*default_display_controller_)->AcknowledgeVsync(cookie);
-  }
-
   if (vsync_callback_) {
     vsync_callback_(display_id, zx::time(timestamp), image_ids);
   }
@@ -143,8 +139,9 @@ void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
 void DisplayManager::OnVsync2(uint64_t display_id, uint64_t timestamp,
                               fuchsia::hardware::display::ConfigStamp applied_config_stamp,
                               uint64_t cookie) {
-  // TODO(fxbug.dev/72588): Acknowledge the Vsync here once we remove
-  // "OnVsync()".
+  if (cookie) {
+    (*default_display_controller_)->AcknowledgeVsync(cookie);
+  }
 
   if (vsync2_callback_) {
     vsync2_callback_(display_id, zx::time(timestamp), applied_config_stamp);
