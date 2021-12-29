@@ -167,6 +167,12 @@ impl CoreRealm {
             )
             .await?
             .add_route(
+                RouteBuilder::protocol_marker::<fbsys::BootstrapMarker>()
+                    .source(RouteEndpoint::component(constants::bt_init::MONIKER))
+                    .targets(vec![RouteEndpoint::AboveRoot]),
+            )
+            .await?
+            .add_route(
                 RouteBuilder::protocol_marker::<fbsys::HostWatcherMarker>()
                     .source(RouteEndpoint::component(constants::bt_init::MONIKER))
                     .targets(vec![RouteEndpoint::AboveRoot]),

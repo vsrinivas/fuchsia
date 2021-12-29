@@ -4,9 +4,6 @@
 
 use fuchsia_zircon::{Duration, DurationNum};
 
-/// Tests for fuchsia.bluetooth.sys.bootstrap protocol
-pub mod bootstrap;
-
 /// Tests for bt-gap Inspect data
 pub mod inspect;
 

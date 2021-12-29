@@ -65,6 +65,7 @@ rustc_library("bt-test-harness") {
     "src/access.rs",
     "src/access_v2.rs",
     "src/bootstrap.rs",
+    "src/bootstrap_v2.rs",
     "src/core_realm.rs",
     "src/emulator.rs",
     "src/host_driver/mod.rs",

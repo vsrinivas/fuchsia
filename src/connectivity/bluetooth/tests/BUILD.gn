@@ -16,6 +16,7 @@ group("tests") {
     "audio-device-output-harness",
     "bt-access-integration-tests",
     "bt-bonding-integration:bt-bonding-integration-tests",
+    "bt-bootstrap-integration:bt-bootstrap-integration-tests",
     "bt-host-integration:bt-host-integration-tests",
     "bt-manifest-integration-tests:tests",
     "bt-profile-integration:bt-profile-integration-tests",

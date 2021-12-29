@@ -5,28 +5,26 @@
 use {
     anyhow::{format_err, Context as _, Error},
     bt_test_harness::{
-        access::{AccessHarness, AccessState},
-        bootstrap::BootstrapHarness,
+        access_v2::{AccessHarness, AccessState},
+        bootstrap_v2::BootstrapHarness,
     },
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::expectation::{
         asynchronous::{ExpectableExt, ExpectableStateExt},
         Predicate as P,
     },
-    fuchsia_bluetooth::types::{
-        Address, BondingData, HostData, Identity, LeBondData, OneOrBoth, PeerId,
+    fuchsia_bluetooth::{
+        constants::integration_timeout_duration,
+        types::{Address, BondingData, HostData, Identity, LeBondData, OneOrBoth, PeerId},
     },
     std::collections::HashSet,
-    test_harness::run_suite,
 };
-
-use crate::tests::timeout_duration;
 
 /// An example identity for an Hci Emulator backed host
 fn example_emulator_identity() -> Identity {
     // Hci Emulators currently default to address 0
     let emulator_address = Address::Public([0, 0, 0, 0, 0, 0]);
-    let peer_address = Address::Random([1, 0, 0, 0, 0, 0]);
+    let peer_address = Address::Public([1, 0, 0, 0, 0, 0]);
 
     let host_data = HostData {
         irk: Some(sys::Key { value: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1] }),
@@ -57,6 +55,7 @@ fn example_emulator_identity() -> Identity {
     Identity { host: host_data, bonds }
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_add_and_commit_identities(
     (bootstrap, access): (BootstrapHarness, AccessHarness),
 ) -> Result<(), Error> {
@@ -90,11 +89,7 @@ async fn test_add_and_commit_identities(
         move |access| expected_peers == access.peers.keys().cloned().collect(),
         "known device identifiers == expected device identifiers",
     );
-    let _ = access.when_satisfied(pred, timeout_duration()).await?;
+    let _ = access.when_satisfied(pred, integration_timeout_duration()).await?;
 
     Ok(())
-}
-
-pub fn run_all() -> Result<(), Error> {
-    run_suite!("sys.Bootstrap", [test_add_and_commit_identities])
 }
