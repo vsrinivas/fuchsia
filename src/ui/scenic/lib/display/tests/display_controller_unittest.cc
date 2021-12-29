@@ -36,6 +36,18 @@ TEST_F(DisplayControllerTest, Display2Test) {
   EXPECT_FALSE(invoked_vsync_callback);
   display.OnVsync(zx::time(2), {2});
   EXPECT_TRUE(invoked_vsync_callback);
+
+  display.OnVsync2(zx::time(1), {.value = 1});
+  bool invoked_vsync2_callback = false;
+  display.set_on_vsync2_callback(
+      [&](zx::time timestamp, fuchsia::hardware::display::ConfigStamp stamp) {
+        invoked_vsync2_callback = true;
+        EXPECT_EQ(zx::time(2), timestamp);
+        EXPECT_EQ(2u, stamp.value);
+      });
+  EXPECT_FALSE(invoked_vsync2_callback);
+  display.OnVsync2(zx::time(2), {.value = 2});
+  EXPECT_TRUE(invoked_vsync2_callback);
 }
 
 TEST_F(DisplayControllerTest, DisplayControllerTest) {

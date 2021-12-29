@@ -21,6 +21,12 @@ void Display2::OnVsync(zx::time timestamp, const std::vector<uint64_t>& images) 
   }
 }
 
+void Display2::OnVsync2(zx::time timestamp, fuchsia::hardware::display::ConfigStamp config_stamp) {
+  if (on_vsync2_callback_) {
+    on_vsync2_callback_(timestamp, config_stamp);
+  }
+}
+
 DisplayController::DisplayController(
     std::vector<Display2> displays,
     const std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr>& controller)

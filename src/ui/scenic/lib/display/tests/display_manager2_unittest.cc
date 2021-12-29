@@ -316,6 +316,7 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
   const uint64_t kTestDisplayId3 = 3u;
   const uint64_t kTestImageId = 2u;
   const uint64_t kTestTimestamp = 111111u;
+  const fuchsia::hardware::display::ConfigStamp kTestConfigStamp = {.value = 2u};
 
   display_controller_objs.mock->events().OnDisplaysChanged(
       /* added */ {CreateFakeDisplayInfo(kTestDisplayId1)},
@@ -377,6 +378,20 @@ TEST_F(DisplayManagerTest, ClaimDisplay) {
                                                    0);
     RunLoopUntilIdle();
     EXPECT_TRUE(vsync_received);
+
+    // Test vsync2 delivery.
+    bool vsync2_received = false;
+    display_controller->displays()->at(0).set_on_vsync2_callback(
+        [&](zx::time timestamp, fuchsia::hardware::display::ConfigStamp stamp) {
+          vsync2_received = true;
+          EXPECT_EQ(zx::time(kTestTimestamp), timestamp);
+          EXPECT_EQ(kTestConfigStamp.value, stamp.value);
+        });
+
+    display_controller_objs.mock->events().OnVsync2(kTestDisplayId2, kTestTimestamp,
+                                                    kTestConfigStamp, 0);
+    RunLoopUntilIdle();
+    EXPECT_TRUE(vsync2_received);
   }
 
   // The display is now unclaimed.

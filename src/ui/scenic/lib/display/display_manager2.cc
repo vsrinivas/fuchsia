@@ -163,6 +163,7 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
       if (dc_private) {
         dc_private->claimed_dc = nullptr;
         dc_private->listener->SetOnVsyncCallback(nullptr);
+        dc_private->listener->SetOnVsync2Callback(nullptr);
       }
     }
     delete dc;
@@ -196,6 +197,28 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
     FX_LOGS(WARNING) << "DisplayManager: Couldn't find display matching to vsync callback.";
     FX_DCHECK(false);
   });
+
+  // This callback is cleared in the custom deleter above.
+  dc_private->listener->SetOnVsync2Callback(
+      [dc_private](uint64_t display_id, uint64_t timestamp,
+                   fuchsia::hardware::display::ConfigStamp stamp, uint64_t cookie) {
+        if (!dc_private->claimed_dc) {
+          FX_LOGS(WARNING)
+              << "DisplayManager: Couldn't find display controller matching to vsync2 callback.";
+          FX_DCHECK(false);
+          return;
+        }
+        // Since the number of displays will be very low (and often only == 1), performance is
+        // usually better iterating instead of using a map.
+        for (auto& display : *(dc_private->claimed_dc->displays())) {
+          if (display.display_id() == display_id) {
+            display.OnVsync2(zx::time(timestamp), stamp);
+            return;
+          }
+        }
+        FX_LOGS(WARNING) << "DisplayManager: Couldn't find display matching to vsync2 callback.";
+        FX_DCHECK(false);
+      });
   return display_controller;
 }
 
