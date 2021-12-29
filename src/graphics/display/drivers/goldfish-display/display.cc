@@ -674,14 +674,16 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
       // previously existed, we should cancel waiting events on the pending
       // color buffer and remove references to both pending and current color
       // buffers.
-      async::PostTask(loop_.dispatcher(), [this, display_id = it.first] {
-        if (pending_config_[display_id].color_buffer &&
-            pending_config_[display_id].color_buffer->async_wait) {
-          pending_config_[display_id].color_buffer->async_wait->Cancel();
-        }
-        pending_config_.erase(display_id);
-        current_config_.erase(display_id);
-      });
+      async::PostTask(loop_.dispatcher(),
+                      [this, display_id = it.first, config_stamp = *config_stamp] {
+                        if (pending_config_[display_id].color_buffer &&
+                            pending_config_[display_id].color_buffer->async_wait) {
+                          pending_config_[display_id].color_buffer->async_wait->Cancel();
+                        }
+                        pending_config_.erase(display_id);
+                        current_config_.erase(display_id);
+                        latest_config_stamp_ = config_stamp;
+                      });
       return;
     }
 
