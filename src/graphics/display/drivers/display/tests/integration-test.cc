@@ -227,8 +227,8 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       zx::sec(1)));
 
   // Empty vsync for last client. Nothing should be sent to the new client.
-  controller()->DisplayControllerInterfaceOnDisplayVsync2(primary_client->display_id(), 0u,
-                                                          &empty_config_stamp);
+  controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u,
+                                                         &empty_config_stamp);
 
   // Send a second vsync, using the config the client applied.
   count = primary_client->vsync_count();
@@ -267,8 +267,8 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
       [p = primary_client.get()]() { return p->vsync_count() == 1; }, zx::sec(1)));
   // Send the controller a vsync for an image / a config it won't recognize anymore.
   config_stamp_t invalid_config_stamp = {.value = controller()->TEST_controller_stamp().value - 1};
-  controller()->DisplayControllerInterfaceOnDisplayVsync2(primary_client->display_id(), 0u,
-                                                          &invalid_config_stamp);
+  controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u,
+                                                         &invalid_config_stamp);
 
   // Send a second vsync, using the config the client applied.
   SendDisplayVsync();

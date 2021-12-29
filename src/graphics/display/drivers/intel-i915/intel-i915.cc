@@ -228,7 +228,6 @@ void Controller::HandleHotplug(registers::Ddi ddi, bool long_pulse) {
   }
 }
 
-// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
   fbl::AutoLock lock(&display_lock_);
 
@@ -265,8 +264,8 @@ void Controller::HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp) {
   }
 
   if (id != INVALID_DISPLAY_ID) {
-    dc_intf_.OnDisplayVsync2(id, timestamp,
-                             vsync_config_stamp.has_value() ? &*vsync_config_stamp : nullptr);
+    dc_intf_.OnDisplayVsync(id, timestamp,
+                            vsync_config_stamp.has_value() ? &*vsync_config_stamp : nullptr);
   }
 }
 
@@ -1733,7 +1732,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
   if (dc_intf_.is_valid()) {
     zx_time_t now = fake_vsync_count ? zx_clock_get_monotonic() : 0;
     for (unsigned i = 0; i < fake_vsync_count; i++) {
-      dc_intf_.OnDisplayVsync2(fake_vsyncs[i], now, config_stamp);
+      dc_intf_.OnDisplayVsync(fake_vsyncs[i], now, config_stamp);
     }
   }
 }

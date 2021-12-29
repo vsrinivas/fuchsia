@@ -399,7 +399,7 @@ SimpleDisplay::SimpleDisplay(zx_device_t* parent, sysmem_protocol_t sysmem,
 void SimpleDisplay::OnPeriodicVSync() {
   if (intf_.is_valid()) {
     fbl::AutoLock lock(&mtx_);
-    intf_.OnDisplayVsync2(kDisplayId, next_vsync_time_.get(), &config_stamp_);
+    intf_.OnDisplayVsync(kDisplayId, next_vsync_time_.get(), &config_stamp_);
   }
   next_vsync_time_ += kVSyncInterval;
   async::PostTaskForTime(

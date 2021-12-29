@@ -500,7 +500,6 @@ void GpuDevice::Flush() {
   cnd_signal(&flush_cond_);
 }
 
-// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void GpuDevice::virtio_gpu_flusher() {
   LTRACE_ENTRY;
   zx_time_t next_deadline = zx_clock_get_monotonic();
@@ -545,8 +544,8 @@ void GpuDevice::virtio_gpu_flusher() {
     {
       fbl::AutoLock al(&flush_lock_);
       if (dc_intf_.ops) {
-        display_controller_interface_on_display_vsync2(&dc_intf_, kDisplayId, next_deadline,
-                                                       &displayed_config_stamp_);
+        display_controller_interface_on_display_vsync(&dc_intf_, kDisplayId, next_deadline,
+                                                      &displayed_config_stamp_);
       }
     }
     next_deadline = zx_time_add_duration(next_deadline, period);

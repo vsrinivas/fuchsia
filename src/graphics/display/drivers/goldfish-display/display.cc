@@ -1101,7 +1101,6 @@ void Display::TeardownDisplay(uint64_t display_id) {
   }
 }
 
-// TODO(fxbug.dev/72588): Switch to use OnDisplayVsync2().
 void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) {
   Device& device = devices_[display_id];
 
@@ -1129,7 +1128,7 @@ void Display::FlushDisplay(async_dispatcher_t* dispatcher, uint64_t display_id) 
       }
 
       zx::time now = async::Now(dispatcher);
-      dc_intf_.OnDisplayVsync2(display_id, now.get(), &latest_config_stamp_);
+      dc_intf_.OnDisplayVsync(display_id, now.get(), &latest_config_stamp_);
     }
   }
 

@@ -160,9 +160,7 @@ protocol DisplayControllerInterface {
     ///
     /// The driver must call this function for all vsync events, even if the
     /// display has no images displayed.
-    ///
-    /// TODO(fxbug.dev/72588): Migrate all drivers to use `OnDisplayVsync2()`.
-    OnDisplayVsync2(struct {
+    OnDisplayVsync(struct {
         display_id uint64;
         timestamp zx.time;
         config_stamp ConfigStamp:optional;

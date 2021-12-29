@@ -307,12 +307,12 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
   task.release()->Post(loop_.dispatcher());
 }
 
-void Controller::DisplayControllerInterfaceOnDisplayVsync2(uint64_t display_id, zx_time_t timestamp,
-                                                           const config_stamp_t* config_stamp) {
+void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                                          const config_stamp_t* config_stamp) {
   // Emit an event called "VSYNC", which is by convention the event
   // that Trace Viewer looks for in its "Highlight VSync" feature.
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
-  TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync2", "display_id", display_id);
+  TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
 
   last_vsync_ns_property_.Set(timestamp);
   last_vsync_interval_ns_property_.Set(timestamp - last_vsync_timestamp_.load().get());

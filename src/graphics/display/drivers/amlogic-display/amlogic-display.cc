@@ -380,7 +380,7 @@ void AmlogicDisplay::DisplayControllerImplApplyConfiguration(
   if (!fully_initialized()) {
     if (dc_intf_.is_valid()) {
       if (display_count == 0 || display_configs[0]->layer_count == 0) {
-        dc_intf_.OnDisplayVsync2(display_id_, zx_clock_get_monotonic(), config_stamp);
+        dc_intf_.OnDisplayVsync(display_id_, zx_clock_get_monotonic(), config_stamp);
       }
     }
   }
@@ -746,8 +746,8 @@ int AmlogicDisplay::VSyncThread() {
     }
     fbl::AutoLock lock(&display_lock_);
     if (dc_intf_.is_valid() && display_attached_) {
-      dc_intf_.OnDisplayVsync2(display_id_, timestamp.get(),
-                               current_config_stamp.has_value() ? &*current_config_stamp : nullptr);
+      dc_intf_.OnDisplayVsync(display_id_, timestamp.get(),
+                              current_config_stamp.has_value() ? &*current_config_stamp : nullptr);
     }
   }
 

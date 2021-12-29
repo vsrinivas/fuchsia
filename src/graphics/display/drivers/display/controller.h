@@ -74,8 +74,8 @@ class Controller : public ControllerParent,
                                                    added_display_info_t* out_display_info_list,
                                                    size_t display_info_count,
                                                    size_t* display_info_actual);
-  void DisplayControllerInterfaceOnDisplayVsync2(uint64_t display_id, zx_time_t timestamp,
-                                                 const config_stamp_t* config_stamp);
+  void DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                                const config_stamp_t* config_stamp);
   zx_status_t DisplayControllerInterfaceGetAudioFormat(
       uint64_t display_id, uint32_t fmt_idx, audio_types_audio_stream_format_range_t* fmt_out);
 

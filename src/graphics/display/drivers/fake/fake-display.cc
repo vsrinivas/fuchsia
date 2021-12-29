@@ -508,7 +508,7 @@ int FakeDisplay::VSyncThread() {
 void FakeDisplay::SendVsync() {
   fbl::AutoLock lock(&display_lock_);
   if (dc_intf_.is_valid()) {
-    dc_intf_.OnDisplayVsync2(kDisplayId, zx_clock_get_monotonic(), &current_config_stamp_);
+    dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), &current_config_stamp_);
   }
 }
 
