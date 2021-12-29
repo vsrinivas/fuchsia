@@ -28,7 +28,6 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
   // The network device frame type used by netemul endpoints.
   static constexpr fuchsia::hardware::network::FrameType kFrameType =
       fuchsia::hardware::network::FrameType::ETHERNET;
-  using Ptr = std::unique_ptr<Endpoint>;
   using FEndpoint = fuchsia::netemul::network::Endpoint;
   using FProxy = fuchsia::netemul::network::DeviceProxy;
   using Config = fuchsia::netemul::network::EndpointConfig;

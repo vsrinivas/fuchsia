@@ -36,10 +36,10 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
   void GetEndpoint(::std::string name, GetEndpointCallback callback) override;
 
   // Request to install a data sink on a named endpoint
-  zx_status_t InstallSink(std::string endpoint, data::BusConsumer::Ptr sink,
+  zx_status_t InstallSink(const std::string& endpoint, data::BusConsumer::Ptr sink,
                           data::Consumer::Ptr* src);
   // Request to remove a data sink from a named endpoint
-  zx_status_t RemoveSink(std::string endpoint, data::BusConsumer::Ptr sink,
+  zx_status_t RemoveSink(const std::string& endpoint, data::BusConsumer::Ptr sink,
                          data::Consumer::Ptr* src);
 
   // Bind request to FIDL service
@@ -49,7 +49,7 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
   // Pointer to parent context. Not owned.
   NetworkContext* parent_;
   fidl::BindingSet<FEndpointManager> bindings_;
-  std::unordered_map<std::string, Endpoint::Ptr> endpoints_;
+  std::unordered_map<std::string, Endpoint> endpoints_;
 };
 
 }  // namespace netemul
