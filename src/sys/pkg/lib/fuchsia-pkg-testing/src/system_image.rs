@@ -18,6 +18,7 @@ const DEFAULT_PACKAGE_DOMAIN: &str = "fuchsia.com";
 pub struct SystemImageBuilder<'a> {
     static_packages: Option<Vec<(PackagePath, Hash)>>,
     cache_packages: Option<Vec<PinnedPkgUrl>>,
+    cache_packages_json: Option<Vec<u8>>,
     pkgfs_non_static_packages_allowlist: Option<&'a [&'a str]>,
     pkgfs_disable_executability_restrictions: bool,
 }
@@ -46,7 +47,7 @@ impl<'a> SystemImageBuilder<'a> {
     /// was not already staged to be added to the package.
     pub fn cache_package(mut self, path: PackagePath, hash: Hash) -> Self {
         let pinned_url =
-            PinnedPkgUrl::new_package(DEFAULT_PACKAGE_DOMAIN.to_string(), path.to_string(), hash)
+            PinnedPkgUrl::new_package(DEFAULT_PACKAGE_DOMAIN.to_string(), format!("/{path}"), hash)
                 .unwrap();
         self.cache_packages.get_or_insert_with(Vec::new).push(pinned_url);
         self
@@ -57,6 +58,15 @@ impl<'a> SystemImageBuilder<'a> {
     pub fn cache_packages(mut self, cache_packages: &[&Package]) -> Self {
         assert_eq!(self.cache_packages, None);
         self.cache_packages = Some(Self::packages_to_urls(cache_packages));
+        self
+    }
+
+    /// The raw byte content for the json formatted cache packages manifest. Call at most once.
+    /// TODO(fxbug.dev/90762) Remove this method and have the other cache packages methods
+    /// just make the json file when the line oriented file is removed.
+    pub fn cache_packages_json(mut self, cache_packages_json: Vec<u8>) -> Self {
+        assert_eq!(self.cache_packages_json, None);
+        self.cache_packages_json = Some(cache_packages_json);
         self
     }
 
@@ -116,6 +126,10 @@ impl<'a> SystemImageBuilder<'a> {
                 &mut bytes,
             );
             builder = builder.add_resource_at("data/cache_packages", bytes.as_slice());
+        }
+
+        if let Some(bytes) = &self.cache_packages_json {
+            builder = builder.add_resource_at("data/cache_packages.json", bytes.as_slice());
         }
 
         if let Some(allowlist) = &self.pkgfs_non_static_packages_allowlist {

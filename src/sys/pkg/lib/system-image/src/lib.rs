@@ -10,7 +10,9 @@ mod system_image;
 
 pub use crate::{
     cache_packages::CachePackages,
-    errors::{AllowListError, CachePackagesInitError, PathHashMappingError},
+    errors::{
+        AllowListError, CachePackagesInitError, PathHashMappingError, StaticPackagesInitError,
+    },
     non_static_allowlist::NonStaticAllowList,
     path_hash_mapping::{Cache, PathHashMapping, StaticPackages},
     system_image::{ExecutabilityRestrictions, SystemImage},

@@ -12,7 +12,7 @@ use {
 /// to appear in `pkgfs/packages` and allowed to expose executable handles to blobs in
 /// `pkgfs/versions`. By default, is located in the `system_image` package at
 /// `data/pkgfs_packages_non_static_packages_allowlist.txt`.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct NonStaticAllowList {
     contents: HashSet<PackageName>,
 }
@@ -27,6 +27,11 @@ impl NonStaticAllowList {
             .map(PackageName::from_str)
             .collect::<Result<HashSet<_>, _>>()?;
         return Ok(Self { contents });
+    }
+
+    /// Create an empty allow _list.
+    pub(crate) fn empty() -> Self {
+        Self { contents: HashSet::new() }
     }
 
     /// Determines if this allowlist allows the given package.

@@ -6,7 +6,8 @@ use {
     crate::{
         get_system_image_hash,
         path_hash_mapping::{Cache, PathHashMapping},
-        CachePackages, CachePackagesInitError,
+        CachePackages, CachePackagesInitError, NonStaticAllowList, StaticPackages,
+        StaticPackagesInitError,
     },
     anyhow::Context as _,
     fuchsia_hash::Hash,
@@ -14,6 +15,8 @@ use {
 };
 
 static DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_restrictions";
+static NON_STATIC_ALLOW_LIST_FILE_PATH: &str =
+    "data/pkgfs_packages_non_static_packages_allowlist.txt";
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ExecutabilityRestrictions {
@@ -37,17 +40,16 @@ impl SystemImage {
         Ok(SystemImage { root_dir })
     }
 
+    /// Make a `SystemImage` from a `RootDir` for the `system_image` package.
+    pub fn from_root_dir(root_dir: RootDir) -> Self {
+        Self { root_dir }
+    }
+
     pub fn load_executability_restrictions(&self) -> ExecutabilityRestrictions {
         match self.root_dir.has_file(DISABLE_RESTRICTIONS_FILE_PATH) {
             true => ExecutabilityRestrictions::DoNotEnforce,
             false => ExecutabilityRestrictions::Enforce,
         }
-    }
-
-    // TODO(fxb/90513): This method can be removed after BasePackages are migrated to follow
-    // this file's pattern.
-    pub fn root_dir(&self) -> &RootDir {
-        &self.root_dir
     }
 
     /// The hash of the `system_image` package.
@@ -79,65 +81,65 @@ impl SystemImage {
         )?)
         .map_err(Into::into)
     }
+
+    /// Load `data/static_packages`.
+    pub async fn static_packages(&self) -> Result<StaticPackages, StaticPackagesInitError> {
+        StaticPackages::deserialize(
+            self.root_dir
+                .read_file("data/static_packages")
+                .await
+                .map_err(StaticPackagesInitError::ReadStaticPackages)?
+                .as_slice(),
+        )
+        .map_err(StaticPackagesInitError::ProcessingStaticPackages)
+    }
+
+    /// Load the non-static allow list from
+    /// "data/pkgfs_packages_non_static_packages_allowlist.txt". Errors during loading result in an
+    /// empty allow list.
+    pub async fn non_static_allow_list(&self) -> NonStaticAllowList {
+        async {
+            NonStaticAllowList::parse(
+                self.root_dir
+                    .read_file(NON_STATIC_ALLOW_LIST_FILE_PATH)
+                    .await
+                    .context("reading allow list contents")?
+                    .as_slice(),
+            )
+            .context("parsing allow list contents")
+        }
+        .await
+        .unwrap_or_else(|e| {
+            fuchsia_syslog::fx_log_warn!(
+                "Failed to load non static allow list from system_image, treating as empty: {e:#}"
+            );
+            NonStaticAllowList::empty()
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
-        matches::assert_matches,
-    };
+    use {super::*, fuchsia_pkg_testing::SystemImageBuilder, matches::assert_matches};
 
-    struct SystemImageBuilder {
-        cache_packages_json: Option<String>,
-        cache_packages: Option<String>,
-        blobfs_fake: FakeBlobfs,
-        blobfs_client: blobfs::Client,
+    struct TestEnv {
+        _blobfs: blobfs_ramdisk::BlobfsRamdisk,
     }
 
-    impl SystemImageBuilder {
-        fn new() -> Self {
-            let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-            Self { blobfs_fake, blobfs_client, cache_packages: None, cache_packages_json: None }
-        }
-
-        fn set_cache_packages(mut self, cache_packages: String) -> Self {
-            self.cache_packages = Some(cache_packages);
-            self
-        }
-
-        fn set_cache_packages_json(mut self, cache_packages_json: String) -> Self {
-            self.cache_packages_json = Some(cache_packages_json);
-            self
-        }
-
-        async fn build(&self) -> SystemImage {
-            let mut pkg_builder = PackageBuilder::new("system_image");
-            if let Some(cache_packages) = &self.cache_packages {
-                pkg_builder =
-                    pkg_builder.add_resource_at("data/cache_packages", cache_packages.as_bytes());
-            }
-            if let Some(cache_packages_json) = &self.cache_packages_json {
-                pkg_builder = pkg_builder
-                    .add_resource_at("data/cache_packages.json", cache_packages_json.as_bytes());
-            }
-
-            let pkg = pkg_builder.build().await.unwrap();
-            let (metafar_blob, content_blobs) = pkg.contents();
-            self.blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-            for content in content_blobs {
-                self.blobfs_fake.add_blob(content.merkle, content.contents);
-            }
+    impl TestEnv {
+        async fn new(system_image: SystemImageBuilder<'_>) -> (Self, SystemImage) {
+            let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().unwrap();
+            let system_image = system_image.build().await;
+            system_image.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
             let root_dir =
-                RootDir::new(self.blobfs_client.clone(), metafar_blob.merkle).await.unwrap();
-            SystemImage { root_dir }
+                RootDir::new(blobfs.client(), *system_image.meta_far_merkle_root()).await.unwrap();
+            (Self { _blobfs: blobfs }, SystemImage { root_dir })
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn fails_without_config_files() {
-        let system_image = SystemImageBuilder::new().build().await;
+    async fn cache_packages_fails_without_config_files() {
+        let (_env, system_image) = TestEnv::new(SystemImageBuilder::new()).await;
         assert_matches!(
             system_image.cache_packages().await,
             Err(CachePackagesInitError::ReadCachePackages(
@@ -147,49 +149,83 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn deserialize_valid_file_list_hashes() {
-        let cache_packages =
-            "name/variant=0000000000000000000000000000000000000000000000000000000000000000\n\
-             other-name/other-variant=1111111111111111111111111111111111111111111111111111111111111111\n";
-        let path_hash_packages =
-            PathHashMapping::<Cache>::deserialize(cache_packages.as_bytes()).unwrap();
-        let expected = CachePackages::from_path_hash_mapping(path_hash_packages).unwrap();
-        let builder = SystemImageBuilder::new();
-        let cache_packages = builder
-            .set_cache_packages(cache_packages.to_string())
-            .build()
-            .await
-            .cache_packages()
-            .await
-            .unwrap();
-        assert_eq!(cache_packages, expected);
+    async fn cache_packages_deserialize_valid_line_oriented() {
+        let (_env, system_image) = TestEnv::new(
+            SystemImageBuilder::new()
+                .cache_package("name/variant".parse().unwrap(), [0; 32].into()),
+        )
+        .await;
+
+        assert_eq!(
+            system_image.cache_packages().await.unwrap(),
+            CachePackages::from_entries(
+                vec!["fuchsia-pkg://fuchsia.com/name/variant?hash=0000000000000000000000000000000000000000000000000000000000000000"
+                    .parse()
+                    .unwrap()
+                ]
+            )
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn deserialize_valid_cache_packages_json() {
+    async fn cache_packages_deserialize_valid_json() {
         let cache_packages_json = br#"
         {
             "version": "1",
             "content": [
-                "fuchsia-pkg://foo.bar/qwe/0?hash=0000000000000000000000000000000000000000000000000000000000000000",
-                "fuchsia-pkg://foo.bar/rty/0?hash=1111111111111111111111111111111111111111111111111111111111111111"
+                "fuchsia-pkg://foo.bar/from-json/1?hash=0101010101010101010101010101010101010101010101010101010101010101"
             ]
         }"#;
-        let expected = CachePackages::from_json(cache_packages_json).unwrap();
-        let cache_packages =
-            "name/variant=0000000000000000000000000000000000000000000000000000000000000000\n\
-             other-name/other-variant=1111111111111111111111111111111111111111111111111111111111111111\n";
-        let builder = SystemImageBuilder::new();
-        let cache_packages = builder
-            .set_cache_packages(cache_packages.to_string())
-            .set_cache_packages_json(
-                String::from_utf8(cache_packages_json.to_vec()).expect("invalid utf-8"),
+
+        let (_env, system_image) = TestEnv::new(
+            SystemImageBuilder::new()
+                .cache_package("from-line/0".parse().unwrap(), [0; 32].into())
+                .cache_packages_json(cache_packages_json.to_vec()),
+        )
+        .await;
+
+        assert_eq!(
+            system_image.cache_packages().await.unwrap(),
+            CachePackages::from_entries(
+                vec!["fuchsia-pkg://foo.bar/from-json/1?hash=0101010101010101010101010101010101010101010101010101010101010101"
+                    .parse()
+                    .unwrap()
+                ]
             )
-            .build()
-            .await
-            .cache_packages()
-            .await
-            .unwrap();
-        assert_eq!(cache_packages, expected);
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn static_packages_deserialize_valid_line_oriented() {
+        let (_env, system_image) = TestEnv::new(
+            SystemImageBuilder::new()
+                .static_package("name/variant".parse().unwrap(), [0; 32].into()),
+        )
+        .await;
+
+        assert_eq!(
+            system_image.static_packages().await.unwrap(),
+            StaticPackages::from_entries(vec![("name/variant".parse().unwrap(), [0; 32].into())])
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn non_static_allow_list_succeeds() {
+        let (_env, system_image) = TestEnv::new(
+            SystemImageBuilder::new().pkgfs_non_static_packages_allowlist(&["allow-me"]),
+        )
+        .await;
+
+        assert_eq!(
+            system_image.non_static_allow_list().await,
+            NonStaticAllowList::parse(b"allow-me\n").unwrap()
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn non_static_allow_list_missing_file_causes_empty_list() {
+        let (_env, system_image) = TestEnv::new(SystemImageBuilder::new()).await;
+
+        assert_eq!(system_image.non_static_allow_list().await, NonStaticAllowList::empty());
     }
 }

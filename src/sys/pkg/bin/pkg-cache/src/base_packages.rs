@@ -10,7 +10,6 @@ use {
     fuchsia_pkg::PackagePath,
     futures::{StreamExt, TryStreamExt},
     std::collections::HashSet,
-    system_image::StaticPackages,
 };
 
 const SYSTEM_IMAGE_NAME: &str = "system_image";
@@ -43,28 +42,24 @@ impl BaseBlobs {
 impl BasePackages {
     pub async fn new(
         blobfs: &blobfs::Client,
-        system_image: &package_directory::RootDir,
+        system_image: &system_image::SystemImage,
         node: finspect::Node,
     ) -> Result<Self, anyhow::Error> {
-        let static_packages = system_image
-            .read_file("data/static_packages")
-            .await
-            .context("failed to read data/static_packages from system_image package")?;
-        let static_packages = StaticPackages::deserialize(static_packages.as_slice())
-            .context("error deserializing data/static_packages")?;
-
         // Add the system image package to the set of static packages to create the set of base
         // packages. If we're constructing BasePackages, we must have a system image package.
         // However, not all systems have a system image, like recovery, which starts pkg-cache with
         // an empty blobfs.
-        let paths_to_hashes: Vec<(PackagePath, Hash)> = static_packages
+        let paths_to_hashes: Vec<(PackagePath, Hash)> = system_image
+            .static_packages()
+            .await
+            .context("failed to load static packages from system image")?
             .into_contents()
             .chain(std::iter::once((
                 PackagePath::from_name_and_variant(
                     SYSTEM_IMAGE_NAME.parse().unwrap(),
                     SYSTEM_IMAGE_VARIANT.parse().unwrap(),
                 ),
-                system_image.hash().clone(),
+                *system_image.hash(),
             )))
             .collect();
 
@@ -169,12 +164,14 @@ mod tests {
 
             let base_packages = BasePackages::new(
                 &blobfs_client,
-                &package_directory::RootDir::new(
-                    blobfs_client.clone(),
-                    *system_image.meta_far_merkle_root(),
-                )
-                .await
-                .unwrap(),
+                &system_image::SystemImage::from_root_dir(
+                    package_directory::RootDir::new(
+                        blobfs_client.clone(),
+                        *system_image.meta_far_merkle_root(),
+                    )
+                    .await
+                    .unwrap(),
+                ),
                 inspector.root().create_child("base-packages"),
             )
             .await
@@ -290,12 +287,14 @@ mod tests {
 
         let base_packages_res = BasePackages::new(
             &blobfs_client,
-            &package_directory::RootDir::new(
-                blobfs_client.clone(),
-                *system_image.meta_far_merkle_root(),
-            )
-            .await
-            .unwrap(),
+            &system_image::SystemImage::from_root_dir(
+                package_directory::RootDir::new(
+                    blobfs_client.clone(),
+                    *system_image.meta_far_merkle_root(),
+                )
+                .await
+                .unwrap(),
+            ),
             inspector.root().create_child("base-packages"),
         )
         .await;

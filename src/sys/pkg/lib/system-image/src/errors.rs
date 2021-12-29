@@ -35,9 +35,6 @@ pub enum AllowListError {
 
 #[derive(Debug, Error)]
 pub enum CachePackagesInitError {
-    #[error("while parsing system image package")]
-    ParseSystemImagePackage(#[source] anyhow::Error),
-
     #[error("while reading data/cache_packages.json file")]
     ReadCachePackagesJson(#[source] package_directory::ReadFileError),
 
@@ -55,4 +52,13 @@ pub enum CachePackagesInitError {
 
     #[error("packages config version not supported: '{0:?}'")]
     VersionNotSupported(String),
+}
+
+#[derive(Debug, Error)]
+pub enum StaticPackagesInitError {
+    #[error("while reading data/static_packages file")]
+    ReadStaticPackages(#[source] package_directory::ReadFileError),
+
+    #[error("while processing data/static_packages")]
+    ProcessingStaticPackages(#[source] PathHashMappingError),
 }

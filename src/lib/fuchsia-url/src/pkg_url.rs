@@ -5,7 +5,12 @@
 use {
     percent_encoding::{self, percent_decode},
     serde::{Deserialize, Deserializer, Serialize, Serializer},
-    std::{convert::TryFrom, fmt, ops::Deref, str},
+    std::{
+        convert::{TryFrom, TryInto as _},
+        fmt,
+        ops::Deref,
+        str,
+    },
     url::{Host, Url},
 };
 
@@ -221,6 +226,14 @@ impl Deref for PinnedPkgUrl {
     type Target = PkgUrl;
     fn deref(&self) -> &Self::Target {
         &self.url
+    }
+}
+
+impl str::FromStr for PinnedPkgUrl {
+    type Err = ParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        PkgUrl::parse(value)?.try_into()
     }
 }
 
@@ -1210,5 +1223,24 @@ mod tests {
         let url =
             PkgUrl::new_package("fuchsia.com".to_string(), "/foo/0".to_string(), None).unwrap();
         assert_matches!(PinnedPkgUrl::try_from(url), Err(ParseError::MissingHash));
+    }
+
+    #[test]
+    fn test_pinned_url_from_str_succeeds() {
+        let url: PinnedPkgUrl = "fuchsia-pkg://fuchsia.com/name/variant?hash=0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
+
+        assert_eq!(
+            url,
+            PinnedPkgUrl::new_package("fuchsia.com".into(), "/name/variant".into(), [0; 32].into())
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_pinned_url_from_str_requires_hash() {
+        assert_matches!(
+            "fuchsia-pkg://fuchsia.com/name/variant".parse::<PinnedPkgUrl>(),
+            Err(ParseError::MissingHash)
+        );
     }
 }

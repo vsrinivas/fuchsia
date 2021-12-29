@@ -87,7 +87,7 @@ async fn main_inner() -> Result<(), Error> {
 
         let base_packages_fut = BasePackages::new(
             &blobfs,
-            &system_image.root_dir(),
+            &system_image,
             inspector.root().create_child("base-packages"),
         );
 
