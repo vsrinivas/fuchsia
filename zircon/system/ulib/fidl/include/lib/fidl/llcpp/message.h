@@ -313,7 +313,8 @@ class IncomingMessage : public ::fidl::Result {
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
   template <typename Transport>
   static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                void* handle_metadata, uint32_t handle_actual) {
+                                typename Transport::HandleMetadata* handle_metadata,
+                                uint32_t handle_actual) {
     return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles, handle_metadata,
                            handle_actual);
   }
@@ -354,8 +355,8 @@ class IncomingMessage : public ::fidl::Result {
   // here appropriately.
   template <typename Transport>
   static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                void* handle_metadata, uint32_t handle_actual,
-                                SkipMessageHeaderValidationTag) {
+                                typename Transport::HandleMetadata* handle_metadata,
+                                uint32_t handle_actual, SkipMessageHeaderValidationTag) {
     return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles, handle_metadata,
                            handle_actual, kSkipMessageHeaderValidation);
   }
