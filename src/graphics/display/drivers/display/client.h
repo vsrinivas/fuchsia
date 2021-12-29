@@ -29,6 +29,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <list>
 #include <map>
 #include <memory>
 #include <variant>
@@ -258,6 +259,8 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
                      SetLayerImageCompleter::Sync& _completer) override;
   void CheckConfig(CheckConfigRequestView request, CheckConfigCompleter::Sync& _completer) override;
   void ApplyConfig(ApplyConfigRequestView request, ApplyConfigCompleter::Sync& _completer) override;
+  void GetLatestAppliedConfigStamp(GetLatestAppliedConfigStampRequestView request,
+                                   GetLatestAppliedConfigStampCompleter::Sync& _completer) override;
   void EnableVsync(EnableVsyncRequestView request, EnableVsyncCompleter::Sync& _completer) override;
   void SetVirtconMode(SetVirtconModeRequestView request,
                       SetVirtconModeCompleter::Sync& _completer) override;
@@ -305,9 +308,11 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   DisplayConfig::Map configs_;
   bool pending_config_valid_ = false;
   bool is_owner_ = false;
+
   // A counter for the number of times the client has successfully applied
   // a configuration. This does not account for changes due to waiting images.
   uint32_t client_apply_count_ = 0;
+  config_stamp_t latest_config_stamp_ = INVALID_CONFIG_STAMP_BANJO;
 
   // This is the client's clamped RGB value.
   uint8_t client_minimum_rgb_ = 0;
@@ -375,8 +380,8 @@ class ClientProxy : public ClientParent {
   void DdkRelease();
 
   // Requires holding controller_->mtx() lock
-  zx_status_t OnDisplayVsync(uint64_t display_id, zx_time_t timestamp, uint64_t* image_ids,
-                             size_t count);
+  zx_status_t OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                             config_stamp_t controller_stamp, uint64_t* image_ids, size_t count);
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                          const uint64_t* displays_removed, size_t removed_count);
   void SetOwnership(bool is_owner);
@@ -402,6 +407,19 @@ class ClientProxy : public ClientParent {
   uint32_t id() const { return handler_.id(); }
 
   inspect::Node& node() { return node_; }
+
+  using config_stamp_pair_t = struct config_stamp_pair {
+    config_stamp_t controller_stamp;
+    config_stamp_t client_stamp;
+  };
+  std::list<config_stamp_pair_t>& pending_applied_config_stamps() {
+    return pending_applied_config_stamps_;
+  }
+
+  // Add a new mapping entry from |stamps.controller_stamp| to |stamp.config_stamp|.
+  // Controller should guarantee that |stamps.controller_stamp| is strictly
+  // greater than existing pending controller stamps.
+  void UpdateConfigStampMapping(config_stamp_pair_t stamps);
 
   // This is used for testing
   void CloseTest();
@@ -448,6 +466,8 @@ class ClientProxy : public ClientParent {
   using vsync_msg_t = struct vsync_msg {
     uint64_t display_id;
     zx_time_t timestamp;
+    config_stamp_t config_stamp;
+    // TODO(fxbug.dev/72588): Remove once we migrate all clients to |OnVsync2()|.
     uint64_t image_ids[kMaxImageHandles];
     size_t count;
   };
@@ -461,6 +481,11 @@ class ClientProxy : public ClientParent {
   bool acknowledge_request_sent_ = false;
 
   fit::function<void()> on_client_dead_;
+
+  // Mapping from controller_stamp to client_stamp for all configurations that
+  // are already applied and pending to be presented on the display.
+  // Ordered by |controller_stamp_| in increasing order.
+  std::list<config_stamp_pair_t> pending_applied_config_stamps_;
 
  private:
   inspect::Node node_;

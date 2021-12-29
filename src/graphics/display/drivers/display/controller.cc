@@ -354,6 +354,40 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     }
   }
 
+  // Determine whether the configuration (associated with Controller
+  // |config_stamp|) comes from primary client, virtcon client, or neither.
+  enum class ConfigStampSource { kPrimary, kVirtcon, kNeither };
+  ConfigStampSource config_stamp_source = ConfigStampSource::kNeither;
+
+  struct {
+    ClientProxy* client;
+    ConfigStampSource source;
+  } const kClientInfo[] = {
+      {
+          .client = primary_client_,
+          .source = ConfigStampSource::kPrimary,
+      },
+      {
+          .client = vc_client_,
+          .source = ConfigStampSource::kVirtcon,
+      },
+  };
+
+  for (const auto& [client, source] : kClientInfo) {
+    if (client) {
+      auto pending_stamps = client->pending_applied_config_stamps();
+      auto it = std::find_if(pending_stamps.begin(), pending_stamps.end(),
+                             [controller_config_stamp](const auto& pending_stamp) {
+                               return pending_stamp.controller_stamp >= controller_config_stamp;
+                             });
+      if (it != pending_stamps.end() && it->controller_stamp == controller_config_stamp) {
+        config_stamp_source = source;
+        // Obsolete stamps will be removed in |Client::OnDisplayVsync|.
+        break;
+      }
+    }
+  };
+
   if (!info->pending_layer_change) {
     // Since we know there are no pending layer changes, we know that every
     // layer (i.e z_index) has an image. So every image either matches a handle
@@ -363,7 +397,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     image_node_t* cur;
     image_node_t* tmp;
     list_for_every_entry_safe (&info->images, cur, tmp, image_node_t, link) {
-      bool should_retire = cur->self->latest_config_stamp() < controller_config_stamp;
+      bool should_retire = cur->self->latest_controller_config_stamp() < controller_config_stamp;
 
       // Retire any images for which we don't already have a z-match, since
       // those are older than whatever is currently in their layer.
@@ -425,20 +459,26 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
     }
   }
 
-  if (vc_applied_ && vc_client_) {
-    vc_client_->OnDisplayVsync(display_id, timestamp, virtcon_images.data(), virtcon_images.size());
-  } else if (!vc_applied_ && primary_client_) {
-    // A previous client applied a config and then disconnected before the vsync. Don't send garbage
-    // image IDs to the new primary client.
-    if (primary_client_->id() != applied_client_id_) {
-      zxlogf(DEBUG,
-             "Dropping vsync. This was meant for client[%d], "
-             "but client[%d] is currently active.\n",
-             applied_client_id_, primary_client_->id());
-    } else {
-      primary_client_->OnDisplayVsync(display_id, timestamp, primary_images.data(),
-                                      primary_images.size());
-    }
+  switch (config_stamp_source) {
+    case ConfigStampSource::kPrimary:
+      primary_client_->OnDisplayVsync(display_id, timestamp, controller_config_stamp,
+                                      primary_images.data(), primary_images.size());
+      break;
+    case ConfigStampSource::kVirtcon:
+      vc_client_->OnDisplayVsync(display_id, timestamp, controller_config_stamp,
+                                 virtcon_images.data(), virtcon_images.size());
+      break;
+    case ConfigStampSource::kNeither:
+      if (primary_client_) {
+        // A previous client applied a config and then disconnected before the vsync. Don't send
+        // garbage image IDs to the new primary client.
+        if (primary_client_->id() != applied_client_id_) {
+          zxlogf(DEBUG,
+                 "Dropping vsync. This was meant for client[%d], "
+                 "but client[%d] is currently active.\n",
+                 applied_client_id_, primary_client_->id());
+        }
+      }
   }
 }
 
@@ -463,7 +503,8 @@ zx_status_t Controller::DisplayControllerInterfaceGetAudioFormat(
 }
 
 void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc,
-                             uint32_t client_stamp, uint32_t client_id) {
+                             config_stamp_t config_stamp, uint32_t layer_stamp,
+                             uint32_t client_id) {
   zx_time_t timestamp = zx_clock_get_monotonic();
   last_valid_apply_config_timestamp_ns_property_.Set(timestamp);
   last_valid_apply_config_interval_ns_property_.Set(timestamp - last_valid_apply_config_timestamp_);
@@ -471,6 +512,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
 
   fbl::Array<const display_config_t*> display_configs(new const display_config_t*[count], count);
   uint32_t display_count = 0;
+
   {
     fbl::AutoLock lock(mtx());
     bool switching_client = (is_vc != vc_applied_ || client_id != applied_client_id_);
@@ -491,7 +533,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     // can apply a new configuration. We allow the client to apply a more complete version of
     // the configuration, although Client::HandleApplyConfig won't migrate a layer's current
     // image if there is also a pending image.
-    if (switching_client || applied_stamp_ != client_stamp) {
+    if (switching_client || applied_layer_stamp_ != layer_stamp) {
       for (int i = 0; i < count; i++) {
         auto* config = configs[i];
         auto display = displays_.find(config->id);
@@ -545,7 +587,7 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
         // Set the image z index so vsync knows what layer the image is in
         AssertMtxAliasHeld(image->mtx());
         image->set_z_index(layer->z_order());
-        image->set_latest_config_stamp(controller_stamp_);
+        image->set_latest_controller_config_stamp(controller_stamp_);
         image->StartPresent();
 
         // It's possible that the image's layer was moved between displays. The logic around
@@ -568,12 +610,18 @@ void Controller::ApplyConfig(DisplayConfig* configs[], int32_t count, bool is_vc
     }
 
     vc_applied_ = is_vc;
-    applied_stamp_ = client_stamp;
+    applied_layer_stamp_ = layer_stamp;
     applied_client_id_ = client_id;
     if (switching_client) {
       active_client_->ReapplySpecialConfigs();
     }
+
+    active_client_->UpdateConfigStampMapping({
+        .controller_stamp = controller_stamp_,
+        .client_stamp = config_stamp,
+    });
   }
+
   dc_.ApplyConfiguration(display_configs.get(), display_count, &controller_stamp_);
 }
 
@@ -839,6 +887,11 @@ void Controller::OnVsyncMonitor() {
   }
 }
 
+config_stamp_t Controller::TEST_controller_stamp() const {
+  fbl::AutoLock lock(mtx());
+  return controller_stamp_;
+}
+
 zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   ZX_DEBUG_ASSERT_MSG(device_ptr && device_ptr->get() == this, "Wrong controller passed to Bind()");
 
@@ -924,8 +977,11 @@ void Controller::DdkRelease() {
   loop_.Shutdown();
   // Set an empty config so that the display driver releases resources.
   const display_config_t* configs;
-  ++controller_stamp_.value;
-  dc_.ApplyConfiguration(&configs, 0, &controller_stamp_);
+  {
+    fbl::AutoLock lock(mtx());
+    ++controller_stamp_.value;
+    dc_.ApplyConfiguration(&configs, 0, &controller_stamp_);
+  }
   delete this;
 }
 

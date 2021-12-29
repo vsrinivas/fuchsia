@@ -15,6 +15,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "image.h"
+#include "src/graphics/display/drivers/display/util.h"
 
 namespace display {
 
@@ -49,8 +50,23 @@ class Layer : public IdMappable<std::unique_ptr<Layer>> {
   auto current_type() const { return current_layer_.type; }
   auto pending_type() const { return pending_layer_.type; }
 
-  // Resolve fences and retire any displayed images. Returns false if there were any errors.
-  bool ResolvePendingImage(FenceCollection* fence);
+  // If the layer properties were changed in the pending configuration, this
+  // retires all images as they are invalidated with layer properties change.
+  bool ResolvePendingLayerProperties();
+
+  // This sets up the fence and config stamp for pending images on this layer.
+  //
+  // - If the layer image has a fence to wait before presentation, this prepares
+  //   the new fence and start async waiting for the fence.
+  // - The layer's latest pending (waiting) image will be associated with the
+  //   client configuration |stamp|, as it reflects the latest configuration
+  //   state; this will owerwrite all the previous stamp states for this image.
+  //   The stamp will be used later when display core integrates stamps of all
+  //   layers to determine the current frame state.
+  //
+  // Returns false if there were any errors.
+  bool ResolvePendingImage(FenceCollection* fence,
+                           config_stamp_t stamp = INVALID_CONFIG_STAMP_BANJO);
 
   // Make the staged config current.
   void ApplyChanges(const display_mode_t& mode);
@@ -65,6 +81,11 @@ class Layer : public IdMappable<std::unique_ptr<Layer>> {
   // If a new image is available, retire current_image() and other pending images. Returns false if
   // no images were ready.
   bool ActivateLatestReadyImage();
+
+  // Get the stamp of configuration that is associated (at ResolvePendingImage)
+  // with the image that is currently being displayed on the device.
+  // If no image is being displayed on this layer, returns nullopt.
+  std::optional<config_stamp_t> GetCurrentClientConfigStamp() const;
 
   // Adds the pending_layer_ to a display list, at z_index. Returns false if the pending_layer_ is
   // currently in use.

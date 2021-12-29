@@ -101,8 +101,13 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   void set_z_index(uint32_t z_index) { z_index_ = z_index; }
   uint32_t z_index() const { return z_index_; }
 
-  void set_latest_config_stamp(config_stamp_t stamp) { latest_config_stamp_ = stamp; }
-  config_stamp_t latest_config_stamp() const { return latest_config_stamp_; }
+  void set_latest_controller_config_stamp(config_stamp_t stamp) {
+    latest_controller_config_stamp_ = stamp;
+  }
+  config_stamp_t latest_controller_config_stamp() const { return latest_controller_config_stamp_; }
+
+  void set_latest_client_config_stamp(config_stamp_t stamp) { latest_client_config_stamp_ = stamp; }
+  config_stamp_t latest_client_config_stamp() const { return latest_client_config_stamp_; }
 
   // The node alternates between a client's waiting image list and the controller's
   // presented image list. The presented image list is protected with the controller mutex,
@@ -124,8 +129,6 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   image_t info_;
   uint32_t stride_px_;
 
-  // Stamp of the latest display configuration that uses this image.
-  config_stamp_t latest_config_stamp_ = INVALID_CONFIG_STAMP_BANJO;
   Controller* const controller_;
 
   // z_index is set/read by controller.cpp under its lock
@@ -133,6 +136,18 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
 
   // |id_| of the client that created the image.
   const uint32_t client_id_;
+
+  // Stamp of the latest Controller display configuration that uses this image.
+  config_stamp_t latest_controller_config_stamp_ = INVALID_CONFIG_STAMP_BANJO;
+
+  // Stamp of the latest display configuration in Client (the DisplayController
+  // FIDL service) that uses this image.
+  //
+  // Note that for an image, it is possible that its |latest_client_config_stamp_|
+  // doesn't match the |latest_controller_config_stamp_|. This could happen when
+  // a client configuration sets a new layer image but the new image is not
+  // ready yet, so the controller has to keep using the old image.
+  config_stamp_t latest_client_config_stamp_ = INVALID_CONFIG_STAMP_BANJO;
 
   // Indicates that the image contents are ready for display.
   // Only ever accessed on loop thread, so no synchronization

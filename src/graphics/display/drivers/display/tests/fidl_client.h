@@ -11,6 +11,7 @@
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
+#include <initializer_list>
 #include <memory>
 
 #include <fbl/auto_lock.h>
@@ -40,26 +41,71 @@ class TestFidlClient {
 
   explicit TestFidlClient(const fidl::WireSyncClient<fuchsia_sysmem::Allocator>& sysmem)
       : sysmem_(sysmem) {}
+
   ~TestFidlClient();
 
   bool CreateChannel(zx_handle_t provider, bool is_vc);
   // Enable vsync for a display and wait for events using |dispatcher|.
   bool Bind(async_dispatcher_t* dispatcher) TA_EXCL(mtx());
-  zx_status_t ImportImageWithSysmem(const fuchsia_hardware_display::wire::ImageConfig& image_config,
-                                    uint64_t* image_id) TA_EXCL(mtx());
-  zx_status_t PresentImage();
+
+  struct EventInfo {
+    uint64_t id;
+    zx::event event = {};
+  };
+
+  zx::status<uint64_t> ImportImageWithSysmem(
+      const fuchsia_hardware_display::wire::ImageConfig& image_config) TA_EXCL(mtx());
+
+  zx::status<uint64_t> CreateImage() TA_EXCL(mtx());
+  zx::status<uint64_t> CreateLayer() TA_EXCL(mtx());
+  zx::status<EventInfo> CreateEvent() TA_EXCL(mtx());
+
+  fuchsia_hardware_display::wire::ConfigStamp GetRecentAppliedConfigStamp() TA_EXCL(mtx());
+
+  struct PresentLayerInfo {
+    uint64_t layer_id;
+    uint64_t image_id;
+    std::optional<uint64_t> image_ready_wait_event_id;
+  };
+
+  std::vector<PresentLayerInfo> CreateDefaultPresentLayerInfo() {
+    auto layer_result = CreateLayer();
+    EXPECT_TRUE(layer_result.is_ok());
+
+    auto image_result = ImportImageWithSysmem(displays_[0].image_config_);
+    EXPECT_TRUE(image_result.is_ok());
+
+    return {
+        {.layer_id = layer_result.value(),
+         .image_id = image_result.value(),
+         .image_ready_wait_event_id = std::nullopt},
+    };
+  }
+
+  zx_status_t PresentLayers() { return PresentLayers(CreateDefaultPresentLayerInfo()); }
+
+  zx_status_t PresentLayers(std::vector<PresentLayerInfo> layers);
+
   uint64_t display_id() const;
 
   fbl::Vector<Display> displays_;
   fidl::WireSyncClient<fuchsia_hardware_display::Controller> dc_ TA_GUARDED(mtx());
   zx::handle device_handle_;
   bool has_ownership_ = false;
-  uint64_t image_id_ = 0;
-  uint64_t layer_id_ = 0;
 
   uint64_t vsync_count() const {
     fbl::AutoLock lock(mtx());
     return vsync_count_;
+  }
+
+  uint64_t vsync2_count() const {
+    fbl::AutoLock lock(mtx());
+    return vsync2_count_;
+  }
+
+  fuchsia_hardware_display::wire::ConfigStamp recent_presented_config_stamp() const {
+    fbl::AutoLock lock(mtx());
+    return recent_presented_config_stamp_;
   }
 
   const std::vector<uint64_t>& recent_vsync_images() const { return recent_vsync_images_; }
@@ -72,16 +118,21 @@ class TestFidlClient {
   mutable fbl::Mutex mtx_;
   async_dispatcher_t* dispatcher_ = nullptr;
   uint64_t vsync_count_ TA_GUARDED(mtx()) = 0;
+  uint64_t vsync2_count_ TA_GUARDED(mtx()) = 0;
   uint64_t cookie_ = 0;
+  fuchsia_hardware_display::wire::ConfigStamp recent_presented_config_stamp_;
+  // TODO(fxbug.dev/72588): Remove after finishing migration to OnVsync2.
   std::vector<uint64_t> recent_vsync_images_;
   const fidl::WireSyncClient<fuchsia_sysmem::Allocator>& sysmem_;
 
-  zx_status_t ImportImageWithSysmemLocked(
-      const fuchsia_hardware_display::wire::ImageConfig& image_config, uint64_t* image_id)
-      TA_REQ(mtx());
+  zx::status<uint64_t> ImportImageWithSysmemLocked(
+      const fuchsia_hardware_display::wire::ImageConfig& image_config) TA_REQ(mtx());
+  zx::status<uint64_t> CreateLayerLocked() TA_REQ(mtx());
+  zx::status<EventInfo> CreateEventLocked() TA_REQ(mtx());
+
   void OnEventMsgAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                        const zx_packet_signal_t* signal) TA_EXCL(mtx());
-  async::WaitMethod<TestFidlClient, &TestFidlClient::OnEventMsgAsync> wait_events_{this};
+  async::WaitMethod<TestFidlClient, &TestFidlClient::OnEventMsgAsync> event_msg_wait_event_{this};
 };
 
 }  // namespace display

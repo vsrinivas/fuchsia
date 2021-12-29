@@ -68,7 +68,7 @@ Layer::~Layer() {
   }
 }
 
-bool Layer::ResolvePendingImage(FenceCollection* fences) {
+bool Layer::ResolvePendingLayerProperties() {
   // If the layer's image configuration changed, get rid of any current images
   if (pending_image_config_gen_ != current_image_config_gen_) {
     current_image_config_gen_ = pending_image_config_gen_;
@@ -89,7 +89,10 @@ bool Layer::ResolvePendingImage(FenceCollection* fences) {
       displayed_image_ = nullptr;
     }
   }
+  return true;
+}
 
+bool Layer::ResolvePendingImage(FenceCollection* fences, config_stamp_t stamp) {
   if (pending_image_) {
     auto wait_fence = fences->GetFence(pending_wait_event_id_);
     if (wait_fence && wait_fence->InContainer()) {
@@ -103,6 +106,11 @@ bool Layer::ResolvePendingImage(FenceCollection* fences) {
       list_add_tail(&waiting_images_, &pending_image_->node.link);
       pending_image_->node.self = std::move(pending_image_);
     }
+  }
+
+  image_node_t* tail_node = list_peek_tail_type(&waiting_images_, image_node_t, link);
+  if (tail_node) {
+    tail_node->self->set_latest_client_config_stamp(stamp);
   }
   return true;
 }
@@ -190,6 +198,13 @@ bool Layer::CleanUpImage(Image* image) {
     }
   }
   return false;
+}
+
+std::optional<config_stamp_t> Layer::GetCurrentClientConfigStamp() const {
+  if (displayed_image_ != nullptr) {
+    return displayed_image_->latest_client_config_stamp();
+  }
+  return std::nullopt;
 }
 
 bool Layer::ActivateLatestReadyImage() {

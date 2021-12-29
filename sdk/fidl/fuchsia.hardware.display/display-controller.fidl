@@ -583,6 +583,19 @@ protocol Controller {
     // CheckConfig.
     ApplyConfig();
 
+    // TODO(fxbug.dev/72588): This is a temporary solution to support old
+    // ApplyConfig() with new OnVsync2() events. Remove this once the migration
+    // is done.
+    //
+    /// Gets the stamp provided with the latest configuration the client
+    /// submitted (by calling ApplyConfig()) and the display core driver
+    /// accepted; the display configuration may not have been rendered yet
+    /// because of pending image availability or pending layer changes.
+    /// If no configuration was applied before, returns `INVALID_CONFIG_STAMP_VALUE`.
+    GetLatestAppliedConfigStamp() -> (resource struct {
+        stamp ConfigStamp;
+    });
+
     /// Applies any pending changes to the current configuration. This will
     /// not apply pending changes to layers which are not on any display.
     ///
@@ -650,6 +663,53 @@ protocol Controller {
         display_id uint64;
         timestamp uint64;
         images vector<uint64>:MAX;
+        cookie uint64;
+    });
+
+    /// Event sent for every vsync.
+    ///
+    /// Arguments
+    ///
+    /// - `display_id` identifies the display on which the vsync occurred.
+    ///
+    /// - `timestamp` indicates the time the vsync occurred.
+    ///
+    /// - `applied_config_stamp` is the stamp of the latest configuration that
+    ///   is *fully* applied to the display. For example, if a configuration
+    ///   contains images that are still waiting to be ready, the configuration
+    ///   will be only partially applied (without the pending image), and thus
+    ///   the stamp of this configuration will not appear in Vsync messages
+    ///   unless that image becomes ready and display controller reapplies
+    ///   the configuration fully with the pending image.
+    ///
+    ///   The `value` of the stamp MUST NOT be INVALID_CONFIG_STAMP_VALUE.
+    ///
+    /// - `cookie` is a unique number returned by the driver.
+    ///
+    ///   Cookie is used to acknowledge the receipt of vsync events using
+    ///   `AcknowledgeVsync` API.
+    ///
+    ///   When cookie has a value of zero, no acknowledgement is required by the
+    ///   client. A non-zero valued cookie requires immediate acknowledgement by
+    ///   client. Failure to acknowledge vsync events will result in driver
+    ///   suspending vsync event notification. All vsync messages containing a
+    ///   non-zero cookie require acknowledgement regardless of whether client
+    ///   has applied a (new) configuration or not (via ApplyConfig).
+    ///
+    ///   If a client fails to acknowledge vsync messages, the driver will store
+    ///   incoming hardware-generated vsyncs in a circular buffer and send them
+    ///   to the client once it resumes acknowledgement. Due to limited size of
+    ///   buffer, only the most recently received vsyncs will be stored and
+    ///   older ones will be dropped.
+    //
+    // TODO(fxbug.dev/72588): Remove "@transitional" tag after implementing
+    // OnVsync2 on all display clients.
+    //
+    @transitional
+    -> OnVsync2(resource struct {
+        display_id uint64;
+        timestamp uint64;
+        applied_config_stamp ConfigStamp;
         cookie uint64;
     });
 

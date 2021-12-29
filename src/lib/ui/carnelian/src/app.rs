@@ -507,6 +507,9 @@ impl App {
                         eprintln!("vsync for display {} with no view", display_id);
                     }
                 }
+                ControllerEvent::OnVsync2 { .. } => {
+                    // TODO(fxbug.dev/72588): Implement OnVsync2() handler.
+                }
                 _ => self.strategy.handle_display_controller_event(event).await,
             },
             MessageInternal::SetVirtconMode(virtcon_mode) => {

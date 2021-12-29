@@ -376,6 +376,9 @@ impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
             ControllerEvent::OnVsync { .. } => {
                 panic!("App strategy should not see vsync events");
             }
+            ControllerEvent::OnVsync2 { .. } => {
+                panic!("App strategy should not see vsync events");
+            }
         }
     }
 

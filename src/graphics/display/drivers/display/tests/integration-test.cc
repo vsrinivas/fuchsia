@@ -6,30 +6,25 @@
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fidl/llcpp/array.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 #include <cstdint>
 #include <memory>
 
+#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
-// clang-format off
-#include "fbl/alloc_checker.h"
-#include "lib/fidl/llcpp/array.h"
-#include "lib/zx/clock.h"
-#include "lib/zx/time.h"
-#include "base.h"
-#include "fidl_client.h"
-
-// These must be included after base.h and fidl_client.h because the Banjo bindings use #defines
-// that conflict with enum names in the FIDL bindings.
-#include "../../fake/fake-display.h"
-#include "../controller.h"
-#include "../client.h"
-// clang-format on
-
+#include "src/graphics/display/drivers/display/client.h"
+#include "src/graphics/display/drivers/display/controller.h"
+#include "src/graphics/display/drivers/display/tests/base.h"
+#include "src/graphics/display/drivers/display/tests/fidl_client.h"
+#include "src/graphics/display/drivers/display/util.h"
+#include "src/graphics/display/drivers/fake/fake-display.h"
 #include "src/lib/fsl/handles/object_info.h"
 namespace sysmem = fuchsia_sysmem;
 
@@ -81,7 +76,7 @@ class IntegrationTest : public TestBase, public zxtest::WithParamInterface<bool>
     ClientProxy* client_ptr = controller()->active_client_;
     EXPECT_OK(sync_completion_wait(client_ptr->handler_.fidl_unbound(), zx::sec(1).get()));
     // EnableVsync(false) has not completed here, because we are still holding controller()->mtx()
-    client_ptr->OnDisplayVsync(display_id, 0, nullptr, 0);
+    client_ptr->OnDisplayVsync(display_id, 0, INVALID_CONFIG_STAMP_BANJO, nullptr, 0);
   }
 
   bool primary_client_dead() {
@@ -96,13 +91,13 @@ class IntegrationTest : public TestBase, public zxtest::WithParamInterface<bool>
 
   void client_proxy_send_vsync() {
     fbl::AutoLock l(controller()->mtx());
-    controller()->active_client_->OnDisplayVsync(0, 0, nullptr, 0);
+    controller()->active_client_->OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO, nullptr, 0);
   }
 
   void client_proxy_send_vsync_with_handle() {
     std::unique_ptr<uint64_t> handle = std::make_unique<uint64_t>();
     fbl::AutoLock l(controller()->mtx());
-    controller()->active_client_->OnDisplayVsync(0, 0, handle.get(), 1);
+    controller()->active_client_->OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO, handle.get(), 1);
   }
 
   void SendDisplayVsync() { display()->SendVsync(); }
@@ -178,7 +173,7 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
   // Present an image
-  EXPECT_OK(primary_client->PresentImage());
+  EXPECT_OK(primary_client->PresentLayers());
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, id = primary_client->display_id()]() {
         fbl::AutoLock lock(controller()->mtx());
@@ -217,7 +212,7 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }));
   // ... and presents before the previous client's empty vsync
-  EXPECT_EQ(ZX_OK, primary_client->PresentImage());
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers());
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, id = primary_client->display_id()]() {
         fbl::AutoLock lock(controller()->mtx());
@@ -253,7 +248,7 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
   // Present an image
-  EXPECT_OK(primary_client->PresentImage());
+  EXPECT_OK(primary_client->PresentLayers());
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, id = primary_client->display_id()]() {
@@ -752,7 +747,7 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon)
       RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
 
   // Present an image from virtcon client
-  EXPECT_OK(vc_client.PresentImage());
+  EXPECT_OK(vc_client.PresentLayers());
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, id = vc_client.display_id()]() {
         fbl::AutoLock lock(controller()->mtx());
@@ -803,7 +798,7 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary)
         RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
     // Present an image from the first primary client
-    EXPECT_OK(primary_client1.PresentImage());
+    EXPECT_OK(primary_client1.PresentLayers());
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
         [this, id = primary_client1.display_id()]() {
           fbl::AutoLock lock(controller()->mtx());
@@ -888,7 +883,7 @@ TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
       [p = primary_client.get()]() { return p->vsync_count() == 0; }, zx::sec(1)));
 
   // Present an image from the primary client.
-  EXPECT_OK(primary_client->PresentImage());
+  EXPECT_OK(primary_client->PresentLayers());
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, id = primary_client->display_id()]() {
         fbl::AutoLock lock(controller()->mtx());
@@ -906,5 +901,598 @@ TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
       },
       zx::sec(1)));
 }
+
+// This tests the basic behavior of ApplyConfig() and OnVsync2() events.
+// We test applying configurations with images without wait fences, so they are
+// guaranteed to be ready when client calls ApplyConfig().
+//
+// In this case, the new configuration stamp is guaranteed to appear in the next
+// coming OnVsync() event.
+//
+// Here we test the following case:
+//
+//  * ApplyConfig({layerA: img0}) ==> config_stamp_1
+//  - Vsync now should have config_stamp_1
+//  * ApplyConfig({layerA: img1}) ==> config_stamp_2
+//  - Vsync now should have config_stamp_2
+//  * ApplyConfig({}) ==> config_stamp_3
+//  - Vsync now should have config_stamp_3
+//
+// Both images are ready at ApplyConfig() time, i.e. no fences are provided.
+TEST_F(IntegrationTest, Vsync2Event) {
+  // Create and bind primary client.
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  // Apply a config for client to become active.
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+  }
+  auto apply_config_stamp_0 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_0);
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
+
+  auto primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+
+  auto present_config_stamp_0 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_0, present_config_stamp_0);
+  EXPECT_NE(0u, present_config_stamp_0.value);
+
+  auto create_default_layer_result = primary_client->CreateLayer();
+  auto create_image_0_result = primary_client->CreateImage();
+  auto create_image_1_result = primary_client->CreateImage();
+
+  EXPECT_EQ(ZX_OK, create_default_layer_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_0_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_result.status_value());
+
+  auto default_layer_id = create_default_layer_result.value();
+  auto image_0_id = create_image_0_result.value();
+  auto image_1_id = create_image_1_result.value();
+
+  // Present one single image without wait.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_0_id,
+                        .image_ready_wait_event_id = std::nullopt},
+                   }));
+  auto apply_config_stamp_1 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
+  EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_1 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_1, present_config_stamp_1);
+
+  // Present another image layer without wait.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_1_id,
+                        .image_ready_wait_event_id = std::nullopt},
+                   }));
+  auto apply_config_stamp_2 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
+  EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_2 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_2, present_config_stamp_2);
+
+  // Hide the existing layer.
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+  }
+  auto apply_config_stamp_3 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_3);
+  EXPECT_GT(apply_config_stamp_3, apply_config_stamp_2);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(0u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_3 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_3, present_config_stamp_3);
+}
+
+// This tests the behavior of ApplyConfig() and OnVsync2() events when images
+// come with wait fences, which is a common use case in Scenic when using GPU
+// composition.
+//
+// When applying configurations with pending images, the config_stamp returned
+// from OnVsync2() should not be updated unless the image becomes ready and
+// triggers a ReapplyConfig().
+//
+// Here we test the following case:
+//
+//  * ApplyConfig({layerA: img0}) ==> config_stamp_1
+//  - Vsync now should have config_stamp_1
+//  * ApplyConfig({layerA: img1, wait on fence1}) ==> config_stamp_2
+//  - Vsync now should have config_stamp_1
+//  * Signal fence1
+//  - Vsync now should have config_stamp_2
+//
+TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
+  // Create and bind primary client.
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  // Apply a config for client to become active.
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+  }
+  auto apply_config_stamp_0 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_0);
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
+
+  auto primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+
+  auto present_config_stamp_0 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_0, present_config_stamp_0);
+  EXPECT_NE(0u, present_config_stamp_0.value);
+
+  auto create_default_layer_result = primary_client->CreateLayer();
+  auto create_image_0_result = primary_client->CreateImage();
+  auto create_image_1_result = primary_client->CreateImage();
+  auto create_image_1_ready_fence_result = primary_client->CreateEvent();
+
+  EXPECT_EQ(ZX_OK, create_default_layer_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_0_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_ready_fence_result.status_value());
+
+  auto default_layer_id = create_default_layer_result.value();
+  auto image_0_id = create_image_0_result.value();
+  auto image_1_id = create_image_1_result.value();
+  auto image_1_ready_fence = std::move(create_image_1_ready_fence_result.value());
+
+  // Present one single image without wait.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_0_id,
+                        .image_ready_wait_event_id = std::nullopt},
+                   }));
+  auto apply_config_stamp_1 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
+  EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_1 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_1, present_config_stamp_1);
+
+  // Present another image layer; but the image is not ready yet. So the
+  // configuration applied to display device will be still the old one. On Vsync
+  // the |presented_config_stamp| is still |config_stamp_1|.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_1_id,
+                        .image_ready_wait_event_id = std::make_optional(image_1_ready_fence.id)},
+                   }));
+  auto apply_config_stamp_2 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
+  EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_2 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_2, present_config_stamp_1);
+
+  // Signal the event. Display Fence callback will be signaled, and new
+  // configuration with new config stamp (config_stamp_2) will be used.
+  // On next Vsync, the |presented_config_stamp| will be updated.
+  auto old_controller_stamp = controller()->TEST_controller_stamp();
+  image_1_ready_fence.event.signal(0u, ZX_EVENT_SIGNALED);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [controller = controller(), old_controller_stamp]() {
+        return controller->TEST_controller_stamp() > old_controller_stamp;
+      },
+      zx::sec(2)));
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_3 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_3, apply_config_stamp_2);
+}
+
+// This tests the behavior of ApplyConfig() and OnVsync2() events when images
+// that comes with wait fences are hidden in subsequent configurations.
+//
+// If a pending image never becomes ready, the config_stamp returned from
+// OnVsync2() should not be updated unless the image layer has been removed from
+// the display in a subsequent configuration.
+//
+// Here we test the following case:
+//
+//  * ApplyConfig({layerA: img0}) ==> config_stamp_1
+//  - Vsync now should have config_stamp_1
+//  * ApplyConfig({layerA: img1, waiting on fence1}) ==> config_stamp_2
+//  - Vsync now should have config_stamp_1
+//  * ApplyConfig({}) ==> config_stamp_3
+//  - Vsync now should have config_stamp_3
+//
+// Note that fence1 is never signaled.
+//
+TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
+  // Create and bind primary client.
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  // Apply a config for client to become active.
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+  }
+  auto apply_config_stamp_0 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_0);
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
+
+  auto primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+
+  auto present_config_stamp_0 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_0, present_config_stamp_0);
+  EXPECT_NE(0u, present_config_stamp_0.value);
+
+  auto create_default_layer_result = primary_client->CreateLayer();
+  auto create_image_0_result = primary_client->CreateImage();
+  auto create_image_1_result = primary_client->CreateImage();
+  auto create_image_1_ready_fence_result = primary_client->CreateEvent();
+
+  EXPECT_EQ(ZX_OK, create_default_layer_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_0_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_ready_fence_result.status_value());
+
+  auto default_layer_id = create_default_layer_result.value();
+  auto image_0_id = create_image_0_result.value();
+  auto image_1_id = create_image_1_result.value();
+  auto image_1_ready_fence = std::move(create_image_1_ready_fence_result.value());
+
+  // Present an image layer.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_0_id,
+                        .image_ready_wait_event_id = std::nullopt},
+                   }));
+  auto apply_config_stamp_1 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
+  EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_1 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_1, present_config_stamp_1);
+
+  // Present another image layer; but the image is not ready yet. Display
+  // controller will wait on the fence and Vsync will return the previous
+  // configuration instead.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_1_id,
+                        .image_ready_wait_event_id = image_1_ready_fence.id},
+                   }));
+  auto apply_config_stamp_2 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
+  EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_2 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_2, present_config_stamp_1);
+
+  // Hide the image layer. Display controller will not care about the fence
+  // and thus use the latest configuration stamp.
+  {
+    fbl::AutoLock lock(primary_client->mtx());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+  }
+  auto apply_config_stamp_3 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_3);
+  EXPECT_GT(apply_config_stamp_3, apply_config_stamp_2);
+
+  // On Vsync, the configuration stamp client receives on Vsync event message
+  // will be the latest one applied to the display controller, since the pending
+  // image has been removed from the configuration.
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(0u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_3 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_3, apply_config_stamp_3);
+}
+
+// This tests the behavior of ApplyConfig() and OnVsync2() events when images
+// that comes with wait fences are overridden in subsequent configurations.
+//
+// If a client applies a configuration (#1) with a pending image, while display
+// controller waits for the image to be ready, the client may apply another
+// configuration (#2) with a different image. If the image in configuration #2
+// becomes available earlier than #1, the layer configuration in #1 should be
+// overridden, and signaling wait fences in #1 should not trigger a
+// ReapplyConfig().
+//
+// Here we test the following case:
+//
+//  * ApplyConfig({layerA: img0}) ==> config_stamp_1
+//  - Vsync now should have config_stamp_1
+//  * ApplyConfig({layerA: img1, waiting on fence1}) ==> config_stamp_2
+//  - Vsync now should have config_stamp_1 since img1 is not ready yet
+//  * ApplyConfig({layerA: img2, waiting on fence2}) ==> config_stamp_3
+//  - Vsync now should have config_stamp_1 since img1 and img2 are not ready
+//  * Signal fence2
+//  - Vsync now should have config_stamp_3.
+//  * Signal fence1
+//  - Vsync .
+//
+// Note that fence1 is never signaled.
+TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
+  // Create and bind primary client.
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+
+  auto create_default_layer_result = primary_client->CreateLayer();
+  auto create_image_0_result = primary_client->CreateImage();
+  auto create_image_1_result = primary_client->CreateImage();
+  auto create_image_2_result = primary_client->CreateImage();
+  auto create_image_1_ready_fence_result = primary_client->CreateEvent();
+  auto create_image_2_ready_fence_result = primary_client->CreateEvent();
+
+  EXPECT_EQ(ZX_OK, create_default_layer_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_0_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_2_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_1_ready_fence_result.status_value());
+  EXPECT_EQ(ZX_OK, create_image_2_ready_fence_result.status_value());
+
+  auto default_layer_id = create_default_layer_result.value();
+  auto image_0_id = create_image_0_result.value();
+  auto image_1_id = create_image_1_result.value();
+  auto image_2_id = create_image_2_result.value();
+  auto image_1_ready_fence = std::move(create_image_1_ready_fence_result.value());
+  auto image_2_ready_fence = std::move(create_image_2_ready_fence_result.value());
+
+  // Apply a config for client to become active; Present an image layer.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_0_id,
+                        .image_ready_wait_event_id = std::nullopt},
+                   }));
+  auto apply_config_stamp_0 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_0);
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
+
+  auto primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_0 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(apply_config_stamp_0, present_config_stamp_0);
+  EXPECT_NE(0u, present_config_stamp_0.value);
+
+  // Present another image layer (image #1, wait_event #0); but the image is not
+  // ready yet. Display controller will wait on the fence and Vsync will return
+  // the previous configuration instead.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_1_id,
+                        .image_ready_wait_event_id = image_1_ready_fence.id},
+                   }));
+  auto apply_config_stamp_1 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
+  EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+
+  auto present_config_stamp_1 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_1, present_config_stamp_0);
+
+  // Present another image layer (image #2, wait_event #1); the image is not
+  // ready as well. We should still see current |presented_config_stamp| to be
+  // equal to |present_config_stamp_0|.
+  EXPECT_EQ(ZX_OK, primary_client->PresentLayers({
+                       {.layer_id = default_layer_id,
+                        .image_id = image_2_id,
+                        .image_ready_wait_event_id = image_2_ready_fence.id},
+                   }));
+  auto apply_config_stamp_2 = primary_client->GetRecentAppliedConfigStamp();
+  EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
+  EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+
+  auto present_config_stamp_2 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_2, present_config_stamp_1);
+
+  // Signal the event #1. Display Fence callback will be signaled, and
+  // configuration with new config stamp (apply_config_stamp_2) will be used.
+  // On next Vsync, the |presented_config_stamp| will be updated.
+  auto old_controller_stamp = controller()->TEST_controller_stamp();
+  image_2_ready_fence.event.signal(0u, ZX_EVENT_SIGNALED);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [controller = controller(), old_controller_stamp]() {
+        return controller->TEST_controller_stamp() > old_controller_stamp;
+      },
+      zx::sec(2)));
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_3 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_3, apply_config_stamp_2);
+
+  // Signal the event #0. Since we have displayed a newer image, signaling the
+  // old event associated with the old image shouldn't trigger ReapplyConfig().
+  // We should still see |apply_config_stamp_2| as the latest presented config
+  // stamp in the client.
+  old_controller_stamp = controller()->TEST_controller_stamp();
+  image_1_ready_fence.event.signal(0u, ZX_EVENT_SIGNALED);
+
+  primary_vsync2_count = primary_client->vsync2_count();
+  SendDisplayVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get(), primary_vsync2_count]() {
+        return p->vsync2_count() > primary_vsync2_count;
+      },
+      zx::sec(2)));
+  {
+    fbl::AutoLock lock(controller()->mtx());
+    EXPECT_EQ(1u, display_info(primary_client->display_id())->vsync_layer_count);
+  }
+
+  auto present_config_stamp_4 = primary_client->recent_presented_config_stamp();
+  EXPECT_EQ(present_config_stamp_4, apply_config_stamp_2);
+}
+
+// TODO(fxbug.dev/90423): Currently the fake-display driver only supports one
+// primary layer. In order to better test ApplyConfig() / OnVsync2() behavior,
+// we should make fake-display driver support multi-layer configurations and
+// then we could add more multi-layer tests.
 
 }  // namespace display

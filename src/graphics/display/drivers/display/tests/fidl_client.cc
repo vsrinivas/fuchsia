@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
+#include <zircon/assert.h>
 
 #include <fbl/auto_lock.h>
 
@@ -73,6 +74,66 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
   return true;
 }
 
+zx::status<uint64_t> TestFidlClient::CreateImage() {
+  return ImportImageWithSysmem(displays_[0].image_config_);
+}
+
+zx::status<uint64_t> TestFidlClient::CreateLayer() {
+  fbl::AutoLock lock(mtx());
+  return CreateLayerLocked();
+}
+
+zx::status<TestFidlClient::EventInfo> TestFidlClient::CreateEvent() {
+  fbl::AutoLock lock(mtx());
+  return CreateEventLocked();
+}
+
+zx::status<uint64_t> TestFidlClient::CreateLayerLocked() {
+  ZX_DEBUG_ASSERT(dc_);
+  auto reply = dc_->CreateLayer();
+  if (!reply.ok()) {
+    zxlogf(ERROR, "Failed to create layer (fidl=%d)", reply.status());
+    return zx::error(reply.status());
+  } else if (reply->res != ZX_OK) {
+    zxlogf(ERROR, "Failed to create layer (res=%d)", reply->res);
+    return zx::error(reply->res);
+  }
+  EXPECT_EQ(dc_->SetLayerPrimaryConfig(reply->layer_id, displays_[0].image_config_).status(),
+            ZX_OK);
+  return zx::ok(reply->layer_id);
+}
+
+zx::status<TestFidlClient::EventInfo> TestFidlClient::CreateEventLocked() {
+  zx::event event;
+  if (auto status = zx::event::create(0u, &event); status != ZX_OK) {
+    zxlogf(ERROR, "Failed to create zx::event: %d", status);
+    return zx::error(status);
+  }
+
+  zx_info_handle_basic_t info;
+  if (auto status = event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get zx handle (%u) info: %d", event.get(), status);
+    return zx::error(status);
+  }
+
+  zx::event dup;
+  if (auto status = event.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
+    zxlogf(ERROR, "Failed to duplicate zx event (%u): %d", event.get(), status);
+    return zx::error(status);
+  }
+
+  auto import_result = dc_->ImportEvent(std::move(event), info.koid);
+  if (!import_result.ok()) {
+    zxlogf(ERROR, "Failed to import event to display controller: %d", import_result.status());
+  }
+
+  return zx::ok(EventInfo{
+      .id = static_cast<uint64_t>(info.koid),
+      .event = std::move(dup),
+  });
+}
+
 bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
   dispatcher_ = dispatcher;
   while (displays_.is_empty() || !has_ownership_) {
@@ -115,23 +176,10 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
   fbl::AutoLock lock(mtx());
   EXPECT_TRUE(has_ownership_);
   EXPECT_FALSE(displays_.is_empty());
-  {
-    auto reply = dc_->CreateLayer();
-    if (!reply.ok()) {
-      zxlogf(ERROR, "Failed to create layer (fidl=%d)", reply.status());
-      return reply.status();
-    } else if (reply->res != ZX_OK) {
-      zxlogf(ERROR, "Failed to create layer (res=%d)", reply->res);
-      return false;
-    }
-    EXPECT_EQ(dc_->SetLayerPrimaryConfig(reply->layer_id, displays_[0].image_config_).status(),
-              ZX_OK);
-    layer_id_ = reply->layer_id;
-  }
-  EXPECT_EQ(ZX_OK, ImportImageWithSysmemLocked(displays_[0].image_config_, &image_id_));
-  wait_events_.set_object(dc_.client_end().channel().get());
-  wait_events_.set_trigger(ZX_CHANNEL_READABLE);
-  EXPECT_OK(wait_events_.Begin(dispatcher));
+
+  event_msg_wait_event_.set_object(dc_.client_end().channel().get());
+  event_msg_wait_event_.set_trigger(ZX_CHANNEL_READABLE);
+  EXPECT_OK(event_msg_wait_event_.Begin(dispatcher));
   return dc_->EnableVsync(true).ok();
 }
 
@@ -166,6 +214,15 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
       }
     }
 
+    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override
+        TA_NO_THREAD_SAFETY_ANALYSIS {
+      client_->vsync2_count_++;
+      client_->recent_presented_config_stamp_ = event->applied_config_stamp;
+      if (event->cookie) {
+        client_->cookie_ = event->cookie;
+      }
+    }
+
     void OnClientOwnershipChange(
         fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* message) override {}
 
@@ -183,7 +240,7 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
     return;
   }
 
-  if (wait_events_.object() == ZX_HANDLE_INVALID) {
+  if (event_msg_wait_event_.object() == ZX_HANDLE_INVALID) {
     return;
   }
   // Re-arm the wait.
@@ -197,16 +254,16 @@ TestFidlClient::~TestFidlClient() {
     auto task = new async::Task();
     task->set_handler(
         [this, task, done_ptr = &done](async_dispatcher_t*, async::Task*, zx_status_t) {
-          wait_events_.Cancel();
-          wait_events_.set_object(ZX_HANDLE_INVALID);
+          event_msg_wait_event_.Cancel();
+          event_msg_wait_event_.set_object(ZX_HANDLE_INVALID);
 
           sync_completion_signal(done_ptr);
           delete task;
         });
     if (task->Post(dispatcher_) != ZX_OK) {
       delete task;
-      wait_events_.Cancel();
-      wait_events_.set_object(ZX_HANDLE_INVALID);
+      event_msg_wait_event_.Cancel();
+      event_msg_wait_event_.set_object(ZX_HANDLE_INVALID);
     } else {
       while (true) {
         if (sync_completion_wait(&done, ZX_MSEC(10)) == ZX_OK) {
@@ -217,19 +274,28 @@ TestFidlClient::~TestFidlClient() {
   }
 }
 
-zx_status_t TestFidlClient::PresentImage() {
+zx_status_t TestFidlClient::PresentLayers(std::vector<PresentLayerInfo> present_layers) {
   fbl::AutoLock l(mtx());
-  EXPECT_NE(0, layer_id_);
-  EXPECT_NE(0, image_id_);
-  uint64_t layers[] = {layer_id_};
+
+  std::vector<uint64_t> layers;
+  for (const auto& info : present_layers) {
+    layers.push_back(info.layer_id);
+  }
   if (auto reply =
           dc_->SetDisplayLayers(display_id(), fidl::VectorView<uint64_t>::FromExternal(layers));
       !reply.ok()) {
     return reply.status();
   }
-  if (auto reply = dc_->SetLayerImage(layer_id_, image_id_, 0, 0); !reply.ok()) {
-    return reply.status();
+
+  for (const auto& info : present_layers) {
+    if (auto reply = dc_->SetLayerImage(info.layer_id, info.image_id,
+                                        info.image_ready_wait_event_id.value_or(0u),
+                                        /*signal_event_id*/ 0);
+        !reply.ok()) {
+      return reply.status();
+    }
   }
+
   if (auto reply = dc_->CheckConfig(false);
       !reply.ok() || reply->res != fhd::wire::ConfigResult::kOk) {
     return reply.ok() ? ZX_ERR_INVALID_ARGS : reply.status();
@@ -237,26 +303,34 @@ zx_status_t TestFidlClient::PresentImage() {
   return dc_->ApplyConfig().status();
 }
 
-zx_status_t TestFidlClient::ImportImageWithSysmem(const fhd::wire::ImageConfig& image_config,
-                                                  uint64_t* image_id) {
+fuchsia_hardware_display::wire::ConfigStamp TestFidlClient::GetRecentAppliedConfigStamp() {
   fbl::AutoLock lock(mtx());
-  return ImportImageWithSysmemLocked(image_config, image_id);
+  EXPECT_TRUE(dc_);
+  auto result = dc_->GetLatestAppliedConfigStamp();
+  EXPECT_TRUE(result.ok());
+  return result->stamp;
 }
 
-zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageConfig& image_config,
-                                                        uint64_t* image_id) {
+zx::status<uint64_t> TestFidlClient::ImportImageWithSysmem(
+    const fhd::wire::ImageConfig& image_config) {
+  fbl::AutoLock lock(mtx());
+  return ImportImageWithSysmemLocked(image_config);
+}
+
+zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
+    const fhd::wire::ImageConfig& image_config) {
   // Create all the tokens.
   fidl::WireSyncClient<sysmem::BufferCollectionToken> local_token;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK) {
       zxlogf(ERROR, "Failed to create channel for shared collection");
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
     auto result = sysmem_->AllocateSharedCollection(std::move(server));
     if (!result.ok()) {
       zxlogf(ERROR, "Failed to allocate shared collection %d", result.status());
-      return result.status();
+      return zx::error(result.status());
     }
     local_token = fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(client));
     EXPECT_NE(ZX_HANDLE_INVALID, local_token.client_end().channel().get());
@@ -266,12 +340,12 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
     zx::channel server;
     if (zx::channel::create(0, &display_token, &server) != ZX_OK) {
       zxlogf(ERROR, "Failed to duplicate token");
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
     if (auto result = local_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(server));
         !result.ok()) {
       zxlogf(ERROR, "Failed to duplicate token: %s", result.FormatDescription().c_str());
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
   }
 
@@ -281,13 +355,13 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
   if (auto result = local_token->Sync(); !result.ok()) {
     zxlogf(ERROR, "Failed to sync token %d %s", result.status(),
            result.FormatDescription().c_str());
-    return result.status();
+    return zx::error(result.status());
   }
   if (auto result = dc_->ImportBufferCollection(display_collection_id, std::move(display_token));
       !result.ok() || result->res != ZX_OK) {
     zxlogf(ERROR, "Failed to import buffer collection %lu (fidl=%d, res=%d)", display_collection_id,
            result.status(), result->res);
-    return result.ok() ? result->res : result.status();
+    return zx::error(result.ok() ? result->res : result.status());
   }
 
   auto set_constraints_result =
@@ -296,8 +370,8 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
     zxlogf(ERROR, "Setting buffer (%dx%d) collection constraints failed: %s", image_config.width,
            image_config.height, set_constraints_result.FormatDescription().c_str());
     dc_->ReleaseBufferCollection(display_collection_id);
-    return set_constraints_result.ok() ? set_constraints_result->res
-                                       : set_constraints_result.status();
+    return zx::error(set_constraints_result.ok() ? set_constraints_result->res
+                                                 : set_constraints_result.status());
   }
 
   // Use the local collection so we can read out the error if allocation
@@ -309,7 +383,7 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
         !sysmem_->BindSharedCollection(local_token.TakeClientEnd(), std::move(server)).ok()) {
       zxlogf(ERROR, "Failed to bind shared collection");
-      return ZX_ERR_NO_MEMORY;
+      return zx::error(ZX_ERR_NO_MEMORY);
     }
     sysmem_collection = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(client));
   }
@@ -325,33 +399,31 @@ zx_status_t TestFidlClient::ImportImageWithSysmemLocked(const fhd::wire::ImageCo
   zx_status_t status = sysmem_collection->SetConstraints(true, constraints).status();
   if (status != ZX_OK) {
     zxlogf(ERROR, "Unable to set constraints (%d)", status);
-    return status;
+    return zx::error(status);
   }
   // Wait for the buffers to be allocated.
   auto info_result = sysmem_collection->WaitForBuffersAllocated();
   if (!info_result.ok() || info_result->status != ZX_OK) {
     zxlogf(ERROR, "Waiting for buffers failed (fidl=%d res=%d)", info_result.status(),
            info_result->status);
-    return info_result.ok() ? info_result->status : info_result.status();
+    return zx::error(info_result.ok() ? info_result->status : info_result.status());
   }
 
   auto& info = info_result->buffer_collection_info;
   if (info.buffer_count < 1) {
     zxlogf(ERROR, "Incorrect buffer collection count %d", info.buffer_count);
-    return ZX_ERR_NO_MEMORY;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   auto import_result = dc_->ImportImage(image_config, display_collection_id, 0);
   if (!import_result.ok() || import_result->res != ZX_OK) {
-    *image_id = fhd::wire::kInvalidDispId;
     zxlogf(ERROR, "Importing image failed (fidl=%d, res=%d)", import_result.status(),
            import_result->res);
-    return import_result.ok() ? import_result->res : import_result.status();
+    return zx::error(import_result.ok() ? import_result->res : import_result.status());
   }
-  *image_id = import_result->image_id;
 
   sysmem_collection->Close();
-  return ZX_OK;
+  return zx::ok(import_result->image_id);
 }
 
 }  // namespace display

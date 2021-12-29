@@ -38,6 +38,7 @@
 #include "lib/fidl/llcpp/server.h"
 #include "lib/zx/clock.h"
 #include "lib/zx/time.h"
+#include "src/graphics/display/drivers/display/util.h"
 #include "src/lib/fsl/handles/object_info.h"
 
 namespace fhd = fuchsia_hardware_display;
@@ -661,6 +662,10 @@ void Client::ApplyConfig(ApplyConfigRequestView request,
     }
   }
 
+  // Now that we can guarantee that the configuration will be applied, it is
+  // safe to increment the config stamp counter.
+  ++latest_config_stamp_.value;
+
   // First go through and reset any current layer lists that are changing, so
   // we don't end up trying to put an image into two lists.
   for (auto& display_config : configs_) {
@@ -680,7 +685,14 @@ void Client::ApplyConfig(ApplyConfigRequestView request,
     // Update any image layers. This needs to be done before migrating layers, as
     // that needs to know if there are any waiting images.
     for (auto& layer_node : display_config.pending_layers_) {
-      if (!layer_node.layer->ResolvePendingImage(&fences_)) {
+      if (!layer_node.layer->ResolvePendingLayerProperties()) {
+        zxlogf(ERROR, "Failed to resolve pending layer properties for layer %lu",
+               layer_node.layer->id);
+        TearDown();
+        return;
+      }
+      if (!layer_node.layer->ResolvePendingImage(&fences_, latest_config_stamp_)) {
+        zxlogf(ERROR, "Failed to resolve pending images for layer %lu", layer_node.layer->id);
         TearDown();
         return;
       }
@@ -744,6 +756,13 @@ void Client::ApplyConfig(ApplyConfigRequestView request,
   ApplyConfig();
 
   // no Reply defined
+}
+
+void Client::GetLatestAppliedConfigStamp(GetLatestAppliedConfigStampRequestView request,
+                                         GetLatestAppliedConfigStampCompleter::Sync& completer) {
+  completer.Reply({
+      .value = latest_config_stamp_.value,
+  });
 }
 
 void Client::EnableVsync(EnableVsyncRequestView request,
@@ -1084,6 +1103,20 @@ void Client::ApplyConfig() {
   bool config_missing_image = false;
   layer_t* layers[layers_.size()];
   int layer_idx = 0;
+
+  // Layers may have pending images, and it is possible that a layer still
+  // uses images from previous configurations. We should take this into account
+  // when sending the config_stamp to |Controller|.
+  //
+  // We keep track of the "current client config stamp" for each image, the
+  // value of which is only updated when a configuration uses an image that is
+  // ready on application, or when the image's wait fence has been signaled and
+  // |ActivateLatestReadyImage()| activates the new image.
+  //
+  // The final config_stamp sent to |Controller| will be the minimum of all
+  // per-layer stamps.
+  config_stamp_t current_applied_config_stamp = latest_config_stamp_;
+
   for (auto& display_config : configs_) {
     display_config.current_.layer_count = 0;
     display_config.current_.layer_list = layers + layer_idx;
@@ -1098,6 +1131,12 @@ void Client::ApplyConfig() {
       if (activated && layer->current_image()) {
         display_config.pending_apply_layer_change_ = true;
         display_config.pending_apply_layer_change_property_.Set(true);
+      }
+
+      auto layer_client_config_stamp = layer->GetCurrentClientConfigStamp();
+      if (layer_client_config_stamp) {
+        current_applied_config_stamp.value =
+            std::min(current_applied_config_stamp.value, layer_client_config_stamp->value);
       }
 
       if (use_kernel_framebuffer_) {
@@ -1143,7 +1182,9 @@ void Client::ApplyConfig() {
     for (auto& c : configs_) {
       dc_configs[dc_idx++] = &c;
     }
-    controller_->ApplyConfig(dc_configs, dc_idx, is_vc_, client_apply_count_, id_);
+
+    controller_->ApplyConfig(dc_configs, dc_idx, is_vc_, current_applied_config_stamp,
+                             client_apply_count_, id_);
   }
 }
 
@@ -1596,7 +1637,8 @@ zx_status_t ClientProxy::OnCaptureComplete() {
 }
 
 zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                                        uint64_t* image_ids, size_t count) {
+                                        config_stamp_t controller_stamp, uint64_t* image_ids,
+                                        size_t count) {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
   {
@@ -1606,6 +1648,20 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     }
   }
   fidl::Result event_sending_result = fidl::Result::Ok();
+
+  config_stamp_t client_stamp = {};
+  auto it =
+      std::find_if(pending_applied_config_stamps_.begin(), pending_applied_config_stamps_.end(),
+                   [controller_stamp](const config_stamp_pair_t& stamp) {
+                     return stamp.controller_stamp >= controller_stamp;
+                   });
+
+  if (it == pending_applied_config_stamps_.end() || it->controller_stamp != controller_stamp) {
+    client_stamp = INVALID_CONFIG_STAMP_BANJO;
+  } else {
+    client_stamp = it->client_stamp;
+    pending_applied_config_stamps_.erase(pending_applied_config_stamps_.begin(), it);
+  }
 
   uint64_t cookie = 0;
   if (number_of_vsyncs_sent_ >= (kVsyncMessagesWatermark - 1)) {
@@ -1640,6 +1696,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     vsync_msg_t v = {
         .display_id = display_id,
         .timestamp = timestamp,
+        .config_stamp = client_stamp,
         .count = count,
     };
     ZX_DEBUG_ASSERT(count <= kMaxImageHandles);
@@ -1679,9 +1736,18 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     vsync_msg_t v = buffered_vsync_messages_.front();
     buffered_vsync_messages_.pop();
     event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-      return event_sender.OnVsync(v.display_id, v.timestamp,
-                                  fidl::VectorView<uint64_t>::FromExternal(v.image_ids, v.count),
-                                  0);
+      // TODO(fxbug.dev/72588): We should only send |OnVsync2| events once we
+      // finish migrating all clients.
+      fidl::Result result =
+          event_sender.OnVsync(v.display_id, v.timestamp,
+                               fidl::VectorView<uint64_t>::FromExternal(v.image_ids, v.count), 0);
+      if (!result.ok()) {
+        return result;
+      }
+
+      return event_sender.OnVsync2(
+          v.display_id, v.timestamp,
+          fuchsia_hardware_display::wire::ConfigStamp{v.config_stamp.value}, 0);
     });
     if (!event_sending_result.ok()) {
       zxlogf(ERROR, "Failed to send all buffered vsync messages: %s\n",
@@ -1693,8 +1759,17 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 
   // Send the latest vsync event
   event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-    return event_sender.OnVsync(display_id, timestamp,
-                                fidl::VectorView<uint64_t>::FromExternal(image_ids, count), cookie);
+    // TODO(fxbug.dev/72588): We should only send |OnVsync2| events once we
+    // finish migrating all clients.
+    fidl::Result result = event_sender.OnVsync(
+        display_id, timestamp, fidl::VectorView<uint64_t>::FromExternal(image_ids, count), cookie);
+    if (!result.ok()) {
+      return result;
+    }
+
+    return event_sender.OnVsync2(display_id, timestamp,
+                                 fuchsia_hardware_display::wire::ConfigStamp{client_stamp.value},
+                                 cookie);
   });
   if (!event_sending_result.ok()) {
     return event_sending_result.status();
@@ -1715,6 +1790,15 @@ void ClientProxy::OnClientDead() {
   if (on_client_dead_) {
     on_client_dead_();
   }
+}
+
+void ClientProxy::UpdateConfigStampMapping(config_stamp_pair_t stamps) {
+  ZX_DEBUG_ASSERT(pending_applied_config_stamps_.empty() ||
+                  pending_applied_config_stamps_.back().controller_stamp < stamps.controller_stamp);
+  pending_applied_config_stamps_.push_back({
+      .controller_stamp = stamps.controller_stamp,
+      .client_stamp = stamps.client_stamp,
+  });
 }
 
 void ClientProxy::CloseTest() { handler_.TearDownTest(); }

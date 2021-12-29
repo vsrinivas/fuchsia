@@ -640,6 +640,9 @@ impl ViewStrategy for DisplayDirectViewStrategy {
                     .unbounded_send(MessageInternal::Render(self.display.display_id as ViewKey))
                     .expect("unbounded_send");
             }
+            ControllerEvent::OnVsync2 { .. } => {
+                // TODO(fxbug.dev/72588): Implement OnVsync2() handler.
+            }
             _ => (),
         }
     }
