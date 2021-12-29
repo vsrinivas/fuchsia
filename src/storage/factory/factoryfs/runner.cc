@@ -48,7 +48,7 @@ zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() {
   return factoryfs_->GetFilesystemInfo();
 }
 
-zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
+zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = factoryfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
@@ -57,28 +57,19 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
   }
 
   fbl::RefPtr<fs::Vnode> export_root;
-  switch (layout) {
-    case ServeLayout::kDataRootOnly:
-      export_root = std::move(vn);
-      break;
-    case ServeLayout::kExportDirectory:
-      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
-      outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
+  auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
+  outgoing->AddEntry(kOutgoingDataRoot, std::move(vn));
 
-      auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
-      outgoing->AddEntry("svc", svc_dir);
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(factoryfs_->vfs());
+  outgoing->AddEntry("svc", svc_dir);
 
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                        fbl::MakeRefCounted<AdminService>(loop_->dispatcher(), *this));
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                    fbl::MakeRefCounted<AdminService>(loop_->dispatcher(), *this));
 
-      query_svc_ = fbl::MakeRefCounted<fs::QueryService>(factoryfs_->vfs());
-      svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+  query_svc_ = fbl::MakeRefCounted<fs::QueryService>(factoryfs_->vfs());
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
 
-      export_root = std::move(outgoing);
-      break;
-  }
-
-  status = ServeDirectory(std::move(export_root), std::move(root));
+  status = ServeDirectory(std::move(outgoing), std::move(root));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mount failed; could not serve root directory";
     return status;

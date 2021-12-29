@@ -46,7 +46,7 @@ class Runner : public fs::ManagedVfs {
 
   // Serves the root directory of the filesystem using |root| as the server-end
   // of an IPC connection.
-  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
+  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
 
  private:
   explicit Runner(async::Loop* loop);

@@ -15,7 +15,7 @@
 namespace factoryfs {
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options,
-                  fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
+                  fidl::ServerEnd<fuchsia_io::Directory> root) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
@@ -23,7 +23,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options,
   if (runner_or.is_error())
     return runner_or.error_value();
 
-  if (zx_status_t status = runner_or->ServeRoot(std::move(root), layout); status != ZX_OK)
+  if (zx_status_t status = runner_or->ServeRoot(std::move(root)); status != ZX_OK)
     return status;
 
   loop.Run();

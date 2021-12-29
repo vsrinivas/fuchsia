@@ -36,32 +36,9 @@ using block_client::BlockDevice;
 using block_client::RemoteBlockDevice;
 
 zx_status_t Mount(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* options) {
-  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
-  // TODO(fxbug.dev/34531): Support both methods (outgoing_server and root_server) till fixed.
-  zx::channel root_server = zx::channel(zx_take_startup_handle(FS_HANDLE_ROOT_ID));
-  zx::channel diagnostics_dir = zx::channel(zx_take_startup_handle(FS_HANDLE_DIAGNOSTICS_DIR));
-
-  if (outgoing_server.is_valid() && root_server.is_valid()) {
-    FX_LOGS(ERROR) << "both PA_DIRECTORY_REQUEST and FS_HANDLE_ROOT_ID provided - need one or the "
-                      "other.";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  fidl::ServerEnd<fuchsia_io::Directory> export_root;
-  factoryfs::ServeLayout layout;
-  if (outgoing_server.is_valid()) {
-    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
-    layout = factoryfs::ServeLayout::kExportDirectory;
-  } else if (root_server.is_valid()) {
-    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(root_server));
-    layout = factoryfs::ServeLayout::kDataRootOnly;
-  } else {
-    // neither provided or we can't access them for some reason.
-    FX_LOGS(ERROR) << "could not get startup handle to serve on";
-    return ZX_ERR_BAD_STATE;
-  }
-
-  return factoryfs::Mount(std::move(device), options, std::move(export_root), layout);
+  return factoryfs::Mount(std::move(device), options,
+                          fidl::ServerEnd<fuchsia_io::Directory>(
+                              zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST))));
 }
 
 zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* options) {

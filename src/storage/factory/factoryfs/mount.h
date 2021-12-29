@@ -14,35 +14,16 @@
 
 namespace factoryfs {
 
-using block_client::BlockDevice;
-
-#define FS_HANDLE_DIAGNOSTICS_DIR PA_HND(PA_USER0, 2)
-
-// Determines the kind of directory layout the filesystem server should expose to the outside world.
-// TODO(fxbug.dev/34531): When all users migrate to the export directory, delete this enum, since
-// only |kExportDirectory| would be used.
-enum class ServeLayout {
-  // The root of the filesystem is exposed directly
-  kDataRootOnly,
-
-  // Expose a pseudo-directory with the filesystem root located at "/root".
-  // TODO(fxbug.dev/34531): Also expose an administration service under "/svc/fuchsia.fs.Admin".
-  kExportDirectory
-};
-
 // Toggles that may be set on factoryfs during initialization.
 struct MountOptions {
   bool verbose = false;
   bool metrics = false;  // TODO(manalib)
 };
 
-// Begins serving requests to the filesystem by parsing the on-disk format using |device|. If
-// |ServeLayout| is |kDataRootOnly|, |root| serves the root of the filesystem. If it's
-// |kExportDirectory|, |root| serves an outgoing directory.
-//
+// Begins serving requests to the filesystem by parsing the on-disk format using |device|.
 // This function blocks until the filesystem terminates.
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options,
-                  fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
+zx_status_t Mount(std::unique_ptr<block_client::BlockDevice> device, MountOptions* options,
+                  fidl::ServerEnd<fuchsia_io::Directory> root);
 
 }  // namespace factoryfs
 
