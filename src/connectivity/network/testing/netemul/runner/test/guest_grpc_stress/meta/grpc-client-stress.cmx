@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "features": [
-            "isolated-persistent-storage"
+            "isolated-cache-storage"
         ],
         "services": [
             "fuchsia.netemul.guest.GuestDiscovery",

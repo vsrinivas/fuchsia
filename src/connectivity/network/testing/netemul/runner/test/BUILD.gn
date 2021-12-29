@@ -7,7 +7,6 @@ import("//build/components.gni")
 group("test") {
   testonly = true
   deps = [
-    ":grpc_client_stress_test_spec",
     ":netemul-guest-test",
     ":netemul-sandbox-test",
     ":sandbox-service_spec",
@@ -207,18 +206,6 @@ fuchsia_test_component("multiple-guests-test") {
   deps = [ ":multiple-guests-test-legacy" ]
 }
 
-fuchsia_test("grpc_client_stress_test_spec") {
-  package = ":netemul-guest-test"
-  component = ":grpc-client-stress-test"
-
-  environments = []
-  foreach(env, guest_envs) {
-    # TODO(https://fxbug.dev/49752): test hangs almost every time.
-    env.tags = [ "flaky" ]
-    environments += [ env ]
-  }
-}
-
 fuchsia_test_package("netemul-guest-test") {
   test_specs = {
     environments = guest_envs
@@ -226,9 +213,9 @@ fuchsia_test_package("netemul-guest-test") {
   test_components = [
     ":guest-test",
     ":multiple-guests-test",
+    ":grpc-client-stress-test",
   ]
   deps = [
-    ":grpc-client-stress-test",
     ":setup_linux_client",
     ":setup_linux_router",
     ":test_script",

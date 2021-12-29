@@ -95,10 +95,8 @@ void GuestDiscoveryServiceImpl::GetGuest(
                           }
                           auto [gis, created] = guests_.try_emplace(guest_info, std::move(socket),
                                                                     executor_.dispatcher());
-                          if (!created) {
-                            completer->complete_error(ZX_ERR_ALREADY_EXISTS);
-                            return;
-                          }
+                          // NB: if !created then we lost the race; that's fine, all connections are
+                          // equivalent.
                           completer->complete_ok(&gis->second);
                         });
             return bridge.consumer.promise().inspect(
