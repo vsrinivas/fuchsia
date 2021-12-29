@@ -22,7 +22,7 @@ go_test("bench_test") {
 
 fuchsia_unittest_package("netstack-bench-gotests") {
   deps = [ ":bench_test" ]
-  manifest = "meta/bench_test.cmx"
+  manifest = "meta/bench_test.cml"
 }
 
 group("tests") {

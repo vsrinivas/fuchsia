@@ -7,6 +7,7 @@ package eth_test
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
@@ -23,7 +24,7 @@ import (
 type nullEndpoint struct{}
 
 func (*nullEndpoint) MTU() uint32 {
-	return 0
+	return math.MaxUint32
 }
 func (*nullEndpoint) Capabilities() stack.LinkEndpointCapabilities {
 	return 0
@@ -60,7 +61,6 @@ func (*nullChecksumOffloadEndpoint) Capabilities() stack.LinkEndpointCapabilitie
 var _ stack.LinkEndpoint = (*nullEndpoint)(nil)
 
 func BenchmarkWritePacket(b *testing.B) {
-	b.Skip("TODO(https://github.com/golang/go/issues/40823): re-enable")
 	const nicid = 1
 	for _, test := range []struct {
 		name string

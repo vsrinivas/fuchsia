@@ -34,12 +34,11 @@ Netstack serves as a back-end for fdio socket API.
 
 To run the benchmarks and obtain profiling data:
 
-    REALM=bench
-    PROFILE_PATH=/data/r/sys/r/$REALM/fuchsia.com:netstack-bench-gotests:0#meta:bench_test.cmx/profile
-    fx build netstack-bench-gotests \
-      && fx test -o -R=$REALM bench_test \
-      && fx scp "[$(fx get-device-addr)]:$PROFILE_PATH" out/profile \
-      && go tool pprof -http=:8080 out/profile
+```shell
+    fx test -o netstack-bench-gotests -- --test.run - --test.bench - \
+      && ffx test run --output-directory out/profile fuchsia-pkg://fuchsia.com/netstack-bench-gotests#meta/netstack-bench-gotests.cm \
+      && fx go tool pprof -http=:8080 out/profile/artifact-0/custom-0/netstack_bench_profile
+```
 
 Example output (astro):
 

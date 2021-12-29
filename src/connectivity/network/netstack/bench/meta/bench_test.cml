@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/sys/test_runners/elf/default.shard.cml" ],
+    program: {
+        binary: "test/bench_test",
+        args: [
+            "--test.bench=.",
+            "--test.benchmem",
+            "--test.cpuprofile=/custom_artifacts/netstack_bench_profile",
+        ],
+    },
+    use: [
+        {
+            storage: "custom_artifacts",
+            path: "/custom_artifacts",
+        },
+    ],
+}
