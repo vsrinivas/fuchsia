@@ -320,6 +320,17 @@ fuchsia_component("component-manager-realm-builder-cmp") {
   manifest = "meta/component_manager.cml"
 }
 
+# This v2 component bundles component manager with a debug config suitable for running
+# a nested component manager inside of realm builder.
+fuchsia_component("component-manager-realm-builder-debug-cmp") {
+  deps = [
+    ":bin",
+    ":component_manager_realm_builder_debug_config",
+  ]
+  component_name = "component_manager"
+  manifest = "meta/component_manager_debug.cml"
+}
+
 fuchsia_component("component-manager-tests-cmp") {
   testonly = true
   deps = [
@@ -396,6 +407,11 @@ component_config("component_manager_appmgr_config") {
 component_config("component_manager_realm_builder_config") {
   sources = [ "configs/realm_builder_config.json5" ]
   dest = "data/component_manager_realm_builder_config"
+}
+
+component_config("component_manager_realm_builder_debug_config") {
+  sources = [ "configs/realm_builder_debug_config.json5" ]
+  dest = "data/component_manager_realm_builder_debug_config"
 }
 
 component_config("component_manager_debug_config") {

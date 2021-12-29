@@ -1,0 +1,40 @@
+{
+    debug: true,
+    maintain_utc_clock: false,
+    use_builtin_process_launcher: false,
+    num_threads: 2,
+    out_dir_contents: "hub",
+    namespace_capabilities: [
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    builtin_capabilities: [
+        {
+            protocol: [
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.EventSource",
+            ],
+        },
+        {
+            runner: "elf",
+        },
+        {
+            runner: "realm_builder",
+        },
+        {
+            resolver: "realm_builder_resolver",
+        },
+        {
+            event: "directory_ready",
+        },
+    ],
+    builtin_pkg_resolver: "appmgr_bridge",
+    realm_builder_resolver_and_runner: "namespace",
+    log_all_events: true,
+}
