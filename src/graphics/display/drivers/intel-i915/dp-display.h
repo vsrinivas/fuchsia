@@ -8,8 +8,8 @@
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
 
-#include "display-device.h"
-#include "dpcd.h"
+#include "src/graphics/display/drivers/intel-i915/display-device.h"
+#include "src/graphics/display/drivers/intel-i915/dpcd.h"
 
 namespace i915 {
 

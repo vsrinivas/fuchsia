@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/dp-display.h"
 
 #include <endian.h>
 #include <lib/ddk/driver.h>
@@ -15,14 +15,14 @@
 
 #include <fbl/string_printf.h>
 
-#include "intel-i915.h"
-#include "macros.h"
-#include "pci-ids.h"
-#include "registers-ddi.h"
-#include "registers-dpll.h"
-#include "registers-pipe.h"
-#include "registers-transcoder.h"
-#include "registers.h"
+#include "src/graphics/display/drivers/intel-i915/intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/macros.h"
+#include "src/graphics/display/drivers/intel-i915/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915/registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 

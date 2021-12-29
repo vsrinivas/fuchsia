@@ -5,8 +5,6 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTEL_I915_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTEL_I915_H_
 
-#if __cplusplus
-
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/intelgpucore/cpp/banjo.h>
@@ -24,19 +22,19 @@
 
 #include <fbl/vector.h>
 
-#include "display-device.h"
-#include "dp-display.h"
-#include "gtt.h"
-#include "hdmi-display.h"
-#include "igd.h"
-#include "interrupts.h"
-#include "pipe.h"
-#include "power.h"
-#include "registers-ddi.h"
-#include "registers-dpll.h"
-#include "registers-pipe.h"
-#include "registers-transcoder.h"
-#include "registers.h"
+#include "src/graphics/display/drivers/intel-i915/display-device.h"
+#include "src/graphics/display/drivers/intel-i915/dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/gtt.h"
+#include "src/graphics/display/drivers/intel-i915/hdmi-display.h"
+#include "src/graphics/display/drivers/intel-i915/igd.h"
+#include "src/graphics/display/drivers/intel-i915/interrupts.h"
+#include "src/graphics/display/drivers/intel-i915/pipe.h"
+#include "src/graphics/display/drivers/intel-i915/power.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915/registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
 
 namespace i915 {
 
@@ -310,11 +308,5 @@ class Controller : public DeviceType,
 };
 
 }  // namespace i915
-
-#endif  // __cplusplus
-
-__BEGIN_CDECLS
-zx_status_t intel_i915_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS
 
 #endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTEL_I915_H_

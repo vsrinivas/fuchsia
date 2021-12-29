@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "interrupts.h"
+#include "src/graphics/display/drivers/intel-i915/interrupts.h"
 
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
-#include "intel-i915.h"
-#include "macros.h"
-#include "registers.h"
+#include "src/graphics/display/drivers/intel-i915/intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/macros.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
 
 namespace i915 {
 

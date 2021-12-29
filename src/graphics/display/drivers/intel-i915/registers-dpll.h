@@ -9,7 +9,7 @@
 
 #include <hwreg/bitfields.h>
 
-#include "registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
 
 namespace registers {
 

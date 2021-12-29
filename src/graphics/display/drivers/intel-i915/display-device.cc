@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "display-device.h"
+#include "src/graphics/display/drivers/intel-i915/display-device.h"
 
 #include <float.h>
 #include <lib/fit/function.h>
@@ -11,12 +11,12 @@
 
 #include <ddktl/fidl.h>
 
-#include "intel-i915.h"
-#include "macros.h"
-#include "registers-dpll.h"
-#include "registers-transcoder.h"
-#include "registers.h"
-#include "tiling.h"
+#include "src/graphics/display/drivers/intel-i915/intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/macros.h"
+#include "src/graphics/display/drivers/intel-i915/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915/registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
+#include "src/graphics/display/drivers/intel-i915/tiling.h"
 
 namespace {
 

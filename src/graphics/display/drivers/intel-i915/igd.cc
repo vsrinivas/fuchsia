@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "igd.h"
+#include "src/graphics/display/drivers/intel-i915/igd.h"
 
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/object.h>
@@ -11,8 +11,8 @@
 
 #include <hwreg/bitfields.h>
 
-#include "intel-i915.h"
-#include "macros.h"
+#include "src/graphics/display/drivers/intel-i915/intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/macros.h"
 
 namespace {
 

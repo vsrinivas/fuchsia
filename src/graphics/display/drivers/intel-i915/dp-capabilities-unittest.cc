@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
-#include "dp-display.h"
-#include "fake-dpcd-channel.h"
+#include "src/graphics/display/drivers/intel-i915/dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
 
 using i915::testing::FakeDpcdChannel;
 using i915::testing::kDefaultLaneCount;

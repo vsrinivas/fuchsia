@@ -13,12 +13,12 @@
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 
-#include "gtt.h"
-#include "pipe.h"
-#include "power.h"
-#include "registers-ddi.h"
-#include "registers-pipe.h"
-#include "registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915/gtt.h"
+#include "src/graphics/display/drivers/intel-i915/pipe.h"
+#include "src/graphics/display/drivers/intel-i915/power.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915/registers-transcoder.h"
 
 namespace i915 {
 

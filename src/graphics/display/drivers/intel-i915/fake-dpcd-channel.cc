@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake-dpcd-channel.h"
+#include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
 
 namespace i915 {
 namespace testing {

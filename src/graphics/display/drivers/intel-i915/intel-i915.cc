@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 
 #include <assert.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
@@ -14,6 +14,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/inout.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -32,18 +33,17 @@
 
 #include <fbl/vector.h>
 
-#include "dp-display.h"
-#include "hdmi-display.h"
-#include "lib/fidl/llcpp/client_end.h"
-#include "macros.h"
-#include "pci-ids.h"
-#include "registers-ddi.h"
-#include "registers-dpll.h"
-#include "registers-pipe.h"
-#include "registers-transcoder.h"
-#include "registers.h"
+#include "src/graphics/display/drivers/intel-i915/dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/hdmi-display.h"
 #include "src/graphics/display/drivers/intel-i915/intel-i915-bind.h"
-#include "tiling.h"
+#include "src/graphics/display/drivers/intel-i915/macros.h"
+#include "src/graphics/display/drivers/intel-i915/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915/registers-dpll.h"
+#include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915/registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
+#include "src/graphics/display/drivers/intel-i915/tiling.h"
 
 #define INTEL_I915_BROADWELL_DID (0x1616)
 

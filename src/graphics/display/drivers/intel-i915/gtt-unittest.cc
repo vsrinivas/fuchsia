@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtt.h"
+#include "src/graphics/display/drivers/intel-i915/gtt.h"
 
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio-ptr/fake.h>
@@ -10,8 +10,8 @@
 
 #include <gtest/gtest.h>
 
-#include "registers.h"
 #include "src/devices/pci/testing/pci_protocol_fake.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
 
 namespace {
 

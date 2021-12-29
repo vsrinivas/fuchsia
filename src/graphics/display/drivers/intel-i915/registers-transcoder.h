@@ -7,7 +7,7 @@
 
 #include <hwreg/bitfields.h>
 
-#include "registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
 
 namespace registers {
 

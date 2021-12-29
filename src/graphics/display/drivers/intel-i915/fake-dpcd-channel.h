@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-#include "dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/dp-display.h"
 
 namespace i915 {
 namespace testing {

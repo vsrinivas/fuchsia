@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtt.h"
+#include "src/graphics/display/drivers/intel-i915/gtt.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/mmio/mmio.h>
@@ -16,9 +16,9 @@
 
 #include <fbl/algorithm.h>
 
-#include "macros.h"
-#include "registers.h"
-#include "tiling.h"
+#include "src/graphics/display/drivers/intel-i915/macros.h"
+#include "src/graphics/display/drivers/intel-i915/registers.h"
+#include "src/graphics/display/drivers/intel-i915/tiling.h"
 
 #define PAGE_PRESENT (1 << 0)
 

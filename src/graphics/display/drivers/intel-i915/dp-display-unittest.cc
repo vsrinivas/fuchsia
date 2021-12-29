@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dp-display.h"
+#include "src/graphics/display/drivers/intel-i915/dp-display.h"
 
 #include <lib/mmio-ptr/fake.h>
 
 #include <gtest/gtest.h>
 
-#include "fake-dpcd-channel.h"
-#include "intel-i915.h"
+#include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
+#include "src/graphics/display/drivers/intel-i915/intel-i915.h"
 
 namespace {
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "interrupts.h"
+#include "src/graphics/display/drivers/intel-i915/interrupts.h"
 
 #include <lib/ddk/driver.h>
 #include <lib/mmio-ptr/fake.h>

@@ -17,8 +17,8 @@
 
 #include <fbl/macros.h>
 
-#include "registers-ddi.h"
-#include "registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915/registers-pipe.h"
 
 namespace i915 {
 
