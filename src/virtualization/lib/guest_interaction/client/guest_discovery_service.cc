@@ -53,22 +53,23 @@ void GuestDiscoveryServiceImpl::GetGuest(
             std::lock_guard lock(lock_);
             manager_completers_.erase(completer);
           })
-          .and_then([this, request = std::move(request)](const GuestInfo& guest_info) mutable
-                    -> fpromise::promise<void, zx_status_t> {
+          .and_then([this](const GuestInfo& guest_info)
+                        -> fpromise::promise<FuchsiaGuestInteractionService*, zx_status_t> {
             // If this is not the first time this guest has been requested, add a binding to the
             // existing interaction service.
             {
               auto gis = guests_.find(guest_info);
               if (gis != guests_.end()) {
-                gis->second.AddBinding(std::move(request));
-                return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
+                return fpromise::make_result_promise<FuchsiaGuestInteractionService*, zx_status_t>(
+                    fpromise::ok(&gis->second));
               }
             }
 
             zx::socket socket, remote_socket;
             zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
             if (status != ZX_OK) {
-              return fpromise::make_error_promise(status);
+              return fpromise::make_result_promise<FuchsiaGuestInteractionService*, zx_status_t>(
+                  fpromise::error(status));
             }
 
             // If this is the first time that the requested guest has been discovered, connect to
@@ -76,7 +77,7 @@ void GuestDiscoveryServiceImpl::GetGuest(
             fuchsia::virtualization::RealmSyncPtr realm;
             manager_->Connect(guest_info.realm_id, realm.NewRequest());
 
-            fpromise::bridge<void, zx_status_t> bridge;
+            fpromise::bridge<FuchsiaGuestInteractionService*, zx_status_t> bridge;
             std::shared_ptr completer =
                 std::make_shared<decltype(bridge.completer)>(std::move(bridge.completer));
 
@@ -86,25 +87,28 @@ void GuestDiscoveryServiceImpl::GetGuest(
             realm->GetHostVsockEndpoint(ep.NewRequest(executor_.dispatcher()));
 
             ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
-                        [this, socket = std::move(socket), guest_info, request = std::move(request),
+                        [this, socket = std::move(socket), guest_info,
                          completer](zx_status_t status) mutable {
                           if (status != ZX_OK) {
                             completer->complete_error(status);
                             return;
                           }
-                          auto [gis, emplaced] = guests_.emplace(
-                              std::piecewise_construct, std::forward_as_tuple(guest_info),
-                              std::forward_as_tuple(std::move(socket), executor_.dispatcher()));
-                          if (!emplaced) {
+                          auto [gis, created] = guests_.try_emplace(guest_info, std::move(socket),
+                                                                    executor_.dispatcher());
+                          if (!created) {
                             completer->complete_error(ZX_ERR_ALREADY_EXISTS);
                             return;
                           }
-                          gis->second.AddBinding(std::move(request));
-                          completer->complete_ok();
+                          completer->complete_ok(&gis->second);
                         });
             return bridge.consumer.promise().inspect(
-                [ep = std::move(ep)](const fpromise::result<void, zx_status_t>&) {});
+                [ep = std::move(ep)](
+                    const fpromise::result<FuchsiaGuestInteractionService*, zx_status_t>&) {});
           })
+          .and_then(
+              [request = std::move(request)](FuchsiaGuestInteractionService*& service) mutable {
+                service->AddBinding(std::move(request));
+              })
           .or_else([](const zx_status_t& status) {
             FX_PLOGS(ERROR, status) << "Guest connection failed";
           })
