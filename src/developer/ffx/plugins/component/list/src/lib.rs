@@ -16,8 +16,8 @@ use {
     serde::{Deserialize, Serialize},
 };
 
-/// The number of times the command should be retried before assuming failure.
-const NUM_ATTEMPTS: u64 = 3;
+/// The number of times listing components from the hub should be retried before assuming failure.
+const NUM_COMPONENT_LIST_ATTEMPTS: u64 = 3;
 
 const SPACER: &str = "  ";
 const WIDTH_CS_TREE: usize = 19;
@@ -52,7 +52,7 @@ pub async fn list(
     list_impl(rcs_proxy, writer, cmd.only, cmd.verbose).await
 }
 
-// Attempt to get the component list `NUM_ATTEMPTS` times. If all attempts fail, return the
+// Attempt to get the component list `NUM_COMPONENT_LIST_ATTEMPTS` times. If all attempts fail, return the
 // last error encountered.
 //
 // This fixes an issue (fxbug.dev/84805) where the component topology may be mutating while the
@@ -63,7 +63,7 @@ pub async fn try_get_component_list(hub_dir: Directory, writer: &Writer) -> Resu
         match Component::parse("/".to_string(), hub_dir.clone()?).await {
             Ok(component) => return Ok(component),
             Err(e) => {
-                if attempt_number > NUM_ATTEMPTS {
+                if attempt_number > NUM_COMPONENT_LIST_ATTEMPTS {
                     return Err(e);
                 } else {
                     writer.error(format!("Retrying. Attempt #{} failed: {}", attempt_number, e))?;
