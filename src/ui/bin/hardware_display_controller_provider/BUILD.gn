@@ -4,16 +4,6 @@
 
 import("//build/components.gni")
 
-declare_args() {
-  # Used to control the type of Vsync events emitted by the FakeDisplay driver
-  # created by fake-hdcp components. If it is true, the fake display driver
-  # will emit OnDisplayVsync2() events with config sequence numbers; otherwise
-  # it will emit OnDisplayVsync() events with image handles.
-  # TODO(fxbug.dev/72588): Remove once we completely migrate display core and
-  # drivers to use OnVsync2/OnDisplayVsync2.
-  fake_display_uses_vsync2 = true
-}
-
 group("hardware_display_controller_provider") {
   testonly = true
   public_deps = [
@@ -26,11 +16,7 @@ fuchsia_package_with_single_component(
     "fake-hardware-display-controller-provider") {
   testonly = true
   component_name = "hdcp"
-  if (fake_display_uses_vsync2) {
-    manifest = "meta/fake_hdcp_vsync2.cmx"
-  } else {
-    manifest = "meta/fake_hdcp.cmx"
-  }
+  manifest = "meta/fake_hdcp.cmx"
   deps = [ "fake:bin" ]
 }
 
@@ -41,11 +27,7 @@ fuchsia_package_with_single_component("hardware-display-controller-provider") {
 }
 
 fuchsia_component("fake-hardware-display-controller-provider-cmv2-component") {
-  if (fake_display_uses_vsync2) {
-    manifest = "meta/fake_hdcp_vsync2.cml"
-  } else {
-    manifest = "meta/fake_hdcp.cml"
-  }
+  manifest = "meta/fake_hdcp.cml"
   component_name = "hdcp"
   testonly = true
   deps = [ "fake:bin" ]

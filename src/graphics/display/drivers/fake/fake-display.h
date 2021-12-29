@@ -55,13 +55,7 @@ class FakeDisplay : public DeviceType,
         clamp_rgbimpl_proto_({&display_clamp_rgb_impl_protocol_ops_, this}) {}
 
   // This function is called from the c-bind function upon driver matching.
-  //
-  // Arguments
-  // - If |start_vsync| is true, a background thread will be started to issue
-  //   vsync events.
-  // - If |use_vsync2| is true, the vsync thread will emit OnDisplayVsync2()
-  //   events; otherwise it will emit OnDisplayVsync() events.
-  zx_status_t Bind(bool start_vsync, bool use_vsync2);
+  zx_status_t Bind(bool start_vsync);
 
   // Required functions needed to implement Display Controller Protocol
   void DisplayControllerImplSetDisplayControllerInterface(
@@ -108,7 +102,7 @@ class FakeDisplay : public DeviceType,
   const display_clamp_rgb_impl_protocol_t* clamp_rgbimpl_proto() const {
     return &clamp_rgbimpl_proto_;
   }
-  void SendVsync(bool use_vsync2);
+  void SendVsync();
 
   // Just for display core unittests.
   zx_status_t ImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
@@ -122,7 +116,7 @@ class FakeDisplay : public DeviceType,
 
  private:
   zx_status_t SetupDisplayInterface();
-  int VSyncThread(bool use_vsync2);
+  int VSyncThread();
   int CaptureThread() __TA_EXCLUDES(capture_lock_, display_lock_);
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 

@@ -161,8 +161,7 @@ class FakeDisplayDeviceTree {
   // |sysmem| allows the caller to customize the sysmem implementation used by the
   // FakeDisplayDeviceTree.  See SysmemDeviceWrapper for more details, as well as existing
   // specializations of GenericSysmemDeviceWrapper<>.
-  FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper> sysmem, bool start_vsync,
-                        bool use_vsync2);
+  FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper> sysmem, bool start_vsync);
   ~FakeDisplayDeviceTree();
 
   Binder& ddk() { return ddk_; }

@@ -105,14 +105,11 @@ class IntegrationTest : public TestBase, public zxtest::WithParamInterface<bool>
     controller()->active_client_->OnDisplayVsync(0, 0, handle.get(), 1);
   }
 
-  void SendDisplayVsync() {
-    bool use_vsync2 = GetParam();
-    display()->SendVsync(use_vsync2);
-  }
+  void SendDisplayVsync() { display()->SendVsync(); }
 
   // |TestBase|
   void SetUp() override {
-    TestBase::SetUp(/*use_vsync2=*/GetParam());
+    TestBase::SetUp();
     zx::channel client, server;
     EXPECT_OK(zx::channel::create(0, &client, &server));
     fidl::UnownedClientEnd<sysmem::DriverConnector> connector{sysmem_fidl()->get()};
@@ -138,7 +135,7 @@ class IntegrationTest : public TestBase, public zxtest::WithParamInterface<bool>
   fidl::WireSyncClient<sysmem::Allocator> sysmem_;
 };
 
-TEST_P(IntegrationTest, DISABLED_ClientsCanBail) {
+TEST_F(IntegrationTest, DISABLED_ClientsCanBail) {
   for (size_t i = 0; i < 100; i++) {
     RunLoopWithTimeoutOrUntil([this]() { return !primary_client_connected(); }, zx::sec(1));
     TestFidlClient client(sysmem_);
@@ -147,7 +144,7 @@ TEST_P(IntegrationTest, DISABLED_ClientsCanBail) {
   }
 }
 
-TEST_P(IntegrationTest, MustUseUniqueEvenIDs) {
+TEST_F(IntegrationTest, MustUseUniqueEvenIDs) {
   TestFidlClient client(sysmem_);
   ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
   ASSERT_TRUE(client.Bind(dispatcher()));
@@ -165,7 +162,7 @@ TEST_P(IntegrationTest, MustUseUniqueEvenIDs) {
   // TODO: Use LLCPP epitaphs when available to detect ZX_ERR_PEER_CLOSED.
 }
 
-TEST_P(IntegrationTest, SendVsyncsAfterEmptyConfig) {
+TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
   TestFidlClient vc_client(sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
@@ -230,14 +227,8 @@ TEST_P(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       zx::sec(1)));
 
   // Empty vsync for last client. Nothing should be sent to the new client.
-  bool use_vsync2 = GetParam();
-  if (use_vsync2) {
-    controller()->DisplayControllerInterfaceOnDisplayVsync2(primary_client->display_id(), 0u,
-                                                            &empty_config_stamp);
-  } else {
-    controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u,
-                                                           nullptr, 0);
-  }
+  controller()->DisplayControllerInterfaceOnDisplayVsync2(primary_client->display_id(), 0u,
+                                                          &empty_config_stamp);
 
   // Send a second vsync, using the config the client applied.
   count = primary_client->vsync_count();
@@ -246,7 +237,7 @@ TEST_P(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       [count, p = primary_client.get()]() { return p->vsync_count() > count; }, zx::sec(1)));
 }
 
-TEST_P(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
+TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
   TestFidlClient vc_client(sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
@@ -275,17 +266,9 @@ TEST_P(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() { return p->vsync_count() == 1; }, zx::sec(1)));
   // Send the controller a vsync for an image / a config it won't recognize anymore.
-  bool use_vsync2 = GetParam();
-  if (use_vsync2) {
-    config_stamp_t invalid_config_stamp = {.value =
-                                               controller()->TEST_controller_stamp().value - 1};
-    controller()->DisplayControllerInterfaceOnDisplayVsync2(primary_client->display_id(), 0u,
-                                                            &invalid_config_stamp);
-  } else {
-    const uint64_t handles[] = {0UL};
-    controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u,
-                                                           handles, 1);
-  }
+  config_stamp_t invalid_config_stamp = {.value = controller()->TEST_controller_stamp().value - 1};
+  controller()->DisplayControllerInterfaceOnDisplayVsync2(primary_client->display_id(), 0u,
+                                                          &invalid_config_stamp);
 
   // Send a second vsync, using the config the client applied.
   SendDisplayVsync();
@@ -294,7 +277,7 @@ TEST_P(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
   EXPECT_EQ(2, primary_client->vsync_count());
 }
 
-TEST_P(IntegrationTest, SendVsyncsAfterClientDies) {
+TEST_F(IntegrationTest, SendVsyncsAfterClientDies) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -304,7 +287,7 @@ TEST_P(IntegrationTest, SendVsyncsAfterClientDies) {
   SendVsyncAfterUnbind(std::move(primary_client), id);
 }
 
-TEST_P(IntegrationTest, AcknowledgeVsync) {
+TEST_F(IntegrationTest, AcknowledgeVsync) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -331,7 +314,7 @@ TEST_P(IntegrationTest, AcknowledgeVsync) {
       zx::sec(1)));
 }
 
-TEST_P(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
+TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -375,7 +358,7 @@ TEST_P(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync_count());
 }
 
-TEST_P(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
+TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -420,7 +403,7 @@ TEST_P(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
             primary_client->vsync_count());
 }
 
-TEST_P(IntegrationTest, InvalidVSyncCookie) {
+TEST_F(IntegrationTest, InvalidVSyncCookie) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -463,7 +446,7 @@ TEST_P(IntegrationTest, InvalidVSyncCookie) {
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 }
 
-TEST_P(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
+TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -567,7 +550,7 @@ TEST_P(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
             primary_client->vsync_count());
 }
 
-TEST_P(IntegrationTest, InvalidImageHandleAfterSave) {
+TEST_F(IntegrationTest, InvalidImageHandleAfterSave) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -611,7 +594,7 @@ TEST_P(IntegrationTest, InvalidImageHandleAfterSave) {
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync_count());
 }
 
-TEST_P(IntegrationTest, ImportGammaTable) {
+TEST_F(IntegrationTest, ImportGammaTable) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -630,7 +613,7 @@ TEST_P(IntegrationTest, ImportGammaTable) {
   }
 }
 
-TEST_P(IntegrationTest, ReleaseGammaTable) {
+TEST_F(IntegrationTest, ReleaseGammaTable) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -652,7 +635,7 @@ TEST_P(IntegrationTest, ReleaseGammaTable) {
   }
 }
 
-TEST_P(IntegrationTest, ReleaseInvalidGammaTable) {
+TEST_F(IntegrationTest, ReleaseInvalidGammaTable) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -674,7 +657,7 @@ TEST_P(IntegrationTest, ReleaseInvalidGammaTable) {
   }
 }
 
-TEST_P(IntegrationTest, SetGammaTable) {
+TEST_F(IntegrationTest, SetGammaTable) {
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
@@ -694,7 +677,7 @@ TEST_P(IntegrationTest, SetGammaTable) {
   }
 }
 
-TEST_P(IntegrationTest, ImportImage_InvalidCollection) {
+TEST_F(IntegrationTest, ImportImage_InvalidCollection) {
   TestFidlClient client(sysmem_);
   ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(client.Bind(dispatcher()));
@@ -708,7 +691,7 @@ TEST_P(IntegrationTest, ImportImage_InvalidCollection) {
   ASSERT_NE(ii_reply->res, ZX_OK);
 }
 
-TEST_P(IntegrationTest, ClampRgb) {
+TEST_F(IntegrationTest, ClampRgb) {
   // Create vc client
   TestFidlClient vc_client(sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
@@ -753,7 +736,7 @@ TEST_P(IntegrationTest, ClampRgb) {
                                         zx::sec(1)));
 }
 
-TEST_P(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon) {
+TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon) {
   // Create and bind virtcon client.
   TestFidlClient vc_client(sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
@@ -810,7 +793,7 @@ TEST_P(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon)
   EXPECT_EQ(0u, primary_client->recent_vsync_images().size());
 }
 
-TEST_P(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary) {
+TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary) {
   {
     // Create and bind the first primary client.
     TestFidlClient primary_client1(sysmem_);
@@ -868,7 +851,7 @@ TEST_P(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary)
   }
 }
 
-TEST_P(IntegrationTest, EmptyConfigIsNotApplied) {
+TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
   // Create and bind virtcon client.
   TestFidlClient vc_client(sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
@@ -923,7 +906,5 @@ TEST_P(IntegrationTest, EmptyConfigIsNotApplied) {
       },
       zx::sec(1)));
 }
-
-INSTANTIATE_TEST_SUITE_P(UseVsync2, IntegrationTest, zxtest::Bool());
 
 }  // namespace display

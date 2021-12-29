@@ -24,8 +24,7 @@ class FakeHardwareDisplayControllerProviderTest : public gtest::TestLoopFixture 
   void SetUp() override {
     TestLoopFixture::SetUp();
 
-    service_ =
-        std::make_unique<fake_display::ProviderService>(nullptr, dispatcher(), /*use_vsync2=*/true);
+    service_ = std::make_unique<fake_display::ProviderService>(nullptr, dispatcher());
   }
 
   void TearDown() override {

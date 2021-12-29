@@ -494,31 +494,25 @@ int FakeDisplay::CaptureThread() {
   return ZX_OK;
 }
 
-int FakeDisplay::VSyncThread(bool use_vsync2) {
+int FakeDisplay::VSyncThread() {
   while (true) {
     zx::nanosleep(zx::deadline_after(zx::sec(1) / kRefreshRateFps));
     if (vsync_shutdown_flag_.load()) {
       break;
     }
-    SendVsync(use_vsync2);
+    SendVsync();
   }
   return ZX_OK;
 }
 
-void FakeDisplay::SendVsync(bool use_vsync2) {
+void FakeDisplay::SendVsync() {
   fbl::AutoLock lock(&display_lock_);
   if (dc_intf_.is_valid()) {
-    if (use_vsync2) {
-      dc_intf_.OnDisplayVsync2(kDisplayId, zx_clock_get_monotonic(), &current_config_stamp_);
-    } else {
-      uint64_t live[] = {current_image_};
-      dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(),
-                              current_image_valid_ ? live : nullptr, current_image_valid_);
-    }
+    dc_intf_.OnDisplayVsync2(kDisplayId, zx_clock_get_monotonic(), &current_config_stamp_);
   }
 }
 
-zx_status_t FakeDisplay::Bind(bool start_vsync, bool use_vsync2) {
+zx_status_t FakeDisplay::Bind(bool start_vsync) {
   zx_status_t status = ddk::PDev::FromFragment(parent(), &pdev_);
   if (status != ZX_OK) {
     DISP_ERROR("Could not get PDEV protocol\n");
@@ -539,16 +533,13 @@ zx_status_t FakeDisplay::Bind(bool start_vsync, bool use_vsync2) {
   }
 
   if (start_vsync) {
-    using Args = struct {
-      FakeDisplay* fake_display;
-      bool use_vsync2;
-    };
-    Args* pargs = new Args{this, use_vsync2};
+    using Args = struct { FakeDisplay* fake_display; };
+    Args* pargs = new Args{this};
     auto start_thread = [](void* opaque) {
       Args* pargs = static_cast<Args*>(opaque);
       Args args = *pargs;
       delete pargs;
-      return args.fake_display->VSyncThread(args.use_vsync2);
+      return args.fake_display->VSyncThread();
     };
     status = thrd_create_with_name(&vsync_thread_, start_thread, pargs, "vsync_thread");
     if (status != ZX_OK) {

@@ -1,8 +1,0 @@
-{
-    include: [ "//src/ui/bin/hardware_display_controller_provider/meta/fake_hdcp.common.cml" ],
-    program: {
-        runner: "elf",
-        binary: "bin/fake_hw_display_controller_provider",
-        args: [ "--use-vsync2" ],
-    },
-}

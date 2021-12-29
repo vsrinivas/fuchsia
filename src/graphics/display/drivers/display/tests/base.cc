@@ -15,16 +15,11 @@
 
 namespace display {
 
-void TestBase::SetUp(bool use_vsync2) {
-  use_vsync2_ = use_vsync2;
-
+void TestBase::SetUp() {
   loop_.StartThread("display::TestBase::loop_", &loop_thrd_);
   auto sysmem = std::make_unique<GenericSysmemDeviceWrapper<sysmem_driver::Device>>();
-  tree_ = std::make_unique<FakeDisplayDeviceTree>(std::move(sysmem), /*start_vsync=*/false,
-                                                  use_vsync2_);
+  tree_ = std::make_unique<FakeDisplayDeviceTree>(std::move(sysmem), /*start_vsync=*/false);
 }
-
-void TestBase::SetUp() { SetUp(/*use_vsync2=*/true); }
 
 void TestBase::TearDown() {
   tree_->AsyncShutdown();

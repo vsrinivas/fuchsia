@@ -11,13 +11,6 @@
 #include "src/ui/bin/hardware_display_controller_provider/fake/service.h"
 
 int main(int argc, const char** argv) {
-  bool use_vsync2 = false;
-  for (const auto& arg : cpp20::span(argv + 1, argc - 1)) {
-    if (strcmp(arg, "--use-vsync2") == 0) {
-      use_vsync2 = true;
-    }
-  }
-
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
   std::unique_ptr<sys::ComponentContext> app_context(
@@ -25,7 +18,7 @@ int main(int argc, const char** argv) {
 
   FX_LOGS(INFO) << "Starting fake fuchsia.hardware.display.Provider service.";
 
-  fake_display::ProviderService hdcp_service_impl(app_context.get(), loop.dispatcher(), use_vsync2);
+  fake_display::ProviderService hdcp_service_impl(app_context.get(), loop.dispatcher());
 
   loop.Run();
 
