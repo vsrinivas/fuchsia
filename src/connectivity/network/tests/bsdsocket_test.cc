@@ -6048,15 +6048,20 @@ class NetDatagramSocketsCmsgTimestampNsTest : public NetDatagramSocketsCmsgTestB
 
   // libc++ implementation of chrono' system_clock uses microseconds, so we can't use it to
   // retrieve the current time for nanosecond timestamp tests.
-  std::chrono::nanoseconds TimeSinceEpoch() const {
+  // https://github.com/llvm-mirror/libcxx/blob/78d6a7767ed/include/chrono#L1574
+  // The high_resolution_clock is also not appropriate, because it is an alias on the
+  // steady_clock.
+  // https://github.com/llvm-mirror/libcxx/blob/78d6a7767ed/include/chrono#L313
+  void TimeSinceEpoch(std::chrono::nanoseconds& out) const {
     struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return std::chrono::seconds(ts.tv_sec) + std::chrono::nanoseconds(ts.tv_nsec);
+    ASSERT_EQ(clock_gettime(CLOCK_REALTIME, &ts), 0) << strerror(errno);
+    out = std::chrono::seconds(ts.tv_sec) + std::chrono::nanoseconds(ts.tv_nsec);
   }
 };
 
 TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvMsg) {
-  const std::chrono::duration before = TimeSinceEpoch();
+  std::chrono::nanoseconds before;
+  ASSERT_NO_FATAL_FAILURE(TimeSinceEpoch(before));
   char control[CMSG_SPACE(sizeof(timespec)) + 1];
   ASSERT_NO_FATAL_FAILURE(
       SendAndCheckReceivedMessage(control, sizeof(control), [&](msghdr& msghdr) {
@@ -6071,7 +6076,8 @@ TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvMsg) {
         memcpy(&received_ts, CMSG_DATA(cmsg), sizeof(received_ts));
         const std::chrono::duration received = std::chrono::seconds(received_ts.tv_sec) +
                                                std::chrono::nanoseconds(received_ts.tv_nsec);
-        const std::chrono::duration after = TimeSinceEpoch();
+        std::chrono::nanoseconds after;
+        ASSERT_NO_FATAL_FAILURE(TimeSinceEpoch(after));
         // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
         // timestamp if the clock jumped back in time.
         if (before <= after) {
@@ -6084,7 +6090,8 @@ TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvMsg) {
 }
 
 TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvCmsgUnalignedControlBuffer) {
-  const std::chrono::duration before = TimeSinceEpoch();
+  std::chrono::nanoseconds before;
+  ASSERT_NO_FATAL_FAILURE(TimeSinceEpoch(before));
   char control[CMSG_SPACE(sizeof(timespec)) + 1];
   // Pass an unaligned control buffer.
   ASSERT_NO_FATAL_FAILURE(
@@ -6108,7 +6115,8 @@ TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvCmsgUnalignedControlBuffer) {
         memcpy(&received_tv, CMSG_DATA(cmsg), sizeof(received_tv));
         const std::chrono::duration received = std::chrono::seconds(received_tv.tv_sec) +
                                                std::chrono::nanoseconds(received_tv.tv_nsec);
-        const std::chrono::duration after = TimeSinceEpoch();
+        std::chrono::nanoseconds after;
+        ASSERT_NO_FATAL_FAILURE(TimeSinceEpoch(after));
         // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
         // timestamp if the clock jumped back in time.
         if (before <= after) {
