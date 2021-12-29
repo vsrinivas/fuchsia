@@ -9,8 +9,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
+
+#include <mutex>
+#include <optional>
 
 #include "src/bringup/bin/netsvc/netifc-discover.h"
 
@@ -29,283 +32,273 @@ const ip6_addr_t ip6_ll_all_nodes = {
     .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
 
+namespace {
+
 // Convert MAC Address to IPv6 Unique Local Address.
-void ula6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
-  uint8_t* ip = _ip->u8;
-  const uint8_t* mac = _mac->x;
-  memset(ip, 0, sizeof(ip6_addr_t));
-
-  ip[0] = 0xFD;
-  ip[1] = mac[1];
-  ip[2] = mac[2];
-  ip[3] = mac[3];
-  ip[4] = mac[4];
-  ip[5] = mac[5];
-
-  // We leave byte-0 out above because it is the least unique but we want
-  // it just in case by some slight chance there are two NICs with the other
-  // bytes matching.
-  ip[13] = mac[0];
-  // We need these down here to keep us matching the snmaddr.
-  ip[13] = mac[3];
-  ip[14] = mac[4];
-  ip[15] = mac[5];
+ip6_addr_t ula6addr_from_mac(const mac_addr_t& mac) {
+  return {.u8 = {
+              0xFD,
+              mac.x[1],
+              mac.x[2],
+              mac.x[3],
+              mac.x[4],
+              mac.x[5],
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              // We need these down here to keep us matching the snmaddr.
+              mac.x[3],
+              mac.x[4],
+              mac.x[5],
+          }};
 }
 
 // Convert MAC Address to IPv6 Link Local Address
 // aa:bb:cc:dd:ee:ff => FF80::aabb:cc4D:FEdd:eeff
 // bit 2 (U/L) of the mac is inverted
-void ll6addr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
-  uint8_t* ip = _ip->u8;
-  const uint8_t* mac = _mac->x;
-  memset(ip, 0, sizeof(ip6_addr_t));
-  ip[0] = 0xFE;
-  ip[1] = 0x80;
-  memset(ip + 2, 0, 6);
-  // Flip the globally-unique bit from the MAC
-  // since the sense of this is backwards in
-  // IPv6 Interface Identifiers.
-  ip[8] = mac[0] ^ 2;
-  ip[9] = mac[1];
-  ip[10] = mac[2];
-  ip[11] = 0xFF;
-  ip[12] = 0xFE;
-  ip[13] = mac[3];
-  ip[14] = mac[4];
-  ip[15] = mac[5];
+ip6_addr_t ll6addr_from_mac(const mac_addr_t& mac) {
+  return {.u8 = {
+              0xFE,
+              0x80,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              // Flip the globally-unique bit from the MAC
+              // since the sense of this is backwards in
+              // IPv6 Interface Identifiers.
+              static_cast<uint8_t>(mac.x[0] ^ 2),
+              mac.x[1],
+              mac.x[2],
+              0xFE,
+              0xFE,
+              mac.x[3],
+              mac.x[4],
+              mac.x[5],
+          }};
 }
 
 // Convert MAC Address to IPv6 Solicit Neighbor Multicast Address
 // aa:bb:cc:dd:ee:ff -> FF02::1:FFdd:eeff
-void snmaddr_from_mac(ip6_addr_t* _ip, const mac_addr_t* _mac) {
-  uint8_t* ip = _ip->u8;
-  const uint8_t* mac = _mac->x;
-  ip[0] = 0xFF;
-  ip[1] = 0x02;
-  memset(ip + 2, 0, 9);
-  ip[11] = 0x01;
-  ip[12] = 0xFF;
-  ip[13] = mac[3];
-  ip[14] = mac[4];
-  ip[15] = mac[5];
+ip6_addr_t snmaddr_from_mac(const mac_addr_t& mac) {
+  return {.u8 = {
+              0xFF,
+              0x02,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0x01,
+              0xFF,
+              mac.x[3],
+              mac.x[4],
+              mac.x[5],
+          }};
 }
 
 // Convert IPv6 Multicast Address to Ethernet Multicast Address
-void multicast_from_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip6) {
-  const uint8_t* ip = _ip6->u8;
-  uint8_t* mac = _mac->x;
-  mac[0] = 0x33;
-  mac[1] = 0x33;
-  mac[2] = ip[12];
-  mac[3] = ip[13];
-  mac[4] = ip[14];
-  mac[5] = ip[15];
+mac_addr_t multicast_from_ip6(const ip6_addr_t& ip6) {
+  return {.x = {
+              0x33,
+              0x33,
+              ip6.u8[12],
+              ip6.u8[13],
+              ip6.u8[14],
+              ip6.u8[15],
+          }};
 }
-
-// ip6 stack configuration
-static mac_addr_t ll_mac_addr;
-static ip6_addr_t ll_ip6_addr;
-static ip6_addr_t ula_ip6_addr;
-static mac_addr_t snm_mac_addr;
-static ip6_addr_t snm_ip6_addr;
 
 // cache for the last source addresses we've seen
 #define MAC_TBL_BUCKETS 256
 #define MAC_TBL_ENTRIES 5
 struct ip6_to_mac_t {
-  zx_time_t last_used;  // A value of 0 indicates "unused"
+  zx_time_t last_used;  // A value of 0 indicates "unused".
   ip6_addr_t ip6;
   mac_addr_t mac;
 };
-static ip6_to_mac_t mac_lookup_tbl[MAC_TBL_BUCKETS][MAC_TBL_ENTRIES];
-static mtx_t mac_cache_lock = {};
 
-static uint8_t mac_cache_hash(const ip6_addr_t* ip) {
+uint8_t mac_cache_hash(const ip6_addr_t& ip) {
   static_assert(MAC_TBL_BUCKETS == 256, "hash algorithms must be updated");
-  uint32_t hash = fnv1a32(ip, sizeof(*ip));
+  uint32_t hash = fnv1a32(&ip, sizeof(ip));
   return ((hash >> 8) ^ hash) & 0xff;
 }
 
-// Clear all entries
-static void mac_cache_init() {
-  size_t bucket_ndx;
-  size_t entry_ndx;
-  mtx_lock(&mac_cache_lock);
-  for (bucket_ndx = 0; bucket_ndx < MAC_TBL_BUCKETS; bucket_ndx++) {
-    for (entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
-      mac_lookup_tbl[bucket_ndx][entry_ndx].last_used = 0;
-    }
-  }
-  mtx_unlock(&mac_cache_lock);
-}
+// ip6 stack configuration.
+struct Ip6Stack {
+  const mac_addr_t ll_mac_addr;
+  const ip6_addr_t ll_ip6_addr;
+  const ip6_addr_t ula_ip6_addr;
+  const ip6_addr_t snm_ip6_addr;
+  const mac_addr_t snm_mac_addr;
+  ip6_to_mac_t mac_lookup_tbl[MAC_TBL_BUCKETS][MAC_TBL_ENTRIES] __TA_GUARDED(mac_cache_lock);
+  std::mutex mac_cache_lock;
 
-void ip6_init(void* macaddr, bool quiet) {
-  // Clear our ip6 -> MAC address lookup table
-  mac_cache_init();
-
-  // save our ethernet MAC and synthesize link layer addresses
-  memcpy(&ll_mac_addr, macaddr, 6);
-  ula6addr_from_mac(&ula_ip6_addr, &ll_mac_addr);
-  ll6addr_from_mac(&ll_ip6_addr, &ll_mac_addr);
-  snmaddr_from_mac(&snm_ip6_addr, &ll_mac_addr);
-  multicast_from_ip6(&snm_mac_addr, &snm_ip6_addr);
-
-  eth_add_mcast_filter(&snm_mac_addr);
-
-  mac_addr_t all;
-  multicast_from_ip6(&all, &ip6_ll_all_nodes);
-  eth_add_mcast_filter(&all);
-
-  if (!quiet) {
-    printf("macaddr: %02x:%02x:%02x:%02x:%02x:%02x\n", ll_mac_addr.x[0], ll_mac_addr.x[1],
-           ll_mac_addr.x[2], ll_mac_addr.x[3], ll_mac_addr.x[4], ll_mac_addr.x[5]);
-
-    char tmp[INET6_ADDRSTRLEN];
-    printf("ip6addr (LL) : %s\n", inet_ntop(AF_INET6, &ll_ip6_addr, tmp, sizeof(tmp)));
-    printf("ip6addr (ULA): %s\n", inet_ntop(AF_INET6, &ula_ip6_addr, tmp, sizeof(tmp)));
-    printf("snmaddr: %s\n", inet_ntop(AF_INET6, &snm_ip6_addr, tmp, sizeof(tmp)));
-  }
-}
-
-// Find the MAC corresponding to a given IP6 address
-static int mac_cache_lookup(mac_addr_t* mac, const ip6_addr_t* ip) {
-  int result = -1;
-  uint8_t key = mac_cache_hash(ip);
-
-  mtx_lock(&mac_cache_lock);
-  for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
-    ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
-
-    if (entry->last_used == 0) {
-      // All out of entries
-      break;
-    }
-
-    if (!memcmp(ip, &entry->ip6, sizeof(ip6_addr_t))) {
-      // Match!
-      memcpy(mac, &entry->mac, sizeof(*mac));
-      result = 0;
-      break;
-    }
-  }
-  mtx_unlock(&mac_cache_lock);
-  return result;
-}
-
-static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
-  const uint8_t* ip = _ip->u8;
-
-  // Multicast addresses are a simple transform
-  if (ip[0] == 0xFF) {
-    multicast_from_ip6(_mac, _ip);
-    return 0;
-  }
-
-  return mac_cache_lookup(_mac, _ip);
-}
-
-// If ip is not in cache already, add it. Otherwise, update its last access time.
-static void mac_cache_save(mac_addr_t* mac, ip6_addr_t* ip) {
-  uint8_t key = mac_cache_hash(ip);
-
-  mtx_lock(&mac_cache_lock);
-  ip6_to_mac_t* oldest_entry = &mac_lookup_tbl[key][0];
-  zx_time_t curr_time = zx_clock_get_monotonic();
-
-  for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
-    ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
-
-    if (entry->last_used == 0) {
-      // Unused entry -- fill it
-      oldest_entry = entry;
-      break;
-    }
-
-    if (memcmp(ip, &entry->ip6, sizeof(ip6_addr_t)) == 0) {
-      // Match found
-      if (memcmp(mac, &entry->mac, sizeof(mac_addr_t)) != 0) {
-        // If mac has changed, update it
-        memcpy(&entry->mac, mac, sizeof(mac_addr_t));
+  Ip6Stack(mac_addr_t macaddr, bool quiet)
+      : ll_mac_addr(macaddr),
+        ll_ip6_addr(ll6addr_from_mac(macaddr)),
+        ula_ip6_addr(ula6addr_from_mac(macaddr)),
+        snm_ip6_addr(snmaddr_from_mac(macaddr)),
+        snm_mac_addr(multicast_from_ip6(snm_ip6_addr)) {
+    size_t bucket_ndx;
+    size_t entry_ndx;
+    for (bucket_ndx = 0; bucket_ndx < MAC_TBL_BUCKETS; bucket_ndx++) {
+      for (entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+        mac_lookup_tbl[bucket_ndx][entry_ndx].last_used = 0;
       }
-      entry->last_used = curr_time;
-      goto done;
     }
 
-    if ((entry_ndx > 0) && (entry->last_used < oldest_entry->last_used)) {
-      oldest_entry = entry;
+    eth_add_mcast_filter(&snm_mac_addr);
+
+    mac_addr_t all = multicast_from_ip6(ip6_ll_all_nodes);
+    eth_add_mcast_filter(&all);
+
+    if (!quiet) {
+      printf("macaddr: %02x:%02x:%02x:%02x:%02x:%02x\n", ll_mac_addr.x[0], ll_mac_addr.x[1],
+             ll_mac_addr.x[2], ll_mac_addr.x[3], ll_mac_addr.x[4], ll_mac_addr.x[5]);
+
+      char tmp[INET6_ADDRSTRLEN];
+      printf("ip6addr (LL) : %s\n", inet_ntop(AF_INET6, &ll_ip6_addr, tmp, sizeof(tmp)));
+      printf("ip6addr (ULA): %s\n", inet_ntop(AF_INET6, &ula_ip6_addr, tmp, sizeof(tmp)));
+      printf("snmaddr: %s\n", inet_ntop(AF_INET6, &snm_ip6_addr, tmp, sizeof(tmp)));
     }
   }
 
-  // No available entry found -- replace oldest
-  memcpy(&oldest_entry->mac, mac, sizeof(mac_addr_t));
-  memcpy(&oldest_entry->ip6, ip, sizeof(ip6_addr_t));
-  oldest_entry->last_used = curr_time;
+  // Find the MAC corresponding to a given IP6 address
+  std::optional<mac_addr_t> ResolveIp6(const ip6_addr_t& ip) {
+    // Multicast addresses are a simple transform
+    if (ip.u8[0] == 0xFF) {
+      return multicast_from_ip6(ip);
+    }
 
-done:
-  mtx_unlock(&mac_cache_lock);
-}
+    uint8_t key = mac_cache_hash(ip);
 
-struct ip6_pkt_t {
-  uint8_t eth[16];
-  ip6_hdr_t ip6;
-  uint8_t data[0];
-};
+    std::lock_guard lock(mac_cache_lock);
+    for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+      ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
 
-struct udp_pkt_t {
-  uint8_t eth[16];
-  ip6_hdr_t ip6;
-  udp_hdr_t udp;
-  uint8_t data[0];
-};
+      if (entry->last_used == 0) {
+        // All out of entries
+        break;
+      }
 
-static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* saddr, const ip6_addr_t* daddr, size_t length,
-                     uint8_t type) {
-  mac_addr_t dmac;
-
-  if (resolve_ip6(&dmac, daddr))
-    return -1;
-
-  // ethernet header
-  memcpy(p->eth + 2, &dmac, ETH_ADDR_LEN);
-  memcpy(p->eth + 8, &ll_mac_addr, ETH_ADDR_LEN);
-  p->eth[14] = (ETH_IP6 >> 8) & 0xFF;
-  p->eth[15] = ETH_IP6 & 0xFF;
-
-  // ip6 header
-  p->ip6.ver_tc_flow = 0x60;  // v=6, tc=0, flow=0
-  p->ip6.length = htons(length);
-  p->ip6.next_header = type;
-  p->ip6.hop_limit = 255;
-  p->ip6.src = *saddr;
-  p->ip6.dst = *daddr;
-
-  return 0;
-}
-
-#define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
-
-static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* saddr,
-                              const ip6_addr_t* daddr, bool block) {
-  if (length > ICMP6_MAX_PAYLOAD)
-    return ZX_ERR_INVALID_ARGS;
-  eth_buffer_t* ethbuf;
-  ip6_pkt_t* p;
-  icmp6_hdr_t* icmp;
-
-  zx_status_t status = eth_get_buffer(ETH_MTU + 2, reinterpret_cast<void**>(&p), &ethbuf, block);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (ip6_setup(p, saddr, daddr, length, HDR_ICMP6)) {
-    eth_put_buffer(ethbuf);
-    return ZX_ERR_INVALID_ARGS;
+      if (entry->ip6 == ip) {
+        // Match!
+        return entry->mac;
+      }
+    }
+    return std::nullopt;
   }
 
-  icmp = reinterpret_cast<icmp6_hdr_t*>(p->data);
-  memcpy(icmp, data, length);
-  icmp->checksum = ip6_checksum(&p->ip6, HDR_ICMP6, length);
-  return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
-}
+  // If ip is not in cache already, add it. Otherwise, update its last access time.
+  void SaveMacCache(const mac_addr_t& mac, const ip6_addr_t& ip) {
+    uint8_t key = mac_cache_hash(ip);
+
+    std::lock_guard lock(mac_cache_lock);
+    ip6_to_mac_t* oldest_entry = &mac_lookup_tbl[key][0];
+    zx_time_t curr_time = zx_clock_get_monotonic();
+
+    for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+      ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
+
+      if (entry->last_used == 0) {
+        // Unused entry -- fill it
+        oldest_entry = entry;
+        break;
+      }
+
+      if (entry->ip6 == ip) {
+        // Match found.
+        // Update mac and last seen.
+        entry->mac = mac;
+        entry->last_used = curr_time;
+        return;
+      }
+
+      if ((entry_ndx > 0) && (entry->last_used < oldest_entry->last_used)) {
+        oldest_entry = entry;
+      }
+    }
+
+    // No available entry found -- replace oldest.
+    *oldest_entry = {
+        .last_used = curr_time,
+        .ip6 = ip,
+        .mac = mac,
+    };
+  }
+
+  std::optional<std::tuple<uint8_t*, uint16_t>> PrepareIp6Packet(uint8_t* data,
+                                                                 const ip6_addr_t& saddr,
+                                                                 const ip6_addr_t& daddr,
+                                                                 size_t length, uint8_t type) {
+    std::optional mac = ResolveIp6(daddr);
+    if (!mac.has_value()) {
+      return std::nullopt;
+    }
+
+    mac_addr_t& dmac = mac.value();
+    // Ethernet header.
+    data = std::copy(std::begin(dmac.x), std::end(dmac.x), data);
+    data = std::copy(std::begin(ll_mac_addr.x), std::end(ll_mac_addr.x), data);
+    *data++ = (ETH_IP6 >> 8) & 0xFF;
+    *data++ = ETH_IP6 & 0xFF;
+    // ip6 header.
+    const ip6_hdr hdr = {
+        .ver_tc_flow = 0x60,  // v=6, tc=0, flow=0
+        .length = htons(length),
+        .next_header = type,
+        .hop_limit = 255,
+        .src = saddr,
+        .dst = daddr,
+    };
+    data = std::copy_n(reinterpret_cast<const uint8_t*>(&hdr), sizeof(hdr), data);
+    return std::make_tuple(data, ip6_header_checksum(hdr, type));
+  }
+
+  static constexpr size_t kIcmp6MacPayload = ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN;
+
+  zx_status_t SendIcmp6(const void* data, size_t length, const ip6_addr_t& saddr,
+                        const ip6_addr_t& daddr, bool block) {
+    if (length > kIcmp6MacPayload) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    eth_buffer_t* ethbuf;
+    uint8_t* p;
+
+    zx_status_t status = eth_get_buffer(ETH_MTU, reinterpret_cast<void**>(&p), &ethbuf, block);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    std::optional prepared = PrepareIp6Packet(p, saddr, daddr, length, HDR_ICMP6);
+    if (!prepared.has_value()) {
+      eth_put_buffer(ethbuf);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    auto [body, checksum] = prepared.value();
+    std::copy_n(static_cast<const uint8_t*>(data), length, body);
+    checksum = ip6_finalize_checksum(checksum, data, length);
+    std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
+                body + offsetof(icmp6_hdr_t, checksum));
+    return eth_send(ethbuf, ETH_HDR_LEN + IP6_HDR_LEN + length);
+  }
+};
+
+std::optional<Ip6Stack> g_state;
+
+}  // namespace
+
+void ip6_init(mac_addr_t macaddr, bool quiet) { g_state.emplace(macaddr, quiet); }
 
 #define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 
@@ -314,29 +307,36 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   if (dlen > UDP6_MAX_PAYLOAD)
     return ZX_ERR_INVALID_ARGS;
   size_t length = dlen + UDP_HDR_LEN;
-  udp_pkt_t* p;
+  uint8_t* p;
   eth_buffer_t* ethbuf;
-  zx_status_t status = eth_get_buffer(ETH_MTU + 2, reinterpret_cast<void**>(&p), &ethbuf, block);
+  zx_status_t status = eth_get_buffer(ETH_MTU, reinterpret_cast<void**>(&p), &ethbuf, block);
   if (status != ZX_OK) {
     return status;
   }
 
-  const bool ula = (*daddr).u8[0] == ula_ip6_addr.u8[0];
-  const ip6_addr_t* const saddr = ula ? &ula_ip6_addr : &ll_ip6_addr;
-  if (ip6_setup(reinterpret_cast<ip6_pkt_t*>(p), saddr, daddr, length, HDR_UDP)) {
+  ZX_ASSERT(g_state.has_value());
+  Ip6Stack& stack_state = g_state.value();
+  const bool ula = (*daddr).u8[0] == stack_state.ula_ip6_addr.u8[0];
+  const ip6_addr_t& saddr = ula ? stack_state.ula_ip6_addr : stack_state.ll_ip6_addr;
+
+  std::optional prepared = stack_state.PrepareIp6Packet(p, saddr, *daddr, length, HDR_UDP);
+  if (!prepared.has_value()) {
     eth_put_buffer(ethbuf);
     return ZX_ERR_INVALID_ARGS;
   }
-
-  // udp header
-  p->udp.src_port = htons(sport);
-  p->udp.dst_port = htons(dport);
-  p->udp.length = htons(length);
-  p->udp.checksum = 0;
-
-  memcpy(p->data, data, dlen);
-  p->udp.checksum = ip6_checksum(&p->ip6, HDR_UDP, length);
-  return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
+  auto [body, checksum] = prepared.value();
+  const udp_hdr_t udp = {
+      .src_port = htons(sport),
+      .dst_port = htons(dport),
+      .length = htons(length),
+      .checksum = 0,
+  };
+  uint8_t* payload = std::copy_n(reinterpret_cast<const uint8_t*>(&udp), sizeof(udp), body);
+  std::copy_n(static_cast<const uint8_t*>(data), dlen, payload);
+  checksum = ip6_finalize_checksum(checksum, body, sizeof(udp) + dlen);
+  std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
+              body + offsetof(udp_hdr_t, checksum));
+  return eth_send(ethbuf, ETH_HDR_LEN + IP6_HDR_LEN + length);
 }
 
 #if REPORT_BAD_PACKETS
@@ -385,12 +385,16 @@ void send_router_advertisement() {
   msg.prefix_lifetime_s = 0xFFFFFFFF;       // valid while this link is up.
   msg.prefix_pref_lifetime_s = 0xFFFFFFFF;  // preferred while this link is up.
 
+  ZX_ASSERT(g_state.has_value());
+  Ip6Stack& stack_state = g_state.value();
+
   // Copy first 8 bytes (64bits) as our prefix, rest will be 0.
-  memcpy(msg.prefix, &ula_ip6_addr, 8);
+  memcpy(msg.prefix, &stack_state.ula_ip6_addr, 8);
 
   // We need to send this on the link-local address because nothing is talking
   // to the ula address yet.
-  zx_status_t status = icmp6_send(&msg, sizeof(msg), &ll_ip6_addr, &ip6_ll_all_nodes, false);
+  zx_status_t status =
+      stack_state.SendIcmp6(&msg, sizeof(msg), stack_state.ll_ip6_addr, ip6_ll_all_nodes, false);
   if (status == ZX_ERR_SHOULD_WAIT) {
     printf("inet6: No buffers available, dropping RA\n");
   } else if (status < 0) {
@@ -413,7 +417,7 @@ void udp6_recv_internal(ip6_hdr_t* ip, void* _data, size_t len) {
   if (udp->checksum == 0xFFFF)
     udp->checksum = 0;
 
-  sum = ip6_checksum(ip, HDR_UDP, len);
+  sum = ip6_finalize_checksum(ip6_header_checksum(*ip, HDR_UDP), udp, len);
   if (unlikely(sum != 0xFFFF)) {
     BAD_PACKET_FROM(&ip->src, "incorrect checksum in UDP packet");
     return;
@@ -445,11 +449,14 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
   if (icmp->checksum == 0xFFFF)
     icmp->checksum = 0;
 
-  sum = ip6_checksum(ip, HDR_ICMP6, len);
+  sum = ip6_finalize_checksum(ip6_header_checksum(*ip, HDR_ICMP6), icmp, len);
   if (unlikely(sum != 0xFFFF)) {
     BAD_PACKET_FROM(&ip->src, "incorrect checksum in ICMP packet");
     return;
   }
+
+  ZX_ASSERT(g_state.has_value());
+  Ip6Stack& stack_state = g_state.value();
 
   zx_status_t status;
   if (icmp->type == ICMP6_NDP_N_SOLICIT) {
@@ -468,11 +475,11 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
       return;
     }
 
-    // Ignore the neighbor solicitation if it is targetting another node, as per
+    // Ignore the neighbor solicitation if it is targeting another node, as per
     // RFC 4861 section 7.2.3.
     {
-      ip6_addr_t* ndp_target = reinterpret_cast<ip6_addr_t*>(ndp->target);
-      if (!ip6_addr_eq(ndp_target, &ll_ip6_addr) && !ip6_addr_eq(ndp_target, &ula_ip6_addr)) {
+      const ip6_addr_t& ndp_target = *reinterpret_cast<ip6_addr_t*>(ndp->target);
+      if (ndp_target != stack_state.ll_ip6_addr && ndp_target != stack_state.ula_ip6_addr) {
         return;
       }
     }
@@ -484,18 +491,18 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     memcpy(msg.hdr.target, ndp->target, sizeof(ip6_addr_t));
     msg.opt[0] = NDP_N_TGT_LL_ADDR;
     msg.opt[1] = 1;
-    memcpy(msg.opt + 2, &ll_mac_addr, ETH_ADDR_LEN);
+    memcpy(msg.opt + 2, &stack_state.ll_mac_addr, ETH_ADDR_LEN);
 
     // If the target was on the ula network, respond from it.
     // Otherwise respond from the ll address.
-    const bool ula = ndp->target[0] == ula_ip6_addr.u8[0];
-    const ip6_addr_t* const saddr = ula ? &ula_ip6_addr : &ll_ip6_addr;
+    const bool ula = ndp->target[0] == stack_state.ula_ip6_addr.u8[0];
+    const ip6_addr_t& saddr = ula ? stack_state.ula_ip6_addr : stack_state.ll_ip6_addr;
 
-    status = icmp6_send(&msg, sizeof(msg), saddr, &ip->src, false);
+    status = stack_state.SendIcmp6(&msg, sizeof(msg), saddr, ip->src, false);
   } else if (icmp->type == ICMP6_ECHO_REQUEST) {
     icmp->checksum = 0;
     icmp->type = ICMP6_ECHO_REPLY;
-    status = icmp6_send(_data, len, &ip->dst, &ip->src, false);
+    status = stack_state.SendIcmp6(_data, len, ip->dst, ip->src, false);
   } else {
     // Ignore
     return;
@@ -509,7 +516,6 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
 
 void eth_recv(void* _data, size_t len) {
   uint8_t* data = static_cast<uint8_t*>(_data);
-  ip6_hdr_t* ip;
   uint32_t n;
 
   if (unlikely(len < (ETH_HDR_LEN + IP6_HDR_LEN))) {
@@ -521,41 +527,46 @@ void eth_recv(void* _data, size_t len) {
   if (data[13] != (ETH_IP6 & 0xFF))
     return;
 
-  ip = reinterpret_cast<ip6_hdr_t*>(data + ETH_HDR_LEN);
+  // Copy IP header to prevent misaligned access.
+  ip6_hdr_t ip;
+  std::copy_n(data + ETH_HDR_LEN, IP6_HDR_LEN, reinterpret_cast<uint8_t*>(&ip));
   data += (ETH_HDR_LEN + IP6_HDR_LEN);
   len -= (ETH_HDR_LEN + IP6_HDR_LEN);
 
-  // require v6
-  if (unlikely((ip->ver_tc_flow & 0xF0) != 0x60)) {
+  // Require v6.
+  if (unlikely((ip.ver_tc_flow & 0xF0) != 0x60)) {
     BAD_PACKET("unknown IP6 version");
     return;
   }
 
-  // ensure length is sane
-  n = ntohs(ip->length);
+  // Ensure length is in bounds.
+  n = ntohs(ip.length);
   if (unlikely(n > len)) {
     BAD_PACKET("IP6 length mismatch");
     return;
   }
 
-  // ignore any trailing data in the ethernet frame
+  ZX_ASSERT(g_state.has_value());
+  Ip6Stack& stack_state = g_state.value();
+
+  // Ignore any trailing data in the ethernet frame.
   len = n;
-  // require that we are the destination
-  if (!ip6_addr_eq(&ll_ip6_addr, &ip->dst) && !ip6_addr_eq(&snm_ip6_addr, &ip->dst) &&
-      !ip6_addr_eq(&ip6_ll_all_nodes, &ip->dst) && !ip6_addr_eq(&ula_ip6_addr, &ip->dst)) {
+  // Require that we are the destination.
+  if (ip.dst != stack_state.ll_ip6_addr && ip.dst != stack_state.snm_ip6_addr &&
+      ip.dst != ip6_ll_all_nodes && ip.dst != stack_state.ula_ip6_addr) {
     return;
   }
 
   // stash the sender's info to simplify replies
-  mac_addr* mac = reinterpret_cast<mac_addr*>(static_cast<uint8_t*>(_data) + ETH_ADDR_LEN);
-  mac_cache_save(mac, &ip->src);
+  mac_addr& mac = *reinterpret_cast<mac_addr*>(static_cast<uint8_t*>(_data) + ETH_ADDR_LEN);
+  stack_state.SaveMacCache(mac, ip.src);
 
-  switch (ip->next_header) {
+  switch (ip.next_header) {
     case HDR_ICMP6:
-      icmp6_recv(ip, data, len);
+      icmp6_recv(&ip, data, len);
       break;
     case HDR_UDP:
-      udp6_recv_internal(ip, data, len);
+      udp6_recv_internal(&ip, data, len);
       break;
     default:
       // do nothing

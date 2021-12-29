@@ -24,15 +24,17 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   return static_cast<uint16_t>(sum);
 }
 
-uint16_t ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
-  uint16_t sum;
+uint16_t ip6_header_checksum(const ip6_hdr_t& ip, uint8_t type) {
+  // Length and protocol field for pseudo-header.
+  const uint16_t sum = checksum(&ip.length, 2, htons(type));
+  // src/dst for pseudo-header + payload.
+  return checksum(&ip.src, 32, sum);
+}
 
-  // length and protocol field for pseudo-header
-  sum = checksum(&ip->length, 2, htons(type));
-  // src/dst for pseudo-header + payload
-  sum = checksum(&ip->src, 32 + length, sum);
+uint16_t ip6_finalize_checksum(uint16_t header_checksum, const void* payload, size_t len) {
+  uint16_t sum = checksum(payload, len, header_checksum);
 
-  // 0 is illegal, so 0xffff remains 0xffff
+  // 0 is illegal, so 0xffff remains 0xffff.
   if (sum != 0xffff) {
     return ~sum;
   }

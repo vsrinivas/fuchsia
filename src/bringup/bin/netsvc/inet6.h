@@ -12,8 +12,10 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <iterator>
+
 using mac_addr_t = struct mac_addr;
-using ip6_addr_t = union ip6_addr;
+using ip6_addr_t = struct ip6_addr;
 using ip6_hdr_t = struct ip6_hdr;
 using udp_hdr_t = struct udp_hdr;
 using icmp6_hdr_t = struct icmp6_hdr;
@@ -24,8 +26,6 @@ using ndp_n_hdr_t = struct ndp_n_hdr;
 #define ETH_MTU 1514
 
 #define IP6_ADDR_LEN 16
-#define IP6_U32_LEN 4
-#define IP6_U64_LEN 2
 
 #define IP6_HDR_LEN 40
 
@@ -37,17 +37,14 @@ struct mac_addr {
   uint8_t x[ETH_ADDR_LEN];
 } __attribute__((packed));
 
-union ip6_addr {
+struct ip6_addr {
   uint8_t u8[IP6_ADDR_LEN];
-  uint32_t u32[IP6_U32_LEN];
-  uint64_t u64[IP6_U64_LEN];
+
+  inline bool operator==(const ip6_addr& rhs) const { return memcmp(u8, rhs.u8, sizeof(u8)) == 0; }
+  inline bool operator!=(const ip6_addr& rhs) const { return !(*this == rhs); }
 } __attribute__((packed));
 
 extern const ip6_addr_t ip6_ll_all_nodes;
-
-static inline bool ip6_addr_eq(const ip6_addr_t* a, const ip6_addr_t* b) {
-  return ((a->u64[0] == b->u64[0]) && (a->u64[1] == b->u64[1]));
-}
 
 #define ETH_IP4 0x0800
 #define ETH_ARP 0x0806
@@ -123,7 +120,7 @@ struct ndp_n_hdr {
 #endif
 
 // provided by inet6.c
-void ip6_init(void* macaddr, bool quiet);
+void ip6_init(mac_addr_t macaddr, bool quiet);
 void eth_recv(void* data, size_t len);
 
 using eth_buffer_t = struct eth_buffer;
@@ -132,7 +129,7 @@ using eth_buffer_t = struct eth_buffer;
 zx_status_t eth_get_buffer(size_t len, void** data, eth_buffer_t** out, bool block);
 void eth_put_buffer(eth_buffer_t* ethbuf);
 
-zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len);
+zx_status_t eth_send(eth_buffer_t* ethbuf, size_t len);
 
 int eth_add_mcast_filter(const mac_addr_t* addr);
 
@@ -144,7 +141,11 @@ zx_status_t udp6_send(const void* data, size_t len, const ip6_addr_t* daddr, uin
 void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport);
 
-uint16_t ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
+uint16_t ip6_checksum(const ip6_hdr_t& ip, uint8_t type);
+
+uint16_t ip6_header_checksum(const ip6_hdr_t& ip, uint8_t type);
+
+uint16_t ip6_finalize_checksum(uint16_t header_checksum, const void* payload, size_t len);
 
 void send_router_advertisement();
 

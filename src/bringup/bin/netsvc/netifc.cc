@@ -72,7 +72,7 @@ static_assert(sizeof(eth_buffer) == 32);
 struct Netifc {
   std::mutex eth_lock;
   std::unique_ptr<EthClient> eth;
-  uint8_t netmac[6];
+  mac_addr_t netmac;
   fuchsia_hardware_ethernet::wire::DeviceStatus last_dev_status;
 
   fzl::VmoMapper iobuf;
@@ -171,7 +171,7 @@ zx_status_t eth_get_buffer(size_t sz, void** data, eth_buffer_t** out, bool bloc
   return g_state.GetBuffer(sz, data, out, ETH_BUFFER_CLIENT, block);
 }
 
-zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
+zx_status_t eth_send(eth_buffer_t* ethbuf, size_t len) {
   std::lock_guard lock(g_state.eth_lock);
 
   g_state.CheckEthBuf(ethbuf, ETH_BUFFER_CLIENT);
@@ -193,8 +193,7 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
   }
 
   ethbuf->state = ETH_BUFFER_TX;
-  if (zx_status_t status =
-          g_state.eth->QueueTx(ethbuf, static_cast<uint8_t*>(ethbuf->data) + skip, len);
+  if (zx_status_t status = g_state.eth->QueueTx(ethbuf, static_cast<uint8_t*>(ethbuf->data), len);
       status != ZX_OK) {
     printf("eth_fifo_send: queue tx failed: %s\n", zx_status_get_string(status));
     g_state.PutBuffer(ethbuf, ETH_BUFFER_TX);
@@ -213,7 +212,7 @@ int netifc_open(const char* interface) {
   // TODO: parameterize netsvc ethdir as well?
   if (zx_status_t status =
           netifc_discover("/dev/class/ethernet", interface,
-                          device.channel().reset_and_get_address(), g_state.netmac);
+                          device.channel().reset_and_get_address(), g_state.netmac.x);
       status != ZX_OK) {
     printf("netifc: failed to discover interface %s\n", zx_status_get_string(status));
     return -1;
