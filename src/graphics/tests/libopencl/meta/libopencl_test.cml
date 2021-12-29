@@ -1,0 +1,36 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/libopencl_test#meta/libopencl_test_driver.cm",
+        },
+        {
+            name: "fake_opencl_loader",
+            url: "fuchsia-pkg://fuchsia.com/libopencl_test#meta/fake_opencl_loader.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [
+                "#fake_opencl_loader",
+                "#test_driver",
+            ],
+        },
+        {
+            protocol: "fuchsia.opencl.loader.Loader",
+            from: "#fake_opencl_loader",
+            to: [ "#test_driver" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

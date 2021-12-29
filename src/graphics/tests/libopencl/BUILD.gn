@@ -1,0 +1,116 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+
+source_set("src") {
+  testonly = true
+
+  defines = [ "CL_TARGET_OPENCL_VERSION=300" ]
+
+  sources = [ "libopencl_test.cc" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/OpenCL-Headers:opencl_headers",
+    "//third_party/OpenCL-ICD-Loader",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("libopencl_test_bin") {
+  testonly = true
+  output_name = "libopencl_test"
+
+  deps = [ ":src" ]
+}
+
+executable("fake_opencl_loader_bin") {
+  testonly = true
+  output_name = "fake_opencl_loader"
+
+  defines = [ "CL_TARGET_OPENCL_VERSION=300" ]
+
+  sources = [ "fake_opencl_loader.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.opencl.loader",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+
+  deps += [
+    ":icd-json",
+    ":libopencl_fake",
+  ]
+
+  # IMPORTANT: The fake_opencl_loader_bin program
+  # expects the library to be in /pkg/lib/ at
+  # runtime, which disallows using instrumented
+  # variants, which will install it it /pkg/lib/<variant>/
+  # instead, resulting in a runtime error.
+  exclude_toolchain_tags = [ "instrumented" ]
+}
+
+resource("icd-json") {
+  sources = [ "libopencl_fake.json" ]
+  outputs = [ "data/manifest/libopencl_fake.json" ]
+}
+
+shared_library("libopencl_fake") {
+  defines = [ "CL_TARGET_OPENCL_VERSION=300" ]
+
+  sources = [ "libopencl_fake.cc" ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//third_party/OpenCL-Headers:opencl_headers",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_component("libopencl_test_driver") {
+  testonly = true
+  component_name = "libopencl_test_driver"
+  deps = [ ":libopencl_test_bin" ]
+
+  manifest = "meta/libopencl_test_driver.cml"
+}
+
+fuchsia_component("libopencl_test_cmp") {
+  testonly = true
+  component_name = "libopencl_test"
+
+  manifest = "meta/libopencl_test.cml"
+}
+
+fuchsia_component("fake_opencl_loader") {
+  testonly = true
+  component_name = "fake_opencl_loader"
+  deps = [ ":fake_opencl_loader_bin" ]
+
+  manifest = "meta/fake_opencl_loader.cml"
+}
+
+fuchsia_test_package("libopencl-test") {
+  package_name = "libopencl_test"
+  test_components = [ ":libopencl_test_cmp" ]
+  deps = [
+    ":fake_opencl_loader",
+    ":libopencl_fake",
+    ":libopencl_test_driver",
+  ]
+}
+
+group("libopencl") {
+  testonly = true
+  deps = [ ":libopencl-test" ]
+}

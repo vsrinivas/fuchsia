@@ -1,0 +1,12 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/libopencl_test",
+    },
+    use: [
+        { protocol: "fuchsia.opencl.loader.Loader" },
+    ],
+}

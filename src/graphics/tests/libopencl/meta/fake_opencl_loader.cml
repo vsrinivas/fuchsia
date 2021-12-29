@@ -1,0 +1,18 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/fake_opencl_loader",
+    },
+    capabilities: [
+        { protocol: "fuchsia.opencl.loader.Loader" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.opencl.loader.Loader",
+            from: "self",
+        },
+    ],
+}
