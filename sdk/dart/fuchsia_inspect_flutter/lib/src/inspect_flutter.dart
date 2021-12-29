@@ -15,11 +15,11 @@ class InspectFlutter {
   /// it to the parent
   @visibleForTesting
   static void inspectFromDiagnostic(DiagnosticsNode diagnostics, Node? parent) {
-    /// Finds the name of the widget and assigns it to the name of the node.
+    // Finds the name of the widget and assigns it to the name of the node.
     String name = '';
     for (DiagnosticsNode diagNode in diagnostics.getProperties()) {
-      /// Used to obtain the name of the widget by checking which
-      /// property is titled "widget"
+      // Used to obtain the name of the widget by checking which
+      // property is titled "widget"
       if (diagNode.name == 'widget') {
         name = diagNode.value.toString();
         break;
@@ -36,15 +36,15 @@ class InspectFlutter {
     // names do not get their properties merged.
     var childNode = parent!.child('${name}_${diagnostics.hashCode}');
 
-    /// For each property, add the property to the node.
+    // For each property, add the property to the node.
     for (DiagnosticsNode diagNode in diagnostics.getProperties()) {
-      /// If the property isn't null, then get the name of the property
-      /// and assign its value. The value of the property can be null
-      /// but the property itself cannot be null.
+      // If the property isn't null, then get the name of the property
+      // and assign its value. The value of the property can be null
+      // but the property itself cannot be null.
       if (diagNode.name != null) {
         childNode!
             .stringProperty(diagNode.name!)!
-            .setValue(diagNode.toDescription()!);
+            .setValue(diagNode.toDescription() ?? '');
       }
     }
 
