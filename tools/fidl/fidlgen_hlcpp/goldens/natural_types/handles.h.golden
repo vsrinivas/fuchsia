@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <zx/cpp/natural_types.h>
-
 #include "lib/fidl/cpp/internal/natural_types_header.h"
 
 //

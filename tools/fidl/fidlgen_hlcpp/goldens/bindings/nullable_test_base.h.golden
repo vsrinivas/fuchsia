@@ -3,7 +3,6 @@
 #pragma once
 
 #include <test/nullable/cpp/fidl.h>
-#include <zx/cpp/fidl.h>
 namespace test {
 namespace nullable {
 namespace testing {

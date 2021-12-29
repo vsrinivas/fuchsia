@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include <zx/cpp/fidl.h>
-
 #include "lib/fidl/cpp/internal/header.h"
 
 //

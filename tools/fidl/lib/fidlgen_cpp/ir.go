@@ -409,18 +409,23 @@ func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 
 func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) nameVariants {
 	ci := fidlgen.ParseCompoundIdentifier(eci)
+
+	if isZirconIdentifier(ci) {
+		return commonNameVariants(zirconName(ci))
+	}
+
 	declInfo, ok := c.decls[ci.EncodeDecl()]
 	if !ok {
 		panic(fmt.Sprintf("unknown identifier: %v", eci))
 	}
 	ctx := declContext(declInfo.Type)
 	name := ctx.transform(ci) // Note: does not handle ci.Member
-	if len(ci.Member) == 0 {
-		return name
+	if len(ci.Member) > 0 {
+		member := memberNameContext(declInfo.Type).transform(ci.Member)
+		name = name.nestVariants(member)
 	}
 
-	member := memberNameContext(declInfo.Type).transform(ci.Member)
-	return name.nestVariants(member)
+	return name
 }
 
 func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier) string {
@@ -707,6 +712,10 @@ func compile(r fidlgen.Root) *Root {
 	for _, l := range r.Libraries {
 		if l.Name == r.Name {
 			// We don't need to include our own header.
+			continue
+		}
+		if l.Name == "zx" {
+			// Skip the zircon types library.
 			continue
 		}
 		root.Dependencies = append(root.Dependencies, fidlgen.ParseLibraryName(l.Name))

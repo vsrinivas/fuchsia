@@ -102,7 +102,7 @@ void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,
     }
 
     NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
-    if (rights_attenuation_mask != zx::wire::Rights::kSameRights) {
+    if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
       new_node_properties->rights_attenuation_mask() &= uint32_t(rights_attenuation_mask);
     }
     logical_buffer_collection().CreateBufferCollectionToken(shared_logical_buffer_collection(),

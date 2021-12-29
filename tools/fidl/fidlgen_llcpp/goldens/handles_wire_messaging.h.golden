@@ -16,8 +16,6 @@
 
 #endif  // __Fuchsia__
 
-#include <fidl/zx/cpp/wire_messaging.h>
-
 namespace test_handles {
 class SomeProtocol;
 

@@ -3,4 +3,3 @@
 #pragma once
 
 #include <test/encapsulatedstructs/cpp/fidl.h>
-#include <zx/cpp/fidl.h>

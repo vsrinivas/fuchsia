@@ -21,7 +21,6 @@
 #endif  // __Fuchsia__
 
 #include <fidl/test.nullable/cpp/markers.h>
-#include <fidl/zx/cpp/wire_types.h>
 
 namespace test_nullable {
 namespace wire {
