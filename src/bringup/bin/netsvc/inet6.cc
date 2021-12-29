@@ -120,6 +120,12 @@ struct ip6_to_mac_t {
 static ip6_to_mac_t mac_lookup_tbl[MAC_TBL_BUCKETS][MAC_TBL_ENTRIES];
 static mtx_t mac_cache_lock = {};
 
+static uint8_t mac_cache_hash(const ip6_addr_t* ip) {
+  static_assert(MAC_TBL_BUCKETS == 256, "hash algorithms must be updated");
+  uint32_t hash = fnv1a32(ip, sizeof(*ip));
+  return ((hash >> 8) ^ hash) & 0xff;
+}
+
 // Clear all entries
 static void mac_cache_init() {
   size_t bucket_ndx;
@@ -161,12 +167,6 @@ void ip6_init(void* macaddr, bool quiet) {
   }
 }
 
-static uint8_t mac_cache_hash(const ip6_addr_t* ip) {
-  static_assert(MAC_TBL_BUCKETS == 256, "hash algorithms must be updated");
-  uint32_t hash = fnv1a32(ip, sizeof(*ip));
-  return ((hash >> 8) ^ hash) & 0xff;
-}
-
 // Find the MAC corresponding to a given IP6 address
 static int mac_cache_lookup(mac_addr_t* mac, const ip6_addr_t* ip) {
   int result = -1;
@@ -202,6 +202,47 @@ static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
   }
 
   return mac_cache_lookup(_mac, _ip);
+}
+
+// If ip is not in cache already, add it. Otherwise, update its last access time.
+static void mac_cache_save(mac_addr_t* mac, ip6_addr_t* ip) {
+  uint8_t key = mac_cache_hash(ip);
+
+  mtx_lock(&mac_cache_lock);
+  ip6_to_mac_t* oldest_entry = &mac_lookup_tbl[key][0];
+  zx_time_t curr_time = zx_clock_get_monotonic();
+
+  for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
+    ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
+
+    if (entry->last_used == 0) {
+      // Unused entry -- fill it
+      oldest_entry = entry;
+      break;
+    }
+
+    if (memcmp(ip, &entry->ip6, sizeof(ip6_addr_t)) == 0) {
+      // Match found
+      if (memcmp(mac, &entry->mac, sizeof(mac_addr_t)) != 0) {
+        // If mac has changed, update it
+        memcpy(&entry->mac, mac, sizeof(mac_addr_t));
+      }
+      entry->last_used = curr_time;
+      goto done;
+    }
+
+    if ((entry_ndx > 0) && (entry->last_used < oldest_entry->last_used)) {
+      oldest_entry = entry;
+    }
+  }
+
+  // No available entry found -- replace oldest
+  memcpy(&oldest_entry->mac, mac, sizeof(mac_addr_t));
+  memcpy(&oldest_entry->ip6, ip, sizeof(ip6_addr_t));
+  oldest_entry->last_used = curr_time;
+
+done:
+  mtx_unlock(&mac_cache_lock);
 }
 
 struct ip6_pkt_t {
@@ -241,6 +282,31 @@ static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* saddr, const ip6_addr_t* da
   return 0;
 }
 
+#define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
+
+static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* saddr,
+                              const ip6_addr_t* daddr, bool block) {
+  if (length > ICMP6_MAX_PAYLOAD)
+    return ZX_ERR_INVALID_ARGS;
+  eth_buffer_t* ethbuf;
+  ip6_pkt_t* p;
+  icmp6_hdr_t* icmp;
+
+  zx_status_t status = eth_get_buffer(ETH_MTU + 2, reinterpret_cast<void**>(&p), &ethbuf, block);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (ip6_setup(p, saddr, daddr, length, HDR_ICMP6)) {
+    eth_put_buffer(ethbuf);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  icmp = reinterpret_cast<icmp6_hdr_t*>(p->data);
+  memcpy(icmp, data, length);
+  icmp->checksum = ip6_checksum(&p->ip6, HDR_ICMP6, length);
+  return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
+}
+
 #define UDP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN - UDP_HDR_LEN)
 
 zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, uint16_t dport,
@@ -270,31 +336,6 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
 
   memcpy(p->data, data, dlen);
   p->udp.checksum = ip6_checksum(&p->ip6, HDR_UDP, length);
-  return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
-}
-
-#define ICMP6_MAX_PAYLOAD (ETH_MTU - ETH_HDR_LEN - IP6_HDR_LEN)
-
-static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t* saddr,
-                              const ip6_addr_t* daddr, bool block) {
-  if (length > ICMP6_MAX_PAYLOAD)
-    return ZX_ERR_INVALID_ARGS;
-  eth_buffer_t* ethbuf;
-  ip6_pkt_t* p;
-  icmp6_hdr_t* icmp;
-
-  zx_status_t status = eth_get_buffer(ETH_MTU + 2, reinterpret_cast<void**>(&p), &ethbuf, block);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (ip6_setup(p, saddr, daddr, length, HDR_ICMP6)) {
-    eth_put_buffer(ethbuf);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  icmp = reinterpret_cast<icmp6_hdr_t*>(p->data);
-  memcpy(icmp, data, length);
-  icmp->checksum = ip6_checksum(&p->ip6, HDR_ICMP6, length);
   return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
 }
 
@@ -464,47 +505,6 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
   } else if (status < 0) {
     printf("inet6: Failed to send ICMP response (err = %d)\n", status);
   }
-}
-
-// If ip is not in cache already, add it. Otherwise, update its last access time.
-static void mac_cache_save(mac_addr_t* mac, ip6_addr_t* ip) {
-  uint8_t key = mac_cache_hash(ip);
-
-  mtx_lock(&mac_cache_lock);
-  ip6_to_mac_t* oldest_entry = &mac_lookup_tbl[key][0];
-  zx_time_t curr_time = zx_clock_get_monotonic();
-
-  for (size_t entry_ndx = 0; entry_ndx < MAC_TBL_ENTRIES; entry_ndx++) {
-    ip6_to_mac_t* entry = &mac_lookup_tbl[key][entry_ndx];
-
-    if (entry->last_used == 0) {
-      // Unused entry -- fill it
-      oldest_entry = entry;
-      break;
-    }
-
-    if (memcmp(ip, &entry->ip6, sizeof(ip6_addr_t)) == 0) {
-      // Match found
-      if (memcmp(mac, &entry->mac, sizeof(mac_addr_t)) != 0) {
-        // If mac has changed, update it
-        memcpy(&entry->mac, mac, sizeof(mac_addr_t));
-      }
-      entry->last_used = curr_time;
-      goto done;
-    }
-
-    if ((entry_ndx > 0) && (entry->last_used < oldest_entry->last_used)) {
-      oldest_entry = entry;
-    }
-  }
-
-  // No available entry found -- replace oldest
-  memcpy(&oldest_entry->mac, mac, sizeof(mac_addr_t));
-  memcpy(&oldest_entry->ip6, ip, sizeof(ip6_addr_t));
-  oldest_entry->last_used = curr_time;
-
-done:
-  mtx_unlock(&mac_cache_lock);
 }
 
 void eth_recv(void* _data, size_t len) {
