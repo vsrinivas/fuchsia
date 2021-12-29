@@ -572,6 +572,18 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
+zx_status_t AmlogicDisplay::DisplayControllerImplSetDisplayPower(uint64_t display_id,
+                                                                 bool power_on) {
+  if (display_id != display_id_ || !display_attached_) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (power_on) {
+    return vout_->PowerOn().status_value();
+  } else {
+    return vout_->PowerOff().status_value();
+  }
+}
+
 void AmlogicDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
     const display_capture_interface_protocol_t* intf) {
   fbl::AutoLock lock(&capture_lock_);

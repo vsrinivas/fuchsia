@@ -498,4 +498,16 @@ protocol DisplayControllerImpl {
     }) -> (struct {
         s zx.status;
     });
+
+    // Power off/on the display panel. Newly added displays are turned on by default.
+    //
+    // Displays that are turned off will not deliver VSync events.
+    // This may include the vsync event for the most recently applied
+    // config.
+    SetDisplayPower(struct {
+        display_id uint64;
+        power_on bool;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -294,6 +294,10 @@ zx_status_t GpuDevice::DisplayControllerImplSetBufferCollectionConstraints(
   return ZX_OK;
 }
 
+zx_status_t GpuDevice::DisplayControllerImplSetDisplayPower(uint64_t display_id, bool power_on) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device) {
   sem_init(&request_sem_, 0, 1);

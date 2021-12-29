@@ -74,6 +74,7 @@ class GpuDevice : public Device,
 
   zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                   zx_unowned_handle_t collection);
+  zx_status_t DisplayControllerImplSetDisplayPower(uint64_t display_id, bool power_on);
 
  private:
   // Internal routines
