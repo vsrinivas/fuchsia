@@ -17,6 +17,18 @@ GuestDiscoveryServiceImpl::GuestDiscoveryServiceImpl(async_dispatcher_t* dispatc
   context_.outgoing()->ServeFromStartupInfo(dispatcher);
 }
 
+namespace {
+// Helpers from the reference documentation for std::visit<>, to allow
+// visit-by-overload of std::variant<>.
+template <class... Ts>
+struct overloaded : Ts... {
+  using Ts::operator()...;
+};
+// explicit deduction guide (not needed as of C++20).
+template <class... Ts>
+overloaded(Ts...) -> overloaded<Ts...>;
+}  // namespace
+
 void GuestDiscoveryServiceImpl::GetGuest(
     fidl::StringPtr realm_name, std::string guest_name,
     fidl::InterfaceRequest<fuchsia::netemul::guest::GuestInteraction> request) {
@@ -55,25 +67,36 @@ void GuestDiscoveryServiceImpl::GetGuest(
           })
           .and_then([this](const GuestInfo& guest_info)
                         -> fpromise::promise<FuchsiaGuestInteractionService*, zx_status_t> {
-            // If this is not the first time this guest has been requested, add a binding to the
-            // existing interaction service.
-            {
-              auto gis = guests_.find(guest_info);
-              if (gis != guests_.end()) {
-                return fpromise::make_result_promise<FuchsiaGuestInteractionService*, zx_status_t>(
-                    fpromise::ok(&gis->second));
-              }
+            auto [it, inserted] = guests_.try_emplace(guest_info);
+            std::variant<GuestCompleters, FuchsiaGuestInteractionService>& variant = it->second;
+            if (!inserted) {
+              // An entry already exists; the connection to the guest is either complete or in
+              // progress; if it is complete, return a resolved promise, otherwise store a completer
+              // to be resolved when the connection completes.
+              return std::visit(
+                  overloaded{
+                      [](FuchsiaGuestInteractionService& guest)
+                          -> fpromise::promise<FuchsiaGuestInteractionService*, zx_status_t> {
+                        return fpromise::make_result_promise<FuchsiaGuestInteractionService*,
+                                                             zx_status_t>(fpromise::ok(&guest));
+                      },
+                      [](GuestCompleters& completers)
+                          -> fpromise::promise<FuchsiaGuestInteractionService*, zx_status_t> {
+                        fpromise::bridge<FuchsiaGuestInteractionService*, zx_status_t> bridge;
+                        completers.push_back(std::move(bridge.completer));
+                        return bridge.consumer.promise();
+                      },
+                  },
+                  variant);
             }
 
+            // We're the first to request a connection to this guest.
             zx::socket socket, remote_socket;
-            zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
-            if (status != ZX_OK) {
+            if (zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &socket, &remote_socket);
+                status != ZX_OK) {
               return fpromise::make_result_promise<FuchsiaGuestInteractionService*, zx_status_t>(
                   fpromise::error(status));
             }
-
-            // If this is the first time that the requested guest has been discovered, connect to
-            // the guest's vsock and start a new GuestInteractionService for it.
             fuchsia::virtualization::RealmSyncPtr realm;
             manager_->Connect(guest_info.realm_id, realm.NewRequest());
 
@@ -86,19 +109,49 @@ void GuestDiscoveryServiceImpl::GetGuest(
                 [completer](zx_status_t status) { completer->complete_error(status); });
             realm->GetHostVsockEndpoint(ep.NewRequest(executor_.dispatcher()));
 
-            ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
-                        [this, socket = std::move(socket), guest_info,
-                         completer](zx_status_t status) mutable {
-                          if (status != ZX_OK) {
-                            completer->complete_error(status);
-                            return;
-                          }
-                          auto [gis, created] = guests_.try_emplace(guest_info, std::move(socket),
+            auto completers_cb = [this, guest_info, &variant, completer,
+                                  socket = std::move(socket)](GuestCompleters completers,
+                                                              zx_status_t status) mutable {
+              if (status != ZX_OK) {
+                // Connecting to the guest failed; notify pending completers and remove the entry to
+                // allow retries.
+                completer->complete_error(status);
+                for (auto& pending : completers) {
+                  pending.complete_error(status);
+                }
+                guests_.erase(guest_info);
+              } else {
+                // Connecting to the guest succeeded; replace pending completers with the complete
+                // connection and notify them.
+                FuchsiaGuestInteractionService& guest =
+                    variant.emplace<FuchsiaGuestInteractionService>(std::move(socket),
                                                                     executor_.dispatcher());
-                          // NB: if !created then we lost the race; that's fine, all connections are
-                          // equivalent.
-                          completer->complete_ok(&gis->second);
+                completer->complete_ok(&guest);
+                for (auto& pending : completers) {
+                  pending.complete_ok(&guest);
+                }
+              }
+            };
+
+            ep->Connect(guest_info.guest_cid, GUEST_INTERACTION_PORT, std::move(remote_socket),
+                        [completer, completers_cb = std::move(completers_cb),
+                         &variant](zx_status_t status) mutable {
+                          std::visit(overloaded{
+                                         [completer](FuchsiaGuestInteractionService& guest) {
+                                           // We completed the connection to the guest and
+                                           // discovered an already-existing connection. This should
+                                           // never happen.
+                                           FX_LOGS(ERROR)
+                                               << "existing connection in connection callback";
+                                           completer->complete_ok(&guest);
+                                         },
+                                         [&](GuestCompleters& completers) {
+                                           completers_cb(std::move(completers), status);
+                                         },
+                                     },
+                                     variant);
                         });
+
             return bridge.consumer.promise().inspect(
                 [ep = std::move(ep)](
                     const fpromise::result<FuchsiaGuestInteractionService*, zx_status_t>&) {});

@@ -46,7 +46,10 @@ class GuestDiscoveryServiceImpl final : public fuchsia::netemul::guest::GuestDis
                 fidl::InterfaceRequest<fuchsia::netemul::guest::GuestInteraction>) override;
 
  private:
-  std::unordered_map<GuestInfo, FuchsiaGuestInteractionService> guests_;
+  using GuestCompleters =
+      std::vector<fpromise::completer<FuchsiaGuestInteractionService*, zx_status_t>>;
+  std::unordered_map<GuestInfo, std::variant<GuestCompleters, FuchsiaGuestInteractionService>>
+      guests_;
   sys::ComponentContext context_;
   async::Executor executor_;
   fpromise::scope scope_;
