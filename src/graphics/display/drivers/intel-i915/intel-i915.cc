@@ -520,6 +520,13 @@ bool Controller::ResetDdi(registers::Ddi ddi) {
   return true;
 }
 
+uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
+  const std::unique_ptr<GttRegion>& region = GetGttRegion(image->handle);
+  ZX_DEBUG_ASSERT(region);
+  region->SetRotation(rotation, *image);
+  return region->base();
+}
+
 registers::Dpll Controller::SelectDpll(bool is_edp, const dpll_state_t& state) {
   registers::Dpll res = registers::DPLL_INVALID;
   if (is_edp) {
@@ -1642,7 +1649,7 @@ bool Controller::ReallocatePipes(const display_config_t** display_config, size_t
       if (pipe == nullptr) {
         for (unsigned i = 0; i < registers::kPipeCount; i++) {
           if (pipe_alloc[i] == display->id()) {
-            pipe = pipes_ + i;
+            pipe = &pipes_[i];
             break;
           }
         }
@@ -2004,8 +2011,11 @@ void Controller::DdkInit(ddk::InitTxn txn) {
   auto f = std::async(std::launch::async, [this, txn = std::move(txn)]() mutable {
     zxlogf(TRACE, "i915: initializing displays");
 
-    for (auto& pipe : pipes_) {
-      pipe.Init();
+    {
+      fbl::AutoLock lock(&display_lock_);
+      for (auto& pipe : pipes_) {
+        interrupts()->EnablePipeVsync(pipe.pipe(), true);
+      }
     }
 
     InitDisplays();
@@ -2253,6 +2263,15 @@ zx_status_t Controller::Init() {
     }
   }
 
+  {
+    fbl::AutoLock lock(&display_lock_);
+    for (const auto pipe : {registers::PIPE_A, registers::PIPE_B, registers::PIPE_C}) {
+      pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
+      pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
+      pipes_.push_back(Pipe(mmio_space(), pipe, power()->GetPipePowerWellRef(pipe)));
+    }
+  }
+
   status = DdkAdd(ddk::DeviceAddArgs("intel_i915").set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to add controller device");
@@ -2297,7 +2316,7 @@ Controller::~Controller() {
 
     for (unsigned i = 0; i < registers::kPipeCount; i++) {
       fbl::AutoLock lock(&display_lock_);
-      pipes_[i].Reset();
+      interrupts()->EnablePipeVsync(pipes_[i].pipe(), true);
     }
   }
   // Release anything leaked by the gpu-core client.

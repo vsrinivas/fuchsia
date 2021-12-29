@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/edid/edid.h>
+#include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
 
@@ -26,18 +27,22 @@ class DisplayDevice;
 
 class Pipe {
  public:
-  Pipe(Controller* device, registers::Pipe pipe);
-  Pipe(const i915::Pipe& other) : Pipe(other.controller_, other.pipe_) {}
+  Pipe(i915::Pipe&& other) : Pipe(other.mmio_space_, other.pipe_, std::move(other.pipe_power_)) {}
+
+  Pipe(ddk::MmioBuffer* mmio_space, registers::Pipe pipe, PowerWellRef pipe_power);
 
   void AttachToDisplay(uint64_t display_id, bool is_edp);
   void Detach();
 
   void ApplyModeConfig(const display_mode_t& mode);
-  void ApplyConfiguration(const display_config_t* config);
 
-  void Init();
-  void Resume();
-  void Reset();
+  using SetupGttImageFunc = fit::function<uint64_t(const image_t* image, uint32_t rotation)>;
+  void ApplyConfiguration(const display_config_t* config, const SetupGttImageFunc& setup_gtt_image);
+
+  // The controller will reset pipe registers and pipe transcoder registers.
+  // TODO(fxbug.dev/83998): Remove the circular dependency between Controller
+  // and Pipe.
+  void Reset(Controller* controller);
 
   void LoadActiveMode(display_mode_t* mode);
 
@@ -45,22 +50,20 @@ class Pipe {
   registers::Trans transcoder() const {
     return attached_edp_ ? registers::TRANS_EDP : static_cast<registers::Trans>(pipe_);
   }
-  Controller* controller() { return controller_; }
 
   uint64_t attached_display_id() const { return attached_display_; }
   bool in_use() const { return attached_display_ != INVALID_DISPLAY_ID; }
 
  private:
-  ddk::MmioBuffer* mmio_space() const;
+  // Borrowed reference to Controller instance
+  ddk::MmioBuffer* mmio_space_ = nullptr;
 
   void ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary, bool enable_csc,
-                             bool* scaler_1_claimed, registers::pipe_arming_regs* regs);
+                             bool* scaler_1_claimed, registers::pipe_arming_regs* regs,
+                             const SetupGttImageFunc& setup_gtt_image);
   void ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
                             registers::pipe_arming_regs* regs);
   void SetColorConversionOffsets(bool preoffsets, const float vals[3]);
-
-  // Borrowed reference to Controller instance
-  Controller* controller_;
 
   uint64_t attached_display_ = INVALID_DISPLAY_ID;
   bool attached_edp_ = false;

@@ -72,20 +72,12 @@ uint32_t encode_pipe_color_component(uint8_t component) {
 
 namespace i915 {
 
-Pipe::Pipe(Controller* controller, registers::Pipe pipe) : controller_(controller), pipe_(pipe) {}
+Pipe::Pipe(ddk::MmioBuffer* mmio_space, registers::Pipe pipe, PowerWellRef pipe_power)
+    : mmio_space_(mmio_space), pipe_(pipe), pipe_power_(std::move(pipe_power)) {}
 
-ddk::MmioBuffer* Pipe::mmio_space() const { return controller_->mmio_space(); }
-
-void Pipe::Init() {
-  pipe_power_ = controller_->power()->GetPipePowerWellRef(pipe_);
-  controller_->interrupts()->EnablePipeVsync(pipe_, true);
-}
-
-void Pipe::Resume() { controller_->interrupts()->EnablePipeVsync(pipe_, true); }
-
-void Pipe::Reset() {
-  controller_->ResetPipe(pipe_);
-  controller_->ResetTrans(transcoder());
+void Pipe::Reset(Controller* controller) {
+  controller->ResetPipe(pipe_);
+  controller->ResetTrans(transcoder());
 }
 
 void Pipe::Detach() { attached_display_ = INVALID_DISPLAY_ID; }
@@ -112,46 +104,46 @@ void Pipe::ApplyModeConfig(const display_mode_t& mode) {
   auto h_total_reg = trans_regs.HTotal().FromValue(0);
   h_total_reg.set_count_total(h_total);
   h_total_reg.set_count_active(h_active);
-  h_total_reg.WriteTo(mmio_space());
+  h_total_reg.WriteTo(mmio_space_);
   auto v_total_reg = trans_regs.VTotal().FromValue(0);
   v_total_reg.set_count_total(v_total);
   v_total_reg.set_count_active(v_active);
-  v_total_reg.WriteTo(mmio_space());
+  v_total_reg.WriteTo(mmio_space_);
 
   auto h_sync_reg = trans_regs.HSync().FromValue(0);
   h_sync_reg.set_sync_start(h_sync_start);
   h_sync_reg.set_sync_end(h_sync_end);
-  h_sync_reg.WriteTo(mmio_space());
+  h_sync_reg.WriteTo(mmio_space_);
   auto v_sync_reg = trans_regs.VSync().FromValue(0);
   v_sync_reg.set_sync_start(v_sync_start);
   v_sync_reg.set_sync_end(v_sync_end);
-  v_sync_reg.WriteTo(mmio_space());
+  v_sync_reg.WriteTo(mmio_space_);
 
   // The Intel docs say that H/VBlank should be programmed with the same H/VTotal
-  trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space());
-  trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space());
+  trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space_);
+  trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space_);
 
   registers::PipeRegs pipe_regs(pipe());
   auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
   pipe_size.set_horizontal_source_size(mode.h_addressable - 1);
   pipe_size.set_vertical_source_size(mode.v_addressable - 1);
-  pipe_size.WriteTo(mmio_space());
+  pipe_size.WriteTo(mmio_space_);
 }
 
 void Pipe::LoadActiveMode(display_mode_t* mode) {
   registers::TranscoderRegs trans_regs(transcoder());
 
-  auto h_total_reg = trans_regs.HTotal().ReadFrom(mmio_space());
+  auto h_total_reg = trans_regs.HTotal().ReadFrom(mmio_space_);
   uint32_t h_total = h_total_reg.count_total();
   uint32_t h_active = h_total_reg.count_active();
-  auto v_total_reg = trans_regs.VTotal().ReadFrom(mmio_space());
+  auto v_total_reg = trans_regs.VTotal().ReadFrom(mmio_space_);
   uint32_t v_total = v_total_reg.count_total();
   uint32_t v_active = v_total_reg.count_active();
 
-  auto h_sync_reg = trans_regs.HSync().ReadFrom(mmio_space());
+  auto h_sync_reg = trans_regs.HSync().ReadFrom(mmio_space_);
   uint32_t h_sync_start = h_sync_reg.sync_start();
   uint32_t h_sync_end = h_sync_reg.sync_end();
-  auto v_sync_reg = trans_regs.VSync().ReadFrom(mmio_space());
+  auto v_sync_reg = trans_regs.VSync().ReadFrom(mmio_space_);
   uint32_t v_sync_start = v_sync_reg.sync_start();
   uint32_t v_sync_end = v_sync_reg.sync_end();
 
@@ -166,14 +158,14 @@ void Pipe::LoadActiveMode(display_mode_t* mode) {
   mode->v_blanking = v_total - v_active;
 
   mode->flags = 0;
-  auto ddi_func_ctrl = trans_regs.DdiFuncControl().ReadFrom(mmio_space());
+  auto ddi_func_ctrl = trans_regs.DdiFuncControl().ReadFrom(mmio_space_);
   if (ddi_func_ctrl.sync_polarity() & 0x2) {
     mode->flags |= MODE_FLAG_VSYNC_POSITIVE;
   }
   if (ddi_func_ctrl.sync_polarity() & 0x1) {
     mode->flags |= MODE_FLAG_HSYNC_POSITIVE;
   }
-  if (trans_regs.Conf().ReadFrom(mmio_space()).interlaced_mode()) {
+  if (trans_regs.Conf().ReadFrom(mmio_space_).interlaced_mode()) {
     mode->flags |= MODE_FLAG_INTERLACED;
   }
 
@@ -183,10 +175,11 @@ void Pipe::LoadActiveMode(display_mode_t* mode) {
   auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
   pipe_size.set_horizontal_source_size(mode->h_addressable - 1);
   pipe_size.set_vertical_source_size(mode->v_addressable - 1);
-  pipe_size.WriteTo(mmio_space());
+  pipe_size.WriteTo(mmio_space_);
 }
 
-void Pipe::ApplyConfiguration(const display_config_t* config) {
+void Pipe::ApplyConfiguration(const display_config_t* config,
+                              const SetupGttImageFunc& get_gtt_region_fn) {
   ZX_ASSERT(config);
 
   registers::pipe_arming_regs_t regs;
@@ -222,13 +215,13 @@ void Pipe::ApplyConfiguration(const display_config_t* config) {
         float val = config->cc_flags & COLOR_CONVERSION_COEFFICIENTS ? config->cc_coefficients[i][j]
                                                                      : identity[i][j];
 
-        auto reg = pipe_regs.CscCoeff(i, j).ReadFrom(mmio_space());
+        auto reg = pipe_regs.CscCoeff(i, j).ReadFrom(mmio_space_);
         reg.coefficient(i, j).set(float_to_i915_csc_coefficient(val));
-        reg.WriteTo(mmio_space());
+        reg.WriteTo(mmio_space_);
       }
     }
   }
-  regs.csc_mode = pipe_regs.CscMode().ReadFrom(mmio_space()).reg_value();
+  regs.csc_mode = pipe_regs.CscMode().ReadFrom(mmio_space_).reg_value();
 
   auto bottom_color = pipe_regs.PipeBottomColor().FromValue(0);
   bottom_color.set_csc_enable(!!config->cc_flags);
@@ -255,7 +248,8 @@ void Pipe::ApplyConfiguration(const display_config_t* config) {
         break;
       }
     }
-    ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed, &regs);
+    ConfigurePrimaryPlane(plane, primary, !!config->cc_flags, &scaler_1_claimed, &regs,
+                          get_gtt_region_fn);
   }
   cursor_layer_t* cursor = nullptr;
   if (config->layer_count &&
@@ -264,36 +258,35 @@ void Pipe::ApplyConfiguration(const display_config_t* config) {
   }
   ConfigureCursorPlane(cursor, !!config->cc_flags, &regs);
 
-  pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space());
-  pipe_regs.PipeBottomColor().FromValue(regs.pipe_bottom_color).WriteTo(mmio_space());
-  pipe_regs.CursorBase().FromValue(regs.cur_base).WriteTo(mmio_space());
-  pipe_regs.CursorPos().FromValue(regs.cur_pos).WriteTo(mmio_space());
+  pipe_regs.CscMode().FromValue(regs.csc_mode).WriteTo(mmio_space_);
+  pipe_regs.PipeBottomColor().FromValue(regs.pipe_bottom_color).WriteTo(mmio_space_);
+  pipe_regs.CursorBase().FromValue(regs.cur_base).WriteTo(mmio_space_);
+  pipe_regs.CursorPos().FromValue(regs.cur_pos).WriteTo(mmio_space_);
   for (unsigned i = 0; i < registers::kImagePlaneCount; i++) {
-    pipe_regs.PlaneSurface(i).FromValue(regs.plane_surf[i]).WriteTo(mmio_space());
+    pipe_regs.PlaneSurface(i).FromValue(regs.plane_surf[i]).WriteTo(mmio_space_);
   }
-  pipe_regs.PipeScalerWinSize(0).FromValue(regs.ps_win_sz[0]).WriteTo(mmio_space());
+  pipe_regs.PipeScalerWinSize(0).FromValue(regs.ps_win_sz[0]).WriteTo(mmio_space_);
   if (pipe_ != registers::PIPE_C) {
-    pipe_regs.PipeScalerWinSize(1).FromValue(regs.ps_win_sz[1]).WriteTo(mmio_space());
+    pipe_regs.PipeScalerWinSize(1).FromValue(regs.ps_win_sz[1]).WriteTo(mmio_space_);
   }
 }
 
 void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* primary,
                                  bool enable_csc, bool* scaler_1_claimed,
-                                 registers::pipe_arming_regs_t* regs) {
+                                 registers::pipe_arming_regs_t* regs,
+                                 const SetupGttImageFunc& setup_gtt_image) {
   registers::PipeRegs pipe_regs(pipe());
 
-  auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(controller_->mmio_space());
+  auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(mmio_space_);
   if (primary == nullptr) {
-    plane_ctrl.set_plane_enable(0).WriteTo(mmio_space());
+    plane_ctrl.set_plane_enable(0).WriteTo(mmio_space_);
     regs->plane_surf[plane_num] = 0;
     return;
   }
 
   const image_t* image = &primary->image;
 
-  const std::unique_ptr<GttRegion>& region = controller_->GetGttRegion(image->handle);
-  region->SetRotation(primary->transform_mode, *image);
-
+  uint32_t base_address = static_cast<uint32_t>(setup_gtt_image(image, primary->transform_mode));
   uint32_t plane_width;
   uint32_t plane_height;
   uint32_t stride;
@@ -322,23 +315,20 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     auto plane_pos = pipe_regs.PlanePosition(plane_num).FromValue(0);
     plane_pos.set_x_pos(primary->dest_frame.x_pos);
     plane_pos.set_y_pos(primary->dest_frame.y_pos);
-    plane_pos.WriteTo(mmio_space());
+    plane_pos.WriteTo(mmio_space_);
 
     // If there's a scaler pointed at this plane, immediately disable it
     // in case there's nothing else that will claim it this frame.
     if (scaled_planes_[pipe()][plane_num]) {
       uint32_t scaler_idx = scaled_planes_[pipe()][plane_num] - 1;
-      pipe_regs.PipeScalerCtrl(scaler_idx)
-          .ReadFrom(mmio_space())
-          .set_enable(0)
-          .WriteTo(mmio_space());
+      pipe_regs.PipeScalerCtrl(scaler_idx).ReadFrom(mmio_space_).set_enable(0).WriteTo(mmio_space_);
       scaled_planes_[pipe()][plane_num] = 0;
       regs->ps_win_sz[scaler_idx] = 0;
     }
   } else {
-    pipe_regs.PlanePosition(plane_num).FromValue(0).WriteTo(mmio_space());
+    pipe_regs.PlanePosition(plane_num).FromValue(0).WriteTo(mmio_space_);
 
-    auto ps_ctrl = pipe_regs.PipeScalerCtrl(*scaler_1_claimed).ReadFrom(mmio_space());
+    auto ps_ctrl = pipe_regs.PipeScalerCtrl(*scaler_1_claimed).ReadFrom(mmio_space_);
     ps_ctrl.set_mode(ps_ctrl.kDynamic);
     if (primary->src_frame.width > 2048) {
       float max_dynamic_height = static_cast<float>(plane_height) *
@@ -350,12 +340,12 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     }
     ps_ctrl.set_binding(plane_num + 1);
     ps_ctrl.set_enable(1);
-    ps_ctrl.WriteTo(mmio_space());
+    ps_ctrl.WriteTo(mmio_space_);
 
     auto ps_win_pos = pipe_regs.PipeScalerWinPosition(*scaler_1_claimed).FromValue(0);
     ps_win_pos.set_x_pos(primary->dest_frame.x_pos);
     ps_win_pos.set_x_pos(primary->dest_frame.y_pos);
-    ps_win_pos.WriteTo(mmio_space());
+    ps_win_pos.WriteTo(mmio_space_);
 
     auto ps_win_size = pipe_regs.PipeScalerWinSize(*scaler_1_claimed).FromValue(0);
     ps_win_size.set_x_size(primary->dest_frame.width);
@@ -369,16 +359,16 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
   auto plane_size = pipe_regs.PlaneSurfaceSize(plane_num).FromValue(0);
   plane_size.set_width_minus_1(plane_width - 1);
   plane_size.set_height_minus_1(plane_height - 1);
-  plane_size.WriteTo(mmio_space());
+  plane_size.WriteTo(mmio_space_);
 
   auto plane_offset = pipe_regs.PlaneOffset(plane_num).FromValue(0);
   plane_offset.set_start_x(x_offset);
   plane_offset.set_start_y(y_offset);
-  plane_offset.WriteTo(mmio_space());
+  plane_offset.WriteTo(mmio_space_);
 
   auto stride_reg = pipe_regs.PlaneSurfaceStride(plane_num).FromValue(0);
   stride_reg.set_stride(stride);
-  stride_reg.WriteTo(controller_->mmio_space());
+  stride_reg.WriteTo(mmio_space_);
 
   auto plane_key_mask = pipe_regs.PlaneKeyMask(plane_num).FromValue(0);
   if (primary->alpha_mode != ALPHA_DISABLE && !isnan(primary->alpha_layer_val)) {
@@ -388,9 +378,9 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 
     auto plane_key_max = pipe_regs.PlaneKeyMax(plane_num).FromValue(0);
     plane_key_max.set_plane_alpha_value(alpha);
-    plane_key_max.WriteTo(mmio_space());
+    plane_key_max.WriteTo(mmio_space_);
   }
-  plane_key_mask.WriteTo(mmio_space());
+  plane_key_mask.WriteTo(mmio_space_);
   if (primary->alpha_mode == ALPHA_DISABLE ||
       primary->image.pixel_format == ZX_PIXEL_FORMAT_RGB_x888 ||
       primary->image.pixel_format == ZX_PIXEL_FORMAT_BGR_888x) {
@@ -431,11 +421,9 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     ZX_ASSERT(primary->transform_mode == FRAME_TRANSFORM_ROT_270);
     plane_ctrl.set_plane_rotation(plane_ctrl.k270deg);
   }
-  plane_ctrl.WriteTo(controller_->mmio_space());
+  plane_ctrl.WriteTo(mmio_space_);
 
-  uint32_t base_address = static_cast<uint32_t>(region->base());
-
-  auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(controller_->mmio_space());
+  auto plane_surface = pipe_regs.PlaneSurface(plane_num).ReadFrom(mmio_space_);
   plane_surface.set_surface_base_addr(base_address >> plane_surface.kRShiftCount);
   regs->plane_surf[plane_num] = plane_surface.reg_value();
 }
@@ -444,11 +432,11 @@ void Pipe::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
                                 registers::pipe_arming_regs_t* regs) {
   registers::PipeRegs pipe_regs(pipe());
 
-  auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(controller_->mmio_space());
+  auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space_);
   // The hardware requires that the cursor has at least one pixel on the display,
   // so disable the plane if there is no overlap.
   if (cursor == nullptr) {
-    cursor_ctrl.set_mode_select(cursor_ctrl.kDisabled).WriteTo(mmio_space());
+    cursor_ctrl.set_mode_select(cursor_ctrl.kDisabled).WriteTo(mmio_space_);
     regs->cur_base = regs->cur_pos = 0;
     return;
   }
@@ -464,7 +452,7 @@ void Pipe::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
     ZX_ASSERT(false);
   }
   cursor_ctrl.set_pipe_csc_enable(enable_csc);
-  cursor_ctrl.WriteTo(mmio_space());
+  cursor_ctrl.WriteTo(mmio_space_);
 
   auto cursor_pos = pipe_regs.CursorPos().FromValue(0);
   if (cursor->x_pos < 0) {
@@ -482,7 +470,7 @@ void Pipe::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
   regs->cur_pos = cursor_pos.reg_value();
 
   uint32_t base_address = static_cast<uint32_t>(reinterpret_cast<uint64_t>(cursor->image.handle));
-  auto cursor_base = pipe_regs.CursorBase().ReadFrom(controller_->mmio_space());
+  auto cursor_base = pipe_regs.CursorBase().ReadFrom(mmio_space_);
   cursor_base.set_cursor_base(base_address >> cursor_base.kPageShift);
   regs->cur_base = cursor_base.reg_value();
 }
@@ -498,7 +486,7 @@ void Pipe::SetColorConversionOffsets(bool preoffsets, const float vals[3]) {
       offset *= -1;
     }
     offset_reg.set_magnitude(float_to_i915_csc_offset(offset));
-    offset_reg.WriteTo(mmio_space());
+    offset_reg.WriteTo(mmio_space_);
   }
 }
 

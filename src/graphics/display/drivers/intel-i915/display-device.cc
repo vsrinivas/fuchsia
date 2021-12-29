@@ -5,6 +5,7 @@
 #include "display-device.h"
 
 #include <float.h>
+#include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
 
@@ -44,7 +45,7 @@ DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, registers::Ddi
 
 DisplayDevice::~DisplayDevice() {
   if (pipe_) {
-    pipe_->Reset();
+    pipe_->Reset(controller_);
     pipe_->Detach();
   }
   if (inited_) {
@@ -113,7 +114,7 @@ bool DisplayDevice::Resume() {
     return false;
   }
   if (pipe_) {
-    pipe_->Resume();
+    controller_->interrupts()->EnablePipeVsync(pipe_->pipe(), true);
   }
   return true;
 }
@@ -130,7 +131,7 @@ bool DisplayDevice::AttachPipe(Pipe* pipe) {
   }
 
   if (pipe_) {
-    pipe_->Reset();
+    pipe_->Reset(controller_);
     pipe_->Detach();
   }
   if (pipe) {
@@ -212,7 +213,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config) {
     PipeConfigEpilogue(info_, pipe_->pipe(), pipe_->transcoder());
   }
 
-  pipe_->ApplyConfiguration(config);
+  pipe_->ApplyConfiguration(config, fit::bind_member<&Controller::SetupGttImage>(controller_));
 }
 
 void DisplayDevice::GetStateNormalized(GetStateNormalizedRequestView request,

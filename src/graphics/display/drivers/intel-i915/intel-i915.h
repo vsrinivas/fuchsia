@@ -161,14 +161,17 @@ class Controller : public DeviceType,
   bool ResetTrans(registers::Trans trans);
   bool ResetDdi(registers::Ddi ddi);
 
-  const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
-
   registers::Dpll SelectDpll(bool is_edp, const dpll_state_t& state);
   const dpll_state_t* GetDpllState(registers::Dpll dpll);
 
   void SetMmioForTesting(ddk::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
 
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
+
+  // For every frame, in order to use the imported image, it is required to set
+  // up the image based on given rotation in GTT and use the handle offset in
+  // GTT. Returns the image base address used for display registers.
+  uint64_t SetupGttImage(const image_t* image, uint32_t rotation);
 
  private:
   // Perform short-running initialization of all subcomponents and instruct the DDK to publish the
@@ -178,6 +181,7 @@ class Controller : public DeviceType,
   // Long-running initialization is performed in the DdkInit hook.
   zx_status_t Init();
 
+  const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
   void EnableBacklight(bool enable);
   void InitDisplays();
   std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
@@ -260,8 +264,7 @@ class Controller : public DeviceType,
   uint64_t next_id_ __TA_GUARDED(display_lock_) = 1;  // id can't be INVALID_DISPLAY_ID == 0
   mtx_t display_lock_;
 
-  Pipe pipes_[registers::kPipeCount] __TA_GUARDED(display_lock_) = {
-      Pipe(this, registers::PIPE_A), Pipe(this, registers::PIPE_B), Pipe(this, registers::PIPE_C)};
+  fbl::Vector<Pipe> pipes_ __TA_GUARDED(display_lock_);
 
   Power power_;
   PowerWellRef cd_clk_power_well_;
