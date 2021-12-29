@@ -11,13 +11,7 @@ import 'package:fxutils/fxutils.dart';
 class ProcessLauncher {
   final StartProcess processStarter;
   ProcessLauncher({StartProcess? processStarter})
-      : processStarter = processStarter ??
-            Process.start as Future<Process> Function(String, List<String>,
-                {Map<String, String>? environment,
-                bool? includeParentEnvironment,
-                ProcessStartMode? mode,
-                bool? runInShell,
-                String? workingDirectory});
+      : processStarter = processStarter ?? Process.start;
 
   Future<Process> start(String executable, List<String> arguments,
           {String? workingDirectory,
