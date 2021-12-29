@@ -129,7 +129,6 @@ func (r *Ramdisk) create(blkSz uint64, blkCnt uint64) error {
 
 func (r *Ramdisk) Destroy() error {
 	if r.proc != zx.HandleInvalid {
-		r.dir.Unmount()
 		zx.Sys_task_kill(r.proc)
 		r.dir.Close()
 	}
