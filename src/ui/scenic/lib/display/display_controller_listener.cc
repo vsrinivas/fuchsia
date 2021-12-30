@@ -71,7 +71,6 @@ void DisplayControllerListener::ClearCallbacks() {
       static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
   event_dispatcher->OnDisplaysChanged = nullptr;
   event_dispatcher->OnClientOwnershipChange = nullptr;
-  event_dispatcher->OnVsync = nullptr;
   event_dispatcher->OnVsync2 = nullptr;
   on_invalid_cb_ = nullptr;
 }

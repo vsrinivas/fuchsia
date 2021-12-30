@@ -151,7 +151,7 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
         }
       }
 
-      void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override { ok_ = false; }
+      void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override { ok_ = false; }
 
       void OnClientOwnershipChange(
           fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {

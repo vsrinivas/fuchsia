@@ -139,10 +139,6 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
       }
     }
 
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
-      invalid_message_ = true;
-    }
-
     void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override {
       invalid_message_ = true;
     }

@@ -643,29 +643,6 @@ protocol Controller {
         cookie uint64;
     });
 
-    // Event sent for every vsync.
-    //
-    // display_id is the identifies the display on which the vsync occurred, and
-    // timestamp indicates the time the vsync occurred. images is a (possibly
-    // empty) vector of all images that were actively being displayed. cookie is a unique
-    // number returned by the driver.
-    // Cookie is used to acknowledge the receipt of vsync events using AcknowledgeVsync API.
-    // When cookie has a value of zero, no acknowledgement is required by the client. A non-zero
-    // valued cookie requires immediate acknowledgement by client. Failure to acknowledge
-    // vsync events will result in driver suspending vsync event notification. All vsync
-    // messages containing a non-zero cookie require acknowledgement regardless of whether
-    // client has applied a (new) configuration or not (via ApplyConfig).
-    // If a client fails to acknowledge vsync messages, the driver will store incoming
-    // hardware-generated vsyncs in a circular buffer and send them
-    // to the client once it resumes acknowledgement. Due to limited size of buffer, only the most
-    // recently received vsyncs will be stored and older ones will be dropped.
-    -> OnVsync(struct {
-        display_id uint64;
-        timestamp uint64;
-        images vector<uint64>:MAX;
-        cookie uint64;
-    });
-
     /// Event sent for every vsync.
     ///
     /// Arguments
@@ -705,7 +682,6 @@ protocol Controller {
     // TODO(fxbug.dev/72588): Remove "@transitional" tag after implementing
     // OnVsync2 on all display clients.
     //
-    @transitional
     -> OnVsync2(resource struct {
         display_id uint64;
         timestamp uint64;
