@@ -3,11 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//src/go/grand_unified_binary/gub.gni")
 import("gentool/generated.gni")
+import("tracing/go_tracing_include_dirs.gni")
 
 grand_unified_binary("bin") {
   output_name = "netstack"
@@ -50,9 +52,14 @@ fuchsia_package("netstack") {
   deps = [ ":component-legacy" ]
 }
 
-grand_unified_binary("bin_with_tracing") {
+go_binary("bin_with_tracing") {
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
   output_name = "netstack"
-  source_name = "grand_unified_binary_with_tracing"
+
+  tags = [ "tracing" ]
+  deps = [ "stub" ]
+
+  include_dirs = go_tracing_include_dirs
 }
 
 fuchsia_component("component-with-tracing") {

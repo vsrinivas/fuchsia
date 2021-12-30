@@ -4,8 +4,6 @@
 
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
-import(
-    "//src/connectivity/network/netstack/tracing/go_tracing_include_dirs.gni")
 
 go_library("lib") {
   deps = [
@@ -19,13 +17,4 @@ go_binary("grand_unified_binary") {
   gopackage = "go.fuchsia.dev/fuchsia/src/go/grand_unified_binary"
 
   deps = [ ":lib" ]
-}
-
-go_binary("grand_unified_binary_with_tracing") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/go/grand_unified_binary"
-
-  tags = [ "tracing" ]
-  deps = [ ":lib" ]
-
-  include_dirs = go_tracing_include_dirs
 }
