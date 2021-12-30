@@ -76,13 +76,6 @@ void DisplayControllerListener::ClearCallbacks() {
   on_invalid_cb_ = nullptr;
 }
 
-void DisplayControllerListener::SetOnVsyncCallback(OnVsyncCallback on_vsync_cb) {
-  // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
-  auto event_dispatcher =
-      static_cast<fuchsia::hardware::display::Controller::Proxy_*>(event_dispatcher_.get());
-  event_dispatcher->OnVsync = std::move(on_vsync_cb);
-}
-
 void DisplayControllerListener::SetOnVsync2Callback(OnVsync2Callback on_vsync2_cb) {
   // TODO(fxbug.dev/7520): Resolve this hack when synchronous interfaces support events.
   auto event_dispatcher =

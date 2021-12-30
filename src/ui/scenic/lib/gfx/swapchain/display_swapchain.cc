@@ -59,7 +59,6 @@ DisplaySwapchain::DisplaySwapchain(
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
-    display_->SetVsyncCallback(fit::bind_member(this, &DisplaySwapchain::OnVsync));
     display_->SetVsync2Callback(fit::bind_member(this, &DisplaySwapchain::OnVsync2));
 
     InitializeFrameRecords();
@@ -104,7 +103,6 @@ DisplaySwapchain::~DisplaySwapchain() {
     return;
   }
 
-  display_->SetVsyncCallback(nullptr);
   display_->SetVsync2Callback(nullptr);
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
@@ -437,8 +435,6 @@ void DisplaySwapchain::OnVsync2(zx::time timestamp,
   last_presented_frame_ = std::move(*vsync_frame_it);
   pending_frame_.pop_front();
 }
-
-void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_ids) {}
 
 void DisplaySwapchain::Flip(uint64_t layer_id, FrameRecord* frame_record) {
   const uint64_t framebuffer_id = frame_record->buffer->id;

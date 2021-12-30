@@ -296,46 +296,6 @@ TEST_F(DisplayControllerListenerTest, OnClientOwnershipChangeCallback) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DisplayControllerListenerTest, OnVsyncCallback) {
-  uint64_t last_display_id = 0u;
-  uint64_t last_timestamp = 0u;
-  std::vector<uint64_t> last_images;
-
-  auto vsync_cb = [&](uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> images,
-                      uint64_t cookie) {
-    last_display_id = display_id;
-    last_timestamp = timestamp;
-    last_images = std::move(images);
-  };
-  display_controller_listener()->InitializeCallbacks(/*on_invalid_cb=*/nullptr,
-                                                     /*displays_changed_cb=*/nullptr,
-                                                     /*client_ownership_change_cb=*/nullptr);
-  display_controller_listener()->SetOnVsyncCallback(std::move(vsync_cb));
-
-  const uint64_t kTestDisplayId = 1u;
-  const uint64_t kTestTimestamp = 111111u;
-  const uint64_t kTestImageId = 2u;
-  mock_display_controller()->events().OnVsync(kTestDisplayId, kTestTimestamp, {kTestImageId}, 0);
-  ASSERT_EQ(0u, last_images.size());
-  RunLoopUntilIdle();
-  EXPECT_EQ(kTestDisplayId, last_display_id);
-  EXPECT_EQ(kTestTimestamp, last_timestamp);
-  ASSERT_EQ(1u, last_images.size());
-  EXPECT_EQ(last_images[0], kTestImageId);
-
-  // Verify we stop getting callbacks after ClearCallbacks().
-  display_controller_listener()->ClearCallbacks();
-  mock_display_controller()->events().OnVsync(kTestDisplayId + 1, kTestTimestamp, {kTestImageId},
-                                              0);
-  // Expect that nothing changed.
-  RunLoopUntilIdle();
-  EXPECT_EQ(kTestDisplayId, last_display_id);
-
-  // Expect no crashes on teardown.
-  ResetDisplayControllerListener();
-  RunLoopUntilIdle();
-}
-
 TEST_F(DisplayControllerListenerTest, OnVsync2Callback) {
   uint64_t last_display_id = 0u;
   uint64_t last_timestamp = 0u;

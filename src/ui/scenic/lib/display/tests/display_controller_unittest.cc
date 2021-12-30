@@ -25,18 +25,6 @@ TEST_F(DisplayControllerTest, Display2Test) {
   EXPECT_TRUE(fidl::Equals(kDisplayMode, display.display_modes()[0]));
   EXPECT_EQ(kPixelFormat, display.pixel_formats()[0]);
 
-  display.OnVsync(zx::time(1), {1});
-  bool invoked_vsync_callback = false;
-  display.set_on_vsync_callback([&](zx::time timestamp, const std::vector<uint64_t>& images) {
-    invoked_vsync_callback = true;
-    EXPECT_EQ(zx::time(2), timestamp);
-    EXPECT_EQ(1u, images.size());
-    EXPECT_EQ(2u, images[0]);
-  });
-  EXPECT_FALSE(invoked_vsync_callback);
-  display.OnVsync(zx::time(2), {2});
-  EXPECT_TRUE(invoked_vsync_callback);
-
   display.OnVsync2(zx::time(1), {.value = 1});
   bool invoked_vsync2_callback = false;
   display.set_on_vsync2_callback(

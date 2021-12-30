@@ -162,7 +162,6 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
       DisplayControllerPrivate* dc_private = weak->FindDisplayControllerPrivate(dc);
       if (dc_private) {
         dc_private->claimed_dc = nullptr;
-        dc_private->listener->SetOnVsyncCallback(nullptr);
         dc_private->listener->SetOnVsync2Callback(nullptr);
       }
     }
@@ -175,28 +174,6 @@ DisplayControllerUniquePtr DisplayManager2::ClaimDisplay(zx_koid_t display_ref_k
 
   // This raw pointer is cleared in the custom deleter above.
   dc_private->claimed_dc = display_controller.get();
-
-  // This callback is cleared in the custom deleter above.
-  dc_private->listener->SetOnVsyncCallback([dc_private](uint64_t display_id, uint64_t timestamp,
-                                                        std::vector<uint64_t> images,
-                                                        uint64_t cookie) {
-    if (!dc_private->claimed_dc) {
-      FX_LOGS(WARNING)
-          << "DisplayManager: Couldn't find display controller matching to vsync callback.";
-      FX_DCHECK(false);
-      return;
-    }
-    // Since the number of displays will be very low (and often only == 1), performance is
-    // usually better iterating instead of using a map.
-    for (auto& display : *(dc_private->claimed_dc->displays())) {
-      if (display.display_id() == display_id) {
-        display.OnVsync(zx::time(timestamp), std::move(images));
-        return;
-      }
-    }
-    FX_LOGS(WARNING) << "DisplayManager: Couldn't find display matching to vsync callback.";
-    FX_DCHECK(false);
-  });
 
   // This callback is cleared in the custom deleter above.
   dc_private->listener->SetOnVsync2Callback(

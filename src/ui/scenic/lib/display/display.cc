@@ -33,14 +33,6 @@ void Display::Unclaim() {
   claimed_ = false;
 }
 
-void Display::OnVsync(zx::time timestamp, std::vector<uint64_t> images) {
-  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp", timestamp.get(),
-                "Vsync interval", vsync_timing_->vsync_interval().get());
-  if (vsync_callback_) {
-    vsync_callback_(timestamp, std::move(images));
-  }
-}
-
 void Display::OnVsync2(zx::time timestamp,
                        fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
   zx::duration time_since_last_vsync = timestamp - vsync_timing_->last_vsync_time();

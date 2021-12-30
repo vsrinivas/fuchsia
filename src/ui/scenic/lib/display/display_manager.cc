@@ -38,8 +38,6 @@ void DisplayManager::BindDefaultDisplayController(
       fit::bind_member(this, &DisplayManager::OnClientOwnershipChange));
 
   // Set up callback to handle Vsync notifications, and ask controller to send these notifications.
-  default_display_controller_listener_->SetOnVsyncCallback(
-      fit::bind_member(this, &DisplayManager::OnVsync));
   default_display_controller_listener_->SetOnVsync2Callback(
       fit::bind_member(this, &DisplayManager::OnVsync2));
   zx_status_t vsync_status = (*default_display_controller_)->EnableVsync(true);
@@ -107,33 +105,11 @@ void DisplayManager::OnClientOwnershipChange(bool has_ownership) {
   }
 }
 
-void DisplayManager::SetVsyncCallback(VsyncCallback callback) {
-  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync_callback_)))
-      << "cannot stomp vsync callback.";
-
-  vsync_callback_ = std::move(callback);
-}
-
 void DisplayManager::SetVsync2Callback(Vsync2Callback callback) {
-  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync_callback_)))
+  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync2_callback_)))
       << "cannot stomp vsync callback.";
 
   vsync2_callback_ = std::move(callback);
-}
-
-void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
-                             std::vector<uint64_t> image_ids, uint64_t cookie) {
-  if (vsync_callback_) {
-    vsync_callback_(display_id, zx::time(timestamp), image_ids);
-  }
-
-  if (!default_display_) {
-    return;
-  }
-  if (default_display_->display_id() != display_id) {
-    return;
-  }
-  default_display_->OnVsync(zx::time(timestamp), std::move(image_ids));
 }
 
 void DisplayManager::OnVsync2(uint64_t display_id, uint64_t timestamp,
