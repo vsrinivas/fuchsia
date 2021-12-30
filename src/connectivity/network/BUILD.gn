@@ -5,17 +5,20 @@
 import("//build/components.gni")
 import("//src/sys/core/build/core_shard.gni")
 
+_common_deps = [
+  "dhcp:component",
+  "dhcpv6/client:component",
+  "dns:component",
+  "http-client:component",
+]
+
 fuchsia_component("component") {
   component_name = "network"
   manifest = "meta/network-default.cml"
-  deps = [
-    "dhcp:component",
-    "dhcpv6/client:component",
-    "dns:component",
-    "http-client:component",
-    "netcfg:component-advanced",
-    "netstack:component",
-  ]
+  deps = _common_deps + [
+           "netstack:component",
+           "netcfg:component-advanced",
+         ]
 }
 
 # TODO(https://fxbug.dev/85450): use subassembly-based product assembly to
@@ -25,14 +28,10 @@ fuchsia_component("component") {
 fuchsia_component("component-basic") {
   component_name = "network"
   manifest = "meta/network-basic.cml"
-  deps = [
-    "dhcp:component",
-    "dhcpv6/client:component",
-    "dns:component",
-    "http-client:component",
-    "netcfg:component-basic",
-    "netstack:component",
-  ]
+  deps = _common_deps + [
+           "netstack:component",
+           "netcfg:component-basic",
+         ]
 }
 
 # TODO(https://fxbug.dev/85450): use subassembly-based product assembly to
@@ -40,14 +39,10 @@ fuchsia_component("component-basic") {
 fuchsia_component("component-with-tracing") {
   component_name = "network"
   manifest = "meta/network-default.cml"
-  deps = [
-    "dhcp:component",
-    "dhcpv6/client:component",
-    "dns:component",
-    "http-client:component",
-    "netcfg:component-advanced",
-    "netstack:component-with-tracing",
-  ]
+  deps = _common_deps + [
+           "netstack:component-with-tracing",
+           "netcfg:component-advanced",
+         ]
 }
 
 fuchsia_package("network") {
