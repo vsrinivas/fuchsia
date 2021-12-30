@@ -147,7 +147,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         .expect("failed to connect to DHCP server");
 
     let dhcp_server_ref = &dhcp_server;
-    // TODO(fxbug.dev/62554): derive these from SERVER_ADDR.
+    // TODO(https://fxbug.dev/62554): derive these from SERVER_ADDR.
     let () = stream::iter(
         [
             fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!("192.168.0.1")]),

@@ -44,7 +44,7 @@ async fn get_admin_unknown() {
         let () = debug_control.get_admin(*id + 1, server).expect("get admin failed");
         matches::assert_matches!(
             control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
-            // TODO(https://fxbug.dev/76695): Sending epitaphs not supported in Go.
+            // TODO(https://fxbug.dev/8018): Sending epitaphs not supported in Go.
             Ok([])
         );
     }

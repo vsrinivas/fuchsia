@@ -87,9 +87,9 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .connect_to_protocol::<netstack::NetstackMarker>()
         .context("failed to connect to netstack service")?;
 
-    // Add the device and get its interface state from netstack.
-    // TODO(fxbug.dev/48907) Support Network Device. This helper fn should use stack.fidl
-    // and be agnostic over interface type.
+    // Add the device and get its interface state from netstack. TODO(https://fxbug.dev/48907)
+    // Support Network Device. This helper fn should use stack.fidl and be agnostic over interface
+    // type.
     let id = netstack
         .add_ethernet_device(
             &name,

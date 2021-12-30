@@ -268,7 +268,7 @@ fn assert_entry(
 
 #[fasync::run_singlethreaded(test)]
 async fn neigh_list_entries() {
-    // TODO(fxbug.dev/59425): Extend this test with hanging get.
+    // TODO(https://fxbug.dev/59425): Extend this test with hanging get.
     let sandbox = TestSandbox::new().expect("failed to create sandbox");
     let network = sandbox.create_network("net").await.expect("failed to create network");
 

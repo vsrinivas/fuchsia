@@ -309,11 +309,10 @@ async fn inspect_nic() {
                 fidl_fuchsia_net_ext::IpAddress::from(BOB_IP).to_string() => {
                     "Link address": fidl_fuchsia_net_ext::MacAddress::from(BOB_MAC).to_string(),
                     State: "Static",
-                    // TODO(fxbug.dev/64524): Use NonZeroIntProperty once we are
-                    // able to distinguish between signed and unsigned integers
-                    // from the fuchsia.diagnostics FIDL. This is currently not
-                    // possible because the inspect data is serialized into JSON
-                    // then converted back, losing type information.
+                    // TODO(https://fxbug.dev/78847): Use NonZeroIntProperty once we are able to
+                    // distinguish between signed and unsigned integers from the
+                    // fuchsia.diagnostics FIDL. This is currently not possible because the inspect
+                    // data is serialized into JSON then converted back, losing type information.
                     "Last updated": NonZeroUintProperty,
                 }
             },

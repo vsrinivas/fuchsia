@@ -1643,7 +1643,7 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   fbl::unique_fd s1;
   ASSERT_TRUE(s1 = fbl::unique_fd(socket(AF_INET, type, 0))) << strerror(errno);
 
-// TODO(gvisor.dev/issue/3839): Remove this.
+// TODO(https://gvisor.dev/issue/3839): Remove this.
 #if defined(__Fuchsia__)
   // Must outlive the block below.
   fbl::unique_fd s;
@@ -1892,7 +1892,7 @@ TEST(NetStreamTest, ConnectTwice) {
 
   ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
-  // TODO(fxbug.dev/61594): decide if we want to match Linux's behaviour.
+  // TODO(https://fxbug.dev/61594): decide if we want to match Linux's behaviour.
   ASSERT_EQ(connect(client.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)),
 #if defined(__linux__)
             0)
@@ -2583,8 +2583,8 @@ TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
     constexpr socklen_t too_small = sizeof(actual_tv) - 7;
     static_assert(too_small > 0);
     socklen_t optlen = too_small;
-    // TODO(eyalsoha): Decide if we want to match Linux's behaviour.  It writes to
-    // only the first optlen bytes of the timeval.
+    // TODO: Decide if we want to match Linux's behaviour. It writes to only
+    // the first optlen bytes of the timeval.
     EXPECT_EQ(getsockopt(socket_fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen),
 #if defined(__Fuchsia__)
               -1);

@@ -223,7 +223,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 };
             }
 
-            // TODO(fxbug.dev/52278): Enable retransmit timeout test,
+            // TODO(https://fxbug.dev/52278): Enable retransmit timeout test,
             // after we are able to tune the TCP stack to reduce
             // this time. Currently it is too long for the test.
             let _ = retransmit_timeout;
