@@ -1730,9 +1730,9 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     vsync_msg_t v = buffered_vsync_messages_.front();
     buffered_vsync_messages_.pop();
     event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-      return event_sender.OnVsync2(
-          v.display_id, v.timestamp,
-          fuchsia_hardware_display::wire::ConfigStamp{v.config_stamp.value}, 0);
+      return event_sender.OnVsync(v.display_id, v.timestamp,
+                                  fuchsia_hardware_display::wire::ConfigStamp{v.config_stamp.value},
+                                  0);
     });
     if (!event_sending_result.ok()) {
       zxlogf(ERROR, "Failed to send all buffered vsync messages: %s\n",
@@ -1744,9 +1744,9 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 
   // Send the latest vsync event
   event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-    return event_sender.OnVsync2(display_id, timestamp,
-                                 fuchsia_hardware_display::wire::ConfigStamp{client_stamp.value},
-                                 cookie);
+    return event_sender.OnVsync(display_id, timestamp,
+                                fuchsia_hardware_display::wire::ConfigStamp{client_stamp.value},
+                                cookie);
   });
   if (!event_sending_result.ok()) {
     return event_sending_result.status();

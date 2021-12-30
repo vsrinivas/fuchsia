@@ -522,7 +522,7 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   // Advance the clock to vsync1.
   zx::time vsync0 = vsync_timing_->last_vsync_time();
   zx::time vsync1 = vsync0 + vsync_timing_->vsync_interval();
-  zx::time vsync2 = vsync1 + vsync_timing_->vsync_interval();
+  zx::time vsync = vsync1 + vsync_timing_->vsync_interval();
 
   EXPECT_GT(vsync_timing_->vsync_interval(), zx::duration(0));
   EXPECT_EQ(vsync0, Now());
@@ -536,7 +536,7 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   });
 
   EXPECT_GE(predicted_presents.size(), 1u);
-  EXPECT_EQ(predicted_presents[0].presentation_time, vsync2);
+  EXPECT_EQ(predicted_presents[0].presentation_time, vsync);
 
   for (size_t i = 0; i < predicted_presents.size(); i++) {
     auto current = std::move(predicted_presents[i]);
@@ -550,8 +550,8 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
 
   zx::time vsync0 = vsync_timing_->last_vsync_time();
   zx::time vsync1 = vsync0 + vsync_timing_->vsync_interval();
-  zx::time vsync2 = vsync1 + vsync_timing_->vsync_interval();
-  zx::time vsync3 = vsync2 + vsync_timing_->vsync_interval();
+  zx::time vsync = vsync1 + vsync_timing_->vsync_interval();
+  zx::time vsync3 = vsync + vsync_timing_->vsync_interval();
   zx::time vsync4 = vsync3 + vsync_timing_->vsync_interval();
 
   // What we really want is a positive difference between each vsync.

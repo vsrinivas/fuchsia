@@ -624,7 +624,7 @@ impl ViewStrategy for DisplayDirectViewStrategy {
 
     async fn handle_display_controller_event(&mut self, event: ControllerEvent) {
         match event {
-            ControllerEvent::OnVsync2 { timestamp, cookie, .. } => {
+            ControllerEvent::OnVsync { timestamp, cookie, .. } => {
                 duration!("gfx", "DisplayDirectViewStrategy::OnVsync");
                 let vsync_interval = Duration::from_nanos(
                     100_000_000_000 / self.display.info.modes[0].refresh_rate_e2 as i64,

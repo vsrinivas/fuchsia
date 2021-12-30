@@ -53,19 +53,19 @@ class DisplayManager {
 
   // TODO(fxbug.dev/76640): we may want to have multiple clients of this, so a single setter that
   // stomps previous callbacks may not be what we want.
-  using Vsync2Callback =
+  using VsyncCallback =
       fit::function<void(uint64_t display_id, zx::time timestamp,
                          fuchsia::hardware::display::ConfigStamp applied_config_stamp)>;
-  void SetVsync2Callback(Vsync2Callback callback);
+  void SetVsyncCallback(VsyncCallback callback);
 
  private:
-  Vsync2Callback vsync2_callback_;
+  VsyncCallback vsync_callback_;
 
   void OnDisplaysChanged(std::vector<fuchsia::hardware::display::Info> added,
                          std::vector<uint64_t> removed);
   void OnClientOwnershipChange(bool has_ownership);
-  void OnVsync2(uint64_t display_id, uint64_t timestamp,
-                fuchsia::hardware::display::ConfigStamp applied_config_stamp, uint64_t cookie);
+  void OnVsync(uint64_t display_id, uint64_t timestamp,
+               fuchsia::hardware::display::ConfigStamp applied_config_stamp, uint64_t cookie);
 
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> default_display_controller_;
   std::shared_ptr<display::DisplayControllerListener> default_display_controller_listener_;

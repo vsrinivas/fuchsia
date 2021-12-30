@@ -38,8 +38,8 @@ void DisplayManager::BindDefaultDisplayController(
       fit::bind_member(this, &DisplayManager::OnClientOwnershipChange));
 
   // Set up callback to handle Vsync notifications, and ask controller to send these notifications.
-  default_display_controller_listener_->SetOnVsync2Callback(
-      fit::bind_member(this, &DisplayManager::OnVsync2));
+  default_display_controller_listener_->SetOnVsyncCallback(
+      fit::bind_member(this, &DisplayManager::OnVsync));
   zx_status_t vsync_status = (*default_display_controller_)->EnableVsync(true);
   if (vsync_status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to enable vsync, status: " << vsync_status;
@@ -105,22 +105,22 @@ void DisplayManager::OnClientOwnershipChange(bool has_ownership) {
   }
 }
 
-void DisplayManager::SetVsync2Callback(Vsync2Callback callback) {
-  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync2_callback_)))
+void DisplayManager::SetVsyncCallback(VsyncCallback callback) {
+  FX_DCHECK(!(static_cast<bool>(callback) && static_cast<bool>(vsync_callback_)))
       << "cannot stomp vsync callback.";
 
-  vsync2_callback_ = std::move(callback);
+  vsync_callback_ = std::move(callback);
 }
 
-void DisplayManager::OnVsync2(uint64_t display_id, uint64_t timestamp,
-                              fuchsia::hardware::display::ConfigStamp applied_config_stamp,
-                              uint64_t cookie) {
+void DisplayManager::OnVsync(uint64_t display_id, uint64_t timestamp,
+                             fuchsia::hardware::display::ConfigStamp applied_config_stamp,
+                             uint64_t cookie) {
   if (cookie) {
     (*default_display_controller_)->AcknowledgeVsync(cookie);
   }
 
-  if (vsync2_callback_) {
-    vsync2_callback_(display_id, zx::time(timestamp), applied_config_stamp);
+  if (vsync_callback_) {
+    vsync_callback_(display_id, zx::time(timestamp), applied_config_stamp);
   }
 
   if (!default_display_) {
@@ -129,7 +129,7 @@ void DisplayManager::OnVsync2(uint64_t display_id, uint64_t timestamp,
   if (default_display_->display_id() != display_id) {
     return;
   }
-  default_display_->OnVsync2(zx::time(timestamp), applied_config_stamp);
+  default_display_->OnVsync(zx::time(timestamp), applied_config_stamp);
 }
 
 }  // namespace display

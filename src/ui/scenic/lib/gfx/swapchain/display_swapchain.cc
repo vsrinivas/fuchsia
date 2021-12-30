@@ -59,7 +59,7 @@ DisplaySwapchain::DisplaySwapchain(
                         "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
 
-    display_->SetVsync2Callback(fit::bind_member(this, &DisplaySwapchain::OnVsync2));
+    display_->SetVsyncCallback(fit::bind_member(this, &DisplaySwapchain::OnVsync));
 
     InitializeFrameRecords();
 
@@ -103,7 +103,7 @@ DisplaySwapchain::~DisplaySwapchain() {
     return;
   }
 
-  display_->SetVsync2Callback(nullptr);
+  display_->SetVsyncCallback(nullptr);
 
   // A FrameRecord is now stale and will no longer receive the OnFramePresented
   // callback; OnFrameDropped will clean up and make the state consistent.
@@ -387,8 +387,8 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   }
 }
 
-void DisplaySwapchain::OnVsync2(zx::time timestamp,
-                                fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
+void DisplaySwapchain::OnVsync(zx::time timestamp,
+                               fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
   // Don't double-report a frame as presented if a frame is shown twice
   // due to the next frame missing its deadline.
   if (last_presented_frame_.has_value() &&

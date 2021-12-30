@@ -122,7 +122,7 @@ void CoreDisplayTest::SetUp() {
       has_display_ = true;
     }
 
-    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override {}
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {}
 
     void OnClientOwnershipChange(
         fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {}

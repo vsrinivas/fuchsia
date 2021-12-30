@@ -806,7 +806,7 @@ impl FrameBuffer {
             fasync::Task::local(
                 stream
                     .map_ok(move |request| match request {
-                        ControllerEvent::OnVsync2 {
+                        ControllerEvent::OnVsync {
                             display_id,
                             timestamp,
                             applied_config_stamp,

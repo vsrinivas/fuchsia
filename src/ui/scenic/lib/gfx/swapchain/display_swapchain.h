@@ -113,7 +113,7 @@ class DisplaySwapchain : public Swapchain {
   // as a render target.
   void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
 
-  void OnVsync2(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
+  void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
 
   // Sets the config which will be used for all imported images.
   void SetImageConfig(uint64_t layer_id, int32_t width, int32_t height, zx_pixel_format_t format);

@@ -139,7 +139,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
       }
     }
 
-    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override {
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
       invalid_message_ = true;
     }
 
@@ -271,7 +271,7 @@ zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
       status_ = ZX_ERR_STOP;
     }
 
-    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override {
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
       // Acknowledge cookie if non-zero
       if (event->cookie) {
         dc->AcknowledgeVsync(event->cookie);

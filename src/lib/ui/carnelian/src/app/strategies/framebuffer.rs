@@ -373,7 +373,7 @@ impl<'a> AppStrategy for DisplayDirectAppStrategy<'a> {
                     .unbounded_send(MessageInternal::OwnershipChanged(has_ownership))
                     .expect("unbounded_send");
             }
-            ControllerEvent::OnVsync2 { .. } => {
+            ControllerEvent::OnVsync { .. } => {
                 panic!("App strategy should not see vsync events");
             }
         }

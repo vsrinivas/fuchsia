@@ -175,10 +175,10 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
         return info->vsync_layer_count == 1;
       },
       zx::sec(1)));
-  auto count = primary_client->vsync2_count();
+  auto count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), count]() { return p->vsync2_count() > count; }, zx::sec(1)));
+      [p = primary_client.get(), count]() { return p->vsync_count() > count; }, zx::sec(1)));
 
   // Set an empty config
   {
@@ -220,10 +220,10 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
                                                          &empty_config_stamp);
 
   // Send a second vsync, using the config the client applied.
-  count = primary_client->vsync2_count();
+  count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [count, p = primary_client.get()]() { return p->vsync2_count() > count; }, zx::sec(1)));
+      [count, p = primary_client.get()]() { return p->vsync_count() > count; }, zx::sec(1)));
 }
 
 TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
@@ -253,7 +253,7 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
       zx::sec(1)));
 
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() { return p->vsync2_count() == 1; }, zx::sec(1)));
+      [p = primary_client.get()]() { return p->vsync_count() == 1; }, zx::sec(1)));
   // Send the controller a vsync for an image / a config it won't recognize anymore.
   config_stamp_t invalid_config_stamp = {.value = controller()->TEST_controller_stamp().value - 1};
   controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u,
@@ -262,8 +262,8 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
   // Send a second vsync, using the config the client applied.
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() { return p->vsync2_count() == 2; }, zx::sec(1)));
-  EXPECT_EQ(2, primary_client->vsync2_count());
+      [p = primary_client.get()]() { return p->vsync_count() == 2; }, zx::sec(1)));
+  EXPECT_EQ(2, primary_client->vsync_count());
 }
 
 TEST_F(IntegrationTest, SendVsyncsAfterClientDies) {
@@ -282,7 +282,7 @@ TEST_F(IntegrationTest, AcknowledgeVsync) {
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
-  EXPECT_EQ(0, primary_client->vsync2_count());
+  EXPECT_EQ(0, primary_client->vsync_count());
   EXPECT_EQ(0, primary_client->get_cookie());
 
   // send vsyncs upto watermark level
@@ -291,7 +291,7 @@ TEST_F(IntegrationTest, AcknowledgeVsync) {
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() { return (p->get_cookie() != 0); }, zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kVsyncMessagesWatermark, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kVsyncMessagesWatermark, primary_client->vsync_count());
 
   // acknowledge
   {
@@ -311,16 +311,14 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
   // send vsyncs until max vsync
-  uint32_t vsync2_count = ClientProxy::kMaxVsyncMessages;
-  while (vsync2_count--) {
+  uint32_t vsync_count = ClientProxy::kMaxVsyncMessages;
+  while (vsync_count--) {
     client_proxy_send_vsync();
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages);
-      },
+      [p = primary_client.get()]() { return (p->vsync_count() == ClientProxy::kMaxVsyncMessages); },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
   EXPECT_NE(0, primary_client->get_cookie());
 
   // At this point, display will not send any more vsync events. Let's confirm by sending a few
@@ -328,7 +326,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   for (uint32_t i = 0; i < kNumVsync; i++) {
     client_proxy_send_vsync();
   }
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 
   // now let's acknowledge vsync
   {
@@ -343,10 +341,10 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   client_proxy_send_vsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages + kNumVsync + 1);
+        return (p->vsync_count() == ClientProxy::kMaxVsyncMessages + kNumVsync + 1);
       },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync_count());
 }
 
 TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
@@ -361,11 +359,9 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
     client_proxy_send_vsync();
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages);
-      },
+      [p = primary_client.get()]() { return (p->vsync_count() == ClientProxy::kMaxVsyncMessages); },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
   EXPECT_NE(0, primary_client->get_cookie());
 
   // At this point, display will not send any more vsync events. Let's confirm by sending a lot
@@ -373,7 +369,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
   for (uint32_t i = 0; i < kNumVsync; i++) {
     client_proxy_send_vsync();
   }
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 
   // now let's acknowledge vsync
   {
@@ -388,12 +384,12 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
   client_proxy_send_vsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() ==
+        return (p->vsync_count() ==
                 ClientProxy::kMaxVsyncMessages + ClientProxy::kVsyncBufferSize + 1);
       },
       zx::sec(3)));
   EXPECT_EQ(ClientProxy::kMaxVsyncMessages + ClientProxy::kVsyncBufferSize + 1,
-            primary_client->vsync2_count());
+            primary_client->vsync_count());
 }
 
 TEST_F(IntegrationTest, InvalidVSyncCookie) {
@@ -408,11 +404,9 @@ TEST_F(IntegrationTest, InvalidVSyncCookie) {
     client_proxy_send_vsync();
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages);
-      },
+      [p = primary_client.get()]() { return (p->vsync_count() == ClientProxy::kMaxVsyncMessages); },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
   EXPECT_NE(0, primary_client->get_cookie());
 
   // At this point, display will not send any more vsync events. Let's confirm by sending a few
@@ -420,7 +414,7 @@ TEST_F(IntegrationTest, InvalidVSyncCookie) {
   for (uint32_t i = 0; i < kNumVsync; i++) {
     client_proxy_send_vsync();
   }
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 
   // now let's acknowledge vsync with invalid cookie
   {
@@ -435,10 +429,10 @@ TEST_F(IntegrationTest, InvalidVSyncCookie) {
   client_proxy_send_vsync();
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages + kNumVsync + 1);
+        return (p->vsync_count() == ClientProxy::kMaxVsyncMessages + kNumVsync + 1);
       },
       zx::sec(1)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 }
 
 TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
@@ -453,11 +447,9 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
     client_proxy_send_vsync();
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages);
-      },
+      [p = primary_client.get()]() { return (p->vsync_count() == ClientProxy::kMaxVsyncMessages); },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
   EXPECT_NE(0, primary_client->get_cookie());
 
   // At this point, display will not send any more vsync events. Let's confirm by sending a few
@@ -465,7 +457,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   for (uint32_t i = 0; i < kNumVsync; i++) {
     client_proxy_send_vsync();
   }
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages, primary_client->vsync_count());
 
   // now let's acknowledge vsync
   {
@@ -480,10 +472,10 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   client_proxy_send_vsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages + kNumVsync + 1);
+        return (p->vsync_count() == ClientProxy::kMaxVsyncMessages + kNumVsync + 1);
       },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages + kNumVsync + 1, primary_client->vsync_count());
 
   // save old cookie
   uint64_t old_cookie = primary_client->get_cookie();
@@ -495,17 +487,17 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
 
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() == ClientProxy::kMaxVsyncMessages * 2);
+        return (p->vsync_count() == ClientProxy::kMaxVsyncMessages * 2);
       },
       zx::sec(3)));
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages * 2, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages * 2, primary_client->vsync_count());
   EXPECT_NE(0, primary_client->get_cookie());
 
   // At this point, display will not send any more vsync events. Let's confirm by sending a few
   for (uint32_t i = 0; i < ClientProxy::kVsyncBufferSize; i++) {
     client_proxy_send_vsync();
   }
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages * 2, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages * 2, primary_client->vsync_count());
 
   // now let's acknowledge vsync with old cookie
   {
@@ -520,11 +512,11 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   client_proxy_send_vsync();
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() == (ClientProxy::kMaxVsyncMessages * 2) + kNumVsync + 1);
+        return (p->vsync_count() == (ClientProxy::kMaxVsyncMessages * 2) + kNumVsync + 1);
       },
       zx::sec(1)));
   // count should still remain the same
-  EXPECT_EQ(ClientProxy::kMaxVsyncMessages * 2, primary_client->vsync2_count());
+  EXPECT_EQ(ClientProxy::kMaxVsyncMessages * 2, primary_client->vsync_count());
 
   // now let's acknowledge with valid cookie
   {
@@ -539,12 +531,12 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   client_proxy_send_vsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [p = primary_client.get()]() {
-        return (p->vsync2_count() ==
+        return (p->vsync_count() ==
                 (ClientProxy::kMaxVsyncMessages * 2) + ClientProxy::kVsyncBufferSize + 1);
       },
       zx::sec(3)));
   EXPECT_EQ((ClientProxy::kMaxVsyncMessages * 2) + ClientProxy::kVsyncBufferSize + 1,
-            primary_client->vsync2_count());
+            primary_client->vsync_count());
 }
 
 TEST_F(IntegrationTest, ImportGammaTable) {
@@ -717,13 +709,13 @@ TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
 
   // Virtcon client should remain active until primary client has set a config.
-  auto vc_vsync2_count = vc_client.vsync2_count();
+  auto vc_vsync_count = vc_client.vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = &vc_client, vc_vsync2_count]() { return p->vsync2_count() > vc_vsync2_count; },
+      [p = &vc_client, vc_vsync_count]() { return p->vsync_count() > vc_vsync_count; },
       zx::sec(1)));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get()]() { return p->vsync2_count() == 0; }, zx::sec(1)));
+      [p = primary_client.get()]() { return p->vsync_count() == 0; }, zx::sec(1)));
 
   // Present an image from the primary client.
   EXPECT_OK(primary_client->PresentLayers());
@@ -736,16 +728,16 @@ TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
       zx::sec(1)));
 
   // Primary client should have become active after a config was set.
-  auto primary_vsync2_count = primary_client->vsync2_count();
+  auto primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(1)));
 }
 
-// This tests the basic behavior of ApplyConfig() and OnVsync2() events.
+// This tests the basic behavior of ApplyConfig() and OnVsync() events.
 // We test applying configurations with images without wait fences, so they are
 // guaranteed to be ready when client calls ApplyConfig().
 //
@@ -762,7 +754,7 @@ TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
 //  - Vsync now should have config_stamp_3
 //
 // Both images are ready at ApplyConfig() time, i.e. no fences are provided.
-TEST_F(IntegrationTest, Vsync2Event) {
+TEST_F(IntegrationTest, VsyncEvent) {
   // Create and bind primary client.
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
@@ -778,11 +770,11 @@ TEST_F(IntegrationTest, Vsync2Event) {
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
 
-  auto primary_vsync2_count = primary_client->vsync2_count();
+  auto primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
 
@@ -812,11 +804,11 @@ TEST_F(IntegrationTest, Vsync2Event) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
   EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -837,11 +829,11 @@ TEST_F(IntegrationTest, Vsync2Event) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
   EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -862,11 +854,11 @@ TEST_F(IntegrationTest, Vsync2Event) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_3);
   EXPECT_GT(apply_config_stamp_3, apply_config_stamp_2);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -878,12 +870,12 @@ TEST_F(IntegrationTest, Vsync2Event) {
   EXPECT_EQ(apply_config_stamp_3, present_config_stamp_3);
 }
 
-// This tests the behavior of ApplyConfig() and OnVsync2() events when images
+// This tests the behavior of ApplyConfig() and OnVsync() events when images
 // come with wait fences, which is a common use case in Scenic when using GPU
 // composition.
 //
 // When applying configurations with pending images, the config_stamp returned
-// from OnVsync2() should not be updated unless the image becomes ready and
+// from OnVsync() should not be updated unless the image becomes ready and
 // triggers a ReapplyConfig().
 //
 // Here we test the following case:
@@ -895,7 +887,7 @@ TEST_F(IntegrationTest, Vsync2Event) {
 //  * Signal fence1
 //  - Vsync now should have config_stamp_2
 //
-TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
+TEST_F(IntegrationTest, VsyncWaitForPendingImages) {
   // Create and bind primary client.
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
@@ -911,11 +903,11 @@ TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
 
-  auto primary_vsync2_count = primary_client->vsync2_count();
+  auto primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
 
@@ -948,11 +940,11 @@ TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
   EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -975,11 +967,11 @@ TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
   EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1001,11 +993,11 @@ TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
       },
       zx::sec(2)));
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1017,11 +1009,11 @@ TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
   EXPECT_EQ(present_config_stamp_3, apply_config_stamp_2);
 }
 
-// This tests the behavior of ApplyConfig() and OnVsync2() events when images
+// This tests the behavior of ApplyConfig() and OnVsync() events when images
 // that comes with wait fences are hidden in subsequent configurations.
 //
 // If a pending image never becomes ready, the config_stamp returned from
-// OnVsync2() should not be updated unless the image layer has been removed from
+// OnVsync() should not be updated unless the image layer has been removed from
 // the display in a subsequent configuration.
 //
 // Here we test the following case:
@@ -1035,7 +1027,7 @@ TEST_F(IntegrationTest, Vsync2WaitForPendingImages) {
 //
 // Note that fence1 is never signaled.
 //
-TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
+TEST_F(IntegrationTest, VsyncHidePendingLayer) {
   // Create and bind primary client.
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
@@ -1051,11 +1043,11 @@ TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
 
-  auto primary_vsync2_count = primary_client->vsync2_count();
+  auto primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
 
@@ -1088,11 +1080,11 @@ TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
   EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1115,11 +1107,11 @@ TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
   EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1144,11 +1136,11 @@ TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
   // On Vsync, the configuration stamp client receives on Vsync event message
   // will be the latest one applied to the display controller, since the pending
   // image has been removed from the configuration.
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1160,7 +1152,7 @@ TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
   EXPECT_EQ(present_config_stamp_3, apply_config_stamp_3);
 }
 
-// This tests the behavior of ApplyConfig() and OnVsync2() events when images
+// This tests the behavior of ApplyConfig() and OnVsync() events when images
 // that comes with wait fences are overridden in subsequent configurations.
 //
 // If a client applies a configuration (#1) with a pending image, while display
@@ -1184,7 +1176,7 @@ TEST_F(IntegrationTest, Vsync2HidePendingLayer) {
 //  - Vsync .
 //
 // Note that fence1 is never signaled.
-TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
+TEST_F(IntegrationTest, VsyncSkipOldPendingConfiguration) {
   // Create and bind primary client.
   auto primary_client = std::make_unique<TestFidlClient>(sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
@@ -1222,11 +1214,11 @@ TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(2)));
 
-  auto primary_vsync2_count = primary_client->vsync2_count();
+  auto primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1250,11 +1242,11 @@ TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_1);
   EXPECT_GT(apply_config_stamp_1, apply_config_stamp_0);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
 
@@ -1273,11 +1265,11 @@ TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
   EXPECT_NE(fuchsia_hardware_display::wire::kInvalidConfigStampFidl, apply_config_stamp_2);
   EXPECT_GT(apply_config_stamp_2, apply_config_stamp_1);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
 
@@ -1295,11 +1287,11 @@ TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
       },
       zx::sec(2)));
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1317,11 +1309,11 @@ TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
   old_controller_stamp = controller()->TEST_controller_stamp();
   image_1_ready_fence.event.signal(0u, ZX_EVENT_SIGNALED);
 
-  primary_vsync2_count = primary_client->vsync2_count();
+  primary_vsync_count = primary_client->vsync_count();
   SendDisplayVsync();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [p = primary_client.get(), primary_vsync2_count]() {
-        return p->vsync2_count() > primary_vsync2_count;
+      [p = primary_client.get(), primary_vsync_count]() {
+        return p->vsync_count() > primary_vsync_count;
       },
       zx::sec(2)));
   {
@@ -1334,7 +1326,7 @@ TEST_F(IntegrationTest, Vsync2SkipOldPendingConfiguration) {
 }
 
 // TODO(fxbug.dev/90423): Currently the fake-display driver only supports one
-// primary layer. In order to better test ApplyConfig() / OnVsync2() behavior,
+// primary layer. In order to better test ApplyConfig() / OnVsync() behavior,
 // we should make fake-display driver support multi-layer configurations and
 // then we could add more multi-layer tests.
 

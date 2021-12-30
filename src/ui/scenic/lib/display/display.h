@@ -31,9 +31,9 @@ class Display {
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px);
   virtual ~Display() = default;
 
-  using Vsync2Callback = fit::function<void(
+  using VsyncCallback = fit::function<void(
       zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp)>;
-  void SetVsync2Callback(Vsync2Callback callback) { vsync2_callback_ = std::move(callback); }
+  void SetVsyncCallback(VsyncCallback callback) { vsync_callback_ = std::move(callback); }
 
   std::shared_ptr<const scheduling::VsyncTiming> vsync_timing() { return vsync_timing_; }
 
@@ -55,13 +55,13 @@ class Display {
   const zx::event& ownership_event() { return ownership_event_; }
 
   // Called by DisplayManager, other users of Display should probably not call this.  Except tests.
-  void OnVsync2(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
+  void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
 
  protected:
   std::shared_ptr<scheduling::VsyncTiming> vsync_timing_;
 
  private:
-  Vsync2Callback vsync2_callback_;
+  VsyncCallback vsync_callback_;
 
   // The maximum vsync interval we would ever expect.
   static constexpr zx::duration kMaximumVsyncInterval = zx::msec(100);

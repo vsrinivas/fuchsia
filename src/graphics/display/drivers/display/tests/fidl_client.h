@@ -93,9 +93,9 @@ class TestFidlClient {
   zx::handle device_handle_;
   bool has_ownership_ = false;
 
-  uint64_t vsync2_count() const {
+  uint64_t vsync_count() const {
     fbl::AutoLock lock(mtx());
-    return vsync2_count_;
+    return vsync_count_;
   }
 
   fuchsia_hardware_display::wire::ConfigStamp recent_presented_config_stamp() const {
@@ -110,7 +110,7 @@ class TestFidlClient {
  private:
   mutable fbl::Mutex mtx_;
   async_dispatcher_t* dispatcher_ = nullptr;
-  uint64_t vsync2_count_ TA_GUARDED(mtx()) = 0;
+  uint64_t vsync_count_ TA_GUARDED(mtx()) = 0;
   uint64_t cookie_ = 0;
   fuchsia_hardware_display::wire::ConfigStamp recent_presented_config_stamp_;
   const fidl::WireSyncClient<fuchsia_sysmem::Allocator>& sysmem_;

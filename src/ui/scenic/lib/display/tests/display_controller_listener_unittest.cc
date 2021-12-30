@@ -296,14 +296,14 @@ TEST_F(DisplayControllerListenerTest, OnClientOwnershipChangeCallback) {
   RunLoopUntilIdle();
 }
 
-TEST_F(DisplayControllerListenerTest, OnVsync2Callback) {
+TEST_F(DisplayControllerListenerTest, OnVsyncCallback) {
   uint64_t last_display_id = 0u;
   uint64_t last_timestamp = 0u;
   fuchsia::hardware::display::ConfigStamp last_config_stamp = {
       .value = fuchsia::hardware::display::INVALID_CONFIG_STAMP_VALUE};
 
-  auto vsync2_cb = [&](uint64_t display_id, uint64_t timestamp,
-                       fuchsia::hardware::display::ConfigStamp stamp, uint64_t cookie) {
+  auto vsync_cb = [&](uint64_t display_id, uint64_t timestamp,
+                      fuchsia::hardware::display::ConfigStamp stamp, uint64_t cookie) {
     last_display_id = display_id;
     last_timestamp = timestamp;
     last_config_stamp = std::move(stamp);
@@ -311,12 +311,12 @@ TEST_F(DisplayControllerListenerTest, OnVsync2Callback) {
   display_controller_listener()->InitializeCallbacks(/*on_invalid_cb=*/nullptr,
                                                      /*displays_changed_cb=*/nullptr,
                                                      /*client_ownership_change_cb=*/nullptr);
-  display_controller_listener()->SetOnVsync2Callback(std::move(vsync2_cb));
+  display_controller_listener()->SetOnVsyncCallback(std::move(vsync_cb));
 
   const uint64_t kTestDisplayId = 1u;
   const uint64_t kTestTimestamp = 111111u;
   const fuchsia::hardware::display::ConfigStamp kConfigStamp = {.value = 2u};
-  mock_display_controller()->events().OnVsync2(kTestDisplayId, kTestTimestamp, kConfigStamp, 0);
+  mock_display_controller()->events().OnVsync(kTestDisplayId, kTestTimestamp, kConfigStamp, 0);
   ASSERT_EQ(fuchsia::hardware::display::INVALID_CONFIG_STAMP_VALUE, last_config_stamp.value);
   RunLoopUntilIdle();
   EXPECT_EQ(kTestDisplayId, last_display_id);
@@ -325,7 +325,7 @@ TEST_F(DisplayControllerListenerTest, OnVsync2Callback) {
 
   // Verify we stop getting callbacks after ClearCallbacks().
   display_controller_listener()->ClearCallbacks();
-  mock_display_controller()->events().OnVsync2(kTestDisplayId + 1, kTestTimestamp, kConfigStamp, 0);
+  mock_display_controller()->events().OnVsync(kTestDisplayId + 1, kTestTimestamp, kConfigStamp, 0);
   // Expect that nothing changed.
   RunLoopUntilIdle();
   EXPECT_EQ(kTestDisplayId, last_display_id);

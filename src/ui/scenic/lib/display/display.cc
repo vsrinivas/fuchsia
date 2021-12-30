@@ -33,8 +33,8 @@ void Display::Unclaim() {
   claimed_ = false;
 }
 
-void Display::OnVsync2(zx::time timestamp,
-                       fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
+void Display::OnVsync(zx::time timestamp,
+                      fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
   zx::duration time_since_last_vsync = timestamp - vsync_timing_->last_vsync_time();
 
   if (vsync_timing_->last_vsync_time() != zx::time(0)) {
@@ -51,11 +51,11 @@ void Display::OnVsync2(zx::time timestamp,
 
   vsync_timing_->set_last_vsync_time(timestamp);
 
-  TRACE_INSTANT("gfx", "Display::OnVsync2", TRACE_SCOPE_PROCESS, "Timestamp", timestamp.get(),
+  TRACE_INSTANT("gfx", "Display::OnVsync", TRACE_SCOPE_PROCESS, "Timestamp", timestamp.get(),
                 "Vsync interval", vsync_timing_->vsync_interval().get());
 
-  if (vsync2_callback_) {
-    vsync2_callback_(timestamp, applied_config_stamp);
+  if (vsync_callback_) {
+    vsync_callback_(timestamp, applied_config_stamp);
   }
 }
 

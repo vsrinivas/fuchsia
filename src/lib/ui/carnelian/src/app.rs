@@ -498,7 +498,7 @@ impl App {
                 self.strategy.handle_new_display_controller(display_path).await;
             }
             MessageInternal::DisplayControllerEvent(event) => match event {
-                ControllerEvent::OnVsync2 { display_id, .. } => {
+                ControllerEvent::OnVsync { display_id, .. } => {
                     if let Ok(view) = self.get_view(display_id) {
                         view.handle_display_controller_event(event).await;
                     } else {

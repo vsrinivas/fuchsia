@@ -584,7 +584,7 @@ protocol Controller {
     ApplyConfig();
 
     // TODO(fxbug.dev/72588): This is a temporary solution to support old
-    // ApplyConfig() with new OnVsync2() events. Remove this once the migration
+    // ApplyConfig() with new OnVsync() events. Remove this once the migration
     // is done.
     //
     /// Gets the stamp provided with the latest configuration the client
@@ -680,9 +680,9 @@ protocol Controller {
     ///   older ones will be dropped.
     //
     // TODO(fxbug.dev/72588): Remove "@transitional" tag after implementing
-    // OnVsync2 on all display clients.
+    // OnVsync on all display clients.
     //
-    -> OnVsync2(resource struct {
+    -> OnVsync(resource struct {
         display_id uint64;
         timestamp uint64;
         applied_config_stamp ConfigStamp;

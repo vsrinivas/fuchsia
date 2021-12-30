@@ -151,7 +151,7 @@ bool TestFidlClient::Bind(async_dispatcher_t* dispatcher) {
         }
       }
 
-      void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override { ok_ = false; }
+      void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override { ok_ = false; }
 
       void OnClientOwnershipChange(
           fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
@@ -202,9 +202,9 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
     }
 
     // The FIDL bindings do not know that the caller holds mtx(), so we can't TA_REQ(mtx()) here.
-    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override
+    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override
         TA_NO_THREAD_SAFETY_ANALYSIS {
-      client_->vsync2_count_++;
+      client_->vsync_count_++;
       client_->recent_presented_config_stamp_ = event->applied_config_stamp;
       if (event->cookie) {
         client_->cookie_ = event->cookie;

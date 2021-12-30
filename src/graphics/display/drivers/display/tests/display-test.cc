@@ -45,23 +45,23 @@ TEST(DisplayTest, ClientVSyncOk) {
     EventHandler(fuchsia_hardware_display::wire::ConfigStamp expected_config_stamp)
         : expected_config_stamp_(expected_config_stamp) {}
 
-    void OnVsync2(
-        fidl::WireResponse<fuchsia_hardware_display::Controller::OnVsync2>* event) override {
+    void OnVsync(
+        fidl::WireResponse<fuchsia_hardware_display::Controller::OnVsync>* event) override {
       if (event->applied_config_stamp == expected_config_stamp_) {
-        vsync2_handled_ = true;
+        vsync_handled_ = true;
       }
     }
 
     zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
 
-    bool vsync2_handled_ = false;
+    bool vsync_handled_ = false;
     fuchsia_hardware_display::wire::ConfigStamp expected_config_stamp_ =
         fuchsia_hardware_display::wire::kInvalidConfigStampFidl;
   };
 
   EventHandler event_handler({.value = kClientStampValue});
   EXPECT_TRUE(client.HandleOneEvent(event_handler).ok());
-  EXPECT_TRUE(event_handler.vsync2_handled_);
+  EXPECT_TRUE(event_handler.vsync_handled_);
 
   clientproxy.CloseTest();
 }
