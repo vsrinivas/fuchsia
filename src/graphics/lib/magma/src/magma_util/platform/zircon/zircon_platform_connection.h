@@ -157,11 +157,12 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
                       UnmapBufferGpuCompleter::Sync& _completer) override;
   void BufferRangeOp(BufferRangeOpRequestView request,
                      BufferRangeOpCompleter::Sync& completer) override;
-  void AccessPerformanceCounters(AccessPerformanceCountersRequestView request,
-                                 AccessPerformanceCountersCompleter::Sync& completer) override;
-  void IsPerformanceCounterAccessEnabled(
-      IsPerformanceCounterAccessEnabledRequestView request,
-      IsPerformanceCounterAccessEnabledCompleter::Sync& completer) override;
+  void EnablePerformanceCounterAccess(
+      EnablePerformanceCounterAccessRequestView request,
+      EnablePerformanceCounterAccessCompleter::Sync& completer) override;
+  void IsPerformanceCounterAccessAllowed(
+      IsPerformanceCounterAccessAllowedRequestView request,
+      IsPerformanceCounterAccessAllowedCompleter::Sync& completer) override;
 
   void EnableFlowControl(EnableFlowControlRequestView request,
                          EnableFlowControlCompleter::Sync& _completer) override;

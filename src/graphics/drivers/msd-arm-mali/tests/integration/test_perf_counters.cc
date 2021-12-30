@@ -43,7 +43,7 @@ class TestConnection : public magma::TestDeviceBase {
       zx_status_t zx_status = fdio_service_connect(p.path().c_str(), server_end.release());
       EXPECT_EQ(ZX_OK, zx_status);
       magma_status_t status =
-          magma_connection_access_performance_counters(connection_, client_end.release());
+          magma_connection_enable_performance_counter_access(connection_, client_end.release());
       EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_ACCESS_DENIED);
       if (status == MAGMA_STATUS_OK) {
         return true;

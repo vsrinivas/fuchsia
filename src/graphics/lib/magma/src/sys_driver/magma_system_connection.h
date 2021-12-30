@@ -51,9 +51,9 @@ class MagmaSystemConnection : private MagmaSystemContext::Owner,
   MagmaSystemContext* LookupContext(uint32_t context_id);
   void SetNotificationCallback(msd_connection_notification_callback_t callback,
                                void* token) override;
-  magma::Status AccessPerformanceCounters(
+  magma::Status EnablePerformanceCounterAccess(
       std::unique_ptr<magma::PlatformHandle> access_token) override;
-  bool IsPerformanceCounterAccessEnabled() override { return can_access_performance_counters_; }
+  bool IsPerformanceCounterAccessAllowed() override { return can_access_performance_counters_; }
   magma::Status EnablePerformanceCounters(const uint64_t* counters,
                                           uint64_t counter_count) override;
   magma::Status CreatePerformanceCounterBufferPool(

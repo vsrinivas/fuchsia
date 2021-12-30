@@ -377,7 +377,7 @@ class TestPlatformConnection {
     FlowControlSkip();
 
     bool enabled = false;
-    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessEnabled(&enabled));
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessAllowed(&enabled));
     EXPECT_FALSE(enabled);
 
     {
@@ -385,14 +385,14 @@ class TestPlatformConnection {
       shared_data_->can_access_performance_counters = true;
     }
 
-    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessEnabled(&enabled));
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->IsPerformanceCounterAccessAllowed(&enabled));
     EXPECT_TRUE(enabled);
 
     auto semaphore = magma::PlatformSemaphore::Create();
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              client_connection_->AccessPerformanceCounters(magma::PlatformHandle::Create(handle)));
+    EXPECT_EQ(MAGMA_STATUS_OK, client_connection_->EnablePerformanceCounterAccess(
+                                   magma::PlatformHandle::Create(handle)));
 
     EXPECT_EQ(client_connection_->GetError(), 0);
     {
@@ -598,14 +598,15 @@ class TestDelegate : public magma::PlatformConnection::Delegate {
     return MAGMA_STATUS_OK;
   }
 
-  magma::Status AccessPerformanceCounters(std::unique_ptr<magma::PlatformHandle> event) override {
+  magma::Status EnablePerformanceCounterAccess(
+      std::unique_ptr<magma::PlatformHandle> event) override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     shared_data_->test_access_token = std::move(event);
     shared_data_->test_complete = true;
     return MAGMA_STATUS_OK;
   }
 
-  bool IsPerformanceCounterAccessEnabled() override {
+  bool IsPerformanceCounterAccessAllowed() override {
     std::unique_lock<std::mutex> lock(shared_data_->mutex);
     return shared_data_->can_access_performance_counters;
   }

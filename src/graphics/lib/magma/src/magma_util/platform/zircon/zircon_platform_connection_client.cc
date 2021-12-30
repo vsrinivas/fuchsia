@@ -274,10 +274,10 @@ magma_status_t PrimaryWrapper::BufferRangeOp(uint64_t buffer_id,
   return magma::FromZxStatus(status).get();
 }
 
-magma_status_t PrimaryWrapper::AccessPerformanceCounters(zx::event event) {
+magma_status_t PrimaryWrapper::EnablePerformanceCounterAccess(zx::event event) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();
-  zx_status_t status = client_->AccessPerformanceCounters(std::move(event)).status();
+  zx_status_t status = client_->EnablePerformanceCounterAccess(std::move(event)).status();
   if (status == ZX_OK) {
     UpdateFlowControl();
   }
@@ -657,13 +657,14 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
-  magma_status_t AccessPerformanceCounters(std::unique_ptr<magma::PlatformHandle> handle) override {
+  magma_status_t EnablePerformanceCounterAccess(
+      std::unique_ptr<magma::PlatformHandle> handle) override {
     if (!handle)
       return DRET(MAGMA_STATUS_INVALID_ARGS);
 
     zx::event event(static_cast<ZirconPlatformHandle*>(handle.get())->release());
 
-    magma_status_t result = client_.AccessPerformanceCounters(std::move(event));
+    magma_status_t result = client_.EnablePerformanceCounterAccess(std::move(event));
 
     if (result != MAGMA_STATUS_OK)
       return DRET_MSG(result, "failed to write to channel");
@@ -671,8 +672,8 @@ class ZirconPlatformConnectionClient : public PlatformConnectionClient {
     return MAGMA_STATUS_OK;
   }
 
-  magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) override {
-    auto rsp = client_.IsPerformanceCounterAccessEnabled();
+  magma_status_t IsPerformanceCounterAccessAllowed(bool* enabled_out) override {
+    auto rsp = client_.IsPerformanceCounterAccessAllowed();
     if (!rsp.ok())
       return DRET_MSG(magma::FromZxStatus(rsp.status()).get(), "failed to write to channel");
 

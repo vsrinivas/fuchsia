@@ -323,24 +323,24 @@ void ZirconPlatformConnection::BufferRangeOp(BufferRangeOpRequestView request,
   }
 }
 
-void ZirconPlatformConnection::AccessPerformanceCounters(
-    AccessPerformanceCountersRequestView request,
-    AccessPerformanceCountersCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection:::AccessPerformanceCounters");
+void ZirconPlatformConnection::EnablePerformanceCounterAccess(
+    EnablePerformanceCounterAccessRequestView request,
+    EnablePerformanceCounterAccessCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection:::EnablePerformanceCounterAccess");
   FlowControl();
 
-  magma::Status status = delegate_->AccessPerformanceCounters(
+  magma::Status status = delegate_->EnablePerformanceCounterAccess(
       magma::PlatformHandle::Create(request->access_token.release()));
   if (!status) {
     SetError(&completer, status.get());
   }
 }
 
-void ZirconPlatformConnection::IsPerformanceCounterAccessEnabled(
-    IsPerformanceCounterAccessEnabledRequestView request,
-    IsPerformanceCounterAccessEnabledCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessEnabled");
-  completer.Reply(delegate_->IsPerformanceCounterAccessEnabled());
+void ZirconPlatformConnection::IsPerformanceCounterAccessAllowed(
+    IsPerformanceCounterAccessAllowedRequestView request,
+    IsPerformanceCounterAccessAllowedCompleter::Sync& completer) {
+  DLOG("ZirconPlatformConnection:::IsPerformanceCounterAccessAllowed");
+  completer.Reply(delegate_->IsPerformanceCounterAccessAllowed());
 }
 
 void ZirconPlatformConnection::EnablePerformanceCounters(
@@ -358,7 +358,7 @@ void ZirconPlatformConnection::CreatePerformanceCounterBufferPool(
     CreatePerformanceCounterBufferPoolRequestView request,
     CreatePerformanceCounterBufferPoolCompleter::Sync& completer) {
   FlowControl();
-  auto pool = std::make_unique<ZirconPlatformPerfCountPool>(request->pool,
+  auto pool = std::make_unique<ZirconPlatformPerfCountPool>(request->pool_id,
                                                             request->event_channel.TakeChannel());
   magma::Status status = delegate_->CreatePerformanceCounterBufferPool(std::move(pool));
   if (!status) {
@@ -370,7 +370,7 @@ void ZirconPlatformConnection::ReleasePerformanceCounterBufferPool(
     ReleasePerformanceCounterBufferPoolRequestView request,
     ReleasePerformanceCounterBufferPoolCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->ReleasePerformanceCounterBufferPool(request->pool);
+  magma::Status status = delegate_->ReleasePerformanceCounterBufferPool(request->pool_id);
   if (!status) {
     SetError(&completer, status.get());
   }
@@ -382,7 +382,7 @@ void ZirconPlatformConnection::AddPerformanceCounterBufferOffsetsToPool(
   FlowControl();
   for (auto& offset : request->offsets) {
     magma::Status status = delegate_->AddPerformanceCounterBufferOffsetToPool(
-        request->pool, offset.buffer_id, offset.offset, offset.size);
+        request->pool_id, offset.buffer_id, offset.offset, offset.size);
     if (!status) {
       SetError(&completer, status.get());
     }
@@ -394,7 +394,7 @@ void ZirconPlatformConnection::RemovePerformanceCounterBufferFromPool(
     RemovePerformanceCounterBufferFromPoolCompleter::Sync& completer) {
   FlowControl();
   magma::Status status =
-      delegate_->RemovePerformanceCounterBufferFromPool(request->pool, request->buffer_id);
+      delegate_->RemovePerformanceCounterBufferFromPool(request->pool_id, request->buffer_id);
   if (!status) {
     SetError(&completer, status.get());
   }
@@ -403,7 +403,7 @@ void ZirconPlatformConnection::RemovePerformanceCounterBufferFromPool(
 void ZirconPlatformConnection::DumpPerformanceCounters(
     DumpPerformanceCountersRequestView request, DumpPerformanceCountersCompleter::Sync& completer) {
   FlowControl();
-  magma::Status status = delegate_->DumpPerformanceCounters(request->pool, request->trigger_id);
+  magma::Status status = delegate_->DumpPerformanceCounters(request->pool_id, request->trigger_id);
   if (!status) {
     SetError(&completer, status.get());
   }

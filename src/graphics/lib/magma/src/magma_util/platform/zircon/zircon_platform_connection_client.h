@@ -37,7 +37,7 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t UnmapBufferGpu(uint64_t buffer_id, uint64_t gpu_va);
   magma_status_t BufferRangeOp(uint64_t buffer_id, fuchsia_gpu_magma::wire::BufferOp op,
                                uint64_t start, uint64_t length);
-  magma_status_t AccessPerformanceCounters(zx::event event);
+  magma_status_t EnablePerformanceCounterAccess(zx::event event);
   magma_status_t EnablePerformanceCounters(fidl::VectorView<uint64_t> counters);
   magma_status_t CreatePerformanceCounterBufferPool(uint64_t pool_id, zx::channel event_channel);
   magma_status_t ReleasePerformanceCounterBufferPool(uint64_t pool_id);
@@ -52,8 +52,8 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
   magma_status_t Flush();
   magma_status_t Sync();
 
-  auto IsPerformanceCounterAccessEnabled() {
-    return client_->IsPerformanceCounterAccessEnabled_Sync();
+  auto IsPerformanceCounterAccessAllowed() {
+    return client_->IsPerformanceCounterAccessAllowed_Sync();
   }
 
   // Returns: bool wait, uint64_t message count, uint64_t imported bytes

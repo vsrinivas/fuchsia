@@ -111,7 +111,7 @@ magma::Status MagmaSystemConnection::ExecuteImmediateCommands(uint32_t context_i
   return context->ExecuteImmediateCommands(commands_size, commands, semaphore_count, semaphore_ids);
 }
 
-magma::Status MagmaSystemConnection::AccessPerformanceCounters(
+magma::Status MagmaSystemConnection::EnablePerformanceCounterAccess(
     std::unique_ptr<magma::PlatformHandle> access_token) {
   auto device = device_.lock();
   if (!device) {

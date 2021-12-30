@@ -464,8 +464,14 @@ magma_status_t magma_initialize_logging(magma_handle_t channel) {
   return MAGMA_STATUS_OK;
 }
 
+// TODO(fxbug.dev/76457) remove after soft transition
 magma_status_t magma_connection_access_performance_counters(magma_connection_t connection,
                                                             magma_handle_t channel) {
+  return magma_connection_enable_performance_counter_access(connection, channel);
+}
+
+magma_status_t magma_connection_enable_performance_counter_access(magma_connection_t connection,
+                                                                  magma_handle_t channel) {
   auto handle = magma::PlatformHandle::Create(channel);
   if (!handle)
     return DRET(MAGMA_STATUS_INVALID_ARGS);
@@ -473,12 +479,12 @@ magma_status_t magma_connection_access_performance_counters(magma_connection_t c
   if (!access_token)
     return DRET(MAGMA_STATUS_INTERNAL_ERROR);
   magma_status_t result = magma::PlatformConnectionClient::cast(connection)
-                              ->AccessPerformanceCounters(std::move(access_token));
+                              ->EnablePerformanceCounterAccess(std::move(access_token));
   if (result != MAGMA_STATUS_OK)
     return DRET_MSG(result, "EnablePerformanceCounterAccess failed: %d", result);
   bool enabled = false;
   result = magma::PlatformConnectionClient::cast(connection)
-               ->IsPerformanceCounterAccessEnabled(&enabled);
+               ->IsPerformanceCounterAccessAllowed(&enabled);
   if (result != MAGMA_STATUS_OK)
     return DRET_MSG(result, "IsPerformanceCounterAccessEnabled failed: %d", result);
 

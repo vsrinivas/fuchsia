@@ -360,8 +360,8 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_connection_access_performance_counters(magma_connection_t connection,
-                                                            magma_handle_t channel) {
+magma_status_t magma_connection_enable_performance_counter_access(magma_connection_t connection,
+                                                                  magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 

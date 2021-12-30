@@ -71,9 +71,9 @@ class PlatformConnectionClient : public magma_connection {
                                                   magma_inline_command_buffer* command_buffers,
                                                   uint64_t* messages_sent_out) = 0;
 
-  virtual magma_status_t AccessPerformanceCounters(
+  virtual magma_status_t EnablePerformanceCounterAccess(
       std::unique_ptr<magma::PlatformHandle> handle) = 0;
-  virtual magma_status_t IsPerformanceCounterAccessEnabled(bool* enabled_out) = 0;
+  virtual magma_status_t IsPerformanceCounterAccessAllowed(bool* enabled_out) = 0;
   virtual magma::Status EnablePerformanceCounters(uint64_t* counters, uint64_t counter_count) = 0;
   virtual magma::Status CreatePerformanceCounterBufferPool(
       std::unique_ptr<PlatformPerfCountPoolClient>* pool_out) = 0;

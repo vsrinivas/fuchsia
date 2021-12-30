@@ -873,8 +873,8 @@ class TestConnection {
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &server_endpoint, &client_endpoint));
     fidl::BindServer(loop.dispatcher(), std::move(server_endpoint), &server);
 
-    EXPECT_EQ(expected_result,
-              magma_connection_access_performance_counters(connection_, client_endpoint.release()));
+    EXPECT_EQ(expected_result, magma_connection_enable_performance_counter_access(
+                                   connection_, client_endpoint.release()));
   }
 #endif
 
@@ -892,7 +892,7 @@ class TestConnection {
       zx_status_t zx_status = fdio_service_connect(p.path().c_str(), server_end.release());
       EXPECT_EQ(ZX_OK, zx_status);
       magma_status_t status =
-          magma_connection_access_performance_counters(connection_, client_end.release());
+          magma_connection_enable_performance_counter_access(connection_, client_end.release());
       EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_ACCESS_DENIED);
       if (status == MAGMA_STATUS_OK) {
         success = true;

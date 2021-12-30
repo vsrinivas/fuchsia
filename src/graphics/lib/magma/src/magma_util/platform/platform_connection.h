@@ -62,9 +62,9 @@ class PlatformConnection {
     virtual magma::Status ExecuteImmediateCommands(uint32_t context_id, uint64_t commands_size,
                                                    void* commands, uint64_t semaphore_count,
                                                    uint64_t* semaphore_ids) = 0;
-    virtual magma::Status AccessPerformanceCounters(
+    virtual magma::Status EnablePerformanceCounterAccess(
         std::unique_ptr<magma::PlatformHandle> access_token) = 0;
-    virtual bool IsPerformanceCounterAccessEnabled() = 0;
+    virtual bool IsPerformanceCounterAccessAllowed() = 0;
     virtual magma::Status EnablePerformanceCounters(const uint64_t* counters,
                                                     uint64_t counter_count) = 0;
     virtual magma::Status CreatePerformanceCounterBufferPool(

@@ -488,12 +488,12 @@ TEST_F(TestMagmaFidl, EnablePerformanceCounters) {
     }
 
     {
-      auto wire_result = primary_->AccessPerformanceCounters(std::move(access_token));
+      auto wire_result = primary_->EnablePerformanceCounterAccess(std::move(access_token));
       ASSERT_TRUE(wire_result.ok());
     }
 
     {
-      auto wire_result = primary_->IsPerformanceCounterAccessEnabled_Sync();
+      auto wire_result = primary_->IsPerformanceCounterAccessAllowed_Sync();
       ASSERT_TRUE(wire_result.ok());
       // Should be enabled if the gpu-performance-counters device matches the device under test
       if (wire_result.Unwrap()->enabled) {

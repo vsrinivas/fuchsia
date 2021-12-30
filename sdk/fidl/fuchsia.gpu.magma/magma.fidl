@@ -238,18 +238,6 @@ protocol Primary {
         length uint64;
     });
 
-    /// Tries to enable performance counter FIDL messages. To be successful, |access_token| must
-    /// have been returned by PerformanceCounterAccess.GetPerformanceCountToken() from the matching
-    /// device.
-    AccessPerformanceCounters(resource struct {
-        access_token zx.handle:EVENT;
-    });
-
-    /// Returns true if any AccessPerformanceCounters message has succeeded.
-    IsPerformanceCounterAccessEnabled() -> (struct {
-        enabled bool;
-    });
-
     /// Enables the events OnNotifyMessagesConsumed and OnNotifyMemoryImported.
     EnableFlowControl();
 
@@ -275,62 +263,74 @@ protocol Primary {
         bytes uint64;
     });
 
+    /// Tries to enable performance counter FIDL messages. To be successful, |access_token| must
+    /// have been returned by PerformanceCounterAccess.GetPerformanceCountToken() from the matching
+    /// device.
+    EnablePerformanceCounterAccess(resource struct {
+        access_token zx.handle:EVENT;
+    });
+
+    /// Returns true if any EnablePerformanceCounterAccess message has succeeded.
+    IsPerformanceCounterAccessAllowed() -> (struct {
+        enabled bool;
+    });
+
     /// Enables a set of performance counters (the precise definition depends on the GPU driver).
     /// Disables enabled performance counters that are not in the new set. Performance counters will
     /// also be automatically disabled on connection close. Performance counter access must have
-    /// been enabled using AccessPerformanceCounters before calling this method.
+    /// been enabled using EnablePerformanceCounterAccess before calling this method.
     EnablePerformanceCounters(struct {
         counters vector<uint64>:64;
     });
 
-    /// Creates a pool of buffers that performance counters can be dumped into. |pool| can be an
-    /// arbitrary integer that's currently not in use. Performance counter access must have been
-    /// enabled using AccessPerformanceCounters before calling this method.
+    /// Creates a pool of buffers that performance counters can be dumped into. Performance counter
+    /// access must have been enabled using EnablePerformanceCounterAccess before calling this
+    /// method.
     CreatePerformanceCounterBufferPool(resource struct {
-        pool PerfCountPoolId;
+        pool_id PerfCountPoolId;
         event_channel server_end:PerformanceCounterEvents;
     });
 
     /// Releases a pool of performance counter buffers. Performance counter access must have been
-    /// enabled using AccessPerformanceCounters before calling this method.
+    /// enabled using EnablePerformanceCounterAccess before calling this method.
     ReleasePerformanceCounterBufferPool(struct {
-        pool PerfCountPoolId;
+        pool_id PerfCountPoolId;
     });
 
-    /// Adds set of a offsets into buffers to the pool. |offsets[n].buffer_id| is the koid of a
+    /// Adds a set of offsets into buffers to the pool. |offsets[n].buffer_id| is the koid of a
     /// buffer that was previously imported using ImportBuffer(). The same buffer may be added to
     /// multiple pools. The pool will hold on to a reference to the buffer even after ReleaseBuffer
     /// is called.  When dumped into this entry, counters will be written starting at
-    /// |buffer_offset| bytes into the buffer, and up to |offsets[n].buffer_offset| +
+    /// |offsets[n].buffer_offset| bytes into the buffer, and up to |offsets[n].buffer_offset| +
     /// |offsets[n].buffer_size|. |offsets[n].buffer_size| must be large enough to fit all enabled
-    /// counters. Performance counter access must have been enabled using AccessPerformanceCounters
-    /// before calling this method.
+    /// counters. Performance counter access must have been enabled using
+    /// EnablePerformanceCounterAccess before calling this method.
     AddPerformanceCounterBufferOffsetsToPool(struct {
-        pool PerfCountPoolId;
+        pool_id PerfCountPoolId;
         offsets vector<BufferRange>:64;
     });
 
-    /// Removes every offset of a buffer from the pool. Once this is method is finished being
-    /// handled on the server, no more dumps will be processed into this buffer. In-flight dumps
-    /// into this buffer may be lost.  Performance counter access must have been enabled using
-    /// AccessPerformanceCounters before calling this method.
+    /// Removes every offset of a buffer from the pool. Once this method is finished being handled
+    /// on the server, no more dumps will be processed into this buffer. In-flight dumps into this
+    /// buffer may be lost.  Performance counter access must have been enabled using
+    /// EnablePerformanceCounterAccess before calling this method.
     RemovePerformanceCounterBufferFromPool(struct {
-        pool PerfCountPoolId;
+        pool_id PerfCountPoolId;
         buffer_id zx.koid;
     });
 
     /// Triggers dumping of the performance counters into a buffer pool. May fail silently if there
     /// are no buffers in the pool. |trigger_id| is an arbitrary ID assigned by the client that can
     /// be returned in OnPerformanceCounterReadCompleted. Performance counter access must have been
-    /// enabled using AccessPerformanceCounters before calling this method.
+    /// enabled using EnablePerformanceCounterAccess before calling this method.
     DumpPerformanceCounters(struct {
-        pool PerfCountPoolId;
+        pool_id PerfCountPoolId;
         trigger_id uint32;
     });
 
     /// Sets the values of all listed performance counters to 0. May not be supported by some
-    /// hardware. Performance counter access must have been enabled using AccessPerformanceCounters
-    /// before calling this method.
+    /// hardware. Performance counter access must have been enabled using
+    /// EnablePerformanceCounterAccess before calling this method.
     ClearPerformanceCounters(struct {
         counters vector<uint64>:64;
     });
