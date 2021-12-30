@@ -6,8 +6,8 @@ use anyhow::{ensure, format_err, Context as _, Error};
 use fdio::watch_directory;
 use fidl::endpoints::{self, ClientEnd};
 use fidl_fuchsia_hardware_display::{
-    ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig, ProviderSynchronousProxy,
-    VirtconMode,
+    ConfigStamp, ControllerEvent, ControllerMarker, ControllerProxy, ImageConfig,
+    ProviderSynchronousProxy, VirtconMode,
 };
 use fidl_fuchsia_sysmem::{ImageFormatConstraints, PixelFormatType};
 use fuchsia_async::{self as fasync, DurationExt, OnSignals, TimeoutExt};
@@ -628,7 +628,7 @@ mod frame_collection_tests {
 pub struct VSync {
     pub display_id: u64,
     pub timestamp: u64,
-    pub images: Vec<u64>,
+    pub applied_config_stamp: ConfigStamp,
     pub cookie: u64,
 }
 
@@ -806,12 +806,17 @@ impl FrameBuffer {
             fasync::Task::local(
                 stream
                     .map_ok(move |request| match request {
-                        ControllerEvent::OnVsync { display_id, timestamp, images, cookie } => {
+                        ControllerEvent::OnVsync2 {
+                            display_id,
+                            timestamp,
+                            applied_config_stamp,
+                            cookie,
+                        } => {
                             sender
                                 .unbounded_send(Message::VSync(VSync {
                                     display_id,
                                     timestamp,
-                                    images,
+                                    applied_config_stamp,
                                     cookie,
                                 }))
                                 .unwrap_or_else(|e| eprintln!("{:?}", e));

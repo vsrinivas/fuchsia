@@ -498,7 +498,8 @@ impl App {
                 self.strategy.handle_new_display_controller(display_path).await;
             }
             MessageInternal::DisplayControllerEvent(event) => match event {
-                ControllerEvent::OnVsync { display_id, .. } => {
+                ControllerEvent::OnVsync { .. } => (),
+                ControllerEvent::OnVsync2 { display_id, .. } => {
                     if let Ok(view) = self.get_view(display_id) {
                         view.handle_display_controller_event(event).await;
                     } else {
@@ -506,9 +507,6 @@ impl App {
                         // Log it to help run down why that is.
                         eprintln!("vsync for display {} with no view", display_id);
                     }
-                }
-                ControllerEvent::OnVsync2 { .. } => {
-                    // TODO(fxbug.dev/72588): Implement OnVsync2() handler.
                 }
                 _ => self.strategy.handle_display_controller_event(event).await,
             },

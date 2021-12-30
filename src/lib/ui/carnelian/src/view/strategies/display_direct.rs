@@ -624,7 +624,7 @@ impl ViewStrategy for DisplayDirectViewStrategy {
 
     async fn handle_display_controller_event(&mut self, event: ControllerEvent) {
         match event {
-            ControllerEvent::OnVsync { timestamp, cookie, .. } => {
+            ControllerEvent::OnVsync2 { timestamp, cookie, .. } => {
                 duration!("gfx", "DisplayDirectViewStrategy::OnVsync");
                 let vsync_interval = Duration::from_nanos(
                     100_000_000_000 / self.display.info.modes[0].refresh_rate_e2 as i64,
@@ -639,9 +639,6 @@ impl ViewStrategy for DisplayDirectViewStrategy {
                 self.app_sender
                     .unbounded_send(MessageInternal::Render(self.display.display_id as ViewKey))
                     .expect("unbounded_send");
-            }
-            ControllerEvent::OnVsync2 { .. } => {
-                // TODO(fxbug.dev/72588): Implement OnVsync2() handler.
             }
             _ => (),
         }
