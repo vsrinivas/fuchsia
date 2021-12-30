@@ -17,6 +17,10 @@ This directory contains the following performance tests:
 
 *   `flutter` - Various Flutter performance tests.
 
+*   `flatland_benchmarks_test` - Tests the performance of Flatland's
+    end-to-end present latency, measured by tracing flow events, for minimal
+    Flatland client (`flatland-view-provider`).
+
 *   `garnet_input_latency_benchmarks_test` - Tests the performance of
     end-to-end input latency, measured by tracing flow events, for minimal
     Scenic clients (`simplest_app` and `yuv_to_image_pipe`).

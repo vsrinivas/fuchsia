@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Supported Tiles commands.
 pub enum TilesMethod {
     Start,
+    StartFlatland,
     Stop,
     List,
     Remove,
@@ -20,6 +21,7 @@ impl std::str::FromStr for TilesMethod {
     fn from_str(method: &str) -> Result<Self, Self::Err> {
         match method {
             "Start" => Ok(TilesMethod::Start),
+            "StartFlatland" => Ok(TilesMethod::StartFlatland),
             "Stop" => Ok(TilesMethod::Stop),
             "List" => Ok(TilesMethod::List),
             "Remove" => Ok(TilesMethod::Remove),

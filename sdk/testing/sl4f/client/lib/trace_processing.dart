@@ -9,6 +9,7 @@ export 'src/trace_processing/metrics/camera_metrics.dart';
 export 'src/trace_processing/metrics/common.dart';
 export 'src/trace_processing/metrics/cpu_metrics.dart';
 export 'src/trace_processing/metrics/drm_fps.dart';
+export 'src/trace_processing/metrics/flatland_latency.dart';
 export 'src/trace_processing/metrics/flutter_frame_stats.dart';
 export 'src/trace_processing/metrics/gpu_metrics.dart';
 export 'src/trace_processing/metrics/input_latency.dart';

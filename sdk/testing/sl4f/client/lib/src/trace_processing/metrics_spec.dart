@@ -10,6 +10,7 @@ import 'package:meta/meta.dart';
 import 'metrics/camera_metrics.dart';
 import 'metrics/cpu_metrics.dart';
 import 'metrics/drm_fps.dart';
+import 'metrics/flatland_latency.dart';
 import 'metrics/flutter_frame_stats.dart';
 import 'metrics/gpu_metrics.dart';
 import 'metrics/input_latency.dart';
@@ -65,6 +66,7 @@ const defaultMetricsRegistry = {
   'cpu': cpuMetricsProcessor,
   'drm_fps': drmFpsMetricsProcessor,
   'system_drm_fps': systemDrmFpsMetricsProcessor,
+  'flatland_latency': flatlandLatencyMetricsProcessor,
   'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
   'gpu': gpuMetricsProcessor,
   'input_latency': inputLatencyMetricsProcessor,

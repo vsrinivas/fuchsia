@@ -39,6 +39,28 @@ impl TilesFacade {
             ) {
                 Ok(a) => {
                     self.tiles.replace(Some(a));
+                    fx_log_info!("start_tile");
+                    return Ok(to_value(TileOutput::Success)?);
+                }
+                Err(err) => {
+                    return Err(format_err!("Starting Tiles component failed with err {:?}", err))
+                }
+            }
+        }
+        return Ok(to_value(TileOutput::Success)?);
+    }
+
+    /// Starts tiles.cmx component flatland version.
+    pub fn start_flatland_tile(&self) -> Result<Value, Error> {
+        if self.tiles.borrow().is_none() {
+            match launch(
+                &launcher()?,
+                String::from("fuchsia-pkg://fuchsia.com/tiles#meta/tiles-flatland.cmx"),
+                None,
+            ) {
+                Ok(a) => {
+                    self.tiles.replace(Some(a));
+                    fx_log_info!("start_flatland_tile");
                     return Ok(to_value(TileOutput::Success)?);
                 }
                 Err(err) => {

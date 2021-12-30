@@ -26,6 +26,9 @@ class Tiles {
 
   Future<void> start() => _sl4f.request('tiles_facade.Start', null);
 
+  Future<void> startFlatland() =>
+      _sl4f.request('tiles_facade.StartFlatland', null);
+
   Future<void> stop() => _sl4f.request('tiles_facade.Stop', null);
 
   Future<List<TilesListResponse>> list() async {

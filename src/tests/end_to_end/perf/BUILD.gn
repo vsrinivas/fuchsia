@@ -21,6 +21,7 @@ test_list = [
   "dart_inspect_benchmarks_test",
   "diagnostics_benchmarks_test",
   "fidlc_microbenchmarks_test",
+  "flatland_benchmarks_test",
   "garnet_input_latency_benchmarks_test",
   "kernel_boot_stats_test",
   "microbenchmarks_test",
@@ -207,6 +208,9 @@ group("package_deps_for_infra_only") {
 
     # Used by network device benchmarks.
     "//src/connectivity/network/drivers/network-device/device:network-device-microbenchmarks",
+
+    # These are used by flatland_benchmarks.
+    "//src/ui/examples:flatland-examples",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/sys/activity",

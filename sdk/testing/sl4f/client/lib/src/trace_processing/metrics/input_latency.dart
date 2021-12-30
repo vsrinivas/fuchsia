@@ -14,19 +14,8 @@ class _Results {
 }
 
 _Results _inputLatency(Model model) {
-  final inputEvents = filterEventsTyped<DurationEvent>(getAllEvents(model),
-      category: 'input', name: 'presentation_on_event');
-  final vsyncEvents = inputEvents.map(findFollowingVsync);
-
-  final latencyValues = Zip2Iterable<DurationEvent, DurationEvent, double>(
-          inputEvents,
-          vsyncEvents,
-          (inputEvent, vsyncEvent) => (vsyncEvent == null)
-              ? null
-              : (vsyncEvent.start - inputEvent.start).toMillisecondsF())
-      .where((delta) => delta != null)
-      .toList();
-
+  final latencyValues =
+      getEventToVsyncLatencyValues(model, 'input', 'presentation_on_event');
   if (latencyValues.isEmpty) {
     // TODO: In the future, we could look into allowing clients to specify
     // whether this case should throw or not.  For the moment, we mirror the

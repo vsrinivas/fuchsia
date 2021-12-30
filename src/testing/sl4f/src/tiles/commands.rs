@@ -15,6 +15,7 @@ impl Facade for TilesFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.parse()? {
             TilesMethod::Start => self.start_tile(),
+            TilesMethod::StartFlatland => self.start_flatland_tile(),
             TilesMethod::Stop => self.stop_tile(),
             TilesMethod::List => self.list().await,
             TilesMethod::Remove => self.remove(args).await,

@@ -117,6 +117,24 @@ DurationEvent findFollowingVsync(DurationEvent durationEvent) {
   return null;
 }
 
+/// Returns a list of durations in milliseconds from the given |startEventName|
+/// events in |startEventCategory| to the nearest connected  "VSYNC" events.
+List<double> getEventToVsyncLatencyValues(
+    Model model, String startEventCategory, String startEventName) {
+  final startEvents = filterEventsTyped<DurationEvent>(getAllEvents(model),
+      category: startEventCategory, name: startEventName);
+  final vsyncEvents = startEvents.map(findFollowingVsync);
+
+  return Zip2Iterable<DurationEvent, DurationEvent, double>(
+          startEvents,
+          vsyncEvents,
+          (startEvent, vsyncEvent) => (vsyncEvent == null)
+              ? null
+              : (vsyncEvent.start - startEvent.start).toMillisecondsF())
+      .where((delta) => delta != null)
+      .toList();
+}
+
 /// Compute the mean (https://en.wikipedia.org/wiki/Arithmetic_mean#Definition)
 /// of [values].
 double computeMean<T extends num>(Iterable<T> values) {

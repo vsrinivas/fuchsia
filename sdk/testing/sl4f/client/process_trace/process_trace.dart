@@ -14,6 +14,7 @@ const _metricsReporters = {
   'camera': cameraMetricsReport,
   'drm_fps': drmFpsMetricsReport,
   'system_drm_fps': systemDrmFpsMetricsReport,
+  'flatland_latency': flatlandLatencyReport,
   'flutter_frame_stats': flutterFrameStatsReport,
   'scenic_frame_stats': scenicFrameStatsReport,
   'memory': memoryMetricsReport,
