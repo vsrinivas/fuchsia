@@ -14,6 +14,20 @@ cd "$(dirname "$0")"
 
 source ../../tools/devshell/lib/vars.sh
 
+UPDATE=0
+while getopts u: flag
+do
+  case "${flag}" in
+    u)
+      UPDATE=1
+      ;;
+    *)
+      echo "Invalid option: $flag"
+      exit 1
+      ;;
+  esac
+done
+
 # Create various symlinks needed for the `go list` call below.
 fx-command-run setup-go
 
@@ -29,8 +43,9 @@ ln -s "$FUCHSIA_DIR"/third_party/cobalt "$COBALT_DST"
 
 # Move jiri-managed repositories out of the module.
 TMP=$(mktemp -d)
-readonly ignored=$(git check-ignore ./*)
-echo "$ignored" | xargs --no-run-if-empty -I % mv % "$TMP"/%
+if ignored=$(git check-ignore ./*); then
+  echo "$ignored" | xargs --no-run-if-empty -I % mv % "$TMP"/%
+fi
 
 GOROOTBIN=$(fx-command-run go env GOROOT)/bin
 GO=$GOROOTBIN/go
@@ -61,7 +76,7 @@ IMPORTS_STR=$(
   echo "${IMPORTS[*]}"
 )
 
-THIS_SCRIPT=$(realpath --relative-to="$FUCHSIA_DIR" "$0")
+THIS_SCRIPT=$(realpath --relative-to="$FUCHSIA_DIR" "$(basename "$0")")
 printf '// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -72,17 +87,21 @@ package imports
 
 import (\n%s\n)' "//$THIS_SCRIPT" "$IMPORTS_STR" | $GOFMT -s >imports.go
 
-# The following two lines used to be in the opposite order, which incorrectly
-# caused `go get -u` to fetch gvisor from the default branch instead of the go
-# branch.
-$GO get -u gvisor.dev/gvisor@go
-$GO get -u
-# 0.60.0 contains
-# https://github.com/googleapis/google-api-go-client/commit/aa0f0be which
-# pulls in grpc/xds and with it a lot of unwanted dependencies.
-#
-# See https://github.com/googleapis/google-api-go-client/issues/1283.
-$GO get -u google.golang.org/api@v0.59.0
+if [ $UPDATE -eq 1 ]; then
+  # The following two lines used to be in the opposite order, which incorrectly
+  # caused `go get -u` to fetch gvisor from the default branch instead of the
+  # go branch.
+  $GO get -u gvisor.dev/gvisor@go
+  $GO get -u
+  # 0.60.0 contains
+  # https://github.com/googleapis/google-api-go-client/commit/aa0f0be which
+  # pulls in grpc/xds and with it a lot of unwanted dependencies.
+  #
+  # See https://github.com/googleapis/google-api-go-client/issues/1283.
+  $GO get -u google.golang.org/api@v0.59.0
+else
+  $GO get
+fi
 
 $GO mod tidy
 $GO mod vendor
