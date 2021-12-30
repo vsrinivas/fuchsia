@@ -21,6 +21,14 @@ namespace fir_fidl = ::fuchsia_input_report::wire;
 
 namespace goldfish::sensor {
 
+namespace {
+
+// A "measurement ID" was sent at the end of sensor data payload which allows
+// filtering stale sensor values.
+constexpr uint64_t kMeasurementIdSize = 1u;
+
+}  // namespace
+
 InputDevice::InputDevice(zx_device_t* parent, async_dispatcher_t* dispatcher,
                          OnDestroyCallback on_destroy)
     : InputDeviceType(parent), dispatcher_(dispatcher), on_destroy_(std::move(on_destroy)) {}
@@ -72,7 +80,7 @@ zx_status_t AccelerationInputDevice::OnReport(const SensorReport& rpt) {
   InputReport input_report;
   input_report.event_time = zx::clock::get_monotonic();
 
-  if (rpt.data.size() != 3) {
+  if (rpt.data.size() != 3 && rpt.data.size() != 3 + kMeasurementIdSize) {
     zxlogf(ERROR, "AccelerationInputDevice: invalid data size: %lu", rpt.data.size());
     return ZX_ERR_INVALID_ARGS;
   }
@@ -186,7 +194,7 @@ zx_status_t GyroscopeInputDevice::OnReport(const SensorReport& rpt) {
   InputReport input_report;
   input_report.event_time = zx::clock::get_monotonic();
 
-  if (rpt.data.size() != 3) {
+  if (rpt.data.size() != 3 && rpt.data.size() != 3 + kMeasurementIdSize) {
     zxlogf(ERROR, "GyroscopeInputDevice: invalid data size: %lu", rpt.data.size());
     return ZX_ERR_INVALID_ARGS;
   }
@@ -295,7 +303,7 @@ zx_status_t RgbcLightInputDevice::OnReport(const SensorReport& rpt) {
   InputReport input_report;
   input_report.event_time = zx::clock::get_monotonic();
 
-  if (rpt.data.size() != 4) {
+  if (rpt.data.size() != 4 && rpt.data.size() != 4 + kMeasurementIdSize) {
     zxlogf(ERROR, "RgbcLightInputDevice: invalid data size: %lu", rpt.data.size());
     return ZX_ERR_INVALID_ARGS;
   }

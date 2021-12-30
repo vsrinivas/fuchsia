@@ -5,8 +5,8 @@
 #include "src/ui/input/drivers/goldfish_sensor/input_device.h"
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
-#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <fidl/fuchsia.input.report/cpp/wire.h>
+#include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/driver.h>
@@ -27,7 +27,7 @@
 namespace goldfish::sensor {
 
 template <class DutType>
-class InputDeviceTest : public ::testing::Test {
+class InputDeviceTest : public ::testing::TestWithParam<bool> {
  public:
   void SetUp() override {
     fake_parent_ = MockDevice::FakeRootParent();
@@ -63,6 +63,8 @@ class InputDeviceTest : public ::testing::Test {
 
   DutType* dut() const { return static_cast<DutType*>(dut_); }
 
+  bool HasMeasurementId() const { return GetParam(); }
+
  protected:
   std::shared_ptr<MockDevice> fake_parent_;
   std::unique_ptr<async::TestLoop> loop_;
@@ -92,7 +94,7 @@ class TestAccelerationInputDevice : public AccelerationInputDevice {
 
 using AccelerationInputDeviceTest = InputDeviceTest<TestAccelerationInputDevice>;
 
-TEST_F(AccelerationInputDeviceTest, ReadInputReports) {
+TEST_P(AccelerationInputDeviceTest, ReadInputReports) {
   auto endpoint_result = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_TRUE(endpoint_result.is_ok());
   auto [client_end, server_end] = std::move(endpoint_result.value());
@@ -109,6 +111,9 @@ TEST_F(AccelerationInputDeviceTest, ReadInputReports) {
   ASSERT_TRUE(dut()->readers_created());
 
   SensorReport rpt = {.name = "acceleration", .data = {Numeric(1.0), Numeric(2.0), Numeric(3.0)}};
+  if (HasMeasurementId()) {
+    rpt.data.push_back(Numeric(100L));
+  }
   EXPECT_EQ(dut_->OnReport(rpt), ZX_OK);
 
   reader_client->ReadInputReports(
@@ -171,7 +176,9 @@ TEST_F(AccelerationInputDeviceTest, Descriptor) {
   EXPECT_TRUE(get_descriptor_called);
 }
 
-TEST_F(AccelerationInputDeviceTest, InvalidInputReports) {
+TEST_P(AccelerationInputDeviceTest, InvalidInputReports) {
+  const int64_t kMeasurementId = 100L;
+
   // Invalid number of elements.
   SensorReport invalid_report1 = {.name = "acceleration", .data = {Numeric(1.0), Numeric(2.0)}};
   EXPECT_EQ(dut_->OnReport(invalid_report1), ZX_ERR_INVALID_ARGS);
@@ -179,18 +186,29 @@ TEST_F(AccelerationInputDeviceTest, InvalidInputReports) {
   // Invalid x.
   SensorReport invalid_report2 = {.name = "acceleration",
                                   .data = {"string", Numeric(2.0), Numeric(3.0)}};
+  if (HasMeasurementId()) {
+    invalid_report2.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report2), ZX_ERR_INVALID_ARGS);
 
   // Invalid y.
   SensorReport invalid_report3 = {.name = "acceleration",
                                   .data = {Numeric(2.0), "string", Numeric(3.0)}};
+  if (HasMeasurementId()) {
+    invalid_report3.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report3), ZX_ERR_INVALID_ARGS);
 
   // Invalid z.
   SensorReport invalid_report4 = {.name = "acceleration",
                                   .data = {Numeric(2.0), Numeric(3.0), "string"}};
+  if (HasMeasurementId()) {
+    invalid_report4.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report4), ZX_ERR_INVALID_ARGS);
 }
+
+INSTANTIATE_TEST_SUITE_P(HasMeasurementId, AccelerationInputDeviceTest, testing::Bool());
 
 class TestGyroscopeInputDevice : public GyroscopeInputDevice {
  public:
@@ -211,7 +229,7 @@ class TestGyroscopeInputDevice : public GyroscopeInputDevice {
 
 using GyroscopeInputDeviceTest = InputDeviceTest<TestGyroscopeInputDevice>;
 
-TEST_F(GyroscopeInputDeviceTest, ReadInputReports) {
+TEST_P(GyroscopeInputDeviceTest, ReadInputReports) {
   auto endpoint_result = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_TRUE(endpoint_result.is_ok());
   auto [client_end, server_end] = std::move(endpoint_result.value());
@@ -229,6 +247,10 @@ TEST_F(GyroscopeInputDeviceTest, ReadInputReports) {
 
   SensorReport rpt = {.name = "gyroscope",
                       .data = {Numeric(M_PI), Numeric(2.0 * M_PI), Numeric(3.0 * M_PI)}};
+  if (HasMeasurementId()) {
+    rpt.data.push_back(Numeric(100L));
+  }
+
   EXPECT_EQ(dut_->OnReport(rpt), ZX_OK);
 
   reader_client->ReadInputReports(
@@ -292,7 +314,9 @@ TEST_F(GyroscopeInputDeviceTest, Descriptor) {
   EXPECT_TRUE(get_descriptor_called);
 }
 
-TEST_F(GyroscopeInputDeviceTest, InvalidInputReports) {
+TEST_P(GyroscopeInputDeviceTest, InvalidInputReports) {
+  const int64_t kMeasurementId = 100L;
+
   // Invalid number of elements.
   SensorReport invalid_report1 = {.name = "gyroscope", .data = {Numeric(1.0), Numeric(2.0)}};
   EXPECT_EQ(dut_->OnReport(invalid_report1), ZX_ERR_INVALID_ARGS);
@@ -300,18 +324,29 @@ TEST_F(GyroscopeInputDeviceTest, InvalidInputReports) {
   // Invalid x.
   SensorReport invalid_report2 = {.name = "gyroscope",
                                   .data = {"string", Numeric(2.0), Numeric(3.0)}};
+  if (HasMeasurementId()) {
+    invalid_report2.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report2), ZX_ERR_INVALID_ARGS);
 
   // Invalid y.
   SensorReport invalid_report3 = {.name = "gyroscope",
                                   .data = {Numeric(2.0), "string", Numeric(3.0)}};
+  if (HasMeasurementId()) {
+    invalid_report3.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report3), ZX_ERR_INVALID_ARGS);
 
   // Invalid z.
   SensorReport invalid_report4 = {.name = "gyroscope",
                                   .data = {Numeric(2.0), Numeric(3.0), "string"}};
+  if (HasMeasurementId()) {
+    invalid_report4.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report4), ZX_ERR_INVALID_ARGS);
 }
+
+INSTANTIATE_TEST_SUITE_P(HasMeasurementId, GyroscopeInputDeviceTest, testing::Bool());
 
 class TestRgbcLightInputDevice : public RgbcLightInputDevice {
  public:
@@ -332,7 +367,7 @@ class TestRgbcLightInputDevice : public RgbcLightInputDevice {
 
 using RgbcLightInputDeviceTest = InputDeviceTest<TestRgbcLightInputDevice>;
 
-TEST_F(RgbcLightInputDeviceTest, ReadInputReports) {
+TEST_P(RgbcLightInputDeviceTest, ReadInputReports) {
   auto endpoint_result = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
   ASSERT_TRUE(endpoint_result.is_ok());
   auto [client_end, server_end] = std::move(endpoint_result.value());
@@ -350,6 +385,9 @@ TEST_F(RgbcLightInputDeviceTest, ReadInputReports) {
 
   SensorReport rpt = {.name = "rgbclight",
                       .data = {Numeric(100L), Numeric(200L), Numeric(300L), Numeric(400L)}};
+  if (HasMeasurementId()) {
+    rpt.data.push_back(Numeric(100L));
+  }
   EXPECT_EQ(dut_->OnReport(rpt), ZX_OK);
 
   reader_client->ReadInputReports(
@@ -408,7 +446,9 @@ TEST_F(RgbcLightInputDeviceTest, Descriptor) {
   EXPECT_TRUE(get_descriptor_called);
 }
 
-TEST_F(RgbcLightInputDeviceTest, InvalidInputReports) {
+TEST_P(RgbcLightInputDeviceTest, InvalidInputReports) {
+  const int64_t kMeasurementId = 100L;
+
   // Invalid number of elements.
   SensorReport invalid_report1 = {.name = "rgbc-light",
                                   .data = {Numeric(1.0), Numeric(2.0), Numeric(3.0)}};
@@ -417,22 +457,36 @@ TEST_F(RgbcLightInputDeviceTest, InvalidInputReports) {
   // Invalid r.
   SensorReport invalid_report2 = {.name = "rgbc-light",
                                   .data = {"string", Numeric(100L), Numeric(200L), Numeric(300L)}};
+  if (HasMeasurementId()) {
+    invalid_report2.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report2), ZX_ERR_INVALID_ARGS);
 
   // Invalid g.
   SensorReport invalid_report3 = {.name = "rgbc-light",
                                   .data = {Numeric(100L), "string", Numeric(200L), Numeric(300L)}};
+  if (HasMeasurementId()) {
+    invalid_report3.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report3), ZX_ERR_INVALID_ARGS);
 
   // Invalid b.
   SensorReport invalid_report4 = {.name = "rgbc-light",
                                   .data = {Numeric(100L), Numeric(200L), "string", Numeric(300L)}};
+  if (HasMeasurementId()) {
+    invalid_report4.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report4), ZX_ERR_INVALID_ARGS);
 
   // Invalid a.
   SensorReport invalid_report5 = {.name = "rgbc-light",
                                   .data = {Numeric(100L), Numeric(200L), Numeric(300L), "string"}};
+  if (HasMeasurementId()) {
+    invalid_report5.data.push_back(Numeric(kMeasurementId));
+  }
   EXPECT_EQ(dut_->OnReport(invalid_report5), ZX_ERR_INVALID_ARGS);
 }
+
+INSTANTIATE_TEST_SUITE_P(HasMeasurementId, RgbcLightInputDeviceTest, testing::Bool());
 
 }  // namespace goldfish::sensor
