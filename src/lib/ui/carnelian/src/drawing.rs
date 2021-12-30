@@ -667,11 +667,10 @@ pub struct TextGrid {
 
 impl TextGrid {
     /// Creates a new text grid.
-    pub fn new(cell_size: Size, cell_padding: f32) -> Self {
-        let font_size = cell_size.height - cell_padding;
-        let baseline = Vector2D::new(0.0, font_size - cell_padding);
+    pub fn new(cell_size: &Size, font_size: f32) -> Self {
+        let baseline = Vector2D::new(0.0, font_size);
 
-        Self { font_size, baseline, cell_size }
+        Self { font_size, baseline, cell_size: *cell_size }
     }
 }
 
@@ -824,7 +823,7 @@ mod tests {
             .await;
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
         let mut glyphs = GlyphMap::new();
-        let grid = TextGrid::new(Size::new(16.0, 32.0), 2.0);
+        let grid = TextGrid::new(&Size::new(16.0, 32.0), 14.0);
         let a_cell =
             TextGridCell::new(&mut render_context, 0, 0, 'a', &grid, &FONT_FACE, &mut glyphs);
         assert!(a_cell.raster.is_some(), "Expected some raster");

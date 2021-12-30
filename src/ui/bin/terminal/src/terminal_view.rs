@@ -38,23 +38,21 @@ use {
         term::{SizeInfo, TermMode},
         Term,
     },
-    terminal::font_to_cell_size,
+    terminal::cell_size_from_cell_height,
+    terminal::font_size_from_cell_size,
 };
 
 const FONT: &'static str = "/pkg/data/font.ttf";
 
 // Default font size.
-const FONT_SIZE: f32 = 14.0;
+const FONT_SIZE: f32 = 16.0;
 
 // Amount of change to font size when zooming.
-const FONT_SIZE_INCREMENT: f32 = 14.0;
+const FONT_SIZE_INCREMENT: f32 = 16.0;
 
 // Font size limits.
-const MIN_FONT_SIZE: f32 = 14.0;
-const MAX_FONT_SIZE: f32 = 140.0;
-
-// Padding between text and cell size.
-const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
+const MIN_FONT_SIZE: f32 = 16.0;
+const MAX_FONT_SIZE: f32 = 160.0;
 
 // Maximum terminal size in cells. We support up to 4 layers per cell.
 const MAX_CELLS: u32 = SceneOrder::MAX.as_u32() / 4;
@@ -212,8 +210,8 @@ impl TerminalViewAssistant {
         spawn_command: Vec<CString>,
         spawn_environ: Vec<CString>,
     ) -> TerminalViewAssistant {
-        let font_size = FONT_SIZE;
-        let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
+        let font = load_font(PathBuf::from(FONT)).expect("unable to load font data");
+        let cell_size = cell_size_from_cell_height(FONT_SIZE);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents
             // the term from panicking if a byte is received before a resize event.
@@ -235,8 +233,6 @@ impl TerminalViewAssistant {
 
         let term = Term::new(&TerminalConfig::default(), &size_info, Clipboard::new(), event_proxy);
 
-        let font = load_font(PathBuf::from(FONT)).expect("unable to load font data");
-
         TerminalViewAssistant {
             last_known_size: Size::zero(),
             last_known_size_info: size_info,
@@ -246,7 +242,7 @@ impl TerminalViewAssistant {
             app_context,
             view_key,
             font,
-            font_size,
+            font_size: FONT_SIZE,
             scene_details: None,
             spawn_command,
             spawn_environ,
@@ -272,8 +268,7 @@ impl TerminalViewAssistant {
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
             let floored_size = new_size.floor();
             let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
-            let font_size = self.font_size;
-            let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
+            let cell_size = cell_size_from_cell_height(self.font_size);
             let grid_size =
                 Size::new(term_size.width / cell_size.width, term_size.height / cell_size.height)
                     .floor();
@@ -576,11 +571,13 @@ impl ViewAssistant for TerminalViewAssistant {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
 
+            let cell_size = cell_size_from_cell_height(self.font_size);
+            let font_size = font_size_from_cell_size(&self.font, &cell_size);
             let terminal = builder.facet(Box::new(TerminalFacet::new(
                 self.font.clone(),
-                self.font_size,
+                font_size,
+                &cell_size,
                 self.term.clone(),
-                self.font_size * CELL_PADDING_FACTOR,
                 self.terminal_scene.scroll_thumb(),
             )));
 
@@ -848,7 +845,7 @@ mod tests {
         let alt_modifier = true;
         view.handle_keyboard_event_internal(&make_keyboard_event(equal, alt_modifier))?;
 
-        assert_eq!(view.font_size, 28.0);
+        assert_eq!(view.font_size, 32.0);
 
         let test_buffer = view.pty_context.as_mut().unwrap().test_buffer.take().unwrap();
         assert_eq!(test_buffer, b"");

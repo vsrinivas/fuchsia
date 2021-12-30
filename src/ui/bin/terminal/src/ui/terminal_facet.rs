@@ -53,11 +53,11 @@ impl<T: 'static> TerminalFacet<T> {
     pub fn new(
         font: FontFace,
         font_size: f32,
+        cell_size: &Size,
         term: Rc<RefCell<Term<T>>>,
-        cell_padding: f32,
         scroll_thumb: Option<Rect>,
     ) -> Self {
-        let renderer = Renderer::new(font_size, cell_padding);
+        let renderer = Renderer::new(font_size, cell_size);
 
         TerminalFacet { font, size: Size::zero(), term, scroll_thumb, thumb_order: None, renderer }
     }

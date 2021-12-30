@@ -20,12 +20,19 @@ use {
     },
 };
 
-pub fn font_to_cell_size(font_size: f32, cell_padding: f32) -> Size {
-    let height = font_size + cell_padding;
+/// Returns the cell size given a cell height.
+pub fn cell_size_from_cell_height(height: f32) -> Size {
+    // Use half of cell height for cell width.
     let width = height / 2.0;
 
     // Round to the smallest size equal or greater.
     Size::new(width, height).ceil()
+}
+
+/// Returns the font size that allows ascent + descent to fit within
+/// the specified cell size.
+pub fn font_size_from_cell_size(font: &FontFace, size: &Size) -> f32 {
+    size.height / (font.ascent(1.0) - font.descent(1.0))
 }
 
 #[derive(PartialEq, Debug)]
@@ -240,11 +247,11 @@ pub fn renderable_layers<'b, T, C>(
     let stride = columns * 4;
     term.renderable_cells(config).flat_map(move |cell| {
         let row = cell.line.0 + offset.row;
-        let cell_order = row * stride + (cell.column.0 + offset.column) * 4;
+        let cell_order = row * stride + (cell.column.0 + offset.column);
         let content: LayerContent = cell.into();
         let order = match content {
             LayerContent::Cursor(_) => cell_order,
-            LayerContent::Char(_) => cell_order + 2,
+            LayerContent::Char(_) => cell_order + columns * 2,
         };
         if cell.bg_alpha != 0.0 {
             assert!(cell.bg_alpha == 1.0, "unsupported bg_alpha: {}", cell.bg_alpha);
@@ -260,7 +267,7 @@ pub fn renderable_layers<'b, T, C>(
         }
         .into_iter()
         .chain(std::iter::once(RenderableLayer {
-            order: order + 1,
+            order: order + columns,
             column: cell.column.0,
             row,
             content,
@@ -280,16 +287,15 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(font_size: f32, cell_padding: f32) -> Self {
-        let cell_size = font_to_cell_size(font_size, cell_padding);
-        let textgrid = TextGrid::new(cell_size, cell_padding);
+    pub fn new(font_size: f32, cell_size: &Size) -> Self {
+        let textgrid = TextGrid::new(cell_size, font_size);
         let glyphs = GlyphMap::new();
         let cursors = FxHashMap::default();
         let layers = FxHashMap::default();
         let old_layers = FxHashSet::default();
         let new_layers = FxHashSet::default();
 
-        Self { cell_size, textgrid, glyphs, cursors, layers, old_layers, new_layers }
+        Self { cell_size: *cell_size, textgrid, glyphs, cursors, layers, old_layers, new_layers }
     }
 
     pub fn render<I>(
@@ -490,14 +496,14 @@ mod tests {
             result,
             vec![
                 RenderableLayer {
-                    order: 3,
+                    order: 6,
                     column: 0,
                     row: 0,
                     content: LayerContent::Char('A'),
                     rgb: fg
                 },
                 RenderableLayer {
-                    order: 5,
+                    order: 3,
                     column: 1,
                     row: 0,
                     content: LayerContent::Cursor(CursorStyle::Block),
@@ -521,7 +527,7 @@ mod tests {
         let size = size2(64, 64);
         let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
-        let mut renderer = Renderer::new(14.0, 2.0);
+        let mut renderer = Renderer::new(14.0, &Size::new(8.0, 16.0));
         let layers = vec![
             RenderableLayer {
                 order: 0,

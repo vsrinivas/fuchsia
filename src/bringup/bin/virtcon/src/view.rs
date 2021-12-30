@@ -38,7 +38,8 @@ use {
         grid::Scroll,
         term::{color::Rgb, SizeInfo, TermMode},
     },
-    terminal::font_to_cell_size,
+    terminal::cell_size_from_cell_height,
+    terminal::font_size_from_cell_size,
 };
 
 fn is_control_only(modifiers: &input::Modifiers) -> bool {
@@ -91,11 +92,8 @@ const STATUS_COLOR_DEFAULT: Rgb = Rgb { r: 170, g: 170, b: 170 };
 const STATUS_COLOR_ACTIVE: Rgb = Rgb { r: 255, g: 255, b: 85 };
 const STATUS_COLOR_UPDATED: Rgb = Rgb { r: 85, g: 255, b: 85 };
 
-// Padding between text and cell size.
-const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
-
 // Amount of change to font size when zooming.
-const FONT_SIZE_INCREMENT: f32 = 14.0;
+const FONT_SIZE_INCREMENT: f32 = 16.0;
 
 // Maximum terminal size in cells. We support up to 4 layers per cell.
 const MAX_CELLS: u32 = SceneOrder::MAX.as_u32() / 4;
@@ -228,7 +226,7 @@ impl VirtualConsoleViewAssistant {
 
     // Resize all terminals for 'new_size'.
     fn resize_terminals(&mut self, new_size: &Size, new_font_size: f32) {
-        let cell_size = font_to_cell_size(new_font_size, new_font_size * CELL_PADDING_FACTOR);
+        let cell_size = cell_size_from_cell_height(new_font_size);
         let grid_size =
             Size::new(new_size.width / cell_size.width, new_size.height / cell_size.height).floor();
         // Clamp width to respect `MAX_CELLS`.
@@ -588,10 +586,9 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 } else {
                     1.0
                 };
-                let font_size = self.font_size * scale_factor;
-                let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
+                let cell_height = self.font_size * scale_factor;
 
-                self.resize_terminals(&context.size, font_size);
+                self.resize_terminals(&context.size, cell_height);
 
                 let active_term =
                     self.terminals.get(&self.active_terminal_id).map(|(t, _)| t.clone_term());
@@ -603,15 +600,18 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 let tab_width =
                     (columns as usize / (status.len() + 1)).clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
 
+                let cell_size = cell_size_from_cell_height(cell_height);
+                let font_size = font_size_from_cell_size(&self.font, &cell_size);
+
                 // Add the text grid to the scene.
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
                     self.font.clone(),
                     font_size,
+                    &cell_size,
                     self.color_scheme,
                     active_term,
                     status,
                     tab_width,
-                    font_size * CELL_PADDING_FACTOR,
                 )));
 
                 self.cell_size = cell_size;

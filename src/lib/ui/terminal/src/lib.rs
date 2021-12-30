@@ -4,5 +4,6 @@
 
 pub mod renderer;
 pub use crate::renderer::{
-    font_to_cell_size, renderable_layers, LayerContent, Offset, RenderableLayer, Renderer,
+    cell_size_from_cell_height, font_size_from_cell_size, renderable_layers, LayerContent, Offset,
+    RenderableLayer, Renderer,
 };

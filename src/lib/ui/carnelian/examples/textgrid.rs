@@ -58,9 +58,9 @@ struct Args {
     #[argh(option, from_str_fn(size_from_str))]
     cell_size: Option<Size>,
 
-    /// cell padding (default is 2)
-    #[argh(option, default = "2.0")]
-    cell_padding: f32,
+    /// font size (default is 14)
+    #[argh(option, default = "14.0")]
+    font_size: f32,
 }
 
 fn color_from_str(value: &str) -> Result<Color, String> {
@@ -80,7 +80,7 @@ struct TextGridAppAssistant {
     background: Color,
     foreground: Color,
     cell_size: Size,
-    cell_padding: f32,
+    font_size: f32,
 }
 
 impl Default for TextGridAppAssistant {
@@ -92,9 +92,9 @@ impl Default for TextGridAppAssistant {
         let background = args.background.unwrap_or(BLACK_COLOR);
         let foreground = args.foreground.unwrap_or(Color::white());
         let cell_size = args.cell_size.unwrap_or(Size::new(8.0, 16.0));
-        let cell_padding = args.cell_padding;
+        let font_size = args.font_size;
 
-        Self { display_rotation, filename, background, foreground, cell_size, cell_padding }
+        Self { display_rotation, filename, background, foreground, cell_size, font_size }
     }
 }
 
@@ -108,14 +108,10 @@ impl AppAssistant for TextGridAppAssistant {
         let background = self.background;
         let foreground = self.foreground;
         let cell_size = self.cell_size;
-        let cell_padding = self.cell_padding;
+        let font_size = self.font_size;
 
         Ok(Box::new(TextGridViewAssistant::new(
-            filename,
-            background,
-            foreground,
-            cell_size,
-            cell_padding,
+            filename, background, foreground, cell_size, font_size,
         )))
     }
 
@@ -142,11 +138,11 @@ impl TextGridFacet {
     fn new(
         font: FontFace,
         cell_size: Size,
-        cell_padding: f32,
+        font_size: f32,
         foreground: Color,
         pages: Vec<Vec<(u16, u16, char)>>,
     ) -> Self {
-        let textgrid = TextGrid::new(cell_size, cell_padding);
+        let textgrid = TextGrid::new(&cell_size, font_size);
         let glyphs = GlyphMap::new();
         let cells: FxHashMap<(u16, u16), char> = FxHashMap::default();
 
