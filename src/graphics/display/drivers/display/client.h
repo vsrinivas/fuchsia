@@ -381,7 +381,7 @@ class ClientProxy : public ClientParent {
 
   // Requires holding controller_->mtx() lock
   zx_status_t OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                             config_stamp_t controller_stamp, uint64_t* image_ids, size_t count);
+                             config_stamp_t controller_stamp);
   void OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
                          const uint64_t* displays_removed, size_t removed_count);
   void SetOwnership(bool is_owner);
@@ -467,9 +467,6 @@ class ClientProxy : public ClientParent {
     uint64_t display_id;
     zx_time_t timestamp;
     config_stamp_t config_stamp;
-    // TODO(fxbug.dev/72588): Remove once we migrate all clients to |OnVsync2()|.
-    uint64_t image_ids[kMaxImageHandles];
-    size_t count;
   };
 
   fbl::RingBuffer<vsync_msg_t, kVsyncBufferSize> buffered_vsync_messages_;

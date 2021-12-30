@@ -1637,8 +1637,7 @@ zx_status_t ClientProxy::OnCaptureComplete() {
 }
 
 zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
-                                        config_stamp_t controller_stamp, uint64_t* image_ids,
-                                        size_t count) {
+                                        config_stamp_t controller_stamp) {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
   {
@@ -1697,12 +1696,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
         .display_id = display_id,
         .timestamp = timestamp,
         .config_stamp = client_stamp,
-        .count = count,
     };
-    ZX_DEBUG_ASSERT(count <= kMaxImageHandles);
-    for (uint64_t i = 0; i < count; i++) {
-      v.image_ids[i] = image_ids[i];
-    }
     buffered_vsync_messages_.push(v);
     return ZX_ERR_BAD_STATE;
   }
@@ -1736,15 +1730,6 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
     vsync_msg_t v = buffered_vsync_messages_.front();
     buffered_vsync_messages_.pop();
     event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-      // TODO(fxbug.dev/72588): We should only send |OnVsync2| events once we
-      // finish migrating all clients.
-      fidl::Result result =
-          event_sender.OnVsync(v.display_id, v.timestamp,
-                               fidl::VectorView<uint64_t>::FromExternal(v.image_ids, v.count), 0);
-      if (!result.ok()) {
-        return result;
-      }
-
       return event_sender.OnVsync2(
           v.display_id, v.timestamp,
           fuchsia_hardware_display::wire::ConfigStamp{v.config_stamp.value}, 0);
@@ -1759,14 +1744,6 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 
   // Send the latest vsync event
   event_sending_result = handler_.binding_state().SendEvents([&](auto&& event_sender) {
-    // TODO(fxbug.dev/72588): We should only send |OnVsync2| events once we
-    // finish migrating all clients.
-    fidl::Result result = event_sender.OnVsync(
-        display_id, timestamp, fidl::VectorView<uint64_t>::FromExternal(image_ids, count), cookie);
-    if (!result.ok()) {
-      return result;
-    }
-
     return event_sender.OnVsync2(display_id, timestamp,
                                  fuchsia_hardware_display::wire::ConfigStamp{client_stamp.value},
                                  cookie);

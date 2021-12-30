@@ -35,7 +35,7 @@ TEST(DisplayTest, ClientVSyncOk) {
       .client_stamp = {.value = kClientStampValue},
   });
 
-  status = clientproxy.OnDisplayVsync(0, 0, {.value = kControllerStampValue}, nullptr, 0);
+  status = clientproxy.OnDisplayVsync(0, 0, {.value = kControllerStampValue});
   EXPECT_OK(status);
 
   fidl::WireSyncClient<fuchsia_hardware_display::Controller> client(std::move(client_chl));
@@ -46,10 +46,7 @@ TEST(DisplayTest, ClientVSyncOk) {
         : expected_config_stamp_(expected_config_stamp) {}
 
     void OnVsync(
-        fidl::WireResponse<fuchsia_hardware_display::Controller::OnVsync>* event) override {
-      vsync_handled_ = true;
-    }
-
+        fidl::WireResponse<fuchsia_hardware_display::Controller::OnVsync>* event) override {}
     void OnVsync2(
         fidl::WireResponse<fuchsia_hardware_display::Controller::OnVsync2>* event) override {
       if (event->applied_config_stamp == expected_config_stamp_) {
@@ -59,18 +56,13 @@ TEST(DisplayTest, ClientVSyncOk) {
 
     zx_status_t Unknown() override { return ZX_ERR_NOT_SUPPORTED; }
 
-    bool vsync_handled_ = false;
     bool vsync2_handled_ = false;
     fuchsia_hardware_display::wire::ConfigStamp expected_config_stamp_ =
         fuchsia_hardware_display::wire::kInvalidConfigStampFidl;
   };
 
   EventHandler event_handler({.value = kClientStampValue});
-  // Two events (one OnVsync(), one OnVsync2()) will be handled.
   EXPECT_TRUE(client.HandleOneEvent(event_handler).ok());
-  EXPECT_TRUE(client.HandleOneEvent(event_handler).ok());
-
-  EXPECT_TRUE(event_handler.vsync_handled_);
   EXPECT_TRUE(event_handler.vsync2_handled_);
 
   clientproxy.CloseTest();
@@ -85,7 +77,7 @@ TEST(DisplayTest, ClientVSynPeerClosed) {
   clientproxy.EnableVsync(true);
   fbl::AutoLock lock(controller.mtx());
   client_chl.reset();
-  status = clientproxy.OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO, nullptr, 0);
+  status = clientproxy.OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO);
   EXPECT_TRUE(status == ZX_ERR_PEER_CLOSED);
   clientproxy.CloseTest();
 }
@@ -97,7 +89,7 @@ TEST(DisplayTest, ClientVSyncNotSupported) {
   Controller controller(nullptr);
   ClientProxy clientproxy(&controller, false, false, 0, std::move(server_chl));
   fbl::AutoLock lock(controller.mtx());
-  status = clientproxy.OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO, nullptr, 0);
+  status = clientproxy.OnDisplayVsync(0, 0, INVALID_CONFIG_STAMP_BANJO);
   EXPECT_TRUE(status == ZX_ERR_NOT_SUPPORTED);
   clientproxy.CloseTest();
 }

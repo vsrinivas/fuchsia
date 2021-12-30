@@ -202,18 +202,6 @@ void TestFidlClient::OnEventMsgAsync(async_dispatcher_t* dispatcher, async::Wait
     }
 
     // The FIDL bindings do not know that the caller holds mtx(), so we can't TA_REQ(mtx()) here.
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override
-        TA_NO_THREAD_SAFETY_ANALYSIS {
-      client_->vsync_count_++;
-      client_->recent_vsync_images_.clear();
-      for (const uint64_t img : event->images) {
-        client_->recent_vsync_images_.push_back(img);
-      }
-      if (event->cookie) {
-        client_->cookie_ = event->cookie;
-      }
-    }
-
     void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override
         TA_NO_THREAD_SAFETY_ANALYSIS {
       client_->vsync2_count_++;

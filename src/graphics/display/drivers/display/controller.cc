@@ -419,7 +419,6 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   // TODO(fxbug.dev/72588): This is a stopgap solution to support existing
   // OnVsync() DisplayController FIDL events. In the future we'll remove this
   // logic and only return config seqnos in OnVsync() events instead.
-  std::vector<uint64_t> primary_images, virtcon_images;
 
   if (controller_config_stamp != INVALID_CONFIG_STAMP_BANJO) {
     auto& config_image_queue = info->config_image_queue;
@@ -445,28 +444,16 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
         // NOTE: If changing this flow name or ID, please also do so in the
         // corresponding FLOW_BEGIN in display_swapchain.cc.
         TRACE_FLOW_END("gfx", "present_image", image.image_id);
-
-        if (vc_client_ && image.client_id == vc_client_->id()) {
-          virtcon_images.push_back(image.image_id);
-        } else if (primary_client_ && image.client_id == primary_client_->id()) {
-          primary_images.push_back(image.image_id);
-        } else {
-          // Otherwise, if the client ID isn't either current primary client
-          // nor virtcon client, there must be a client change and this image
-          // is not used by current client anymore, so we drop the image.
-        }
       }
     }
   }
 
   switch (config_stamp_source) {
     case ConfigStampSource::kPrimary:
-      primary_client_->OnDisplayVsync(display_id, timestamp, controller_config_stamp,
-                                      primary_images.data(), primary_images.size());
+      primary_client_->OnDisplayVsync(display_id, timestamp, controller_config_stamp);
       break;
     case ConfigStampSource::kVirtcon:
-      vc_client_->OnDisplayVsync(display_id, timestamp, controller_config_stamp,
-                                 virtcon_images.data(), virtcon_images.size());
+      vc_client_->OnDisplayVsync(display_id, timestamp, controller_config_stamp);
       break;
     case ConfigStampSource::kNeither:
       if (primary_client_) {

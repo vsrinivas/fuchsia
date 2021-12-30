@@ -93,11 +93,6 @@ class TestFidlClient {
   zx::handle device_handle_;
   bool has_ownership_ = false;
 
-  uint64_t vsync_count() const {
-    fbl::AutoLock lock(mtx());
-    return vsync_count_;
-  }
-
   uint64_t vsync2_count() const {
     fbl::AutoLock lock(mtx());
     return vsync2_count_;
@@ -108,8 +103,6 @@ class TestFidlClient {
     return recent_presented_config_stamp_;
   }
 
-  const std::vector<uint64_t>& recent_vsync_images() const { return recent_vsync_images_; }
-
   uint64_t get_cookie() const { return cookie_; }
 
   fbl::Mutex* mtx() const { return &mtx_; }
@@ -117,12 +110,9 @@ class TestFidlClient {
  private:
   mutable fbl::Mutex mtx_;
   async_dispatcher_t* dispatcher_ = nullptr;
-  uint64_t vsync_count_ TA_GUARDED(mtx()) = 0;
   uint64_t vsync2_count_ TA_GUARDED(mtx()) = 0;
   uint64_t cookie_ = 0;
   fuchsia_hardware_display::wire::ConfigStamp recent_presented_config_stamp_;
-  // TODO(fxbug.dev/72588): Remove after finishing migration to OnVsync2.
-  std::vector<uint64_t> recent_vsync_images_;
   const fidl::WireSyncClient<fuchsia_sysmem::Allocator>& sysmem_;
 
   zx::status<uint64_t> ImportImageWithSysmemLocked(
