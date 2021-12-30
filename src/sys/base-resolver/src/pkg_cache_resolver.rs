@@ -33,19 +33,12 @@ async fn get_pkg_cache_hash(
     boot_args: &fidl_fuchsia_boot::ArgumentsProxy,
     blobfs: blobfs::Client,
 ) -> Result<fuchsia_hash::Hash, anyhow::Error> {
-    let system_image = system_image::get_system_image_hash(&boot_args)
+    system_image::SystemImage::new(blobfs, boot_args)
         .await
-        .context("failed to get system_image hash")?;
-    let system_image = package_directory::RootDir::new(blobfs, system_image)
+        .context("failed to load system_image package")?
+        .static_packages()
         .await
-        .context("failed to create RootDir for system_image")?;
-    let static_packages = system_image
-        .read_file("data/static_packages")
-        .await
-        .context("failed to read data/static_packages from system_image")?;
-    let static_packages = system_image::StaticPackages::deserialize(static_packages.as_slice())
-        .context("failed to deserialize static_packages")?;
-    static_packages
+        .context("failed to read static packages")?
         .hash_for_package(&pkg_cache_path())
         .ok_or_else(|| anyhow::anyhow!("failed to find pkg-cache hash in static packages manifest"))
 }
