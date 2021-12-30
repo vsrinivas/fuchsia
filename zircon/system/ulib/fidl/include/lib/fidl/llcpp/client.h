@@ -173,21 +173,23 @@ class WireClient {
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
   }
 
-  // Returns the interface for making outgoing FIDL calls. If the binding has
-  // been torn down, calls on the interface return error with status
-  // |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
+  // Returns the interface for making outgoing FIDL calls. The client must be
+  // initialized first.
+  //
+  // If the binding has been torn down, calls on the interface return error with
+  // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
   //
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |WireClient| reference-counting type.
-  ClientImpl* operator->() const { return get(); }
-  ClientImpl& operator*() const { return *get(); }
+  ClientImpl* operator->() const { return &get(); }
+  ClientImpl& operator*() const { return get(); }
 
  private:
   // Allow unit tests to peek into the internals of this class.
   friend ::fidl_testing::ClientChecker;
 
-  ClientImpl* get() const { return static_cast<ClientImpl*>(controller_.get()); }
+  ClientImpl& get() const { return *static_cast<ClientImpl*>(&controller_.get()); }
 
   WireClient(const WireClient& other) noexcept = delete;
   WireClient& operator=(const WireClient& other) noexcept = delete;
@@ -439,22 +441,24 @@ class WireSharedClient final {
   // of the channel while the binding is alive.
   WireSharedClient Clone() { return WireSharedClient(*this); }
 
-  // Returns the interface for making outgoing FIDL calls. If the client has
-  // been unbound, calls on the interface return error with status
-  // |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
+  // Returns the interface for making outgoing FIDL calls. The client must be
+  // initialized first.
+  //
+  // If the binding has been torn down, calls on the interface return error with
+  // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
   //
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |WireSharedClient| reference-counting type. A client may be cloned and
   // handed off through the |Clone| method.
-  ClientImpl* operator->() const { return get(); }
-  ClientImpl& operator*() const { return *get(); }
+  ClientImpl* operator->() const { return &get(); }
+  ClientImpl& operator*() const { return get(); }
 
  private:
   // Allow unit tests to peek into the internals of this class.
   friend ::fidl_testing::ClientChecker;
 
-  ClientImpl* get() const { return static_cast<ClientImpl*>(controller_.get()); }
+  ClientImpl& get() const { return *static_cast<ClientImpl*>(&controller_.get()); }
 
   WireSharedClient(const WireSharedClient& other) noexcept = default;
   WireSharedClient& operator=(const WireSharedClient& other) noexcept = default;

@@ -186,30 +186,34 @@ class Client {
                      internal::MakeAnyEventDispatcher(event_handler),
                      fidl::AnyTeardownObserver::Noop(),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
-    natural_client_impl_.emplace(controller_.get());
+    natural_client_impl_.emplace(&controller_.get());
   }
 
   // Returns the interface for making outgoing FIDL calls using natural objects.
+  // The client must be initialized first.
+  //
   // If the binding has been torn down, calls on the interface return error with
   // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
   //
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
-  const NaturalClientImpl* operator->() const { return get(); }
-  const NaturalClientImpl& operator*() const { return *get(); }
+  const NaturalClientImpl* operator->() const { return &get(); }
+  const NaturalClientImpl& operator*() const { return get(); }
 
   // Returns the interface for making outgoing FIDL calls using wire objects.
+  // The client must be initialized first.
+  //
   // If the binding has been torn down, calls on the interface return error with
   // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
   //
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
-  WireClientImpl* wire() const { return static_cast<WireClientImpl*>(controller_.get()); }
+  WireClientImpl* wire() const { return static_cast<WireClientImpl*>(&controller_.get()); }
 
  private:
-  const NaturalClientImpl* get() const { return &natural_client_impl_.value(); }
+  const NaturalClientImpl& get() const { return natural_client_impl_.value(); }
 
   Client(const Client& other) noexcept = delete;
   Client& operator=(const Client& other) noexcept = delete;
@@ -422,7 +426,7 @@ class SharedClient final {
                      fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      internal::MakeAnyEventDispatcher(event_handler), std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
-    natural_client_impl_ = std::make_shared<NaturalClientImpl>(controller_.get());
+    natural_client_impl_ = std::make_shared<NaturalClientImpl>(&controller_.get());
   }
 
   // Overload of |Bind| that omits the |event_handler|, to
@@ -452,29 +456,33 @@ class SharedClient final {
   SharedClient Clone() { return SharedClient(*this); }
 
   // Returns the interface for making outgoing FIDL calls using natural objects.
+  // The client must be initialized first.
+  //
   // If the binding has been torn down, calls on the interface return error with
   // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
   //
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
-  const NaturalClientImpl* operator->() const { return get(); }
-  const NaturalClientImpl& operator*() const { return *get(); }
+  const NaturalClientImpl* operator->() const { return &get(); }
+  const NaturalClientImpl& operator*() const { return get(); }
 
   // Returns the interface for making outgoing FIDL calls using wire objects.
+  // The client must be initialized first.
+  //
   // If the binding has been torn down, calls on the interface return error with
   // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
   //
   // Persisting this pointer to a local variable is discouraged, since that
   // results in unsafe borrows. Always prefer making calls directly via the
   // |Client| reference-counting type.
-  WireClientImpl* wire() const { return static_cast<WireClientImpl*>(controller_.get()); }
+  WireClientImpl* wire() const { return static_cast<WireClientImpl*>(&controller_.get()); }
 
  private:
-  const NaturalClientImpl* get() const {
+  const NaturalClientImpl& get() const {
     auto* impl = natural_client_impl_.get();
     ZX_ASSERT(impl != nullptr);
-    return impl;
+    return *impl;
   }
 
   SharedClient(const SharedClient& other) noexcept = default;

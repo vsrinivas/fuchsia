@@ -20,6 +20,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "async_loop_and_endpoints_fixture.h"
 #include "client_checkers.h"
 #include "lsan_disabler.h"
 #include "mock_client_impl.h"
@@ -29,6 +30,10 @@ namespace {
 
 using ::fidl_testing::TestProtocol;
 using ::fidl_testing::TestResponseContext;
+
+//
+// Client binding/transaction bookkeeping tests
+//
 
 TEST(ClientBindingTestCase, AsyncTxn) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -237,11 +242,6 @@ TEST(ClientBindingTestCase, Events) {
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
-TEST(ClientBindingTestCase, UnbindOnInvalidClientShouldPanic) {
-  WireSharedClient<TestProtocol> client;
-  ASSERT_DEATH([&] { client.AsyncTeardown(); });
-}
-
 TEST(ClientBindingTestCase, UnbindWhileActiveChannelRefs) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -425,11 +425,40 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
-TEST(WireClient, UseOnDispatcherThread) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
+//
+// Client wrapper tests
+//
+class WireClientTest : public fidl_testing::AsyncLoopAndEndpointsFixture {};
+
+TEST_F(WireClientTest, DefaultConstruction) {
+  WireClient<TestProtocol> client;
+  EXPECT_FALSE(client.is_valid());
+}
+
+TEST_F(WireClientTest, InvalidAccess) {
+  WireClient<TestProtocol> client;
+  ASSERT_DEATH([&] {
+    client->MakeSyncCallWith(
+        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
+  });
+}
+
+TEST_F(WireClientTest, Move) {
+  WireClient<TestProtocol> client;
+  client.Bind(std::move(endpoints().client), loop().dispatcher());
+  EXPECT_TRUE(client.is_valid());
+
+  WireClient<TestProtocol> client2 = std::move(client);
+  EXPECT_FALSE(client.is_valid());
+  EXPECT_TRUE(client2.is_valid());
+  ASSERT_DEATH([&] {
+    client->MakeSyncCallWith(
+        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
+  });
+}
+
+TEST_F(WireClientTest, UseOnDispatcherThread) {
+  auto [local, remote] = std::move(endpoints());
 
   std::optional<fidl::UnbindInfo> error;
   std::thread::id error_handling_thread;
@@ -450,15 +479,15 @@ TEST(WireClient, UseOnDispatcherThread) {
   EventHandler handler(error, error_handling_thread);
 
   // Create the client on the current thread.
-  fidl::WireClient client(std::move(local), loop.dispatcher(), &handler);
+  WireClient client(std::move(local), loop().dispatcher(), &handler);
 
   // Dispatch messages on the current thread.
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(loop().RunUntilIdle());
 
   // Trigger an error; receive |on_fidl_error| on the same thread.
   ASSERT_FALSE(error.has_value());
   remote.reset();
-  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_OK(loop().RunUntilIdle());
   ASSERT_TRUE(error.has_value());
   ASSERT_EQ(std::this_thread::get_id(), error_handling_thread);
 
@@ -466,14 +495,11 @@ TEST(WireClient, UseOnDispatcherThread) {
   client = {};
 }
 
-TEST(WireClient, CannotDestroyOnAnotherThread) {
+TEST_F(WireClientTest, CannotDestroyOnAnotherThread) {
   fidl_testing::RunWithLsanDisabled([&] {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-    ASSERT_OK(endpoints.status_value());
-    auto [local, remote] = std::move(*endpoints);
+    auto [local, remote] = std::move(endpoints());
 
-    fidl::WireClient client(std::move(local), loop.dispatcher());
+    WireClient client(std::move(local), loop().dispatcher());
     remote.reset();
 
     // Panics when a foreign thread attempts to destroy the client.
@@ -484,60 +510,48 @@ TEST(WireClient, CannotDestroyOnAnotherThread) {
   });
 }
 
-TEST(WireClient, CanShutdownLoopFromAnotherThread) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
+TEST_F(WireClientTest, CanShutdownLoopFromAnotherThread) {
+  auto [local, remote] = std::move(endpoints());
 
-  fidl::WireClient client(std::move(local), loop.dispatcher());
+  WireClient client(std::move(local), loop().dispatcher());
 
-  std::thread foreign_thread([&] { loop.Shutdown(); });
+  std::thread foreign_thread([&] { loop().Shutdown(); });
   foreign_thread.join();
 }
 
-TEST(WireClient, CanShutdownLoopFromAnotherThreadWhileWorkingThreadIsRunning) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
+TEST_F(WireClientTest, CanShutdownLoopFromAnotherThreadWhileWorkingThreadIsRunning) {
+  auto [local, remote] = std::move(endpoints());
 
-  loop.StartThread();
-  fidl::WireClient client(std::move(local), loop.dispatcher());
+  loop().StartThread();
+  WireClient client(std::move(local), loop().dispatcher());
 
   // Async teardown work may happen on |foreign_thread| or the worker thread
   // started by |StartThread|, but we should support both.
-  std::thread foreign_thread([&] { loop.Shutdown(); });
+  std::thread foreign_thread([&] { loop().Shutdown(); });
   foreign_thread.join();
 }
 
-TEST(WireClient, CanShutdownLoopFromAnotherThreadWhileTeardownIsPending) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
+TEST_F(WireClientTest, CanShutdownLoopFromAnotherThreadWhileTeardownIsPending) {
+  auto [local, remote] = std::move(endpoints());
 
-  fidl::WireClient client(std::move(local), loop.dispatcher());
+  WireClient client(std::move(local), loop().dispatcher());
   client = {};
 
   // Allow any async teardown work to happen on |foreign_thread|.
-  std::thread foreign_thread([&] { loop.Shutdown(); });
+  std::thread foreign_thread([&] { loop().Shutdown(); });
   foreign_thread.join();
 }
 
-TEST(WireClient, CannotDispatchOnAnotherThread) {
+TEST_F(WireClientTest, CannotDispatchOnAnotherThread) {
   fidl_testing::RunWithLsanDisabled([&] {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-    ASSERT_OK(endpoints.status_value());
-    auto [local, remote] = std::move(*endpoints);
+    auto [local, remote] = std::move(endpoints());
 
-    fidl::WireClient client(std::move(local), loop.dispatcher());
+    WireClient client(std::move(local), loop().dispatcher());
     remote.reset();
 
     // Panics when a different thread attempts to dispatch the error.
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-    std::thread foreign_thread([&] { ASSERT_DEATH([&] { loop.RunUntilIdle(); }); });
+    std::thread foreign_thread([&] { ASSERT_DEATH([&] { loop().RunUntilIdle(); }); });
     foreign_thread.join();
 #endif
   });

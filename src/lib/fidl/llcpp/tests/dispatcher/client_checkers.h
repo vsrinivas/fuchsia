@@ -27,13 +27,13 @@ class ClientChecker {
   // Asserts that the contained client implementation object is not null.
   template <typename ClientLike>
   static void AssertImplNotNull(const ClientLike& client) {
-    ASSERT_NOT_NULL(client.get());
+    ASSERT_NOT_NULL(client.controller_.client_impl_.get());
   }
 
   // Asserts that the contained client implementation object is null.
   template <typename ClientLike>
   static void AssertImplNull(const ClientLike& client) {
-    ASSERT_NULL(client.get());
+    ASSERT_NULL(client.controller_.client_impl_.get());
   }
 };
 

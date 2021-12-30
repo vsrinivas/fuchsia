@@ -112,7 +112,7 @@ class NaturalClientMessengerTest : public zxtest::Test {
   NaturalClientMessengerTest()
       : loop_(&kAsyncLoopConfigNeverAttachToThread),
         controller_(Create(loop_.dispatcher())),
-        impl_(static_cast<FakeClientImpl*>(controller_.get())),
+        impl_(static_cast<FakeClientImpl*>(&controller_.get())),
         messenger_(impl_) {}
 
  protected:

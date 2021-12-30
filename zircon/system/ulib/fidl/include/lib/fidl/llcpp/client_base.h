@@ -383,9 +383,15 @@ class ClientController {
   bool is_valid() const { return static_cast<bool>(client_impl_); }
   explicit operator bool() const { return is_valid(); }
 
-  ClientBase* get() const { return client_impl_.get(); }
+  ClientBase& get() const {
+    ZX_ASSERT(is_valid());
+    return *client_impl_;
+  }
 
  private:
+  // Allow unit tests to peek into the internals of this class.
+  friend ::fidl_testing::ClientChecker;
+
   // |ControlBlock| controls the lifecycle of a client binding, such that
   // teardown will only happen after all clones of a |Client| managing
   // the same transport goes out of scope.

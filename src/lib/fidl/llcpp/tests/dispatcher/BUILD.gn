@@ -17,6 +17,7 @@ group("dispatcher") {
 
 source_set("client_test_helpers") {
   public = [
+    "async_loop_and_endpoints_fixture.h",
     "client_checkers.h",
     "lsan_disabler.h",
     "mock_client_impl.h",

@@ -117,6 +117,19 @@ TEST_F(SharedClient, DefaultConstruction) {
   EXPECT_FALSE(client.is_valid());
 }
 
+TEST_F(Client, InvalidAccess) {
+  fidl::Client<TestProtocol> client;
+  ASSERT_DEATH([&] { client->SomeNaturalMethod(); });
+  ASSERT_DEATH([&] { client.wire()->SomeWireMethod(); });
+}
+
+TEST_F(SharedClient, InvalidAccess) {
+  fidl::SharedClient<TestProtocol> client;
+  ASSERT_DEATH([&] { client->SomeNaturalMethod(); });
+  ASSERT_DEATH([&] { client.wire()->SomeWireMethod(); });
+  ASSERT_DEATH([&] { client.AsyncTeardown(); });
+}
+
 TEST_F(Client, Move) {
   fidl::Client<TestProtocol> client;
   client.Bind(std::move(endpoints().client), loop().dispatcher());

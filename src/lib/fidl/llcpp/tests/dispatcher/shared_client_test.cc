@@ -19,6 +19,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "async_loop_and_endpoints_fixture.h"
 #include "client_checkers.h"
 #include "mock_client_impl.h"
 
@@ -67,11 +68,6 @@ class NormalTeardownObserver {
   std::unique_ptr<fidl::WireAsyncEventHandler<TestProtocol>> event_handler_ =
       std::make_unique<EventHandler>(did_teardown_);
 };
-
-TEST(WireSharedClient, TeardownOnInvalidClientShouldPanic) {
-  WireSharedClient<TestProtocol> client;
-  ASSERT_DEATH([&] { client.AsyncTeardown(); });
-}
 
 TEST(WireSharedClient, Teardown) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -271,6 +267,36 @@ TEST(WireSharedClient, CloneSupportsExplicitTeardown) {
   EXPECT_TRUE(observer.IsTeardown());
   EXPECT_NULL(ClientBaseChecker::GetTransport(&*clone).get());
   EXPECT_NULL(ClientBaseChecker::GetTransport(&*client).get());
+}
+
+class WireSharedClientTest : public fidl_testing::AsyncLoopAndEndpointsFixture {};
+
+TEST_F(WireSharedClientTest, DefaultConstruction) {
+  WireSharedClient<TestProtocol> client;
+  EXPECT_FALSE(client.is_valid());
+}
+
+TEST_F(WireSharedClientTest, InvalidAccess) {
+  WireSharedClient<TestProtocol> client;
+  ASSERT_DEATH([&] {
+    client->MakeSyncCallWith(
+        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
+  });
+  ASSERT_DEATH([&] { client.AsyncTeardown(); });
+}
+
+TEST_F(WireSharedClientTest, Move) {
+  WireSharedClient<TestProtocol> client;
+  client.Bind(std::move(endpoints().client), loop().dispatcher());
+  EXPECT_TRUE(client.is_valid());
+
+  WireSharedClient<TestProtocol> client2 = std::move(client);
+  EXPECT_FALSE(client.is_valid());
+  EXPECT_TRUE(client2.is_valid());
+  ASSERT_DEATH([&] {
+    client->MakeSyncCallWith(
+        [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
+  });
 }
 
 }  // namespace
