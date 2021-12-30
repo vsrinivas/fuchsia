@@ -85,6 +85,9 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
+    # Ensure this target doesn't rot. This dependency can be removed if the
+    # target becomes load bearing elsewhere.
+    ":component-with-tracing",
     "dhcp:tests",
     "dhcpv6:tests",
     "dns:tests",
