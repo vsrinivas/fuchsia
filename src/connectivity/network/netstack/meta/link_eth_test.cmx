@@ -1,9 +1,0 @@
-{
-    "program": {
-        "args": [
-            "--test.timeout",
-            "2m"
-        ],
-        "binary": "test/link_eth_test"
-    }
-}
