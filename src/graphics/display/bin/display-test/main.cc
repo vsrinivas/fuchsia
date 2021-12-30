@@ -34,6 +34,7 @@
 #include <fbl/vector.h>
 
 #include "fidl/fuchsia.hardware.display/cpp/wire.h"
+#include "fidl/fuchsia.hardware.display/cpp/wire_types.h"
 #include "lib/ddk/driver.h"
 #include "lib/fdio/directory.h"
 #include "lib/fzl/vmo-mapper.h"
@@ -142,6 +143,10 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
       invalid_message_ = true;
     }
 
+    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override {
+      invalid_message_ = true;
+    }
+
     void OnClientOwnershipChange(
         fidl::WireResponse<fhd::Controller::OnClientOwnershipChange>* event) override {
       has_ownership_ = event->has_ownership;
@@ -227,11 +232,11 @@ bool update_display_layers(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
   return true;
 }
 
-bool apply_config() {
+std::optional<fhd::wire::ConfigStamp> apply_config() {
   auto result = dc->CheckConfig(false);
   if (!result.ok()) {
     printf("Failed to make check call: %s\n", result.FormatDescription().c_str());
-    return false;
+    return std::nullopt;
   }
 
   if (result->res != fhd::wire::ConfigResult::kOk) {
@@ -240,21 +245,28 @@ bool apply_config() {
       printf("Client composition op (display %ld, layer %ld): %hhu\n", op.display_id, op.layer_id,
              static_cast<uint8_t>(op.opcode));
     }
-    return false;
+    return std::nullopt;
   }
 
   if (!dc->ApplyConfig().ok()) {
     printf("Apply failed\n");
-    return false;
+    return std::nullopt;
   }
-  return true;
+
+  auto config_stamp_result = dc->GetLatestAppliedConfigStamp();
+  if (!config_stamp_result.ok()) {
+    printf("GetLatestAppliedConfigStamp failed\n");
+    return std::nullopt;
+  }
+
+  return config_stamp_result->stamp;
 }
 
-zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers) {
+zx_status_t wait_for_vsync(fhd::wire::ConfigStamp expected_stamp) {
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
    public:
-    explicit EventHandler(const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers)
-        : layers_(layers) {}
+    explicit EventHandler(fhd::wire::ConfigStamp expected_stamp)
+        : expected_stamp_(expected_stamp) {}
 
     zx_status_t status() const { return status_; }
 
@@ -263,29 +275,16 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
       status_ = ZX_ERR_STOP;
     }
 
-    void OnVsync(fidl::WireResponse<fhd::Controller::OnVsync>* event) override {
+    void OnVsync2(fidl::WireResponse<fhd::Controller::OnVsync2>* event) override {
       // Acknowledge cookie if non-zero
       if (event->cookie) {
         dc->AcknowledgeVsync(event->cookie);
       }
 
-      for (auto& layer : layers_) {
-        uint64_t id = layer->image_id(event->display_id);
-        if (id == 0) {
-          continue;
-        }
-        for (auto image_id : event->images) {
-          if (image_id == id) {
-            layer->set_frame_done(event->display_id);
-          }
-        }
-      }
-
-      for (auto& layer : layers_) {
-        if (!layer->is_done()) {
-          status_ = ZX_ERR_NEXT;
-          return;
-        }
+      if (event->applied_config_stamp.value >= expected_stamp_.value) {
+        status_ = ZX_OK;
+      } else {
+        status_ = ZX_ERR_NEXT;
       }
     }
 
@@ -298,11 +297,11 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
     zx_status_t Unknown() override { return ZX_ERR_STOP; }
 
    private:
-    const fbl::Vector<std::unique_ptr<VirtualLayer>>& layers_;
+    fhd::wire::ConfigStamp expected_stamp_;
     zx_status_t status_ = ZX_OK;
   };
 
-  EventHandler event_handler(layers);
+  EventHandler event_handler(expected_stamp);
   zx_status_t status = dc.HandleOneEvent(event_handler).status();
   return (status == ZX_OK) ? event_handler.status() : status;
 }
@@ -1146,10 +1145,15 @@ int main(int argc, const char* argv[]) {
         return -1;
       }
     }
+
+    fhd::wire::ConfigStamp expected_stamp = {.value = fhd::wire::kInvalidConfigStampValue};
     if (!max_apply_configs || i < max_apply_configs) {
       for (uint32_t cpv = 0; cpv < configs_per_vsync; cpv++) {
-        if (!apply_config()) {
+        auto maybe_expected_stamp = apply_config();
+        if (!maybe_expected_stamp.has_value()) {
           return -1;
+        } else {
+          expected_stamp = *maybe_expected_stamp;
         }
       }
     }
@@ -1159,7 +1163,7 @@ int main(int argc, const char* argv[]) {
     }
 
     zx_status_t status = ZX_OK;
-    while (layers.size() != 0 && (status = wait_for_vsync(layers)) == ZX_ERR_NEXT) {
+    while (layers.size() != 0 && (status = wait_for_vsync(expected_stamp)) == ZX_ERR_NEXT) {
     }
     ZX_ASSERT(status == ZX_OK);
     if (capture) {
