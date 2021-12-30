@@ -1,0 +1,61 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "fuzz_manager"
+  visibility = [ ":*" ]
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/async-utils",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+  sources = [
+    "src/diagnostics.rs",
+    "src/events.rs",
+    "src/fuzzer.rs",
+    "src/main.rs",
+    "src/manager.rs",
+    "src/test_support.rs",
+  ]
+}
+
+fuchsia_component("fuzz-manager") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/fuzz-manager.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("manager") {
+  package_name = "fuzz-manager"
+  testonly = true
+  deps = [ ":fuzz-manager" ]
+}
+
+fuchsia_component("unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/unittests.cml"
+  deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("tests") {
+  package_name = "fuzz-manager-tests"
+  test_components = [ ":unittests" ]
+}
