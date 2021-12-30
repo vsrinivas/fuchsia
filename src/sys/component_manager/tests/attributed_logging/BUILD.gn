@@ -11,8 +11,9 @@ rustc_test("test-bin") {
   source_root = "integration-test.rs"
   name = "attributed-logging-test"
   deps = [
-    "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
@@ -21,7 +22,7 @@ rustc_test("test-bin") {
 
 fuchsia_component("integration-test") {
   testonly = true
-  manifest = "meta/integration-test.cmx"
+  manifest = "meta/integration-test.cml"
   deps = [ ":test-bin" ]
 }
 
@@ -41,12 +42,6 @@ fuchsia_component("e2e-test") {
   testonly = true
   manifest = "meta/e2e-test.cmx"
   deps = [ ":e2e-bin" ]
-}
-
-fuchsia_component("integration-root-component") {
-  testonly = true
-  manifest = "meta/integration-root.cml"
-  component_name = "integration-root"
 }
 
 fuchsia_component("e2e-root-component") {
@@ -82,8 +77,8 @@ fuchsia_test_package("attributed-logging-test") {
   deps = [
     ":component-manager",
     ":e2e-root-component",
-    ":integration-root-component",
     "components:all-components",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
   ]
 }

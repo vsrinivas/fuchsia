@@ -4,33 +4,34 @@
 
 use {
     component_events::{
-        events::{self, Event},
+        events::{self, Event, EventSource},
         matcher::EventMatcher,
         sequence::{self, EventSequence},
     },
-    fuchsia_async as fasync,
-    test_utils_lib::opaque_test::OpaqueTestBuilder,
+    fidl_fuchsia_sys2 as fsys,
+    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 /// Verifies that when a component has a LogSink in its namespace that the
 /// component manager tries to connect to this.
 async fn check_logsink_requested() {
-    let test_env = OpaqueTestBuilder::new(
-        "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/integration-root.cm",
-    )
-    .component_manager_url(
-        "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/component-manager.cmx",
-    )
-    .config("/pkg/data/cm_config")
-    .build()
-    .await
-    .expect("failed to construct OpaqueTest");
-
-    let mut event_source = test_env
-        .connect_to_event_source()
+    let builder = RealmBuilder::new().await.unwrap();
+    builder.add_child("empty_child", "#meta/empty.cm", ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("empty_child")]),
+        )
         .await
-        .expect("could not connect to event source for opaque test");
+        .unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let mut event_source = EventSource::from_proxy(proxy);
 
     let expected = EventSequence::new()
         .all_of(
