@@ -13,11 +13,11 @@ import (
 	"fmt"
 	"net"
 	"runtime"
-	"sync"
 	"syscall/zx"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	fidlnet "fidl/fuchsia/net"

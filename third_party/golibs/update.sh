@@ -58,7 +58,7 @@ for dir in $FUCHSIA_DIR $FUCHSIA_DIR/cobalt $FUCHSIA_DIR/third_party/syzkaller/s
     xargs dirname |
     sort | uniq |
     sed 's|^|./|' |
-    xargs "$GO" list -mod=readonly -e -f \
+    xargs "$GO" list -tags deadlock_detection -mod=readonly -e -f \
       '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}{{"\n"}}{{join .XTestImports "\n"}}' |
     grep -vF go.fuchsia.dev/fuchsia/ |
     # Apparently we generate these normally checked-in files?

@@ -7,7 +7,7 @@
             "--log-packets",
             "--verbosity=debug"
         ],
-        "binary": "bin/netstack"
+        "binary": "bin/netstack_with_deadlock_detection"
     },
     "sandbox": {
         "services": [

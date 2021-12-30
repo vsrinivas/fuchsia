@@ -11,13 +11,13 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sync"
 	"syscall/zx"
 
 	"gen/netstack/link/eth"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/hardware/ethernet"

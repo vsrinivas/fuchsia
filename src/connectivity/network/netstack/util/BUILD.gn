@@ -10,6 +10,7 @@ go_library("util") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
   deps = [
+    "//src/connectivity/network/netstack/sync",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:gvisor.dev/gvisor",
   ]

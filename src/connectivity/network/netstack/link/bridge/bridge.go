@@ -15,11 +15,11 @@ import (
 	"math"
 	"sort"
 	"strings"
-	"sync"
 
 	"fidl/fuchsia/hardware/network"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"gvisor.dev/gvisor/pkg/tcpip"

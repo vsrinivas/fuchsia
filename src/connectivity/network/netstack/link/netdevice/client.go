@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"math"
 	"math/bits"
-	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -20,6 +19,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/hardware/network"

@@ -8,7 +8,7 @@
 package filter
 
 import (
-	"sync"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"

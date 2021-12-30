@@ -27,24 +27,32 @@ fuchsia_component("component-legacy") {
   deps = [ ":bin" ]
 }
 
+go_binary("bin_with_deadlock_detection") {
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
+  output_name = string_replace(target_name, "bin", "netstack")
+
+  tags = [ "deadlock_detection" ]
+  deps = [ "stub" ]
+}
+
 fuchsia_component("component-debug") {
   testonly = true
   component_name = "netstack-debug"
   manifest = "meta/netstack_debug.cml"
-  deps = [ ":bin" ]
+  deps = [ ":bin_with_deadlock_detection" ]
 }
 
 fuchsia_component("component-debug-legacy") {
   testonly = true
   component_name = "netstack-debug"
   manifest = "meta/netstack_debug.cmx"
-  deps = [ ":bin" ]
+  deps = [ ":bin_with_deadlock_detection" ]
 }
 
 fuchsia_component("component-conformance") {
   component_name = "netstack-conformance"
   manifest = "meta/netstack_conformance.cml"
-  deps = [ ":bin" ]
+  deps = [ ":bin_with_deadlock_detection" ]
 }
 
 # TODO(https://fxbug.dev/84248): rm once no longer used in network:config.
@@ -53,8 +61,8 @@ fuchsia_package("netstack") {
 }
 
 go_binary("bin_with_tracing") {
-  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
-  output_name = "netstack"
+  gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
+  output_name = string_replace(target_name, "bin", "netstack")
 
   tags = [ "tracing" ]
   deps = [ "stub" ]
@@ -101,6 +109,7 @@ go_library("pprof") {
   sources = [ "export.go" ]
   deps = [
     "inspect",
+    "sync",
     "//src/lib/component",
     "//src/lib/syslog/go",
   ]
@@ -122,6 +131,7 @@ go_library("lib") {
     "link/eth",
     "link/netdevice",
     "routes",
+    "sync",
     "time",
     "tracing",
     "util",

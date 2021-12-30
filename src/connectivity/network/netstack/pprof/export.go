@@ -14,11 +14,11 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"sort"
-	"sync"
 	"syscall/zx"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 )

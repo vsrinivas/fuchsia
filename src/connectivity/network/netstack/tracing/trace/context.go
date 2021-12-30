@@ -12,9 +12,10 @@ package trace
 
 import (
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"unsafe"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 )
 
 // #include <lib/trace-engine/buffer_internal.h>

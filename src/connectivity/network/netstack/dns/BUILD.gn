@@ -12,6 +12,7 @@ go_library("dns") {
 
   deps = [
     "//sdk/fidl/fuchsia.net.name($go_toolchain)",
+    "//src/connectivity/network/netstack/sync",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:gvisor.dev/gvisor",

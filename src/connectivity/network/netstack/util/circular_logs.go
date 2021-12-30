@@ -5,9 +5,9 @@
 package util
 
 import (
-	"sync"
-
 	"syscall/zx"
+
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 )
 
 type LogEntry struct {

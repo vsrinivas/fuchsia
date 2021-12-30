@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 {
     include: [ "//src/connectivity/network/netstack/meta/netstack.shard.cml" ],
+    program: {
+        binary: "bin/netstack",
+    },
     use: [
         {
             storage: "cache",

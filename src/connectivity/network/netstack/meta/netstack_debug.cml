@@ -4,6 +4,7 @@
 {
     include: [ "//src/connectivity/network/netstack/meta/netstack.shard.cml" ],
     program: {
+        binary: "bin/netstack_with_deadlock_detection",
         args: [
             "--log-packets",
             "--verbosity=debug",

@@ -7,9 +7,6 @@
         "syslog/client.shard.cml",
         "syslog/elf_stdio.shard.cml",
     ],
-    program: {
-        binary: "bin/netstack",
-    },
     capabilities: [
         {
             protocol: [

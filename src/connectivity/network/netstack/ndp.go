@@ -11,10 +11,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"gvisor.dev/gvisor/pkg/tcpip"

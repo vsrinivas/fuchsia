@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"sync"
 	"syscall/zx"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
@@ -21,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/bridge"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	zxtime "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"

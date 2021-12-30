@@ -23,9 +23,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sync"
 	stdtime "time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"gvisor.dev/gvisor/pkg/tcpip"

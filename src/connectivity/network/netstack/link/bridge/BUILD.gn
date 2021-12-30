@@ -13,6 +13,7 @@ go_library("bridge") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
     "//src/connectivity/network/netstack/link",
+    "//src/connectivity/network/netstack/sync",
     "//src/connectivity/network/netstack/util",
     "//src/lib/syslog/go",
     "//third_party/golibs:gvisor.dev/gvisor",

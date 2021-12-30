@@ -353,6 +353,26 @@ go_library("github.com/kr/text") {
     "wrap.go",
   ]
 }
+go_library("github.com/petermattis/goid") {
+  name = "github.com/petermattis/goid"
+  source_dir = "vendor/github.com/petermattis/goid"
+  sources = [
+    "goid.go",
+    "goid_gccgo.go",
+    "goid_go1.3.go",
+    "goid_go1.4.go",
+    "goid_go1.4.s",
+    "goid_go1.5_amd64.go",
+    "goid_go1.5_amd64.s",
+    "goid_go1.5_arm.go",
+    "goid_go1.5_arm.s",
+    "goid_slow.go",
+    "runtime_gccgo_go1.8.go",
+    "runtime_go1.5.go",
+    "runtime_go1.6.go",
+    "runtime_go1.9.go",
+  ]
+}
 go_library("github.com/pkg/sftp") {
   name = "github.com/pkg/sftp/..."
   source_dir = "vendor/github.com/pkg/sftp"
@@ -422,6 +442,16 @@ go_library("github.com/rogpeppe/go-internal/fmtsort") {
     "mapelem.go",
     "mapelem_1.11.go",
     "sort.go",
+  ]
+}
+go_library("github.com/sasha-s/go-deadlock") {
+  name = "github.com/sasha-s/go-deadlock"
+  source_dir = "vendor/github.com/sasha-s/go-deadlock"
+  deps = [ ":github.com/petermattis/goid" ]
+  sources = [
+    "deadlock.go",
+    "deadlock_map.go",
+    "stacktraces.go",
   ]
 }
 go_library("github.com/spf13/pflag") {

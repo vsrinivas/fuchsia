@@ -10,7 +10,6 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
@@ -19,6 +18,7 @@ import (
 	"unsafe"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fuchsia/hardware/network"

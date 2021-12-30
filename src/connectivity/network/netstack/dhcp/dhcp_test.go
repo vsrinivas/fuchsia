@@ -12,10 +12,10 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"sync"
 	"testing"
 	stdtime "time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 
 	"github.com/google/go-cmp/cmp"

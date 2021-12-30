@@ -12,12 +12,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"

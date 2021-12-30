@@ -10,6 +10,7 @@ go_library("routes") {
   name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
   deps = [
+    "//src/connectivity/network/netstack/sync",
     "//src/connectivity/network/netstack/util",
     "//src/lib/syslog/go",
     "//third_party/golibs:gvisor.dev/gvisor",

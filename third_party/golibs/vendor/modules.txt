@@ -13,14 +13,6 @@ cloud.google.com/go/storage/internal/apiv2
 # github.com/creack/pty v1.1.17
 ## explicit
 github.com/creack/pty
-# github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
-## explicit
-# github.com/docker/docker v1.4.2-0.20191028175130-9e7d5ac5ea55
-## explicit
-# github.com/docker/go-connections v0.3.0
-## explicit
-# github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
-## explicit
 # github.com/dustin/go-humanize v1.0.0
 ## explicit
 github.com/dustin/go-humanize
@@ -28,8 +20,6 @@ github.com/dustin/go-humanize/english
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit
 github.com/fsnotify/fsnotify
-# github.com/gogo/googleapis v1.4.1
-## explicit
 # github.com/golang/glog v1.0.0
 ## explicit
 github.com/golang/glog
@@ -52,12 +42,6 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-github/v35 v35.1.0
-## explicit
-# github.com/google/gopacket v1.1.19
-## explicit
-# github.com/google/pprof v0.0.0-20211008130755-947d60d73cc0
-## explicit
 # github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 ## explicit
 github.com/google/shlex
@@ -76,10 +60,8 @@ github.com/kr/fs
 github.com/kr/pretty
 # github.com/kr/text v0.2.0
 github.com/kr/text
-# github.com/opencontainers/image-spec v1.0.1
-## explicit
-# github.com/pborman/uuid v1.2.0
-## explicit
+# github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5
+github.com/petermattis/goid
 # github.com/pkg/sftp v1.13.4
 ## explicit
 github.com/pkg/sftp
@@ -87,6 +69,9 @@ github.com/pkg/sftp/internal/encoding/ssh/filexfer
 # github.com/rogpeppe/go-internal v1.8.0
 ## explicit
 github.com/rogpeppe/go-internal/fmtsort
+# github.com/sasha-s/go-deadlock v0.3.1
+## explicit
+github.com/sasha-s/go-deadlock
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag
@@ -417,5 +402,3 @@ gvisor.dev/gvisor/pkg/tcpip/transport/tcp
 gvisor.dev/gvisor/pkg/tcpip/transport/tcpconntrack
 gvisor.dev/gvisor/pkg/tcpip/transport/udp
 gvisor.dev/gvisor/pkg/waiter
-# honnef.co/go/tools v0.2.1
-## explicit

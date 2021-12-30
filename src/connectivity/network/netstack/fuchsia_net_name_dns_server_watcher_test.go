@@ -11,13 +11,13 @@ import (
 	"context"
 	"errors"
 	"runtime"
-	"sync"
 	"syscall/zx"
 	"testing"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"

@@ -20,6 +20,7 @@ import (
 	_ "github.com/kr/fs"
 	_ "github.com/kr/pretty"
 	_ "github.com/pkg/sftp"
+	_ "github.com/sasha-s/go-deadlock"
 	_ "github.com/spf13/pflag"
 	_ "github.com/theupdateframework/go-tuf"
 	_ "github.com/theupdateframework/go-tuf/data"

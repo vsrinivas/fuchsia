@@ -16,12 +16,12 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
-	"sync"
 	"syscall/zx"
 	"testing"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"

@@ -13,10 +13,10 @@ import (
 	"net"
 	"sort"
 	"strings"
-	"sync"
 
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"gvisor.dev/gvisor/pkg/tcpip"

@@ -8,9 +8,9 @@
 package dns
 
 import (
-	"sync"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/net/name"
