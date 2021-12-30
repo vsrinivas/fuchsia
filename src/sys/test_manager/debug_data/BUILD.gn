@@ -79,7 +79,7 @@ fuchsia_component("debug_data_unittests_component") {
   testonly = true
   component_name = "debug_data_unittests"
   deps = [ ":test_bin" ]
-  manifest = "meta/debug_data_unittests.cmx"
+  manifest = "meta/debug_data_unittests.cml"
 }
 
 fuchsia_test_package("debug_data_unittests") {
