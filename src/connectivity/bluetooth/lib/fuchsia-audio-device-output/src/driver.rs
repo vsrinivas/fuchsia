@@ -366,7 +366,6 @@ impl SoftPcmOutput {
             RingBufferRequest::GetProperties { responder } => {
                 let prop = RingBufferProperties {
                     // TODO(fxbug.dev/51726): Set external_delay and fifo_depth from outside the crate.
-                    external_delay: Some(0),
                     fifo_depth: Some(0),
                     needs_cache_flush_or_invalidate: Some(false),
                     ..RingBufferProperties::EMPTY
@@ -590,7 +589,6 @@ mod tests {
             Poll::Ready(Ok(v)) => v,
             x => panic!("expected Ready Ok from get_properties, got {:?}", x),
         };
-        assert_eq!(props2.external_delay, Some(0i64));
         assert_eq!(props2.fifo_depth, Some(0u32));
         assert_eq!(props2.needs_cache_flush_or_invalidate, Some(false));
 

@@ -78,8 +78,9 @@ void AdminTest::RequestRingBufferProperties() {
     return;
   }
 
-  ASSERT_TRUE(ring_buffer_props_.has_external_delay());
-  EXPECT_GE(ring_buffer_props_.external_delay(), 0);
+  if (ring_buffer_props_.has_external_delay()) {
+    EXPECT_GE(ring_buffer_props_.external_delay(), 0);
+  }
 
   EXPECT_TRUE(ring_buffer_props_.has_fifo_depth());
 
