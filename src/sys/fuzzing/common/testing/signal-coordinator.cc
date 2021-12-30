@@ -19,14 +19,15 @@ bool FakeSignalCoordinator::SignalPeer(Signal signal) { return coordinator_.Sign
 
 zx_signals_t FakeSignalCoordinator::AwaitSignal() {
   sync_.WaitFor("OnSignal to be called");
-  zx_signals_t observed;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    observed = observed_;
-    observed_ = 0;
-    sync_.Reset();
+  return GetObserved();
+}
+
+zx_status_t FakeSignalCoordinator::AwaitSignal(zx::time deadline, zx_signals_t* out) {
+  auto status = sync_.WaitUntil(deadline);
+  if (status == ZX_OK) {
+    *out = GetObserved();
   }
-  return observed;
+  return status;
 }
 
 bool FakeSignalCoordinator::OnSignal(zx_signals_t observed) {
@@ -36,6 +37,17 @@ bool FakeSignalCoordinator::OnSignal(zx_signals_t observed) {
     sync_.Signal();
   }
   return (observed & ZX_EVENTPAIR_PEER_CLOSED) == 0;
+}
+
+zx_signals_t FakeSignalCoordinator::GetObserved() {
+  zx_signals_t observed;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    observed = observed_;
+    observed_ = 0;
+    sync_.Reset();
+  }
+  return observed;
 }
 
 }  // namespace fuzzing

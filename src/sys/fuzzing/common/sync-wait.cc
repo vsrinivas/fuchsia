@@ -34,6 +34,22 @@ zx_status_t WaitFor(const char* what, Waiter* waiter) {
   return status;
 }
 
+zx_status_t PollFor(const char* what, Waiter* waiter, zx::duration interval) {
+  Waiter wrapper = [waiter, interval](zx::time deadline) {
+    while (true) {
+      auto step = zx::deadline_after(interval);
+      auto status = (*waiter)(step);
+      if (status != ZX_ERR_TIMED_OUT) {
+        return status;
+      }
+      if (deadline < zx::clock::get_monotonic()) {
+        return ZX_ERR_TIMED_OUT;
+      }
+    }
+  };
+  return WaitFor(what, &wrapper);
+}
+
 void SetThreshold(zx::duration threshold) { gThreshold = threshold.get(); }
 
 void ResetThreshold() { gThreshold = ZX_SEC(30); }

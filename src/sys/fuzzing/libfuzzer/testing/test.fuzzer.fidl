@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// Fuzzing Test Support
+///
+/// This library is used to create tests for runners that wrap LLVM-based fuzzing engines, e.g.
+/// libFuzzer. Tests like those in //src/sys/fuzzing/libfuzzer/runner_unittest.cc need to examine
+/// the test input provided to LLVMTestOneInput, and provide the feedback that would normally come
+/// from SanitizerCoverage. This exchange between unit test and test fuzzer is complicated by the
+/// fact that in some cases, libFuzzer will spawn clones of itself as child processes with slightly
+/// different command line arguments. The |Relay| protocol defined by this library allows the test
+/// fuzzers to connect to the unit tests regardless of how their processes were started.
+library test.fuzzer;
+
+using fuchsia.mem;
+using zx;
+
+/// Buffers associated with an eventpair that can be used to signal when they are readable. The
+/// fuzzer should write the |test_input| received from libFuzzer into the first buffer, while the
+/// unit test should provide the simulated fuzzing |feedback| using the second buffer.
+type SignaledBuffer = resource struct {
+    eventpair zx.handle:EVENTPAIR;
+    test_input fuchsia.mem.Buffer;
+    feedback fuchsia.mem.Buffer;
+};
+
+/// Relays test data from unit test to test fuzzer.
+///
+/// As noted above, the unit tests want to be able to exchange data with libFuzzer processes in the
+/// same component without having control over how those processes are spawned. This protocol
+/// provides a solution: both unit test and fuzzer can connect the relay and use it to establish
+/// means for subsequent communication. Since both are part of the same component, the two uses are
+/// merged into a single protocol capability.
+@discoverable
+protocol Relay {
+    /// Registers the buffer and eventpair used to exchange test data. This is called by the unit
+    /// test both at the start of a test, and after a fuzzer process exits and closes its end of the
+    /// eventpair. This allows for the libFuzzer workflows that consist of multiple, sequential
+    /// fuzzer processes. This call does not block.
+    SetTestData(resource struct {
+        data SignaledBuffer;
+    });
+
+    /// Waits for a call to |SetTestData|, then returns its signaled buffer. This is called by the
+    /// fuzzer once per fuzzer process.
+    WatchTestData() -> (resource struct {
+        data SignaledBuffer;
+    });
+};

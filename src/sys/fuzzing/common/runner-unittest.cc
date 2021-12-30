@@ -75,33 +75,22 @@ Input RunnerTest::RunOne(bool has_leak) {
 }
 
 void RunnerTest::RunUntilIdle() {
-  // Ensure the fuzzer is up and running before enforcing timeout.
-  if (!HasTestInput()) {
-    return;
-  }
-  while (true) {
+  while (HasTestInput()) {
     auto input = GetTestInput();
-    zx::nanosleep(zx::deadline_after(zx::msec(10)));
     SetFeedback(GetCoverage(input), GetResult(input), HasLeak(input));
-    while (!HasTestInput(zx::msec(10))) {
-      if (HasStatus()) {
-        // Engine is indicating it is idle.
-        return;
-      }
-      zx::nanosleep(zx::deadline_after(zx::msec(10)));
-    }
   }
 }
 
 bool RunnerTest::HasTestInput() {
-  bool has_input = false;
-  Waiter waiter = [this, &has_input](zx::time deadline) {
-    has_input = HasTestInput(deadline);
-    return ZX_OK;
+  // Periodically check if the engine has produced a final status; and therefore will not produce
+  // additional test inputs.
+  Waiter waiter = [this](zx::time deadline) {
+    return (HasTestInput(deadline) || HasStatus()) ? ZX_OK : ZX_ERR_TIMED_OUT;
   };
-  WaitFor("test input", &waiter);
+  auto status = PollFor("engine to produce test input or status", &waiter, zx::msec(100));
+  EXPECT_EQ(status, ZX_OK);
   started_sync_.Signal();
-  return has_input;
+  return !HasStatus();
 }
 
 void RunnerTest::AwaitStarted() { started_sync_.WaitFor("runner to send test input"); }
@@ -397,9 +386,9 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
   EXPECT_GE(elapsed, zx::msec(100));
 }
 
-void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected) {
+void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected, uint64_t oom_limit) {
   auto options = RunnerTest::DefaultOptions(runner);
-  options->set_oom_limit(1ULL << 25);  // 32 Mb
+  options->set_oom_limit(oom_limit);
   Configure(runner, options);
   runner->AddToCorpus(CorpusType::SEED, Input({0x09}));
   runner->Merge([&](zx_status_t status) { SetStatus(status); });
@@ -407,9 +396,9 @@ void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected) {
   EXPECT_EQ(GetStatus(), expected);
 }
 
-void RunnerTest::Merge(Runner* runner, bool keeps_errors) {
+void RunnerTest::Merge(Runner* runner, bool keeps_errors, uint64_t oom_limit) {
   auto options = RunnerTest::DefaultOptions(runner);
-  options->set_oom_limit(1ULL << 25);  // 32 Mb
+  options->set_oom_limit(oom_limit);
   Configure(runner, options);
   std::vector<std::string> expected_seed;
   std::vector<std::string> expected_live;

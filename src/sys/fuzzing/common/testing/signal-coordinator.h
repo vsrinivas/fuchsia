@@ -20,6 +20,8 @@ class FakeSignalCoordinator final {
   FakeSignalCoordinator() = default;
   ~FakeSignalCoordinator() = default;
 
+  bool is_valid() const { return coordinator_.is_valid(); }
+
   // Like |SignalCoordinator::Create| with |OnSignal| as the second parameter.
   zx::eventpair Create();
 
@@ -32,11 +34,15 @@ class FakeSignalCoordinator final {
   // Blocks until the next call to |SignalPeer|.
   zx_signals_t AwaitSignal() FXL_LOCKS_EXCLUDED(mutex_);
 
+  // Like |AwaitSignal()| but only blocks until |deadline| and returns signals via |out|.
+  zx_status_t AwaitSignal(zx::time deadline, zx_signals_t* out) FXL_LOCKS_EXCLUDED(mutex_);
+
   void Join() { coordinator_.Join(); }
   void Reset() { coordinator_.Reset(); }
 
  private:
   bool OnSignal(zx_signals_t observed);
+  zx_signals_t GetObserved() FXL_LOCKS_EXCLUDED(mutex_);
 
   SignalCoordinator coordinator_;
   std::mutex mutex_;

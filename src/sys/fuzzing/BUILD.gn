@@ -8,5 +8,6 @@ group("tests") {
     "common:tests",
     "framework:fatal-tests",
     "framework:tests",
+    "libfuzzer:tests",
   ]
 }

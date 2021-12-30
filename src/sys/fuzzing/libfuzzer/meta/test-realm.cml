@@ -1,0 +1,51 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "unittests",
+            url: "fuchsia-pkg://fuchsia.com/component-fuzzing-libfuzzer-tests#meta/unittests.cm",
+        },
+        {
+            name: "relay",
+            url: "fuchsia-pkg://fuchsia.com/component-fuzzing-libfuzzer-tests#meta/test-relay.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "gtest_runner",
+            from: "parent",
+            to: [ "#unittests" ],
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#unittests",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#relay",
+        },
+        {
+            protocol: [ "test.fuzzer.Relay" ],
+            from: "#relay",
+            to: "#unittests",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#unittests",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#unittests",
+        },
+    ],
+}

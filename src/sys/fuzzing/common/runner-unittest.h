@@ -72,10 +72,11 @@ class RunnerTest : public ::testing::Test {
   void AwaitStarted();
 
   // Returns false if the runner stops before providing any test inputs; otherwise waits for the
-  // first input (either indefinitely, until |timeout| elapses, or until |deadline| passes,
-  // depending on the version) and returns true. Unblocks |AwaitStarted| before returning.
+  // first input indefinitely and returns true. Unblocks |AwaitStarted| before returning.
   bool HasTestInput();
-  bool HasTestInput(zx::duration timeout) { return HasTestInput(zx::deadline_after(timeout)); }
+
+  // Like |HasTesInput|, except that it returns false if the given |deadline| expires before it
+  // receives a test input.
   virtual bool HasTestInput(zx::time deadline) = 0;
 
   // Returns the test input for the next run. This must not be called unless |HasTestInput| returns
@@ -127,10 +128,10 @@ class RunnerTest : public ::testing::Test {
 
   // |expected| indicates the anticipated return value when merging a corpus with an error-causing
   // input.
-  void MergeSeedError(Runner* runner, zx_status_t expected);
+  void MergeSeedError(Runner* runner, zx_status_t expected, uint64_t oom_limit = kDefaultOomLimit);
 
   // |keeps_errors| indicates whether merge keeps error-causing inputs in the final corpus.
-  void Merge(Runner* runner, bool keeps_errors);
+  void Merge(Runner* runner, bool keeps_errors, uint64_t oom_limit = kDefaultOomLimit);
 
   void Stop(Runner* runner);
 

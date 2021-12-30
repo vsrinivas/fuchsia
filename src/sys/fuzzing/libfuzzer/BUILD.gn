@@ -1,0 +1,76 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+source_set("libfuzzer") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "runner.cc",
+    "runner.h",
+  ]
+  public_deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//third_party/re2",
+  ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//third_party/boringssl",
+  ]
+}
+
+test("unittests_bin") {
+  output_name = "component_fuzzing_libfuzzer_unittests"
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "runner-unittest.cc" ]
+  deps = [
+    ":libfuzzer",
+    "testing:test.fuzzer",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/fuzzing/common:runner-unittests",
+    "//src/sys/fuzzing/common/testing",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_component("test-realm") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/test-realm.cml"
+  deps = [
+    ":test-relay",
+    ":unittests",
+  ]
+}
+
+fuchsia_component("test-relay") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/test-relay.cml"
+  deps = [ "testing:relay" ]
+}
+
+fuchsia_component("unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/unittests.cml"
+  deps = [
+    ":unittests_bin",
+    "testing:fuzzer",
+  ]
+}
+
+fuchsia_test_package("tests") {
+  package_name = "component-fuzzing-libfuzzer-tests"
+  test_components = [ ":test-realm" ]
+}

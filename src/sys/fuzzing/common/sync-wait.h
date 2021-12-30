@@ -37,6 +37,10 @@ using Waiter = fit::function<zx_status_t(zx::time)>;
 //
 zx_status_t WaitFor(const char* what, Waiter* waiter);
 
+// Like |WaitFor|, but executes the waiter repeatedly after each |interval|. This allows creating
+// |waiter|s that wait indefinitely for one condition, but can exit early by polling another.
+zx_status_t PollFor(const char* what, Waiter* waiter, zx::duration interval);
+
 // Configures the |threshold| after which |WaitFor| should log a warning. If the value is less than
 // or equal to zero, logging is disabled. This should only be used for testing |WaitFor| and
 // |SyncWait| themselves.
