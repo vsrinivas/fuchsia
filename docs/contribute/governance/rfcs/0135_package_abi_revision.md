@@ -439,7 +439,7 @@ the application bundle's `Info.plist` file.
 [ABI revision]: 0002_platform_versioning.md#abi_revision
 [API level]: 0002_platform_versioning.md#api_level
 [FAR index chunk]: /docs/concepts/source_code/archive_format.md#index_chunk
-[Fuchsia System Interface]: /docs/concepts/system/abi/system.md
+[Fuchsia System Interface]: /docs/concepts/packages/system.md
 [LSMinimumSystemVersion]: https://developer.apple.com/documentation/bundleresources/information_property_list/lsminimumsystemversion?language=objc
 [MinimumOSVersion]: https://developer.apple.com/documentation/bundleresources/information_property_list/minimumosversion?language=objc
 [RFC-0002 Applications]: 0002_platform_versioning.md#applications

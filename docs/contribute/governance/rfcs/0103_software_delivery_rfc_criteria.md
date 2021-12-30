@@ -148,5 +148,5 @@ find that not enough "large" changes are going through the RFC process.
 [package-schema]: /docs/concepts/packages/package.md#structure-of-a-package
 [rfc-process]: /docs/contribute/governance/rfcs/0001_rfc_process.md
 [swd]: /docs/contribute/governance/areas/README.md#software-delivery
-[tuf-structure]: /docs/concepts/system/software_update_system.md#merkle-root
+[tuf-structure]: /docs/concepts/packages/software_update_system.md#merkle-root
 [zircon-criteria]: 0006_addendum_to_rfc_process_for_zircon.md

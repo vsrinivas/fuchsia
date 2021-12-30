@@ -77,7 +77,7 @@ the problems and solutions that are also encountered when developing Fuchsia.
 * [Testing scope][test-scope]
 * [Testing best practices][best-practices]
 
-[fsi]: /docs/concepts/system/abi/system.md
+[fsi]: /docs/concepts/packages/system.md
 [netstack3-roadmap]: /docs/contribute/roadmap/2021/netstack3.md
 [test-scope]: /docs/contribute/testing/scope.md
 [best-practices]: /docs/contribute/testing/best-practices.md

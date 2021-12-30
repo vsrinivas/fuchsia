@@ -12,6 +12,8 @@ toc:
   path: /docs/concepts/kernel/concepts.md
 - title: "Zircon and LK"
   path: /docs/concepts/kernel/zx_and_lk.md
+- title: "C library (libc)"
+  path: /docs/concepts/kernel/libc.md
 - title: "Kernel objects"
   section:
   - title: "Handles"

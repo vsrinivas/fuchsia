@@ -210,9 +210,9 @@ platform interfaces are observed and respected.
 [fidl-compatibility]: /docs/development/languages/fidl/guides/compatibility/README.md
 [fidl-reference]: https://fuchsia.dev/reference/fidl/
 [font-provider-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.fonts#Provider
-[fsi-abi-surface]: /docs/concepts/system/abi/system.md#abi_surfaces
-[fsi-job-policy]: /docs/concepts/system/abi/system.md#job_policy
-[fsi-package-conventions]: /docs/concepts/system/abi/system.md#package_conventions
+[fsi-abi-surface]: /docs/concepts/packages/system.md#abi_surfaces
+[fsi-job-policy]: /docs/concepts/packages/system.md#job_policy
+[fsi-package-conventions]: /docs/concepts/packages/system.md#package_conventions
 [fssh]: /docs/reference/tools/sdk/fssh.md
 [fx-mem]: https://fuchsia.dev/reference/tools/fx/cmd/mem
 [fx-snapshot]: https://fuchsia.dev/reference/tools/fx/cmd/snapshot
@@ -235,7 +235,7 @@ platform interfaces are observed and respected.
 [namespaces]: /docs/concepts/process/namespaces.md
 [oot-component-testing]: /docs/contribute/roadmap/2021/oot_component_testing.md
 [oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md
-[open-life]: /docs/concepts/system/life_of_an_open.md#fidl
+[open-life]: /docs/concepts/filesystems/life_of_an_open.md#fidl
 [package]: /docs/concepts/packages/package.md
 [package-url]: /docs/concepts/packages/package_url.md
 [procargs]: /docs/concepts/process/program_loading.md#the_processargs_protocol

@@ -154,7 +154,7 @@ To add a glossary definition, you need to edit the
 <pre class="devsite-click-to-copy">
 - term: 'ABI'
   short_description: 'The binary-level interface to the system.'
-  full_description: '{% htmlescape %}The <a href="/docs/concepts/system/abi/system.md">Application Binary Interface</a> (ABI)
+  full_description: '{% htmlescape %}The <a href="/docs/concepts/packages/system.md">Application Binary Interface</a> (ABI)
   for a system is the binary-level interface to the system. Typically you don''t
   write software that uses the system ABI directly. Instead, you write software
   against the system API. When the software is compiled, the binary artifact

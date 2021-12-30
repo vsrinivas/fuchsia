@@ -479,7 +479,7 @@ additional justification or otherwise be discouraged by the platform team.
 [ffx-plugins]: /docs/development/tools/ffx/development/plugins.md
 [ffx-proxy-plugin]: /docs/development/tools/ffx/development/proxy-plugin.md
 [fidl-abi-compatibility]: /docs/development/languages/fidl/guides/compatibility/README.md
-[fsi]: /docs/concepts/system/abi/system.md
+[fsi]: /docs/concepts/packages/system.md
 [fuchsia-updatable]: /docs/concepts/principles/updatable.md
 [glossary.product-owner]: /docs/glossary/README.md#product-owner
 [inspect]: /docs/development/diagnostics/inspect/README.md

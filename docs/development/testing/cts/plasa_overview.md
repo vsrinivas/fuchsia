@@ -32,7 +32,7 @@ work is underway to backfill the missing platform surface fragments.
 
 [cts]: /docs/development/testing/cts/overview.md
 [fidl]: /docs/concepts/fidl/overview.md
-[fsi]: /docs/concepts/system/abi/system.md
+[fsi]: /docs/concepts/packages/system.md
 [fxdev]: https://fuchsia.dev
 [idk]: /docs/development/idk/README.md
 [plasadoc]: plasa_manifest.md

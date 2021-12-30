@@ -55,7 +55,7 @@ VFS layer, Fuchsia processes send requests to filesystem services which
 implement protocols for Files, Directories, and Devices. To send one of these
 open requests, a Fuchsia process must transmit an RPC message over an existing
 handle to a directory; for more detail on this process, refer to the [life of an
-open document](/docs/concepts/system/life_of_an_open.md).
+open document](/docs/concepts/filesystems/life_of_an_open.md).
 
 ### Namespaces
 
@@ -74,7 +74,7 @@ redirect these requests to a local handle representing the “/bin” directory,
 rather than sending a request directly to the “bin” directory within the “root”
 directory. Namespaces, like all filesystem constructs, are not visible from the
 kernel: rather, they are implemented in client-side runtimes (such as
-[libfdio](/docs/concepts/system/life_of_an_open.md#Fdio)) and are interposed between most client code
+[libfdio](/docs/concepts/filesystems/life_of_an_open.md#Fdio)) and are interposed between most client code
 and the handles to remote filesystems.
 
 Since namespaces operate on handles, and most Fuchsia resources and services

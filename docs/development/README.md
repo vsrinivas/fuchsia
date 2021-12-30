@@ -44,7 +44,7 @@ and debugging Fuchsia and programs running on Fuchsia.
 
 ## ABI
 
- - [System](/docs/concepts/system/abi/system.md) - Describes scope of the binary-stable Fuchsia System Interface
+ - [System](/docs/concepts/packages/system.md) - Describes scope of the binary-stable Fuchsia System Interface
 
 ## SDK
 

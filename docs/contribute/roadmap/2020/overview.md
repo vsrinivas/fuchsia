@@ -85,7 +85,7 @@ teams:
 
 Teams are evaluating potential improvements that could be made to
 [MinFS](/docs/concepts/filesystems/minfs.md) and
-[VFS](/docs/concepts/system/life_of_an_open.md#vfs_layer), including generating
+[VFS](/docs/concepts/filesystems/life_of_an_open.md#vfs_layer), including generating
 a system for benchmarking and implementing paging within the VFS layer.
 
 ### Implementing accessibility and input improvements

@@ -928,7 +928,7 @@ generalization of a build system to operate asynchronously and distributed.
 [fig2]: resources/0124_decentralized_product_integration_artifact_description_and_propagation/fig_2.png
 [fig3]: resources/0124_decentralized_product_integration_artifact_description_and_propagation/fig_3.png
 [fig4]: resources/0124_decentralized_product_integration_artifact_description_and_propagation/fig_4.png
-[fuchsia-swd]: /docs/concepts/system/software_update_system.md
+[fuchsia-swd]: /docs/concepts/packages/software_update_system.md
 [fuchsia-package]: /docs/concepts/packages/package.md
 [fuchsia-package-hermetic]: /docs/concepts/software_model.md#distributing-components-through-packages
 [fuchsia-merkleroot]: /docs/concepts/packages/merkleroot.md

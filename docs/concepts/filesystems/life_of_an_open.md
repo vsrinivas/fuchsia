@@ -14,7 +14,7 @@ Where does that request go?
 
 ## Standard Library: Where 'open' is defined
 
-The ‘open’ call is a function, provided by a [standard library](libc.md). For
+The ‘open’ call is a function, provided by a [standard library](/docs/concepts/kernel/libc.md). For
 C/C++ programs, this will normally be declared in `unistd.h`, which has a
 backing definition in [libfdio](/sdk/lib/fdio/).
 For Go programs, there is an equivalent (but distinct) implementation in the Go

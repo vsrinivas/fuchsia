@@ -354,7 +354,7 @@ See also:
 [fidl-compatibility-tests]: /src/tests/fidl/compatibility/README.md
 [fidl-wire-format]: /docs/reference/fidl/language/wire-format
 [fonts-tests-integration]: /src/fonts/tests/integration/README.md
-[fsi]: /docs/concepts/system/abi/system.md
+[fsi]: /docs/concepts/packages/system.md
 [fuchsia.pkg.fontresolver]: https://fuchsia.dev/reference/fidl/fuchsia.pkg#FontResolver
 [fuzzing]: /docs/development/testing/fuzzing/overview.md
 [gidl]: /tools/fidl/gidl/README.md

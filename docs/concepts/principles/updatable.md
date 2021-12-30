@@ -34,7 +34,7 @@ Components exchange capabilities as defined by FIDL protocols.
 Software is composed at runtime through protocols
 rather than through static composition of libraries.
 Fuchsia has no system libraries.
-Even the C standard library [(libc)](/docs/concepts/system/libc.md)
+Even the C standard library [(libc)](/docs/concepts/kernel/libc.md)
 is expressed as a dependency,
 delivered only when software needs it.
 Components can be swapped with another implementation

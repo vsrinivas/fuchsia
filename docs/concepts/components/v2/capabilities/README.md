@@ -123,7 +123,7 @@ For more information on what happens when connecting to a capability, see
 [doc-collections]: /docs/concepts/components/v2/realms.md#collections
 [doc-component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [doc-environments]: /docs/concepts/components/v2/environments.md
-[doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
+[doc-outgoing-directory]: /docs/concepts/packages/system.md#outgoing_directory
 [doc-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [examples-routing]: /examples/components/routing

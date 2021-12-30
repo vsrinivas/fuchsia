@@ -21,7 +21,7 @@ functionality that imposes costs on people who do not use the functionality.
 
 One of the most important aspects of FIDL is that Fuchsia uses FIDL pervasively
 for interprocess communication and therefore for defining the [system
-ABI](/docs/concepts/system/abi/system.md).
+ABI](/docs/concepts/packages/system.md).
 
 Many use cases for interprocess communication are performance-critical.  When
 people are evaluating technologies for these performance-critical use cases,

@@ -26,7 +26,7 @@ For example:
 
   Note: This example uses `fdio` to set up the FIDL channel with Trace Manager. For
   more information, see
-  [`fdio`](/docs/concepts/system/life_of_an_open.md#fdio).
+  [`fdio`](/docs/concepts/filesystems/life_of_an_open.md#fdio).
 
   ```cpp
   #include <lib/async-loop/cpp/loop.h>
