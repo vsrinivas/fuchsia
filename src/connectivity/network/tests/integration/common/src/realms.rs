@@ -195,10 +195,6 @@ pub mod constants {
     }
 }
 
-fn use_log_sink() -> Option<fnetemul::ChildUses> {
-    Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(fnetemul::Empty {})]))
-}
-
 fn protocol_dep<P>(component_name: &'static str) -> fnetemul::ChildDep
 where
     P: fidl::endpoints::DiscoverableProtocolMarker,
@@ -219,7 +215,13 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 exposes: Some(
                     version.get_services().iter().map(|service| service.to_string()).collect(),
                 ),
-                uses: use_log_sink(),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    // NB: intentionally do not route SecureStore; it is intentionally not available
+                    // in all tests to ensure that its absence is handled gracefully. Note also that
+                    // netstack-debug does not have a use declaration for this protocol for the same
+                    // reason.
+                ])),
                 ..fnetemul::ChildDef::EMPTY
             },
             KnownServiceProvider::Manager(management_agent) => fnetemul::ChildDef {
