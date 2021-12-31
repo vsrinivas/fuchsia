@@ -4,41 +4,49 @@
 
 # These are the size limits for core products.
 #
-# NOTE: The limits are set arbitrarily high at the moment to ensure size_checker
-# passes. We will gradually tune the set of components and sizes tracked here.
+# NOTE: The absolute limits are set arbitrarily high at the moment to ensure
+# size_checker passes. We will gradually tune the set of components and sizes
+# tracked here.
+#
+# The creep limits are chosen based on historical size increases in the 90th
+# percentile of CLs. Exceeding the creep limits does not yet block submission:
+# see fxbug.dev/79053.
 
 blobfs_capacity = "10485760000"  # 10000 MiB
 
 size_checker_input = {
   icu_data = [ "icudtl.dat" ]
   icu_data_limit = 104857600  # 100 MiB
-  icu_data_creep_limit = 1048576  # 1 MiB
+
+  # This is set to a very generous limit because ICU data size is routinely
+  # expected to grow when there is temporarily more than 1 copy.
+  icu_data_creep_limit = 9230090  # 8.80 MiB
   core_limit = 104857600
-  core_creep_limit = 1048576
+  core_creep_limit = 153416  # 0.146 MiB
   components = [
     {
       component = "/system (drivers and early boot)"
       src = [ "build/images/fuchsia/fuchsia" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 40136  # 0.038 MiB
     },
     {
       component = "Software Delivery"
       src = [ "src/sys/pkg" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 73728  # 0.070 MiB
     },
     {
       component = "Connectivity"
       src = [ "src/connectivity" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 75072  # 0.072 MiB
     },
     {
       component = "Time"
       src = [ "src/sys/time" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 16384  # 0.016 MiB
     },
     {
       component = "Diagnostics"
@@ -47,7 +55,7 @@ size_checker_input = {
         "src/diagnostics",
       ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 49144  # 0.047 MiB
     },
     {
       component = "Component Framework"
@@ -59,13 +67,13 @@ size_checker_input = {
         "src/sys/component_index",
       ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 200648  # 0.191 MiB
     },
     {
       component = "Graphics"
       src = [ "src/graphics" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 41776  # 0.040 MiB
     },
     {
       component = "I18N"
@@ -74,25 +82,25 @@ size_checker_input = {
         "garnet/bin/timezone",
       ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 24576  # 0.023 MiB
     },
     {
       component = "Cobalt"
       src = [ "src/cobalt" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 32768  # 0.031 MiB
     },
     {
       component = "Config Data"
       src = [ "build/images/fuchsia/fuchsia_config-data" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 507080  # 0.484 MiB
     },
     {
       component = "SetUI"
       src = [ "garnet/bin/setui" ]
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 57504  # 0.055 MiB
     },
   ]
 
@@ -102,7 +110,7 @@ size_checker_input = {
       blobs_json_path =
           "obj/build/images/fuchsia/update/update_package_manifest.json"
       limit = 104857600
-      creep_limit = 1048576
+      creep_limit = 144176  # 0.137 MiB
     },
   ]
 }
