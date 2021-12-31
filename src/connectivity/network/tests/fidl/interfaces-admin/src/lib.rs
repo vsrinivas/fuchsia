@@ -1204,19 +1204,9 @@ async fn installer_creates_datapath() {
                     .expect("create interface");
                 let iface_id = control.get_id().await.expect("get id");
 
-                {
-                    let stack = realm
-                        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-                        .expect("connect to protocol");
-                    // TODO(https://fxbug.dev/85659): Enable through Control when
-                    // available.
-
-                    let () = stack
-                        .enable_interface(iface_id)
-                        .await
-                        .expect("enable interface")
-                        .expect("failed to enable interface");
-                }
+                let did_enable =
+                    control.enable().await.expect("calling enable").expect("enable failed");
+                assert!(did_enable);
 
                 let address_state_provider = interfaces::add_address_wait_assigned(
                     &control,
