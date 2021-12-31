@@ -4161,52 +4161,64 @@ TEST(NetStreamTest, GetSocketAcceptConn) {
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-  int got = -1;
-  socklen_t got_len = sizeof(got);
-  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
-  EXPECT_EQ(got_len, sizeof(got));
-  EXPECT_EQ(got, 0);
-
-  sockaddr_in addr = {
-      .sin_family = AF_INET,
-      .sin_addr =
-          {
-              .s_addr = htonl(INADDR_ANY),
-          },
+  auto assert_so_accept_conn_eq = [&fd](int expected) {
+    int got = ~expected;
+    socklen_t got_len = sizeof(got);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0)
+        << strerror(errno);
+    ASSERT_EQ(got_len, sizeof(got));
+    ASSERT_EQ(got, expected);
   };
-  ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
-      << strerror(errno);
-  got = -1;
-  got_len = sizeof(got);
-  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
-  EXPECT_EQ(got_len, sizeof(got));
-  EXPECT_EQ(got, 0);
+
+  {
+    SCOPED_TRACE("initial");
+    ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(0));
+  }
+
+  {
+    const sockaddr_in addr = {
+        .sin_family = AF_INET,
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_ANY),
+            },
+    };
+    ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+        << strerror(errno);
+  }
+
+  {
+    SCOPED_TRACE("bound");
+    ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(0));
+  }
 
   ASSERT_EQ(listen(fd.get(), 0), 0) << strerror(errno);
-  got = -1;
-  got_len = sizeof(got);
-  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
-  EXPECT_EQ(got_len, sizeof(got));
-  EXPECT_EQ(got, 1);
+
+  {
+    SCOPED_TRACE("listening");
+    ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(1));
+  }
 
   ASSERT_EQ(shutdown(fd.get(), SHUT_WR), 0) << strerror(errno);
-  // TODO(https://fxbug.dev/61714): Fix the race with shutdown and getsockopt.
-#if !defined(__Fuchsia__)
-  got = -1;
-  got_len = sizeof(got);
-  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
-  EXPECT_EQ(got_len, sizeof(got));
-  EXPECT_EQ(got, 1);
-#endif
+
+  {
+    SCOPED_TRACE("shutdown-write");
+    ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(1));
+  }
 
   ASSERT_EQ(shutdown(fd.get(), SHUT_RD), 0) << strerror(errno);
-  // TODO(https://fxbug.dev/61714): Fix the race with shutdown and getsockopt.
+
+  // TODO(https://fxbug.dev/61714): Shutting down a listening endpoint is asynchronous in gVisor;
+  // transitioning out of the listening state is the responsibility of
+  // tcp.endpoint.protocolListenLoop
+  // (https://cs.opensource.google/gvisor/gvisor/+/master:pkg/tcpip/transport/tcp/accept.go;l=742-762;drc=58b9bdfc21e792c5d529ec9f4ab0b2f2cd1ee082),
+  // which is merely notified when tcp.endpoint.shutdown is called
+  // (https://cs.opensource.google/gvisor/gvisor/+/master:pkg/tcpip/transport/tcp/endpoint.go;l=2493;drc=58b9bdfc21e792c5d529ec9f4ab0b2f2cd1ee082).
 #if !defined(__Fuchsia__)
-  got = -1;
-  got_len = sizeof(got);
-  ASSERT_EQ(getsockopt(fd.get(), SOL_SOCKET, SO_ACCEPTCONN, &got, &got_len), 0) << strerror(errno);
-  EXPECT_EQ(got_len, sizeof(got));
-  EXPECT_EQ(got, 0);
+  {
+    SCOPED_TRACE("shutdown-read");
+    ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(0));
+  }
 #endif
 }
 

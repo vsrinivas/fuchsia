@@ -1146,9 +1146,12 @@ func (epe *endpointWithEvent) shutdown(how socket.ShutdownMode) (posix.Errno, er
 }
 
 func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdownResult, error) {
-	if errno, err := epe.shutdown(how); err != nil {
+	errno, err := epe.shutdown(how)
+	_ = syslog.DebugTf("shutdown", "%p: how=%s errno=%s err=%v", epe, how, errno, err)
+	if err != nil {
 		return socket.BaseNetworkSocketShutdownResult{}, err
-	} else if errno != 0 {
+	}
+	if errno != 0 {
 		return socket.BaseNetworkSocketShutdownResultWithErr(errno), nil
 	}
 	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
@@ -1660,9 +1663,12 @@ func (eps *endpointWithSocket) shutdown(how socket.ShutdownMode) (posix.Errno, e
 }
 
 func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseNetworkSocketShutdownResult, error) {
-	if errno, err := eps.shutdown(how); err != nil {
+	errno, err := eps.shutdown(how)
+	_ = syslog.DebugTf("shutdown", "%p: how=%s errno=%s err=%v", eps, how, errno, err)
+	if err != nil {
 		return socket.BaseNetworkSocketShutdownResult{}, err
-	} else if errno != 0 {
+	}
+	if errno != 0 {
 		return socket.BaseNetworkSocketShutdownResultWithErr(errno), nil
 	}
 	return socket.BaseNetworkSocketShutdownResultWithResponse(socket.BaseNetworkSocketShutdownResponse{}), nil
