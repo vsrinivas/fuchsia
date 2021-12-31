@@ -592,6 +592,15 @@ config("Wno-reorder-init-list") {
   ]
 }
 
+config("Wno-bitwise-instead-of-logical") {
+  cflags = [ "-Wno-bitwise-instead-of-logical" ]
+  visibility = [
+    "//third_party/zstd:*",
+    "//zircon/kernel/lib/lockup_detector",
+    "//third_party/Vulkan-ValidationLayers:*",
+  ]
+}
+
 # TODO(fxbug.dev/58161): clean up instances of this outside of third party code.
 config("Wno-unused-function") {
   cflags = [ "-Wno-unused-function" ]
