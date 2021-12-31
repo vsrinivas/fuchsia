@@ -1299,7 +1299,6 @@ impl ResolvedInstanceState {
 
     /// Adds a new child of this instance for the given `ChildDecl`. Returns a future to wait on
     /// the child's `Discover` action, or None if it already existed.
-    #[must_use]
     async fn add_child(
         &mut self,
         component: &Arc<ComponentInstance>,
@@ -1311,7 +1310,6 @@ impl ResolvedInstanceState {
     }
 
     #[cfg(test)]
-    #[must_use]
     pub async fn add_child_for_test(
         &mut self,
         component: &Arc<ComponentInstance>,
@@ -1322,7 +1320,6 @@ impl ResolvedInstanceState {
         self.add_child_internal(component, child, collection, None, register_discover).await
     }
 
-    #[must_use]
     async fn add_child_internal(
         &mut self,
         component: &Arc<ComponentInstance>,

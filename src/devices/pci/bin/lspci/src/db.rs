@@ -11,7 +11,9 @@ use {
 struct Device<'a> {
     name: &'a str,
     device: u16,
+    #[allow(unused)]
     subvendor: Option<u16>,
+    #[allow(unused)]
     subdevice: Option<u16>,
 }
 

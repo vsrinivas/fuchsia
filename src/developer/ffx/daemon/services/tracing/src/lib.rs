@@ -24,6 +24,7 @@ use {
 struct TraceTask {
     target_query: Option<String>,
     output_file: String,
+    #[allow(unused)]
     config: trace::TraceConfig,
     proxy: trace::ControllerProxy,
     task: Task<()>,

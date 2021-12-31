@@ -21,6 +21,7 @@ use {
 pub struct PackageIndex {
     dynamic: DynamicIndex,
     retained: RetainedIndex,
+    #[allow(unused)]
     node: finspect::Node,
 }
 

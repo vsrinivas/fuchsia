@@ -43,6 +43,7 @@ struct Opt {
 
     /// already generated configs from cargo build scripts
     #[argh(option, short = 'p')]
+    #[allow(unused)]
     cargo_configs: Option<PathBuf>,
 
     /// location of GN file

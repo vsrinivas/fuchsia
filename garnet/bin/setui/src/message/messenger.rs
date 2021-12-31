@@ -66,7 +66,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A
 /// the audience of sent messages to a preset target.
 #[derive(Clone, Debug)]
 pub struct TargetedMessengerClient<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
+    #[allow(unused)]
     client: MessengerClient<P, A, R>,
+    #[allow(unused)]
     audience: Audience<A, R>,
 }
 
@@ -93,6 +95,7 @@ pub struct MessengerClient<
     R: Role + 'static = default::Role,
 > {
     messenger: Messenger<P, A, R>,
+    #[allow(unused)]
     fuse: ActionFuseHandle,
 }
 

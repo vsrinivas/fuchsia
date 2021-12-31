@@ -36,6 +36,7 @@ use {
 /// A system responsible for implementing basic events functionality on a scoped realm.
 #[derive(Clone)]
 pub struct EventSource {
+    #[allow(unused)]
     /// The component model, needed to route events.
     model: Weak<Model>,
 
@@ -49,6 +50,7 @@ pub struct EventSource {
     /// Used for OpaqueTest:
     /// The implicit static EventStream is dropped when the EventSource goes out of scope.
     /// TODO(fxbug.dev/48245): this shouldn't be done for any EventSource once OpaqueTest goes away.
+    #[allow(unused)]
     resolve_instance_event_stream: Arc<Mutex<Option<fasync::Task<()>>>>,
 
     /// The options used to subscribe to events.

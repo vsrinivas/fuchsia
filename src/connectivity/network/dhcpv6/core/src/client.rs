@@ -195,8 +195,7 @@ impl InformationRequesting {
                 _ => (),
             }
         }
-
-        let actions = std::array::IntoIter::new([
+        let actions = IntoIterator::into_iter([
             Action::CancelTimer(ClientTimerType::Retransmission),
             Action::ScheduleTimer(ClientTimerType::Refresh, information_refresh_time),
         ])

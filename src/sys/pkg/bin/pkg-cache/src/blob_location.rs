@@ -16,12 +16,14 @@ use {
 #[derive(Debug)]
 pub(crate) struct BlobLocation {
     base_blobs: BaseBlobs,
+    #[allow(unused)]
     node: finspect::Node,
 }
 
 #[derive(Debug)]
 struct BaseBlobs {
     blobs: InspectableLen<HashSet<Hash>>,
+    #[allow(unused)]
     node: finspect::Node,
 }
 

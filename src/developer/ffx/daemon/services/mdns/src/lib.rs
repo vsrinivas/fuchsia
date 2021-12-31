@@ -26,6 +26,7 @@ pub(crate) const MDNS_TTL: u32 = 255;
 #[derive(Debug)]
 struct CachedTarget {
     target: bridge::Target,
+    #[allow(unused)]
     eviction_task: Option<Task<()>>,
 }
 

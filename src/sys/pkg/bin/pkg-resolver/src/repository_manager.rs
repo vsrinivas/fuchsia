@@ -51,10 +51,13 @@ pub struct RepositoryManager {
 
 #[derive(Debug)]
 struct RepositoryManagerInspectState {
+    #[allow(unused)]
     node: inspect::Node,
     dynamic_configs_node: inspect::Node,
     static_configs_node: inspect::Node,
+    #[allow(unused)]
     dynamic_configs_path_property: inspect::StringProperty,
+    #[allow(unused)]
     persisted_repos_dir_property: inspect::StringProperty,
     stats: Arc<Mutex<Stats>>,
     repos_node: Arc<inspect::Node>,
@@ -62,6 +65,7 @@ struct RepositoryManagerInspectState {
 
 #[derive(Debug)]
 pub struct Stats {
+    #[allow(unused)]
     node: inspect::Node,
 
     mirrors_node: inspect::Node,
@@ -86,6 +90,7 @@ impl Stats {
 
 #[derive(Debug)]
 pub struct MirrorStats {
+    #[allow(unused)]
     node: inspect::Node,
     /// web requests that failed with a network error and then succeeded when retried
     network_blips: inspect_util::Counter,

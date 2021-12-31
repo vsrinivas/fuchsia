@@ -480,6 +480,7 @@ pub enum Attribution<P: Payload + 'static, A: Address + 'static, R: Role + 'stat
 #[derive(Clone, Debug)]
 pub struct Message<P: Payload + 'static, A: Address + 'static, R: Role + 'static> {
     author: Fingerprint<A>,
+    #[allow(unused)]
     timestamp: Timestamp,
     payload: P,
     attribution: Attribution<P, A, R>,

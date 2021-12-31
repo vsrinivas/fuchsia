@@ -26,7 +26,6 @@ use crate::night_mode::types::NightModeInfo;
 use crate::privacy::types::PrivacyInfo;
 use crate::setup::types::SetupInfo;
 use serde::{Deserialize, Serialize};
-use std::array;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
@@ -222,21 +221,21 @@ pub(crate) trait Merge<Other = Self> {
 /// Returns default setting types. These types should be product-agnostic,
 /// capable of operating with platform level support.
 pub fn get_default_setting_types() -> HashSet<SettingType> {
-    array::IntoIter::new([
+    [
         SettingType::Accessibility,
         SettingType::Device,
         SettingType::Intl,
         SettingType::Privacy,
         SettingType::Setup,
-    ])
-    .collect()
+    ]
+    .into()
 }
 
 /// Returns all known setting types. New additions to SettingType should also
 /// be inserted here.
 #[cfg(test)]
 pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
-    array::IntoIter::new([
+    [
         SettingType::Accessibility,
         SettingType::Audio,
         SettingType::Device,
@@ -250,8 +249,8 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::NightMode,
         SettingType::Privacy,
         SettingType::Setup,
-    ])
-    .collect()
+    ]
+    .into()
 }
 
 #[cfg(test)]
