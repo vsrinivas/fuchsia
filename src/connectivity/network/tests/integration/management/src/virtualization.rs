@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use fidl::endpoints::Proxy as _;
@@ -104,7 +105,7 @@ impl<'a> std::fmt::Debug for Guest<'a> {
 }
 
 impl<'a> Guest<'a> {
-    async fn new<E: netemul::Endpoint, S: Into<String>>(
+    async fn new<E: netemul::Endpoint, S: Into<Cow<'a, str>>>(
         sandbox: &'a netemul::TestSandbox,
         network_proxy: &fnet_virtualization::NetworkProxy,
         realm_name: S,
@@ -112,7 +113,7 @@ impl<'a> Guest<'a> {
         ipv4_addr: fnet::Subnet,
     ) -> Guest<'a> {
         let realm = sandbox
-            .create_netstack_realm::<Netstack2, _>(realm_name.into())
+            .create_netstack_realm::<Netstack2, _>(realm_name)
             .expect("failed to create guest netstack realm");
         let net = sandbox
             .create_network(format!("net{}", interface))

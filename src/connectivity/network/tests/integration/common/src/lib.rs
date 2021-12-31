@@ -252,22 +252,20 @@ pub async fn send_ra_with_router_lifetime<'a>(
 }
 
 /// Sets up a realm with a network with no required services.
-pub async fn setup_network<E, S>(
-    sandbox: &netemul::TestSandbox,
-    // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
-    name: S,
+pub async fn setup_network<'a, E>(
+    sandbox: &'a netemul::TestSandbox,
+    name: &'a str,
 ) -> Result<(
-    netemul::TestNetwork<'_>,
-    netemul::TestRealm<'_>,
+    netemul::TestNetwork<'a>,
+    netemul::TestRealm<'a>,
     fnetstack::NetstackProxy,
-    netemul::TestInterface<'_>,
-    netemul::TestFakeEndpoint<'_>,
+    netemul::TestInterface<'a>,
+    netemul::TestFakeEndpoint<'a>,
 )>
 where
     E: netemul::Endpoint,
-    S: Copy + Into<String>,
 {
-    setup_network_with::<E, S, _>(sandbox, name, std::iter::empty::<fnetemul::ChildDef>()).await
+    setup_network_with::<E, _>(sandbox, name, std::iter::empty::<fnetemul::ChildDef>()).await
 }
 
 /// Sets up a realm with required services and a network used for tests
@@ -276,21 +274,19 @@ where
 /// Returns the network, realm, netstack client, interface (added to the
 /// netstack and up) and a fake endpoint used to read and write raw ethernet
 /// packets.
-pub async fn setup_network_with<E, S, I>(
-    sandbox: &netemul::TestSandbox,
-    // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
-    name: S,
+pub async fn setup_network_with<'a, E, I>(
+    sandbox: &'a netemul::TestSandbox,
+    name: &'a str,
     children: I,
 ) -> Result<(
-    netemul::TestNetwork<'_>,
-    netemul::TestRealm<'_>,
+    netemul::TestNetwork<'a>,
+    netemul::TestRealm<'a>,
     fnetstack::NetstackProxy,
-    netemul::TestInterface<'_>,
-    netemul::TestFakeEndpoint<'_>,
+    netemul::TestInterface<'a>,
+    netemul::TestFakeEndpoint<'a>,
 )>
 where
     E: netemul::Endpoint,
-    S: Copy + Into<String>,
     I: IntoIterator,
     I::Item: Into<fnetemul::ChildDef>,
 {

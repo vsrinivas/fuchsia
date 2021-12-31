@@ -4,6 +4,8 @@
 
 //! Provides utilities for test realms.
 
+use std::borrow::Cow;
+
 use fidl::endpoints::DiscoverableProtocolMarker as _;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_net_debug as fnet_debug;
@@ -464,20 +466,20 @@ impl Manager for NetCfgAdvanced {
 #[async_trait]
 pub trait TestSandboxExt {
     /// Creates a realm with Netstack services.
-    fn create_netstack_realm<N, S>(&self, name: S) -> Result<netemul::TestRealm<'_>>
+    fn create_netstack_realm<'a, N, S>(&'a self, name: S) -> Result<netemul::TestRealm<'a>>
     where
         N: Netstack,
-        S: Into<String>;
+        S: Into<Cow<'a, str>>;
 
     /// Creates a realm with the base Netstack services plus additional ones in
     /// `children`.
-    fn create_netstack_realm_with<N, S, I>(
-        &self,
+    fn create_netstack_realm_with<'a, N, S, I>(
+        &'a self,
         name: S,
         children: I,
-    ) -> Result<netemul::TestRealm<'_>>
+    ) -> Result<netemul::TestRealm<'a>>
     where
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
         N: Netstack,
         I: IntoIterator,
         I::Item: Into<fnetemul::ChildDef>;
@@ -486,23 +488,23 @@ pub trait TestSandboxExt {
 #[async_trait]
 impl TestSandboxExt for netemul::TestSandbox {
     /// Creates a realm with Netstack services.
-    fn create_netstack_realm<N, S>(&self, name: S) -> Result<netemul::TestRealm<'_>>
+    fn create_netstack_realm<'a, N, S>(&'a self, name: S) -> Result<netemul::TestRealm<'a>>
     where
         N: Netstack,
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
     {
         self.create_netstack_realm_with::<N, _, _>(name, std::iter::empty::<fnetemul::ChildDef>())
     }
 
     /// Creates a realm with the base Netstack services plus additional ones in
     /// `children`.
-    fn create_netstack_realm_with<N, S, I>(
-        &self,
+    fn create_netstack_realm_with<'a, N, S, I>(
+        &'a self,
         name: S,
         children: I,
-    ) -> Result<netemul::TestRealm<'_>>
+    ) -> Result<netemul::TestRealm<'a>>
     where
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
         N: Netstack,
         I: IntoIterator,
         I::Item: Into<fnetemul::ChildDef>,

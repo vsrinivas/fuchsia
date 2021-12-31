@@ -1377,7 +1377,7 @@ async fn control_owns_interface_lifetime(detach: bool) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(&name).expect("create realm");
     let endpoint =
-        sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
+        sandbox.create_endpoint::<netemul::NetworkDevice, _>(&name).await.expect("create endpoint");
     let installer = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");

@@ -111,7 +111,7 @@ impl<'a> DhcpTestNetwork<'a> {
         let curr_idx: usize = next_ep_idx.replace_with(|&mut old| old + 1);
         let ep_name = format!("{}-{}", name, curr_idx);
         let endpoint =
-            net.create_endpoint::<E, _>(ep_name.clone()).await.expect("failed to create endpoint");
+            net.create_endpoint::<E, _>(ep_name).await.expect("failed to create endpoint");
         endpoint
     }
 }

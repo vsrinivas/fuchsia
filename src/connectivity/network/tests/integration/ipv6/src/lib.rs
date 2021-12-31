@@ -194,7 +194,7 @@ async fn sends_router_solicitations<E: netemul::Endpoint>(
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let (_network, realm, _netstack, _iface, fake_ep) =
-        setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
+        setup_network::<E>(&sandbox, name).await.expect("error setting up network");
 
     if forwarding {
         let stack = realm
@@ -315,7 +315,7 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
     let name = name.as_str();
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let (_network, realm, _netstack, iface, fake_ep) =
-        setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
+        setup_network::<E>(&sandbox, name).await.expect("error setting up network");
 
     if forwarding {
         let stack = realm
@@ -656,7 +656,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let (_network, realm, _netstack, iface, fake_ep) =
-        setup_network::<E, _>(&sandbox, name).await.expect("error setting up network");
+        setup_network::<E>(&sandbox, name).await.expect("error setting up network");
 
     let debug_control = realm
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
@@ -839,7 +839,7 @@ async fn on_and_off_link_route_discovery<E: netemul::Endpoint>(
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let (_network, realm, netstack, iface, fake_ep) =
-        setup_network::<E, _>(&sandbox, name).await.expect("failed to setup network");
+        setup_network::<E>(&sandbox, name).await.expect("failed to setup network");
 
     if forwarding {
         let stack = realm
@@ -961,7 +961,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
 
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let (_network, realm, _netstack, iface, fake_ep) =
-        setup_network_with::<E, _, _>(&sandbox, name, &[KnownServiceProvider::SecureStash])
+        setup_network_with::<E, _>(&sandbox, name, &[KnownServiceProvider::SecureStash])
             .await
             .expect("error setting up network");
 
@@ -1084,7 +1084,7 @@ async fn slaac_regeneration_after_dad_failure<E: netemul::Endpoint>(name: &str) 
 async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("error creating sandbox");
     let (_network, _realm, _netstack, iface, fake_ep) =
-        setup_network::<E, _>(&sandbox, name).await.expect("error setting up networking");
+        setup_network::<E>(&sandbox, name).await.expect("error setting up networking");
 
     // Add an address so we join the address's solicited node multicast group.
     let () = iface

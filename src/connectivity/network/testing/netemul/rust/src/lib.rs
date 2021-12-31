@@ -6,6 +6,7 @@
 
 //! Netemul utilities.
 
+use std::borrow::Cow;
 use std::convert::{TryFrom as _, TryInto as _};
 use std::path::{Path, PathBuf};
 
@@ -104,10 +105,12 @@ impl TestSandbox {
     }
 
     /// Creates a realm with `name` and `children`.
-    // TODO(https://fxbug.dev/84137): Change type of `name` to `Cow<&'static, str>`.
-    pub fn create_realm<S, I>(&self, name: S, children: I) -> Result<TestRealm<'_>>
+    pub fn create_realm<'a, I>(
+        &'a self,
+        name: impl Into<Cow<'a, str>>,
+        children: I,
+    ) -> Result<TestRealm<'a>>
     where
-        S: Into<String>,
         I: IntoIterator,
         I::Item: Into<fnetemul::ChildDef>,
     {
@@ -116,7 +119,7 @@ impl TestSandbox {
         let () = self.sandbox.create_realm(
             server,
             fnetemul::RealmOptions {
-                name: Some(name.clone()),
+                name: Some(name.clone().into_owned()),
                 children: Some(children.into_iter().map(Into::into).collect()),
                 ..fnetemul::RealmOptions::EMPTY
             },
@@ -125,8 +128,10 @@ impl TestSandbox {
     }
 
     /// Creates a realm with no components.
-    // TODO(https://fxbug.dev/84137): Change type of `name` to `Cow<&'static, str>`.
-    pub fn create_empty_realm(&self, name: impl Into<String>) -> Result<TestRealm<'_>> {
+    pub fn create_empty_realm<'a>(
+        &'a self,
+        name: impl Into<Cow<'a, str>>,
+    ) -> Result<TestRealm<'a>> {
         self.create_realm(name, std::iter::empty::<fnetemul::ChildDef>())
     }
 
@@ -157,8 +162,10 @@ impl TestSandbox {
     }
 
     /// Creates a new empty network with default configurations and `name`.
-    // TODO(https://fxbug.dev/84137): Change type of `name` to `Cow<&'static, str>`.
-    pub async fn create_network(&self, name: impl Into<String>) -> Result<TestNetwork<'_>> {
+    pub async fn create_network<'a>(
+        &'a self,
+        name: impl Into<Cow<'a, str>>,
+    ) -> Result<TestNetwork<'a>> {
         let name = name.into();
         let netm = self.get_network_manager()?;
         let (status, network) = netm
@@ -183,10 +190,9 @@ impl TestSandbox {
     /// Creates a new unattached endpoint with default configurations and `name`.
     ///
     /// Characters may be dropped from the front of `name` if it exceeds the maximum length.
-    // TODO(https://fxbug.dev/84137): Change type of `name` to `Cow<&'static, str>`.
-    pub async fn create_endpoint<E, S>(&self, name: S) -> Result<TestEndpoint<'_>>
+    pub async fn create_endpoint<'a, E, S>(&'a self, name: S) -> Result<TestEndpoint<'a>>
     where
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
         E: Endpoint,
     {
         self.create_endpoint_with(name, E::make_config(DEFAULT_MTU, None)).await
@@ -195,21 +201,30 @@ impl TestSandbox {
     /// Creates a new unattached endpoint with the provided configuration.
     ///
     /// Characters may be dropped from the front of `name` if it exceeds the maximum length.
-    pub async fn create_endpoint_with(
-        &self,
-        // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
-        name: impl Into<String>,
+    pub async fn create_endpoint_with<'a>(
+        &'a self,
+        name: impl Into<Cow<'a, str>>,
         mut config: fnetemul_network::EndpointConfig,
-    ) -> Result<TestEndpoint<'_>> {
+    ) -> Result<TestEndpoint<'a>> {
         let name = {
             let max_len = usize::try_from(fidl_fuchsia_hardware_ethertap::MAX_NAME_LENGTH)
                 .context("fuchsia.hardware.ethertap/MAX_NAME_LENGTH does not fit in usize")?;
-            let mut name = name.into();
-            // NB: Drop characters from the front because it's likely that a name that exceeds the
-            // length limit is the full name of a test whose suffix is more informative because
-            // nesting of testcases appends suffixes.
-            let () = name.replace_range(0..name.len().checked_sub(max_len).unwrap_or(0), "");
-            name
+            let name = name.into();
+            match name.len().checked_sub(max_len) {
+                None => name,
+                Some(start) => {
+                    // NB: Drop characters from the front because it's likely that a name that
+                    // exceeds the length limit is the full name of a test whose suffix is more
+                    // informative because nesting of test cases appends suffixes.
+                    match name {
+                        Cow::Borrowed(name) => Cow::Borrowed(&name[start..]),
+                        Cow::Owned(mut name) => {
+                            let _: std::string::Drain<'_> = name.drain(..start);
+                            Cow::Owned(name)
+                        }
+                    }
+                }
+            }
         };
 
         let epm = self.get_endpoint_manager()?;
@@ -237,7 +252,7 @@ pub enum InterfaceConfig {
 #[must_use]
 pub struct TestRealm<'a> {
     realm: fnetemul::ManagedRealmProxy,
-    name: String,
+    name: Cow<'a, str>,
     _sandbox: &'a TestSandbox,
 }
 
@@ -295,13 +310,12 @@ impl<'a> TestRealm<'a> {
     pub async fn join_network<E, S>(
         &self,
         network: &TestNetwork<'a>,
-        // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
         ep_name: S,
         if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>>
     where
         E: Endpoint,
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
     {
         let endpoint =
             network.create_endpoint::<E, _>(ep_name).await.context("failed to create endpoint")?;
@@ -322,8 +336,7 @@ impl<'a> TestRealm<'a> {
     pub async fn join_network_with(
         &self,
         network: &TestNetwork<'a>,
-        // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
-        ep_name: impl Into<String>,
+        ep_name: impl Into<Cow<'a, str>>,
         ep_config: fnetemul_network::EndpointConfig,
         if_config: &InterfaceConfig,
     ) -> Result<TestInterface<'a>> {
@@ -547,7 +560,7 @@ impl<'a> TestRealm<'a> {
 #[must_use]
 pub struct TestNetwork<'a> {
     network: fnetemul_network::NetworkProxy,
-    name: String,
+    name: Cow<'a, str>,
     sandbox: &'a TestSandbox,
 }
 
@@ -570,11 +583,10 @@ impl<'a> TestNetwork<'a> {
     /// Creates a new endpoint with `name` attached to this network.
     ///
     /// Characters may be dropped from the front of `name` if it exceeds the maximum length.
-    // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
     pub async fn create_endpoint<E, S>(&self, name: S) -> Result<TestEndpoint<'a>>
     where
         E: Endpoint,
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
     {
         let ep = self
             .sandbox
@@ -592,8 +604,7 @@ impl<'a> TestNetwork<'a> {
     /// Characters may be dropped from the front of `name` if it exceeds the maximum length.
     pub async fn create_endpoint_with(
         &self,
-        // TODO(https://fxbug.dev/84137): Change type to `Cow<&'static, str>`.
-        name: impl Into<String>,
+        name: impl Into<Cow<'a, str>>,
         config: fnetemul_network::EndpointConfig,
     ) -> Result<TestEndpoint<'a>> {
         let ep = self
@@ -621,7 +632,7 @@ impl<'a> TestNetwork<'a> {
 #[must_use]
 pub struct TestEndpoint<'a> {
     endpoint: fnetemul_network::EndpointProxy,
-    name: String,
+    name: Cow<'a, str>,
     _sandbox: &'a TestSandbox,
 }
 

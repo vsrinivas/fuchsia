@@ -440,7 +440,7 @@ async fn test_state<E: netemul::Endpoint>(
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm = sandbox
         .create_netstack_realm_with::<Netstack2, _, _>(
-            name.clone(),
+            &name,
             std::iter::once(&KnownServiceProvider::Reachability),
         )
         .expect("failed to create realm");

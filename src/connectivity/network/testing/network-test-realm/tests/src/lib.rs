@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
+#![cfg(test)]
+
+use std::borrow::Cow;
+
 use anyhow::Result;
 use component_events::events::Event as _;
 use derivative::Derivative;
@@ -44,10 +47,10 @@ const NON_EXISTENT_INTERFACE_NAME: &'static str = "non_existent_interface";
 
 /// Creates a `netemul::TestRealm` with a Netstack2 instance and the Network
 /// Test Realm.
-fn create_netstack_realm<S: Into<String>>(
-    name: S,
-    sandbox: &netemul::TestSandbox,
-) -> Result<netemul::TestRealm<'_>> {
+fn create_netstack_realm<'a>(
+    name: impl Into<Cow<'a, str>>,
+    sandbox: &'a netemul::TestSandbox,
+) -> Result<netemul::TestRealm<'a>> {
     // NOTE: To simplify the tests and reduce the number of dependencies, netcfg
     // is intentionally omitted from the `KnownServiceProvider` list below.
     // Instead, it is expected that tests will manually register interfaces with
