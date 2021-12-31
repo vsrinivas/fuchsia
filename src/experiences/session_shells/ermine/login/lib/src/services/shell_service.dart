@@ -15,6 +15,7 @@ import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:flutter/material.dart';
+import 'package:mobx/mobx.dart';
 import 'package:zircon/zircon.dart';
 
 /// Defines a service to launch and support Ermine user shell.
@@ -29,7 +30,7 @@ class ShellService {
     Incoming.fromSvcPath().connectToService(scenic);
     scenic.usesFlatland().then((scenicUsesFlatland) {
       _useFlatland = scenicUsesFlatland;
-      _ready.value = true;
+      runInAction(() => {_ready.value = true});
     });
     WidgetsFlutterBinding.ensureInitialized();
     _focusSubscription = FocusState.instance.stream().listen(_onFocusChanged);
