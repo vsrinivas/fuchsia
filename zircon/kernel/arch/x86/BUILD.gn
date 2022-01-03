@@ -70,12 +70,8 @@ config("retpoline") {
 # execute incorrectly when they end at or cross 32-byte boundaries. (fxbug.dev/44204)
 config("skylake_jcc") {
   visibility = [ ":*" ]
-  if (is_gcc) {
-    cflags = [ "-Wa,-mbranches-within-32B-boundaries" ]
-  } else {
-    cflags = [ "-mbranches-within-32B-boundaries" ]
-  }
   defines = [ "X64_KERNEL_JCC_WORKAROUND" ]
+  configs = [ "//build/config/x64:mitigate_skylake_jcc" ]
 }
 
 # This is used pervasively throughout the kernel on x86.
