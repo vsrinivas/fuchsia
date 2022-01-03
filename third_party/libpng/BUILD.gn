@@ -31,13 +31,13 @@ config("clang_warnings") {
 
 source_set("libpng") {
   sources = [
+    "pnglibconf.h",
     "src/png.c",
     "src/png.h",
     "src/pngconf.h",
     "src/pngerror.c",
     "src/pngget.c",
     "src/pnginfo.h",
-    "src/pnglibconf.h",
     "src/pngmem.c",
     "src/pngpread.c",
     "src/pngprefix.h",
