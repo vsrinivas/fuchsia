@@ -152,9 +152,9 @@ _VULKAN_HEADERS_URL = 'https://github.com/KhronosGroup/Vulkan-Headers'
 _VULKAN_LOADER_URL = 'https://github.com/KhronosGroup/Vulkan-Loader'
 _VULKAN_VALIDATION_LAYERS_URL = 'https://github.com/KhronosGroup/Vulkan-ValidationLayers'
 
-_DEFAULT_SWIFTSHADER_REVISION = '0fa19bd6c285e8ad3459a3f58ca903ceb2d7ab00'
-_DEFAULT_GLSLANG_REVISION = '2fb89a0072ae7316af1c856f22663fde4928128a'
-_DEFAULT_VULKAN_SDK_VERSION = '1.2.189'
+_DEFAULT_SWIFTSHADER_REVISION = 'f1afdde60a81bce2451f208d989637ce09ecfbdb'
+_DEFAULT_GLSLANG_REVISION = 'c9706bdda0ac22b9856f1aa8261e5b9e15cd20c5'
+_DEFAULT_VULKAN_SDK_VERSION = '1.2.198'
 
 
 def make_git_url(site_url, revision):
