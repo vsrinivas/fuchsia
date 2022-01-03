@@ -18,7 +18,7 @@ config("spirv_warnings") {
   ]
 }
 
-source_set("spirv-cross") {
+source_set("spirv_cross_sources") {
   public_configs = [ ":public_preprocessor_definitions" ]
 
   sources = [
@@ -34,9 +34,13 @@ source_set("spirv-cross") {
     "spirv_cpp.hpp",
     "spirv_cross.cpp",
     "spirv_cross.hpp",
-    "spirv_cross_util.cpp",
+
+    # spirv-cross-parsed-ir
+    "spirv_cross_parsed_ir.cpp",
+    "spirv_cross_parsed_ir.hpp",
 
     # spirv-cross-util
+    "spirv_cross_util.cpp",
     "spirv_cross_util.hpp",
 
     # spirv-cross-glsl
@@ -50,6 +54,14 @@ source_set("spirv-cross") {
 
     # spirv-cross-msl
     "spirv_msl.hpp",
+
+    # spirv-parser
+    "spirv_parser.cpp",
+    "spirv_parser.hpp",
+
+    # spirv-reflect
+    "spirv_reflect.cpp",
+    "spirv_reflect.hpp",
   ]
 
   configs += [ ":spirv_warnings" ]
@@ -59,5 +71,5 @@ source_set("spirv-cross") {
 # recent versions of spirv_cross. Note that it is never used by the Fuchsia
 # build though.
 group("spirv_cross_full_for_fuzzers") {
-  deps = [ ":spirv-cross" ]
+  deps = [ ":spirv_cross_sources" ]
 }

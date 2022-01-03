@@ -128,7 +128,7 @@ template("escher_library") {
     ]
 
     deps = [
-      "//third_party/spirv-cross",
+      "//third_party/spirv-cross:spirv_cross_sources",
       "//third_party/spirv-tools:spvtools_opt",
     ]
 
