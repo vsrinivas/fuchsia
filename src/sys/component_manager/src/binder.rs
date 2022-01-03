@@ -167,7 +167,7 @@ async fn report_routing_failure_to_target(
             report_routing_failure(&target, &*BINDER_CAPABILITY, &err, server_end).await;
         }
         Err(err) => {
-            log::warn!("failed to upgrade reference to {}: {}", target.moniker, err);
+            log::warn!("failed to upgrade reference to {}: {}", target.partial_abs_moniker, err);
         }
     }
 }

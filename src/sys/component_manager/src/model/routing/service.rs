@@ -125,7 +125,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             let target = match self.target.upgrade() {
                 Ok(target) => target,
                 Err(_) => {
-                    warn!("target of service routing is gone: {}", &self.target.moniker);
+                    warn!("target of service routing is gone: {}", &self.target.partial_abs_moniker);
                     return;
                 }
             };

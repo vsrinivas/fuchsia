@@ -387,7 +387,7 @@ impl EventRegistry {
             RouteSource::Event(CapabilitySource::Framework {
                 capability: InternalCapability::Event(source_name),
                 component,
-            }) => Ok((source_name, component.moniker.into())),
+            }) => Ok((source_name, component.abs_moniker.into())),
             RouteSource::Event(CapabilitySource::Builtin {
                 capability: InternalCapability::Event(source_name),
                 ..

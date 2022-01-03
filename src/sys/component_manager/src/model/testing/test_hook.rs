@@ -333,7 +333,7 @@ impl Hook for HubInjectionTestHook {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
-                    component.moniker.clone(),
+                    component.abs_moniker.clone(),
                     capability,
                     capability_provider.take(),
                 )

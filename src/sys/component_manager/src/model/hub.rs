@@ -614,7 +614,7 @@ impl Hub {
             let mut capability_provider = capability_provider.lock().await;
             if capability_provider.is_none() {
                 *capability_provider = Some(Box::new(HubCapabilityProvider::new(
-                    component.moniker.clone(),
+                    component.abs_moniker.clone(),
                     self.clone(),
                 )))
             }

@@ -14,10 +14,7 @@ use {
     async_trait::async_trait,
     cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
-    moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, PartialAbsoluteMoniker,
-        PartialChildMoniker,
-    },
+    moniker::{AbsoluteMoniker, ChildMoniker, PartialAbsoluteMoniker, PartialChildMoniker},
     std::{
         clone::Clone,
         sync::{Arc, Weak},
@@ -157,26 +154,35 @@ where
 pub struct WeakComponentInstanceInterface<C: ComponentInstanceInterface> {
     #[derivative(Debug = "ignore")]
     inner: Weak<C>,
-    pub moniker: AbsoluteMoniker,
+    pub abs_moniker: AbsoluteMoniker,
+    pub partial_abs_moniker: PartialAbsoluteMoniker,
 }
 
 impl<C: ComponentInstanceInterface> WeakComponentInstanceInterface<C> {
     pub fn new(component: &Arc<C>) -> Self {
-        Self { inner: Arc::downgrade(component), moniker: component.abs_moniker().clone() }
+        Self {
+            inner: Arc::downgrade(component),
+            abs_moniker: component.abs_moniker().clone(),
+            partial_abs_moniker: component.partial_abs_moniker().clone(),
+        }
     }
 
     /// Attempts to upgrade this `WeakComponentInterface<C>` into an `Arc<C>`, if the
     /// original component instance interface `C` has not been destroyed.
     pub fn upgrade(&self) -> Result<Arc<C>, ComponentInstanceError> {
-        self.inner
-            .upgrade()
-            .ok_or_else(|| ComponentInstanceError::instance_not_found(self.moniker.to_partial()))
+        self.inner.upgrade().ok_or_else(|| {
+            ComponentInstanceError::instance_not_found(self.partial_abs_moniker.clone())
+        })
     }
 }
 
 impl<C: ComponentInstanceInterface> From<&Arc<C>> for WeakComponentInstanceInterface<C> {
     fn from(component: &Arc<C>) -> Self {
-        Self { inner: Arc::downgrade(component), moniker: component.abs_moniker().clone() }
+        Self {
+            inner: Arc::downgrade(component),
+            abs_moniker: component.abs_moniker().clone(),
+            partial_abs_moniker: component.partial_abs_moniker().clone(),
+        }
     }
 }
 

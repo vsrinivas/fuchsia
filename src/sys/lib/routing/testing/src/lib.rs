@@ -1719,7 +1719,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         let model = T::new("a", components).build().await;
         let root_instance = model.look_up_instance(&vec![].into()).await.expect("root instance");
         let expected_source_moniker =
-            AbsoluteMoniker::parse_string_without_instances("/b").unwrap();
+            PartialAbsoluteMoniker::parse_string_without_instances("/b").unwrap();
 
         assert_matches!(
         route_capability(RouteRequest::ExposeProtocol(expose_decl), &root_instance).await,
@@ -1730,7 +1730,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         capability: ComponentCapability::Protocol(protocol_decl),
                         component,
                     }), _route)
-            ) if protocol_decl == expected_protocol_decl && component.moniker == expected_source_moniker
+            ) if protocol_decl == expected_protocol_decl && component.partial_abs_moniker == expected_source_moniker
         );
     }
 

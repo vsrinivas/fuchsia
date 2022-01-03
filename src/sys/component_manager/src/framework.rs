@@ -30,7 +30,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialChildMoniker},
+    moniker::{ChildMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
     std::{
         cmp,
         path::PathBuf,
@@ -48,12 +48,12 @@ lazy_static! {
 // namespace, the following CapabilityProvider will support both paths.
 // Tracking bug: https://fxbug.dev/85183.
 pub struct RealmCapabilityProvider {
-    scope_moniker: AbsoluteMoniker,
+    scope_moniker: PartialAbsoluteMoniker,
     host: Arc<RealmCapabilityHost>,
 }
 
 impl RealmCapabilityProvider {
-    pub fn new(scope_moniker: AbsoluteMoniker, host: Arc<RealmCapabilityHost>) -> Self {
+    pub fn new(scope_moniker: PartialAbsoluteMoniker, host: Arc<RealmCapabilityHost>) -> Self {
         Self { scope_moniker, host }
     }
 }
@@ -69,12 +69,11 @@ impl CapabilityProvider for RealmCapabilityProvider {
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
-        let scope_moniker = self.scope_moniker.to_partial();
         let host = self.host.clone();
         // We only need to look up the component matching this scope.
         // These operations should all work, even if the component is not running.
         let model = host.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-        let component = WeakComponentInstance::from(&model.look_up(&scope_moniker).await?);
+        let component = WeakComponentInstance::from(&model.look_up(&self.scope_moniker).await?);
         task_scope
             .add_task(async move {
                 let serve_result = host
@@ -215,7 +214,7 @@ impl RealmCapabilityHost {
             Some(child) => {
                 let mut exposed_dir = exposed_dir.into_channel();
                 child
-                    .bind(&BindReason::BindChild { parent: component.moniker.clone() })
+                    .bind(&BindReason::BindChild { parent: component.abs_moniker.clone() })
                     .await
                     .map_err(|e| match e {
                         ModelError::ResolverError { err, .. } => {
@@ -316,7 +315,7 @@ impl RealmCapabilityHost {
 
     async fn on_scoped_framework_capability_routed_async<'a>(
         self: Arc<Self>,
-        scope_moniker: AbsoluteMoniker,
+        scope_moniker: PartialAbsoluteMoniker,
         capability: &'a InternalCapability,
         capability_provider: Option<Box<dyn CapabilityProvider>>,
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
@@ -431,7 +430,7 @@ impl Hook for RealmCapabilityHost {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
-                    component.moniker.clone(),
+                    component.partial_abs_moniker.clone(),
                     &capability,
                     capability_provider.take(),
                 )

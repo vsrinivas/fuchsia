@@ -31,7 +31,7 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::*,
-    moniker::{AbsoluteMonikerBase, ExtendedMoniker, RelativeMoniker},
+    moniker::{ExtendedMoniker, RelativeMoniker},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -176,7 +176,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
             let source = self.source.upgrade()?;
             source
                 .bind(&BindReason::AccessCapability {
-                    target: ExtendedMoniker::ComponentInstance(self.target.moniker.clone()),
+                    target: ExtendedMoniker::ComponentInstance(self.target.abs_moniker.clone()),
                     path: self.path.clone(),
                 })
                 .await?;
@@ -298,14 +298,14 @@ async fn open_capability_at_source(open_request: OpenRequest<'_>) -> Result<(), 
             }
             CapabilitySource::Framework { capability, component } => {
                 return Err(RoutingError::capability_from_framework_not_found(
-                    &component.moniker.to_partial(),
+                    &component.partial_abs_moniker,
                     capability.source_name().to_string(),
                 )
                 .into());
             }
             CapabilitySource::Capability { source_capability, component } => {
                 return Err(RoutingError::capability_from_capability_not_found(
-                    &component.moniker.to_partial(),
+                    &component.partial_abs_moniker,
                     source_capability.to_string(),
                 )
                 .into());
