@@ -4,7 +4,10 @@
 
 group("fuzzing") {
   testonly = true
-  deps = [ "manager" ]
+  deps = [
+    "manager",
+    "registry",
+  ]
 }
 
 group("tests") {
@@ -15,5 +18,6 @@ group("tests") {
     "framework:tests",
     "libfuzzer:tests",
     "manager:tests",
+    "registry:tests",
   ]
 }
