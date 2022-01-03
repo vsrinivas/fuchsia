@@ -159,22 +159,9 @@ zx_status_t VmMapping::Protect(vaddr_t base, size_t size, uint new_arch_mmu_flag
 // static
 zx_status_t VmMapping::ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base,
                                       size_t size, uint new_arch_mmu_flags) {
-  // If the desired arch mmu flags contain the WRITE permissions then we cannot go and change any
-  // existing mappings to be writeable. This is because the backing VMO might be wanting to do
-  // copy-on-write, and changing the permissions will prevent that and potentially allow writing to
-  // what was supposed to be a read-only page provided by the VMO. We cannot do nothing though
-  // since we might be removing permissions. For now we simply set the permissions to what was
-  // requested, just without write. This is not optimal since there could be legitimate existing
-  // writable mappings that we will now go and needlessly remove write from, however it is at least
-  // correct. Unfortunately it is not correct if this is a kernel aspace, since we cannot use faults
-  // to bring back in the correct mappings. For now we require, via an assert, that this is not a
-  // kernel aspace.
-  // TODO(fxb/90014): Make this more optimal and find a solution for the kernel path.
-  if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
-    ASSERT(aspace->is_user());
-    vm_mappings_protect_no_write.Add(1);
-    new_arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
-  }
+  // This can never be used to set a WRITE permission since it does not ask the underlying VMO to
+  // perform the copy-on-write step.
+  ASSERT(!(new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
   // If not removing all permissions do the protect, otherwise skip straight to unmapping the entire
   // region.
   if ((new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) != 0) {
@@ -209,29 +196,43 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   // can acquire this from any region.
   new_arch_mmu_flags |= (protection_ranges_.FirstRegionMmuFlags() & ARCH_MMU_FLAG_CACHE_MASK);
 
-  // If we're not actually changing permissions, return fast.
-  if (protection_ranges_.IsSingleProtection(new_arch_mmu_flags)) {
-    return ZX_OK;
-  }
+  // This will get called by UpdateProtectionRange below for every existing unique protection range
+  // that gets changed and allows us to fine tune the protect action based on the previous flags.
+  auto protect_callback = [new_arch_mmu_flags, this](vaddr_t base, size_t size,
+                                                     uint old_arch_mmu_flags) {
+    // Perform an early return if the new and old flags are the same, as there's nothing to be done.
+    if (new_arch_mmu_flags == old_arch_mmu_flags) {
+      return;
+    }
 
-  zx_status_t status =
-      protection_ranges_.UpdateProtectionRange(base_, size_, base, size, new_arch_mmu_flags);
-  if (status != ZX_OK) {
-    return status;
-  }
+    uint flags = new_arch_mmu_flags;
+    // Check if the new flags have the write permission. This is problematic as we cannot just
+    // change any existing hardware mappings to have the write permission, as any individual mapping
+    // may be the result of a read fault and still need to have a copy-on-write step performed.
+    if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+      // Whatever happens, we're not going to be protecting the arch aspace to have write mappings,
+      // so this has to be a user aspace so that we can lazily take write faults in the future.
+      ASSERT(aspace_->is_user());
+      flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+      vm_mappings_protect_no_write.Add(1);
+      // If the new flags without write permission are the same as the old flags, then skip the
+      // protect step since it will be a no-op.
+      if (flags == old_arch_mmu_flags) {
+        return;
+      }
+    }
 
-  // Finally do the actual protect.
-  // TODO: Depending on the exact existing protection nodes this protect might be for a larger than
-  // needed range and could potentially be minimized.
-  // TODO(fxbug.dev/63989) Ensure dirty tracked regions do not get write permissions added to their
-  // hardware mappings.
-  status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
-  // If the protect failed then we do not have sufficient information left to rollback in order to
-  // return an error, nor can we claim success, so require the protect to have succeeded to
-  // continue.
-  ASSERT(status == ZX_OK);
+    // TODO(fxbug.dev/63989) Ensure dirty tracked regions do not get write permissions added to
+    // their hardware mappings.
+    zx_status_t status = ProtectOrUnmap(aspace_, base, size, flags);
+    // If the protect failed then we do not have sufficient information left to rollback in order to
+    // return an error, nor can we claim success, so require the protect to have succeeded to
+    // continue.
+    ASSERT(status == ZX_OK);
+  };
 
-  return ZX_OK;
+  return protection_ranges_.UpdateProtectionRange(base_, size_, base, size, new_arch_mmu_flags,
+                                                  protect_callback);
 }
 
 zx_status_t VmMapping::Unmap(vaddr_t base, size_t size) {
@@ -1172,12 +1173,15 @@ zx_status_t MappingProtectionRanges::EnumerateProtectionRanges(
   return ZX_OK;
 }
 
+template <typename F>
 zx_status_t MappingProtectionRanges::UpdateProtectionRange(vaddr_t mapping_base,
                                                            size_t mapping_size, vaddr_t base,
-                                                           size_t size, uint new_arch_mmu_flags) {
+                                                           size_t size, uint new_arch_mmu_flags,
+                                                           F callback) {
   // If we're changing the whole mapping, just make the change.
   if (mapping_base == base && mapping_size == size) {
     protect_region_list_rest_.clear();
+    callback(base, size, first_region_arch_mmu_flags_);
     first_region_arch_mmu_flags_ = new_arch_mmu_flags;
     return ZX_OK;
   }
@@ -1222,11 +1226,27 @@ zx_status_t MappingProtectionRanges::UpdateProtectionRange(vaddr_t mapping_base,
   }
 
   // Now that we have done all memory allocations and know that we cannot fail start the destructive
-  // part and erase any nodes in the the range.
-  while (first != last) {
-    auto node = protect_region_list_rest_.erase(first++);
-    if (nodes_available < total_nodes_needed) {
-      protect_nodes[nodes_available++].emplace(ktl::move(node));
+  // part and erase any nodes in the the range as well as call the provided callback with the old
+  // data.
+  {
+    vaddr_t old_start = base;
+    uint old_flags = start_carry_flags;
+    while (first != last) {
+      // On the first iteration if the range is aligned to a node then we skip, since we do not want
+      // to do the callback for a zero sized range.
+      if (old_start != first->region_start) {
+        callback(old_start, first->region_start - old_start, old_flags);
+      }
+      old_start = first->region_start;
+      old_flags = first->arch_mmu_flags;
+      auto node = protect_region_list_rest_.erase(first++);
+      if (nodes_available < total_nodes_needed) {
+        protect_nodes[nodes_available++].emplace(ktl::move(node));
+      }
+    }
+    // If the range was not aligned to a node then process any remainder.
+    if (old_start <= base + (size - 1)) {
+      callback(old_start, base + size - old_start, old_flags);
     }
   }
 

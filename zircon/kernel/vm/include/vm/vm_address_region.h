@@ -640,8 +640,11 @@ class MappingProtectionRanges {
   }
 
   // Updates the specified inclusive sub range to have the given flags. On error state is unchanged.
+  // When updating the provided callback is invoked for every old range and value that is being
+  // modified.
+  template <typename F>
   zx_status_t UpdateProtectionRange(vaddr_t mapping_base, size_t mapping_size, vaddr_t base,
-                                    size_t size, uint new_arch_mmu_flags);
+                                    size_t size, uint new_arch_mmu_flags, F callback);
 
   // Returns the precise mmu flags for the given vaddr. The vaddr is assumed to be within the range
   // of this mapping.
@@ -686,11 +689,6 @@ class MappingProtectionRanges {
 
   // Flags for the first protection region.
   uint FirstRegionMmuFlags() const { return first_region_arch_mmu_flags_; }
-
-  // Returns true if there is only one protection region and it matches the flags passed in.
-  bool IsSingleProtection(uint arch_mmu_flags) {
-    return protect_region_list_rest_.is_empty() && arch_mmu_flags == first_region_arch_mmu_flags_;
-  }
 
  private:
   // If a mapping is protected so that parts of it are different types then we need to track this
