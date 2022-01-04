@@ -19,5 +19,6 @@ group("tests") {
     "libfuzzer:tests",
     "manager:tests",
     "registry:tests",
+    "tests",
   ]
 }

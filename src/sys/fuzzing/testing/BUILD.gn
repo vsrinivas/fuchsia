@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+source_set("testing") {
+  testonly = true
+  sources = [
+    "runner.cc",
+    "runner.h",
+  ]
+  public_deps = [
+    "//src/lib/fxl",
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/common/testing",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+  ]
+}
+
+executable("fuzzer") {
+  output_name = "component_fuzzing_test_fuzzer"
+  testonly = true
+  sources = [ "engine.cc" ]
+  deps = [ ":testing" ]
+}

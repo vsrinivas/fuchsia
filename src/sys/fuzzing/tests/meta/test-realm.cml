@@ -1,0 +1,51 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "integration-tests",
+            url: "fuchsia-pkg://fuchsia.com/component-fuzzing-tests#meta/integration-tests.cm",
+        },
+        {
+            name: "fuzz-registry",
+            url: "fuchsia-pkg://fuchsia.com/fuzz-registry#meta/fuzz-registry.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "gtest_runner",
+            from: "parent",
+            to: [ "#integration-tests" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#fuzz-registry",
+                "#integration-tests",
+            ],
+        },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            to: "#integration-tests",
+        },
+        {
+            protocol: "fuchsia.fuzzer.Registrar",
+            from: "#fuzz-registry",
+            to: "#integration-tests",
+        },
+        {
+            protocol: "fuchsia.fuzzer.Registry",
+            from: "#fuzz-registry",
+            to: "#integration-tests",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#integration-tests",
+        },
+    ],
+}
