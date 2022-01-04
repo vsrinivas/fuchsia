@@ -6151,11 +6151,6 @@ class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase,
                                         public testing::Test {
  protected:
   void SetUp() override {
-#if defined(__Fuchsia__)
-    // TODO(https://fxbug.dev/86524): Support receiving SOL_IP -> IP_TOS control message.
-    GTEST_SKIP() << "receiving SOL_IP -> IP_TOS control message not supported in Fuchsia";
-#endif
-
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(AF_INET));
 
     // Enable receiving IP_TOS control message.

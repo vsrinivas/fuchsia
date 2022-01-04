@@ -173,6 +173,9 @@ class FidlControlDataProcessor {
     if (control_data.has_socket()) {
       total += Store(control_data.socket());
     }
+    if (control_data.has_ip()) {
+      total += Store(control_data.ip());
+    }
     return total;
   }
 
@@ -215,6 +218,15 @@ class FidlControlDataProcessor {
       }
     }
 
+    return total;
+  }
+
+  socklen_t Store(fsocket::wire::IpRecvControlData const& control_data) {
+    socklen_t total = 0;
+    if (control_data.has_tos()) {
+      const uint8_t tos = control_data.tos();
+      total += StoreControlMessage(IPPROTO_IP, IP_TOS, &tos, sizeof(tos));
+    }
     return total;
   }
 

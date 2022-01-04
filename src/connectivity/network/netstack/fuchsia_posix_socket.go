@@ -1719,10 +1719,21 @@ func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ControlMessages)
 	return controlData
 }
 
+func (s *datagramSocket) ipControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.IpRecvControlData {
+	var controlData socket.IpRecvControlData
+	if s.ep.SocketOptions().GetReceiveTOS() && cmsg.HasTOS {
+		controlData.SetTos(cmsg.TOS)
+	}
+	return controlData
+}
+
 func (s *datagramSocket) networkSocketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.NetworkSocketRecvControlData {
 	var controlData socket.NetworkSocketRecvControlData
 	if socketControlData := s.socketControlMessagesToFIDL(cmsg); socketControlData != (socket.SocketRecvControlData{}) {
 		controlData.SetSocket(socketControlData)
+	}
+	if ipControlData := s.ipControlMessagesToFIDL(cmsg); ipControlData != (socket.IpRecvControlData{}) {
+		controlData.SetIp(ipControlData)
 	}
 	return controlData
 }

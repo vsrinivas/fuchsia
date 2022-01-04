@@ -632,6 +632,16 @@ type NetworkSocketSendControlData = table {};
 type NetworkSocketRecvControlData = table {
     /// Socket level ancillary data.
     1: socket SocketRecvControlData;
+
+    /// IPv4 level ancillary data.
+    ///
+    /// These match POSIX `SOL_IP` control messages.
+    2: ip @generated_name("IpRecvControlData") table {
+        /// The Type Of Service of a packet that was received.
+        ///
+        /// Present if the `SOL_IP` -> `IP_RECVTOS` option is enabled.
+        1: tos uint8;
+    };
 };
 
 /// Flags controlling RecvMsg behavior.
