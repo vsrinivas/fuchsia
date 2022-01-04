@@ -89,18 +89,71 @@ class WireWeakEventSender;
 
 // WireClientImpl implements both synchronous and asynchronous FIDL calls,
 // working together with the |::fidl::internal::ClientBase| class to safely
-// borrow channel ownership from the binding object.
+// borrow transport ownership from the binding object.
+//
+// TODO(fxbug.dev/85688): This class should be decomposed into
+// |WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
 template <typename FidlProtocol>
 class WireClientImpl;
 
+// |WireWeakAsyncClientImpl| implements one-way FIDL calls with managed buffers.
+// It borrows the transport through a weak reference when making calls.
+//
+// TODO(fxbug.dev/85688): Generate this class.
+template <typename FidlProtocol>
+class WireWeakOnewayClientImpl;
+
+// |WireWeakAsyncClientImpl| implements asynchronous FIDL calls with managed
+// buffers. It borrows the transport through a weak reference when making calls.
+//
+// TODO(fxbug.dev/85688): Generate this class.
+template <typename FidlProtocol>
+class WireWeakAsyncClientImpl;
+
+// |WireWeakOnewayBufferClientImpl| implements one-way FIDL calls with
+// caller-provided buffers. It borrows the transport through a weak reference
+// when making calls.
+template <typename FidlProtocol>
+class WireWeakOnewayBufferClientImpl;
+
+// |WireWeakAsyncBufferClientImpl| implements asynchronous FIDL calls with
+// caller-provided buffers. It borrows the transport through a weak reference
+// when making calls.
+template <typename FidlProtocol>
+class WireWeakAsyncBufferClientImpl;
+
 // |WireSyncClientImpl| implements synchronous FIDL calls with managed buffers.
+// It contains an unowned transport handle.
+//
+// TODO(fxbug.dev/78906): Consider merging this implementation with
+// |WireWeakSyncClientImpl| to support thread-safe teardown of
+// |fidl::WireSyncClient|s.
 template <typename FidlProtocol>
 class WireSyncClientImpl;
 
+// |WireWeakSyncClientImpl| implements synchronous FIDL calls with managed
+// buffers. It borrows the transport through a weak reference when making calls.
+//
+// TODO(fxbug.dev/85688): Generate this class.
+template <typename FidlProtocol>
+class WireWeakSyncClientImpl;
+
 // |WireSyncBufferClientImpl| implements synchronous FIDL calls with
-// caller-provided buffers.
+// caller-provided buffers. It contains an unowned transport handle.
+//
+// TODO(fxbug.dev/78906): Consider merging this implementation with
+// |WireWeakSyncBufferClientImpl| to support thread-safe teardown of
+// |fidl::WireSyncClient|s.
 template <typename FidlProtocol>
 class WireSyncBufferClientImpl;
+
+// |WireWeakSyncBufferClientImpl| implements synchronous FIDL calls with
+// caller-provided buffers. It borrows the transport through a weak reference
+// when making calls.
+//
+// TODO(fxbug.dev/85688): Generate this class.
+template <typename FidlProtocol>
+class WireWeakSyncBufferClientImpl;
 
 template <typename FidlProtocol>
 class WireEventHandlerInterface;

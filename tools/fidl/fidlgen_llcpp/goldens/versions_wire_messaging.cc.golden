@@ -125,6 +125,23 @@ fidl::internal::WireClientImpl<::test_versions::Protocol>::Foo() {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_versions::Protocol>::Foo() {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_versions::Protocol::Foo>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_versions::Protocol::Foo> _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_versions::Protocol::Foo>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

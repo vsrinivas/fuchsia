@@ -41,6 +41,24 @@ fidl::internal::WireClientImpl<::test_driveroneway::OneWay>::Send(
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_driveroneway::OneWay>::Send(const ::test_driveroneway::wire::Payload&
+                                           payload) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_driveroneway::OneWay::Send>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_driveroneway::OneWay::Send> _request{payload};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_driveroneway::OneWay::Send>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

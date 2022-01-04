@@ -19,9 +19,6 @@ namespace fidl {
 
 class Decoder;
 
-// |Error| is a type alias for when the result of an operation is an error.
-using Error = Result;
-
 namespace internal {
 
 // |DesignatedInitializationProxy<FidlStruct>| is the name of the aggregate

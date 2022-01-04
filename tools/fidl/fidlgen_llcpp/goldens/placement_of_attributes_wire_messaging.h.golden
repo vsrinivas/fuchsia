@@ -299,6 +299,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::test_placementofattributes::ExampleProtocol>
@@ -312,6 +313,26 @@ class ::fidl::internal::WireClientImpl<
   ::fidl::Result Method(::fidl::BufferSpan _buffer_span,
                         const ::test_exampleusing::wire::Empty& arg);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_placementofattributes::ExampleProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Method(const ::test_exampleusing::wire::Empty& arg);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_placementofattributes::ExampleProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_placementofattributes::ExampleProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__

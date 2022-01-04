@@ -7,6 +7,7 @@
 
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fit/function.h>
+#include <lib/fitx/result.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -150,7 +151,14 @@ using OutgoingMessageBuffer =
 class AnyBufferAllocator {
  public:
   // Allocates a buffer of size |num_bytes|.
+  //
+  // If the underlying memory resource cannot satisfy the allocation, it should
+  // return nullptr, and preserve its original state before the allocation.
   uint8_t* Allocate(uint32_t num_bytes) { return memory_resource_(num_bytes); }
+
+  // Attempt to allocate |size| bytes from the allocator, returning a view when
+  // successful and an error otherwise.
+  fitx::result<fidl::Error, fidl::BufferSpan> TryAllocate(uint32_t num_bytes);
 
  private:
   template <typename MemoryResource>

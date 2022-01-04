@@ -92,6 +92,29 @@ void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
   ::fidl::internal::ClientBase::SendTwoWay(
       _request_message.GetOutgoingMessage(), _context);
 }
+void fidl::internal::
+    WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
+        uint16_t addend1, uint16_t addend2,
+        ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>*
+            _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_drivertwoway::TwoWay::Add>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> _request{addend1,
+                                                                 addend2};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

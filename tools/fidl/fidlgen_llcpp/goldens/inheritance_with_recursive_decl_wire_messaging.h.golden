@@ -744,6 +744,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::test_inheritancewithrecursivedecl::Parent>
@@ -759,6 +760,27 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::BufferSpan _buffer_span,
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Parent>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result First(
+      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Parent>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_inheritancewithrecursivedecl::Parent> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -840,6 +862,31 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::BufferSpan _buffer_span,
       ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result First(
+      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Second(
+      ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&& request);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_inheritancewithrecursivedecl::Child> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 

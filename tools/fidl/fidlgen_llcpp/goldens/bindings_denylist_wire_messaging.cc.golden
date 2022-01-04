@@ -182,6 +182,33 @@ fidl::internal::WireClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
             &_request);
       });
 }
+void fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::
+    LibfuzzerNeedsNonemptyProtocol(
+        ::fidl::WireResponseContext<
+            ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocol>* _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                          LibfuzzerNeedsNonemptyProtocol>
+      _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                              LibfuzzerNeedsNonemptyProtocol>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

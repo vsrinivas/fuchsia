@@ -8007,6 +8007,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>
     final : public ::fidl::internal::ClientBase {
@@ -8056,6 +8057,32 @@ class ::fidl::internal::WireClientImpl<::test_protocols::HandleRightsProtocol>
       ::test_protocols::HandleRightsProtocol::ResponseMethod>
   ResponseMethod_Sync(::fidl::BufferSpan _buffer_span, ::zx::socket&& h);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::HandleRightsProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result NoResponseMethod(::zx::socket&& h);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::HandleRightsProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::HandleRightsProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void ResponseMethod(
+      ::zx::socket&& h,
+      ::fidl::WireResponseContext<
+          ::test_protocols::HandleRightsProtocol::ResponseMethod>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -8288,6 +8315,53 @@ class ::fidl::internal::WireClientImpl<
                                ::fidl::StringView arg);
   WireClientImpl() = default;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result NoRequestNoResponse();
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result WithRequestNoResponse(::fidl::StringView arg);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::WithAndWithoutRequestResponse>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::WithAndWithoutRequestResponse> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void NoRequestEmptyResponse(::fidl::WireResponseContext<
+                              ::test_protocols::WithAndWithoutRequestResponse::
+                                  NoRequestEmptyResponse>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void NoRequestWithResponse(::fidl::WireResponseContext<
+                             ::test_protocols::WithAndWithoutRequestResponse::
+                                 NoRequestWithResponse>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void WithRequestEmptyResponse(
+      ::fidl::StringView arg,
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponse>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void WithRequestWithResponse(
+      ::fidl::StringView arg,
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponse>* _context);
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -8407,6 +8481,32 @@ class ::fidl::internal::WireClientImpl<::test_protocols::Transitional> final
   ::fidl::Result OneWay(::fidl::BufferSpan _buffer_span, int64_t x);
   WireClientImpl() = default;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::Transitional>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result OneWay(int64_t x);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::Transitional>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::Transitional> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Request(
+      int64_t x,
+      ::fidl::WireResponseContext<::test_protocols::Transitional::Request>*
+          _context);
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -8480,6 +8580,26 @@ class ::fidl::internal::WireClientImpl<::test_protocols::MethodWithUnion> final
   ::fidl::Result UnionMethod(::fidl::BufferSpan _buffer_span,
                              ::test_protocols::wire::TheUnion u);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::MethodWithUnion>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result UnionMethod(::test_protocols::wire::TheUnion u);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::MethodWithUnion>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::MethodWithUnion> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 
@@ -8656,6 +8776,41 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithProtocolEnds> final
                             ::test_protocols::wire::ProtocolEnds&& in);
   WireClientImpl() = default;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::WithProtocolEnds>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::WithProtocolEnds>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::WithProtocolEnds> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void ClientEnds(
+      ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>&& in,
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithProtocolEnds::ClientEnds>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void ServerEnds(
+      ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>&& in,
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithProtocolEnds::ServerEnds>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void StructContainingEnds(
+      ::test_protocols::wire::ProtocolEnds&& in,
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithProtocolEnds::StructContainingEnds>* _context);
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -8725,6 +8880,28 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ManyParameters> final
                          bool p9, bool p10, bool p11, bool p12, bool p13,
                          bool p14, bool p15);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::ManyParameters>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                         bool p7, bool p8, bool p9, bool p10, bool p11,
+                         bool p12, bool p13, bool p14, bool p15);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::ManyParameters>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::ManyParameters> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 
@@ -8911,6 +9088,42 @@ class ::fidl::internal::WireClientImpl<::test_protocols::WithErrorSyntax> final
   HandleInResult_Sync(::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::WithErrorSyntax>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::WithErrorSyntax> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void ResponseAsStruct(
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithErrorSyntax::ResponseAsStruct>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void ErrorAsPrimitive(
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void ErrorAsEnum(::fidl::WireResponseContext<
+                   ::test_protocols::WithErrorSyntax::ErrorAsEnum>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void HandleInResult(
+      ::fidl::WireResponseContext<
+          ::test_protocols::WithErrorSyntax::HandleInResult>* _context);
+};
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -8971,6 +9184,26 @@ class ::fidl::internal::WireClientImpl<::test_protocols::DiscoverableProtocol>
   // necessary.
   ::fidl::Result Method();
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::DiscoverableProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Method();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::DiscoverableProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::DiscoverableProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 
@@ -9139,6 +9372,43 @@ class ::fidl::internal::WireClientImpl<::test_protocols::ChannelProtocol> final
   ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MutateSocket>
   MutateSocket_Sync(::fidl::BufferSpan _buffer_span, ::zx::socket&& a);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocols::ChannelProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result MethodA(int64_t a, int64_t b);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocols::ChannelProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocols::ChannelProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void MethodB(
+      int64_t a, int64_t b,
+      ::fidl::WireResponseContext<::test_protocols::ChannelProtocol::MethodB>*
+          _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void TakeHandle(::zx::handle&& h,
+                  ::fidl::WireResponseContext<
+                      ::test_protocols::ChannelProtocol::TakeHandle>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void MutateSocket(
+      ::zx::socket&& a,
+      ::fidl::WireResponseContext<
+          ::test_protocols::ChannelProtocol::MutateSocket>* _context);
 };
 #endif  // __Fuchsia__
 

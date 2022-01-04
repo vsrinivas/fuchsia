@@ -858,6 +858,7 @@ static_assert(offsetof(::fidl::WireResponse<
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
     : public ::fidl::internal::ClientBase {
@@ -948,6 +949,35 @@ class ::fidl::internal::WireClientImpl<::test_union::TestProtocol> final
   FlexibleXUnionHenceResponseMustBeHeapAllocated_Sync(
       ::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_union::TestProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_union::TestProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_union::TestProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::WireResponseContext<
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::WireResponseContext<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

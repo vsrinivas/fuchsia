@@ -58,6 +58,8 @@ class ::fidl::internal::WireEventDispatcher<fidl_testing::TestProtocol>
   }
 };
 
+// TODO(fxbug.dev/85688): This class should be decomposed into
+// |WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
 template <>
 class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
     : public fidl::internal::ClientBase {
@@ -105,6 +107,20 @@ class ::fidl::internal::WireClientImpl<fidl_testing::TestProtocol>
  private:
   std::mutex lock_;
   std::unordered_set<zx_txid_t> txids_;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<fidl_testing::TestProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<fidl_testing::TestProtocol>
+    : public ::fidl::internal::WireWeakOnewayBufferClientImpl<fidl_testing::TestProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 
 namespace fidl_testing {

@@ -65,21 +65,10 @@ class ResponseContextAsyncErrorTask : private async_task_t {
 // |ClientBase| can track it without requiring heap allocation.
 //
 // The generated code will define type-specific response contexts e.g.
-// `FooMethodResponseContext`, that inherits from |ResponseContext| and
-// interprets the bytes passed to the |OnReply| call appropriately.
-// Users should interact with those subclasses; the notes here on lifecycle
-// apply to those subclasses.
-//
-// ## Lifecycle
-//
-// The bindings runtime has no opinions about how |ResponseContext|s are
-// allocated.
-//
-// Once a |ResponseContext| is passed to the bindings runtime, ownership is
-// transferred to the bindings (in particular, the |ClientBase| object).
-// Ownership is returned back to the caller when |OnRawReply|is invoked. This
-// means that the user or generated code must keep the response context object
-// alive for the duration of the async method call.
+// |fidl::WireResponseContext<FooMethod>|, that inherits from |ResponseContext|
+// and interprets the bytes passed to the |OnRawResult| call appropriately.
+// Users should interact with those subclasses; see the lifecycle notes on
+// |WireResponseContext|.
 //
 // NOTE: |ResponseContext| are additionally referenced with a |list_node_t|
 // in order to safely iterate over outstanding transactions on |ClientBase|
@@ -124,7 +113,6 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // An error occurred while processing this FIDL call:
   //
   // - Failed to encode the outgoing request specific to this call.
-  // - Failed to decode the incoming response specific to this call.
   // - The peer endpoint was closed.
   // - Error from the |async_dispatcher_t|.
   // - Error from the underlying transport.
@@ -133,9 +121,7 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   // - The call raced with an external error in the meantime that caused binding
   //   teardown.
   //
-  // |OnRawResult| is always invoked asynchronously whether in case of success
-  // or error, unless the dispatcher is shut down, in which case it will be
-  // called synchronously.
+  // See |WireResponseContext<FidlMethod>::OnResult| for more details.
   virtual cpp17::optional<fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& result, internal::IncomingTransportContext transport_context) = 0;
 
@@ -161,18 +147,85 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
 
 }  // namespace internal
 
+// |WireResponseContext| is used to monitor the outcome of an outstanding asynchronous
+// |FidlMethod| method call without heap memory allocation. They are used in
+// combination with the caller-allocating async API flavors of FIDL clients.
+//
+// ## Lifecycle
+//
+// The FIDL runtime has no requirements on how |WireResponseContext|s are
+// allocated.
+//
+// Once a |WireResponseContext| is passed to the client, ownership is
+// transferred to the FIDL runtime. Ownership is returned back to the user when
+// |OnResult| is invoked. This means that the user must keep the response
+// context object alive for the duration of the async method call. |OnResult| is
+// guaranteed to be invoked exactly once regardless of success or error.
+//
+// ## Usage
+//
+// Subclass |WireResponseContext| and override its |OnResult| method. Example:
+//
+//     // Lets say we have a `Game` object that loads some required asset
+//     // using the `Disk` FIDL protocol and its `Download` method.
+//     class Game : public fidl::WireResponseContext<Disk::Download> {
+//      public:
+//       void LoadGame() {
+//         // Passing `this` to the caller-allocating flavor since `Game`
+//         // implements the corresponding response context.
+//         disk_client_.buffer(arena_)->Download("foo.zip", this);
+//       }
+//
+//      private:
+//       void OnResult(fidl::WireUnownedResult<Disk::Download>& result) final {
+//         if (!result.ok()) {
+//           std::cerr << "Downloading failed: " << result.error();
+//           return;
+//         }
+//         // Access the response.
+//         fidl::WireResponse<Disk::Download>& response = result.value();
+//       }
+//
+//       fidl::WireClient<Disk> disk_client_;
+//       fidl::Arena<> arena_;
+//     };
 template <typename FidlMethod>
 class WireResponseContext : public internal::ResponseContext {
  public:
   WireResponseContext()
       : ::fidl::internal::ResponseContext(internal::WireOrdinal<FidlMethod>::value) {}
 
+  // Invoked when a response has been received or an error was detected for this
+  // call.
+  //
+  // ## If |result| respresents a success
+  //
+  // |result| borrows the decoded response. The implementation may transfer out
+  // handles contained in the message, but should not access the bytes in
+  // |result| once this method returns.
+  //
+  // ## If |result| represents an error
+  //
+  // An error occurred while processing this FIDL call:
+  //
+  // - Failed to encode the outgoing request specific to this call.
+  // - Failed to decode the incoming response specific to this call.
+  // - The peer endpoint was closed.
+  // - Error from the |async_dispatcher_t|.
+  // - Error from the underlying transport.
+  // - The server sent a malformed message.
+  // - The user explicitly initiated binding teardown.
+  // - The call raced with an external error in the meantime that caused binding
+  //   teardown.
+  //
+  // |OnResult| is always invoked asynchronously whether in case of success
+  // or error, unless the dispatcher is shut down, in which case it will be
+  // called synchronously.
   virtual void OnResult(::fidl::WireUnownedResult<FidlMethod>& result) = 0;
 
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext transport_context) override {
+      ::fidl::IncomingMessage&& msg, internal::IncomingTransportContext transport_context) final {
     if (unlikely(!msg.ok())) {
       ::fidl::WireUnownedResult<FidlMethod> result{msg.error()};
       OnResult(result);

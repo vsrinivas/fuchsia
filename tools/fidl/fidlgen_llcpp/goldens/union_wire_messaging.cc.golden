@@ -79,13 +79,13 @@ namespace test_union {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_union::TestProtocol::
           StrictXUnionHenceResponseMayBeStackAllocated>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_union::TestProtocol::
                               StrictXUnionHenceResponseMayBeStackAllocated>,
@@ -167,13 +167,13 @@ namespace test_union {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_union::TestProtocol::
           FlexibleXUnionHenceResponseMustBeHeapAllocated>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_union::TestProtocol::
                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
@@ -470,6 +470,57 @@ fidl::internal::WireClientImpl<::test_union::TestProtocol>::
                 _transport->get<fidl::internal::ChannelTransport>()),
             _allocator, &_request);
       });
+}
+void fidl::internal::WireWeakAsyncBufferClientImpl<::test_union::TestProtocol>::
+    StrictXUnionHenceResponseMayBeStackAllocated(
+        ::fidl::WireResponseContext<
+            ::test_union::TestProtocol::
+                StrictXUnionHenceResponseMayBeStackAllocated>* _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
+      _request{};
+  ::fidl::UnownedEncodedMessage<::fidl::WireRequest<
+      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+void fidl::internal::WireWeakAsyncBufferClientImpl<::test_union::TestProtocol>::
+    FlexibleXUnionHenceResponseMustBeHeapAllocated(
+        ::fidl::WireResponseContext<
+            ::test_union::TestProtocol::
+                FlexibleXUnionHenceResponseMustBeHeapAllocated>* _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_union::TestProtocol::
+                          FlexibleXUnionHenceResponseMustBeHeapAllocated>
+      _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_union::TestProtocol::
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 #endif  // __Fuchsia__
 

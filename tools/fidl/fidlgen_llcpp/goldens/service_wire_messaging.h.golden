@@ -869,6 +869,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_service::SecondProtocol> final
     : public ::fidl::internal::ClientBase {
@@ -877,6 +878,26 @@ class ::fidl::internal::WireClientImpl<::test_service::SecondProtocol> final
   // necessary.
   ::fidl::Result MethodOnSecond();
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_service::SecondProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result MethodOnSecond();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_service::SecondProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_service::SecondProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -939,6 +960,26 @@ class ::fidl::internal::WireClientImpl<::test_service::FirstProtocol> final
   // necessary.
   ::fidl::Result MethodOnFirst();
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_service::FirstProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result MethodOnFirst();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_service::FirstProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_service::FirstProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 

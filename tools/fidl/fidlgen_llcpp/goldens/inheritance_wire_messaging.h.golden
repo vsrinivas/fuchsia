@@ -795,6 +795,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Sub::Foo>, y) ==
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_inheritance::Super> final
     : public ::fidl::internal::ClientBase {
@@ -829,6 +830,26 @@ class ::fidl::internal::WireClientImpl<::test_inheritance::Super> final
   ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> Foo_Sync(
       ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_inheritance::Super> : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_inheritance::Super> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Foo(
+      ::fidl::StringView s,
+      ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -915,6 +936,25 @@ class ::fidl::internal::WireClientImpl<::test_inheritance::Sub> final
   ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> Foo_Sync(
       ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_inheritance::Sub>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_inheritance::Sub> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Foo(::fidl::StringView s,
+           ::fidl::WireResponseContext<::test_inheritance::Sub::Foo>* _context);
 };
 #endif  // __Fuchsia__
 

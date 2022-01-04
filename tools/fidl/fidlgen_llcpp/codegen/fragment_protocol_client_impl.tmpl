@@ -7,6 +7,10 @@
 {{- define "Protocol:ClientImpl:MessagingHeader" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
+{{/*
+TODO(fxbug.dev/85688): This class should be decomposed into
+|WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
+*/}}
 template<>
 class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
  public:
@@ -15,6 +19,27 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
   {{- end }}
   {{ .WireClientImpl.Self }}() = default;
 };
+
+template<>
+class {{ .WireWeakOnewayBufferClientImpl }} : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  {{- range .OneWayMethods }}
+    {{- template "Method:ClientImplOnewayBuffer:MessagingHeader" . }}
+  {{- end }}
+};
+
+template<>
+class {{ .WireWeakAsyncBufferClientImpl }} final : public {{ .WireWeakOnewayBufferClientImpl }} {
+ public:
+  using {{ .WireWeakOnewayBufferClientImpl.Self }}::{{ .WireWeakOnewayBufferClientImpl.Self }};
+
+  {{- range .TwoWayMethods }}
+    {{- template "Method:ClientImplAsyncBuffer:MessagingHeader" . }}
+  {{- end }}
+};
+
 {{- EndifFuchsia -}}
 {{- end }}
 
@@ -26,6 +51,14 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
 
   {{- range .ClientMethods }}
     {{- template "Method:ClientImpl:MessagingSource" . }}
+  {{- end }}
+
+  {{- range .OneWayMethods }}
+    {{- template "Method:ClientImplOnewayBuffer:MessagingSource" . }}
+  {{- end }}
+
+  {{- range .TwoWayMethods }}
+    {{- template "Method:ClientImplAsyncBuffer:MessagingSource" . }}
   {{- end }}
 
   {{- EndifFuchsia -}}

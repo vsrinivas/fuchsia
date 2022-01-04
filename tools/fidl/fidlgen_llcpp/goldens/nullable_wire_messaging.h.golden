@@ -439,6 +439,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol> final
     : public ::fidl::internal::ClientBase {
@@ -476,6 +477,28 @@ class ::fidl::internal::WireClientImpl<::test_nullable::SimpleProtocol> final
   ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> Add_Sync(
       ::fidl::BufferSpan _buffer_span, int32_t a, int32_t b);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_nullable::SimpleProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_nullable::SimpleProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_nullable::SimpleProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Add(int32_t a, int32_t b,
+           ::fidl::WireResponseContext<::test_nullable::SimpleProtocol::Add>*
+               _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

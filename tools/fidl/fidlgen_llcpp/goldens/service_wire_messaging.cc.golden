@@ -45,6 +45,24 @@ namespace test_service {
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
 }
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_service::SecondProtocol>::MethodOnSecond() {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_service::SecondProtocol::MethodOnSecond>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
+      _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -189,6 +207,23 @@ fidl::internal::WireClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_service::FirstProtocol>::MethodOnFirst() {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_service::FirstProtocol::MethodOnFirst>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst> _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 

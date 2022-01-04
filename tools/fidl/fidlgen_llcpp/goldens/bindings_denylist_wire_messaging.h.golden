@@ -644,6 +644,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
@@ -681,6 +682,29 @@ class ::fidl::internal::WireClientImpl<
                          LibfuzzerNeedsNonemptyProtocol>
   LibfuzzerNeedsNonemptyProtocol_Sync();
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void LibfuzzerNeedsNonemptyProtocol(
+      ::fidl::WireResponseContext<
+          ::test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocol>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__
@@ -744,6 +768,23 @@ class ::fidl::internal::WireClientImpl<::test_bindingsdenylist::OnlyCppAndDeps>
     final : public ::fidl::internal::ClientBase {
  public:
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_bindingsdenylist::OnlyCppAndDeps>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_bindingsdenylist::OnlyCppAndDeps> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 

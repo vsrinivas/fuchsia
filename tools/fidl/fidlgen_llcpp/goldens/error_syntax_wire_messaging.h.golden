@@ -888,6 +888,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::test_errorsyntax::ExampleUseOfErrorSyntax>
@@ -973,6 +974,36 @@ class ::fidl::internal::WireClientImpl<
       ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
   CallWhichMayFail_Sync(::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_errorsyntax::ExampleUseOfErrorSyntax>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_errorsyntax::ExampleUseOfErrorSyntax> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void ComposedCallWhichMayFail(
+      ::fidl::StringView s,
+      ::fidl::WireResponseContext<::test_errorsyntax::ExampleUseOfErrorSyntax::
+                                      ComposedCallWhichMayFail>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void CallWhichMayFail(
+      ::fidl::StringView s,
+      ::fidl::WireResponseContext<
+          ::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>*
+          _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

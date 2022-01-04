@@ -43,13 +43,13 @@ namespace test_inheritancewithrecursivedecl {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritancewithrecursivedecl::Parent::First>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
@@ -93,6 +93,26 @@ namespace test_inheritancewithrecursivedecl {
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Parent>::
+    First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
+              request) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_inheritancewithrecursivedecl::Parent::First>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>
+      _request{std::move(request)};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 
@@ -268,13 +288,13 @@ namespace test_inheritancewithrecursivedecl {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritancewithrecursivedecl::Child::First>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
@@ -318,13 +338,13 @@ namespace test_inheritancewithrecursivedecl {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritancewithrecursivedecl::Child::Second>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
@@ -396,6 +416,46 @@ namespace test_inheritancewithrecursivedecl {
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>::
+    First(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
+              request) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_inheritancewithrecursivedecl::Child::First>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>
+      _request{std::move(request)};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_inheritancewithrecursivedecl::Child>::
+    Second(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>&&
+               request) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_inheritancewithrecursivedecl::Child::Second>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>
+      _request{std::move(request)};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
 #endif  // __Fuchsia__
 

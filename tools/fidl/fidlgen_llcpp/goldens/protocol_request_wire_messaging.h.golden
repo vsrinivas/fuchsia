@@ -1182,6 +1182,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
     : public ::fidl::internal::ClientBase {
@@ -1269,6 +1270,41 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Parent> final
       ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
   WireClientImpl() = default;
 };
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocolrequest::Parent>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result TakeChild(
+      ::fidl::ClientEnd<::test_protocolrequest::Child>&& c);
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result TakeChildRequest(
+      ::fidl::ServerEnd<::test_protocolrequest::Child>&& r);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolrequest::Parent>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocolrequest::Parent> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void GetChild(
+      ::fidl::WireResponseContext<::test_protocolrequest::Parent::GetChild>*
+          _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void GetChildRequest(
+      ::fidl::WireResponseContext<
+          ::test_protocolrequest::Parent::GetChildRequest>* _context);
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -1327,6 +1363,23 @@ class ::fidl::internal::WireClientImpl<::test_protocolrequest::Child> final
     : public ::fidl::internal::ClientBase {
  public:
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_protocolrequest::Child>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolrequest::Child>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_protocolrequest::Child> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 #endif  // __Fuchsia__
 

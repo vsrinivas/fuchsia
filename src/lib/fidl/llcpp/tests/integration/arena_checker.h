@@ -16,9 +16,17 @@ class ArenaChecker {
     return IsPointerInArena(pointer, arena, arena.initial_buffer_, kInitialCapacity);
   }
 
+  // Returns if the arena was used to allocate any buffer at all.
+  template <size_t kInitialCapacity>
+  static bool DidUse(::fidl::Arena<kInitialCapacity>& arena) {
+    return DidUse(arena, arena.initial_buffer_);
+  }
+
  private:
   static bool IsPointerInArena(void* pointer, ::fidl::AnyArena& arena,
                                const uint8_t* initial_buffer, size_t initial_capacity);
+
+  static bool DidUse(::fidl::AnyArena& arena, const uint8_t* initial_buffer);
 };
 
 }  // namespace fidl_testing

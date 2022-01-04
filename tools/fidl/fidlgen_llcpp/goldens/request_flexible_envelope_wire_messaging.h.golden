@@ -873,6 +873,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
     final : public ::fidl::internal::ClientBase {
@@ -962,6 +963,35 @@ class ::fidl::internal::WireClientImpl<::test_requestflexibleenvelope::Protocol>
       ::fidl::BufferSpan _buffer_span,
       ::test_requestflexibleenvelope::wire::FlexibleFoo s);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_requestflexibleenvelope::Protocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_requestflexibleenvelope::Protocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void RequestStrictResponseFlexible(
+      ::test_requestflexibleenvelope::wire::StrictFoo s,
+      ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
+                                      RequestStrictResponseFlexible>* _context);
+
+  // Caller provides the backing storage for FIDL message.
+  void RequestFlexibleResponseStrict(
+      ::test_requestflexibleenvelope::wire::FlexibleFoo s,
+      ::fidl::WireResponseContext<::test_requestflexibleenvelope::Protocol::
+                                      RequestFlexibleResponseStrict>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

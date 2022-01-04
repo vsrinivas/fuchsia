@@ -127,19 +127,21 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 // //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
 var (
 	// Protocol related
-	WireSyncClient            = fidlNs.member("WireSyncClient")
-	WireClient                = fidlNs.member("WireClient")
-	WireEventHandlerInterface = internalNs.member("WireEventHandlerInterface")
-	WireSyncEventHandler      = fidlNs.member("WireSyncEventHandler")
-	WireAsyncEventHandler     = fidlNs.member("WireAsyncEventHandler")
-	WireServer                = fidlNs.member("WireServer")
-	WireEventSender           = fidlNs.member("WireEventSender")
-	WireWeakEventSender       = internalNs.member("WireWeakEventSender")
-	WireClientImpl            = internalNs.member("WireClientImpl")
-	WireSyncClientImpl        = internalNs.member("WireSyncClientImpl")
-	WireSyncBufferClientImpl  = internalNs.member("WireSyncBufferClientImpl")
-	WireEventDispatcher       = internalNs.member("WireEventDispatcher")
-	WireServerDispatcher      = internalNs.member("WireServerDispatcher")
+	WireSyncClient                 = fidlNs.member("WireSyncClient")
+	WireClient                     = fidlNs.member("WireClient")
+	WireEventHandlerInterface      = internalNs.member("WireEventHandlerInterface")
+	WireSyncEventHandler           = fidlNs.member("WireSyncEventHandler")
+	WireAsyncEventHandler          = fidlNs.member("WireAsyncEventHandler")
+	WireServer                     = fidlNs.member("WireServer")
+	WireEventSender                = fidlNs.member("WireEventSender")
+	WireWeakEventSender            = internalNs.member("WireWeakEventSender")
+	WireClientImpl                 = internalNs.member("WireClientImpl")
+	WireWeakAsyncBufferClientImpl  = internalNs.member("WireWeakAsyncBufferClientImpl")
+	WireWeakOnewayBufferClientImpl = internalNs.member("WireWeakOnewayBufferClientImpl")
+	WireSyncClientImpl             = internalNs.member("WireSyncClientImpl")
+	WireSyncBufferClientImpl       = internalNs.member("WireSyncBufferClientImpl")
+	WireEventDispatcher            = internalNs.member("WireEventDispatcher")
+	WireServerDispatcher           = internalNs.member("WireServerDispatcher")
 
 	// Method related
 	WireRequest         = fidlNs.member("WireRequest")
@@ -159,39 +161,43 @@ type wireTypeNames struct {
 	// related to this protocol.
 	// TODO(fxbug.dev/72798): Golang template should use this instead of the
 	// nameVariants embedded in Protocol.
-	WireProtocolMarker        name
-	WireSyncClient            name
-	WireClient                name
-	WireEventHandlerInterface name
-	WireSyncEventHandler      name
-	WireAsyncEventHandler     name
-	WireServer                name
-	WireEventSender           name
-	WireWeakEventSender       name
-	WireClientImpl            name
-	WireSyncClientImpl        name
-	WireSyncBufferClientImpl  name
-	WireEventDispatcher       name
-	WireServerDispatcher      name
+	WireProtocolMarker             name
+	WireSyncClient                 name
+	WireClient                     name
+	WireEventHandlerInterface      name
+	WireSyncEventHandler           name
+	WireAsyncEventHandler          name
+	WireServer                     name
+	WireEventSender                name
+	WireWeakEventSender            name
+	WireClientImpl                 name
+	WireWeakAsyncBufferClientImpl  name
+	WireWeakOnewayBufferClientImpl name
+	WireSyncClientImpl             name
+	WireSyncBufferClientImpl       name
+	WireEventDispatcher            name
+	WireServerDispatcher           name
 }
 
 func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 	p := protocolVariants.Wire
 	return wireTypeNames{
-		WireProtocolMarker:        p,
-		WireSyncClient:            WireSyncClient.template(p),
-		WireClient:                WireClient.template(p),
-		WireEventHandlerInterface: WireEventHandlerInterface.template(p),
-		WireSyncEventHandler:      WireSyncEventHandler.template(p),
-		WireAsyncEventHandler:     WireAsyncEventHandler.template(p),
-		WireServer:                WireServer.template(p),
-		WireEventSender:           WireEventSender.template(p),
-		WireWeakEventSender:       WireWeakEventSender.template(p),
-		WireClientImpl:            WireClientImpl.template(p),
-		WireSyncClientImpl:        WireSyncClientImpl.template(p),
-		WireSyncBufferClientImpl:  WireSyncBufferClientImpl.template(p),
-		WireEventDispatcher:       WireEventDispatcher.template(p),
-		WireServerDispatcher:      WireServerDispatcher.template(p),
+		WireProtocolMarker:             p,
+		WireSyncClient:                 WireSyncClient.template(p),
+		WireClient:                     WireClient.template(p),
+		WireEventHandlerInterface:      WireEventHandlerInterface.template(p),
+		WireSyncEventHandler:           WireSyncEventHandler.template(p),
+		WireAsyncEventHandler:          WireAsyncEventHandler.template(p),
+		WireServer:                     WireServer.template(p),
+		WireEventSender:                WireEventSender.template(p),
+		WireWeakEventSender:            WireWeakEventSender.template(p),
+		WireClientImpl:                 WireClientImpl.template(p),
+		WireWeakAsyncBufferClientImpl:  WireWeakAsyncBufferClientImpl.template(p),
+		WireWeakOnewayBufferClientImpl: WireWeakOnewayBufferClientImpl.template(p),
+		WireSyncClientImpl:             WireSyncClientImpl.template(p),
+		WireSyncBufferClientImpl:       WireSyncBufferClientImpl.template(p),
+		WireEventDispatcher:            WireEventDispatcher.template(p),
+		WireServerDispatcher:           WireServerDispatcher.template(p),
 	}
 }
 

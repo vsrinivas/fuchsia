@@ -288,6 +288,9 @@ class Result {
 // Logs a full description of the result to an output stream.
 std::ostream& operator<<(std::ostream& ostream, const Result& result);
 
+// |Error| is a type alias for when the result of an operation is an error.
+using Error = Result;
+
 // |UnbindInfo| describes how the channel was unbound from a server or client.
 //
 // The reason is always initialized when part of a |fidl::UnbindInfo|.

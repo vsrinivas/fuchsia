@@ -474,6 +474,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
     : public ::fidl::internal::ClientBase {
@@ -521,6 +522,30 @@ class ::fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol> final
                   ::test_anonymous::wire::UnionMember union_member,
                   ::test_anonymous::wire::TableMember table_member);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_anonymous::SomeProtocol>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_anonymous::SomeProtocol> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void SomeMethod(
+      ::test_anonymous::wire::UnionMember union_member,
+      ::test_anonymous::wire::TableMember table_member,
+      ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
+          _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -173,8 +173,8 @@ class WireClient {
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromDispatcherThread);
   }
 
-  // Returns the interface for making outgoing FIDL calls. The client must be
-  // initialized first.
+  // Returns the interface for making outgoing FIDL calls with managed memory
+  // allocation. The client must be initialized first.
   //
   // If the binding has been torn down, calls on the interface return error with
   // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
@@ -184,6 +184,59 @@ class WireClient {
   // |WireClient| reference-counting type.
   ClientImpl* operator->() const { return &get(); }
   ClientImpl& operator*() const { return get(); }
+
+  // Returns a veneer object which exposes the caller-allocating API, using the
+  // provided |resource| to allocate buffers necessary for each call. Requests
+  // will live on those buffers. Responses on the other hand do not live on
+  // those buffers; they are separately managed and may become invalid after the
+  // corresponding async response/result callback returns.
+  //
+  // Examples of supported memory resources are:
+  //
+  // * |fidl::BufferSpan|, referencing a range of bytes.
+  // * |fidl::AnyArena&|, referencing an arena.
+  // * Any type for which there is a |MakeAnyBufferAllocator| specialization.
+  //   See |AnyBufferAllocator|.
+  //
+  // This interface is suitable when one needs complete control over memory
+  // allocation. Instead of implicitly heap allocating the necessary bookkeeping
+  // for in-flight operations, the methods take a raw pointer to a
+  // |fidl::WireResponseContext<FidlMethod>|, which may be allocated via any
+  // means as long as it outlives the duration of this async FIDL call. Refer to
+  // documentation on the response context.
+  //
+  // The returned object borrows from this object, hence must not outlive
+  // the client object.
+  //
+  // The returned object may be briefly persisted for use over multiple calls:
+  //
+  //     fidl::Arena my_arena;
+  //     fidl::WireClient client(std::move(client_end), some_dispatcher);
+  //     auto buffered = client.buffer(my_arena);
+  //     buffered->FooMethod(args, foo_response_context);
+  //     buffered->BarMethod(args, bar_response_context);
+  //     ...
+  //
+  // In this situation, those calls will all use the initially provided memory
+  // resource (`my_arena`) to allocate their message buffers. The memory
+  // resource won't be reset/overwritten across calls. Note that if a
+  // |BufferSpan| is provided as the memory resource, sharing memory resource in
+  // this manner may eventually exhaust the capacity of the buffer span since it
+  // represents a single fixed size buffer. To reuse (overwrite) the underlying
+  // buffer across multiple calls, obtain a new caller-allocating veneer object
+  // for each call:
+  //
+  //     fidl::BufferSpan span(some_large_buffer, size);
+  //     fidl::WireClient client(std::move(client_end), some_dispatcher);
+  //     client.buffer(span)->FooMethod(args, foo_response_context);
+  //     client.buffer(span)->BarMethod(args, bar_response_context);
+  //
+  template <typename MemoryResource>
+  auto buffer(MemoryResource&& resource) const {
+    ZX_ASSERT(is_valid());
+    return internal::BufferClientVeneer<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
+        &get(), internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
+  }
 
  private:
   // Allow unit tests to peek into the internals of this class.
@@ -441,8 +494,8 @@ class WireSharedClient final {
   // of the channel while the binding is alive.
   WireSharedClient Clone() { return WireSharedClient(*this); }
 
-  // Returns the interface for making outgoing FIDL calls. The client must be
-  // initialized first.
+  // Returns the interface for making outgoing FIDL calls with managed memory
+  // allocation. The client must be initialized first.
   //
   // If the binding has been torn down, calls on the interface return error with
   // status |ZX_ERR_CANCELED| and reason |fidl::Reason::kUnbind|.
@@ -453,6 +506,16 @@ class WireSharedClient final {
   // handed off through the |Clone| method.
   ClientImpl* operator->() const { return &get(); }
   ClientImpl& operator*() const { return get(); }
+
+  // Returns a veneer object which exposes the caller-allocating API, using
+  // the provided |resource| to allocate buffers necessary for each call.
+  // See documentation on |WireClient::buffer| for detailed behavior.
+  template <typename MemoryResource>
+  auto buffer(MemoryResource&& resource) const {
+    ZX_ASSERT(is_valid());
+    return internal::BufferClientVeneer<internal::WireWeakAsyncBufferClientImpl<Protocol>>{
+        &get(), internal::MakeAnyBufferAllocator(std::forward<MemoryResource>(resource))};
+  }
 
  private:
   // Allow unit tests to peek into the internals of this class.

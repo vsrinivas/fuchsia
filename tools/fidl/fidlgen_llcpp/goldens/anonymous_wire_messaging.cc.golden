@@ -58,13 +58,13 @@ namespace test_anonymous {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_anonymous::SomeProtocol::SomeMethod>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>,
       ::fidl::MessageDirection::kSending>();
@@ -207,6 +207,30 @@ fidl::internal::WireClientImpl<::test_anonymous::SomeProtocol>::SomeMethod_Sync(
                 _transport->get<fidl::internal::ChannelTransport>()),
             _allocator, &_request);
       });
+}
+void fidl::internal::
+    WireWeakAsyncBufferClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(
+        ::test_anonymous::wire::UnionMember union_member,
+        ::test_anonymous::wire::TableMember table_member,
+        ::fidl::WireResponseContext<::test_anonymous::SomeProtocol::SomeMethod>*
+            _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_anonymous::SomeProtocol::SomeMethod>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod> _request{
+      union_member, table_member};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_anonymous::SomeProtocol::SomeMethod>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 #endif  // __Fuchsia__
 

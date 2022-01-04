@@ -514,6 +514,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<
     ::test_foreigntypeinresponseusedthroughcompose::Top>
@@ -554,6 +555,28 @@ class ::fidl::internal::WireClientImpl<
       ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
   GetFoo_Sync(::fidl::BufferSpan _buffer_span);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_foreigntypeinresponseusedthroughcompose::Top>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_foreigntypeinresponseusedthroughcompose::Top> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void GetFoo(::fidl::WireResponseContext<
+              ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>*
+                  _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

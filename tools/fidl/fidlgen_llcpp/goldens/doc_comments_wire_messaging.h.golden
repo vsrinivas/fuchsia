@@ -400,6 +400,7 @@ static_assert(
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_doccomments::Interface> final
     : public ::fidl::internal::ClientBase {
@@ -412,6 +413,30 @@ class ::fidl::internal::WireClientImpl<::test_doccomments::Interface> final
   // necessary.
   ::fidl::Result Method();
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_doccomments::Interface>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  /// method comment #1
+  ///
+  /// method comment #3
+  //
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Method();
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_doccomments::Interface>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_doccomments::Interface> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__

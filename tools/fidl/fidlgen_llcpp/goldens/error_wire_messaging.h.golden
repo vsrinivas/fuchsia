@@ -410,6 +410,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>,
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_error::Example> final
     : public ::fidl::internal::ClientBase {
@@ -442,6 +443,25 @@ class ::fidl::internal::WireClientImpl<::test_error::Example> final
   ::fidl::WireUnownedResult<::test_error::Example::Foo> Foo_Sync(
       ::fidl::BufferSpan _buffer_span, ::fidl::StringView s);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<::test_error::Example>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<::test_error::Example>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_error::Example> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Foo(::fidl::StringView s,
+           ::fidl::WireResponseContext<::test_error::Example::Foo>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

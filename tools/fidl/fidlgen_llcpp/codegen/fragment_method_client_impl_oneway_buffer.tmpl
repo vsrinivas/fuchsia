@@ -1,0 +1,33 @@
+{{/*
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+
+{{- define "Method:ClientImplOnewayBuffer:MessagingHeader" }}
+{{ .Docs }}
+{{- if .DocComments }}
+//
+{{- end }}
+// Caller provides the backing storage for FIDL message.
+::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs }});
+{{ end }}
+
+
+{{- define "Method:ClientImplOnewayBuffer:MessagingSource" }}
+::fidl::Result {{ .Protocol.WireWeakOnewayBufferClientImpl.NoLeading }}::{{ .Name }}(
+    {{- RenderParams .RequestArgs }}) {
+  constexpr uint32_t _buffer_size = ::fidl::AsyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
+  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request_message(
+      _allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+{{- end }}

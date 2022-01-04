@@ -120,6 +120,55 @@ AnyIncomingEventDispatcher MakeAnyEventDispatcher(
   return event_dispatcher;
 }
 
+class ClientBase;
+
+// |BufferClientImplBase| stores the core state for client messaging
+// implementations that use |ClientBase|, and where the message encoding buffers
+// are provided by an allocator.
+class BufferClientImplBase {
+ public:
+  explicit BufferClientImplBase(ClientBase* client_base, AnyBufferAllocator&& allocator)
+      : client_base_(client_base), allocator_(std::move(allocator)) {}
+
+ protected:
+  // Used by implementations to access the transport, hence prefixed with an
+  // underscore to avoid the unlikely event of a name collision.
+  ClientBase* _client_base() const { return client_base_; }
+
+  // Used by implementations to access the allocator, hence prefixed with an
+  // underscore to avoid the unlikely event of a name collision.
+  AnyBufferAllocator& _allocator() { return allocator_; }
+
+ private:
+  ClientBase* client_base_;
+  AnyBufferAllocator allocator_;
+};
+
+// A veneer interface object which delegates calls to |Impl| using the "->"
+// operator.
+template <typename Impl>
+struct BufferClientVeneer {
+ public:
+  BufferClientVeneer(ClientBase* client_base, AnyBufferAllocator&& allocator)
+      : impl_(client_base, std::move(allocator)) {}
+
+  // Copying/moving around this object is dangerous as it may lead to dangling
+  // references to the buffer span/arena. Disable these operations for now.
+  BufferClientVeneer(const BufferClientVeneer&) = delete;
+  BufferClientVeneer& operator=(const BufferClientVeneer&) = delete;
+  BufferClientVeneer(BufferClientVeneer&&) = delete;
+  BufferClientVeneer& operator=(BufferClientVeneer&&) = delete;
+
+  // Returns a pointer to the concrete messaging implementation.
+  Impl* operator->() {
+    static_assert(std::is_base_of_v<BufferClientImplBase, Impl>);
+    return static_cast<Impl*>(&impl_);
+  }
+
+ private:
+  Impl impl_;
+};
+
 }  // namespace internal
 
 // A type-erasing object to inform the user the completion of bindings teardown.

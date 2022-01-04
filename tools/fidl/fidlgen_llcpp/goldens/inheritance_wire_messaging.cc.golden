@@ -50,13 +50,13 @@ namespace test_inheritance {
     ::fidl::WireRequest<::test_inheritance::Super::Foo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritance::Super::Foo>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_inheritance::Super::Foo>,
       ::fidl::MessageDirection::kSending>();
@@ -179,6 +179,26 @@ fidl::internal::WireClientImpl<::test_inheritance::Super>::Foo_Sync(
                 _transport->get<fidl::internal::ChannelTransport>()),
             _allocator, &_request);
       });
+}
+void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Super>::
+    Foo(::fidl::StringView s,
+        ::fidl::WireResponseContext<::test_inheritance::Super::Foo>* _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_inheritance::Super::Foo>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_inheritance::Super::Foo> _request{s};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_inheritance::Super::Foo>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 #endif  // __Fuchsia__
 
@@ -357,13 +377,13 @@ namespace test_inheritance {
     ::fidl::WireRequest<::test_inheritance::Sub::Foo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_inheritance::Sub::Foo>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_inheritance::Sub::Foo>,
       ::fidl::MessageDirection::kSending>();
@@ -483,6 +503,26 @@ fidl::internal::WireClientImpl<::test_inheritance::Sub>::Foo_Sync(
                 _transport->get<fidl::internal::ChannelTransport>()),
             _allocator, &_request);
       });
+}
+void fidl::internal::WireWeakAsyncBufferClientImpl<::test_inheritance::Sub>::
+    Foo(::fidl::StringView s,
+        ::fidl::WireResponseContext<::test_inheritance::Sub::Foo>* _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_inheritance::Sub::Foo>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_inheritance::Sub::Foo> _request{s};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_inheritance::Sub::Foo>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 #endif  // __Fuchsia__
 

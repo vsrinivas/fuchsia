@@ -82,13 +82,13 @@ namespace test_protocolrequest {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_protocolrequest::Parent::GetChild>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>,
       ::fidl::MessageDirection::kSending>();
@@ -155,13 +155,13 @@ namespace test_protocolrequest {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_protocolrequest::Parent::GetChildRequest>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   constexpr uint32_t request_byte_capacity = ::fidl::MaxSizeInChannel<
       ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>,
       ::fidl::MessageDirection::kSending>();
@@ -209,13 +209,13 @@ namespace test_protocolrequest {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_protocolrequest::Parent::TakeChild>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
@@ -257,13 +257,13 @@ namespace test_protocolrequest {
             request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<
       ::test_protocolrequest::Parent::TakeChildRequest>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(::fidl::Result::EncodeError(
-        ZX_ERR_BUFFER_TOO_SMALL,
-        ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation =
+      allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
   uint32_t request_byte_capacity = buffer_size;
   uint8_t* request_bytes = buffer;
 
@@ -545,6 +545,88 @@ fidl::internal::WireClientImpl<::test_protocolrequest::Parent>::TakeChild(
                        &_request_object);
   return ::fidl::internal::ClientBase::SendOneWay(
       _request_message.GetOutgoingMessage());
+}
+::fidl::Result fidl::internal::
+    WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::TakeChild(
+        ::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolrequest::Parent::TakeChild>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild> _request{
+      std::move(c)};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+::fidl::Result
+fidl::internal::WireWeakOnewayBufferClientImpl<::test_protocolrequest::Parent>::
+    TakeChildRequest(::fidl::ServerEnd<::test_protocolrequest::Child>&& r) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolrequest::Parent::TakeChildRequest>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    return _allocation.error_value();
+  }
+
+  ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>
+      _request{std::move(r)};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
+}
+void fidl::internal::
+    WireWeakAsyncBufferClientImpl<::test_protocolrequest::Parent>::GetChild(
+        ::fidl::WireResponseContext<::test_protocolrequest::Parent::GetChild>*
+            _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolrequest::Parent::GetChild>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild> _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChild>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
+}
+void fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_protocolrequest::Parent>::
+    GetChildRequest(
+        ::fidl::WireResponseContext<
+            ::test_protocolrequest::Parent::GetChildRequest>* _context) {
+  constexpr uint32_t _buffer_size =
+      ::fidl::AsyncClientMethodBufferSizeInChannel<
+          ::test_protocolrequest::Parent::GetChildRequest>();
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> _allocation =
+      _allocator().TryAllocate(_buffer_size);
+  if (!_allocation.is_ok()) {
+    ::fidl::OutgoingMessage _failure{_allocation.error_value()};
+    _client_base()->SendTwoWay(_failure, _context);
+    return;
+  }
+
+  ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>
+      _request{};
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::test_protocolrequest::Parent::GetChildRequest>>
+      _request_message(_allocation->data, _buffer_size, &_request);
+  _client_base()->SendTwoWay(_request_message.GetOutgoingMessage(), _context);
 }
 #endif  // __Fuchsia__
 

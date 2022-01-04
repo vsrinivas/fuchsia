@@ -34,4 +34,9 @@ bool ArenaChecker::IsPointerInArena(void* pointer, ::fidl::AnyArena& arena,
   return false;
 }
 
+bool ArenaChecker::DidUse(::fidl::AnyArena& arena, const uint8_t* initial_buffer) {
+  // If we are not at the start of the initial buffer, then allocation had happened.
+  return arena.next_data_available_ != initial_buffer;
+}
+
 }  // namespace fidl_testing

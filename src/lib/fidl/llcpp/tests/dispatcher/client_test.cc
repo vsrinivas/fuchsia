@@ -441,6 +441,10 @@ TEST_F(WireClientTest, InvalidAccess) {
     client->MakeSyncCallWith(
         [](std::shared_ptr<fidl::internal::AnyTransport>) { ADD_FAILURE("Should not get here"); });
   });
+  ASSERT_DEATH([&] {
+    fidl::Arena arena;
+    client.buffer(arena);
+  });
 }
 
 TEST_F(WireClientTest, Move) {

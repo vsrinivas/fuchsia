@@ -86,14 +86,12 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 
   {{/* Allocate one buffer for both request/response (if applicable). */ -}}
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<{{ .Marker }}>();
-  uint8_t* buffer = allocator.Allocate(buffer_size);
-  if (!buffer) {
-    ::fidl::Result::operator=(
-        ::fidl::Result::EncodeError(
-            ZX_ERR_BUFFER_TOO_SMALL,
-            ::fidl::internal::kCallerAllocatedBufferTooSmall));
+  ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
+  if (!allocation.is_ok()) {
+    ::fidl::Result::operator=(allocation.error_value());
     return;
   }
+  uint8_t* buffer = allocation->data;
 
 {{- if .HasResponse -}}
   {{/* TODO(fxbug.dev/85843): We should be able optimize this to just the max of

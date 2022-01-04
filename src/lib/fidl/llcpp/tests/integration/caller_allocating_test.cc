@@ -20,30 +20,41 @@ namespace test = ::llcpptest_protocol_test;
 // `.buffer()` syntax) of clients and server APIs end-to-end.
 //
 
-class WireCallTest : public ::zxtest::Test {
+class CallerAllocatingFixture : public ::zxtest::Test {
  public:
   class Frobinator : public fidl::WireServer<test::Frobinator> {
    public:
-    void Frob(FrobRequestView request, FrobCompleter::Sync& completer) override {}
+    void Frob(FrobRequestView request, FrobCompleter::Sync& completer) override {
+      EXPECT_EQ(request->value.get(), "test");
+      frob_count_++;
+    }
 
     void Grob(GrobRequestView request, GrobCompleter::Sync& completer) override {
       completer.Reply(request->value);
     }
+
+    size_t frob_count() const { return frob_count_; }
+
+   private:
+    size_t frob_count_ = 0;
   };
 
   void SetUp() override {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     zx::status server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
-    fidl::BindServer(loop_->dispatcher(), std::move(*server_end), std::make_unique<Frobinator>());
-    ASSERT_OK(loop_->StartThread());
+    server_ = std::make_shared<Frobinator>();
+    fidl::BindServer(loop_->dispatcher(), std::move(*server_end), server_);
   }
 
-  const fidl::ClientEnd<test::Frobinator>& client_end() { return client_end_; }
+  std::unique_ptr<async::Loop>& loop() { return loop_; }
+  fidl::ClientEnd<test::Frobinator>& client_end() { return client_end_; }
+  size_t frob_count() const { return server_->frob_count(); }
 
  private:
   std::unique_ptr<async::Loop> loop_;
   fidl::ClientEnd<test::Frobinator> client_end_;
+  std::shared_ptr<Frobinator> server_;
 };
 
 bool IsPointerInBufferSpan(void* pointer, fidl::BufferSpan buffer_span) {
@@ -55,6 +66,13 @@ bool IsPointerInBufferSpan(void* pointer, fidl::BufferSpan buffer_span) {
   }
   return false;
 }
+
+class WireCallTest : public CallerAllocatingFixture {
+  void SetUp() override {
+    CallerAllocatingFixture::SetUp();
+    ASSERT_OK(loop()->StartThread());
+  }
+};
 
 TEST_F(WireCallTest, CallerAllocateBufferSpan) {
   fidl::SyncClientBuffer<test::Frobinator::Grob> buffer;
@@ -109,4 +127,109 @@ TEST_F(WireCallTest, CallerAllocateInsufficientBufferSize) {
                                        ->Grob("test");
   EXPECT_STATUS(ZX_ERR_BUFFER_TOO_SMALL, result.status());
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
+}
+
+namespace {
+
+class WireClientTest : public CallerAllocatingFixture {};
+class WireSharedClientTest : public CallerAllocatingFixture {};
+
+class GrobResponseContext : public fidl::WireResponseContext<test::Frobinator::Grob> {
+ public:
+  void OnResult(fidl::WireUnownedResult<test::Frobinator::Grob>& result) final {
+    ASSERT_OK(result.status());
+    EXPECT_EQ(result->value.get(), "test");
+    got_result = true;
+  }
+  bool got_result = false;
+};
+
+}  // namespace
+
+TEST_F(WireClientTest, TwoWayCallerAllocateBufferSpan) {
+  fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
+
+  GrobResponseContext context;
+  client.buffer(buffer.view())->Grob("test", &context);
+  loop()->RunUntilIdle();
+
+  EXPECT_TRUE(context.got_result);
+}
+
+TEST_F(WireClientTest, TwoWayCallerAllocateArena) {
+  fidl::Arena arena;
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
+
+  EXPECT_FALSE(fidl_testing::ArenaChecker::DidUse(arena));
+  GrobResponseContext context;
+  client.buffer(arena)->Grob("test", &context);
+  loop()->RunUntilIdle();
+
+  EXPECT_TRUE(context.got_result);
+  EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
+}
+
+TEST_F(WireClientTest, OneWayCallerAllocate) {
+  fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
+  fidl::WireClient client(std::move(client_end()), loop()->dispatcher());
+
+  fidl::Result result = client.buffer(buffer.view())->Frob("test");
+  loop()->RunUntilIdle();
+
+  EXPECT_OK(result.status());
+  EXPECT_EQ(1, frob_count());
+
+  // Test multi-request syntax.
+  fidl::Arena arena;
+  auto buffered = client.buffer(arena);
+  EXPECT_OK(buffered->Frob("test").status());
+  EXPECT_OK(buffered->Frob("test").status());
+  EXPECT_OK(buffered->Frob("test").status());
+  loop()->RunUntilIdle();
+  EXPECT_EQ(4, frob_count());
+}
+
+TEST_F(WireSharedClientTest, TwoWayCallerAllocateBufferSpan) {
+  fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
+  fidl::WireSharedClient client(std::move(client_end()), loop()->dispatcher());
+
+  GrobResponseContext context;
+  client.buffer(buffer.view())->Grob("test", &context);
+  loop()->RunUntilIdle();
+
+  EXPECT_TRUE(context.got_result);
+}
+
+TEST_F(WireSharedClientTest, TwoWayCallerAllocateArena) {
+  fidl::Arena arena;
+  fidl::WireSharedClient client(std::move(client_end()), loop()->dispatcher());
+
+  EXPECT_FALSE(fidl_testing::ArenaChecker::DidUse(arena));
+  GrobResponseContext context;
+  client.buffer(arena)->Grob("test", &context);
+  loop()->RunUntilIdle();
+
+  EXPECT_TRUE(context.got_result);
+  EXPECT_TRUE(fidl_testing::ArenaChecker::DidUse(arena));
+}
+
+TEST_F(WireSharedClientTest, OneWayCallerAllocate) {
+  fidl::AsyncClientBuffer<test::Frobinator::Grob> buffer;
+  fidl::WireSharedClient client(std::move(client_end()), loop()->dispatcher());
+
+  fidl::Result result = client.buffer(buffer.view())->Frob("test");
+  loop()->RunUntilIdle();
+
+  EXPECT_OK(result.status());
+  EXPECT_EQ(1, frob_count());
+
+  // Test multi-request syntax.
+  fidl::Arena arena;
+  auto buffered = client.buffer(arena);
+  EXPECT_OK(buffered->Frob("test").status());
+  EXPECT_OK(buffered->Frob("test").status());
+  EXPECT_OK(buffered->Frob("test").status());
+  loop()->RunUntilIdle();
+  EXPECT_EQ(4, frob_count());
 }

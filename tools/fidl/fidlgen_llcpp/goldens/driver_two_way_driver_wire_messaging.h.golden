@@ -270,6 +270,7 @@ static_assert(offsetof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay> final
     : public ::fidl::internal::ClientBase {
@@ -294,6 +295,28 @@ class ::fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay> final
       ::fidl::BufferSpan _request_buffer, uint16_t addend1, uint16_t addend2,
       ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_drivertwoway::TwoWay>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_drivertwoway::TwoWay>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_drivertwoway::TwoWay> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
+
+  // Caller provides the backing storage for FIDL message.
+  void Add(
+      uint16_t addend1, uint16_t addend2,
+      ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context);
 };
 namespace fidl {
 #endif  // __Fuchsia__

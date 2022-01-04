@@ -29,4 +29,17 @@ AnyMemoryResource MakeFidlAnyMemoryResource(fidl::BufferSpan buffer_span) {
   };
 }
 
+namespace internal {
+
+fitx::result<fidl::Error, fidl::BufferSpan> AnyBufferAllocator::TryAllocate(uint32_t num_bytes) {
+  uint8_t* buffer = Allocate(num_bytes);
+  if (buffer == nullptr) {
+    return fitx::error(fidl::Result::EncodeError(ZX_ERR_BUFFER_TOO_SMALL,
+                                                 fidl::internal::kCallerAllocatedBufferTooSmall));
+  }
+  return fitx::ok(fidl::BufferSpan{buffer, num_bytes});
+}
+
+}  // namespace internal
+
 }  // namespace fidl

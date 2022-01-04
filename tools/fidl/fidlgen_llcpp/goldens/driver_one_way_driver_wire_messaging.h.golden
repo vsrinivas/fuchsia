@@ -147,6 +147,7 @@ static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>,
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireClientImpl<::test_driveroneway::OneWay> final
     : public ::fidl::internal::ClientBase {
@@ -159,6 +160,26 @@ class ::fidl::internal::WireClientImpl<::test_driveroneway::OneWay> final
   ::fidl::Result Send(::fidl::BufferSpan _buffer_span,
                       const ::test_driveroneway::wire::Payload& payload);
   WireClientImpl() = default;
+};
+
+template <>
+class ::fidl::internal::WireWeakOnewayBufferClientImpl<
+    ::test_driveroneway::OneWay>
+    : public ::fidl::internal::BufferClientImplBase {
+ public:
+  using BufferClientImplBase::BufferClientImplBase;
+
+  // Caller provides the backing storage for FIDL message.
+  ::fidl::Result Send(const ::test_driveroneway::wire::Payload& payload);
+};
+
+template <>
+class ::fidl::internal::WireWeakAsyncBufferClientImpl<
+    ::test_driveroneway::OneWay>
+    final : public ::fidl::internal::WireWeakOnewayBufferClientImpl<
+                ::test_driveroneway::OneWay> {
+ public:
+  using WireWeakOnewayBufferClientImpl::WireWeakOnewayBufferClientImpl;
 };
 namespace fidl {
 #endif  // __Fuchsia__
