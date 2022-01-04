@@ -103,7 +103,7 @@ class FakePciProtocolInternal
   pcie_device_info_t SetDeviceInfoInternal(pcie_device_info_t new_info);
 
   pci_irq_mode_t irq_mode() const { return irq_mode_; }
-  size_t irq_cnt() const { return irq_cnt_; }
+  uint32_t irq_cnt() const { return irq_cnt_; }
   std::array<FakeBar, PCI_DEVICE_BAR_COUNT>& bars() { return bars_; }
   std::vector<FakeCapability>& capabilities() { return capabilities_; }
 
@@ -145,9 +145,9 @@ class FakePciProtocolInternal
   std::vector<zx::interrupt> msi_interrupts_;
   std::vector<zx::interrupt> msix_interrupts_;
   pci_irq_mode_t irq_mode_;
-  size_t irq_cnt_ = 0;
-  size_t msi_count_ = 0;
-  size_t msix_count_ = 0;
+  uint32_t irq_cnt_ = 0;
+  uint32_t msi_count_ = 0;
+  uint32_t msix_count_ = 0;
 
   std::array<FakeBar, PCI_DEVICE_BAR_COUNT> bars_{};
   std::vector<FakeCapability> capabilities_;
