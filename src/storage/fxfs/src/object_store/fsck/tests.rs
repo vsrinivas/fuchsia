@@ -6,9 +6,9 @@ use {
     crate::{
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayerWriter,
-            types::{Item, ItemRef, LayerIterator, LayerWriter},
+            types::{Item, ItemRef, Key, LayerIterator, LayerWriter, Value},
         },
-        object_handle::{ObjectHandle, Writer},
+        object_handle::{ObjectHandle, Writer, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
@@ -21,8 +21,10 @@ use {
                 errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
                 fsck_with_options, FsckOptions,
             },
-            object_record::ObjectDescriptor,
-            object_record::{ObjectKey, ObjectValue},
+            object_record::{
+                ObjectAttributes, ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind,
+                ObjectValue, Timestamp,
+            },
             transaction::{self, Options, TransactionHandler},
             volume::create_root_volume,
             HandleOptions, Mutation, ObjectStore,
@@ -91,6 +93,71 @@ impl FsckTest {
     fn errors(&self) -> Vec<FsckIssue> {
         self.errors.lock().unwrap().clone()
     }
+}
+
+#[derive(Copy, Clone)]
+enum InstallTarget {
+    ExtentTree,
+    ObjectTree,
+}
+
+// Creates a new layer file containing |items| and writes them in order into |store|, skipping all
+// normal validation.  This allows bad records to be inserted into the object store (although they
+// will still be subject to merging).
+// Doing this in the root store might cause a variety of unrelated failures.
+async fn install_items_in_store<K: Key, V: Value>(
+    filesystem: &Arc<FxFilesystem>,
+    store: &ObjectStore,
+    items: impl AsRef<[Item<K, V>]>,
+    target: InstallTarget,
+) {
+    let device = filesystem.device();
+    let root_store = filesystem.root_store();
+    let mut transaction = filesystem
+        .clone()
+        .new_transaction(&[], Options::default())
+        .await
+        .expect("new_transaction failed");
+    let layer_handle = ObjectStore::create_object(
+        &root_store,
+        &mut transaction,
+        HandleOptions::default(),
+        Some(0),
+    )
+    .await
+    .expect("create_object failed");
+    transaction.commit().await.expect("commit failed");
+
+    {
+        let mut writer =
+            SimplePersistentLayerWriter::new(Writer::new(&layer_handle), filesystem.block_size());
+        for item in items.as_ref() {
+            writer.write(item.as_item_ref()).await.expect("write failed");
+        }
+        writer.flush().await.expect("flush failed");
+    }
+
+    let mut store_info = store.store_info();
+    match target {
+        InstallTarget::ExtentTree => store_info.extent_tree_layers.push(layer_handle.object_id()),
+        InstallTarget::ObjectTree => store_info.object_tree_layers.push(layer_handle.object_id()),
+    }
+    let mut store_info_vec = vec![];
+    serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
+    let mut buf = device.allocate_buffer(store_info_vec.len());
+    buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
+
+    let store_info_handle = ObjectStore::open_object(
+        &root_store,
+        store.store_info_handle_object_id().unwrap(),
+        HandleOptions::default(),
+    )
+    .await
+    .expect("open store info handle failed");
+    let mut transaction =
+        store_info_handle.new_transaction().await.expect("new_transaction failed");
+    store_info_handle.txn_write(&mut transaction, 0, buf.as_ref()).await.expect("txn_write failed");
+    transaction.commit().await.expect("commit failed");
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -597,55 +664,18 @@ async fn test_misordered_layer_file() {
 
     {
         let fs = test.filesystem();
-        let device = fs.device();
-        let root_store = fs.root_store();
         let root_volume = create_root_volume(&fs).await.unwrap();
-        let volume = root_volume.new_volume("vol").await.unwrap();
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        let layer_handle = ObjectStore::create_object(
-            &root_store,
-            &mut transaction,
-            HandleOptions::default(),
-            Some(0),
+        let store = root_volume.new_volume("vol").await.unwrap();
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![
+                Item::new(ExtentKey::new(5, 0, 10..20), ExtentValue::None),
+                Item::new(ExtentKey::new(0, 0, 0..5), ExtentValue::None),
+            ],
+            InstallTarget::ExtentTree,
         )
-        .await
-        .expect("create_object failed");
-        transaction.commit().await.expect("commit failed");
-
-        {
-            let mut writer =
-                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
-            let item1 = Item::new(ExtentKey::new(5, 0, 10..20), ExtentValue::None);
-            let item2 = Item::new(ExtentKey::new(0, 0, 0..5), ExtentValue::None);
-            writer.write(item1.as_item_ref()).await.expect("write failed");
-            writer.write(item2.as_item_ref()).await.expect("write failed");
-            writer.flush().await.expect("flush failed");
-        }
-        let mut store_info = volume.store_info();
-        store_info.extent_tree_layers = vec![layer_handle.object_id()];
-        let mut store_info_vec = vec![];
-        serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
-        let mut buf = device.allocate_buffer(store_info_vec.len());
-        buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
-
-        let store_info_handle = ObjectStore::open_object(
-            &root_store,
-            volume.store_info_handle_object_id().unwrap(),
-            HandleOptions::default(),
-        )
-        .await
-        .expect("open store info handle failed");
-        let mut transaction =
-            store_info_handle.new_transaction().await.expect("new_transaction failed");
-        store_info_handle
-            .txn_write(&mut transaction, 0, buf.as_ref())
-            .await
-            .expect("txn_write failed");
-        transaction.commit().await.expect("commit failed");
+        .await;
     }
 
     test.remount().await.expect("Remount failed");
@@ -659,55 +689,18 @@ async fn test_overlapping_keys_in_layer_file() {
 
     {
         let fs = test.filesystem();
-        let device = fs.device();
-        let root_store = fs.root_store();
         let root_volume = create_root_volume(&fs).await.unwrap();
-        let volume = root_volume.new_volume("vol").await.unwrap();
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        let layer_handle = ObjectStore::create_object(
-            &root_store,
-            &mut transaction,
-            HandleOptions::default(),
-            Some(0),
+        let store = root_volume.new_volume("vol").await.unwrap();
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![
+                Item::new(ExtentKey::new(0, 0, 0..20), ExtentValue::None),
+                Item::new(ExtentKey::new(0, 0, 10..30), ExtentValue::None),
+            ],
+            InstallTarget::ExtentTree,
         )
-        .await
-        .expect("create_object failed");
-        transaction.commit().await.expect("commit failed");
-
-        {
-            let mut writer =
-                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
-            let item1 = Item::new(ExtentKey::new(0, 0, 0..20), ExtentValue::None);
-            let item2 = Item::new(ExtentKey::new(0, 0, 10..30), ExtentValue::None);
-            writer.write(item1.as_item_ref()).await.expect("write failed");
-            writer.write(item2.as_item_ref()).await.expect("write failed");
-            writer.flush().await.expect("flush failed");
-        }
-        let mut store_info = volume.store_info();
-        store_info.extent_tree_layers = vec![layer_handle.object_id()];
-        let mut store_info_vec = vec![];
-        serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
-        let mut buf = device.allocate_buffer(store_info_vec.len());
-        buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
-
-        let store_info_handle = ObjectStore::open_object(
-            &root_store,
-            volume.store_info_handle_object_id().unwrap(),
-            HandleOptions::default(),
-        )
-        .await
-        .expect("open store info handle failed");
-        let mut transaction =
-            store_info_handle.new_transaction().await.expect("new_transaction failed");
-        store_info_handle
-            .txn_write(&mut transaction, 0, buf.as_ref())
-            .await
-            .expect("txn_write failed");
-        transaction.commit().await.expect("commit failed");
+        .await;
     }
 
     test.remount().await.expect("Remount failed");
@@ -724,57 +717,452 @@ async fn test_unexpected_record_in_layer_file() {
 
     {
         let fs = test.filesystem();
-        let device = fs.device();
-        let root_store = fs.root_store();
         let root_volume = create_root_volume(&fs).await.unwrap();
-        let volume = root_volume.new_volume("vol").await.unwrap();
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        let layer_handle = ObjectStore::create_object(
-            &root_store,
-            &mut transaction,
-            HandleOptions::default(),
-            Some(0),
+        let store = root_volume.new_volume("vol").await.unwrap();
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![Item::new(ObjectKey::object(0), ObjectValue::None)],
+            InstallTarget::ExtentTree,
         )
-        .await
-        .expect("create_object failed");
-        transaction.commit().await.expect("commit failed");
-
-        {
-            // Write an ObjectKey/ObjectValue into a tree that expects an ExtentKey/ExtentValue.
-            let mut writer =
-                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
-            let item = Item::new(ObjectKey::object(0), ObjectValue::None);
-            writer.write(item.as_item_ref()).await.expect("write failed");
-            writer.flush().await.expect("flush failed");
-        }
-        let mut store_info = volume.store_info();
-        store_info.extent_tree_layers = vec![layer_handle.object_id()];
-        let mut store_info_vec = vec![];
-        serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
-        let mut buf = device.allocate_buffer(store_info_vec.len());
-        buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
-
-        let store_info_handle = ObjectStore::open_object(
-            &root_store,
-            volume.store_info_handle_object_id().unwrap(),
-            HandleOptions::default(),
-        )
-        .await
-        .expect("open store info handle failed");
-        let mut transaction =
-            store_info_handle.new_transaction().await.expect("new_transaction failed");
-        store_info_handle
-            .txn_write(&mut transaction, 0, buf.as_ref())
-            .await
-            .expect("txn_write failed");
-        transaction.commit().await.expect("commit failed");
+        .await;
     }
 
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MalformedLayerFile(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_mismatched_key_and_value() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![Item::new(ObjectKey::object(10), ObjectValue::Attribute { size: 100 })],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Error(FsckError::MalformedObjectRecord(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_link_to_root_directory() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .insert_child(
+                &mut transaction,
+                "a",
+                store.root_directory_object_id(),
+                ObjectDescriptor::Directory,
+            )
+            .await
+            .expect("insert_child failed");
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::RootObjectHasParent(..)), ..]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_multiple_links_to_directory() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .insert_child(&mut transaction, "a", 10, ObjectDescriptor::Directory)
+            .await
+            .expect("insert_child failed");
+        root_directory
+            .insert_child(&mut transaction, "b", 10, ObjectDescriptor::Directory)
+            .await
+            .expect("insert_child failed");
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Error(FsckError::MultipleLinksToDirectory(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_conflicting_link_types() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .insert_child(&mut transaction, "a", 10, ObjectDescriptor::Directory)
+            .await
+            .expect("insert_child failed");
+        root_directory
+            .insert_child(&mut transaction, "b", 10, ObjectDescriptor::File)
+            .await
+            .expect("insert_child failed");
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Error(FsckError::ConflictingTypeForLink(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_volume_in_child_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .insert_child(&mut transaction, "a", 10, ObjectDescriptor::Volume)
+            .await
+            .expect("Create child failed");
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::VolumeInChildStore(..)), ..]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_children_on_file() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let object_id = root_directory
+            .create_child_file(&mut transaction, "a'")
+            .await
+            .expect("Create child failed")
+            .object_id();
+        transaction.commit().await.expect("commit transaction failed");
+
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![Item::new(
+                ObjectKey::child(object_id, "foo"),
+                ObjectValue::Child { object_id: 11, object_descriptor: ObjectDescriptor::File },
+            )],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::FileHasChildren(..)), ..]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_attribute_on_directory() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![Item::new(
+                ObjectKey::attribute(store.root_directory_object_id(), 1),
+                ObjectValue::attribute(100),
+            )],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::AttributeOnDirectory(..)), ..]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_orphaned_attribute() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![Item::new(ObjectKey::attribute(10, 1), ObjectValue::attribute(100))],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Warning(FsckWarning::OrphanedAttribute(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_records_for_tombstoned_object() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![
+                Item::new(ObjectKey::object(10), ObjectValue::None),
+                Item::new(ObjectKey::attribute(10, 1), ObjectValue::attribute(100)),
+            ],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Error(FsckError::TombstonedObjectHasRecords(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_graveyard_in_child_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![
+                Item::new(
+                    ObjectKey::object(10),
+                    ObjectValue::Object {
+                        kind: ObjectKind::Graveyard,
+                        attributes: ObjectAttributes {
+                            creation_time: Timestamp::now(),
+                            modification_time: Timestamp::now(),
+                        },
+                    },
+                ),
+                Item::new(
+                    ObjectKey {
+                        object_id: 10,
+                        data: ObjectKeyData::GraveyardEntry {
+                            store_object_id: 100,
+                            object_id: 102,
+                        },
+                    },
+                    ObjectValue::Object {
+                        kind: ObjectKind::Graveyard,
+                        attributes: ObjectAttributes {
+                            creation_time: Timestamp::now(),
+                            modification_time: Timestamp::now(),
+                        },
+                    },
+                ),
+            ],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::GraveyardInChildStore(..)),
+            FsckIssue::Error(FsckError::GraveyardRecordInChildStore(..)),
+            ..
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_invalid_object_in_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+
+        install_items_in_store(
+            &fs,
+            store.as_ref(),
+            vec![Item::new(ObjectKey::object(INVALID_OBJECT_ID), ObjectValue::Some)],
+            InstallTarget::ObjectTree,
+        )
+        .await;
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Warning(FsckWarning::InvalidObjectIdInStore(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_invalid_child_in_store() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        root_directory
+            .insert_child(&mut transaction, "a", INVALID_OBJECT_ID, ObjectDescriptor::File)
+            .await
+            .expect("Insert child failed");
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Warning(FsckWarning::InvalidObjectIdInStore(..)), ..]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_link_cycle() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let store = root_volume.new_volume("vol").await.unwrap();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let parent = root_directory
+            .create_child_dir(&mut transaction, "a")
+            .await
+            .expect("Create child failed");
+        let child =
+            parent.create_child_dir(&mut transaction, "b").await.expect("Create child failed");
+        child
+            .insert_child(&mut transaction, "c", parent.object_id(), ObjectDescriptor::Directory)
+            .await
+            .expect("Insert child failed");
+        transaction.commit().await.expect("commit transaction failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::MultipleLinksToDirectory(..)),
+            FsckIssue::Error(FsckError::SubDirCountMismatch(..)),
+            FsckIssue::Error(FsckError::ObjectCountMismatch(..)),
+            FsckIssue::Error(FsckError::LinkCycle(..)),
+            ..
+        ]
+    );
 }

@@ -62,6 +62,7 @@ fxfs_sources = [
   "src/object_store/filesystem.rs",
   "src/object_store/fsck.rs",
   "src/object_store/fsck/errors.rs",
+  "src/object_store/fsck/store_scanner.rs",
   "src/object_store/fsck/tests.rs",
   "src/object_store/graveyard.rs",
   "src/object_store/journal.rs",

@@ -8,21 +8,20 @@ use {
             simple_persistent_layer::SimplePersistentLayer,
             skip_list_layer::SkipListLayer,
             types::{
-                BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, MutableLayer,
-                OrdUpperBound, RangeKey, Value,
+                BoxedLayerIterator, Item, Key, Layer, LayerIterator, OrdUpperBound, RangeKey, Value,
             },
         },
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
-                self, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
+                Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem},
             fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
             graveyard::Graveyard,
-            object_record::{ObjectDescriptor, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
+            object_record::{ObjectKey, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
             HandleOptions, ObjectStore, StoreInfo, MAX_STORE_INFO_SERIALIZED_SIZE,
@@ -32,7 +31,6 @@ use {
     bincode::deserialize_from,
     futures::try_join,
     std::{
-        collections::hash_map::{Entry, HashMap},
         ops::Bound,
         sync::{
             atomic::{AtomicU64, Ordering},
@@ -42,6 +40,8 @@ use {
 };
 
 pub mod errors;
+
+mod store_scanner;
 
 #[cfg(test)]
 mod tests;
@@ -85,7 +85,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     log::info!("Starting fsck");
     let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
 
-    let fsck = Fsck::new(options);
+    let mut fsck = Fsck::new(options);
 
     let object_manager = filesystem.object_manager();
     // The graveyard not being present would prevent the filesystem from mounting at all.
@@ -95,7 +95,13 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     // Scan the root parent object store.
     let mut root_objects = vec![super_block.root_store_object_id, super_block.journal_object_id];
     root_objects.append(&mut object_manager.root_store().parent_objects());
-    fsck.scan_store(&object_manager.root_parent_store(), &root_objects, &graveyard).await?;
+    store_scanner::scan_store(
+        &fsck,
+        object_manager.root_parent_store().as_ref(),
+        graveyard.as_ref(),
+        &root_objects,
+    )
+    .await?;
 
     let root_store = &object_manager.root_store();
     let mut root_store_root_objects = Vec::new();
@@ -139,7 +145,13 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     }
 
     // Finally scan the root object store.
-    fsck.scan_store(root_store, &root_store_root_objects, &graveyard).await?;
+    store_scanner::scan_store(
+        &fsck,
+        root_store.as_ref(),
+        graveyard.as_ref(),
+        &root_store_root_objects,
+    )
+    .await?;
 
     // Now compare our regenerated allocation map with what we actually have.
     let layer_set = allocator.tree().layer_set();
@@ -211,14 +223,19 @@ impl<K: RangeKey + PartialEq> KeyExt for K {
 
 struct Fsck<F: Fn(&FsckIssue)> {
     options: FsckOptions<F>,
+    // A list of allocations generated based on all extents found across all scanned object stores.
     allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     errors: AtomicU64,
 }
 
 impl<F: Fn(&FsckIssue)> Fsck<F> {
     fn new(options: FsckOptions<F>) -> Self {
-        // TODO(csuter): fix magic number
-        Fsck { options, allocations: SkipListLayer::new(2048), errors: AtomicU64::new(0) }
+        Fsck {
+            options,
+            // TODO(csuter): fix magic number
+            allocations: SkipListLayer::new(2048),
+            errors: AtomicU64::new(0),
+        }
     }
 
     fn errors(&self) -> u64 {
@@ -254,7 +271,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
     }
 
     async fn check_child_store(
-        &self,
+        &mut self,
         filesystem: &FxFilesystem,
         graveyard: &Graveyard,
         store_id: u64,
@@ -303,7 +320,8 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         }
 
         let store = filesystem.object_manager().open_store(store_id).await?;
-        self.scan_store(&store, &store.root_objects(), graveyard).await?;
+
+        store_scanner::scan_store(self, store.as_ref(), graveyard, &store.root_objects()).await?;
         let mut parent_objects = store.parent_objects();
         root_store_root_objects.append(&mut parent_objects);
         Ok(())
@@ -375,155 +393,6 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
                 iter.advance().await,
                 FsckFatal::MalformedLayerFile(store_object_id, layer_file_object_id),
             )?;
-        }
-        Ok(())
-    }
-
-    async fn scan_store(
-        &self,
-        store: &ObjectStore,
-        root_objects: &[u64],
-        graveyard: &Graveyard,
-    ) -> Result<(), Error> {
-        let mut object_refs: HashMap<u64, (u64, u64)> = HashMap::new();
-
-        let store_id = store.store_object_id();
-
-        // Add all the graveyard references.
-        let layer_set = graveyard.store().tree().layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = self.assert(
-            graveyard.iter_from(&mut merger, (store.store_object_id(), 0)).await,
-            FsckFatal::MalformedGraveyard,
-        )?;
-        while let Some((store_object_id, object_id, _)) = iter.get() {
-            if store_object_id != store.store_object_id() {
-                break;
-            }
-            object_refs.insert(object_id, (0, 1));
-            self.assert(iter.advance().await, FsckFatal::MalformedGraveyard)?;
-        }
-
-        let layer_set = store.tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter =
-            self.assert(merger.seek(Bound::Unbounded).await, FsckFatal::MalformedStore(store_id))?;
-        for root_object in root_objects {
-            object_refs.insert(*root_object, (0, 1));
-        }
-        let mut object_count = 0;
-        while let Some(item) = iter.get() {
-            self.process_object_item(store, item, &mut object_refs, &mut object_count)?;
-            self.assert(iter.advance().await, FsckFatal::MalformedStore(store_id))?;
-        }
-
-        let bs = store.block_size();
-        let layer_set = store.extent_tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await?;
-        while let Some(ItemRef { key: ExtentKey { object_id, range, .. }, value, .. }) = iter.get()
-        {
-            if range.start % bs > 0 || range.end % bs > 0 {
-                self.error(FsckError::MisalignedExtent(store_id, *object_id, range.clone(), 0))?;
-            } else if range.start >= range.end {
-                self.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
-            }
-            if let ExtentValue::Some { device_offset, .. } = value {
-                if device_offset % bs > 0 {
-                    self.error(FsckError::MisalignedExtent(
-                        store_id,
-                        *object_id,
-                        range.clone(),
-                        *device_offset,
-                    ))?;
-                }
-                let item = Item::new(
-                    AllocatorKey {
-                        device_range: *device_offset..*device_offset + range.end - range.start,
-                    },
-                    AllocatorValue { delta: 1 },
-                );
-                let lower_bound = item.key.lower_bound_for_merge_into();
-                self.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
-            }
-            iter.advance().await?;
-        }
-
-        // Check object reference counts.
-        for (object_id, (count, references)) in object_refs {
-            if count != references {
-                // Special case for an orphaned node
-                if references == 0 {
-                    self.warning(FsckWarning::OrphanedObject(store_id, object_id))?;
-                } else {
-                    self.error(FsckError::RefCountMismatch(object_id, references, count))?;
-                }
-            }
-        }
-
-        if object_count != store.object_count() {
-            self.error(FsckError::ObjectCountMismatch(
-                store_id,
-                store.object_count(),
-                object_count,
-            ))?;
-        }
-
-        Ok(())
-    }
-
-    fn process_object_item<'a>(
-        &self,
-        store: &ObjectStore,
-        item: ItemRef<'a, ObjectKey, ObjectValue>,
-        object_refs: &mut HashMap<u64, (u64, u64)>,
-        object_count: &mut u64,
-    ) -> Result<(), Error> {
-        let (key, value) = (item.key, item.value);
-        match (key, value) {
-            (
-                ObjectKey { object_id, data: ObjectKeyData::Object },
-                ObjectValue::Object { kind, .. },
-            ) => {
-                let refs = match kind {
-                    ObjectKind::File { refs, .. } => *refs,
-                    ObjectKind::Directory { .. } | ObjectKind::Graveyard => 1,
-                };
-                match object_refs.entry(*object_id) {
-                    Entry::Occupied(mut occupied) => {
-                        occupied.get_mut().0 += refs;
-                    }
-                    Entry::Vacant(vacant) => {
-                        vacant.insert((refs, 0));
-                    }
-                }
-                *object_count += 1;
-            }
-            (
-                ObjectKey { data: ObjectKeyData::Child { .. }, .. },
-                ObjectValue::Child { object_id, object_descriptor },
-            ) => {
-                match object_refs.entry(*object_id) {
-                    Entry::Occupied(mut occupied) => {
-                        occupied.get_mut().1 += 1;
-                    }
-                    Entry::Vacant(vacant) => {
-                        vacant.insert((0, 1));
-                    }
-                }
-                match object_descriptor {
-                    ObjectDescriptor::File | ObjectDescriptor::Directory => {}
-                    ObjectDescriptor::Volume => {
-                        if !store.is_root() {
-                            self.error(FsckError::VolumeInChildStore(
-                                store.store_object_id(),
-                                *object_id,
-                            ))?;
-                        }
-                    }
-                }
-            }
-            _ => {}
         }
         Ok(())
     }

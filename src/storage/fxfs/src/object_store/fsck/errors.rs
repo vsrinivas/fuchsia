@@ -5,7 +5,10 @@
 use {
     crate::{
         lsm_tree::types::ItemRef,
-        object_store::allocator::{AllocatorKey, AllocatorValue},
+        object_store::{
+            allocator::{AllocatorKey, AllocatorValue},
+            ObjectDescriptor,
+        },
     },
     std::ops::Range,
 };
@@ -65,16 +68,63 @@ impl<K: std::fmt::Debug, V> From<ItemRef<'_, K, V>> for Key {
     }
 }
 
+impl<K: std::fmt::Debug> From<&K> for Key {
+    fn from(k: &K) -> Self {
+        Self(format!("{:?}", k))
+    }
+}
+
+#[derive(Clone, Debug)]
+#[allow(dead_code)]
+pub struct Value(String);
+
+impl<K, V: std::fmt::Debug> From<ItemRef<'_, K, V>> for Value {
+    fn from(item: ItemRef<'_, K, V>) -> Self {
+        Self(format!("{:?}", item.value))
+    }
+}
+
+// `From<V: std::fmt::Debug> for Value` creates a recursive definition since Value is Debug, so we
+// have to go concrete here.
+impl From<ObjectDescriptor> for Value {
+    fn from(d: ObjectDescriptor) -> Self {
+        Self(format!("{:?}", d))
+    }
+}
+
+impl<V: std::fmt::Debug> From<&V> for Value {
+    fn from(v: &V) -> Self {
+        Self(format!("{:?}", v))
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum FsckWarning {
-    // An object ID was found which had no parent.
-    // Parameters are (store_id, object_id)
+    GraveyardRecordForAbsentObject(u64, u64),
+    InvalidObjectIdInStore(u64, Key, Value),
+    OrphanedAttribute(u64, u64, u64),
     OrphanedObject(u64, u64),
 }
 
 impl FsckWarning {
     fn to_string(&self) -> String {
         match self {
+            FsckWarning::GraveyardRecordForAbsentObject(store_id, object_id) => {
+                format!(
+                    "Graveyard contains an entry for object {} in store {}, but that object is \
+                    absent",
+                    store_id, object_id
+                )
+            }
+            FsckWarning::InvalidObjectIdInStore(store_id, key, value) => {
+                format!("Store {} has an invalid object ID ({:?}, {:?})", store_id, key, value)
+            }
+            FsckWarning::OrphanedAttribute(store_id, object_id, attribute_id) => {
+                format!(
+                    "Attribute {} found for object {} which doesn't exist in store {}",
+                    attribute_id, object_id, store_id
+                )
+            }
             FsckWarning::OrphanedObject(store_id, object_id) => {
                 format!("Orphaned object {} was found in store {}", object_id, store_id)
             }
@@ -86,14 +136,28 @@ impl FsckWarning {
 pub enum FsckError {
     AllocatedBytesMismatch(u64, u64),
     AllocationMismatch(Allocation, Allocation),
+    AttributeOnDirectory(u64, u64),
+    ConflictingTypeForLink(u64, u64, Value, Value),
     ExtraAllocations(Vec<Allocation>),
+    FileHasChildren(u64, u64),
+    GraveyardInChildStore(u64, u64),
+    GraveyardRecordInChildStore(u64, Key),
+    LinkCycle(u64, u64),
     MalformedAllocation(Allocation),
     MalformedExtent(u64, u64, Range<u64>, u64),
+    MalformedObjectRecord(u64, Key, Value),
     MisalignedAllocation(Allocation),
     MisalignedExtent(u64, u64, Range<u64>, u64),
     MissingAllocation(Allocation),
+    MissingObjectInfo(u64, u64),
+    MultipleLinksToDirectory(u64, u64),
     ObjectCountMismatch(u64, u64, u64),
     RefCountMismatch(u64, u64, u64),
+    RootObjectHasParent(u64, u64, u64),
+    SubDirCountMismatch(u64, u64, u64, u64),
+    TombstonedObjectHasRecords(u64, u64),
+    UnexpectedObjectInGraveyard(u64),
+    UnexpectedRecordInObjectStore(u64, Key, Value),
     VolumeInChildStore(u64, u64),
 }
 
@@ -106,8 +170,29 @@ impl FsckError {
             FsckError::AllocatedBytesMismatch(expected, actual) => {
                 format!("Expected {} bytes allocated, but found {} bytes", expected, actual)
             }
+            FsckError::AttributeOnDirectory(store_id, object_id) => {
+                format!("Directory {} in store {} had attributes", object_id, store_id)
+            }
+            FsckError::ConflictingTypeForLink(store_id, object_id, expected, actual) => {
+                format!(
+                    "Object {} in store {} is of type {:?} but has a link of type {:?}",
+                    store_id, object_id, expected, actual
+                )
+            }
             FsckError::ExtraAllocations(allocations) => {
                 format!("Unexpected allocations {:?}", allocations)
+            }
+            FsckError::FileHasChildren(store_id, object_id) => {
+                format!("Object {} in store {} has children", object_id, store_id)
+            }
+            FsckError::GraveyardInChildStore(store_id, graveyard_id) => {
+                format!("Found graveyard (id {}) in child store {}", graveyard_id, store_id)
+            }
+            FsckError::GraveyardRecordInChildStore(store_id, key) => {
+                format!("Found graveyard record {:?} in child store {}", key, store_id)
+            }
+            FsckError::LinkCycle(store_id, object_id) => {
+                format!("Detected cycle involving object {} in store {}", store_id, object_id)
             }
             FsckError::MalformedAllocation(allocations) => {
                 format!("Malformed allocation {:?}", allocations)
@@ -116,6 +201,12 @@ impl FsckError {
                 format!(
                     "Extent {:?} (offset {}) for object {} in store {} is malformed",
                     extent, device_offset, oid, store_id
+                )
+            }
+            FsckError::MalformedObjectRecord(store_id, key, value) => {
+                format!(
+                    "Object record in store {} has mismatched key {:?} and value {:?}",
+                    store_id, key, value
                 )
             }
             FsckError::MisalignedAllocation(allocations) => {
@@ -130,11 +221,41 @@ impl FsckError {
             FsckError::MissingAllocation(allocation) => {
                 format!("Expected but didn't find allocation {:?}", allocation)
             }
+            FsckError::MissingObjectInfo(store_id, object_id) => {
+                format!("Object {} in store {} had no object record", store_id, object_id)
+            }
+            FsckError::MultipleLinksToDirectory(store_id, object_id) => {
+                format!("Directory {} in store {} has multiple links", store_id, object_id)
+            }
             FsckError::ObjectCountMismatch(store_id, expected, actual) => {
                 format!("Store {} had {} objects, expected {}", store_id, actual, expected)
             }
             FsckError::RefCountMismatch(oid, expected, actual) => {
                 format!("Object {} had {} references, expected {}", oid, actual, expected)
+            }
+            FsckError::RootObjectHasParent(store_id, object_id, apparent_parent_id) => {
+                format!(
+                    "Object {} is child of {} but is a root object of store {}",
+                    object_id, apparent_parent_id, store_id
+                )
+            }
+            FsckError::SubDirCountMismatch(store_id, object_id, expected, actual) => {
+                format!(
+                    "Directory {} in store {} should have {} sub dirs but had {}",
+                    object_id, store_id, expected, actual
+                )
+            }
+            FsckError::TombstonedObjectHasRecords(store_id, object_id) => {
+                format!(
+                    "Tombstoned object {} in store {} was referenced by other records",
+                    store_id, object_id
+                )
+            }
+            FsckError::UnexpectedObjectInGraveyard(object_id) => {
+                format!("Found a non-file object {} in graveyard", object_id)
+            }
+            FsckError::UnexpectedRecordInObjectStore(store_id, key, value) => {
+                format!("Unexpected record ({:?}, {:?}) in object store {}", key, value, store_id)
             }
             FsckError::VolumeInChildStore(store_id, object_id) => {
                 format!(
@@ -152,6 +273,7 @@ pub enum FsckFatal {
     MalformedLayerFile(u64, u64),
     MalformedStore(u64),
     MisOrderedLayerFile(u64, u64),
+    MisOrderedObjectStore(u64),
     MissingLayerFile(u64, u64),
     MissingStoreInfo(u64),
     OverlappingKeysInLayerFile(u64, u64, Key, Key),
@@ -174,6 +296,9 @@ impl FsckFatal {
                     "Layer file {} for store/allocator {} contains out-of-order records",
                     store_id, layer_file_id
                 )
+            }
+            FsckFatal::MisOrderedObjectStore(store_id) => {
+                format!("Store/allocator {} contains out-of-order or duplicate records", store_id)
             }
             FsckFatal::MissingLayerFile(store_id, layer_file_id) => {
                 format!(
