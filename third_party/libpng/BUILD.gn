@@ -20,6 +20,7 @@ config("clang_warnings") {
       "-Wno-conversion",
       "-Wno-implicit-fallthrough",
       "-Wno-sign-compare",
+      "-Wno-null-pointer-subtraction",
 
       # libpng checks that the width is not greater than PNG_SIZE_MAX.
       # On platforms where size_t is 64-bits, this comparison will always
