@@ -722,6 +722,6 @@ templates. These unsupported features include:
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [pm]: /src/sys/pkg/bin/pm/README.md
 [resource-data]: /docs/development/components/data.md
-[restrict-log-severity]: /docs/concepts/testing/logs.md#restricting_log_severity
-[test-environments]: /docs/concepts/testing/environments.md
+[restrict-log-severity]: /docs/development/diagnostics/logs.md#restricting_log_severity
+[test-environments]: /docs/contribute/testing/environments.md
 [working-with-packages]: /docs/development/idk/documentation/packages.md

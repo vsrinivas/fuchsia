@@ -174,7 +174,7 @@ Further reading:
 [channel]: /docs/reference/kernel_objects/channel.md
 [continuous-integration]: https://martinfowler.com/articles/continuousIntegration.html
 [contract-test]: https://martinfowler.com/bliki/ContractTest.html
-[coverage-no-e2e]: /docs/concepts/testing/coverage.md#end-to-end_e2e_tests_exclusion
+[coverage-no-e2e]: /docs/contribute/testing/coverage.md#end-to-end_e2e_tests_exclusion
 [cpuperf]: /garnet/bin/cpuperf/README.md
 [create-e2e-test]: /docs/development/testing/create_a_new_end_to_end_test.md
 [cts]: /sdk/cts/README.md
@@ -210,12 +210,12 @@ Further reading:
 [run-e2e-test]: /docs/development/testing/run_an_end_to_end_test.md
 [run-test-component]: /docs/development/run/run-test-component.md
 [rust-stress-test-lib]: /docs/development/testing/rust_stress_test_library.md
-[sanitizers]: /docs/concepts/testing/sanitizers.md
-[sanitizers-supported-configs]: /docs/concepts/testing/sanitizers.md#supported_configurations
+[sanitizers]: /docs/contribute/testing/sanitizers.md
+[sanitizers-supported-configs]: /docs/contribute/testing/sanitizers.md#supported_configurations
 [screen-is-not-black]: /src/tests/end_to_end/screen_is_not_black/README.md
 [stress-tests]: /docs/development/testing/stress_tests.md
 [syscalls]: /docs/reference/syscalls/README.md
-[test-coverage]: /docs/concepts/testing/coverage.md
+[test-coverage]: /docs/contribute/testing/coverage.md
 [test-package-gn]: /docs/development/components/build.md#test-packages
 [testing-integration]: /docs/development/testing/components/integration_testing.md
 [testing-v2]: /docs/development/testing/components/README.md

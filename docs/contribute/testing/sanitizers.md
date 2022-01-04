@@ -278,7 +278,7 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [enable-pmm-checker]:  /docs/gen/boot-options.md#kernel_pmm_checker_enable_bool
 [ffi]: https://doc.rust-lang.org/nomicon/ffi.html
 [ftrivial-rfc]: https://lists.llvm.org/pipermail/cfe-dev/2018-November/060172.html
-[fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
+[fuzz-testing]: /docs/contribute/testing/fuzz_testing.md
 [fxb]: https://bugs.fuchsia.dev/p/fuchsia/issues/list
 [fxb73214]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=73214
 [fxb88496]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=88496
@@ -304,6 +304,6 @@ See also: [sanitizers in the 2021 roadmap][sanitizers-2021-roadmap].
 [sanitizers-2021-roadmap]: /docs/contribute/roadmap/2021/invest_in_sanitizers.md
 [shadowcallstack]: /docs/concepts/kernel/shadow_call_stack.md
 [syzkaller]: https://github.com/google/syzkaller
-[test-coverage]: /docs/concepts/testing/coverage.md
+[test-coverage]: /docs/contribute/testing/coverage.md
 [testing-flakiness]: /docs/development/testing/testing_for_flakiness_in_cq.md
 [ubsan-open-project]: /docs/contribute/open_projects/cpp/ubsan.md

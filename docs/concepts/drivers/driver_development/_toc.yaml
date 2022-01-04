@@ -16,3 +16,8 @@ toc:
   path: /docs/concepts/drivers/driver_development/interrupts.md
 - title: "DMA"
   path: /docs/concepts/drivers/driver_development/dma.md
+
+
+- title: "Scripting Layer for Fuchsia (SL4F)"
+  path: /docs/concepts/drivers/driver_development/sl4f.md
+

@@ -6,22 +6,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Test environments"
-  path: /docs/concepts/testing/environments.md
-- title: "Scripting Layer for Fuchsia (SL4F)"
-  path: /docs/concepts/testing/sl4f.md
-- title: "Logging and tests"
-  path: /docs/concepts/testing/logs.md
-- title: "Fuzz testing"
-  path: /docs/concepts/testing/fuzz_testing.md
 - title: "Compatibility testing"
   path:  /docs/concepts/testing/compatibility_testing.md
-- title: "Entropy quality tests"
-  path:  /docs/concepts/testing/entropy_quality_tests.md
-- title: "Test coverage"
-  path:  /docs/concepts/testing/coverage.md
-- title: "Sanitizers"
-  path:  /docs/concepts/testing/sanitizers.md
 - title: "Policy"
   section:
   - title: "Flaky test policy"

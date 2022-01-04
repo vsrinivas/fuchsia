@@ -130,7 +130,7 @@ principle, and meet regularly.
 [arm-mte]: https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/enhancing-memory-safety
 [arm-mte-android]: https://security.googleblog.com/2019/08/adopting-arm-memory-tagging-extension.html
 [asan]: https://clang.llvm.org/docs/AddressSanitizer.html
-[fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
+[fuzz-testing]: /docs/contribute/testing/fuzz_testing.md
 [fxb-sanitizers]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Aasan%20OR%20label%3Alsan%20OR%20label%3Aubsan%20OR%20label%3Alibfuzzer%20OR%20label%3AClusterFuzz&can=2
 [fxb56628]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=56628
 [fxb66819]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=66819
@@ -145,7 +145,7 @@ principle, and meet regularly.
 [rfc-0078]: /docs/contribute/governance/rfcs/0078_kernel_coverage_for_fuchsia_fuzzing.md
 [rust-leaking]: https://doc.rust-lang.org/nomicon/leaking.html
 [rust-unsafe]: https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html
-[sanitizers]: /docs/concepts/testing/sanitizers.md
+[sanitizers]: /docs/contribute/testing/sanitizers.md
 [tsan]: https://clang.llvm.org/docs/ThreadSanitizer.html
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 [ubsan-open-project]: /docs/contribute/open_projects/cpp/ubsan.md

@@ -319,7 +319,7 @@ Areas for future work:
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
 [flaky-policy]: /docs/concepts/testing/test_flake_policy.md
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
-[fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
+[fuzz-testing]: /docs/contribute/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
 [fxb77206]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=77206
 [fxb89446]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=89446

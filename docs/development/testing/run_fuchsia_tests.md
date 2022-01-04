@@ -268,7 +268,7 @@ require rebuilding that test's package as well.
 <!-- Reference links -->
 
 [tests-as-components]: /docs/concepts/testing/v1_test_component.md
-[scripting-layer-for-fuchsia]: /docs/concepts/testing/sl4f.md
+[scripting-layer-for-fuchsia]: /docs/concepts/drivers/driver_development/sl4f.md
 [component-uri]: /docs/concepts/components/component_urls.md
 [rust-glob-syntax]: https://docs.rs/glob/0.3.0/glob/struct.Pattern.html
 [fuchsia-package-name]: /docs/concepts/packages/package_url.md#package-name

@@ -74,7 +74,7 @@ This section covers developing drivers on Fuchsia.
  - [Debugging workflow](/docs/development/debugging/debugging.md)
  - [Fuzz testing with LibFuzzer](/docs/development/testing/fuzzing/overview.md)
  - [Test components](/docs/concepts/testing/v1_test_component.md)
- - [Test environments](/docs/concepts/testing/environments.md)
+ - [Test environments](/docs/contribute/testing/environments.md)
  - [Testability rubrics](/docs/development/testing/testability_rubric.md)
  - [Test flake policy](/docs/concepts/testing/test_flake_policy.md)
  - [Testing Isolated Cache Storage](/docs/concepts/testing/testing_isolated_cache_storage.md)

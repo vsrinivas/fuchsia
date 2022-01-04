@@ -572,7 +572,7 @@ The Android operating system:
 [docs-ffx]: /docs/development/tools/ffx/overview.md
 [docs-rfc]: /docs/contribute/governance/rfcs/README.md
 [docs-test-runner]: /docs/development/testing/components/test_runner_framework.md
-[docs-testing]: /docs/concepts/testing/sl4f.md
+[docs-testing]: /docs/concepts/drivers/driver_development/sl4f.md
 [fidl-metrics]: https://fuchsia.dev/reference/fidl/fuchsia.metrics
 [fidl-crash-reporter]: https://fuchsia.dev/reference/fidl/fuchsia.feedback#CrashReporter
 [fuchsia-repository]: /docs/concepts/packages/package_url.md#repository_root_verification_known_sources

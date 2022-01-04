@@ -316,7 +316,7 @@ covered in a [separate roadmap document][oot-system-testing].
 [components-build]: /docs/development/components/build.md
 [components-test]: /docs/development/testing/components/README.md
 [covargs]: /tools/debug/covargs/
-[coverage]: /docs/concepts/testing/coverage.md
+[coverage]: /docs/contribute/testing/coverage.md
 [dac]: /docs/contribute/roadmap/2020/overview.md#implementing_drivers_as_components
 [dash]: /zircon/third_party/uapp/dash/
 [driver-abi-stability]: /docs/contribute/roadmap/2021/stable_driver_runtime.md
@@ -353,9 +353,9 @@ covered in a [separate roadmap document][oot-system-testing].
 [runner-gtest]: /docs/development/testing/components/test_runner_framework.md#gtest-runner
 [runner-rust]: /docs/development/testing/components/test_runner_framework.md#rust-runner
 [rust]: https://www.rust-lang.org/
-[sanitizers]: /docs/concepts/testing/sanitizers.md
+[sanitizers]: /docs/contribute/testing/sanitizers.md
 [sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
-[sl4f]: /docs/concepts/testing/sl4f.md
+[sl4f]: /docs/concepts/drivers/driver_development/sl4f.md
 [sl4f-client]: /sdk/testing/sl4f/client/
 [sl4f-guide]: /docs/development/testing/create_a_new_end_to_end_test.md
 [stress-tests]: /docs/development/testing/stress_tests.md

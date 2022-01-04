@@ -1108,6 +1108,6 @@ You must add your component to the allowlist for the feature in
 [rustc-test]: /build/rust/rustc_test.gni
 [source-code-layout]: /docs/concepts/source_code/layout.md
 [source-expansion-placeholders]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#placeholders
-[test-environments]: /docs/concepts/testing/environments.md
+[test-environments]: /docs/contribute/testing/environments.md
 [v2-test-component]: /docs/development/testing/components/test_component.md
 [working-with-packages]: /docs/development/idk/documentation/packages.md

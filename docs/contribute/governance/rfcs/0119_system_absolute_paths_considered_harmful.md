@@ -424,4 +424,4 @@ A great Jedi once said: "Only a Sith deals in absolutes."
 [paving]: /docs/development/hardware/paving.md
 [reproducible-builds]: https://reproducible-builds.org
 [sandboxfs-performance]: https://blog.bazel.build/2017/08/25/introducing-sandboxfs.html
-[test-coverage]: /docs/concepts/testing/coverage.md
+[test-coverage]: /docs/contribute/testing/coverage.md

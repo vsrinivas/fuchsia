@@ -30,5 +30,7 @@ toc:
     path: /docs/development/diagnostics/logs/severity.md
   - title: "View"
     path: /docs/development/diagnostics/logs/viewing.md
+  - title: "Logging and tests"
+    path: /docs/development/diagnostics/logs.md
 - title: "Analyze with Triage"
   path: /docs/development/diagnostics/triage/codelab.md
