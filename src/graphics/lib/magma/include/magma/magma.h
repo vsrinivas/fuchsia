@@ -584,15 +584,6 @@ magma_status_t magma_get_buffer_handle2(
 magma_status_t magma_flush(
     magma_connection_t connection);
 
-///
-/// \brief TODO(fxbug.dev/76457) remove after soft transition
-/// \param connection An open connection to a device.
-/// \param channel A handle to a channel to a gpu-performance-counter device.
-///
-magma_status_t magma_connection_access_performance_counters(
-    magma_connection_t connection,
-    magma_handle_t channel);
-
 #if defined(__cplusplus)
 }
 #endif

@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 81,
+    "next-free-ordinal": 80,
     "exports": [
       {
         "ordinal": 4,
@@ -1054,24 +1054,6 @@
             "name": "connection",
             "type": "magma_connection_t",
             "description": "An open connection."
-          }
-        ]
-      },
-      {
-        "ordinal": 80,
-        "name": "magma_connection_access_performance_counters",
-        "type": "magma_status_t",
-        "description": "TODO(fxbug.dev/76457) remove after soft transition",
-        "arguments": [
-          {
-            "name": "connection",
-            "type": "magma_connection_t",
-            "description": "An open connection to a device."
-          },
-          {
-            "name": "channel",
-            "type": "magma_handle_t",
-            "description": "A handle to a channel to a gpu-performance-counter device."
           }
         ]
       }
