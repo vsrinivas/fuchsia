@@ -101,7 +101,7 @@ static void ldsvc_server(zx_handle_t channel_handle) {
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
-          .handle_metadata = handle_metadata,
+          .handle_metadata = (fidl_handle_metadata_t*)(handle_metadata),
           .num_bytes = 0u,
           .num_handles = 0u,
       };

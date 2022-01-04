@@ -107,7 +107,7 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher, async_wait_t* w
       fidl_incoming_msg_t msg = {
           .bytes = bytes,
           .handles = handles,
-          .handle_metadata = handle_metadata,
+          .handle_metadata = (fidl_handle_metadata_t*)(handle_metadata),
           .num_bytes = 0u,
           .num_handles = 0u,
       };

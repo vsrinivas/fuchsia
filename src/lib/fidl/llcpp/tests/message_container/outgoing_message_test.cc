@@ -25,7 +25,7 @@ TEST(OutgoingMessage, CreateWithConstructorArgs) {
           .iovecs = iovecs,
           .iovec_capacity = std::size(iovecs),
           .handles = handles,
-          .handle_metadata = handle_metadata,
+          .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
           .handle_capacity = std::size(handles),
           .backing_buffer = backing_buffer,
           .backing_buffer_capacity = std::size(backing_buffer),
@@ -36,7 +36,7 @@ TEST(OutgoingMessage, CreateWithConstructorArgs) {
   EXPECT_EQ(0u, msg.handle_actual());
   EXPECT_EQ(handles, msg.handles());
   EXPECT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, msg.transport_type());
-  EXPECT_EQ(handle_metadata, msg.handle_metadata());
+  EXPECT_EQ(handle_metadata, msg.handle_metadata<fidl::internal::ChannelTransport>());
 }
 
 TEST(OutgoingMessage, ConstructFromCIovecMessage) {
@@ -57,7 +57,7 @@ TEST(OutgoingMessage, ConstructFromCIovecMessage) {
               .iovecs = &iovec,
               .num_iovecs = 1,
               .handles = &handle,
-              .handle_metadata = &handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(&handle_metadata),
               .num_handles = 1,
           },
   };
@@ -67,7 +67,7 @@ TEST(OutgoingMessage, ConstructFromCIovecMessage) {
   ASSERT_EQ(1u, msg.iovec_actual());
   ASSERT_EQ(&handle, msg.handles());
   ASSERT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, msg.transport_type());
-  ASSERT_EQ(&handle_metadata, msg.handle_metadata());
+  EXPECT_EQ(&handle_metadata, msg.handle_metadata<fidl::internal::ChannelTransport>());
   ASSERT_EQ(1u, msg.handle_actual());
 }
 
@@ -84,7 +84,7 @@ TEST(OutgoingMessage, ConstructFromCByteMessage) {
           {
               .bytes = bytes,
               .handles = &handle,
-              .handle_metadata = &handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(&handle_metadata),
               .num_bytes = std::size(bytes),
               .num_handles = 1,
           },
@@ -192,7 +192,7 @@ TEST(OutgoingMessage, OutgoingMessageBytesMatchIgnoreHandles) {
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
-              .handle_metadata = &handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(&handle_metadata),
               .num_handles = 1,
           },
   };

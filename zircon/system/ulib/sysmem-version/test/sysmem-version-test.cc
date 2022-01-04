@@ -71,7 +71,8 @@ class LinearSnap {
            outgoing_message.handle_actual() * sizeof(zx_handle_t));
     ZX_ASSERT(outgoing_message.handle_actual() * sizeof(fidl_channel_handle_metadata_t) <=
               sizeof(snap_handle_metadata_));
-    memcpy(snap_handle_metadata_, outgoing_message.handle_metadata(),
+    memcpy(snap_handle_metadata_,
+           outgoing_message.handle_metadata<fidl::internal::ChannelTransport>(),
            outgoing_message.handle_actual() * sizeof(fidl_channel_handle_metadata_t));
     snap_handles_count_ = outgoing_message.handle_actual();
     outgoing_to_incoming_result_.emplace(encoded.GetOutgoingMessage());

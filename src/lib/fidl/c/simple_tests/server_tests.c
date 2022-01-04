@@ -57,7 +57,7 @@ TEST(ServerTests, dispatch_test) {
   fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
-      .handle_metadata = handle_metadata,
+      .handle_metadata = (fidl_handle_metadata_t*)(handle_metadata),
       .num_bytes = sizeof(request),
       .num_handles = 2,
   };
@@ -186,7 +186,7 @@ TEST(ServerTests, error_test) {
   fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
-      .handle_metadata = handle_metadata,
+      .handle_metadata = (fidl_handle_metadata_t*)(handle_metadata),
       .num_bytes = sizeof(request),
       .num_handles = 2,
   };
@@ -230,7 +230,7 @@ TEST(ServerTests, incompatible_magic_test) {
   fidl_incoming_msg_t msg = {
       .bytes = &request,
       .handles = handles,
-      .handle_metadata = handle_metadata,
+      .handle_metadata = (fidl_handle_metadata_t*)(handle_metadata),
       .num_bytes = sizeof(request),
       .num_handles = 2,
   };

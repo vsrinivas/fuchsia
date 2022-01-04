@@ -122,7 +122,7 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       auto copied_bytes = outgoing_v1.CopyBytes();
       std::vector<zx_handle_info_t> handle_infos;
       fidl_channel_handle_metadata_t* handle_metadata =
-          static_cast<fidl_channel_handle_metadata_t*>(outgoing_v1.handle_metadata());
+          outgoing_v1.handle_metadata<fidl::internal::ChannelTransport>();
       for (uint32_t i = 0; i < outgoing_v1.handle_actual(); i++) {
         handle_infos.push_back({
             .handle = outgoing_v1.handles()[i],
@@ -175,7 +175,8 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
       c_msg.iovec.iovecs = iovec_buffer.get();
       c_msg.iovec.num_iovecs = actual_iovecs;
       c_msg.iovec.handles = handle_buffer.get();
-      c_msg.iovec.handle_metadata = handle_metadata_buffer.get();
+      c_msg.iovec.handle_metadata =
+          reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_buffer.get());
       c_msg.iovec.num_handles = actual_handles;
 
       break;
@@ -205,7 +206,7 @@ bool EncodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
     std::unique_ptr<zx_handle_disposition_t[]> outgoing_handle_dispositions =
         std::make_unique<zx_handle_disposition_t[]>(outgoing.handle_actual());
     fidl_channel_handle_metadata_t* handle_metadata =
-        static_cast<fidl_channel_handle_metadata_t*>(outgoing.handle_metadata());
+        outgoing.handle_metadata<fidl::internal::ChannelTransport>();
     for (uint32_t i = 0; i < outgoing.handle_actual(); i++) {
       outgoing_handle_dispositions[i] = zx_handle_disposition_t{
           .operation = ZX_HANDLE_OP_MOVE,

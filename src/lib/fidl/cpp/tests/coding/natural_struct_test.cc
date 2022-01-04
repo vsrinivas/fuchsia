@@ -159,7 +159,7 @@ TEST(NaturalStructWithHandle, Encode) {
   ASSERT_NO_FAILURES(fidl_testing::ComparePayload<zx_handle_t>(
       cpp20::span(message.handles(), message.handle_actual()), cpp20::span(handles)));
   ASSERT_NO_FAILURES(fidl_testing::ComparePayload<fidl_channel_handle_metadata_t>(
-      cpp20::span(static_cast<fidl_channel_handle_metadata_t*>(message.handle_metadata()),
+      cpp20::span(message.handle_metadata<fidl::internal::ChannelTransport>(),
                   message.handle_actual()),
       cpp20::span(handle_metadata)));
 }

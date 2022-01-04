@@ -63,7 +63,8 @@ class RewriteTransaction : public fidl::Transaction {
             {
                 .bytes = real_msg_bytes,
                 .handles = real_msg_handles,
-                .handle_metadata = real_msg_handle_metadata,
+                .handle_metadata =
+                    reinterpret_cast<fidl_handle_metadata_t*>(real_msg_handle_metadata),
                 .num_bytes = 0u,
                 .num_handles = 0u,
             },
@@ -181,7 +182,7 @@ class RewriteTransaction : public fidl::Transaction {
     ZX_ASSERT(real_msg.type == FIDL_OUTGOING_MSG_TYPE_BYTE);
     zx_handle_disposition_t handle_dispositions[ZX_CHANNEL_MAX_MSG_HANDLES];
     fidl_channel_handle_metadata_t* metadata =
-        static_cast<fidl_channel_handle_metadata_t*>(real_msg.byte.handle_metadata);
+        reinterpret_cast<fidl_channel_handle_metadata_t*>(real_msg.byte.handle_metadata);
     for (uint32_t i = 0; i < real_msg.byte.num_handles; i++) {
       handle_dispositions[i] = {
           .operation = ZX_HANDLE_OP_MOVE,

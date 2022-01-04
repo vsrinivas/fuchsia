@@ -484,6 +484,10 @@ static_assert(sizeof(fidl_handle_t) == sizeof(zx_handle_t), "handle type size mi
 #define FIDL_HANDLE_INVALID ((fidl_handle_t)(0))
 static_assert(FIDL_HANDLE_INVALID == ZX_HANDLE_INVALID, "invalid handle value mismatch");
 
+// Placeholder for an arbitrary handle metadata type.
+// fidl_handle_metadata_t* is used instead of void* to prevent automatic conversions.
+typedef struct fidl_handle_metadata fidl_handle_metadata_t;
+
 // Pair of object type and rights, used for handle metadata for the channel
 // transport.
 typedef struct fidl_channel_handle_metadata {
@@ -510,13 +514,12 @@ typedef struct fidl_outgoing_msg_byte {
   fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
+  // fidl_handle_metadata_t is a placeholder type, cast this into the appropriate
+  // handle type when using.
   // This is an array of fidl_channel_handle_metadata when representing C messages.
-  // The type is void* because it can hold other metadata types when used in LLCPP
-  // messages.
-  // TODO(fxbug.dev/85734) Assign a more appropriate type than void* here.
   //
   // See |num_handles| for the number of handles in the message.
-  void* handle_metadata;
+  fidl_handle_metadata_t* handle_metadata;
 
   // The number of bytes in |bytes|.
   uint32_t num_bytes;
@@ -543,13 +546,12 @@ typedef struct fidl_outgoing_msg_iovec {
   fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
+  // fidl_handle_metadata_t is a placeholder type, cast this into the appropriate
+  // handle type when using.
   // This is an array of fidl_channel_handle_metadata when representing C messages.
-  // The type is void* because it can hold other metadata types when used in LLCPP
-  // messages.
-  // TODO(fxbug.dev/85734) Assign a more appropriate type than void* here.
   //
   // See |num_handles| for the number of handles in the message.
-  void* handle_metadata;
+  fidl_handle_metadata_t* handle_metadata;
 
   // The number of handles in |handles|.
   uint32_t num_handles;
@@ -589,13 +591,12 @@ typedef struct fidl_incoming_msg {
   fidl_handle_t* handles;
 
   // Array of metadata providing additional information on the handles.
+  // fidl_handle_metadata_t is a placeholder type, cast this into the appropriate
+  // handle type when using.
   // This is an array of fidl_channel_handle_metadata when representing C messages.
-  // The type is void* because it can hold other metadata types when used in LLCPP
-  // messages.
-  // TODO(fxbug.dev/85734) Assign a more appropriate type than void* here.
   //
   // See |num_handles| for the number of handles in the message.
-  void* handle_metadata;
+  fidl_handle_metadata_t* handle_metadata;
 
   // The number of bytes in |bytes|.
   uint32_t num_bytes;

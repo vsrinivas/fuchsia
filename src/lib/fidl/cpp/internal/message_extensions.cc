@@ -17,7 +17,7 @@ namespace internal {
   return ::fidl::IncomingMessage::Create(
       static_cast<uint8_t*>(c_msg.bytes) + sizeof(fidl_message_header_t),
       c_msg.num_bytes - static_cast<uint32_t>(sizeof(fidl_message_header_t)), c_msg.handles,
-      static_cast<fidl_channel_handle_metadata_t*>(c_msg.handle_metadata), c_msg.num_handles,
+      reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg.handle_metadata), c_msg.num_handles,
       ::fidl::IncomingMessage::kSkipMessageHeaderValidation);
 }
 
@@ -25,7 +25,7 @@ namespace internal {
     fidl::IncomingMessage message,
     cpp20::span<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_storage) {
   fidl_incoming_msg_t c_msg = std::move(message).ReleaseToEncodedCMessage();
-  auto* handle_metadata = static_cast<fidl_channel_handle_metadata_t*>(c_msg.handle_metadata);
+  auto* handle_metadata = reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg.handle_metadata);
   for (size_t i = 0; i < c_msg.num_handles && i < ZX_CHANNEL_MAX_MSG_HANDLES; i++) {
     handle_storage[i] = zx_handle_info_t{
         .handle = c_msg.handles[i],
@@ -65,7 +65,7 @@ namespace internal {
           {
               .bytes = message.bytes().data(),
               .handles = handles,
-              .handle_metadata = handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
               .num_bytes = message.bytes().actual(),
               .num_handles = message.handles().actual(),
           },

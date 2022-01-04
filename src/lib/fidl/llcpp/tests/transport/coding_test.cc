@@ -86,13 +86,12 @@ TEST(Coding, EncodedDecode) {
   ASSERT_OK(encoded.status());
   auto& msg = encoded.GetOutgoingMessage();
 
-  ASSERT_EQ(kTestMetadataValue,
-            static_cast<TestHandleMetadata*>(msg.handle_metadata())[0].metadata);
+  ASSERT_EQ(kTestMetadataValue, msg.handle_metadata<TestTransport>()[0].metadata);
 
   auto copied_bytes = encoded.GetOutgoingMessage().CopyBytes();
   fidl::DecodedMessage<Input, TestTransport> decoded(
       copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), msg.handles(),
-      static_cast<TestHandleMetadata*>(msg.handle_metadata()), msg.handle_actual());
+      msg.handle_metadata<TestTransport>(), msg.handle_actual());
   ASSERT_OK(decoded.status());
 
   ASSERT_EQ(123, decoded.PrimaryObject()->h);

@@ -383,7 +383,7 @@ zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* m
     return status;
   }
   fidl_channel_handle_metadata_t* handle_metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(msg->handle_metadata);
+      reinterpret_cast<fidl_channel_handle_metadata_t*>(msg->handle_metadata);
   for (uint32_t i = 0; i < *out_actual_handles; i++) {
     msg->handles[i] = handle_dispositions[i].handle;
     handle_metadata[i] = {

@@ -150,8 +150,8 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   uint32_t num_handles_actual;
   zx_status_t status = fidl::internal::EncodeIovecEtc<FIDL_WIRE_FORMAT_VERSION_V2>(
       *transport_vtable_->encoding_configuration, message_type, data, iovecs(), iovec_capacity(),
-      handles(), handle_metadata(), handle_capacity(), backing_buffer(), backing_buffer_capacity(),
-      &num_iovecs_actual, &num_handles_actual, error_address());
+      handles(), message_.iovec.handle_metadata, handle_capacity(), backing_buffer(),
+      backing_buffer_capacity(), &num_iovecs_actual, &num_handles_actual, error_address());
   if (status != ZX_OK) {
     SetResult(fidl::Result::EncodeError(status, *error_address()));
     return;
@@ -184,7 +184,7 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, const Write
   }
   ZX_ASSERT(transport_type() == transport.type());
   zx_status_t status = transport.write(options, iovecs(), iovec_actual(), handles(),
-                                       handle_metadata(), handle_actual());
+                                       message_.iovec.handle_metadata, handle_actual());
   ReleaseHandles();
   if (status != ZX_OK) {
     SetResult(fidl::Result::TransportError(status));
@@ -194,8 +194,8 @@ void OutgoingMessage::Write(internal::AnyUnownedTransport transport, const Write
 void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
                                const fidl_type_t* response_type, uint8_t* result_bytes,
                                uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-                               void* result_handle_metadata, uint32_t result_handle_capacity,
-                               const CallOptions& options) {
+                               fidl_handle_metadata_t* result_handle_metadata,
+                               uint32_t result_handle_capacity, const CallOptions& options) {
   if (status() != ZX_OK) {
     return;
   }
@@ -206,7 +206,7 @@ void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
   internal::CallMethodArgs args = {
       .wr_data = iovecs(),
       .wr_handles = handles(),
-      .wr_handle_metadata = handle_metadata(),
+      .wr_handle_metadata = message_.iovec.handle_metadata,
       .wr_data_count = iovec_actual(),
       .wr_handles_count = handle_actual(),
       .rd_data = result_bytes,
@@ -268,8 +268,8 @@ OutgoingMessage::CopiedBytes::CopiedBytes(const OutgoingMessage& msg) {
 }
 
 IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
-                                 uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
-                                 uint32_t handle_actual)
+                                 uint32_t byte_actual, zx_handle_t* handles,
+                                 fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual)
     : IncomingMessage(transport_vtable, bytes, byte_actual, handles, handle_metadata, handle_actual,
                       kSkipMessageHeaderValidation) {
   Validate();
@@ -283,8 +283,9 @@ IncomingMessage IncomingMessage::FromEncodedCMessage(const fidl_incoming_msg_t* 
 }
 
 IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
-                                 uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
-                                 uint32_t handle_actual, SkipMessageHeaderValidationTag)
+                                 uint32_t byte_actual, zx_handle_t* handles,
+                                 fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual,
+                                 SkipMessageHeaderValidationTag)
     : fidl::Result(fidl::Result::Ok()),
       transport_vtable_(transport_vtable),
       message_{
@@ -295,9 +296,8 @@ IncomingMessage::IncomingMessage(const internal::TransportVTable* transport_vtab
           .num_handles = handle_actual,
       } {}
 
-IncomingMessage::IncomingMessage(const fidl::Result& failure) : fidl::Result(failure), message_{} {
-  ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
-}
+IncomingMessage::IncomingMessage(const fidl::Result& failure) : fidl::Result(failure), message_ {}
+{ ZX_DEBUG_ASSERT(failure.status() != ZX_OK); }
 
 IncomingMessage::~IncomingMessage() { std::move(*this).CloseHandles(); }
 
@@ -408,7 +408,7 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata) {
   zx_handle_t* handles = input.handles();
   fidl_channel_handle_metadata_t* handle_metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(input.handle_metadata());
+      input.handle_metadata<fidl::internal::ChannelTransport>();
   uint32_t num_handles = input.handle_actual();
   input.ReleaseHandles();
 

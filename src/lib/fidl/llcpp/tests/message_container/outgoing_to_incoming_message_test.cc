@@ -56,7 +56,7 @@ TEST(OutgoingToIncomingMessage, Handles) {
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
-              .handle_metadata = &handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(&handle_metadata),
               .num_handles = 1,
           },
   };
@@ -69,7 +69,7 @@ TEST(OutgoingToIncomingMessage, Handles) {
   EXPECT_EQ(output.handle_actual(), std::size(iovecs));
   EXPECT_EQ(output.handles()[0], ev.get());
   fidl_channel_handle_metadata_t* out_handle_metadata =
-      reinterpret_cast<fidl_channel_handle_metadata_t*>(output.handle_metadata());
+      output.handle_metadata<fidl::internal::ChannelTransport>();
   EXPECT_EQ(out_handle_metadata[0].obj_type, handle_metadata.obj_type);
   EXPECT_EQ(out_handle_metadata[0].rights, handle_metadata.rights);
 }
@@ -93,7 +93,7 @@ TEST(OutgoingToIncomingMessage, HandlesWrongType) {
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
-              .handle_metadata = &handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(&handle_metadata),
               .num_handles = 1,
           },
   };
@@ -121,7 +121,7 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
               .iovecs = iovecs,
               .num_iovecs = std::size(iovecs),
               .handles = &handle,
-              .handle_metadata = &handle_metadata,
+              .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(&handle_metadata),
               .num_handles = 1,
           },
   };

@@ -85,7 +85,7 @@ class OutgoingMessage : public ::fidl::Result {
     zx_channel_iovec_t* iovecs;
     uint32_t iovec_capacity;
     zx_handle_t* handles;
-    void* handle_metadata;
+    fidl_handle_metadata_t* handle_metadata;
     uint32_t handle_capacity;
     uint8_t* backing_buffer;
     uint32_t backing_buffer_capacity;
@@ -119,8 +119,13 @@ class OutgoingMessage : public ::fidl::Result {
   uint32_t iovec_actual() const { return iovec_message().num_iovecs; }
   fidl_handle_t* handles() const { return iovec_message().handles; }
   fidl_transport_type transport_type() const { return transport_vtable_->type; }
-  void* handle_metadata() const { return iovec_message().handle_metadata; }
   uint32_t handle_actual() const { return iovec_message().num_handles; }
+
+  template <typename Transport>
+  typename Transport::HandleMetadata* handle_metadata() const {
+    ZX_ASSERT(Transport::VTable.type == transport_vtable_->type);
+    return reinterpret_cast<typename Transport::HandleMetadata*>(iovec_message().handle_metadata);
+  }
 
   // Convert the outgoing message to its C API counterpart, releasing the
   // ownership of handles to the caller in the process. This consumes the
@@ -184,7 +189,7 @@ class OutgoingMessage : public ::fidl::Result {
   template <typename FidlType>
   void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
             uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-            void* result_handle_metadata, uint32_t result_handle_capacity,
+            fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
             const CallOptions& options = {}) {
     CallImpl(transport, FidlType::Type, result_bytes, result_byte_capacity, result_handles,
              result_handle_metadata, result_handle_capacity, options);
@@ -197,7 +202,8 @@ class OutgoingMessage : public ::fidl::Result {
     typename internal::AssociatedTransport<TransportObject>::HandleMetadata
         result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
-                   result_bytes, result_byte_capacity, result_handles, result_handle_metadata,
+                   result_bytes, result_byte_capacity, result_handles,
+                   reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
                    ZX_CHANNEL_MAX_MSG_HANDLES, options);
   }
 
@@ -211,7 +217,7 @@ class OutgoingMessage : public ::fidl::Result {
 
   void CallImpl(internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
                 uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
-                void* result_handle_metadata, uint32_t result_handle_capacity,
+                fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
                 const CallOptions& options);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
@@ -315,7 +321,8 @@ class IncomingMessage : public ::fidl::Result {
   static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
                                 typename Transport::HandleMetadata* handle_metadata,
                                 uint32_t handle_actual) {
-    return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles, handle_metadata,
+    return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles,
+                           reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
                            handle_actual);
   }
 
@@ -357,7 +364,8 @@ class IncomingMessage : public ::fidl::Result {
   static IncomingMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
                                 typename Transport::HandleMetadata* handle_metadata,
                                 uint32_t handle_actual, SkipMessageHeaderValidationTag) {
-    return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles, handle_metadata,
+    return IncomingMessage(&Transport::VTable, bytes, byte_actual, handles,
+                           reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
                            handle_actual, kSkipMessageHeaderValidation);
   }
 
@@ -404,8 +412,13 @@ class IncomingMessage : public ::fidl::Result {
   uint32_t byte_actual() const { return message_.num_bytes; }
 
   zx_handle_t* handles() const { return message_.handles; }
-  void* handle_metadata() const { return message_.handle_metadata; }
   uint32_t handle_actual() const { return message_.num_handles; }
+
+  template <typename Transport>
+  typename Transport::HandleMetadata* handle_metadata() const {
+    ZX_ASSERT(Transport::VTable.type == transport_vtable_->type);
+    return reinterpret_cast<typename Transport::HandleMetadata*>(message_.handle_metadata);
+  }
 
   // Convert the incoming message to its C API counterpart, releasing the
   // ownership of handles to the caller in the process. This consumes the
@@ -425,11 +438,12 @@ class IncomingMessage : public ::fidl::Result {
  private:
   explicit IncomingMessage(const ::fidl::Result& failure);
   IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
-                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
-                  uint32_t handle_actual);
+                  uint32_t byte_actual, zx_handle_t* handles,
+                  fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual);
   IncomingMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
-                  uint32_t byte_actual, zx_handle_t* handles, void* handle_metadata,
-                  uint32_t handle_actual, SkipMessageHeaderValidationTag);
+                  uint32_t byte_actual, zx_handle_t* handles,
+                  fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual,
+                  SkipMessageHeaderValidationTag);
 
   // Only |fidl::DecodedMessage<T>| instances may decode this message.
   template <typename T>
@@ -617,7 +631,8 @@ class UnownedEncodedMessage final {
             .iovecs = iovecs_,
             .iovec_capacity = iovec_capacity,
             .handles = handle_storage_.data(),
-            .handle_metadata = handle_metadata_storage_.data(),
+            .handle_metadata =
+                reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_storage_.data()),
             .handle_capacity = kNumHandles,
             .backing_buffer = backing_buffer,
             .backing_buffer_capacity = backing_buffer_size,
@@ -764,7 +779,7 @@ class DecodedMessage<FidlType, Transport,
 
   DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
-                       static_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
+                       reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   // Internal constructor for specifying a specific wire format version.
@@ -772,7 +787,7 @@ class DecodedMessage<FidlType, Transport,
                  const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(wire_format_version, static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes,
                        c_msg->handles,
-                       static_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
+                       reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
   ~DecodedMessage() {

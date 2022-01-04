@@ -78,7 +78,7 @@ bool EncodeSuccess(FidlWireFormatVersion wire_format_version, FidlType* value,
   auto copied_bytes = outgoing_msg.CopyBytes();
   fidl::DecodedMessage<FidlType> llcpp_decoded(
       copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), outgoing_msg.handles(),
-      static_cast<fidl_channel_handle_metadata_t*>(outgoing_msg.handle_metadata()),
+      outgoing_msg.template handle_metadata<fidl::internal::ChannelTransport>(),
       outgoing_msg.handle_actual());
   // Handles are now owned by |llcpp_decoded|.
   outgoing_msg.ReleaseHandles();

@@ -480,7 +480,7 @@ class SimpleBinding {
         fidl_incoming_msg_t msg = {
             .bytes = bytes_,
             .handles = handles_,
-            .handle_metadata = handle_metadata_,
+            .handle_metadata = reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata_),
             .num_bytes = 0u,
             .num_handles = 0u,
         };
