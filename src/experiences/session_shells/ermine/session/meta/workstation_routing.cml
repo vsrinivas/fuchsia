@@ -73,7 +73,6 @@
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.identity.account.AccountManager",
@@ -134,7 +133,6 @@
         },
         {
             protocol: [
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",

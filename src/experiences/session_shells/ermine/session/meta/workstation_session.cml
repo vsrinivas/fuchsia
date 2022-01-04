@@ -39,7 +39,6 @@
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
-                "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.hardware.power.statecontrol.Admin",
