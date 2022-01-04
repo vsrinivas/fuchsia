@@ -3,6 +3,7 @@ table/member fuchsia.ui.pointerinjector/Config.context fuchsia.ui.pointerinjecto
 table/member fuchsia.ui.pointerinjector/Config.device_id uint32
 table/member fuchsia.ui.pointerinjector/Config.device_type fuchsia.ui.pointerinjector/DeviceType
 table/member fuchsia.ui.pointerinjector/Config.dispatch_policy fuchsia.ui.pointerinjector/DispatchPolicy
+table/member fuchsia.ui.pointerinjector/Config.relative_motion_range array<fuchsia.input.report/Axis,2>
 table/member fuchsia.ui.pointerinjector/Config.scroll_h_range fuchsia.input.report/Axis
 table/member fuchsia.ui.pointerinjector/Config.scroll_v_range fuchsia.input.report/Axis
 table/member fuchsia.ui.pointerinjector/Config.target fuchsia.ui.pointerinjector/Target
@@ -36,6 +37,7 @@ table/member fuchsia.ui.pointerinjector/PointerSample.phase fuchsia.ui.pointerin
 table/member fuchsia.ui.pointerinjector/PointerSample.pointer_id uint32
 table/member fuchsia.ui.pointerinjector/PointerSample.position_in_viewport array<float32,2>
 table/member fuchsia.ui.pointerinjector/PointerSample.pressed_buttons vector<uint8>:32
+table/member fuchsia.ui.pointerinjector/PointerSample.relative_motion array<float32,2>
 table/member fuchsia.ui.pointerinjector/PointerSample.scroll_h int64
 table/member fuchsia.ui.pointerinjector/PointerSample.scroll_v int64
 table fuchsia.ui.pointerinjector/PointerSample

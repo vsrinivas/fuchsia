@@ -18,6 +18,10 @@ alias Extents = array<Point2, 2>;
 /// - The values are placed in column-major order.
 alias Mat3 = array<float32, 9>;
 
+/// The valid values of relative motion for a mouse device.
+/// - The ranges are placed in (x, y) order.
+alias RelativeMotionRange = array<fuchsia.input.report.Axis, 2>;
+
 /// A specification for an injector |Device|.
 ///
 /// All fields required.
@@ -51,6 +55,9 @@ type Config = resource table {
     /// have injected events dispatched to it, regardless of other factors, such
     /// as surface occlusion by clients inside and outside of |target|.
     6: dispatch_policy DispatchPolicy;
+
+    /// Range of X and Y motion by a mouse device.
+   10: relative_motion_range RelativeMotionRange;
 
     /// Range of vertical scroll values issued by the device.
     7: scroll_v_range fuchsia.input.report.Axis;

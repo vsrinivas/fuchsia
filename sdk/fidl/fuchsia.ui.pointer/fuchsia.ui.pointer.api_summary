@@ -6,6 +6,7 @@ strict enum fuchsia.ui.pointer/EventPhase uint32
 const fuchsia.ui.pointer/MOUSE_MAX_EVENT uint32 128
 table/member fuchsia.ui.pointer/MouseDeviceInfo.buttons vector<uint8>:32
 table/member fuchsia.ui.pointer/MouseDeviceInfo.id uint32
+table/member fuchsia.ui.pointer/MouseDeviceInfo.relative_motion_range array<fuchsia.input.report/Axis,2>
 table/member fuchsia.ui.pointer/MouseDeviceInfo.scroll_h_range fuchsia.input.report/Axis
 table/member fuchsia.ui.pointer/MouseDeviceInfo.scroll_v_range fuchsia.input.report/Axis
 table fuchsia.ui.pointer/MouseDeviceInfo
@@ -22,6 +23,7 @@ struct fuchsia.ui.pointer/MouseEventStreamInfo
 table/member fuchsia.ui.pointer/MousePointerSample.device_id uint32
 table/member fuchsia.ui.pointer/MousePointerSample.position_in_viewport array<float32,2>
 table/member fuchsia.ui.pointer/MousePointerSample.pressed_buttons vector<uint8>:32
+table/member fuchsia.ui.pointer/MousePointerSample.relative_motion array<float32,2>
 table/member fuchsia.ui.pointer/MousePointerSample.scroll_h int64
 table/member fuchsia.ui.pointer/MousePointerSample.scroll_v int64
 table fuchsia.ui.pointer/MousePointerSample

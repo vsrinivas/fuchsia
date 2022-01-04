@@ -89,11 +89,18 @@ type MouseEvent = table {
     6: trace_flow_id uint64;
 };
 
+/// The valid values of relative motion for a mouse device.
+/// - The ranges are placed in (x, y) order.
+alias RelativeMotionRange = array<device.Axis, 2>;
+
 /// Information about a device that issues a mouse event stream.
 type MouseDeviceInfo = table {
     /// An identifier for the mouse device that issues a mouse event stream.
     /// Required.
     1: id uint32;
+
+    /// Range of relative movement values issued by the device.
+    5: relative_motion_range RelativeMotionRange;
 
     /// Range of vertical scroll values issued by the device.
     2: scroll_v_range device.Axis;
@@ -105,6 +112,11 @@ type MouseDeviceInfo = table {
     4: buttons vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS;
 };
 
+/// The relative motion performed by a mouse device.
+/// - The valid range is defined in [`MouseDeviceInfo.RelativeMotionRange`].
+/// - The values are placed in (x, y) order.
+alias RelativeMotion = array<float32, 2>;
+
 /// A description of each sampled data point in a mouse event stream.
 type MousePointerSample = table {
     /// An identifier for the mouse device that issues a mouse event stream.
@@ -114,6 +126,10 @@ type MousePointerSample = table {
     /// The position of this event, in the viewport's coordinate system.
     /// Required.
     2: position_in_viewport Point2;
+
+    /// The relative movement performed, independent of the viewport's
+    /// coordinate system.
+    6: relative_motion RelativeMotion;
 
     /// Relative vertical scrolling displacement.
     3: scroll_v int64;

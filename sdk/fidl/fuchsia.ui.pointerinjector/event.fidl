@@ -24,6 +24,11 @@ type EventPhase = strict enum {
     CANCEL = 4;
 };
 
+/// The relative motion performed by a mouse device.
+/// - The valid range is defined in [`Config.RelativeMotionRange`].
+/// - The values are placed in (x, y) order.
+alias RelativeMotion = array<float32, 2>;
+
 /// A description of each sampled data point for a pointer device.
 type PointerSample = table {
     /// An identifier of the pointer that issued this event.
@@ -35,6 +40,10 @@ type PointerSample = table {
 
     /// The position of this event, in the viewport's coordinate system.
     3: position_in_viewport Point2;
+
+    /// The movement of a mouse, independent of the viewport's coordinate
+    /// system.
+    7: relative_motion RelativeMotion;
 
     /// Relative vertical scrolling displacement.
     4: scroll_v int64;
