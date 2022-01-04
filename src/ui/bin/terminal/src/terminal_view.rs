@@ -39,7 +39,6 @@ use {
         Term,
     },
     terminal::cell_size_from_cell_height,
-    terminal::font_size_from_cell_size,
 };
 
 const FONT: &'static str = "/pkg/data/font.ttf";
@@ -572,10 +571,8 @@ impl ViewAssistant for TerminalViewAssistant {
             let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
 
             let cell_size = cell_size_from_cell_height(self.font_size);
-            let font_size = font_size_from_cell_size(&self.font, &cell_size);
             let terminal = builder.facet(Box::new(TerminalFacet::new(
                 self.font.clone(),
-                font_size,
                 &cell_size,
                 self.term.clone(),
                 self.terminal_scene.scroll_thumb(),

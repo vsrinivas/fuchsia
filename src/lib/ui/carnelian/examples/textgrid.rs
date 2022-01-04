@@ -8,7 +8,7 @@ use {
     carnelian::{
         app::Config,
         color::Color,
-        drawing::{load_font, DisplayRotation, FontFace, GlyphMap, TextGrid, TextGridCell},
+        drawing::{load_font, DisplayRotation, FontFace, GlyphMap, TextGrid},
         make_app_assistant,
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Style},
         scene::{
@@ -57,10 +57,6 @@ struct Args {
     /// cell size (default is 8x16)
     #[argh(option, from_str_fn(size_from_str))]
     cell_size: Option<Size>,
-
-    /// font size (default is 14)
-    #[argh(option, default = "14.0")]
-    font_size: f32,
 }
 
 fn color_from_str(value: &str) -> Result<Color, String> {
@@ -80,7 +76,6 @@ struct TextGridAppAssistant {
     background: Color,
     foreground: Color,
     cell_size: Size,
-    font_size: f32,
 }
 
 impl Default for TextGridAppAssistant {
@@ -92,9 +87,8 @@ impl Default for TextGridAppAssistant {
         let background = args.background.unwrap_or(BLACK_COLOR);
         let foreground = args.foreground.unwrap_or(Color::white());
         let cell_size = args.cell_size.unwrap_or(Size::new(8.0, 16.0));
-        let font_size = args.font_size;
 
-        Self { display_rotation, filename, background, foreground, cell_size, font_size }
+        Self { display_rotation, filename, background, foreground, cell_size }
     }
 }
 
@@ -108,11 +102,8 @@ impl AppAssistant for TextGridAppAssistant {
         let background = self.background;
         let foreground = self.foreground;
         let cell_size = self.cell_size;
-        let font_size = self.font_size;
 
-        Ok(Box::new(TextGridViewAssistant::new(
-            filename, background, foreground, cell_size, font_size,
-        )))
+        Ok(Box::new(TextGridViewAssistant::new(filename, background, foreground, cell_size)))
     }
 
     fn filter_config(&mut self, config: &mut Config) {
@@ -138,11 +129,10 @@ impl TextGridFacet {
     fn new(
         font: FontFace,
         cell_size: Size,
-        font_size: f32,
         foreground: Color,
         pages: Vec<Vec<(u16, u16, char)>>,
     ) -> Self {
-        let textgrid = TextGrid::new(&cell_size, font_size);
+        let textgrid = TextGrid::new(&font, &cell_size);
         let glyphs = GlyphMap::new();
         let cells: FxHashMap<(u16, u16), char> = FxHashMap::default();
 
@@ -188,16 +178,15 @@ impl Facet for TextGridFacet {
             match self.cells.entry((*column, *row)) {
                 Entry::Occupied(entry) => {
                     if *entry.get() != *c {
-                        let cell = TextGridCell::new(
+                        let maybe_raster = textgrid.maybe_raster_for_cell(
                             render_context,
                             *column as usize,
                             *row as usize,
                             *c,
-                            textgrid,
                             font,
                             glyphs,
                         );
-                        if let Some(raster) = cell.raster {
+                        if let Some(raster) = maybe_raster {
                             let value = entry.into_mut();
                             *value = *c;
 
@@ -220,16 +209,15 @@ impl Facet for TextGridFacet {
                     }
                 }
                 Entry::Vacant(entry) => {
-                    let cell = TextGridCell::new(
+                    let maybe_raster = textgrid.maybe_raster_for_cell(
                         render_context,
                         *column as usize,
                         *row as usize,
                         *c,
-                        textgrid,
                         font,
                         glyphs,
                     );
-                    if let Some(raster) = cell.raster {
+                    if let Some(raster) = maybe_raster {
                         entry.insert(*c);
                         layer_group.insert(
                             order,
@@ -298,19 +286,12 @@ struct TextGridViewAssistant {
     background: Color,
     foreground: Color,
     cell_size: Size,
-    cell_padding: f32,
     scene_details: Option<SceneDetails>,
 }
 
 impl TextGridViewAssistant {
-    pub fn new(
-        filename: String,
-        background: Color,
-        foreground: Color,
-        cell_size: Size,
-        cell_padding: f32,
-    ) -> Self {
-        Self { filename, background, foreground, cell_size, cell_padding, scene_details: None }
+    pub fn new(filename: String, background: Color, foreground: Color, cell_size: Size) -> Self {
+        Self { filename, background, foreground, cell_size, scene_details: None }
     }
 }
 
@@ -332,8 +313,7 @@ impl ViewAssistant for TextGridViewAssistant {
             let pages = load_pages(Path::new("/pkg/data/static").join(self.filename.clone()))
                 .expect("unable to load text data");
             let mut builder = SceneBuilder::new().background_color(self.background).mutable(false);
-            let textgrid_facet =
-                TextGridFacet::new(font, self.cell_size, self.cell_padding, self.foreground, pages);
+            let textgrid_facet = TextGridFacet::new(font, self.cell_size, self.foreground, pages);
             let textgrid = builder.facet(Box::new(textgrid_facet));
             SceneDetails { scene: builder.build(), textgrid }
         });

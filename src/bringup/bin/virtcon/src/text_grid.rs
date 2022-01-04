@@ -48,14 +48,13 @@ const STATUS_BG: Rgb = Rgb { r: 0, g: 0, b: 0 };
 impl<T> TextGridFacet<T> {
     pub fn new(
         font: FontFace,
-        font_size: f32,
         cell_size: &Size,
         color_scheme: ColorScheme,
         term: Option<Rc<RefCell<Term<T>>>>,
         status: Vec<(String, Rgb)>,
         status_tab_width: usize,
     ) -> Self {
-        let renderer = Renderer::new(font_size, cell_size);
+        let renderer = Renderer::new(&font, cell_size);
 
         Self { font, color_scheme, size: Size::zero(), term, status, status_tab_width, renderer }
     }
@@ -161,7 +160,6 @@ mod tests {
         let font = load_font(PathBuf::from(FONT))?;
         let _ = TextGridFacet::<TestListener>::new(
             font,
-            14.0,
             &Size::new(8.0, 16.0),
             ColorScheme::default(),
             None,

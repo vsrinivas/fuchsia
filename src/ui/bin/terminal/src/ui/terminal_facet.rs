@@ -52,12 +52,11 @@ pub struct TerminalFacet<T> {
 impl<T: 'static> TerminalFacet<T> {
     pub fn new(
         font: FontFace,
-        font_size: f32,
         cell_size: &Size,
         term: Rc<RefCell<Term<T>>>,
         scroll_thumb: Option<Rect>,
     ) -> Self {
-        let renderer = Renderer::new(font_size, cell_size);
+        let renderer = Renderer::new(&font, cell_size);
 
         TerminalFacet { font, size: Size::zero(), term, scroll_thumb, thumb_order: None, renderer }
     }

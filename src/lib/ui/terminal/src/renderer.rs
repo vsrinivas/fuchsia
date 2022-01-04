@@ -5,7 +5,7 @@
 use {
     carnelian::{
         color::Color,
-        drawing::{FontFace, GlyphMap, TextGrid, TextGridCell},
+        drawing::{FontFace, GlyphMap, TextGrid},
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Raster, Style},
         scene::{LayerGroup, SceneOrder},
         Size,
@@ -27,12 +27,6 @@ pub fn cell_size_from_cell_height(height: f32) -> Size {
 
     // Round to the smallest size equal or greater.
     Size::new(width, height).ceil()
-}
-
-/// Returns the font size that allows ascent + descent to fit within
-/// the specified cell size.
-pub fn font_size_from_cell_size(font: &FontFace, size: &Size) -> f32 {
-    size.height / (font.ascent(1.0) - font.descent(1.0))
 }
 
 #[derive(PartialEq, Debug)]
@@ -205,9 +199,7 @@ fn maybe_raster_for_layer_content(
             cursors,
         ),
         LayerContent::Char(c) => {
-            let grid_cell =
-                TextGridCell::new(render_context, column, row, *c, textgrid, font, glyphs);
-            grid_cell.raster
+            textgrid.maybe_raster_for_cell(render_context, column, row, *c, font, glyphs)
         }
     }
 }
@@ -287,8 +279,8 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(font_size: f32, cell_size: &Size) -> Self {
-        let textgrid = TextGrid::new(cell_size, font_size);
+    pub fn new(font: &FontFace, cell_size: &Size) -> Self {
+        let textgrid = TextGrid::new(font, cell_size);
         let glyphs = GlyphMap::new();
         let cursors = FxHashMap::default();
         let layers = FxHashMap::default();
@@ -527,7 +519,7 @@ mod tests {
         let size = size2(64, 64);
         let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
-        let mut renderer = Renderer::new(14.0, &Size::new(8.0, 16.0));
+        let mut renderer = Renderer::new(&FONT_FACE, &Size::new(8.0, 16.0));
         let layers = vec![
             RenderableLayer {
                 order: 0,

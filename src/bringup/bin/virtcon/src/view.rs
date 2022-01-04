@@ -39,7 +39,6 @@ use {
         term::{color::Rgb, SizeInfo, TermMode},
     },
     terminal::cell_size_from_cell_height,
-    terminal::font_size_from_cell_size,
 };
 
 fn is_control_only(modifiers: &input::Modifiers) -> bool {
@@ -601,12 +600,10 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     (columns as usize / (status.len() + 1)).clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
 
                 let cell_size = cell_size_from_cell_height(cell_height);
-                let font_size = font_size_from_cell_size(&self.font, &cell_size);
 
                 // Add the text grid to the scene.
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
                     self.font.clone(),
-                    font_size,
                     &cell_size,
                     self.color_scheme,
                     active_term,
