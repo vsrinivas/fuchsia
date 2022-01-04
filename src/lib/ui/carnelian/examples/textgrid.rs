@@ -8,15 +8,16 @@ use {
     carnelian::{
         app::Config,
         color::Color,
-        drawing::{load_font, DisplayRotation, FontFace, GlyphMap, TextGrid},
+        drawing::{load_font, DisplayRotation, FontFace, Glyph, GlyphMap, TextGrid},
         make_app_assistant,
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Style},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
         scene::{
             facets::{Facet, FacetId},
             scene::{Scene, SceneBuilder, SceneOrder},
             LayerGroup,
         },
-        App, AppAssistant, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+        ViewKey,
     },
     fuchsia_trace::duration,
     fuchsia_trace_provider,
@@ -147,6 +148,33 @@ impl TextGridFacet {
             cells,
         }
     }
+
+    fn maybe_raster_for_cell(
+        context: &mut RenderContext,
+        textgrid: &TextGrid,
+        column: usize,
+        row: usize,
+        c: char,
+        face: &FontFace,
+        glyph_map: &mut GlyphMap,
+    ) -> Option<Raster> {
+        let glyph_index = face.face.glyph_index(c).expect("glyph_index");
+        let glyphs = &mut glyph_map.glyphs;
+        let scale = textgrid.scale;
+        let offset = textgrid.offset;
+        let glyph = glyphs.entry(glyph_index).or_insert_with(|| {
+            Glyph::with_scale_and_offset(context, face, scale, offset, glyph_index)
+        });
+        if glyph.bounding_box.is_empty() {
+            None
+        } else {
+            let cell_position = Point::new(
+                textgrid.cell_size.width * column as f32,
+                textgrid.cell_size.height * row as f32,
+            );
+            Some(glyph.raster.clone().translate(cell_position.to_vector().to_i32()))
+        }
+    }
 }
 
 impl Facet for TextGridFacet {
@@ -178,8 +206,9 @@ impl Facet for TextGridFacet {
             match self.cells.entry((*column, *row)) {
                 Entry::Occupied(entry) => {
                     if *entry.get() != *c {
-                        let maybe_raster = textgrid.maybe_raster_for_cell(
+                        let maybe_raster = Self::maybe_raster_for_cell(
                             render_context,
+                            textgrid,
                             *column as usize,
                             *row as usize,
                             *c,
@@ -209,8 +238,9 @@ impl Facet for TextGridFacet {
                     }
                 }
                 Entry::Vacant(entry) => {
-                    let maybe_raster = textgrid.maybe_raster_for_cell(
+                    let maybe_raster = Self::maybe_raster_for_cell(
                         render_context,
+                        textgrid,
                         *column as usize,
                         *row as usize,
                         *c,

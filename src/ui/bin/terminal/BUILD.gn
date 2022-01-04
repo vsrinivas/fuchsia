@@ -71,6 +71,21 @@ resource("font") {
   outputs = [ "data/font.ttf" ]
 }
 
+resource("bold_font") {
+  sources = [ terminal_bold_font_path ]
+  outputs = [ "data/bold-font.ttf" ]
+}
+
+resource("italic_font") {
+  sources = [ terminal_italic_font_path ]
+  outputs = [ "data/italic-font.ttf" ]
+}
+
+resource("bold_italic_font") {
+  sources = [ terminal_bold_italic_font_path ]
+  outputs = [ "data/bold-italic-font.ttf" ]
+}
+
 rustc_binary("bin") {
   name = "terminal"
   edition = "2018"
@@ -78,7 +93,10 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":bold_font",
+    ":bold_italic_font",
     ":font",
+    ":italic_font",
     ":lib",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace-provider",
@@ -118,7 +136,10 @@ fuchsia_test_component("terminal_tests_component") {
   component_name = "terminal_tests"
   manifest = "meta/terminal_tests.cmx"
   deps = [
+    ":bold_font",
+    ":bold_italic_font",
     ":font",
+    ":italic_font",
     ":lib_test",
     "//src/lib/zircon/rust:exit_with_code_util",
     "//zircon/third_party/uapp/dash",

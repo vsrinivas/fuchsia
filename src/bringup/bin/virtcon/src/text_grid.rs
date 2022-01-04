@@ -7,7 +7,6 @@ use {
     crate::terminal::TerminalConfig,
     carnelian::{
         color::Color,
-        drawing::FontFace,
         render::Context as RenderContext,
         scene::{facets::Facet, LayerGroup},
         Size, ViewAssistantContext,
@@ -16,10 +15,10 @@ use {
     std::{any::Any, cell::RefCell, rc::Rc},
     term_model::{
         ansi::{CursorStyle, TermInfo},
-        term::color::Rgb,
+        term::{cell::Flags, color::Rgb},
         Term,
     },
-    terminal::{renderable_layers, LayerContent, Offset, RenderableLayer, Renderer},
+    terminal::{renderable_layers, FontSet, LayerContent, Offset, RenderableLayer, Renderer},
 };
 
 fn make_rgb(color: &Color) -> Rgb {
@@ -29,7 +28,7 @@ fn make_rgb(color: &Color) -> Rgb {
 /// Facet that implements a virtcon-style text grid with a status bar
 /// and terminal output.
 pub struct TextGridFacet<T> {
-    font: FontFace,
+    font_set: FontSet,
     color_scheme: ColorScheme,
     size: Size,
     term: Option<Rc<RefCell<Term<T>>>>,
@@ -47,16 +46,24 @@ const STATUS_BG: Rgb = Rgb { r: 0, g: 0, b: 0 };
 
 impl<T> TextGridFacet<T> {
     pub fn new(
-        font: FontFace,
+        font_set: FontSet,
         cell_size: &Size,
         color_scheme: ColorScheme,
         term: Option<Rc<RefCell<Term<T>>>>,
         status: Vec<(String, Rgb)>,
         status_tab_width: usize,
     ) -> Self {
-        let renderer = Renderer::new(&font, cell_size);
+        let renderer = Renderer::new(&font_set, cell_size);
 
-        Self { font, color_scheme, size: Size::zero(), term, status, status_tab_width, renderer }
+        Self {
+            font_set,
+            color_scheme,
+            size: Size::zero(),
+            term,
+            status,
+            status_tab_width,
+            renderer,
+        }
     }
 }
 
@@ -106,13 +113,13 @@ impl<T: 'static> Facet for TextGridFacet<T> {
                 order: order + x,
                 column: start + x,
                 row: 0,
-                content: LayerContent::Char(c),
+                content: LayerContent::Char((c, Flags::empty())),
                 rgb: *rgb,
             })
         }))
         .chain(term.iter().flat_map(|term| renderable_layers(term, &config, &term_offset)));
 
-        self.renderer.render(layer_group, render_context, &self.font, layers);
+        self.renderer.render(layer_group, render_context, &self.font_set, layers);
 
         Ok(())
     }
@@ -158,8 +165,9 @@ mod tests {
     #[test]
     fn can_create_text_grid() -> Result<(), Error> {
         let font = load_font(PathBuf::from(FONT))?;
+        let font_set = FontSet::new(font, None, None, None);
         let _ = TextGridFacet::<TestListener>::new(
-            font,
+            font_set,
             &Size::new(8.0, 16.0),
             ColorScheme::default(),
             None,

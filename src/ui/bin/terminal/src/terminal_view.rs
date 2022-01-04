@@ -11,7 +11,7 @@ use {
     anyhow::{Context as _, Error},
     carnelian::{
         color::Color,
-        drawing::{load_font, FontFace},
+        drawing::load_font,
         input::{self},
         render::Context as RenderContext,
         scene::{
@@ -38,10 +38,14 @@ use {
         term::{SizeInfo, TermMode},
         Term,
     },
-    terminal::cell_size_from_cell_height,
+    terminal::{cell_size_from_cell_height, FontSet},
 };
 
+// Font files.
 const FONT: &'static str = "/pkg/data/font.ttf";
+const BOLD_FONT: &'static str = "/pkg/data/bold-font.ttf";
+const ITALIC_FONT: &'static str = "/pkg/data/italic-font.ttf";
+const BOLD_ITALIC_FONT: &'static str = "/pkg/data/bold-italic-font.ttf";
 
 // Default font size.
 const FONT_SIZE: f32 = 16.0;
@@ -189,7 +193,7 @@ pub struct TerminalViewAssistant {
     app_context: AppContextWrapper,
     view_key: ViewKey,
     scroll_to_bottom_on_input: bool,
-    font: FontFace,
+    font_set: FontSet,
     font_size: f32,
     scene_details: Option<SceneDetails>,
 
@@ -210,6 +214,11 @@ impl TerminalViewAssistant {
         spawn_environ: Vec<CString>,
     ) -> TerminalViewAssistant {
         let font = load_font(PathBuf::from(FONT)).expect("unable to load font data");
+        let bold_font = load_font(PathBuf::from(BOLD_FONT)).expect("unable to load bold font data");
+        let italic_font =
+            load_font(PathBuf::from(ITALIC_FONT)).expect("unable to load italic font data");
+        let bold_italic_font = load_font(PathBuf::from(BOLD_ITALIC_FONT))
+            .expect("unable to load bold italic font data");
         let cell_size = cell_size_from_cell_height(FONT_SIZE);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents
@@ -240,7 +249,12 @@ impl TerminalViewAssistant {
             terminal_scene,
             app_context,
             view_key,
-            font,
+            font_set: FontSet::new(
+                font,
+                Some(bold_font),
+                Some(italic_font),
+                Some(bold_italic_font),
+            ),
             font_size: FONT_SIZE,
             scene_details: None,
             spawn_command,
@@ -572,7 +586,7 @@ impl ViewAssistant for TerminalViewAssistant {
 
             let cell_size = cell_size_from_cell_height(self.font_size);
             let terminal = builder.facet(Box::new(TerminalFacet::new(
-                self.font.clone(),
+                self.font_set.clone(),
                 &cell_size,
                 self.term.clone(),
                 self.terminal_scene.scroll_thumb(),

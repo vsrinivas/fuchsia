@@ -10,7 +10,7 @@ use {
     crate::text_grid::{TextGridFacet, TextGridMessages},
     anyhow::{anyhow, Error},
     carnelian::{
-        drawing::{load_font, FontFace},
+        drawing::load_font,
         input,
         render::{rive::load_rive, Context as RenderContext},
         scene::{
@@ -38,7 +38,7 @@ use {
         grid::Scroll,
         term::{color::Rgb, SizeInfo, TermMode},
     },
-    terminal::cell_size_from_cell_height,
+    terminal::{cell_size_from_cell_height, FontSet},
 };
 
 fn is_control_only(modifiers: &input::Modifiers) -> bool {
@@ -128,7 +128,7 @@ pub struct VirtualConsoleViewAssistant {
     tab_width: usize,
     scene_details: Option<SceneDetails>,
     terminals: BTreeMap<u32, (Terminal<EventProxy>, TerminalStatus)>,
-    font: FontFace,
+    font_set: FontSet,
     animation: Option<Animation>,
     active_terminal_id: u32,
     virtcon_mode: VirtconMode,
@@ -141,6 +141,9 @@ pub struct VirtualConsoleViewAssistant {
 
 const BOOT_ANIMATION: &'static str = "/pkg/data/boot-animation.riv";
 const FONT: &'static str = "/pkg/data/font.ttf";
+const BOLD_FONT: &'static str = "/pkg/data/bold-font.ttf";
+const ITALIC_FONT: &'static str = "/pkg/data/italic-font.ttf";
+const BOLD_ITALIC_FONT: &'static str = "/pkg/data/bold-italic-font.ttf";
 
 impl VirtualConsoleViewAssistant {
     pub fn new(
@@ -159,6 +162,10 @@ impl VirtualConsoleViewAssistant {
         let terminals = BTreeMap::new();
         let active_terminal_id = 0;
         let font = load_font(PathBuf::from(FONT))?;
+        let bold_font = load_font(PathBuf::from(BOLD_FONT)).ok();
+        let italic_font = load_font(PathBuf::from(ITALIC_FONT)).ok();
+        let bold_italic_font = load_font(PathBuf::from(BOLD_ITALIC_FONT)).ok();
+        let font_set = FontSet::new(font, bold_font, italic_font, bold_italic_font);
         let virtcon_mode = VirtconMode::Forced; // We always start out in forced mode.
         let (animation, desired_virtcon_mode) = if boot_animation {
             let file = load_rive(BOOT_ANIMATION)?;
@@ -204,7 +211,7 @@ impl VirtualConsoleViewAssistant {
             tab_width,
             scene_details,
             terminals,
-            font,
+            font_set,
             animation,
             active_terminal_id,
             virtcon_mode,
@@ -603,7 +610,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
 
                 // Add the text grid to the scene.
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
-                    self.font.clone(),
+                    self.font_set.clone(),
                     &cell_size,
                     self.color_scheme,
                     active_term,

@@ -547,7 +547,17 @@ impl Glyph {
         let xy_scale = size / units_per_em as f32;
         let scale = vec2(xy_scale, xy_scale);
         let offset = Vector2D::zero();
-        Self::with_scale_and_offset(context, face, scale, offset, id)
+        if let Some(id) = id {
+            Self::with_scale_and_offset(context, face, scale, offset, id)
+        } else {
+            let path_builder = context.path_builder().expect("path_builder");
+            let path = path_builder.build();
+            let mut raster_builder = context.raster_builder().expect("raster_builder");
+            raster_builder.add(&path, None);
+            let raster = raster_builder.build();
+
+            Self { bounding_box: Rect::zero(), raster }
+        }
     }
 
     #[allow(missing_docs)]
@@ -556,33 +566,25 @@ impl Glyph {
         face: &FontFace,
         scale: Vector2D<f32>,
         offset: Vector2D<f32>,
-        id: Option<ttf_parser::GlyphId>,
+        id: ttf_parser::GlyphId,
     ) -> Self {
-        if let Some(id) = id {
-            let mut builder = GlyphBuilder::new(scale, offset, context);
-            let glyph_bounding_box =
-                &face.face.outline_glyph(id, &mut builder).unwrap_or_else(|| ZERO_RECT);
-            let min_x = glyph_bounding_box.x_min as f32 * scale.x + offset.x;
-            let max_y = -glyph_bounding_box.y_min as f32 * scale.y + offset.y;
-            let max_x = glyph_bounding_box.x_max as f32 * scale.x + offset.x;
-            let min_y = -glyph_bounding_box.y_max as f32 * scale.y + offset.y;
-            let bounding_box = Box2D::new(point2(min_x, min_y), point2(max_x, max_y)).to_rect();
-            Self { bounding_box, raster: builder.raster() }
-        } else {
-            let path_builder = context.path_builder().expect("path_builder");
-            let path = path_builder.build();
-            let mut raster_builder = context.raster_builder().expect("raster_builder");
-            raster_builder.add(&path, None);
-            let raster = raster_builder.build();
-            Self { bounding_box: Rect::zero(), raster }
-        }
+        let mut builder = GlyphBuilder::new(scale, offset, context);
+        let glyph_bounding_box =
+            &face.face.outline_glyph(id, &mut builder).unwrap_or_else(|| ZERO_RECT);
+        let min_x = glyph_bounding_box.x_min as f32 * scale.x + offset.x;
+        let max_y = -glyph_bounding_box.y_min as f32 * scale.y + offset.y;
+        let max_x = glyph_bounding_box.x_max as f32 * scale.x + offset.x;
+        let min_y = -glyph_bounding_box.y_max as f32 * scale.y + offset.y;
+        let bounding_box = Box2D::new(point2(min_x, min_y), point2(max_x, max_y)).to_rect();
+
+        Self { bounding_box, raster: builder.raster() }
     }
 }
 
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct GlyphMap {
-    glyphs: BTreeMap<ttf_parser::GlyphId, Glyph>,
+    pub glyphs: BTreeMap<ttf_parser::GlyphId, Glyph>,
 }
 
 impl GlyphMap {
@@ -673,9 +675,9 @@ impl Text {
 
 /// Struct containing text grid details.
 pub struct TextGrid {
-    scale: Vector2D<f32>,
-    offset: Vector2D<f32>,
-    cell_size: Size,
+    pub scale: Vector2D<f32>,
+    pub offset: Vector2D<f32>,
+    pub cell_size: Size,
 }
 
 impl TextGrid {
@@ -709,47 +711,6 @@ impl TextGrid {
         let offset = vec2(0.0, ascent * font_size);
 
         Self { scale, offset, cell_size: *cell_size }
-    }
-
-    pub fn maybe_raster_for_cell(
-        &self,
-        context: &mut RenderContext,
-        column: usize,
-        row: usize,
-        c: char,
-        face: &FontFace,
-        glyph_map: &mut GlyphMap,
-    ) -> Option<Raster> {
-        if let Some(glyph_index) = face.face.glyph_index(c) {
-            let glyphs = &mut glyph_map.glyphs;
-            let scale = self.scale;
-            let offset = self.offset;
-            let glyph = glyphs.entry(glyph_index).or_insert_with(|| {
-                Glyph::with_scale_and_offset(context, face, scale, offset, Some(glyph_index))
-            });
-            if glyph.bounding_box.is_empty() {
-                None
-            } else {
-                let cell_position = Point::new(
-                    self.cell_size.width * column as f32,
-                    self.cell_size.height * row as f32,
-                );
-
-                let raster = glyph.raster.clone().translate(cell_position.to_vector().to_i32());
-
-                // Add empty raster to enable caching of the translated glyph.
-                // TODO: add more appropriate API for this.
-                let empty_raster = {
-                    let raster_builder = context.raster_builder().unwrap();
-                    raster_builder.build()
-                };
-                let raster = raster + empty_raster;
-
-                Some(raster)
-            }
-        } else {
-            None
-        }
     }
 }
 
@@ -826,35 +787,11 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_textgridcell() {
-        let size = size2(800, 800);
-        let mut buffer_allocator = BufferCollectionAllocator::new(
-            size.width,
-            size.height,
-            fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
-            FrameUsage::Cpu,
-            3,
-        )
-        .expect("BufferCollectionAllocator::new");
-        let context_token = buffer_allocator
-            .duplicate_token()
-            .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
-                panic!("Timed out while waiting for duplicate_token")
-            })
-            .await
-            .expect("token");
-        let mold_context = generic::Mold::new_context(context_token, size, DisplayRotation::Deg0);
-        let _buffers_result = buffer_allocator
-            .allocate_buffers(true)
-            .on_timeout(Time::after(DEFAULT_TIMEOUT), || {
-                panic!("Timed out while waiting for sysmem buffers")
-            })
-            .await;
-        let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
-        let mut glyphs = GlyphMap::new();
+        let cell_size = Size::new(16.0, 32.0);
         let grid = TextGrid::new(&FONT_FACE, &Size::new(16.0, 32.0));
-        let maybe_a_raster =
-            grid.maybe_raster_for_cell(&mut render_context, 0, 0, 'a', &FONT_FACE, &mut glyphs);
-        assert!(maybe_a_raster.is_some(), "Expected some raster");
+        assert_eq!(grid.cell_size, cell_size);
+        assert!(grid.offset != vec2(0.0, 0.0));
+        assert!(grid.scale != vec2(0.0, 0.0));
     }
 
     #[test]

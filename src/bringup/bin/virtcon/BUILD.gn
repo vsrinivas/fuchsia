@@ -72,6 +72,27 @@ resource("font") {
   outputs = [ "data/font.ttf" ]
 }
 
+if (virtcon_bold_font_path != "") {
+  resource("bold_font") {
+    sources = [ virtcon_bold_font_path ]
+    outputs = [ "data/bold-font.ttf" ]
+  }
+}
+
+if (virtcon_italic_font_path != "") {
+  resource("italic_font") {
+    sources = [ virtcon_italic_font_path ]
+    outputs = [ "data/italic-font.ttf" ]
+  }
+}
+
+if (virtcon_bold_italic_font_path != "") {
+  resource("bold_italic_font") {
+    sources = [ virtcon_bold_italic_font_path ]
+    outputs = [ "data/bold-italic-font.ttf" ]
+  }
+}
+
 resource("boot_animation") {
   sources = [ virtcon_boot_animation_path ]
   outputs = [ "data/boot-animation.riv" ]
@@ -94,6 +115,18 @@ rustc_binary("bin") {
     "//src/sys/lib/stdout-to-debuglog/rust",
     "//third_party/rust_crates:anyhow",
   ]
+
+  if (virtcon_bold_font_path != "") {
+    deps += [ ":bold_font" ]
+  }
+
+  if (virtcon_italic_font_path != "") {
+    deps += [ ":italic_font" ]
+  }
+
+  if (virtcon_bold_italic_font_path != "") {
+    deps += [ ":bold_italic_font" ]
+  }
 
   configs += [ "//build/config/rust:bootfs" ]
 

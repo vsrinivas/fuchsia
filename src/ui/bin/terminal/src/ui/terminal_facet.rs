@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     carnelian::{
         color::Color,
-        drawing::{path_for_rectangle, FontFace},
+        drawing::path_for_rectangle,
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
         scene::{facets::Facet, LayerGroup, SceneOrder},
         Rect, Size, ViewAssistantContext,
@@ -14,7 +14,7 @@ use {
     fuchsia_trace as ftrace,
     std::{any::Any, cell::RefCell, convert::TryFrom, rc::Rc},
     term_model::{ansi::TermInfo, config::Config, Term},
-    terminal::{renderable_layers, Offset, Renderer},
+    terminal::{renderable_layers, FontSet, Offset, Renderer},
 };
 
 /// Empty type for term model config
@@ -41,7 +41,7 @@ fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Ra
 
 /// Facet that implements a terminal text grid with a scroll bar.
 pub struct TerminalFacet<T> {
-    font: FontFace,
+    font_set: FontSet,
     size: Size,
     term: Rc<RefCell<Term<T>>>,
     scroll_thumb: Option<Rect>,
@@ -51,14 +51,21 @@ pub struct TerminalFacet<T> {
 
 impl<T: 'static> TerminalFacet<T> {
     pub fn new(
-        font: FontFace,
+        font_set: FontSet,
         cell_size: &Size,
         term: Rc<RefCell<Term<T>>>,
         scroll_thumb: Option<Rect>,
     ) -> Self {
-        let renderer = Renderer::new(&font, cell_size);
+        let renderer = Renderer::new(&font_set, cell_size);
 
-        TerminalFacet { font, size: Size::zero(), term, scroll_thumb, thumb_order: None, renderer }
+        TerminalFacet {
+            font_set,
+            size: Size::zero(),
+            term,
+            scroll_thumb,
+            thumb_order: None,
+            renderer,
+        }
     }
 }
 
@@ -89,7 +96,7 @@ impl<T: 'static> Facet for TerminalFacet<T> {
 
         let offset = Offset { column: 0, row: 0 };
         let layers = renderable_layers(&term, &config, &offset);
-        self.renderer.render(layer_group, render_context, &self.font, layers);
+        self.renderer.render(layer_group, render_context, &self.font_set, layers);
 
         // Add new scrollbar thumb.
         if let Some(thumb) = self.scroll_thumb {

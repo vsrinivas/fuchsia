@@ -5,7 +5,7 @@
 use {
     carnelian::{
         color::Color,
-        drawing::{FontFace, GlyphMap, TextGrid},
+        drawing::{FontFace, Glyph, TextGrid},
         render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Raster, Style},
         scene::{LayerGroup, SceneOrder},
         Size,
@@ -29,10 +29,29 @@ pub fn cell_size_from_cell_height(height: f32) -> Size {
     Size::new(width, height).ceil()
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Clone)]
+pub struct FontSet {
+    font: FontFace,
+    bold_font: Option<FontFace>,
+    italic_font: Option<FontFace>,
+    bold_italic_font: Option<FontFace>,
+}
+
+impl FontSet {
+    pub fn new(
+        font: FontFace,
+        bold_font: Option<FontFace>,
+        italic_font: Option<FontFace>,
+        bold_italic_font: Option<FontFace>,
+    ) -> Self {
+        Self { font, bold_font, italic_font, bold_italic_font }
+    }
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum LayerContent {
     Cursor(CursorStyle),
-    Char(char),
+    Char((char, Flags)),
 }
 
 // The term-model library gives us zero-width characters in our array of chars. However,
@@ -42,11 +61,12 @@ impl From<RenderableCell> for LayerContent {
         match cell.inner {
             RenderableCellContent::Cursor(cursor_key) => Self::Cursor(cursor_key.style),
             RenderableCellContent::Chars(chars) => {
+                let flags = cell.flags & Flags::BOLD_ITALIC;
                 // Ignore hidden cells and render tabs as spaces to prevent font issues.
                 if chars[0] == '\t' || cell.flags.contains(Flags::HIDDEN) {
-                    Self::Char(' ')
+                    Self::Char((' ', flags))
                 } else {
-                    Self::Char(chars[0])
+                    Self::Char((chars[0], flags))
                 }
             }
         }
@@ -59,10 +79,10 @@ struct LayerId {
     rgb: Rgb,
 }
 
-// Thickness of cursor lines is determined by multiplying thickness factor
-// with the cell height. 1/16 has been chosen as that results in 1px thick
-// lines for a 16px cell height.
-const CURSOR_LINE_THICKNESS_FACTOR: f32 = 1.0 / 16.0;
+// Thickness of lines is determined by multiplying thickness factor
+// with the cell height. 1/16 has been chosen as that results in 1px
+// thick lines for a 16px cell height.
+const LINE_THICKNESS_FACTOR: f32 = 1.0 / 16.0;
 
 fn path_for_block(size: &Size, render_context: &mut RenderContext) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
@@ -77,7 +97,7 @@ fn path_for_block(size: &Size, render_context: &mut RenderContext) -> Path {
 
 fn path_for_underline(size: &Size, render_context: &mut RenderContext) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let top = size.height - size.height * CURSOR_LINE_THICKNESS_FACTOR;
+    let top = size.height - size.height * LINE_THICKNESS_FACTOR;
     path_builder
         .move_to(point2(0.0, top))
         .line_to(point2(size.width, top))
@@ -89,7 +109,7 @@ fn path_for_underline(size: &Size, render_context: &mut RenderContext) -> Path {
 
 fn path_for_beam(size: &Size, render_context: &mut RenderContext) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let right = size.height * CURSOR_LINE_THICKNESS_FACTOR;
+    let right = size.height * LINE_THICKNESS_FACTOR;
     path_builder
         .move_to(point2(0.0, 0.0))
         .line_to(point2(right, 0.0))
@@ -101,7 +121,7 @@ fn path_for_beam(size: &Size, render_context: &mut RenderContext) -> Path {
 
 fn path_for_hollow_block(size: &Size, render_context: &mut RenderContext) -> Path {
     let mut path_builder = render_context.path_builder().expect("path_builder");
-    let inset = size.height * CURSOR_LINE_THICKNESS_FACTOR;
+    let inset = size.height * LINE_THICKNESS_FACTOR;
     let bottom_start = size.height - inset;
     let right_start = size.width - inset;
     path_builder
@@ -149,22 +169,69 @@ fn maybe_path_for_cursor_style(
 fn maybe_raster_for_cursor_style(
     render_context: &mut RenderContext,
     cursor_style: CursorStyle,
+    cell_size: &Size,
+) -> Option<Raster> {
+    maybe_path_for_cursor_style(render_context, cursor_style, cell_size).as_ref().map(|p| {
+        let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+        raster_builder.add(p, None);
+        raster_builder.build()
+    })
+}
+
+fn maybe_raster_for_char(
+    context: &mut RenderContext,
+    c: char,
+    flags: Flags,
+    textgrid: &TextGrid,
+    font_set: &FontSet,
+) -> Option<Raster> {
+    let maybe_bold_italic_font = match flags {
+        Flags::BOLD => font_set.bold_font.as_ref(),
+        Flags::ITALIC => font_set.italic_font.as_ref(),
+        Flags::BOLD_ITALIC => font_set.bold_italic_font.as_ref(),
+        _ => None,
+    };
+    let regular_font = &font_set.font;
+    let scale = textgrid.scale;
+    let offset = textgrid.offset;
+
+    // Try bold/italic font first and fallback to regular font if needed.
+    for font in maybe_bold_italic_font.iter().chain(std::iter::once(&regular_font)) {
+        if let Some(glyph_index) = font.face.glyph_index(c) {
+            let glyph = Glyph::with_scale_and_offset(context, font, scale, offset, glyph_index);
+            return Some(glyph.raster.clone());
+        }
+    }
+
+    //
+    // This is a good place to add fallback glyphs in the future.
+    //
+
+    None
+}
+
+fn maybe_raster_for_layer_content(
+    render_context: &mut RenderContext,
+    content: &LayerContent,
     column: usize,
     row: usize,
-    cell_size: &Size,
-    cursors: &mut FxHashMap<CursorStyle, Option<Raster>>,
+    textgrid: &TextGrid,
+    font_set: &FontSet,
+    raster_cache: &mut FxHashMap<LayerContent, Option<Raster>>,
 ) -> Option<Raster> {
-    cursors
-        .entry(cursor_style)
-        .or_insert_with(|| {
-            maybe_path_for_cursor_style(render_context, cursor_style, cell_size).as_ref().map(|p| {
-                let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-                raster_builder.add(p, None);
-                raster_builder.build()
-            })
+    raster_cache
+        .entry(*content)
+        .or_insert_with(|| match content {
+            LayerContent::Cursor(cursor_style) => {
+                maybe_raster_for_cursor_style(render_context, *cursor_style, &textgrid.cell_size)
+            }
+            LayerContent::Char((c, flags)) => {
+                maybe_raster_for_char(render_context, *c, *flags, textgrid, font_set)
+            }
         })
         .as_ref()
         .map(|r| {
+            let cell_size = &textgrid.cell_size;
             let cell_position =
                 point2(cell_size.width * column as f32, cell_size.height * row as f32);
             let raster = r.clone().translate(cell_position.to_vector().to_i32());
@@ -176,32 +243,6 @@ fn maybe_raster_for_cursor_style(
             };
             raster + empty_raster
         })
-}
-
-fn maybe_raster_for_layer_content(
-    render_context: &mut RenderContext,
-    content: &LayerContent,
-    column: usize,
-    row: usize,
-    cell_size: &Size,
-    textgrid: &TextGrid,
-    font: &FontFace,
-    glyphs: &mut GlyphMap,
-    cursors: &mut FxHashMap<CursorStyle, Option<Raster>>,
-) -> Option<Raster> {
-    match content {
-        LayerContent::Cursor(cursor_style) => maybe_raster_for_cursor_style(
-            render_context,
-            *cursor_style,
-            column,
-            row,
-            cell_size,
-            cursors,
-        ),
-        LayerContent::Char(c) => {
-            textgrid.maybe_raster_for_cell(render_context, column, row, *c, font, glyphs)
-        }
-    }
 }
 
 fn make_color(term_color: &Rgb) -> Color {
@@ -269,40 +310,35 @@ pub fn renderable_layers<'b, T, C>(
 }
 
 pub struct Renderer {
-    cell_size: Size,
     textgrid: TextGrid,
-    glyphs: GlyphMap,
-    cursors: FxHashMap<CursorStyle, Option<Raster>>,
+    raster_cache: FxHashMap<LayerContent, Option<Raster>>,
     layers: FxHashMap<SceneOrder, LayerId>,
     old_layers: FxHashSet<SceneOrder>,
     new_layers: FxHashSet<SceneOrder>,
 }
 
 impl Renderer {
-    pub fn new(font: &FontFace, cell_size: &Size) -> Self {
-        let textgrid = TextGrid::new(font, cell_size);
-        let glyphs = GlyphMap::new();
-        let cursors = FxHashMap::default();
+    pub fn new(font_set: &FontSet, cell_size: &Size) -> Self {
+        let textgrid = TextGrid::new(&font_set.font, cell_size);
+        let raster_cache = FxHashMap::default();
         let layers = FxHashMap::default();
         let old_layers = FxHashSet::default();
         let new_layers = FxHashSet::default();
 
-        Self { cell_size: *cell_size, textgrid, glyphs, cursors, layers, old_layers, new_layers }
+        Self { textgrid, raster_cache, layers, old_layers, new_layers }
     }
 
     pub fn render<I>(
         &mut self,
         layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
-        font: &FontFace,
+        font_set: &FontSet,
         layers: I,
     ) where
         I: IntoIterator<Item = RenderableLayer>,
     {
-        let glyphs = &mut self.glyphs;
-        let cursors = &mut self.cursors;
+        let raster_cache = &mut self.raster_cache;
         let textgrid = &self.textgrid;
-        let cell_size = &self.cell_size;
 
         // Process all layers and update the layer group as needed.
         for RenderableLayer { order, column, row, content, rgb } in layers.into_iter() {
@@ -320,11 +356,9 @@ impl Renderer {
                             &id.content,
                             column,
                             row,
-                            cell_size,
                             textgrid,
-                            font,
-                            glyphs,
-                            cursors,
+                            font_set,
+                            raster_cache,
                         );
                         if let Some(raster) = raster {
                             let value = entry.into_mut();
@@ -363,11 +397,9 @@ impl Renderer {
                         &id.content,
                         column,
                         row,
-                        cell_size,
                         textgrid,
-                        font,
-                        glyphs,
-                        cursors,
+                        font_set,
+                        raster_cache,
                     );
                     if let Some(raster) = raster {
                         entry.insert(id);
@@ -441,8 +473,9 @@ mod tests {
     static FONT_DATA: &'static [u8] = include_bytes!(
         "../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"
     );
-    static FONT_FACE: Lazy<FontFace> =
-        Lazy::new(|| FontFace::new(&FONT_DATA).expect("Failed to create font"));
+    static FONT_SET: Lazy<FontSet> = Lazy::new(|| {
+        FontSet::new(FontFace::new(&FONT_DATA).expect("Failed to create font"), None, None, None)
+    });
 
     struct TestLayerGroup<'a>(&'a mut BTreeMap<SceneOrder, Layer>);
 
@@ -491,7 +524,7 @@ mod tests {
                     order: 6,
                     column: 0,
                     row: 0,
-                    content: LayerContent::Char('A'),
+                    content: LayerContent::Char(('A', Flags::empty())),
                     rgb: fg
                 },
                 RenderableLayer {
@@ -505,7 +538,7 @@ mod tests {
                     order: 7,
                     column: 1,
                     row: 0,
-                    content: LayerContent::Char(' '),
+                    content: LayerContent::Char((' ', Flags::empty())),
                     rgb: bg
                 }
             ],
@@ -519,7 +552,7 @@ mod tests {
         let size = size2(64, 64);
         let mold_context = generic::Mold::new_context_without_token(size, DisplayRotation::Deg0);
         let mut render_context = RenderContext { inner: ContextInner::Mold(mold_context) };
-        let mut renderer = Renderer::new(&FONT_FACE, &Size::new(8.0, 16.0));
+        let mut renderer = Renderer::new(&FONT_SET, &Size::new(8.0, 16.0));
         let layers = vec![
             RenderableLayer {
                 order: 0,
@@ -532,13 +565,13 @@ mod tests {
                 order: 1,
                 column: 0,
                 row: 0,
-                content: LayerContent::Char('A'),
+                content: LayerContent::Char(('A', Flags::empty())),
                 rgb: Rgb { r: 0, g: 0, b: 0xff },
             },
         ];
         let mut result = BTreeMap::new();
         let mut layer_group = TestLayerGroup(&mut result);
-        renderer.render(&mut layer_group, &mut render_context, &FONT_FACE, layers.into_iter());
+        renderer.render(&mut layer_group, &mut render_context, &FONT_SET, layers.into_iter());
         assert_eq!(result.len(), 2, "expected two layers");
     }
 }
