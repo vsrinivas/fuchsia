@@ -9,7 +9,7 @@ use fidl_fuchsia_web::{
     ContextMarker, ContextProviderMarker, ContextProviderProxy, CreateContextParams, DebugMarker,
     DebugProxy, DevToolsListenerMarker, DevToolsListenerRequest, DevToolsListenerRequestStream,
     DevToolsPerContextListenerMarker, DevToolsPerContextListenerRequest,
-    DevToolsPerContextListenerRequestStream, FrameMarker, NavigationControllerMarker,
+    DevToolsPerContextListenerRequestStream, FrameMarker,
 };
 use fuchsia_async as fasync;
 use fuchsia_component as app;
@@ -108,9 +108,10 @@ impl WebdriverFacadeInternal {
     /// Returns a proxy to ContextProvider.  Completion of this method
     /// guarantees that the debug service is published on the Hub.
     async fn get_context_provider_proxy() -> Result<ContextProviderProxy, Error> {
-        // Walk through creating a frame and navigation controller.  Completion
-        // of NavigationController GetVisibleEntry guarantees that the debug
-        // service is ready to accept requests.
+        // Walk through creating a frame and navigation controller.
+        // Completion of fuchsia.web.Frame.GetPrivateMemorySize() is used to
+        // wait until the Frame has actually been created, thereby ensuring that
+        // the debug service is ready to accept requests.
         let context_provider = app::client::connect_to_protocol::<ContextProviderMarker>()?;
         let (context_proxy, context_server_end) = create_proxy::<ContextMarker>()?;
 
@@ -129,10 +130,7 @@ impl WebdriverFacadeInternal {
         let (frame_proxy, frame_server_end) = create_proxy::<FrameMarker>()?;
         context_proxy.create_frame(frame_server_end)?;
 
-        let (navigation_proxy, navigation_server_end) =
-            create_proxy::<NavigationControllerMarker>()?;
-        frame_proxy.get_navigation_controller(navigation_server_end)?;
-        navigation_proxy.get_visible_entry().await?;
+        frame_proxy.get_private_memory_size().await?;
         Ok(context_provider)
     }
 
