@@ -31,6 +31,8 @@ packages:
   - package: libx11-xcb1
   - package: libxau-dev
   - package: libxau6
+  - package: libxcb-shm0
+  - package: libxcb-shm0-dev
   - package: libxcb1
   - package: libxcb1-dev
   - package: libxcursor-dev
