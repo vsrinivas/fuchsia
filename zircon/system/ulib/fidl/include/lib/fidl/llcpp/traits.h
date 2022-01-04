@@ -265,7 +265,7 @@ struct IsResponseType<FidlType, void_t<decltype(FidlType::MessageKind)>>
 template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedMessageSize() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
-  if constexpr (IsResponseType<FidlType>()) {
+  if constexpr (Direction == MessageDirection::kReceiving) {
     if (FidlType::HasFlexibleEnvelope) {
       return ZX_CHANNEL_MAX_MSG_BYTES;
     }
@@ -287,8 +287,8 @@ constexpr uint32_t ClampedMessageSize() {
 template <typename FidlType, const MessageDirection Direction>
 constexpr uint32_t ClampedHandleCount() {
   static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
-  if constexpr (IsResponseType<FidlType>()) {
-    if (FidlType::HasFlexibleEnvelope && Direction == MessageDirection::kReceiving) {
+  if constexpr (Direction == MessageDirection::kReceiving) {
+    if (FidlType::HasFlexibleEnvelope) {
       return ZX_CHANNEL_MAX_MSG_HANDLES;
     }
   }

@@ -11,6 +11,19 @@ protocol Protocol {
         value array<byte, 497>;
     });
 
+    // A small request that should be stack-allocated when sending.
+    SmallRequestWithFlexibleType(struct {
+        u flexible union {
+            1: value int64;
+        };
+    });
+
+    SmallResponseWithFlexibleType() -> (struct {
+        r flexible union {
+            1: value int64;
+        };
+    });
+
     RequestOf512BytesAndResponseOf256Bytes(struct {
         value array<byte, 496>;
     }) -> (struct {

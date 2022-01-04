@@ -48,6 +48,30 @@ TEST(MessageBufferSize, ResponseStorageAllocationStrategy) {
                 512);
 }
 
+TEST(MessageBufferSize, MaxSizeInChannel) {
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::RequestOf512Bytes>,
+                                       fidl::MessageDirection::kSending>() == 512);
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::RequestOf512Bytes>,
+                                       fidl::MessageDirection::kReceiving>() == 512);
+
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallRequestWithFlexibleType>,
+                                       fidl::MessageDirection::kSending>() < 512);
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallRequestWithFlexibleType>,
+                                       fidl::MessageDirection::kReceiving>() ==
+                ZX_CHANNEL_MAX_MSG_BYTES);
+
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallResponseWithFlexibleType>,
+                                       fidl::MessageDirection::kSending>() < 512);
+  static_assert(fidl::MaxSizeInChannel<fidl::WireRequest<Protocol::SmallResponseWithFlexibleType>,
+                                       fidl::MessageDirection::kReceiving>() < 512);
+
+  static_assert(fidl::MaxSizeInChannel<fidl::WireResponse<Protocol::SmallResponseWithFlexibleType>,
+                                       fidl::MessageDirection::kSending>() < 512);
+  static_assert(fidl::MaxSizeInChannel<fidl::WireResponse<Protocol::SmallResponseWithFlexibleType>,
+                                       fidl::MessageDirection::kReceiving>() ==
+                ZX_CHANNEL_MAX_MSG_BYTES);
+}
+
 TEST(MessageBufferSize, BufferSizeConstexprFunctions) {
   static_assert(fidl::SyncClientMethodBufferSizeInChannel<Protocol::RequestOf512Bytes>() == 512);
   // 513 bytes becomes 520 bytes after alignment.
@@ -60,4 +84,21 @@ TEST(MessageBufferSize, BufferSizeConstexprFunctions) {
       fidl::ServerReplyBufferSizeInChannel<Protocol::RequestOf512BytesAndResponseOf256Bytes>() ==
       256);
   static_assert(fidl::ServerReplyBufferSizeInChannel<Protocol::EventOf256Bytes>() == 256);
+
+  // Note: the computed value may need to be adjusted when changing the
+  // in-memory wire format.
+  static_assert(
+      fidl::SyncClientMethodBufferSizeInChannel<Protocol::SmallRequestWithFlexibleType>() ==
+      sizeof(fidl_message_header_t) + sizeof(fidl_xunion_t) + sizeof(int64_t));
+
+  static_assert(
+      fidl::SyncClientMethodBufferSizeInChannel<Protocol::SmallResponseWithFlexibleType>() ==
+      sizeof(fidl_message_header_t) + ZX_CHANNEL_MAX_MSG_BYTES);
+  static_assert(
+      fidl::AsyncClientMethodBufferSizeInChannel<Protocol::SmallResponseWithFlexibleType>() ==
+      sizeof(fidl_message_header_t));
+  // A server is sending the flexible response, hence we do not have to
+  // over-allocate for unknown fields.
+  static_assert(fidl::ServerReplyBufferSizeInChannel<Protocol::SmallResponseWithFlexibleType>() <
+                512);
 }
