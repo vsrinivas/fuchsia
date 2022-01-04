@@ -12,7 +12,7 @@ use {
         CLONE_FLAG_SAME_RIGHTS, MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK,
         OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -41,20 +41,21 @@ pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> 
         return Err(zx::Status::NOT_FILE);
     }
 
-    // Explicitly expand OPEN_FLAG_POSIX to prevent right escalation issues.
-    // TODO(fxbug.dev/81185): Remove this branch when removing OPEN_FLAG_POSIX.
-    if (flags & OPEN_FLAG_POSIX) != 0 {
+    // Explicitly expand OPEN_FLAG_POSIX_DEPRECATED to prevent right escalation issues.
+    // TODO(fxbug.dev/81185): Remove this branch and usesof OPEN_FLAG_POSIX_DEPRECATED below when
+    // out-of-tree clients have been updated.
+    if (flags & OPEN_FLAG_POSIX_DEPRECATED) != 0 {
         flags |= OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
     }
     // Parent connection must check the POSIX flags in `check_child_connection_flags`, so if any
     // are still present, we expand their respective rights and remove any remaining flags.
-    if flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+    if flags & (OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
         flags |= OPEN_RIGHT_EXECUTABLE;
     }
-    if flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE) != 0 {
+    if flags & (OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE) != 0 {
         flags |= OPEN_RIGHT_WRITABLE;
     }
-    flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
+    flags &= !(OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
     let allowed_flags = OPEN_FLAG_NODE_REFERENCE
         | OPEN_FLAG_DESCRIBE
@@ -83,8 +84,8 @@ pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> 
 }
 
 /// Directories need to make sure that connections to child entries do not receive more rights than
-/// the conneciton to the directory itself.  Plus there is special handling of the OPEN_FLAG_POSIX
-/// flag.  This function should be called before calling [`new_connection_validate_flags`] if both
+/// the connection to the directory itself.  Plus there is special handling of the OPEN_FLAG_POSIX_*
+/// flags. This function should be called before calling [`new_connection_validate_flags`] if both
 /// are needed.
 pub fn check_child_connection_flags(
     parent_flags: u32,
@@ -124,10 +125,10 @@ pub fn check_child_connection_flags(
     }
 
     // Expand POSIX flag into new equivalents.
-    // TODO(fxbug.dev/81185): Remove branch when removing OPEN_FLAG_POSIX from fuchsia.io.
-    if flags & OPEN_FLAG_POSIX != 0 {
+    // TODO(fxbug.dev/81185): Remove branch once all out-of-tree clients have been updated.
+    if flags & OPEN_FLAG_POSIX_DEPRECATED != 0 {
         flags |= OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
-        flags &= !OPEN_FLAG_POSIX;
+        flags &= !OPEN_FLAG_POSIX_DEPRECATED;
     }
     // Remove POSIX flags when the respective rights are not available ("soft fail").
     if parent_flags & OPEN_RIGHT_EXECUTABLE == 0 {
@@ -196,7 +197,7 @@ mod tests {
         fidl_fuchsia_io::{
             CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
             OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
             OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
             OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
@@ -247,15 +248,16 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_posix() {
+        // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         for open_flags in build_flag_combinations(
             0,
             OPEN_RIGHT_READABLE
-                | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_DEPRECATED
                 | OPEN_FLAG_POSIX_EXECUTABLE
                 | OPEN_FLAG_POSIX_WRITABLE,
         ) {
             let mut expected_rights = open_flags & OPEN_RIGHT_READABLE;
-            if (open_flags & OPEN_FLAG_POSIX) != 0 {
+            if (open_flags & OPEN_FLAG_POSIX_DEPRECATED) != 0 {
                 expected_rights |= OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
             }
             if (open_flags & OPEN_FLAG_POSIX_WRITABLE) != 0 {

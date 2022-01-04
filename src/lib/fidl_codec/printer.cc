@@ -33,7 +33,7 @@ constexpr uint32_t OPEN_FLAG_APPEND = 0x100000;
 constexpr uint32_t OPEN_FLAG_NO_REMOTE = 0x200000;
 constexpr uint32_t OPEN_FLAG_NODE_REFERENCE = 0x400000;
 constexpr uint32_t OPEN_FLAG_DESCRIBE = 0x800000;
-constexpr uint32_t OPEN_FLAG_POSIX = 0x1000000;
+constexpr uint32_t OPEN_FLAG_POSIX_DEPRECATED = 0x01000000;
 constexpr uint32_t OPEN_FLAG_POSIX_WRITABLE = 0x8000000;
 constexpr uint32_t OPEN_FLAG_POSIX_EXECUTABLE = 0x10000000;
 constexpr uint32_t OPEN_FLAG_NOT_DIRECTORY = 0x2000000;
@@ -185,7 +185,7 @@ void PrettyPrinter::DisplayDirectoryOpenFlags(uint32_t value) {
   DirectoryOpenCase(OPEN_FLAG_NO_REMOTE);
   DirectoryOpenCase(OPEN_FLAG_NODE_REFERENCE);
   DirectoryOpenCase(OPEN_FLAG_DESCRIBE);
-  DirectoryOpenCase(OPEN_FLAG_POSIX);
+  DirectoryOpenCase(OPEN_FLAG_POSIX_DEPRECATED);
   DirectoryOpenCase(OPEN_FLAG_POSIX_WRITABLE);
   DirectoryOpenCase(OPEN_FLAG_POSIX_EXECUTABLE);
   DirectoryOpenCase(OPEN_FLAG_NOT_DIRECTORY);

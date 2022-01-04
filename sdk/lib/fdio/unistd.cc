@@ -66,6 +66,25 @@ fdio_state_t __fdio_global_state = []() constexpr {
 }
 ();
 
+// Verify that the fuchsia.io flags align with ZXIO_FS_*. If any of these static assertions fire,
+// the corresponding constants in zircon/system/public/zircon/device/vfs.h need to be updated.
+static_assert(ZX_FS_RIGHT_READABLE == fio::wire::kOpenRightReadable, "Flag mismatch!");
+static_assert(ZX_FS_RIGHT_WRITABLE == fio::wire::kOpenRightWritable, "Flag mismatch!");
+static_assert(ZX_FS_RIGHT_ADMIN == fio::wire::kOpenRightAdmin, "Flag mismatch!");
+static_assert(ZX_FS_RIGHT_EXECUTABLE == fio::wire::kOpenRightExecutable, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_CREATE == fio::wire::kOpenFlagCreate, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_EXCLUSIVE == fio::wire::kOpenFlagCreateIfAbsent, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_TRUNCATE == fio::wire::kOpenFlagTruncate, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_DIRECTORY == fio::wire::kOpenFlagDirectory, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_APPEND == fio::wire::kOpenFlagAppend, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_NOREMOTE == fio::wire::kOpenFlagNoRemote, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_VNODE_REF_ONLY == fio::wire::kOpenFlagNodeReference, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_DESCRIBE == fio::wire::kOpenFlagDescribe, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_NOT_DIRECTORY == fio::wire::kOpenFlagNotDirectory, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_CLONE_SAME_RIGHTS == fio::wire::kCloneFlagSameRights, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_POSIX_WRITABLE == fio::wire::kOpenFlagPosixWritable, "Flag mismatch!");
+static_assert(ZX_FS_FLAG_POSIX_EXECUTABLE == fio::wire::kOpenFlagPosixExecutable, "Flag mismatch!");
+
 // Verify the O_* flags which align with ZXIO_FS_*.
 static_assert(O_PATH == ZX_FS_FLAG_VNODE_REF_ONLY, "Open Flag mismatch");
 static_assert(O_ADMIN == ZX_FS_RIGHT_ADMIN, "Open Flag mismatch");
@@ -77,33 +96,35 @@ static_assert(O_APPEND == ZX_FS_FLAG_APPEND, "Open Flag mismatch");
 static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
 
 // The mask of "1:1" flags which match between both open flag representations.
-#define ZXIO_FS_MASK \
-  (O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | O_DIRECTORY | O_APPEND | O_NOREMOTE)
+constexpr uint32_t kZxioFsMask =
+    O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | O_DIRECTORY | O_APPEND | O_NOREMOTE;
 
-#define ZXIO_FS_FLAGS                                                                          \
-  (ZXIO_FS_MASK | ZX_FS_FLAG_POSIX | ZX_FS_FLAG_POSIX_WRITABLE | ZX_FS_FLAG_POSIX_EXECUTABLE | \
-   ZX_FS_FLAG_NOT_DIRECTORY | ZX_FS_FLAG_CLONE_SAME_RIGHTS)
+// TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated after clients have updated to a newer SDK.
+constexpr uint32_t kZxioFsFlags =
+    kZxioFsMask | fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable |
+    fio::wire::kOpenFlagPosixDeprecated | fio::wire::kOpenFlagNotDirectory |
+    fio::wire::kCloneFlagSameRights;
 
 // Verify that the remaining O_* flags don't overlap with the ZXIO_FS flags.
-static_assert(!(O_RDONLY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_WRONLY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_RDWR & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NONBLOCK & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_DSYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_SYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_RSYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NOFOLLOW & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_CLOEXEC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NOCTTY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_ASYNC & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_DIRECT & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_LARGEFILE & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_NOATIME & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
-static_assert(!(O_TMPFILE & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");
+static_assert(!(O_RDONLY & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_WRONLY & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_RDWR & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_NONBLOCK & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_DSYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_SYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_RSYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_NOFOLLOW & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_CLOEXEC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_NOCTTY & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_ASYNC & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_DIRECT & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_LARGEFILE & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_NOATIME & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
+static_assert(!(O_TMPFILE & kZxioFsFlags), "Unexpected collision with kZxioFsFlags");
 
-#define ZX_FS_FLAGS_ALLOWED_WITH_O_PATH                                          \
-  (ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOT_DIRECTORY | \
-   ZX_FS_FLAG_DESCRIBE)
+static constexpr uint32_t kZxFsFlagsAllowedWithOPath =
+    ZX_FS_FLAG_VNODE_REF_ONLY | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOT_DIRECTORY |
+    ZX_FS_FLAG_DESCRIBE;
 
 static uint32_t fdio_flags_to_zxio(uint32_t flags) {
   uint32_t rights = 0;
@@ -119,10 +140,10 @@ static uint32_t fdio_flags_to_zxio(uint32_t flags) {
       break;
   }
 
-  uint32_t result = rights | ZX_FS_FLAG_DESCRIBE | (flags & ZXIO_FS_MASK);
+  uint32_t result = rights | ZX_FS_FLAG_DESCRIBE | (flags & kZxioFsMask);
 
   if (!(result & ZX_FS_FLAG_VNODE_REF_ONLY)) {
-    result |= ZX_FS_FLAG_POSIX;
+    result |= ZX_FS_FLAG_POSIX_WRITABLE | ZX_FS_FLAG_POSIX_EXECUTABLE;
   }
   return result;
 }
@@ -138,7 +159,7 @@ static uint32_t zxio_flags_to_fdio(uint32_t flags) {
     result |= O_RDONLY;
   }
 
-  result |= (flags & ZXIO_FS_MASK);
+  result |= (flags & kZxioFsMask);
   return result;
 }
 
@@ -310,7 +331,7 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
     }
   }
   if (zx_flags & ZX_FS_FLAG_VNODE_REF_ONLY) {
-    zx_flags &= ZX_FS_FLAGS_ALLOWED_WITH_O_PATH;
+    zx_flags &= kZxFsFlagsAllowedWithOPath;
   }
   return iodir->open(clean, zx_flags, mode);
 }

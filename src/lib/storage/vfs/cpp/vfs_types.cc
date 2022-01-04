@@ -40,10 +40,10 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(uint32_t fidl_flags
   if (fidl_flags & fio::wire::kOpenFlagDescribe) {
     options.flags.describe = true;
   }
-  // Expand existing POSIX flag into new equivalent flags to prevent any rights escalations when
-  // crossing remote mount points.
-  // TODO(fxbug.dev/81185): Remove this branch when removing OPEN_FLAG_POSIX.
-  if (fidl_flags & fio::wire::kOpenFlagPosix) {
+  // Expand deprecated POSIX flag into new equivalents to maintain binary compatibility with
+  // out-of-tree clients while still preventing rights escalations when crossing remote mounts.
+  // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated.
+  if (fidl_flags & fio::wire::kOpenFlagPosixDeprecated) {
     options.flags.posix_write = true;
     options.flags.posix_execute = true;
   }

@@ -424,7 +424,7 @@ async fn open_remote_file_test() {
     .await;
 }
 
-/// Ensure specifying OPEN_FLAG_POSIX cannot cause rights escalation (fxbug.dev/40862).
+/// Ensure specifying OPEN_FLAG_POSIX_DEPRECATED cannot cause rights escalation (fxbug.dev/40862).
 /// The test sets up the following hierarchy of nodes:
 ///
 /// ------------------ RW   --------------------------
@@ -433,10 +433,11 @@ async fn open_remote_file_test() {
 ///                         |    (remote_dir_client) | ---> | remote_dir_server |
 ///                         -------------------------- (b)  ---------------------
 ///
-/// To validate the right escalation issue has been resolved, we call Open() on the
-/// test_dir_proxy passing in OPEN_FLAG_POSIX, which if handled correctly, should result
-/// in opening remote_dir_server as RW (and NOT RWX, which can occur if the POSIX flag is
-/// passed directly to the remote instead of OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE).
+/// To validate the right escalation issue has been resolved, we call Open() on the test_dir_proxy
+/// passing in OPEN_FLAG_POSIX_DEPRECATED, which if handled correctly, should result in opening
+/// remote_dir_server as RW (and NOT RWX, which can occur if the deprecated POSIX flag is
+/// passed directly to the remote instead of only OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE).
+/// TODO(fxbug.dev/81185): Replace OPEN_FLAG_POSIX_DEPRECATED with new set of equivalent flags.
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_right_escalation_test() {
     let harness = TestHarness::new().await;
@@ -478,7 +479,7 @@ async fn open_remote_directory_right_escalation_test() {
     let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
     test_dir_proxy
         .open(
-            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_POSIX,
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_POSIX_DEPRECATED,
             io::MODE_TYPE_DIRECTORY,
             remote_name,
             node_server,
@@ -588,10 +589,10 @@ async fn open_child_dir_with_extra_rights() {
     assert_eq!(get_open_status(&child_dir_client).await, zx::Status::ACCESS_DENIED);
 }
 
-/// Creates a child directory and opens it with OPEN_FLAG_POSIX, ensuring that the requested
-/// rights are expanded to only those which the parent directory connection has.
+/// Creates a child directory and opens it with OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE, ensuring that
+/// the requested rights are expanded to only those which the parent directory connection has.
 #[fasync::run_singlethreaded(test)]
-async fn open_child_dir_with_posix_flag() {
+async fn open_child_dir_with_posix_flags() {
     let harness = TestHarness::new().await;
 
     for dir_flags in harness.dir_rights.valid_combos() {
@@ -606,7 +607,10 @@ async fn open_child_dir_with_posix_flag() {
             create_proxy::<io::NodeMarker>().expect("Cannot create proxy.");
         parent_dir
             .open(
-                io::OPEN_FLAG_POSIX | readable | io::OPEN_FLAG_DESCRIBE,
+                readable
+                    | io::OPEN_FLAG_POSIX_WRITABLE
+                    | io::OPEN_FLAG_POSIX_EXECUTABLE
+                    | io::OPEN_FLAG_DESCRIBE,
                 io::MODE_TYPE_DIRECTORY,
                 "child",
                 child_dir_server,

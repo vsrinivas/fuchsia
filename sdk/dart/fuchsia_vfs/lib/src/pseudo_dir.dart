@@ -106,11 +106,11 @@ class PseudoDir extends Vnode {
 
     var connectFlags = filterForNodeReference(flags);
 
-    // Explicitly expand OPEN_FLAG_POSIX into new equivalent flags.
-    // TODO(fxbug.dev/40862): Remove entire branch when OPEN_FLAG_POSIX is removed.
-    if ((connectFlags & openFlagPosix) != 0) {
+    // Explicitly expand openFlagPosixDeprecated into new equivalent flags.
+    // TODO(fxbug.dev/81185): Remove entire branch when flag is removed from fuchsia.io.
+    if ((connectFlags & openFlagPosixDeprecated) != 0) {
       connectFlags |= openFlagPosixWritable | openFlagPosixExecutable;
-      connectFlags &= ~openFlagPosix;
+      connectFlags &= ~openFlagPosixDeprecated;
     }
 
     // Grant POSIX clients additional rights.
@@ -258,7 +258,7 @@ class PseudoDir extends Vnode {
         openFlagDirectory |
         openFlagNodeReference |
         openFlagDescribe |
-        openFlagPosix |
+        openFlagPosixDeprecated |
         openFlagPosixWritable |
         openFlagPosixExecutable |
         cloneFlagSameRights;

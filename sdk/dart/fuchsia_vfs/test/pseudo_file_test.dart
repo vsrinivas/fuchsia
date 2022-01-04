@@ -275,12 +275,15 @@ void main() {
       });
     });
 
-    test('clone works with POSIX compatibility', () async {
+    test('clone works with POSIX compatibility flags', () async {
       var file = _createReadOnlyFile('test_str', openRightReadable);
 
       var clonedProxy = FileProxy();
       await file.proxy.clone(
-          openRightReadable | openFlagDescribe | openFlagPosix,
+          openRightReadable |
+              openFlagDescribe |
+              openFlagPosixWritable |
+              openFlagPosixExecutable,
           _getNodeInterfaceRequest(clonedProxy));
 
       await clonedProxy.onOpen.first.then((response) {

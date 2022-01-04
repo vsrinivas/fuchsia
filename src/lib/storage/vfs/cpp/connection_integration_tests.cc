@@ -197,11 +197,11 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Combinations of POSIX flags to be tested.
-  // TODO(fxbug.dev/40862): Remove OPEN_FLAG_POSIX.
+  // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated.
   const uint32_t OPEN_FLAG_COMBINATIONS[]{
       fio::wire::kOpenFlagPosixWritable, fio::wire::kOpenFlagPosixExecutable,
       fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable,
-      fio::wire::kOpenFlagPosix};
+      fio::wire::kOpenFlagPosixDeprecated};
 
   for (const uint32_t OPEN_FLAGS : OPEN_FLAG_COMBINATIONS) {
     // Connect to drectory specifying the flag combination we want to test.
@@ -217,9 +217,9 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
     auto dir_flags = dir_get_result.Unwrap()->flags;
     EXPECT_NE(fio::wire::kOpenRightReadable & dir_flags, 0);
     // Each POSIX flag should be expanded to its respective right(s).
-    if (OPEN_FLAGS & (fio::wire::kOpenFlagPosix | fio::wire::kOpenFlagPosixWritable))
+    if (OPEN_FLAGS & (fio::wire::kOpenFlagPosixDeprecated | fio::wire::kOpenFlagPosixWritable))
       EXPECT_NE(fio::wire::kOpenRightWritable & dir_flags, 0);
-    if (OPEN_FLAGS & (fio::wire::kOpenFlagPosix | fio::wire::kOpenFlagPosixExecutable))
+    if (OPEN_FLAGS & (fio::wire::kOpenFlagPosixDeprecated | fio::wire::kOpenFlagPosixExecutable))
       EXPECT_NE(fio::wire::kOpenRightExecutable & dir_flags, 0);
 
     // Repeat test, but for file, which should not have any expanded rights.

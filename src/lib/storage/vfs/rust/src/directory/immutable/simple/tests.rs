@@ -38,7 +38,7 @@ use {
         DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
         NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
         MAX_FILENAME, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_EXECUTABLE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING,
         WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
@@ -384,7 +384,7 @@ fn open_subdir_with_posix_flag_rights_expansion() {
     // Combinations of flags to pass in when opening a subdirectory within the root directory.
     let subdir_flag_combos = build_flag_combinations(
         OPEN_RIGHT_READABLE,
-        OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE,
+        OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE,
     );
 
     // Validates that POSIX flags passed when opening a subdirectory against the root directory
@@ -397,12 +397,14 @@ fn open_subdir_with_posix_flag_rights_expansion() {
         // Ensure POSIX flags were removed.
         assert!(
             resulting_subdir_flags
-                & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE)
+                & (OPEN_FLAG_POSIX_DEPRECATED
+                    | OPEN_FLAG_POSIX_WRITABLE
+                    | OPEN_FLAG_POSIX_EXECUTABLE)
                 == 0,
             "POSIX flags were not removed!"
         );
         // Ensure writable rights were expanded correctly.
-        if subdir_open_flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE) != 0 {
+        if subdir_open_flags & (OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE) != 0 {
             if root_node_flags & OPEN_RIGHT_WRITABLE != 0 {
                 assert!(
                     resulting_subdir_flags & OPEN_RIGHT_WRITABLE != 0,
@@ -416,7 +418,7 @@ fn open_subdir_with_posix_flag_rights_expansion() {
             }
         }
         // Ensure executable rights were expanded correctly.
-        if subdir_open_flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+        if subdir_open_flags & (OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
             if root_node_flags & OPEN_RIGHT_EXECUTABLE != 0 {
                 assert!(
                     resulting_subdir_flags & OPEN_RIGHT_EXECUTABLE != 0,
@@ -762,7 +764,7 @@ fn flag_posix_means_writable() {
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |root| async move {
         let nested = open_get_directory_proxy_assert_ok!(
             &root,
-            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_DESCRIBE,
             "nested"
         );
 
@@ -802,7 +804,7 @@ fn flag_posix_does_not_add_writable_to_read_only() {
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let nested = open_get_directory_proxy_assert_ok!(
             &root,
-            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX | OPEN_FLAG_DESCRIBE,
+            OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_DESCRIBE,
             "nested"
         );
 

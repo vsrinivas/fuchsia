@@ -25,7 +25,7 @@ use crate::{
 };
 
 use super::test_utils::{
-    consume_vmo_with_counter, simple_consume_vmo, simple_init_vmo, simple_init_vmo_resizable,
+    simple_consume_vmo, simple_init_vmo, simple_init_vmo_resizable,
     simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity, simple_read_only,
     simple_read_write, simple_read_write_resizeable, simple_write_only,
     simple_write_only_with_capacity,
@@ -35,7 +35,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
         FileEvent, FileMarker, NodeAttributes, NodeInfo, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT, VMO_FLAG_PRIVATE, VMO_FLAG_READ,
         VMO_FLAG_WRITE,
     },
@@ -94,7 +94,7 @@ fn read_only_read() {
 #[test]
 fn read_only_ignore_posix_flag() {
     run_server_client(
-        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE,
         read_only(simple_init_vmo(b"Content")),
         |proxy| async move {
             assert_read!(proxy, "Content");
@@ -342,29 +342,6 @@ fn read_write_no_read_flag() {
             assert_close!(proxy);
         },
     );
-}
-
-#[test]
-fn read_write_ignore_posix_flag() {
-    let attempts = Arc::new(AtomicUsize::new(0));
-
-    run_server_client(
-        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_POSIX,
-        read_write(
-            simple_init_vmo_resizable(b"Content"),
-            consume_vmo_with_counter(b"Can write", attempts.clone(), 1, "`consume_vmo`"),
-        ),
-        |proxy| async move {
-            assert_read!(proxy, "Content");
-            assert_seek!(proxy, 0, Start);
-            assert_write!(proxy, "Can write");
-            assert_seek!(proxy, 0, Start);
-            assert_read!(proxy, "Can write");
-            assert_close!(proxy);
-        },
-    );
-
-    assert_eq!(attempts.load(Ordering::Relaxed), 1);
 }
 
 #[test]

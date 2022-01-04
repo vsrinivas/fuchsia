@@ -22,7 +22,8 @@
 #include <lib/fidl/llcpp/string_view.h>
 #endif  // __Fuchsia__
 
-// debug-only header defining utility functions for logging flags and paths.
+// Debug-only header defining utility functions for logging flags and paths.
+// May be used on both Fuchsia and host-only builds.
 
 namespace fs {
 
@@ -40,6 +41,13 @@ struct Path {
 };
 
 namespace debug_internal {
+
+// TODO(fxbug.dev/81185): Remove kFlagPosixDeprecated when OPEN_FLAG_POSIX_DEPRECATED has been
+// removed from fuchsia.io.
+static constexpr uint32_t kFlagPosixDeprecated = 0x01000000U;
+#ifdef __Fuchsia__
+static_assert(kFlagPosixDeprecated == fuchsia_io::wire::kOpenFlagPosixDeprecated, "Flag mismatch!");
+#endif
 
 constexpr const char* FlagToString(uint32_t flag) {
   switch (flag) {
@@ -69,10 +77,10 @@ constexpr const char* FlagToString(uint32_t flag) {
       return "FLAG_VNODE_REF_ONLY";
     case ZX_FS_FLAG_DESCRIBE:
       return "FLAG_DESCRIBE";
-    case ZX_FS_FLAG_POSIX:
-      return "FLAG_POSIX";
+    case kFlagPosixDeprecated:
+      return "FLAG_POSIX_DEPRECATED";
     case ZX_FS_FLAG_POSIX_WRITABLE:
-      return "ZX_FS_FLAG_POSIX_WRITABLE";
+      return "FLAG_POSIX_WRITABLE";
     case ZX_FS_FLAG_POSIX_EXECUTABLE:
       return "FLAG_POSIX_EXECUTABLE";
     case ZX_FS_FLAG_NOT_DIRECTORY:

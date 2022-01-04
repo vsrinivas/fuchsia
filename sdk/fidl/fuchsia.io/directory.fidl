@@ -46,12 +46,10 @@ const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 = 0x02c80000;
 /// Requests that an "OnOpen" event is sent to the interface request.
 /// The event will contain a non-null NodeInfo if the open/clone is successful.
 const OPEN_FLAG_DESCRIBE uint32 = 0x00800000;
-/// Specify this flag to request POSIX-compatibility with respect to execute and write permissions.
-/// This flag implies OPEN_FLAG_POSIX_WRITABLE and OPEN_FLAG_POSIX_EXECUTABLE.
-///
-/// Use of this flag is being deprecated, and should be replaced with a combination of
-/// OPEN_FLAG_POSIX_WRITABLE and/or OPEN_FLAG_POSIX_EXECUTABLE.
-const OPEN_FLAG_POSIX uint32 = 0x01000000;
+/// DO NOT USE. In process of being removed.
+/// TODO(fxbug.dev/81185): Remove when all clients have updated to the latest SDK.
+@deprecated("Temporary flag used by servers to maintain binary compatibility with clients.")
+const OPEN_FLAG_POSIX_DEPRECATED uint32 = 0x01000000;
 /// Specify this flag to request POSIX-compatibility with respect to write permission handling.
 /// Currently, it affects permission handling specifically during Open:
 /// - If the target path is a directory, the rights on the new connection expand to include

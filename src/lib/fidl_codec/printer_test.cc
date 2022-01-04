@@ -37,7 +37,7 @@ TEST(PrettyPrinter, Uint64Print) {
 TEST(PrettyPrinter, OpenRightPrint) {
   std::stringstream out;
   PrettyPrinter printer(out, WithoutColors, false, "", 100, false);
-  printer.DisplayDirectoryOpenFlags(0x7ffffff);
+  printer.DisplayDirectoryOpenFlags(0x1fffffff);
   out << '\n';
   printer.DisplayDirectoryOpenFlags(0);
   out << '\n';
@@ -45,7 +45,8 @@ TEST(PrettyPrinter, OpenRightPrint) {
             "OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITEABLE | OPEN_RIGHT_ADMIN | "
             "OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT | "
             "OPEN_FLAG_TRUNCATE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_APPEND | OPEN_FLAG_NO_REMOTE | "
-            "OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX | "
+            "OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX_DEPRECATED | "
+            "OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE | "
             "OPEN_FLAG_NOT_DIRECTORY | CLONE_FLAGS_SAME_RIGHTS | 0xfff0\n"
             "0\n");
 }

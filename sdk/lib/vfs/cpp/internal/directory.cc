@@ -226,12 +226,13 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
     return SendOnOpenEventOnError(open_flags, std::move(request), status);
   }
 
-  // Explicitly expand OPEN_FLAG_POSIX to prevent any right escalations from occurring if we have
-  // to cross a remote mount point.
-  // TODO(fxbug.dev/81185): Remove entire branch when removing OPEN_FLAG_POSIX.
-  if (open_flags & fuchsia::io::OPEN_FLAG_POSIX) {
+  // Explicitly expand OPEN_FLAG_POSIX_DEPRECATED to prevent any right escalations from occurring if
+  // we cross a remote mount point. This ensures binary compatibility with older clients who have
+  // not yet transitioned to the new set of flags.
+  // TODO(fxbug.dev/81185): Remove once all clients are updated to use the latest SDK.
+  if (open_flags & fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED) {
     open_flags |= fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
-    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX;
+    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_DEPRECATED;
   }
 
   // The POSIX compatibility flags allow the child dir connection to inherit

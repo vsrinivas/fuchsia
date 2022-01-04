@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_io::{
         VmoFlags, OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX_DEPRECATED,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -51,8 +51,9 @@ pub fn new_connection_validate_flags(
         flags &= !OPEN_FLAG_NOT_DIRECTORY;
     }
 
-    // For files the OPEN_FLAG_POSIX flags are ignored, as they have meaning only for directories.
-    flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
+    // For files, the OPEN_FLAG_POSIX_* flags are ignored as they have meaning only for directories.
+    // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
+    flags &= !(OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
     let allowed_flags = OPEN_FLAG_NODE_REFERENCE
         | OPEN_FLAG_DESCRIBE
@@ -165,8 +166,9 @@ mod tests {
         fidl_fuchsia_io::{
             OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
             OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-            OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-            OPEN_RIGHT_WRITABLE, VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
+            OPEN_FLAG_POSIX_DEPRECATED, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
+            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            VMO_FLAG_EXEC, VMO_FLAG_READ, VMO_FLAG_WRITE,
         },
         fuchsia_zircon as zx,
     };
@@ -260,17 +262,20 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_posix() {
-        // OPEN_FLAG_POSIX is ignored for files.
+        // OPEN_FLAG_POSIX_* is ignored for files.
+        // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
+        const ALL_POSIX_FLAGS: u32 =
+            OPEN_FLAG_POSIX_DEPRECATED | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
         for open_flags in build_flag_combinations(
-            OPEN_FLAG_POSIX,
-            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE,
+            0,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE | ALL_POSIX_FLAGS,
         ) {
             let (readable, writable, executable) = io_flags_to_rights(open_flags);
-            // Skip disallowed W+X combinations.
-            if writable && executable {
+            // Skip disallowed W+X combinations, and skip combinations without any POSIX flags.
+            if (writable && executable) || (open_flags & ALL_POSIX_FLAGS == 0) {
                 continue;
             }
-            ncvf_ok(open_flags, readable, writable, executable, open_flags & !OPEN_FLAG_POSIX);
+            ncvf_ok(open_flags, readable, writable, executable, open_flags & !ALL_POSIX_FLAGS);
         }
     }
 

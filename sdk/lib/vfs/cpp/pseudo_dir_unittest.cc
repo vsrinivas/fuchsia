@@ -907,7 +907,7 @@ TEST_F(PseudoDirConnection, NodeReferenceWithInvalidFlags) {
   auto ptr = dir_.Serve();
   fuchsia::io::DirectorySyncPtr new_ptr;
   AssertOpenPath(ptr, "subdir1", new_ptr,
-                 fuchsia::io::OPEN_FLAG_NODE_REFERENCE | fuchsia::io::OPEN_FLAG_POSIX, 0,
+                 fuchsia::io::OPEN_FLAG_NODE_REFERENCE | fuchsia::io::OPEN_FLAG_POSIX_WRITABLE, 0,
                  ZX_ERR_INVALID_ARGS);
 }
 
@@ -964,7 +964,7 @@ TEST_F(PseudoDirConnection, PosixFlagExpandsInheritedRights) {
   auto ptr = dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
   fuchsia::io::DirectorySyncPtr sub_ptr;
   AssertOpenPath(ptr, "subdir1", sub_ptr,
-                 fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_POSIX);
+                 fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_FLAG_POSIX_WRITABLE);
   fuchsia::io::FileSyncPtr file_ptr;
   AssertOpenPath(sub_ptr, "file1", file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
   file_ptr.Unbind();

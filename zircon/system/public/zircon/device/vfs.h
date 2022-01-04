@@ -8,12 +8,15 @@
 #include <zircon/types.h>
 
 // NOTE: All the defines here with the exception of ZX_FS_RIGHTS and ZX_FS_RIGHTS_SPACE are
-// mirrored from the constants in io.fidl, and their values must be kept in sync.
+// mirrored from the constants in io.fidl, and their values must be kept in sync. These values are
+// redefined here as this header is used for both Fuchsia and host builds.
+//
 // The FIDL definition is the source of truth:
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/fidl/fuchsia-io/io.fidl
 // Refer to link for documentation on detailed semantics of the flags.
-// TODO(yifeit): Assert that these values are kept in sync with io.fidl. Cannot do it here as this
-// header is used for both Fuchsia and host.
+//
+// Static assertions in sdk/lib/fdio/unistd.cc ensure that the constants below remain in alignment
+// with the values defined in fuchsia.io.
 
 // Rights
 #define ZX_FS_RIGHT_READABLE 0x00000001U
@@ -36,7 +39,6 @@
 #define ZX_FS_FLAG_NOREMOTE 0x00200000U
 #define ZX_FS_FLAG_VNODE_REF_ONLY 0x00400000U
 #define ZX_FS_FLAG_DESCRIBE 0x00800000U
-#define ZX_FS_FLAG_POSIX 0x01000000U
 #define ZX_FS_FLAG_NOT_DIRECTORY 0x02000000U
 #define ZX_FS_FLAG_CLONE_SAME_RIGHTS 0x04000000U
 #define ZX_FS_FLAG_POSIX_WRITABLE 0x08000000U
