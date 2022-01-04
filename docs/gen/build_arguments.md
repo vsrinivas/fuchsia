@@ -3783,11 +3783,29 @@ custom disk for development purposes.
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:24
 
+### terminal_bold_font_path
+
+**Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Bold.ttf"`
+
+From //src/ui/bin/terminal/terminal_args.gni:12
+
+### terminal_bold_italic_font_path
+
+**Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-BoldItalic.ttf"`
+
+From //src/ui/bin/terminal/terminal_args.gni:20
+
 ### terminal_font_path
 
 **Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"`
 
 From //src/ui/bin/terminal/terminal_args.gni:8
+
+### terminal_italic_font_path
+
+**Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Italic.ttf"`
+
+From //src/ui/bin/terminal/terminal_args.gni:16
 
 ### test_durations_file
 A file in containing historical test duration data for this build
@@ -4155,17 +4173,38 @@ is meant solely for developer debugging.
 
 From //build/images/args.gni:145
 
+### virtcon_bold_font_path
+Path to file to use for bold font
+
+**Current value (from the default):** `""`
+
+From //src/bringup/bin/virtcon/virtcon_args.gni:11
+
+### virtcon_bold_italic_font_path
+Path to file to use for bold italic font
+
+**Current value (from the default):** `""`
+
+From //src/bringup/bin/virtcon/virtcon_args.gni:17
+
 ### virtcon_boot_animation_path
 
 **Current value (from the default):** `"//src/bringup/bin/virtcon/data/boot-animation.riv"`
 
-From //src/bringup/bin/virtcon/virtcon_args.gni:12
+From //src/bringup/bin/virtcon/virtcon_args.gni:21
 
 ### virtcon_font_path
 
 **Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"`
 
 From //src/bringup/bin/virtcon/virtcon_args.gni:8
+
+### virtcon_italic_font_path
+Path to file to use for italic font
+
+**Current value (from the default):** `""`
+
+From //src/bringup/bin/virtcon/virtcon_args.gni:14
 
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
