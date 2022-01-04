@@ -113,23 +113,22 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
 void BindDriverTestOutput(
     const fidl::ServerEnd<fuchsia_device_manager::DeviceController>& controller,
     fidl::ServerEnd<fuchsia_driver_test_logger::Logger> test_output) {
-  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::MessageRead(controller.channel(), fidl::BufferSpan(bytes, std::size(bytes)), handles,
-                        handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
-  ASSERT_TRUE(msg.ok());
+  fidl::MessageRead(
+      controller.channel(),
+      [&](fidl::IncomingMessage msg,
+          fidl::internal::IncomingTransportContext incoming_transport_context) {
+        ASSERT_TRUE(msg.ok());
 
-  auto* header = msg.header();
-  FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
+        auto* header = msg.header();
+        FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  FakeDevice fake(std::move(test_output));
-  fidl::WireDispatch(
-      static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
-      std::move(msg), &txn);
-  ASSERT_FALSE(txn.detected_error());
-  ASSERT_TRUE(fake.bind_called());
+        FakeDevice fake(std::move(test_output));
+        fidl::WireDispatch(
+            static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
+            std::move(msg), &txn);
+        ASSERT_FALSE(txn.detected_error());
+        ASSERT_TRUE(fake.bind_called());
+      });
 }
 
 // Reads a BindDriver request from remote, checks that it is for the expected
@@ -137,23 +136,22 @@ void BindDriverTestOutput(
 void CheckBindDriverReceived(
     const fidl::ServerEnd<fuchsia_device_manager::DeviceController>& controller,
     const fidl::StringView expected_driver) {
-  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::MessageRead(controller.channel(), fidl::BufferSpan(bytes, std::size(bytes)), handles,
-                        handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
-  ASSERT_TRUE(msg.ok());
+  fidl::MessageRead(
+      controller.channel(),
+      [&](fidl::IncomingMessage msg,
+          fidl::internal::IncomingTransportContext incoming_transport_context) {
+        ASSERT_TRUE(msg.ok());
 
-  auto* header = msg.header();
-  FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
+        auto* header = msg.header();
+        FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  FakeDevice fake(fidl::ServerEnd<fuchsia_driver_test_logger::Logger>(), expected_driver);
-  fidl::WireDispatch(
-      static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
-      std::move(msg), &txn);
-  ASSERT_FALSE(txn.detected_error());
-  ASSERT_TRUE(fake.bind_called());
+        FakeDevice fake(fidl::ServerEnd<fuchsia_driver_test_logger::Logger>(), expected_driver);
+        fidl::WireDispatch(
+            static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
+            std::move(msg), &txn);
+        ASSERT_FALSE(txn.detected_error());
+        ASSERT_TRUE(fake.bind_called());
+      });
 }
 
 }  // namespace

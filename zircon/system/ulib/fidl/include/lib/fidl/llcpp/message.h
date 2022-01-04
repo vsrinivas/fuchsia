@@ -527,27 +527,53 @@ class IncomingMessage : public ::fidl::Result {
   bool is_transactional_ = false;
 };
 
-// Reads a message from |transport| using the |bytes_storage| and |handles_storage|
-// buffers as needed.
+// Reads a message from |transport| and calls |callback| with the results.
 //
-// Error information is embedded in the returned |IncomingMessage| when applicable.
-template <typename TransportObject>
-IncomingMessage MessageRead(TransportObject&& transport, ::fidl::BufferSpan bytes_storage,
-                            fidl_handle_t* handle_storage,
-                            typename internal::AssociatedTransport<TransportObject>::HandleMetadata*
-                                handle_metadata_storage,
-                            uint32_t handle_capacity, const ReadOptions& options = {}) {
+// |callback| is called synchronously, before MessageRead completes.
+// It is not safe to use pointers in the arguments of |callback| after the function returns.
+// The return type of |MessageRead| is the same as the return type of |callback|.
+//
+// Error information is embedded in the |IncomingMessage| passed to the callback when applicable.
+template <typename TransportObject, typename Callback,
+          typename ReturnTypeOfCallback = std::invoke_result_t<
+              Callback, IncomingMessage, fidl::internal::IncomingTransportContext>>
+ReturnTypeOfCallback MessageRead(TransportObject&& transport, Callback callback,
+                                 const ReadOptions& options = {}) {
   auto type_erased_transport =
       internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
-  uint32_t num_bytes, num_handles;
-  zx_status_t status = type_erased_transport.read(
-      options, bytes_storage.data, bytes_storage.capacity, handle_storage, handle_metadata_storage,
-      handle_capacity, &num_bytes, &num_handles);
-  if (status != ZX_OK) {
-    return IncomingMessage::Create(fidl::Result::TransportError(status));
+
+  auto call_callback = [&callback](
+                           Result result, void* data, uint32_t data_count, fidl_handle_t* handles,
+                           void* handle_metadata, uint32_t handles_count,
+                           fidl::internal::IncomingTransportContext incoming_transport_context) {
+    if (!result.ok()) {
+      return callback(IncomingMessage::Create(result), fidl::internal::IncomingTransportContext());
+    }
+    return callback(
+        IncomingMessage::Create(
+            static_cast<uint8_t*>(data), data_count, handles,
+            static_cast<typename internal::AssociatedTransport<TransportObject>::HandleMetadata*>(
+                handle_metadata),
+            handles_count),
+        incoming_transport_context);
+  };
+
+  if constexpr (std::is_same_v<ReturnTypeOfCallback, void>) {
+    type_erased_transport.read(options, call_callback);
+    return;
+  } else {
+    ReturnTypeOfCallback ret;
+    // Call read using a wrapping callback that extracts the return argument.
+    type_erased_transport.read(
+        options, [&ret, call_callback = std::move(call_callback)](
+                     Result result, void* data, uint32_t data_count, fidl_handle_t* handles,
+                     void* handle_metadata, uint32_t handles_count,
+                     fidl::internal::IncomingTransportContext incoming_transport_context) {
+          ret = call_callback(result, data, data_count, handles, handle_metadata, handles_count,
+                              incoming_transport_context);
+        });
+    return ret;
   }
-  return IncomingMessage::Create(bytes_storage.data, num_bytes, handle_storage,
-                                 handle_metadata_storage, num_handles);
 }
 
 namespace internal {

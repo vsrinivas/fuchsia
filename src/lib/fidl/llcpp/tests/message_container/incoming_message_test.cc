@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/llcpp/message.h>
+#include <lib/sync/completion.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
@@ -164,7 +165,7 @@ class IncomingMessageChannelReadEtcTest : public ::testing::Test {
       handle_metadata_buffer_;
 };
 
-TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
+TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChanne) {
   zx::channel source, sink;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
 
@@ -173,21 +174,32 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
   fidl_init_txn_header(hdr, /* txid */ 1, /* ordinal */ 1);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                    handle_metadata_data(), handle_buffer_size());
-  EXPECT_EQ(ZX_OK, incoming.status());
-  EXPECT_EQ(incoming.byte_actual(), sizeof(fidl_message_header_t));
-  EXPECT_EQ(0, memcmp(incoming.bytes(), bytes, incoming.byte_actual()));
-  EXPECT_EQ(0u, incoming.handle_actual());
+  sync_completion_t completion;
+  fidl::MessageRead(source,
+                    [&](fidl::IncomingMessage incoming,
+                        fidl::internal::IncomingTransportContext incoming_transport_context) {
+                      EXPECT_EQ(ZX_OK, incoming.status());
+                      EXPECT_EQ(incoming.byte_actual(), sizeof(fidl_message_header_t));
+                      EXPECT_EQ(0, memcmp(incoming.bytes(), bytes, incoming.byte_actual()));
+                      EXPECT_EQ(0u, incoming.handle_actual());
+                      sync_completion_signal(&completion);
+                    });
 
-  auto incoming2 = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                     handle_metadata_data(), handle_buffer_size());
-  EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming2.status());
-  EXPECT_EQ(fidl::Reason::kTransportError, incoming2.reason());
-  EXPECT_EQ(
-      "FIDL operation failed due to underlying transport I/O error, "
-      "status: ZX_ERR_SHOULD_WAIT (-22)",
-      incoming2.FormatDescription());
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&completion, ZX_TIME_INFINITE));
+  sync_completion_reset(&completion);
+
+  fidl::MessageRead(source,
+                    [&](fidl::IncomingMessage incoming,
+                        fidl::internal::IncomingTransportContext incoming_transport_context) {
+                      EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming.status());
+                      EXPECT_EQ(fidl::Reason::kTransportError, incoming.reason());
+                      EXPECT_EQ(
+                          "FIDL operation failed due to underlying transport I/O error, "
+                          "status: ZX_ERR_SHOULD_WAIT (-22)",
+                          incoming.FormatDescription());
+                      sync_completion_signal(&completion);
+                    });
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&completion, ZX_TIME_INFINITE));
 }
 
 TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
@@ -195,10 +207,15 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
 
   sink.reset();
-  auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                    handle_metadata_data(), handle_buffer_size());
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, incoming.status());
-  EXPECT_EQ(fidl::Reason::kPeerClosed, incoming.reason());
+  sync_completion_t completion;
+  fidl::MessageRead(source,
+                    [&](fidl::IncomingMessage incoming,
+                        fidl::internal::IncomingTransportContext incoming_transport_context) {
+                      EXPECT_EQ(ZX_ERR_PEER_CLOSED, incoming.status());
+                      EXPECT_EQ(fidl::Reason::kPeerClosed, incoming.reason());
+                      sync_completion_signal(&completion);
+                    });
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&completion, ZX_TIME_INFINITE));
 }
 
 TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
@@ -211,12 +228,17 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
   fidl_init_txn_header(hdr, /* txid */ 42, /* ordinal */ kFidlOrdinalEpitaph);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::MessageRead(source, byte_buffer_view(), handle_data(),
-                                    handle_metadata_data(), handle_buffer_size());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
-  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
-  EXPECT_EQ(
-      "FIDL operation failed due to unexpected message, "
-      "status: ZX_ERR_INVALID_ARGS (-10), detail: invalid header",
-      incoming.FormatDescription());
+  sync_completion_t completion;
+  fidl::MessageRead(source,
+                    [&](fidl::IncomingMessage incoming,
+                        fidl::internal::IncomingTransportContext incoming_transport_context) {
+                      EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
+                      EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
+                      EXPECT_EQ(
+                          "FIDL operation failed due to unexpected message, "
+                          "status: ZX_ERR_INVALID_ARGS (-10), detail: invalid header",
+                          incoming.FormatDescription());
+                      sync_completion_signal(&completion);
+                    });
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&completion, ZX_TIME_INFINITE));
 }

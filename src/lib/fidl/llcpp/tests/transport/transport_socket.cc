@@ -33,18 +33,19 @@ zx_status_t socket_write(fidl_handle_t handle, const WriteOptions& write_options
   return ZX_OK;
 }
 
-zx_status_t socket_read(fidl_handle_t handle, const ReadOptions& read_options, void* data,
-                        uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
-                        uint32_t handles_capacity, uint32_t* out_data_actual_count,
-                        uint32_t* out_handles_actual_count) {
+void socket_read(fidl_handle_t handle, const ReadOptions& read_options,
+                 TransportReadCallback callback) {
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   size_t actual;
-  zx_status_t status = zx_socket_read(handle, 0, data, data_capacity, &actual);
+  zx_status_t status = zx_socket_read(handle, 0, bytes, ZX_CHANNEL_MAX_MSG_BYTES, &actual);
   if (status != ZX_OK) {
-    return status;
+    callback(Result::TransportError(status), nullptr, 0, nullptr, nullptr, 0,
+             IncomingTransportContext());
+    return;
   }
-  *out_data_actual_count = static_cast<uint32_t>(actual);
-  *out_handles_actual_count = 0;
-  return ZX_OK;
+
+  callback(Result::Ok(), bytes, static_cast<uint32_t>(actual), nullptr, nullptr, 0,
+           IncomingTransportContext());
 }
 
 zx_status_t socket_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
@@ -79,13 +80,14 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
     return failure_handler_(fidl::UnbindInfo::PeerClosed(ZX_ERR_PEER_CLOSED));
   }
 
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-  IncomingMessage msg = fidl::MessageRead(zx::unowned_socket(async_wait_t::object), bytes.view(),
-                                          nullptr, nullptr, 0);
-  if (!msg.ok()) {
-    return failure_handler_(fidl::UnbindInfo{msg});
-  }
-  return success_handler_(msg, internal::IncomingTransportContext());
+  fidl::MessageRead(zx::unowned_socket(async_wait_t::object),
+                    [this](IncomingMessage msg,
+                           fidl::internal::IncomingTransportContext incoming_transport_context) {
+                      if (!msg.ok()) {
+                        return failure_handler_(fidl::UnbindInfo{msg});
+                      }
+                      return success_handler_(msg, fidl::internal::IncomingTransportContext());
+                    });
 }
 
 const CodingConfig SocketTransport::EncodingConfiguration = {};

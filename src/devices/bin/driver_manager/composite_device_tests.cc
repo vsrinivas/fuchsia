@@ -94,25 +94,24 @@ class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostCo
 void CheckCreateCompositeDeviceReceived(
     const fidl::ServerEnd<fdm::DriverHostController>& controller, const char* expected_name,
     size_t expected_fragments_count, DeviceState* composite) {
-  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
-  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::MessageRead(controller.channel(), fidl::BufferSpan(bytes, std::size(bytes)), handles,
-                        handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
-  ASSERT_TRUE(msg.ok());
+  fidl::MessageRead(
+      controller.channel(),
+      [&](fidl::IncomingMessage msg,
+          fidl::internal::IncomingTransportContext incoming_transport_context) {
+        ASSERT_TRUE(msg.ok());
 
-  auto* header = msg.header();
-  FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
+        auto* header = msg.header();
+        FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
-  FakeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
-                   &composite->controller_server);
-  fidl::WireDispatch(
-      static_cast<fidl::WireServer<fuchsia_device_manager::DriverHostController>*>(&fake),
-      std::move(msg), &txn);
-  ASSERT_FALSE(txn.detected_error());
-  ASSERT_TRUE(composite->coordinator_client.is_valid());
-  ASSERT_TRUE(composite->controller_server.is_valid());
+        FakeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
+                         &composite->controller_server);
+        fidl::WireDispatch(
+            static_cast<fidl::WireServer<fuchsia_device_manager::DriverHostController>*>(&fake),
+            std::move(msg), &txn);
+        ASSERT_FALSE(txn.detected_error());
+        ASSERT_TRUE(composite->coordinator_client.is_valid());
+        ASSERT_TRUE(composite->controller_server.is_valid());
+      });
 }
 
 // Helper for BindComposite for issuing an AddComposite for a composite with the

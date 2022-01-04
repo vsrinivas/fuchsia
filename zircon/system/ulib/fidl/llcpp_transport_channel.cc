@@ -40,10 +40,8 @@ zx_status_t channel_write(fidl_handle_t handle, const WriteOptions& write_option
 #endif
 }
 
-zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, void* data,
-                         uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
-                         uint32_t handles_capacity, uint32_t* out_data_actual_count,
-                         uint32_t* out_handles_actual_count) {
+void channel_read(fidl_handle_t handle, const ReadOptions& read_options,
+                  TransportReadCallback callback) {
 #ifndef __Fuchsia__
   ZX_PANIC("channel_read unsupported on host");
 #else
@@ -52,22 +50,35 @@ zx_status_t channel_read(fidl_handle_t handle, const ReadOptions& read_options, 
     options |= ZX_CHANNEL_READ_MAY_DISCARD;
   }
 
-  *out_data_actual_count = 0;
-  *out_handles_actual_count = 0;
-  zx_handle_info_t his[ZX_CHANNEL_MAX_MSG_HANDLES];
+  uint32_t bytes_actual_count = 0;
+  uint32_t handles_actual_count = 0;
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_info_t handle_infos[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_trace(WillLLCPPAsyncChannelRead);
   zx_status_t status =
-      zx_channel_read_etc(handle, options, data, his, data_capacity, handles_capacity,
-                          out_data_actual_count, out_handles_actual_count);
-  fidl_channel_handle_metadata_t* metadata =
-      static_cast<fidl_channel_handle_metadata_t*>(handle_metadata);
-  for (uint32_t i = 0; i < *out_handles_actual_count; i++) {
-    handles[i] = his[i].handle;
-    metadata[i] = fidl_channel_handle_metadata_t{
-        .obj_type = his[i].type,
-        .rights = his[i].rights,
+      zx_channel_read_etc(handle, options, bytes, handle_infos, ZX_CHANNEL_MAX_MSG_BYTES,
+                          ZX_CHANNEL_MAX_MSG_HANDLES, &bytes_actual_count, &handles_actual_count);
+  fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, bytes_actual_count,
+             handles_actual_count);
+  if (status != ZX_OK) {
+    callback(Result::TransportError(status), nullptr, 0, nullptr, nullptr, 0,
+             IncomingTransportContext());
+    return;
+  }
+
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
+      handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  for (uint32_t i = 0; i < handles_actual_count; i++) {
+    handles[i] = handle_infos[i].handle;
+    handle_metadata[i] = fidl_channel_handle_metadata_t{
+        .obj_type = handle_infos[i].type,
+        .rights = handle_infos[i].rights,
     };
   }
-  return status;
+
+  callback(Result::Ok(), bytes, bytes_actual_count, handles, handle_metadata, handles_actual_count,
+           IncomingTransportContext());
 #endif
 }
 
@@ -160,19 +171,15 @@ void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status
     return failure_handler_(fidl::UnbindInfo::PeerClosed(ZX_ERR_PEER_CLOSED));
   }
 
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT fidl_channel_handle_metadata_t
-      handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl_trace(WillLLCPPAsyncChannelRead);
-  IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(async_wait_t::object), bytes.view(),
-                                          handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
-  if (!msg.ok()) {
-    return failure_handler_(fidl::UnbindInfo{msg});
-  }
-  fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes.data(), msg.byte_actual(),
-             msg.handle_actual());
-  return success_handler_(msg, IncomingTransportContext());
+  fidl::MessageRead(
+      zx::unowned_channel(async_wait_t::object),
+      [this](IncomingMessage msg,
+             fidl::internal::IncomingTransportContext incoming_transport_context) -> void {
+        if (!msg.ok()) {
+          return failure_handler_(fidl::UnbindInfo{msg});
+        }
+        return success_handler_(msg, IncomingTransportContext());
+      });
 }
 #endif
 
