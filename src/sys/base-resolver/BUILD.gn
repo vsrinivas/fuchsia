@@ -57,6 +57,7 @@ rustc_binary("bin") {
 
   test_deps = [
     ":fake_pkgfs",
+    "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//third_party/rust_crates:matches",

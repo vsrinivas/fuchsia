@@ -5,6 +5,7 @@
 use {
     anyhow::{self, Context},
     fidl::endpoints::{ClientEnd, Proxy},
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
@@ -96,7 +97,31 @@ async fn resolve_component(
     })?;
     let package_dir = resolve_package(&package_url, packages_dir).await?;
 
-    let data = get_manifest_data(&package_dir, cm_path).await?;
+    let data =
+        get_data_from_package_path(&package_dir, cm_path, ResolverError::ComponentNotFound).await?;
+    let raw_bytes = raw_bytes_from_data(&data)?;
+    let decl: fdecl::Component = fidl::encoding::decode_persistent(&raw_bytes[..])
+        .map_err(ResolverError::ParsingManifest)?;
+
+    let config_values = if let Some(config_decl) = decl.config.as_ref() {
+        // if we have a config declaration, we need to read the value file from the package dir
+        let strategy =
+            config_decl.value_source.as_ref().ok_or(ResolverError::InvalidConfigSource)?;
+        let config_path = match strategy {
+            fdecl::ConfigValueSource::PackagePath(path) => path,
+            other => return Err(ResolverError::UnsupportedConfigSource(other.to_owned())),
+        };
+        Some(
+            get_data_from_package_path(
+                &package_dir,
+                &config_path,
+                ResolverError::ConfigValuesNotFound,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
 
     let package_dir = ClientEnd::new(
         package_dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
@@ -109,6 +134,7 @@ async fn resolve_component(
             package_dir: Some(package_dir),
             ..fsys::Package::EMPTY
         }),
+        config_values,
         ..fsys::Component::EMPTY
     })
 }
@@ -136,13 +162,14 @@ async fn resolve_package(
     Ok(dir)
 }
 
-async fn get_manifest_data(
+async fn get_data_from_package_path(
     package: &fio::DirectoryProxy,
     cm_path: &str,
+    map_not_found_err: impl FnOnce(io_util::node::OpenError) -> ResolverError,
 ) -> Result<fmem::Data, ResolverError> {
     let cm_file = io_util::directory::open_file(&package, cm_path, fio::OPEN_RIGHT_READABLE)
         .await
-        .map_err(ResolverError::ComponentNotFound)?;
+        .map_err(map_not_found_err)?;
     let (status, buffer) =
         cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
     let () = Status::ok(status).map_err(ResolverError::VmoFailure)?;
@@ -151,6 +178,20 @@ async fn get_manifest_data(
         None => fmem::Data::Bytes(
             io_util::file::read(&cm_file).await.map_err(ResolverError::ReadManifest)?,
         ),
+    })
+}
+
+fn raw_bytes_from_data(data: &fmem::Data) -> Result<Vec<u8>, ResolverError> {
+    Ok(match data {
+        fmem::Data::Buffer(buf) => {
+            let size = buf.size as usize;
+            let mut raw_bytes = Vec::with_capacity(size);
+            raw_bytes.resize(size, 0);
+            buf.vmo.read(&mut raw_bytes, 0).map_err(ResolverError::VmoFailure)?;
+            raw_bytes
+        }
+        fmem::Data::Bytes(b) => b.clone(),
+        _ => return Err(ResolverError::UnrecognizedDataVariant),
     })
 }
 
@@ -166,6 +207,16 @@ enum ResolverError {
     ComponentNotFound(#[source] io_util::node::OpenError),
     #[error("package not found")]
     PackageNotFound(#[source] io_util::node::OpenError),
+    #[error("couldn't parse component manifest")]
+    ParsingManifest(#[source] fidl::Error),
+    #[error("couldn't find config values")]
+    ConfigValuesNotFound(#[source] io_util::node::OpenError),
+    #[error("config source missing or invalid")]
+    InvalidConfigSource,
+    #[error("unsupported config source: {:?}", _0)]
+    UnsupportedConfigSource(fdecl::ConfigValueSource),
+    #[error("unrecognized fuchsia.mem.Data variant")]
+    UnrecognizedDataVariant,
     #[error("read manifest error")]
     ReadManifest(#[source] io_util::file::ReadError),
     #[error("IO error")]
@@ -186,6 +237,11 @@ impl From<&ResolverError> for fsys::ResolverError {
             UnsupportedRepo => fsys::ResolverError::NotSupported,
             ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
             PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
+            ConfigValuesNotFound(_) => fsys::ResolverError::ConfigValuesNotFound,
+            ParsingManifest(_)
+            | UnsupportedConfigSource(_)
+            | UnrecognizedDataVariant
+            | InvalidConfigSource => fsys::ResolverError::InvalidManifest,
             ReadManifest(_)
             | IOError(_)
             | VmoFailure(_)
@@ -203,7 +259,7 @@ mod tests {
         fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
-        fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryObject, NodeInfo, NodeMarker},
         matches::assert_matches,
         std::sync::Arc,
@@ -352,6 +408,42 @@ mod tests {
         );
     }
 
+    #[fuchsia::test]
+    async fn resolves_component_with_config() {
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).unwrap();
+        let component = resolve_component(
+            "fuchsia-pkg://fuchsia.com/test-package#meta/foo-with-config.cm",
+            &pkgfs_dir,
+        )
+        .await
+        .unwrap();
+        assert_matches!(component, fsys::Component { decl: Some(..), config_values: Some(..), .. });
+    }
+
+    #[fuchsia::test]
+    async fn fails_to_resolve_component_missing_config_values() {
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).unwrap();
+        let error = resolve_component(
+            "fuchsia-pkg://fuchsia.com/test-package#meta/foo-without-config.cm",
+            &pkgfs_dir,
+        )
+        .await
+        .unwrap_err();
+        assert_matches!(error, ResolverError::ConfigValuesNotFound(..));
+    }
+
+    #[fuchsia::test]
+    async fn fails_to_resolve_component_bad_config_source() {
+        let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).unwrap();
+        let error = resolve_component(
+            "fuchsia-pkg://fuchsia.com/test-package#meta/foo-with-bad-config.cm",
+            &pkgfs_dir,
+        )
+        .await
+        .unwrap_err();
+        assert_matches!(error, ResolverError::InvalidConfigSource);
+    }
+
     fn build_fake_pkgfs() -> Arc<MockDir> {
         let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
             .expect("failed to encode ComponentDecl FIDL");
@@ -369,6 +461,62 @@ mod tests {
                                         .add_entry(
                                             "foo.cm",
                                             Arc::new(MockFile::new(cm_bytes.clone())),
+                                        )
+                                        .add_entry(
+                                            "foo-with-config.cm",
+                                            Arc::new(MockFile::new(
+                                                encode_persistent(&mut fdecl::Component {
+                                                    config: Some(fdecl::Config {
+                                                        value_source: Some(
+                                                            fdecl::ConfigValueSource::PackagePath(
+                                                                "meta/foo-with-config.cvf"
+                                                                    .to_string(),
+                                                            ),
+                                                        ),
+                                                        ..fdecl::Config::EMPTY
+                                                    }),
+                                                    ..fdecl::Component::EMPTY
+                                                })
+                                                .unwrap(),
+                                            )),
+                                        )
+                                        .add_entry(
+                                            "foo-with-config.cvf",
+                                            Arc::new(MockFile::new(
+                                                encode_persistent(&mut fconfig::ValuesData {
+                                                    ..fconfig::ValuesData::EMPTY
+                                                })
+                                                .unwrap(),
+                                            )),
+                                        )
+                                        .add_entry(
+                                            "foo-with-bad-config.cm",
+                                            Arc::new(MockFile::new(
+                                                encode_persistent(&mut fdecl::Component {
+                                                    config: Some(fdecl::Config {
+                                                        ..fdecl::Config::EMPTY
+                                                    }),
+                                                    ..fdecl::Component::EMPTY
+                                                })
+                                                .unwrap(),
+                                            )),
+                                        )
+                                        .add_entry(
+                                            "foo-without-config.cm",
+                                            Arc::new(MockFile::new(
+                                                encode_persistent(&mut fdecl::Component {
+                                                    config: Some(fdecl::Config {
+                                                        value_source: Some(
+                                                            fdecl::ConfigValueSource::PackagePath(
+                                                                "doesnt-exist.cvf".to_string(),
+                                                            ),
+                                                        ),
+                                                        ..fdecl::Config::EMPTY
+                                                    }),
+                                                    ..fdecl::Component::EMPTY
+                                                })
+                                                .unwrap(),
+                                            )),
                                         )
                                         .add_entry("vmo.cm", Arc::new(MockFile::new(cm_bytes))),
                                 ),

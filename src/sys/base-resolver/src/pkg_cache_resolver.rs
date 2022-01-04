@@ -91,7 +91,12 @@ async fn resolve_pkg_cache(
     )
     .await
     .map_err(ResolverError::ServePackageDirectory)?;
-    let data = crate::get_manifest_data(&proxy, PKG_CACHE_MANIFEST_PATH).await?;
+    let data = crate::get_data_from_package_path(
+        &proxy,
+        PKG_CACHE_MANIFEST_PATH,
+        ResolverError::ComponentNotFound,
+    )
+    .await?;
     let client = ClientEnd::new(
         proxy.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
     );
