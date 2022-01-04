@@ -5,7 +5,10 @@
 import("//build/config/arm.gni")
 
 config("libpng_config") {
-  include_dirs = [ "src" ]
+  include_dirs = [
+    "src",
+    ".",
+  ]
   defines = []
 }
 
@@ -32,6 +35,7 @@ config("clang_warnings") {
 source_set("libpng") {
   sources = [
     "pnglibconf.h",
+    "pngprefix.h",
     "src/png.c",
     "src/png.h",
     "src/pngconf.h",
@@ -40,7 +44,6 @@ source_set("libpng") {
     "src/pnginfo.h",
     "src/pngmem.c",
     "src/pngpread.c",
-    "src/pngprefix.h",
     "src/pngpriv.h",
     "src/pngread.c",
     "src/pngrio.c",
