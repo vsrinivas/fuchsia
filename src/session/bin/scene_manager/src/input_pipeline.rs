@@ -6,13 +6,13 @@ use {
     ::input_pipeline::{text_settings_handler::TextSettingsHandler, CursorMessage},
     anyhow::{Context, Error},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
-    fidl_fuchsia_settings as fsettings, fidl_fuchsia_ui_shortcut as ui_shortcut,
-    fuchsia_async as fasync,
+    fidl_fuchsia_settings as fsettings,
+    fidl_fuchsia_ui_pointerinjector_configuration::SetupProxy,
+    fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
-    futures::lock::Mutex,
-    futures::StreamExt,
+    futures::{lock::Mutex, StreamExt},
     icu_data,
     input_pipeline::{
         self, dead_keys_handler,
@@ -20,6 +20,7 @@ use {
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap_handler,
+        mouse_injector_handler::MouseInjectorHandler,
         shortcut_handler::ShortcutHandler,
         touch_injector_handler::TouchInjectorHandler,
     },
@@ -68,22 +69,27 @@ pub async fn handle_input(
     Ok(input_pipeline)
 }
 
+fn setup_pointer_injector_config_request_stream(
+    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+) -> SetupProxy {
+    let (setup_proxy, setup_request_stream) = fidl::endpoints::create_proxy_and_stream::<
+        fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker,
+    >()
+    .expect("Failed to create pointerinjector.configuration.Setup channel.");
+
+    scene_management::handle_pointer_injector_configuration_setup_request_stream(
+        setup_request_stream,
+        scene_manager,
+    );
+
+    setup_proxy
+}
+
 async fn add_flatland_touch_handler(
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     mut assembly: InputPipelineAssembly,
 ) -> InputPipelineAssembly {
-    let (setup_proxy, setup_server_end) = fidl::endpoints::create_proxy::<
-        fidl_fuchsia_ui_pointerinjector_configuration::SetupMarker,
-    >()
-    .expect("Failed to create pointerinjector.configuration.Setup channel.");
-    let setup_request_stream =
-        setup_server_end.into_stream().expect("Failed to convert server-end to request-stream.");
-
-    scene_management::handle_pointer_injector_configuration_setup_request_stream(
-        setup_request_stream,
-        scene_manager.clone(),
-    );
-
+    let setup_proxy = setup_pointer_injector_config_request_stream(scene_manager.clone());
     let size = scene_manager.lock().await.get_pointerinjection_display_size();
     let touch_handler = TouchInjectorHandler::new_with_config_proxy(setup_proxy, size).await;
     match touch_handler {
@@ -92,7 +98,29 @@ async fn add_flatland_touch_handler(
             assembly = assembly.add_handler(touch_handler);
         }
         Err(e) => fx_log_err!(
-            "build_input_pipeline_assembly(): failed to instantiate TouchInjectorHandler: {:?}",
+            "build_input_pipeline_assembly(): Touch injector handler was not installed: {:?}",
+            e
+        ),
+    };
+    assembly
+}
+
+async fn add_flatland_mouse_handler(
+    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
+    mut assembly: InputPipelineAssembly,
+    sender: futures::channel::mpsc::Sender<CursorMessage>,
+) -> InputPipelineAssembly {
+    let setup_proxy = setup_pointer_injector_config_request_stream(scene_manager.clone());
+    let size = scene_manager.lock().await.get_pointerinjection_display_size();
+    let mouse_handler =
+        MouseInjectorHandler::new_with_config_proxy(setup_proxy, size, sender).await;
+    match mouse_handler {
+        Ok(mouse_handler) => {
+            fasync::Task::local(mouse_handler.clone().watch_viewport()).detach();
+            assembly = assembly.add_handler(mouse_handler);
+        }
+        Err(e) => fx_log_err!(
+            "build_input_pipeline_assembly(): Mouse injector handler was not installed: {:?}",
             e
         ),
     };
@@ -134,7 +162,7 @@ async fn build_input_pipeline_assembly(
 
         if use_flatland {
             assembly = add_flatland_touch_handler(scene_manager.clone(), assembly).await;
-            assembly = scene_manager.lock().await.add_mouse_handler(sender, assembly).await;
+            assembly = add_flatland_mouse_handler(scene_manager.clone(), assembly, sender).await;
         } else {
             let locked_scene_manager = scene_manager.lock().await;
             assembly = locked_scene_manager.add_touch_handler(assembly).await;

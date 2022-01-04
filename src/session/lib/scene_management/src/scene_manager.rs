@@ -144,6 +144,7 @@ pub trait SceneManager: Send {
     ///
     /// # Parameters
     /// - `assembly`: An [`InputPipelineAssembly`] which represents a partially-constructed input pipeline.
+    // TODO(fxbug.dev/87519): delete when Gfx version is deleted.
     async fn add_mouse_handler(
         &self,
         position_sender: futures::channel::mpsc::Sender<input_pipeline::CursorMessage>,
