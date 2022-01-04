@@ -23,7 +23,7 @@ pub use crate::{
     image::{Image, ImageClass, ImageType, OpenImageError},
     images::{ImageList, ResolveImagesError, UnverifiedImageList},
     name::VerifyNameError,
-    packages::ParsePackageError,
+    packages::{parse_packages_json, ParsePackageError},
     update_mode::{ParseUpdateModeError, UpdateMode},
     version::{ReadVersionError, SystemVersion},
 };

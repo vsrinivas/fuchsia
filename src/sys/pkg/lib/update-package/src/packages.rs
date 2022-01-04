@@ -93,7 +93,8 @@ pub enum ParsePackageError {
     VersionNotSupported(String),
 }
 
-pub(crate) fn parse_packages_json(contents: &[u8]) -> Result<Vec<PkgUrl>, ParsePackageError> {
+/// Returns structured `packages.json` data based on file contents string.
+pub fn parse_packages_json(contents: &[u8]) -> Result<Vec<PkgUrl>, ParsePackageError> {
     match serde_json::from_slice(&contents).map_err(ParsePackageError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(ParsePackageError::VersionNotSupported(version)),
