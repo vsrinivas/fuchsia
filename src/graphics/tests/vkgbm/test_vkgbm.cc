@@ -187,7 +187,7 @@ TEST_P(VkGbmImportWithParam, ImportImageCopy) {
                            .setTiling(vk::ImageTiling::eDrmFormatModifierEXT)
                            .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
                            .setSharingMode(vk::SharingMode::eExclusive)
-                           .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                           .setInitialLayout(vk::ImageLayout::eUndefined)
                            .setPNext(&external_create_info);
 
     auto result = context()->device()->createImageUnique(create_info);
@@ -565,7 +565,7 @@ TEST_P(VkGbmExportWithTiling, ExportWithTiling) {
                          .setTiling(tiling)
                          .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
                          .setSharingMode(vk::SharingMode::eExclusive)
-                         .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                         .setInitialLayout(vk::ImageLayout::eUndefined)
                          .setPNext(&external_create_info);
 
   auto result = context()->device()->createImageUnique(create_info);
@@ -615,7 +615,7 @@ TEST_P(VkGbmExportWithDrm, ExportWithDrm) {
                          .setTiling(vk::ImageTiling::eDrmFormatModifierEXT)
                          .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
                          .setSharingMode(vk::SharingMode::eExclusive)
-                         .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                         .setInitialLayout(vk::ImageLayout::eUndefined)
                          .setPNext(&external_create_info);
 
   {

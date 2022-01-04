@@ -221,7 +221,7 @@ bool VkReadbackTest::InitImage() {
   image_create_info.usage = vk::ImageUsageFlagBits::eTransferDst;
   image_create_info.sharingMode = vk::SharingMode::eExclusive;
   image_create_info.queueFamilyIndexCount = 0;
-  image_create_info.initialLayout = vk::ImageLayout::ePreinitialized;
+  image_create_info.initialLayout = vk::ImageLayout::eUndefined;
 
 #ifdef __Fuchsia__
   vk::ExternalMemoryImageCreateInfo external_memory_create_info;
@@ -416,7 +416,7 @@ bool VkReadbackTest::FillCommandBuffer(vk::CommandBuffer& command_buffer, bool t
     // Transition image for clear operation.
     vk::ImageMemoryBarrier image_barrier;
     image_barrier.image = image_.get();
-    image_barrier.oldLayout = vk::ImageLayout::ePreinitialized;
+    image_barrier.oldLayout = vk::ImageLayout::eUndefined;
     image_barrier.newLayout = vk::ImageLayout::eGeneral;
     image_barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     image_barrier.subresourceRange.levelCount = 1;

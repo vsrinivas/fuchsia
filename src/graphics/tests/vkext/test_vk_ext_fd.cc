@@ -168,7 +168,7 @@ TEST_F(TestVkExtMemFd, ImageExport) {
                            .setTiling(vk::ImageTiling::eOptimal)
                            .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
                            .setSharingMode(vk::SharingMode::eExclusive)
-                           .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                           .setInitialLayout(vk::ImageLayout::eUndefined)
                            .setPNext(&external_create_info);
 
     auto result = context_->device()->createImageUnique(create_info);

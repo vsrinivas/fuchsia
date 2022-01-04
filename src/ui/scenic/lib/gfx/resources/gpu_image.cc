@@ -98,7 +98,12 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   // object once we support a bitmask instead of an enum.
   escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-  constexpr auto kInitialLayout = vk::ImageLayout::ePreinitialized;
+  // Vulkan specs require that for all images created with a
+  // |VkExternalMemoryImageCreateInfo| whose handleTypes is not 0, their initial
+  // layout must be |eUndefined|.
+  // (see https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/
+  // VkImageCreateInfo.html#VUID-VkImageCreateInfo-pNext-01443)
+  constexpr auto kInitialLayout = vk::ImageLayout::eUndefined;
   vk::Device vk_device = session->resource_context().vk_device;
   vk::Image vk_image =
       escher::image_utils::CreateVkImage(vk_device, escher_image_info, kInitialLayout);
