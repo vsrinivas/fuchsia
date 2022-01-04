@@ -12,12 +12,12 @@ Large Objects** (BLOBs). The root of the tree is a BLOB called "meta.far" which
 contains metadata for the package, including a "meta/contents" file which
 contains references to the rest of the BLOBs. The BLOBs inside Fuchsia packages
 are **content-addressed**, meaning they are referenced using a hash of their
-contents. The content-address of the meta.far itself is known as the **package
+contents. The content address of the meta.far itself is known as the **package
 hash**.
 
 <aside class="key-point">
   </b>Merkle Roots</b>
-  <p>Content-addresses are computed as the root hash of a Merkle tree. This is
+  <p>Content addresses are computed as the root hash of a Merkle tree. This is
   a common technique for verifying the integrity of content in transit and on
   disk. This allows Fuchsia to verify the contents of an entire package using
   just the package hash!</p>
@@ -32,13 +32,13 @@ following two items:
 * `meta/package`: JSON file containing the package's identity information
   such as name and version.
 * `meta/contents`: A map of the human-readable file names in a package to
-  their content-addresses.
+  their content addresses.
 
 ![Diagram showing the contents of a Fuchsia package consisting of "meta.far"
 metadata and a collection of content BLOBs.](images/meta-far.png){: width="544"}
 
 If two or more packages share the same content (such as a library dependency,
-or font resource), their metadata will point to the same content-address for
+or font resource), their metadata will point to the same content address for
 that resource. This enables Fuchsia to optimize package distribution and
 storage by avoiding the need to fetch and save a content BLOB that already
 exists.
@@ -187,7 +187,7 @@ demand!
 
 Now that the `bouncing_ball` package has successfully been resolved, you can
 explore the package contents. Once resolved, the package is referenced on the
-target device using its content-address.
+target device using its content address.
 
 From the device shell prompt, use the `pkgctl get-hash` command to determine the
 package hash for `bouncing_ball`:
