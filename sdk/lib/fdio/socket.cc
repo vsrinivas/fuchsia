@@ -2073,6 +2073,28 @@ struct socket_with_event : public base_socket_with_event<T> {
 };
 
 template <>
+zx_status_t socket_with_event<RawSocket>::getsockopt(int level, int optname, void* optval,
+                                                     socklen_t* optlen, int16_t* out_code) {
+  SockOptResult result = [&]() {
+    switch (level) {
+      case SOL_IP:
+        switch (optname) {
+          case IP_HDRINCL: {
+            GetSockOptProcessor proc(optval, optlen);
+            return proc.Process(zxio_socket_with_event().client->GetIpHeaderIncluded(),
+                                [](const auto& response) { return response.value; });
+          }
+        }
+        break;
+    }
+    return BaseNetworkSocket(zxio_socket_with_event().client)
+        .getsockopt_fidl(level, optname, optval, optlen);
+  }();
+  *out_code = result.err;
+  return result.status;
+}
+
+template <>
 zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, const void* optval,
                                                      socklen_t optlen, int16_t* out_code) {
   SockOptResult result = [&]() {

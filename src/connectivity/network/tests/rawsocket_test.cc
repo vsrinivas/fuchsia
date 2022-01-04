@@ -465,8 +465,34 @@ TEST_P(RawSocketTest, SockOptSoType) {
   int opt;
   socklen_t optlen = sizeof(opt);
   ASSERT_EQ(getsockopt(fd().get(), SOL_SOCKET, SO_TYPE, &opt, &optlen), 0) << strerror(errno);
-  ASSERT_EQ(optlen, sizeof(int));
+  ASSERT_EQ(optlen, sizeof(opt));
   EXPECT_EQ(opt, SOCK_RAW);
+}
+
+TEST_P(RawSocketTest, SockOptIPHdrIncl) {
+  const auto& [family, protocol] = GetParam();
+
+  int opt;
+  socklen_t optlen = sizeof(opt);
+// TODO(https://fxbug.deb/90810): Don't support IP_HDRINCL on raw IPv6 sockets.
+#ifndef __Fuchsia__
+  if (family == AF_INET) {
+#endif  // __Fuchsia__
+    ASSERT_EQ(getsockopt(fd().get(), SOL_IP, IP_HDRINCL, &opt, &optlen), 0) << strerror(errno);
+    ASSERT_EQ(optlen, sizeof(opt));
+    EXPECT_EQ(opt, protocol == IPPROTO_RAW);
+
+    constexpr int yes = 1;
+    ASSERT_EQ(setsockopt(fd().get(), SOL_IP, IP_HDRINCL, &yes, sizeof(yes)), 0) << strerror(errno);
+    ASSERT_EQ(getsockopt(fd().get(), SOL_IP, IP_HDRINCL, &opt, &optlen), 0) << strerror(errno);
+    ASSERT_EQ(optlen, sizeof(opt));
+    EXPECT_EQ(opt, yes);
+#ifndef __Fuchsia__
+  } else {
+    ASSERT_EQ(getsockopt(fd().get(), SOL_IP, IP_HDRINCL, &opt, &optlen), -1);
+    EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
+  }
+#endif  // __Fuchsia__
 }
 
 INSTANTIATE_TEST_SUITE_P(AllRawSocketTests, RawSocketTest,
