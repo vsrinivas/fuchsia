@@ -34,8 +34,7 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
 }
 
 void InitializeCoordinator(Coordinator* coordinator) {
-  zx_status_t status = coordinator->InitCoreDevices(kSystemDriverPath);
-  ASSERT_OK(status);
+  coordinator->InitCoreDevices(kSystemDriverPath);
 
   // Add the driver we're using as platform bus
   load_driver(nullptr, kSystemDriverPath,
@@ -43,7 +42,7 @@ void InitializeCoordinator(Coordinator* coordinator) {
 
   // Initialize devfs.
   devfs_init(coordinator->root_device(), coordinator->dispatcher());
-  status = devfs_publish(coordinator->root_device(), coordinator->sys_device());
+  auto status = devfs_publish(coordinator->root_device(), coordinator->sys_device());
   ASSERT_OK(status);
   devfs_connect_diagnostics(coordinator->inspect_manager().diagnostics_client());
   coordinator->set_running(true);

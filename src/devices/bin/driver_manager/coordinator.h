@@ -182,10 +182,13 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   ~Coordinator();
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
-  zx_status_t InitCoreDevices(std::string_view sys_device_driver);
-  zx::status<> InitInspect();
-  bool InSuspend() const;
-  bool InResume() const;
+
+  // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
+  void LoadV1Drivers(std::string_view sys_device_driver,
+                     fbl::Vector<std::string>& driver_search_paths,
+                     fbl::Vector<const char*>& load_drivers);
+  void InitCoreDevices(std::string_view sys_device_driver);
+  void DriverAddedInit(Driver* drv, const char* version);
 
   // Start searching the system for non-boot drivers.
   // This will start a new thread to load non-boot drivers asynchronously.
@@ -193,9 +196,15 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   void BindFallbackDrivers();
   void AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers);
-  void BindDrivers();
   void DriverAdded(Driver* drv, const char* version);
-  void DriverAddedInit(Driver* drv, const char* version);
+
+  void Suspend(
+      uint32_t flags, SuspendCallback = [](zx_status_t status) {});
+  void Resume(
+      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
+  bool InSuspend() const;
+  bool InResume() const;
+
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
   const Driver* LibnameToDriver(std::string_view libname) const;
 
@@ -248,6 +257,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // is a driver bound to the device and the device is not allowed to be bound multiple times.
   zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
                          bool new_device);
+
+  void HandleNewDevice(const fbl::RefPtr<Device>& dev);
+
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
 
   struct LoadFirmwareResult {
@@ -269,8 +281,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
                                  fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
-  void HandleNewDevice(const fbl::RefPtr<Device>& dev);
-
   zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
                            fbl::RefPtr<DriverHost> target_driver_host);
   zx_status_t PrepareNewProxy(const fbl::RefPtr<Device>& dev,
@@ -282,7 +292,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   async_dispatcher_t* firmware_dispatcher() const { return firmware_dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
-  bool require_system() const { return config_.require_system; }
   SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
   SystemPowerState default_shutdown_system_state() const {
     return config_.default_shutdown_system_state;
@@ -311,31 +320,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
     return devices_;
   }
 
-  const fbl::RefPtr<Device>& root_device() { return root_device_; }
-  const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
-
-  zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
-
-  void Suspend(
-      uint32_t flags, SuspendCallback = [](zx_status_t status) {});
-
-  void Resume(
-      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
-
-  SuspendHandler& suspend_handler() { return suspend_handler_; }
-  const SuspendHandler& suspend_handler() const { return suspend_handler_; }
-
-  ResumeContext& resume_context() { return resume_context_; }
-  const ResumeContext& resume_context() const { return resume_context_; }
-
-  const Driver* fragment_driver() { return driver_loader_.LoadDriverUrl(GetFragmentDriverUrl()); }
-
-  InspectManager& inspect_manager() { return *inspect_manager_; }
-  DriverLoader& driver_loader() { return driver_loader_; }
-
-  const zx::vmo& mexec_kernel_zbi() const { return mexec_kernel_zbi_; }
-  const zx::vmo& mexec_data_zbi() const { return mexec_data_zbi_; }
-
   // This method is public only for the test suite.
   zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
 
@@ -359,11 +343,90 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
       fidl::ClientEnd<fuchsia_power_manager::DriverManagerRegistration> power_manager,
       fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> system_state_transition,
       fidl::ClientEnd<fuchsia_io::Directory> devfs, RegisterWithPowerManagerCompletion completion);
-  void ScheduleBaseDriverLoading();
 
   zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
 
+  const fbl::RefPtr<Device>& root_device() { return root_device_; }
+  const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
+
+  zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
+
+  SuspendHandler& suspend_handler() { return suspend_handler_; }
+  const SuspendHandler& suspend_handler() const { return suspend_handler_; }
+
+  ResumeContext& resume_context() { return resume_context_; }
+  const ResumeContext& resume_context() const { return resume_context_; }
+
+  const Driver* fragment_driver() { return driver_loader_.LoadDriverUrl(GetFragmentDriverUrl()); }
+
+  InspectManager& inspect_manager() { return *inspect_manager_; }
+  DriverLoader& driver_loader() { return driver_loader_; }
+
+  const zx::vmo& mexec_kernel_zbi() const { return mexec_kernel_zbi_; }
+  const zx::vmo& mexec_data_zbi() const { return mexec_data_zbi_; }
+
  private:
+  // fuchsia.driver.development/DriverDevelopment interface
+  void RestartDriverHosts(RestartDriverHostsRequestView request,
+                          RestartDriverHostsCompleter::Sync& completer) override;
+  void GetDriverInfo(GetDriverInfoRequestView request,
+                     GetDriverInfoCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoRequestView request,
+                     GetDeviceInfoCompleter::Sync& completer) override;
+
+  // fuchsia.device.manager/Administrator interface
+  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override;
+  void UnregisterSystemStorageForShutdown(
+      UnregisterSystemStorageForShutdownRequestView request,
+      UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
+
+  // fuchsia.device.manager/DebugDumper interface
+  void DumpTree(DumpTreeRequestView request, DumpTreeCompleter::Sync& completer) override;
+  void DumpDrivers(DumpDriversRequestView request, DumpDriversCompleter::Sync& completer) override;
+  void DumpBindingProperties(DumpBindingPropertiesRequestView request,
+                             DumpBindingPropertiesCompleter::Sync& completer) override;
+
+  void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
+  zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
+                                            const DriverLoader::MatchDeviceConfig& config);
+
+  // Given a device, return all of the Drivers whose bind programs match with the device.
+  // The returned vector is organized by priority, so if only one driver is being bound it
+  // should be the first in the vector.
+  // If `drvlibname` is not empty then the device will only be checked against the driver
+  // with that specific name.
+  zx::status<std::vector<MatchedDriver>> MatchDevice(const fbl::RefPtr<Device>& dev,
+                                                     std::string_view drvlibname);
+  zx_status_t MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
+                                  bool autobind);
+
+  zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
+      fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
+  zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
+      fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
+
+  // Driver registrar interface
+  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;
+
+  void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                  const zx_packet_signal_t* signal);
+  async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
+
+  void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
+  void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
+
+  void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
+
+  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
+
+  zx_status_t BindDriver(Driver* drv) {
+    return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));
+  }
+
+  // Schedule unbind and remove tasks for all devices in |driver_host|.
+  // Used as part of RestartDriverHosts().
+  void ScheduleUnbindRemoveAllDevices(fbl::RefPtr<DriverHost> driver_host);
+
   CoordinatorConfig config_;
   async_dispatcher_t* const dispatcher_;
   async_dispatcher_t* const firmware_dispatcher_;
@@ -404,76 +467,12 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
 
-  // Stashed mexec inputs.
-  zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
-
-  void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
-  zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                            const DriverLoader::MatchDeviceConfig& config);
-
-  // Given a device, return all of the Drivers whose bind programs match with the device.
-  // The returned vector is organized by priority, so if only one driver is being bound it
-  // should be the first in the vector.
-  // If `drvlibname` is not empty then the device will only be checked against the driver
-  // with that specific name.
-  zx::status<std::vector<MatchedDriver>> MatchDevice(const fbl::RefPtr<Device>& dev,
-                                                     std::string_view drvlibname);
-  zx_status_t MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                                  bool autobind);
-
-  zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
-      fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
-  zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
-      fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<Device>>& devices);
-
-  // fuchsia.driver.development/DriverDevelopment interface
-  void RestartDriverHosts(RestartDriverHostsRequestView request,
-                          RestartDriverHostsCompleter::Sync& completer) override;
-  void GetDriverInfo(GetDriverInfoRequestView request,
-                     GetDriverInfoCompleter::Sync& completer) override;
-  void GetDeviceInfo(GetDeviceInfoRequestView request,
-                     GetDeviceInfoCompleter::Sync& completer) override;
-
-  // fuchsia.device.manager/Administrator interface
-  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override;
-  void UnregisterSystemStorageForShutdown(
-      UnregisterSystemStorageForShutdownRequestView request,
-      UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
-
-  // fuchsia.device.manager/DebugDumper interface
-  void DumpTree(DumpTreeRequestView request, DumpTreeCompleter::Sync& completer) override;
-  void DumpDrivers(DumpDriversRequestView request, DumpDriversCompleter::Sync& completer) override;
-  void DumpBindingProperties(DumpBindingPropertiesRequestView request,
-                             DumpBindingPropertiesCompleter::Sync& completer) override;
-
-  // Driver registrar interface
-  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;
-
-  void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                  const zx_packet_signal_t* signal);
-  async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
-
   cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
       driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
 
-  void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
-  void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
-
-  void BuildSuspendList();
-  void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
-
-  std::unique_ptr<Driver> ValidateDriver(std::unique_ptr<Driver> drv);
-
-  zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
-
-  zx_status_t BindDriver(Driver* drv) {
-    return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));
-  }
-
-  // Schedule unbind and remove tasks for all devices in |driver_host|.
-  // Used as part of RestartDriverHosts().
-  void ScheduleUnbindRemoveAllDevices(fbl::RefPtr<DriverHost> driver_host);
+  // Stashed mexec inputs.
+  zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

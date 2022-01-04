@@ -189,18 +189,15 @@ TEST(MiscTestCase, InitCoreDevices) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
-
-  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
-  ASSERT_OK(status);
+  coordinator.InitCoreDevices(kSystemDriverPath);
 }
 
 TEST(MiscTestCase, DumpState) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   InspectManager inspect_manager(loop.dispatcher());
-  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
-  ASSERT_OK(status);
+  Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
+  coordinator.InitCoreDevices(kSystemDriverPath);
 
   constexpr int32_t kBufSize = 256;
   char buf[kBufSize + 1] = {0};
@@ -250,8 +247,7 @@ TEST(MiscTestCase, BindDrivers) {
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
-  ASSERT_OK(status);
+  coordinator.InitCoreDevices(kSystemDriverPath);
   coordinator.set_running(true);
 
   Driver* driver;
@@ -271,8 +267,7 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
   InspectManager inspect_manager(loop.dispatcher());
   Coordinator coordinator(NullConfig(), &inspect_manager, loop.dispatcher(), loop.dispatcher());
 
-  zx_status_t status = coordinator.InitCoreDevices(kSystemDriverPath);
-  ASSERT_OK(status);
+  coordinator.InitCoreDevices(kSystemDriverPath);
 
   // AttemptBind function that asserts it has only been called once
   class CallOnce {

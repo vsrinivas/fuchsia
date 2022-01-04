@@ -7,16 +7,12 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fidl/fuchsia.boot/cpp/wire.h>
-#include <fidl/fuchsia.device.manager/cpp/wire.h>
-#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.pkg/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
-#include <lib/async/cpp/wait.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
@@ -63,13 +59,10 @@
 #include <src/lib/fsl/vmo/sized_vmo.h>
 #include <src/lib/fsl/vmo/vector.h>
 
-#include "src/devices/bin/driver_manager/composite_device.h"
-#include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
-#include "src/devices/bin/driver_manager/vmo_writer.h"
 #include "src/devices/lib/log/log.h"
 
 namespace fio = fuchsia_io;
@@ -157,6 +150,56 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
 
 Coordinator::~Coordinator() {}
 
+void Coordinator::LoadV1Drivers(std::string_view sys_device_driver,
+                                fbl::Vector<std::string>& driver_search_paths,
+                                fbl::Vector<const char*>& load_drivers) {
+  InitCoreDevices(sys_device_driver);
+
+  // Load the drivers.
+  for (const std::string& path : driver_search_paths) {
+    find_loadable_drivers(boot_args(), path, fit::bind_member(this, &Coordinator::DriverAddedInit));
+  }
+  for (const char* driver : load_drivers) {
+    load_driver(boot_args(), driver, fit::bind_member(this, &Coordinator::DriverAddedInit));
+  }
+
+  PrepareProxy(sys_device_, nullptr);
+
+  // Bind all the drivers we loaded.
+  AddAndBindDrivers(std::move(drivers_));
+  DriverLoader::MatchDeviceConfig config;
+  BindAllDevicesDriverIndex(config);
+
+  // Bind the fallback drivers if we don't require the full system.
+  if (config_.require_system) {
+    LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
+  } else {
+    BindFallbackDrivers();
+  }
+
+  // Schedule the base drivers to load.
+  driver_loader_.WaitForBaseDrivers([this]() {
+    DriverLoader::MatchDeviceConfig config;
+    config.only_return_base_and_fallback_drivers = true;
+    BindAllDevicesDriverIndex(config);
+  });
+
+  devfs_publish(root_device_, sys_device_);
+}
+
+void Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
+  // If the sys device is not a path, then we try to load it like a URL.
+  if (sys_device_driver[0] != '/') {
+    auto string = std::string(sys_device_driver.data());
+    driver_loader_.LoadDriverUrl(string);
+  }
+
+  sys_device_ =
+      fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
+                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
+  sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
+}
+
 bool Coordinator::InSuspend() const { return suspend_handler().InSuspend(); }
 
 bool Coordinator::InResume() const {
@@ -220,21 +263,6 @@ void Coordinator::RegisterWithPowerManager(
         set_power_manager_registered(true);
         completion(ZX_OK);
       });
-}
-
-zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
-  // If the sys device is not a path, then we try to load it like a URL.
-  if (sys_device_driver[0] != '/') {
-    auto string = std::string(sys_device_driver.data());
-    driver_loader_.LoadDriverUrl(string);
-  }
-
-  sys_device_ =
-      fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
-                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
-  sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
-
-  return ZX_OK;
 }
 
 const Driver* Coordinator::LibnameToDriver(std::string_view libname) const {
@@ -1597,14 +1625,6 @@ void Coordinator::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfi
   }
 }
 
-void Coordinator::ScheduleBaseDriverLoading() {
-  driver_loader_.WaitForBaseDrivers([this]() {
-    DriverLoader::MatchDeviceConfig config;
-    config.only_return_base_and_fallback_drivers = true;
-    BindAllDevicesDriverIndex(config);
-  });
-}
-
 zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(
     const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) {
   if (dev->IsAlreadyBound()) {
@@ -1770,13 +1790,6 @@ void Coordinator::BindFallbackDrivers() {
   }
 
   AddAndBindDrivers(std::move(fallback_drivers_));
-}
-
-void Coordinator::BindDrivers() {
-  AddAndBindDrivers(std::move(drivers_));
-
-  DriverLoader::MatchDeviceConfig config;
-  BindAllDevicesDriverIndex(config);
 }
 
 // TODO(fxbug.dev/42257): Temporary helper to convert state to flags.

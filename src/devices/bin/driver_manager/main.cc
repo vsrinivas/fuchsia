@@ -377,33 +377,9 @@ int main(int argc, char** argv) {
       return status;
     }
 
-    status = coordinator.InitCoreDevices(driver_manager_args.sys_device_driver.c_str());
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
-      return status;
-    }
-
-    for (const std::string& path : driver_manager_args.driver_search_paths) {
-      find_loadable_drivers(coordinator.boot_args(), path,
-                            fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
-    }
-    for (const char* driver : driver_manager_args.load_drivers) {
-      load_driver(coordinator.boot_args(), driver,
-                  fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
-    }
-
-    coordinator.PrepareProxy(coordinator.sys_device(), nullptr);
-
-    // Initial bind attempt for drivers enumerated at startup.
-    coordinator.BindDrivers();
-    if (coordinator.require_system()) {
-      LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
-    } else {
-      coordinator.BindFallbackDrivers();
-    }
-    coordinator.ScheduleBaseDriverLoading();
-
-    devfs_publish(coordinator.root_device(), coordinator.sys_device());
+    coordinator.LoadV1Drivers(driver_manager_args.sys_device_driver.c_str(),
+                              driver_manager_args.driver_search_paths,
+                              driver_manager_args.load_drivers);
   } else {
     // V2 Drivers.
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
