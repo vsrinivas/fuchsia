@@ -19,15 +19,6 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   SystemDataUpdaterImpl(inspect::Node inspect_node, encoder::SystemDataInterface* system_data,
                         const std::string& cache_file_name_prefix);
 
-  // Resets Cobalt's view of the system-wide experiment state and replaces it
-  // with the given values.
-  //
-  // |experiments|  All experiments the device has a notion of and the
-  // arms the device belongs to for each of them. These are the only
-  // experiments the device can collect data for.
-  void SetExperimentState(std::vector<fuchsia::cobalt::Experiment> experiments,
-                          SetExperimentStateCallback callback) override;
-
   void SetSoftwareDistributionInfo(fuchsia::cobalt::SoftwareDistributionInfo current_info,
                                    SetSoftwareDistributionInfoCallback callback) override;
 

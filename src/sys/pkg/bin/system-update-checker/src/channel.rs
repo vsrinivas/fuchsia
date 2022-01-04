@@ -487,7 +487,6 @@ mod tests {
                             *chan.lock() = (info.current_channel, info.current_realm);
                             responder.send(CobaltStatus::Ok).unwrap();
                         }
-                        _ => unreachable!(),
                     }
                 }
             })
@@ -596,7 +595,6 @@ mod tests {
                                         state.lock().call_count += 1;
                                         responder.send(status).unwrap();
                                     }
-                                    _ => unreachable!(),
                                 }
                             }
                         })
@@ -625,7 +623,6 @@ mod tests {
                                             state.lock().realm = info.current_realm;
                                             responder.send(CobaltStatus::Ok).unwrap();
                                         }
-                                        _ => unreachable!(),
                                     }
                                     }
                                 })

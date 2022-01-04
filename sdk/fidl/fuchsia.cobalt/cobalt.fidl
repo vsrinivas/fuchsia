@@ -623,14 +623,6 @@ protocol LoggerSimple {
 // SystemProfileUpdater Interface
 /////////////////////////////////////////////////////////////////////
 
-/// The state of a single experiment on a device or binary.
-type Experiment = struct {
-    /// The id of the experiment as defined by the A/B Experiment framework.
-    experiment_id uint64;
-    /// The id of the experiment arm as defined by the A/B Experiment framework.
-    arm_id uint32;
-};
-
 /// A collection of fields describing a system's software distribution.
 type SoftwareDistributionInfo = table {
     /// The channel that the device last used as an update source. This value
@@ -644,22 +636,10 @@ type SoftwareDistributionInfo = table {
 };
 
 /// The SystemDataUpdater interface allows callers to update the state of
-/// the System Data in Cobalt. This includes the SystemProfile and experiment
-/// state. The changes are global and affect all loggers running on the device.
+/// the SystemProfile in Cobalt. The changes are global and affect all loggers
+/// running on the device.
 @discoverable
 protocol SystemDataUpdater {
-    /// Resets Cobalt's view of the system-wide experiment state and replaces it
-    /// with the given values.
-    ///
-    /// `experiments`  All experiments the device has a notion of and the arms
-    /// the device belongs to for each of them. These are the only experiments
-    /// the device can collect data for.
-    SetExperimentState(struct {
-        experiments vector<Experiment>:MAX;
-    }) -> (struct {
-        status Status;
-    });
-
     /// Sets Cobalt's view of the system-wide distribution information replacing the
     /// existing values.
     ///

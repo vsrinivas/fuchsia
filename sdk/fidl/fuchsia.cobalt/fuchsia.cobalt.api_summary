@@ -26,9 +26,6 @@ union/member fuchsia.cobalt/EventPayload.fps float32
 union/member fuchsia.cobalt/EventPayload.int_histogram vector<fuchsia.cobalt/HistogramBucket>:500
 union/member fuchsia.cobalt/EventPayload.memory_bytes_used int64
 strict union fuchsia.cobalt/EventPayload
-struct/member fuchsia.cobalt/Experiment.arm_id uint32
-struct/member fuchsia.cobalt/Experiment.experiment_id uint64
-struct fuchsia.cobalt/Experiment
 struct/member fuchsia.cobalt/HistogramBucket.count uint64
 struct/member fuchsia.cobalt/HistogramBucket.index uint32
 struct fuchsia.cobalt/HistogramBucket
@@ -88,7 +85,6 @@ enum/member fuchsia.cobalt/Status.INVALID_ARGUMENTS 1
 enum/member fuchsia.cobalt/Status.OK 0
 enum/member fuchsia.cobalt/Status.SHUT_DOWN 4
 strict enum fuchsia.cobalt/Status int32
-protocol/member fuchsia.cobalt/SystemDataUpdater.SetExperimentState(vector<fuchsia.cobalt/Experiment> experiments) -> (fuchsia.cobalt/Status status)
 protocol/member fuchsia.cobalt/SystemDataUpdater.SetSoftwareDistributionInfo(fuchsia.cobalt/SoftwareDistributionInfo info) -> (fuchsia.cobalt/Status status)
 protocol fuchsia.cobalt/SystemDataUpdater
 union/member fuchsia.cobalt/Value.double_value float64

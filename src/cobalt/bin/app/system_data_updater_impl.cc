@@ -28,20 +28,6 @@ SystemDataUpdaterImpl::SystemDataUpdaterImpl(inspect::Node inspect_node,
   RestoreData();
 }
 
-void SystemDataUpdaterImpl::SetExperimentState(std::vector<fuchsia::cobalt::Experiment> experiments,
-                                               SetExperimentStateCallback callback) {
-  std::vector<Experiment> experiment_proto_vector;
-  for (const fuchsia::cobalt::Experiment& experiment_fidl : experiments) {
-    Experiment experiment_proto;
-    experiment_proto.set_experiment_id(experiment_fidl.experiment_id);
-    experiment_proto.set_arm_id(experiment_fidl.arm_id);
-    experiment_proto_vector.push_back(experiment_proto);
-  }
-
-  system_data_->SetExperimentState(std::move(experiment_proto_vector));
-  callback(FuchsiaStatus::OK);
-}
-
 void SystemDataUpdaterImpl::RestoreData() {
   std::string d = Restore(kChannelCacheFilenameSuffix);
   if (!d.empty()) {

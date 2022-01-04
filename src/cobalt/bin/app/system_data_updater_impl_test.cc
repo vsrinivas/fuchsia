@@ -20,7 +20,6 @@ namespace cobalt {
 
 using encoder::SystemData;
 using fidl::VectorPtr;
-using fuchsia::cobalt::ExperimentPtr;
 using fuchsia::cobalt::SoftwareDistributionInfo;
 using FuchsiaStatus = fuchsia::cobalt::Status;
 using fuchsia::cobalt::SystemDataUpdaterPtr;
@@ -79,26 +78,11 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
     return system_data_updater;
   }
 
-  const std::vector<Experiment>& experiments() {
-    return cobalt_app_->system_make_data().experiments();
-  }
-
   const std::string& channel() {
     return cobalt_app_->system_make_data().system_profile().channel();
   }
 
   const std::string& realm() { return cobalt_app_->system_make_data().system_profile().realm(); }
-
-  std::vector<fuchsia::cobalt::Experiment> ExperimentVectorWithIdAndArmId(int64_t experiment_id,
-                                                                          int64_t arm_id) {
-    std::vector<fuchsia::cobalt::Experiment> vector;
-
-    fuchsia::cobalt::Experiment experiment;
-    experiment.experiment_id = experiment_id;
-    experiment.arm_id = arm_id;
-    vector.push_back(experiment);
-    return vector;
-  }
 
   inspect::Hierarchy InspectHierarchy() {
     fpromise::result<inspect::Hierarchy> result =
@@ -110,47 +94,6 @@ class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<CobaltAppForTest> cobalt_app_;
 };
-
-TEST_F(SystemDataUpdaterImplTests, SetExperimentStateFromNull) {
-  int64_t kExperimentId = 1;
-  int64_t kArmId = 123;
-  SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
-
-  EXPECT_TRUE(experiments().empty());
-
-  system_data_updater->SetExperimentState(ExperimentVectorWithIdAndArmId(kExperimentId, kArmId),
-                                          [&](FuchsiaStatus s) {});
-
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(experiments().empty());
-  EXPECT_EQ(experiments().front().experiment_id(), kExperimentId);
-  EXPECT_EQ(experiments().front().arm_id(), kArmId);
-}
-
-TEST_F(SystemDataUpdaterImplTests, UpdateExperimentState) {
-  int64_t kInitialExperimentId = 1;
-  int64_t kInitialArmId = 123;
-  int64_t kUpdatedExperimentId = 1;
-  int64_t kUpdatedArmId = 123;
-  SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
-
-  system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kInitialExperimentId, kInitialArmId), [&](FuchsiaStatus s) {});
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(experiments().empty());
-  EXPECT_EQ(experiments().front().experiment_id(), kInitialExperimentId);
-  EXPECT_EQ(experiments().front().arm_id(), kInitialArmId);
-
-  system_data_updater->SetExperimentState(
-      ExperimentVectorWithIdAndArmId(kUpdatedExperimentId, kUpdatedArmId), [&](FuchsiaStatus s) {});
-  RunLoopUntilIdle();
-
-  EXPECT_FALSE(experiments().empty());
-  EXPECT_EQ(experiments().front().experiment_id(), kUpdatedExperimentId);
-  EXPECT_EQ(experiments().front().arm_id(), kUpdatedArmId);
-}
 
 TEST_F(SystemDataUpdaterImplTests, SetSoftwareDistributionInfo) {
   SystemDataUpdaterPtr system_data_updater = GetSystemDataUpdater();
