@@ -10,7 +10,7 @@
 set -e
 
 # Specify a simulated CIPD instance id for prebuilts
-AEMU_VERSION="git_revision:unknown"
+AEMU_VERSION="bid:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
 GRPCWEBPROXY_VERSION="git_revision:unknown"
 GRPCWEBPROXY_LABEL="$(echo "${GRPCWEBPROXY_VERSION}" | tr ':/' '_')"
@@ -245,7 +245,7 @@ INPUT
   sed -i'.bak' "s/ kill / fakekill /g" "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devshell/emu"
 
   # Create fake ZIP file download so femu.sh doesn't try to download it
-  touch "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${AEMU_LABEL}.zip"
+  touch "${FUCHSIA_WORK_DIR}/emulator/grpcwebproxy-${PLATFORM}-${GRPCWEBPROXY_LABEL}.zip"
 
   if is-mac; then
     # grpcwebproxy does not work on OSX, so check there is an error message
@@ -307,7 +307,7 @@ readonly EXPECTED_HELP="Usage: femu.sh
     ${BT_TEMP_DIR}/test-home/.ssh/fuchsia_authorized_keys, which is generated if needed.
   [--version <version>]
     Specify the CIPD version of AEMU to download.
-    Defaults to aemu.version file with git_revision:unknown
+    Defaults to aemu.version file with bid:unknown
   [--experiment-arm64]
     Override FUCHSIA_ARCH to arm64, instead of the default x64.
     This is required for *-arm64 system images, and is not auto detected.

@@ -217,7 +217,7 @@ impl VDLFiles {
                     .host_tools
                     .download_and_extract(
                         aemu_cipd_version.to_string(),
-                        "third_party/aemu".to_string(),
+                        "third_party/android/aemu/release".to_string(),
                     )?
                     .join("emulator"))
             }

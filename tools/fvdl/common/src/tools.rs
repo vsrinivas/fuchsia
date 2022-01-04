@@ -262,6 +262,10 @@ impl HostTools {
                 // "latest" and "integration" labels always point to the newest release.
                 // We cannot assume that the binary is the same as last fetched. Therefore
                 // we will always re-download and unzip when used.
+                //
+                // TODO(yuanzhi) When using fuchsia/third_party/android/aemu/release/...
+                // we no longer add "integration" ref to any cipd instances. Keeping the "integration" check
+                // for now for any backward compatibility we may have to support.
                 "latest" | "integration" => {
                     if cipd_zip.exists() {
                         remove_file(&cipd_zip)?;

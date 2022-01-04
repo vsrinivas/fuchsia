@@ -8,8 +8,8 @@
   </hooks>
   <packages>
     <package
-      name="fuchsia/third_party/aemu/${platform}"
-      version="git_revision:a123456789abcdef0123456789abcdef01234567"/>
+      name="fuchsia/third_party/android/aemu/release/${platform}"
+      version="bid:7927554"/>
     <package
       name="fuchsia/third_party/grpcwebproxy/${platform}"
       version="git_revision:b123456789abcdef0123456789abcdef01234567"/>

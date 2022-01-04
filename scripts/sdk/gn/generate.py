@@ -77,7 +77,7 @@ EXTRA_COPY = [
 # that ${platform} is actually part of the XML package name, so should
 # not be interpreted.
 EXTRA_PREBUILTS = {
-    'fuchsia/third_party/aemu/${platform}': 'aemu',
+    'fuchsia/third_party/android/aemu/release/${platform}': 'aemu',
     'fuchsia/third_party/grpcwebproxy/${platform}': 'grpcwebproxy',
     'fuchsia/vdl/${platform}': 'device_launcher',
 }

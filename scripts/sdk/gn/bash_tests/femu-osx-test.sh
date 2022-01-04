@@ -12,7 +12,7 @@ set -e
 # Initialize variables that need to be set before BT_SET_UP()
 
 # Specify a simulated CIPD instance id for prebuilts
-AEMU_VERSION="git_revision:unknown"
+AEMU_VERSION="bid:unknown"
 AEMU_LABEL="$(echo "${AEMU_VERSION}" | tr ':/' '_')"
 GRPCWEBPROXY_VERSION="git_revision:unknown"
 # Force mac-amd64 to test OSX on Linux

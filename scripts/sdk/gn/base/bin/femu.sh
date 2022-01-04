@@ -209,7 +209,7 @@ fi
 readonly PREBUILT_AEMU_DIR="${DOWNLOADS_DIR}/aemu-${ARCH}-${LABEL_AEMU}"
 
 download-extract-cipd \
-  "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/aemu/${ARCH}/+/${VER_AEMU}" \
+  "https://chrome-infra-packages.appspot.com/dl/fuchsia/third_party/android/aemu/release/${ARCH}/+/${VER_AEMU}" \
   "${PREBUILT_AEMU_DIR}"
 
 if (( ENABLE_GRPCWEBPROXY )); then
