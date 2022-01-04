@@ -277,7 +277,7 @@ class FakeEcam {
   void reset() {
     // Memset optimizations cause faults on uncached memory, so zero out
     // the memory by hand.
-    assert(mmio_->get_size() % ZX_PAGE_SIZE == 0);
+    assert(mmio_->get_size() % zx_system_get_page_size() == 0);
     assert(mmio_->get_size() % sizeof(uint64_t) == 0);
     assert(reinterpret_cast<uintptr_t>(mmio_->get()) % sizeof(uint64_t) == 0);
     for (size_t i = 0; i < mmio_->get_size(); i += sizeof(uint64_t)) {

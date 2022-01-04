@@ -23,7 +23,7 @@ class FakePci : public ddk::PciProtocol<FakePci> {
 
   zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res) {
     zx::vmo vmo;
-    if (auto status = zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo); status != ZX_OK) {
+    if (auto status = zx::vmo::create(zx_system_get_page_size(), 0, &vmo); status != ZX_OK) {
       return status;
     }
     out_res->handle = vmo.release();

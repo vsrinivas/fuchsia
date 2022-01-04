@@ -28,10 +28,10 @@ TEST(PciAllocationTest, BalancedAllocation) {
   FakePciroot* fake_impl = RetrieveFakeFromClient(client);
   PciRootAllocator root_alloc(client, PCI_ADDRESS_SPACE_MEMORY, false);
   {
-    auto alloc1 = root_alloc.Allocate(std::nullopt, ZX_PAGE_SIZE);
+    auto alloc1 = root_alloc.Allocate(std::nullopt, zx_system_get_page_size());
     EXPECT_TRUE(alloc1.is_ok());
     EXPECT_EQ(1, fake_impl->allocation_eps().size());
-    auto alloc2 = root_alloc.Allocate(1024, ZX_PAGE_SIZE);
+    auto alloc2 = root_alloc.Allocate(1024, zx_system_get_page_size());
     EXPECT_TRUE(alloc2.is_ok());
     EXPECT_EQ(2, fake_impl->allocation_eps().size());
   }
@@ -49,7 +49,7 @@ TEST(PciAllocationTest, VmoCreationFailure) {
   zx::vmo vmo;
   PciRootAllocator root(client, PCI_ADDRESS_SPACE_MEMORY, false);
   PciAllocator* root_ptr = &root;
-  auto alloc = root_ptr->Allocate(std::nullopt, ZX_PAGE_SIZE);
+  auto alloc = root_ptr->Allocate(std::nullopt, zx_system_get_page_size());
   EXPECT_TRUE(alloc.is_ok());
   EXPECT_OK(alloc->CreateVmObject(&vmo));
 }
