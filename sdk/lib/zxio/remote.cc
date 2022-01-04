@@ -1255,11 +1255,11 @@ uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t a
 }
 
 zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->Close();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->Close2();
   if (result.status() != ZX_OK) {
     return result.status();
   }
-  return result.Unwrap()->s;
+  return result->result.is_err() ? result->result.err() : ZX_OK;
 }
 
 zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle) {

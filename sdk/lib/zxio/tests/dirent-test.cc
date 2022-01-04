@@ -36,6 +36,11 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
     completer.Reply(ZX_OK);
   }
 
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+    num_close_.fetch_add(1);
+    completer.ReplySuccess();
+  }
+
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override {
     auto buffer_start = reinterpret_cast<uint8_t*>(buffer_);
     size_t actual = 0;

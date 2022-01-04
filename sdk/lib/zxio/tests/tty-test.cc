@@ -32,7 +32,7 @@ class WindowSizeTtyServer : public fuchsia_hardware_pty::testing::Device_TestBas
   }
 
   void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
-    completer.Reply({});
+    completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }

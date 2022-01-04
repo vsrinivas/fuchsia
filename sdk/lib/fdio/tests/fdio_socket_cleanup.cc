@@ -33,7 +33,7 @@ class Server final : public fuchsia_io::testing::Node_TestBase {
   }
 
   void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
-    EXPECT_OK(completer.Reply({}).status());
+    EXPECT_OK(completer.ReplySuccess().status());
     // FDIO expects the channel to be closed after replying.
     completer.Close(ZX_OK);
   }

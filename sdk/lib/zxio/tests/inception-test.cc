@@ -313,6 +313,11 @@ class TestServiceNodeServer : public fuchsia_io::testing::Node_TestBase {
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+    completer.ReplySuccess();
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
 };
 
 TEST(CreateWithInfo, Service) {
@@ -357,6 +362,11 @@ class TestTtyServer : public fuchsia_hardware_pty::testing::Device_TestBase {
 
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+    completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }

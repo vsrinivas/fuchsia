@@ -755,7 +755,7 @@ void DcIostate::Close(CloseRequestView request, CloseCompleter::Sync& completer)
 }
 
 void DcIostate::Close2(Close2RequestView request, Close2Completer::Sync& completer) {
-  completer.Reply({});
+  completer.ReplySuccess();
   completer.Close(ZX_OK);
 }
 

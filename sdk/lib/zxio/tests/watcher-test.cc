@@ -37,7 +37,7 @@ class Server final : public fuchsia_io::testing::Directory_TestBase {
   }
 
   void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
-    completer.ReplySuccess({});
+    completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 

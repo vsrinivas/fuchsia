@@ -37,6 +37,10 @@ class DatagramSocketServer final : public fuchsia_posix_socket::testing::Datagra
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
+    completer.ReplySuccess();
+    completer.Close(ZX_OK);
+  }
 };
 
 class DatagramSocketTest : public zxtest::Test {
@@ -125,6 +129,10 @@ class StreamSocketServer final : public fuchsia_posix_socket::testing::StreamSoc
 
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
     completer.Reply(ZX_OK);
+    completer.Close(ZX_OK);
+  }
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 };
@@ -224,6 +232,10 @@ class RawSocketServer final : public fuchsia_posix_socket_raw::testing::Socket_T
     completer.Reply(ZX_OK);
     completer.Close(ZX_OK);
   }
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    completer.ReplySuccess();
+    completer.Close(ZX_OK);
+  }
 };
 
 class RawSocketTest : public zxtest::Test {
@@ -315,6 +327,10 @@ class PacketSocketServer final : public fuchsia_posix_socket_packet::testing::So
 
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.Reply(ZX_OK);
+    completer.Close(ZX_OK);
+  }
+  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {
+    completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 };

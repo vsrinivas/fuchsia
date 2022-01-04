@@ -27,7 +27,7 @@ class CloseOnlyNodeServer : public fuchsia_io::testing::Node_TestBase {
 
   // Exercised by |zxio_close|.
   void Close2(Close2RequestView request, Close2Completer::Sync& completer) final {
-    completer.Reply({});
+    completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
   }
