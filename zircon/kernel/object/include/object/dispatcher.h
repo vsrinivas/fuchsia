@@ -173,7 +173,7 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
   // May only be called when |is_waitable| reports true.
   void Cancel(const Handle* handle);
 
-  // Like Cancel() but issued via via zx_port_cancel().
+  // Like Cancel() but issued via zx_port_cancel().
   //
   // Returns true if an observer was canceled.
   //
