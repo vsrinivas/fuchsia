@@ -602,7 +602,13 @@ class SyncToCommand:
         *args: Union[str, pathlib.Path],
         **kwargs,
     ) -> subprocess.CompletedProcess:
-        return self.run_command("jiri", "-color=always", *args, **kwargs)
+        # Prefer to run Jiri via $PATH so that logs are concise and don't
+        # include the full path to Jiri, but fall back to using Jiri from the
+        # local checkout if it's not on $PATH.
+        jiri_path = "jiri"
+        if not shutil.which(jiri_path):
+            jiri_path = os.path.join(self.fuchsia_dir, ".jiri_root", "bin", "jiri")
+        return self.run_command(jiri_path, "-color=always", *args, **kwargs)
 
     def confirm_ok_to_change_source_code(self) -> None:
         if self.dry_run:
