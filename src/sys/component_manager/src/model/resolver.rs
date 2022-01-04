@@ -313,6 +313,9 @@ impl From<fsys::ResolverError> for ResolverError {
             fsys::ResolverError::InvalidManifest => {
                 ResolverError::ManifestInvalid(anyhow::Error::from(RemoteError(err)).into())
             }
+            fsys::ResolverError::ConfigValuesNotFound => {
+                ResolverError::ConfigValuesIo(Status::NOT_FOUND)
+            }
         }
     }
 }

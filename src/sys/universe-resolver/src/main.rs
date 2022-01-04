@@ -70,7 +70,8 @@ async fn resolve_component(
     let package_dir = resolve_package(&package_url, package_resolver).await?;
 
     // Read the component manifest (.cm file) from the package directory.
-    let data = get_data_from_package_path(&package_dir, cm_path).await?;
+    let data =
+        get_data_from_package_path(&package_dir, cm_path, ResolverError::ManifestNotFound).await?;
     let raw_bytes = raw_bytes_from_data(&data)?;
 
     let decl: fdecl::Component = fidl::encoding::decode_persistent(&raw_bytes[..])
@@ -83,7 +84,14 @@ async fn resolve_component(
             fdecl::ConfigValueSource::PackagePath(path) => path,
             other => return Err(ResolverError::UnsupportedConfigStrategy(other.to_owned())),
         };
-        Some(get_data_from_package_path(&package_dir, &config_path).await?)
+        Some(
+            get_data_from_package_path(
+                &package_dir,
+                &config_path,
+                ResolverError::ConfigValuesNotFound,
+            )
+            .await?,
+        )
     } else {
         None
     };
@@ -107,10 +115,11 @@ async fn resolve_component(
 async fn get_data_from_package_path(
     package_dir: &DirectoryProxy,
     path: &str,
+    map_not_found_err: impl FnOnce(io_util::node::OpenError) -> ResolverError,
 ) -> Result<fmem::Data, ResolverError> {
     let file = io_util::directory::open_file(&package_dir, path, fio::OPEN_RIGHT_READABLE)
         .await
-        .map_err(|source| ResolverError::FileNotFound { source, path: path.to_owned() })?;
+        .map_err(map_not_found_err)?;
 
     let (status, buffer) =
         file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IoError)?;
@@ -169,12 +178,10 @@ enum ResolverError {
     Internal,
     #[error("invalid component URL: {}", .0)]
     InvalidUrl(#[from] PkgUrlParseError),
-    #[error("{path} not found: {source}")]
-    FileNotFound {
-        path: String,
-        #[source]
-        source: io_util::node::OpenError,
-    },
+    #[error("manifest not found: {_0}")]
+    ManifestNotFound(#[source] io_util::node::OpenError),
+    #[error("config values not found: {_0}")]
+    ConfigValuesNotFound(#[source] io_util::node::OpenError),
     #[error("package not found")]
     PackageNotFound,
     #[error("error reading {path}: {source}")]
@@ -206,7 +213,8 @@ impl From<ResolverError> for fsys::ResolverError {
         match err {
             ResolverError::Internal => fsys::ResolverError::Internal,
             ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
-            ResolverError::FileNotFound { .. } => fsys::ResolverError::ManifestNotFound,
+            ResolverError::ManifestNotFound { .. } => fsys::ResolverError::ManifestNotFound,
+            ResolverError::ConfigValuesNotFound { .. } => fsys::ResolverError::ConfigValuesNotFound,
             ResolverError::PackageNotFound => fsys::ResolverError::PackageNotFound,
             ResolverError::ReadFile { .. }
             | ResolverError::VmoFailure(_)
@@ -616,7 +624,7 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Err(ResolverError::FileNotFound { path, .. }) if path == "meta/test.cm"
+                Err(ResolverError::ManifestNotFound(..))
             );
         };
         join!(server, client);
@@ -715,7 +723,7 @@ mod tests {
             resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test_with_config.cm", &proxy)
                 .await
                 .unwrap_err(),
-            ResolverError::FileNotFound { path, .. } if path == "meta/test_with_config.cvf"
+            ResolverError::ConfigValuesNotFound(_)
         );
     }
 

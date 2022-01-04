@@ -53,4 +53,6 @@ type ResolverError = strict enum {
     RESOURCE_UNAVAILABLE = 8;
     /// The component manifest could not be parsed or it contained invalid configuration.
     INVALID_MANIFEST = 9;
+    /// The component specifies configuration fields but the values were not found.
+    CONFIG_VALUES_NOT_FOUND = 10;
 };
