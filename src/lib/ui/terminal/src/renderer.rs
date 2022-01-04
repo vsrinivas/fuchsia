@@ -21,12 +21,23 @@ use {
 };
 
 /// Returns the cell size given a cell height.
-pub fn cell_size_from_cell_height(height: f32) -> Size {
-    // Use half of cell height for cell width.
-    let width = height / 2.0;
+pub fn cell_size_from_cell_height(font_set: &FontSet, height: f32) -> Size {
+    let rounded_height = height.round();
 
-    // Round to the smallest size equal or greater.
-    Size::new(width, height).ceil()
+    // Use a cell width that matches the horizontal advance of character
+    // '0' as closely as possible. This minimizes the amount of horizontal
+    // stretching used for glyph outlines. Fallback to half of cell height
+    // if glyph '0' is missing.
+    let face = &font_set.font.face;
+    let width = face.glyph_index('0').map_or(height / 2.0, |glyph_index| {
+        let ascent = face.ascender() as f32;
+        let descent = face.descender() as f32;
+        let horizontal_advance =
+            face.glyph_hor_advance(glyph_index).expect("glyph_hor_advance") as f32;
+        rounded_height * horizontal_advance / (ascent - descent)
+    });
+
+    Size::new(width.round(), rounded_height)
 }
 
 #[derive(Clone)]

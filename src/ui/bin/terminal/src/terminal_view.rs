@@ -219,7 +219,9 @@ impl TerminalViewAssistant {
             load_font(PathBuf::from(ITALIC_FONT)).expect("unable to load italic font data");
         let bold_italic_font = load_font(PathBuf::from(BOLD_ITALIC_FONT))
             .expect("unable to load bold italic font data");
-        let cell_size = cell_size_from_cell_height(FONT_SIZE);
+        let font_set =
+            FontSet::new(font, Some(bold_font), Some(italic_font), Some(bold_italic_font));
+        let cell_size = cell_size_from_cell_height(&font_set, FONT_SIZE);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents
             // the term from panicking if a byte is received before a resize event.
@@ -249,12 +251,7 @@ impl TerminalViewAssistant {
             terminal_scene,
             app_context,
             view_key,
-            font_set: FontSet::new(
-                font,
-                Some(bold_font),
-                Some(italic_font),
-                Some(bold_italic_font),
-            ),
+            font_set,
             font_size: FONT_SIZE,
             scene_details: None,
             spawn_command,
@@ -281,7 +278,7 @@ impl TerminalViewAssistant {
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
             let floored_size = new_size.floor();
             let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
-            let cell_size = cell_size_from_cell_height(self.font_size);
+            let cell_size = cell_size_from_cell_height(&self.font_set, self.font_size);
             let grid_size =
                 Size::new(term_size.width / cell_size.width, term_size.height / cell_size.height)
                     .floor();
@@ -584,7 +581,7 @@ impl ViewAssistant for TerminalViewAssistant {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
 
-            let cell_size = cell_size_from_cell_height(self.font_size);
+            let cell_size = cell_size_from_cell_height(&self.font_set, self.font_size);
             let terminal = builder.facet(Box::new(TerminalFacet::new(
                 self.font_set.clone(),
                 &cell_size,

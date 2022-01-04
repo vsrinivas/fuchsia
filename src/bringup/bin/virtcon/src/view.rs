@@ -232,7 +232,7 @@ impl VirtualConsoleViewAssistant {
 
     // Resize all terminals for 'new_size'.
     fn resize_terminals(&mut self, new_size: &Size, new_font_size: f32) {
-        let cell_size = cell_size_from_cell_height(new_font_size);
+        let cell_size = cell_size_from_cell_height(&self.font_set, new_font_size);
         let grid_size =
             Size::new(new_size.width / cell_size.width, new_size.height / cell_size.height).floor();
         // Clamp width to respect `MAX_CELLS`.
@@ -606,7 +606,7 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 let tab_width =
                     (columns as usize / (status.len() + 1)).clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
 
-                let cell_size = cell_size_from_cell_height(cell_height);
+                let cell_size = cell_size_from_cell_height(&self.font_set, cell_height);
 
                 // Add the text grid to the scene.
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
