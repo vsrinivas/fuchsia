@@ -205,17 +205,20 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t len) {
 
 int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 
-int netifc_open(const char* interface) {
+int netifc_open(cpp17::string_view interface) {
   std::lock_guard lock(g_state.eth_lock);
 
   fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device;
   // TODO: parameterize netsvc ethdir as well?
-  if (zx_status_t status =
-          netifc_discover("/dev/class/ethernet", interface,
-                          device.channel().reset_and_get_address(), g_state.netmac.x);
-      status != ZX_OK) {
-    printf("netifc: failed to discover interface %s\n", zx_status_get_string(status));
-    return -1;
+  {
+    zx::status status = netifc_discover("/dev/class/ethernet", interface);
+    if (status.is_error()) {
+      printf("netifc: failed to discover interface %s\n", status.status_string());
+      return -1;
+    }
+    auto& [dev, mac] = status.value();
+    device.channel() = std::move(dev);
+    g_state.netmac = mac;
   }
 
   // Allocate shareable ethernet buffer data heap.

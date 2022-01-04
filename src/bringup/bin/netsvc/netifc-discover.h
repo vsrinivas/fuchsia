@@ -2,14 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/types.h>
-
 #ifndef SRC_BRINGUP_BIN_NETSVC_NETIFC_DISCOVER_H_
 #define SRC_BRINGUP_BIN_NETSVC_NETIFC_DISCOVER_H_
 
-__BEGIN_CDECLS
-zx_status_t netifc_discover(const char* ethdir, const char* topological_path,
-                            zx_handle_t* interface, uint8_t netmac[6]);
-__END_CDECLS
+#include <lib/stdcompat/string_view.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/status.h>
+
+#include "src/bringup/bin/netsvc/inet6.h"
+
+struct DiscoveredInterface {
+  zx::channel chan;
+  mac_addr_t mac;
+};
+
+zx::status<DiscoveredInterface> netifc_discover(const std::string& ethdir,
+                                                cpp17::string_view topological_path);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_NETIFC_DISCOVER_H_

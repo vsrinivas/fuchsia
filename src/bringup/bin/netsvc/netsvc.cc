@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
   bool should_advertise = args.advertise;
   g_netbootloader = args.netboot;
   g_all_features = args.all_features;
-  const char* interface = args.interface.empty() ? nullptr : args.interface.c_str();
+  const std::string& interface = args.interface;
 
   if (g_netbootloader && !g_all_features) {
     printf("netsvc: fatal: --netboot requires --all-features\n");
@@ -140,8 +140,8 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  if (interface != nullptr) {
-    printf("netsvc: looking for interface %s\n", interface);
+  if (!interface.empty()) {
+    printf("netsvc: looking for interface %s\n", interface.c_str());
   }
 
   if (!should_advertise) {

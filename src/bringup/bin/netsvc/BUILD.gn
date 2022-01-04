@@ -216,22 +216,20 @@ source_set("inet6") {
 
 source_set("netifc-discover") {
   sources = [
+    "inet6.h",
     "netifc-discover.cc",
     "netifc-discover.h",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_llcpp",
     "//sdk/lib/fdio",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
   visibility = [
     ":*",
     "//src/bringup/bin/device-name-provider:*",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }

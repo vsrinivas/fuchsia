@@ -34,7 +34,7 @@ char* append_word(char* dest, uint16_t num, char sep) {
   return dest;
 }
 
-void device_id_get_words(unsigned char mac[6], char out[HOST_NAME_MAX]) {
+void device_id_get_words(const unsigned char mac[6], char out[HOST_NAME_MAX]) {
   char* dest = out;
   dest = append_word(dest, static_cast<uint16_t>(mac[0] | ((mac[4] << 8) & 0xF00)), '-');
   dest = append_word(dest, static_cast<uint16_t>(mac[1] | ((mac[5] << 8) & 0xF00)), '-');
@@ -61,7 +61,7 @@ char* append_hex(char* dest, uint16_t num, char sep) {
 #define PREFIX_LEN 9
 const char mac_prefix[PREFIX_LEN] = "fuchsia-";
 
-void device_id_get_mac(unsigned char mac[6], char out[HOST_NAME_MAX]) {
+void device_id_get_mac(const unsigned char mac[6], char out[HOST_NAME_MAX]) {
   char* dest = out;
   // Prepend with 'fs-'
   // Prepended with mac_prefix
@@ -74,7 +74,7 @@ void device_id_get_mac(unsigned char mac[6], char out[HOST_NAME_MAX]) {
   dest = append_hex(dest, static_cast<uint16_t>((mac[4] << 8) | mac[5]), 0);
 }
 
-void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX], uint32_t generation) {
+void device_id_get(const unsigned char mac[6], char out[HOST_NAME_MAX], uint32_t generation) {
   if (generation == 1) {
     device_id_get_mac(mac, out);
   } else {  // Style 0
@@ -110,16 +110,14 @@ int main(int argc, char** argv) {
   if (!args.nodename.empty()) {
     strlcpy(device_name, args.nodename.c_str(), sizeof(device_name));
   } else {
-    uint8_t mac[6];
-    const char* interface = args.interface.empty() ? nullptr : args.interface.c_str();
-    if ((err = netifc_discover(args.ethdir.c_str(), interface, nullptr, mac))) {
+    zx::status status = netifc_discover(args.ethdir, args.interface);
+    if (status.is_error()) {
       strlcpy(device_name, fuchsia_device::wire::kDefaultDeviceName, sizeof(device_name));
-      printf(
-          "device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %d: "
-          "%s\n",
-          device_name, args.ethdir.c_str(), err, strerror(errno));
+      printf("device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %s\n",
+             device_name, args.ethdir.c_str(), status.status_string());
     } else {
-      device_id_get(mac, device_name, args.namegen);
+      const auto& [dev, mac] = status.value();
+      device_id_get(mac.x, device_name, args.namegen);
       printf("device-name-provider: generated device name: %s\n", device_name);
     }
   }

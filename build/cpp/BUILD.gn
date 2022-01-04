@@ -25,7 +25,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/bringup/bin/bootsvc/integration_test:bootsvc-integration-test",
     "//src/bringup/bin/console-launcher:bin",
     "//src/bringup/bin/console-launcher:lib",
-    "//src/bringup/bin/netsvc:netifc-discover",
     "//src/bringup/bin/pwrbtn-monitor:pwrbtn-monitor",
     "//src/bringup/bin/svchost:crashsvc",
     "//src/bringup/bin/svchost:crashsvc-test",
