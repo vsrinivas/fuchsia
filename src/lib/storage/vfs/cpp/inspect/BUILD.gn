@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+static_library("inspect") {
+  public = [
+    "inspect_data.h",
+    "inspect_tree.h",
+  ]
+  sources = [
+    "inspect_data.cc",
+    "inspect_tree.cc",
+  ]
+  public_deps = [
+    "//src/lib/storage/block_client/cpp",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+test("inspect_unittests") {
+  output_name = "fs-inspect-unittests"
+  sources = [
+    "inspect_data_tests.cc",
+    "inspect_tree_tests.cc",
+  ]
+
+  deps = [
+    ":inspect",
+    "//sdk/lib/inspect/testing/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/block_client/cpp:fake_device",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("vfs-inspect-tests") {
+  deps = [ ":inspect_unittests" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":vfs-inspect-tests" ]
+}

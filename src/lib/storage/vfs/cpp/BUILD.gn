@@ -176,6 +176,7 @@ group("tests") {
     ":fs-inotify-test-pkg",
     ":fs-vnode-test",
     ":fs-vnode-test-pkg",
+    "inspect:tests",
     "journal:tests",
     "metrics:tests",
     "transaction:tests",
