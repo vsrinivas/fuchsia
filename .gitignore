@@ -108,6 +108,8 @@ tables_generator_tests_*.txt
 /third_party/jinja2/src
 !/third_party/nlassert/
 /third_party/nlassert/src
+!/third_party/openssl-ecjpake
+/third_party/openssl-ecjpake/src
 
 /tmp/
 /topaz/
