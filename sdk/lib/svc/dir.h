@@ -6,17 +6,19 @@
 #define LIB_SVC_DIR_H_
 
 #include <lib/async/dispatcher.h>
+#include <zircon/availability.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
 
-typedef void(svc_connector_t)(void* context, const char* service_name, zx_handle_t service_request);
+typedef void(svc_connector_t)(void* context, const char* service_name, zx_handle_t service_request)
+    ZX_AVAILABLE_SINCE(1);
 
-typedef struct svc_dir svc_dir_t;
+typedef struct svc_dir svc_dir_t ZX_AVAILABLE_SINCE(1);
 
 __EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t directory_request,
-                                    svc_dir_t** out_result);
+                                    svc_dir_t** out_result) ZX_AVAILABLE_SINCE(1);
 
 // Adds a service named |service_name| to the given |dir|.
 //
@@ -39,18 +41,19 @@ __EXPORT zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t 
 // ZX_ERR_ALREADY_EXISTS. If the provided |service_name| is invalid,
 // ZX_ERR_INVALID_ARGS is returned. Otherwise, this returns ZX_OK.
 __EXPORT zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,
-                                         void* context, svc_connector_t* handler);
+                                         void* context, svc_connector_t* handler)
+    ZX_AVAILABLE_SINCE(1);
 
 // Removes the service named |service_name| of type |type| from the
 // given |dir|. This reports a failure if the entry does not exist, by
 // returning ZX_ERR_NOT_FOUND. Otherwise, the service entry is
 // removed, and ZX_OK is returned.
 __EXPORT zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type,
-                                            const char* service_name);
+                                            const char* service_name) ZX_AVAILABLE_SINCE(1);
 
 // Destroy the provided directory. This currently cannot fail, and
 // returns ZX_OK.
-__EXPORT zx_status_t svc_dir_destroy(svc_dir_t* dir);
+__EXPORT zx_status_t svc_dir_destroy(svc_dir_t* dir) ZX_AVAILABLE_SINCE(1);
 
 __END_CDECLS
 
