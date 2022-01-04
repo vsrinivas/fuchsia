@@ -30,6 +30,7 @@
 #include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/engine/adapter-client.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
+#include "src/sys/fuzzing/framework/engine/coverage-client.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/mutagen.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
@@ -49,6 +50,7 @@ class RunnerImpl final : public Runner {
   ~RunnerImpl() override;
 
   void SetTargetAdapter(std::unique_ptr<TargetAdapterClient> target_adapter);
+  void SetCoverageProvider(std::unique_ptr<CoverageProviderClient> coverage_provider);
 
   // |Runner| method implementations.
   void AddDefaults(Options* options) override;
@@ -58,9 +60,6 @@ class RunnerImpl final : public Runner {
   Input GetDictionaryAsInput() const override;
   Status CollectStatus() override FXL_LOCKS_EXCLUDED(mutex_);
 
-  // Handle incoming |ProcessProxy| requests.
-  fidl::InterfaceRequestHandler<ProcessProxy> GetProcessProxyHandler();
-
   // Callback for signals received from the target adapter and process proxies that are used to
   // notify the runner that they have started or finished.
   bool OnSignal();
@@ -69,8 +68,8 @@ class RunnerImpl final : public Runner {
   // notify the runner that they have encountered an error. Error values are interpreted as:
   //   * 0: -          no error.
   //   * UINTPTR_MAX:  timeout
-  //   * other:        pointer to process proxy with error.
-  void OnError(uintptr_t error);
+  //   * other:        target_id of process proxy with error.
+  void OnError(uint64_t error);
 
   // Stages of stopping: close sources of new tasks, interrupt the current task, and join it.
   void Close() override { close_.Run(); }
@@ -186,19 +185,20 @@ class RunnerImpl final : public Runner {
   std::shared_ptr<Corpus> live_corpus_;
   Mutagen mutagen_;
 
-  // Interface to the target adapter.
+  // Interfaces to other components.
   std::unique_ptr<TargetAdapterClient> target_adapter_;
+  std::unique_ptr<CoverageProviderClient> coverage_provider_;
 
   // Feedback collection and analysis variables.
   std::shared_ptr<ModulePool> pool_;
   std::mutex mutex_;
-  std::vector<std::unique_ptr<ProcessProxyImpl>> proxies_ FXL_GUARDED_BY(mutex_);
-  std::atomic<size_t> pending_proxy_signals_ = 0;
+  std::unordered_map<uint64_t, std::unique_ptr<ProcessProxyImpl>> process_proxies_
+      FXL_GUARDED_BY(mutex_);
+  std::atomic<size_t> pending_signals_ = 0;
   SyncWait process_sync_;
 
-  // Represents the different types of fuzzing-ending errors. If an input results in multiple errors
-  // from different processes, only the first assignment is handled as the primary error.
-  std::atomic<uintptr_t> error_ = 0;
+  // The target ID of the process that caused an error, or a value reserved for timeouts.
+  std::atomic<uint64_t> error_ = kInvalidTargetId;
 
   RunOnce close_;
   RunOnce interrupt_;

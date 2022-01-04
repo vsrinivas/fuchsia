@@ -31,25 +31,21 @@ TEST_F(ProcessProxyTest, AddDefaults) {
 }
 
 TEST_F(ProcessProxyTest, Connect) {
-  ProcessProxyImpl impl(pool());
+  auto process_proxy = MakeProcessProxy();
 
   uint32_t runs = 1000;
   int64_t run_limit = 20;
   auto options1 = ProcessProxyTest::DefaultOptions();
   options1->set_runs(runs);
   options1->set_run_limit(run_limit);
-  impl.Configure(options1);
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
-  Options options2;
+  process_proxy->Configure(options1);
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), IgnoreTarget(), &options2), ZX_OK);
-  EXPECT_EQ(options2.runs(), runs);
-  EXPECT_EQ(options2.run_limit(), run_limit);
+  process_proxy->Connect(IgnoreAll());
 }
 
 TEST_F(ProcessProxyTest, AddFeedback) {
-  ProcessProxyImpl impl(pool());
+  auto process_proxy = MakeProcessProxy();
 
   FakeModule fake;
   fake[0] = 1;
@@ -57,20 +53,16 @@ TEST_F(ProcessProxyTest, AddFeedback) {
   fake[2] = 8;
   Module module(fake.counters(), fake.pcs(), fake.num_pcs());
 
-  Feedback feedback;
-  feedback.set_id(module.id());
-  feedback.set_inline_8bit_counters(module.Share());
-
-  auto proxy = Bind(&impl);
-  proxy->AddFeedback(std::move(feedback));
+  auto llvm_module = module.GetLlvmModule();
+  process_proxy->AddLlvmModule(std::move(llvm_module));
   auto* module_impl = pool()->Get(module.id(), fake.num_pcs());
   EXPECT_EQ(module_impl->Measure(), 3U);
 }
 
 TEST_F(ProcessProxyTest, SignalPeer) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   zx_signals_t observed;
   SyncWait sync;
   SignalCoordinator coordinator;
@@ -80,40 +72,41 @@ TEST_F(ProcessProxyTest, SignalPeer) {
     return true;
   });
 
-  auto proxy = Bind(&impl);
-  EXPECT_EQ(proxy->Connect(std::move(eventpair), IgnoreTarget(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreTarget(std::move(eventpair)));
+  sync.WaitFor("connection");
+  sync.Reset();
+  EXPECT_EQ(observed, kSync);
 
-  impl.Start(/* detect_leaks */ false);
+  process_proxy->Start(/* detect_leaks */ false);
   sync.WaitFor("start without leak detection");
   sync.Reset();
   EXPECT_EQ(observed, kStart);
 
-  impl.Start(/* detect_leaks */ true);
+  process_proxy->Start(/* detect_leaks */ true);
   sync.WaitFor("start with leak detection");
   sync.Reset();
   EXPECT_EQ(observed, kStartLeakCheck);
 
-  impl.Finish();
+  process_proxy->Finish();
   sync.WaitFor("finish");
   sync.Reset();
   EXPECT_EQ(observed, kFinish);
 }
 
 TEST_F(ProcessProxyTest, AwaitSignals) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
   SyncWait sync;
-  ProcessProxyImpl* failed_impl = nullptr;
-  impl.SetHandlers([&]() { sync.Signal(); },
-                   [&](ProcessProxyImpl* failed) {
-                     failed_impl = failed;
-                     sync.Signal();
-                   });
+  uint64_t target_id = kInvalidTargetId;
+  process_proxy->SetHandlers([&]() { sync.Signal(); },
+                             [&](uint64_t id) {
+                               target_id = id;
+                               sync.Signal();
+                             });
 
-  auto proxy = Bind(&impl);
   SignalCoordinator coordinator;
   auto eventpair = coordinator.Create([](zx_signals_t signals) { return true; });
-  EXPECT_EQ(proxy->Connect(std::move(eventpair), IgnoreTarget(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreTarget(std::move(eventpair)));
 
   sync.Reset();
   coordinator.SignalPeer(kStart);
@@ -122,23 +115,23 @@ TEST_F(ProcessProxyTest, AwaitSignals) {
   sync.Reset();
   coordinator.SignalPeer(kFinish);
   sync.WaitFor("finish without leaks");
+  EXPECT_FALSE(process_proxy->leak_suspected());
 
   sync.Reset();
   coordinator.SignalPeer(kFinishWithLeaks);
   sync.WaitFor("finish with leaks");
-  EXPECT_TRUE(impl.leak_suspected());
+  EXPECT_TRUE(process_proxy->leak_suspected());
 
   sync.Reset();
   coordinator.Reset();
   sync.WaitFor("leak detection");
-  EXPECT_EQ(failed_impl, &impl);
+  EXPECT_EQ(target_id, process_proxy->target_id());
 }
 
 TEST_F(ProcessProxyTest, GetStats) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
   zx::process spawned = target.Launch();
   zx_info_handle_basic_t basic_info;
@@ -153,9 +146,9 @@ TEST_F(ProcessProxyTest, GetStats) {
       spawned.get_info(ZX_INFO_TASK_RUNTIME, &task_runtime, sizeof(task_runtime), nullptr, nullptr),
       ZX_OK);
 
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), std::move(spawned), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(std::move(spawned)));
   ProcessStats stats;
-  impl.GetStats(&stats);
+  process_proxy->GetStats(&stats);
   EXPECT_EQ(stats.koid, basic_info.koid);
   EXPECT_GE(stats.mem_mapped_bytes, task_stats.mem_mapped_bytes);
   EXPECT_NE(stats.mem_private_bytes, 0U);
@@ -165,130 +158,119 @@ TEST_F(ProcessProxyTest, GetStats) {
 }
 
 TEST_F(ProcessProxyTest, DefaultBadMalloc) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultMallocExitcode);
-  EXPECT_EQ(impl.Join(), Result::BAD_MALLOC);
+  EXPECT_EQ(process_proxy->GetResult(), Result::BAD_MALLOC);
 }
 
 TEST_F(ProcessProxyTest, CustomBadMalloc) {
-  ProcessProxyImpl impl(pool());
+  auto process_proxy = MakeProcessProxy();
   int32_t exitcode = 1234;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_malloc_exitcode(exitcode);
-  impl.Configure(options);
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  process_proxy->Configure(options);
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(impl.Join(), Result::BAD_MALLOC);
+  EXPECT_EQ(process_proxy->GetResult(), Result::BAD_MALLOC);
 }
 
 TEST_F(ProcessProxyTest, DefaultDeath) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultDeathExitcode);
-  EXPECT_EQ(impl.Join(), Result::DEATH);
+  EXPECT_EQ(process_proxy->GetResult(), Result::DEATH);
 }
 
 TEST_F(ProcessProxyTest, CustomDeath) {
-  ProcessProxyImpl impl(pool());
+  auto process_proxy = MakeProcessProxy();
   int32_t exitcode = 4321;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_death_exitcode(exitcode);
-  impl.Configure(options);
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  process_proxy->Configure(options);
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(impl.Join(), Result::DEATH);
+  EXPECT_EQ(process_proxy->GetResult(), Result::DEATH);
 }
 
 TEST_F(ProcessProxyTest, Exit) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(1);
-  EXPECT_EQ(impl.Join(), Result::EXIT);
+  EXPECT_EQ(process_proxy->GetResult(), Result::EXIT);
 }
 
 TEST_F(ProcessProxyTest, DefaultLeak) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultLeakExitcode);
-  EXPECT_EQ(impl.Join(), Result::LEAK);
+  EXPECT_EQ(process_proxy->GetResult(), Result::LEAK);
 }
 
 TEST_F(ProcessProxyTest, CustomLeak) {
-  ProcessProxyImpl impl(pool());
+  auto process_proxy = MakeProcessProxy();
   int32_t exitcode = 5678309;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_leak_exitcode(exitcode);
-  impl.Configure(options);
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  process_proxy->Configure(options);
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(impl.Join(), Result::LEAK);
+  EXPECT_EQ(process_proxy->GetResult(), Result::LEAK);
 }
 
 TEST_F(ProcessProxyTest, DefaultOom) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(kDefaultOomExitcode);
-  EXPECT_EQ(impl.Join(), Result::OOM);
+  EXPECT_EQ(process_proxy->GetResult(), Result::OOM);
 }
 
 TEST_F(ProcessProxyTest, CustomOom) {
-  ProcessProxyImpl impl(pool());
+  auto process_proxy = MakeProcessProxy();
   int32_t exitcode = 24601;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_oom_exitcode(exitcode);
-  impl.Configure(options);
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  process_proxy->Configure(options);
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   target.Exit(exitcode);
-  EXPECT_EQ(impl.Join(), Result::OOM);
+  EXPECT_EQ(process_proxy->GetResult(), Result::OOM);
 }
 
 TEST_F(ProcessProxyTest, Timeout) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), target.Launch(), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(target.Launch()));
   constexpr size_t kBufSize = 1U << 20;
   auto buf = std::make_unique<char[]>(kBufSize);
   // On timeout, the runner invokes |ProcessProxyImpl::Dump|.
-  auto len = impl.Dump(buf.get(), kBufSize);
+  auto len = process_proxy->Dump(buf.get(), kBufSize);
   EXPECT_GT(len, 0U);
   EXPECT_LT(len, kBufSize);
-  impl.Kill();
 }
 
 }  // namespace

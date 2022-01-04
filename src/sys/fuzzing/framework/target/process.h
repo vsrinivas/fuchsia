@@ -11,6 +11,7 @@
 #include <stdint.h>
 
 #include <atomic>
+#include <limits>
 #include <mutex>
 #include <vector>
 
@@ -18,14 +19,19 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/sancov.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/target/module.h"
 #include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::Feedback;
+using ::fuchsia::fuzzer::InstrumentationSyncPtr;
 using ::fuchsia::fuzzer::Options;
-using ::fuchsia::fuzzer::ProcessProxySyncPtr;
+
+// Reserved target IDs. |kTimeoutTargetId| is a pseudo-ID used to signify a timeout across all
+// target processes rather than an error in a specific one.
+constexpr uint64_t kInvalidTargetId = std::numeric_limits<uint64_t>::min();
+constexpr uint64_t kTimeoutTargetId = std::numeric_limits<uint64_t>::max();
 
 // This class represents a target process being fuzzed. It is a singleton in each process, and its
 // methods are typically invoked through various callbacks.
@@ -64,20 +70,29 @@ class Process {
   // called once per process; subsequent calls will return immediately.
   static void InstallHooks();
 
-  // Connects to the engine. This should happen before main, typically as part of the singleton's
-  // constructor. This method can only be called once per object; subsequent calls will return
-  // immediately.
-  void Connect(ProcessProxySyncPtr&& proxy) FXL_LOCKS_EXCLUDED(mutex_);
+  // Connects to the |Coverage| component. This should happen before main, typically as part of the
+  // singleton's constructor. This method can only be called once per object; subsequent calls will
+  // return immediately.
+  void Connect(InstrumentationSyncPtr&& instrumentation) FXL_LOCKS_EXCLUDED(mutex_);
 
  private:
   // SignalCoordinator callback.
   bool OnSignal(zx_signals_t observed);
 
+  // Blocks until the engine signals it has added a process or module proxy for this object.
+  void AwaitSync();
+
   // Sends complete pending modules to the engine.
   void AddModulesLocked() FXL_REQUIRE(mutex_);
 
   // Update module counters.
-  void Update();
+  void UpdateModules();
+
+  // Clear module counters.
+  void ClearModules();
+
+  // Configures the target for leak detection, if available. See |DetectLeak| below for details.
+  void ConfigureLeakDetection();
 
   // Performs a leak check.
   //
@@ -101,12 +116,12 @@ class Process {
   // First call returns true if a sanitizer is present; all other calls return false.
   static bool AcquireCrashState();
 
-  ProcessProxySyncPtr proxy_;
+  InstrumentationSyncPtr instrumentation_;
   SignalCoordinator coordinator_;
+  SyncWait sync_;
 
   // Options provided by the engine.
   Options options_;
-  bool connected_ = false;
   bool can_detect_leaks_ = false;  // Is LSan available and is options.deteck_leaks == true?
   size_t malloc_limit_ = 0;
 

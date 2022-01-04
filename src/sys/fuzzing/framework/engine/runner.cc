@@ -12,15 +12,12 @@
 #include <deque>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/framework/target/process.h"
 
 namespace fuzzing {
-namespace {
 
+using ::fuchsia::fuzzer::CoverageEvent;
 using ::fuchsia::fuzzer::MAX_PROCESS_STATS;
-
-const uintptr_t kTimeout = std::numeric_limits<uintptr_t>::max();
-
-}  // namespace
 
 RunnerImpl::RunnerImpl()
     : close_([this] { CloseImpl(); }),
@@ -76,6 +73,9 @@ void RunnerImpl::ConfigureImpl(const std::shared_ptr<Options>& options) {
   mutagen_.Configure(options_);
   if (target_adapter_) {
     target_adapter_->Configure(options_);
+  }
+  if (coverage_provider_) {
+    coverage_provider_->Configure(options_);
   }
 }
 
@@ -469,10 +469,10 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     // Signal proxies that a run is about to begin.
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      pending_proxy_signals_ = proxies_.size();
+      pending_signals_ = process_proxies_.size();
       ResetSyncIfNoPendingError(&process_sync_);
-      for (auto& proxy : proxies_) {
-        proxy->Start(detect_leaks);
+      for (auto& process_proxy : process_proxies_) {
+        process_proxy.second->Start(detect_leaks);
       }
     }
     // Wait for the next input to be ready. If attempting to detect a leak, use the previous input.
@@ -486,7 +486,7 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
       }
     }
     // Wait for proxies to respond.
-    while (pending_proxy_signals_ != 0) {
+    while (pending_signals_ != 0) {
       process_sync_.WaitFor("processes to acknowledge start");
       has_error |= HasError(test_input);
     }
@@ -509,14 +509,14 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     // Signal proxies that a run has ended.
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      pending_proxy_signals_ = proxies_.size();
+      pending_signals_ = process_proxies_.size();
       ResetSyncIfNoPendingError(&process_sync_);
-      for (auto& proxy : proxies_) {
-        proxy->Finish();
+      for (auto& process_proxy : process_proxies_) {
+        process_proxy.second->Finish();
       }
     }
     // Wait for proxies to respond.
-    while (pending_proxy_signals_ != 0) {
+    while (pending_signals_ != 0) {
       process_sync_.WaitFor("processes to acknowledge finish");
       has_error |= HasError(test_input);
     }
@@ -539,8 +539,8 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     if (leak_detection_attempts && !detect_leaks) {
       // This is a first try, and leak detection is requested.
       std::lock_guard<std::mutex> lock(mutex_);
-      for (auto& proxy : proxies_) {
-        detect_leaks |= proxy->leak_suspected();
+      for (auto& process_proxy : process_proxies_) {
+        detect_leaks |= process_proxy.second->leak_suspected();
       }
     }
     // Inform the worker that it can analyze the feedback from last input now.
@@ -577,21 +577,46 @@ void RunnerImpl::SetTargetAdapter(std::unique_ptr<TargetAdapterClient> target_ad
   seed_corpus_->Load(seed_corpus_dirs);
 }
 
-fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler() {
-  return [this](fidl::InterfaceRequest<ProcessProxy> request) {
-    auto proxy = std::make_unique<ProcessProxyImpl>(pool_);
-    proxy->Bind(std::move(request));
-    proxy->Configure(options_);
-    {
-      std::lock_guard<std::mutex> lock(mutex_);
-      proxy->SetHandlers([this]() { OnSignal(); },
-                         [this](ProcessProxyImpl* exited) {
-                           auto error = reinterpret_cast<uintptr_t>(exited);
-                           OnError(error);
-                         });
-      proxies_.push_back(std::move(proxy));
+void RunnerImpl::SetCoverageProvider(std::unique_ptr<CoverageProviderClient> coverage_provider) {
+  FX_CHECK(options_);
+  FX_CHECK(!coverage_provider_);
+  coverage_provider_ = std::move(coverage_provider);
+  coverage_provider_->Configure(options_);
+  coverage_provider_->OnEvent([this](CoverageEvent event) {
+    auto target_id = event.target_id;
+    if (target_id == kInvalidTargetId || target_id == kTimeoutTargetId) {
+      FX_LOGS(ERROR) << "CoverageEvent with invalid target_id: " << target_id;
+      return;
     }
-  };
+    auto payload = std::move(event.payload);
+    if (payload.is_process_started()) {
+      auto instrumented = std::move(payload.process_started());
+      auto process_proxy = std::make_unique<ProcessProxyImpl>(target_id, pool_);
+      process_proxy->Configure(options_);
+      process_proxy->SetHandlers(
+          /* signal_handler */ [this]() { OnSignal(); },
+          /* error_handler */ [this](uint64_t target_id) { OnError(target_id); });
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        // This needs to be within the lock, since |OnError| may called as soon as |Connect| is
+        // called, and it will expect to find the |target_id| in |process_proxies_|.
+        process_proxy->Connect(std::move(instrumented));
+        process_proxies_[target_id] = std::move(process_proxy);
+      }
+    }
+    if (payload.is_llvm_module_added()) {
+      auto llvm_module = std::move(payload.llvm_module_added());
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto process_proxy = process_proxies_.find(target_id);
+        if (process_proxy == process_proxies_.end()) {
+          FX_LOGS(WARNING) << "CoverageEvent.LlvmModuleAdded: no such target_id: " << target_id;
+        } else {
+          process_proxy->second->AddLlvmModule(std::move(llvm_module));
+        }
+      }
+    }
+  });
 }
 
 ///////////////////////////////////////////////////////////////
@@ -599,8 +624,8 @@ fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler()
 
 bool RunnerImpl::OnSignal() {
   // "Normal" signals are received in response to signals sent to start or finish a run. |RunLoop|
-  // keeps track of how many of these signals are sent using |pending_proxy_signals_|.
-  auto pending = pending_proxy_signals_.fetch_sub(1);
+  // keeps track of how many of these signals are sent using |pending_signals_|.
+  auto pending = pending_signals_.fetch_sub(1);
   FX_DCHECK(pending);
   if (pending == 1) {
     process_sync_.Signal();
@@ -608,9 +633,10 @@ bool RunnerImpl::OnSignal() {
   return true;
 }
 
-void RunnerImpl::OnError(uintptr_t error) {
-  // Only the first proxy to detect an error awakens the |RunLoop|. Subsequent errors are dropped.
-  uintptr_t expected = 0;
+void RunnerImpl::OnError(uint64_t error) {
+  // Only the first process_proxy to detect an error awakens the |RunLoop|. Subsequent errors are
+  // dropped.
+  uint64_t expected = 0;
   if (error_.compare_exchange_strong(expected, error)) {
     target_adapter_->SetError();
     process_sync_.Signal();
@@ -627,41 +653,38 @@ void RunnerImpl::ResetSyncIfNoPendingError(SyncWait* sync) {
 
 bool RunnerImpl::HasError(const Input* last_input) {
   auto error = error_.load();
-  if (!error) {
+  if (error == kInvalidTargetId) {
     return false;
   }
   std::lock_guard<std::mutex> lock(mutex_);
-  if (error != kTimeout) {
+  if (error != kTimeoutTargetId) {
     // Almost every error causes the process to exit...
-    auto* exited = reinterpret_cast<ProcessProxyImpl*>(error);
-    set_result(exited->Join());
+    auto process_proxy = process_proxies_.find(error);
+    FX_CHECK(process_proxy != process_proxies_.end())
+        << "Received error from unknown target_id: " << error;
+    set_result(process_proxy->second->GetResult());
   } else {
     /// .. except for timeouts.
     set_result(Result::TIMEOUT);
     constexpr size_t kBufSize = 1ULL << 20;
     auto buf = std::make_unique<char[]>(kBufSize);
-    for (auto& proxy : proxies_) {
-      auto len = proxy->Dump(buf.get(), kBufSize);
+    for (auto& process_proxy : process_proxies_) {
+      auto len = process_proxy.second->Dump(buf.get(), kBufSize);
       __sanitizer_log_write(buf.get(), len);
     }
   }
-  // If it's an ignored exit(),just remove that one proxy and treat it like a signal.
+  // If it's an ignored exit(),just remove that one process_proxy and treat it like a signal.
   if (result() == Result::EXIT && !options_->detect_exits()) {
-    auto exited = reinterpret_cast<ProcessProxyImpl*>(error);
-    proxies_.erase(std::remove_if(proxies_.begin(), proxies_.end(),
-                                  [exited](const std::unique_ptr<ProcessProxyImpl>& proxy) {
-                                    return proxy.get() == exited;
-                                  }),
-                   proxies_.end());
+    process_proxies_.erase(error);
     ClearErrors();
-    if (pending_proxy_signals_) {
+    if (pending_signals_) {
       OnSignal();
     }
     return false;
   }
   // Otherwise, it's really an error. Remove the target adapter and all proxies.
   target_adapter_->Close();
-  proxies_.clear();
+  process_proxies_.clear();
   if (last_input) {
     set_result_input(*last_input);
   }
@@ -692,7 +715,7 @@ void RunnerImpl::Timer() {
       break;
     }
     if (run_deadline < zx::clock::get_monotonic()) {
-      OnError(kTimeout);
+      OnError(kTimeoutTargetId);
       timer_sync_.WaitFor("error to be handled");
     } else {
       timer_sync_.WaitUntil(run_deadline);
@@ -741,13 +764,13 @@ Status RunnerImpl::CollectStatus() {
   std::vector<ProcessStats> all_stats;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    all_stats.reserve(std::min<size_t>(proxies_.size(), MAX_PROCESS_STATS));
-    for (auto& proxy : proxies_) {
+    all_stats.reserve(std::min<size_t>(process_proxies_.size(), MAX_PROCESS_STATS));
+    for (auto& process_proxy : process_proxies_) {
       if (all_stats.size() == all_stats.capacity()) {
         break;
       }
       ProcessStats stats;
-      auto status = proxy->GetStats(&stats);
+      auto status = process_proxy.second->GetStats(&stats);
       if (status == ZX_OK) {
         all_stats.push_back(stats);
       } else {

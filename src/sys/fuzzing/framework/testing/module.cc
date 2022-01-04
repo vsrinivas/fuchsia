@@ -25,6 +25,13 @@ Identifier FakeFrameworkModule::id() const { return module_->id(); }
 
 Buffer FakeFrameworkModule::Share() { return module_->Share(); }
 
+LlvmModule FakeFrameworkModule::GetLlvmModule() {
+  LlvmModule llvm_module;
+  llvm_module.set_id(id());
+  llvm_module.set_inline_8bit_counters(Share());
+  return llvm_module;
+}
+
 void FakeFrameworkModule::Update() { module_->Update(); }
 
 void FakeFrameworkModule::Clear() { module_->Clear(); }

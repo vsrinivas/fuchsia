@@ -1,0 +1,111 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fuzzer;
+
+using fuchsia.mem;
+using zx;
+
+/// |LlvmModule|s are uniquely identified by a pair of 64 bit keys based on their PC tables.
+alias Identifier = array<uint64, 2>;
+
+/// Represents the code coverage information of an LLVM module.
+///
+/// Modules are the top level container of LLVM IR, and contains functions, variables, and other
+/// symbols. SanitizerCoverage is added as a transformation on LLVM IR, so its code coverage is
+/// associated with modules.
+type LlvmModule = resource table {
+    // Uniquely identifies the module. If the module is added more than once by different processes,
+    // the code counters are combined.
+    1: id Identifier;
+
+    /// The provided VMOs contain inline 8-bit code-coverage edge counters for an LLVM module.
+    /// See also:
+    ///     https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
+    2: inline_8bit_counters fuchsia.mem.Buffer;
+};
+
+/// Represents an instrumented target process under test.
+type InstrumentedProcess = resource table {
+    /// An eventpair used to synchronize the start and end of code coverage collection.
+    1: eventpair zx.handle:EVENTPAIR;
+
+    /// A handle that can be used to monitor the target process for errors.
+    2: process zx.handle:PROCESS;
+};
+
+/// Produces feedback for the fuzzing engine for an instrumented target process.
+///
+/// This protocol coordinates feedback collection and other diagnostics with target processes under
+/// test. The connection to the |Instrumentation| should be established very early in a target
+/// process's lifecycle.
+///
+/// The channel is closed on FIDL error. Clients should exit and not attempt to reconnect.
+@discoverable
+protocol Instrumentation {
+    /// Registers the instrumented target process.
+    ///
+    /// This method is called once per connection to set up the eventpair and process handle used by
+    /// the engine and target process to signal each other and to handle errors. It returns the
+    /// currently set options; see |Configure|.
+    ///
+    /// Certain options determine sanitizer behaviors before `main` is called, and cannot
+    /// subsequently be changed while the target process is running. This is the root cause of the
+    /// constraint in |Controller| against modifying options during "long-running workflows", i.e
+    /// those that spawn target processes.
+    ///
+    /// The channel is closed on FIDL error. Clients should not attempt to reconnect.
+    Initialize(resource struct {
+        instrumented InstrumentedProcess;
+    }) -> (struct {
+        options Options;
+    });
+
+    /// Adds an LLVM module from a target process for use in guiding fuzzing.
+    ///
+    /// It is an error to call this method without first calling |Initialize|.
+    ///
+    /// The channel is closed on FIDL error. Clients should not attempt to reconnect.
+    AddLlvmModule(resource struct {
+        llvm_module LlvmModule;
+    }) -> ();
+};
+
+/// Represents events related to adding target process code coverage.
+///
+/// Each target process has an associated target identifier, assigned to it by the coverage
+/// component and attached to its related events.
+///
+/// The first event for each target process will always be a single `process_started`. Target
+/// processes typically register their LLVM modules immediately after starting, although late
+/// registrations are possible as a result of calls like `dlopen()`.
+type CoverageEvent = resource struct {
+    target_id uint64;
+    payload flexible resource union {
+        /// An instrumented target process started.
+        1: process_started InstrumentedProcess;
+
+        /// A target process registered an LLVM module.
+        2: llvm_module_added LlvmModule;
+    };
+};
+
+/// Retrieves the feedback produced by instrumented target processes.
+///
+/// The fuzzing engine will use this protocol to retrieve the information added to the coverage
+/// component.
+@discoverable
+protocol CoverageProvider {
+    /// Copies the currently configured options from the engine to the coverage component. Target
+    /// processes will get a copy of these via |Instrumentation.Initialize|.
+    SetOptions(struct {
+        options Options;
+    });
+
+    /// Returns the next coverage event. This method is a "hanging get" and will wait for the next
+    /// event before returning
+    WatchCoverageEvent() -> (resource struct {
+        event CoverageEvent;
+    });
+};

@@ -16,6 +16,8 @@
 
 namespace fuzzing {
 
+using ::fuchsia::fuzzer::LlvmModule;
+
 // Wraps a |Module| and automatically provides fake counters and PC tables based on a seed value.
 class FakeFrameworkModule final : public FakeModule {
  public:
@@ -30,10 +32,10 @@ class FakeFrameworkModule final : public FakeModule {
 
   FakeFrameworkModule& operator=(FakeFrameworkModule&& other) noexcept;
 
+  // See corresponding |Module| methods.
   Identifier id() const;
-
-  // Methods for sharing counters, e.g. via |AddFeedback|.
   Buffer Share();
+  LlvmModule GetLlvmModule();
   void Update();
   void Clear();
 

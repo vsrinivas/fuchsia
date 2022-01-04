@@ -15,15 +15,14 @@ namespace {
 using ProcessProxyFatalTest = ProcessProxyTest;
 
 TEST_F(ProcessProxyFatalTest, Crash) {
-  ProcessProxyImpl impl(pool());
-  impl.Configure(ProcessProxyTest::DefaultOptions());
-  impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
-  auto proxy = Bind(&impl);
+  auto process_proxy = MakeProcessProxy();
+  process_proxy->Configure(ProcessProxyTest::DefaultOptions());
+  process_proxy->SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   TestTarget target;
   auto process = target.Launch();
-  EXPECT_EQ(proxy->Connect(IgnoreSentSignals(), std::move(process), IgnoreOptions()), ZX_OK);
+  process_proxy->Connect(IgnoreSentSignals(std::move(process)));
   target.Crash();
-  EXPECT_EQ(impl.Join(), Result::CRASH);
+  EXPECT_EQ(process_proxy->GetResult(), Result::CRASH);
 }
 
 }  // namespace

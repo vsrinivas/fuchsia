@@ -6,19 +6,20 @@
 #define SRC_SYS_FUZZING_FRAMEWORK_ENGINE_PROCESS_PROXY_TEST_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
+#include <stdint.h>
 
 #include <memory>
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
+#include "src/sys/fuzzing/framework/testing/process.h"
 #include "src/sys/fuzzing/framework/testing/target.h"
 
 namespace fuzzing {
-
-using ::fuchsia::fuzzer::ProcessProxySyncPtr;
 
 // Base class for ProcessProxy unit tests. This is in its own compilation unit so it can be used by
 // both the normal unit tests, and the unit tests that produce fatal logs.
@@ -31,23 +32,24 @@ class ProcessProxyTest : public ::testing::Test {
 
   std::shared_ptr<ModulePool> pool() const { return pool_; }
 
-  ProcessProxySyncPtr Bind(ProcessProxyImpl* impl);
+  std::unique_ptr<ProcessProxyImpl> MakeProcessProxy();
 
   static std::shared_ptr<Options> DefaultOptions();
 
-  zx::eventpair IgnoreSentSignals();
-  zx::process IgnoreTarget();
-  Options* IgnoreOptions();
+  InstrumentedProcess IgnoreSentSignals(zx::process&& process);
+  InstrumentedProcess IgnoreTarget(zx::eventpair&& eventpair);
+  InstrumentedProcess IgnoreAll();
+
+  void TearDown() override;
 
  private:
+  std::shared_ptr<Dispatcher> dispatcher_;
   std::shared_ptr<ModulePool> pool_;
-  SignalCoordinator coordinator_;
-  TestTarget target_;
-  Options ignored_;
+  FakeProcess process_;
 };
 
 void IgnoreReceivedSignals();
-void IgnoreErrors(ProcessProxyImpl* ignored);
+void IgnoreErrors(uint64_t ignored);
 
 }  // namespace fuzzing
 

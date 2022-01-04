@@ -22,37 +22,40 @@ bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
 
 void FakeProcessProxy::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
 
-ProcessProxySyncPtr FakeProcessProxy::Bind(bool disable_warnings) {
+InstrumentationSyncPtr FakeProcessProxy::Bind(bool disable_warnings) {
   if (disable_warnings) {
     options_->set_purge_interval(0);
     options_->set_malloc_limit(0);
   }
-  ProcessProxySyncPtr proxy;
-  auto request = proxy.NewRequest();
+  InstrumentationSyncPtr instrumentation;
+  auto request = instrumentation.NewRequest();
   binding_.Bind(std::move(request));
-  return proxy;
+  return instrumentation;
 }
 
-void FakeProcessProxy::Connect(zx::eventpair eventpair, zx::process process,
-                               ConnectCallback callback) {
-  coordinator_.Pair(std::move(eventpair));
+void FakeProcessProxy::Initialize(InstrumentedProcess instrumented, InitializeCallback callback) {
+  auto* eventpair = instrumented.mutable_eventpair();
+  coordinator_.Pair(std::move(*eventpair));
   zx_info_handle_basic_t info;
-  auto status = process.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  auto status =
+      instrumented.process().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   process_koid_ = info.koid;
   callback(CopyOptions(*options_));
+  coordinator_.SignalPeer(kSync);
 }
 
-void FakeProcessProxy::AddFeedback(Feedback feedback, AddFeedbackCallback callback) {
+void FakeProcessProxy::AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallback callback) {
   SharedMemory counters;
-  auto* buffer = feedback.mutable_inline_8bit_counters();
-  counters.LinkMirrored(std::move(*buffer));
-  auto id = feedback.id();
+  auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
+  counters.LinkMirrored(std::move(*inline_8bit_counters));
+  auto id = llvm_module.id();
   ids_[id[0]] = id[1];
   auto* module = pool_->Get(id, counters.size());
   module->Add(counters.data(), counters.size());
   counters_.push_back(std::move(counters));
   callback();
+  coordinator_.SignalPeer(kSync);
 }
 
 }  // namespace fuzzing

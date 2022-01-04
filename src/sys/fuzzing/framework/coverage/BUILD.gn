@@ -1,0 +1,64 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_component.gni")
+
+source_set("coverage-lib") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [
+    "event-queue.cc",
+    "event-queue.h",
+    "forwarder.cc",
+    "forwarder.h",
+    "instrumentation.cc",
+    "instrumentation.h",
+    "provider.cc",
+    "provider.h",
+  ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/framework/target:no_hooks",
+    "//zircon/system/ulib/sync",
+  ]
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+  ]
+}
+
+executable("coverage-bin") {
+  output_name = "component_fuzzing_provider"
+  testonly = true
+  sources = [ "coverage-main.cc" ]
+  deps = [ ":coverage-lib" ]
+}
+
+fuchsia_component("coverage") {
+  testonly = true
+  manifest = "../meta/coverage.cml"
+  deps = [ ":coverage-bin" ]
+}
+
+# Tests and test support.
+
+source_set("unittests") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [
+    "event-queue-unittest.cc",
+    "forwarder-unittest.cc",
+    "instrumentation-unittest.cc",
+    "provider-unittest.cc",
+  ]
+  deps = [
+    ":coverage-lib",
+    "../testing",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -17,7 +17,7 @@ class InstrumentedProcess : public Process {
   InstrumentedProcess() {
     Process::InstallHooks();
     auto svc = sys::ServiceDirectory::CreateFromNamespace();
-    ProcessProxySyncPtr proxy;
+    InstrumentationSyncPtr proxy;
     svc->Connect(proxy.NewRequest());
     Process::Connect(std::move(proxy));
   }

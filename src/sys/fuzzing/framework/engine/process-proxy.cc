@@ -13,25 +13,34 @@
 
 namespace fuzzing {
 
-// Public methods.
-
-ProcessProxyImpl::ProcessProxyImpl(const std::shared_ptr<ModulePool>& pool)
-    : binding_(this), pool_(std::move(pool)) {}
+ProcessProxyImpl::ProcessProxyImpl(uint64_t target_id, const std::shared_ptr<ModulePool>& pool)
+    : target_id_(target_id), pool_(std::move(pool)) {}
 
 ProcessProxyImpl::~ProcessProxyImpl() {
-  // Ensure the channel will close by killing the attached process.
-  Kill();
+  // Prevent new signals and/or errors.
+  closed_ = true;
+  coordinator_.Reset();
+  // Interrupt associated workflows.
+  process_.kill();
+  exception_channel_.reset();
+  // ...and join them.
+  Waiter waiter = [this](zx::time deadline) {
+    return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
+  };
+  WaitFor("process to terminate", &waiter);
+  if (exception_thread_.joinable()) {
+    exception_thread_.join();
+  }
   // Deregister this object's shared memory objects from the module pool.
   for (auto& kv : modules_) {
     auto* module_proxy = kv.first;
     auto& counters = kv.second;
     module_proxy->Remove(counters.data());
   }
-  exception_channel_.reset();
-  if (exception_thread_.joinable()) {
-    exception_thread_.join();
-  }
 }
+
+///////////////////////////////////////////////////////////////
+// Configuration methods
 
 void ProcessProxyImpl::AddDefaults(Options* options) {
   if (!options->has_malloc_exitcode()) {
@@ -57,43 +66,25 @@ void ProcessProxyImpl::SetHandlers(SignalHandler on_signal, ErrorHandler on_erro
   on_error_ = std::move(on_error);
 }
 
-void ProcessProxyImpl::Bind(fidl::InterfaceRequest<ProcessProxy> request) {
-  binding_.Bind(std::move(request));
-}
-
-void ProcessProxyImpl::Connect(zx::eventpair eventpair, zx::process process,
-                               ConnectCallback callback) {
+void ProcessProxyImpl::Connect(InstrumentedProcess instrumented) {
+  if (closed_) {
+    return;
+  }
   FX_DCHECK(options_);
   FX_DCHECK(on_signal_);
   FX_DCHECK(on_error_);
-  // Wire up signal forwarders.
-  coordinator_.Pair(std::move(eventpair), [this](zx_signals_t observed) {
-    switch (observed) {
-      case kStart:
-        break;
-      case kFinish:
-        leak_suspected_ = false;
-        break;
-      case kFinishWithLeaks:
-        leak_suspected_ = true;
-        break;
-      default:
-        // If the peer exits, invoke the error handler.
-        on_error_(this);
-        return false;
-    }
-    on_signal_();
-    return true;
-  });
-  process_ = std::move(process);
-  // Start crash handler.
+  // Create exception channel. Do this before starting the signal handler in case it errors
+  // immediately.
+  auto* process = instrumented.mutable_process();
+  process_ = std::move(*process);
   auto status = process_.create_exception_channel(0, &exception_channel_);
   if (status != ZX_OK) {
-    FX_LOGS(FATAL) << "Failed to create exception channel: " << zx_status_get_string(status);
+    // The process already crashed!
+    FX_CHECK(status == ZX_ERR_BAD_STATE);
+    result_ = Result::CRASH;
   }
-  if (exception_thread_.joinable()) {
-    exception_thread_.join();
-  }
+  // Start crash handler.
+  FX_CHECK(!exception_thread_.joinable());
   exception_thread_ = std::thread([this]() {
     zx_exception_info_t info;
     zx::exception exception;
@@ -104,30 +95,55 @@ void ProcessProxyImpl::Connect(zx::eventpair eventpair, zx::process process,
         exception_channel_.read(0, &info, exception.reset_and_get_address(), sizeof(info), 1,
                                 nullptr, nullptr) != ZX_OK) {
       // Process exited and channel was closed before or during the wait and/or read.
+      // |GetResult| will attempt to determine the reason using the exitcode.
       return;
     }
     result_ = Result::CRASH;
   });
-  // Send options in response.
-  auto options = CopyOptions(*options_);
-  callback(std::move(options));
+  // Wire up signal forwarders.
+  auto* eventpair = instrumented.mutable_eventpair();
+  coordinator_.Pair(std::move(*eventpair), [this](zx_signals_t observed) {
+    switch (observed) {
+      case kStart:
+        break;
+      case kFinish:
+        leak_suspected_ = false;
+        break;
+      case kFinishWithLeaks:
+        leak_suspected_ = true;
+        break;
+      default:
+        if (closed_) {
+          // no-op
+        } else if (observed & ZX_EVENTPAIR_PEER_CLOSED) {
+          // If the peer exits, invoke the error handler.
+          on_error_(target_id_);
+        } else {
+          FX_LOGS(ERROR) << "ProcessProxy received unknown signal: 0x" << std::hex << observed;
+        }
+        return false;
+    }
+    on_signal_();
+    return true;
+  });
+  coordinator_.SignalPeer(kSync);
 }
 
-void ProcessProxyImpl::AddFeedback(Feedback feedback, AddFeedbackCallback callback) {
-  if (!feedback.has_id()) {
-    FX_LOGS(FATAL) << "Feedback is missing identifier.";
-  }
-  if (!feedback.has_inline_8bit_counters()) {
-    FX_LOGS(FATAL) << "Feedback is missing inline 8-bit counters.";
+void ProcessProxyImpl::AddLlvmModule(LlvmModule llvm_module) {
+  if (closed_) {
+    return;
   }
   SharedMemory counters;
-  auto* buffer = feedback.mutable_inline_8bit_counters();
-  counters.LinkMirrored(std::move(*buffer));
-  auto* module_proxy = pool_->Get(feedback.id(), counters.size());
+  auto* inline_8bit_counters = llvm_module.mutable_inline_8bit_counters();
+  counters.LinkMirrored(std::move(*inline_8bit_counters));
+  auto* module_proxy = pool_->Get(llvm_module.id(), counters.size());
   module_proxy->Add(counters.data(), counters.size());
   modules_[module_proxy] = std::move(counters);
-  callback();
+  coordinator_.SignalPeer(kSync);
 }
+
+///////////////////////////////////////////////////////////////
+// Run-related methods
 
 void ProcessProxyImpl::Start(bool detect_leaks) {
   leak_suspected_ = false;
@@ -136,8 +152,39 @@ void ProcessProxyImpl::Start(bool detect_leaks) {
 
 void ProcessProxyImpl::Finish() { coordinator_.SignalPeer(kFinish); }
 
+///////////////////////////////////////////////////////////////
+// Status-related methods.
+
 zx_status_t ProcessProxyImpl::GetStats(ProcessStats* out) {
   return GetStatsForProcess(process_, out);
+}
+
+Result ProcessProxyImpl::GetResult() {
+  FX_DCHECK(options_);
+  Waiter waiter = [this](zx::time deadline) {
+    return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
+  };
+  auto status = WaitFor("process to terminate", &waiter);
+  FX_CHECK(status == ZX_OK) << "failed to terminate process: " << zx_status_get_string(status);
+  zx_info_process_t info;
+  status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+  FX_CHECK(status == ZX_OK) << "failed to get process info: " << zx_status_get_string(status);
+  FX_CHECK(info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
+  Result result = Result::NO_ERRORS;
+  if (info.return_code == options_->malloc_exitcode()) {
+    result = Result::BAD_MALLOC;
+  } else if (info.return_code == options_->death_exitcode()) {
+    result = Result::DEATH;
+  } else if (info.return_code == options_->leak_exitcode()) {
+    result = Result::LEAK;
+  } else if (info.return_code == options_->oom_exitcode()) {
+    result = Result::OOM;
+  } else if (info.return_code != 0) {
+    result = Result::EXIT;
+  }
+  // Set the result, unless it was already set.
+  Result previous = Result::NO_ERRORS;
+  return result_.compare_exchange_strong(previous, result) ? result : previous;
 }
 
 size_t ProcessProxyImpl::Dump(void* buf, size_t size) {
@@ -153,36 +200,6 @@ size_t ProcessProxyImpl::Dump(void* buf, size_t size) {
   fclose(out);
   str[size - 1] = 0;
   return strlen(str);
-}
-
-void ProcessProxyImpl::Kill() { process_.kill(); }
-
-Result ProcessProxyImpl::Join() {
-  FX_DCHECK(options_);
-  Waiter waiter = [this](zx::time deadline) {
-    return process_.wait_one(ZX_PROCESS_TERMINATED, deadline, nullptr);
-  };
-  auto status = WaitFor("process to terminate", &waiter);
-  FX_CHECK(status == ZX_OK) << "failed to terminate process: " << zx_status_get_string(status);
-  zx_info_process_t info;
-  status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-  FX_CHECK(status == ZX_OK) << "failt to get process info: " << zx_status_get_string(status);
-  FX_CHECK(info.flags & ZX_INFO_PROCESS_FLAG_EXITED);
-  if (result_ != Result::NO_ERRORS) {
-    return result_;
-  }
-  if (info.return_code == options_->malloc_exitcode()) {
-    result_ = Result::BAD_MALLOC;
-  } else if (info.return_code == options_->death_exitcode()) {
-    result_ = Result::DEATH;
-  } else if (info.return_code == options_->leak_exitcode()) {
-    result_ = Result::LEAK;
-  } else if (info.return_code == options_->oom_exitcode()) {
-    result_ = Result::OOM;
-  } else if (info.return_code != 0) {
-    result_ = Result::EXIT;
-  }
-  return result_;
 }
 
 }  // namespace fuzzing

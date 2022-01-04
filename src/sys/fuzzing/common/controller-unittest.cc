@@ -21,7 +21,6 @@ namespace fuzzing {
 namespace {
 
 using fuchsia::fuzzer::ControllerSyncPtr;
-using fuchsia::fuzzer::ProcessProxySyncPtr;
 using fuchsia::fuzzer::UpdateReason;
 
 // Test fixtures.

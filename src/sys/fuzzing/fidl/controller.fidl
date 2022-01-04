@@ -179,8 +179,8 @@ protocol Controller {
     /// Runs the normal fuzzing feedback loop:
     ///   1. Selects an input from the corpus.
     ///   2. Mutates the input.
-    ///   3. Uses the |Adapter| to execute the input.
-    ///   4. Checks feedback from |ProcessProxies|.
+    ///   3. Uses the |TargetAdapter| to execute the input.
+    ///   4. Checks feedback from the |InstrumentedProcesses|.
     ///   5. If the input produced useful feedback, adds it to the corpus.
     ///
     /// This loop continues until one of three conditions is met:

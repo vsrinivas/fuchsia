@@ -29,7 +29,6 @@ using ::fuchsia::fuzzer::Controller;
 using ::fuchsia::fuzzer::CorpusReader;
 using ::fuchsia::fuzzer::CorpusReaderSyncPtr;
 using ::fuchsia::fuzzer::Monitor;
-using ::fuchsia::fuzzer::ProcessProxy;
 using ::fuchsia::fuzzer::TargetAdapter;
 
 using CorpusType = ::fuchsia::fuzzer::Corpus;

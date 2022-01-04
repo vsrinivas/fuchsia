@@ -9,9 +9,10 @@ fidl("fuchsia.fuzzer") {
     "adapter.fidl",
     "controller.fidl",
     "corpus.fidl",
+    "coverage.fidl",
     "manager.fidl",
     "options.fidl",
-    "process.fidl",
+    "overview.fidl",
     "registry.fidl",
     "status.fidl",
   ]

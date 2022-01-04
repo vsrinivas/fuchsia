@@ -34,6 +34,11 @@ source_set("no_hooks") {
   ]
 }
 
+source_set("main-wrapper") {
+  testonly = true
+  sources = [ "main-wrapper.cc" ]
+}
+
 source_set("unittests") {
   visibility = [ "../*" ]
   testonly = true

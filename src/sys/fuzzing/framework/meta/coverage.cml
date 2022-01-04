@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/component_fuzzing_coverage",
+    },
+    capabilities: [
+        { protocol: "fuchsia.fuzzer.Instrumentation" },
+        { protocol: "fuchsia.fuzzer.CoverageProvider" },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.fuzzer.Instrumentation" ],
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.fuzzer.CoverageProvider" ],
+            from: "self",
+        },
+    ],
+}

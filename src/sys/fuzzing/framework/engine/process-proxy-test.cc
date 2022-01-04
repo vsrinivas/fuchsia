@@ -4,14 +4,17 @@
 
 #include "src/sys/fuzzing/framework/engine/process-proxy-test.h"
 
+#include "src/sys/fuzzing/framework/target/process.h"
+
 namespace fuzzing {
 
-void ProcessProxyTest::SetUp() { pool_ = std::make_shared<ModulePool>(); }
+void ProcessProxyTest::SetUp() {
+  dispatcher_ = std::make_shared<Dispatcher>();
+  pool_ = std::make_shared<ModulePool>();
+}
 
-ProcessProxySyncPtr ProcessProxyTest::Bind(ProcessProxyImpl* impl) {
-  ProcessProxySyncPtr proxy;
-  impl->Bind(proxy.NewRequest());
-  return proxy;
+std::unique_ptr<ProcessProxyImpl> ProcessProxyTest::MakeProcessProxy() {
+  return std::make_unique<ProcessProxyImpl>(kInvalidTargetId + 1, pool_);
 }
 
 std::shared_ptr<Options> ProcessProxyTest::DefaultOptions() {
@@ -20,16 +23,20 @@ std::shared_ptr<Options> ProcessProxyTest::DefaultOptions() {
   return options;
 }
 
-zx::eventpair ProcessProxyTest::IgnoreSentSignals() {
-  return coordinator_.Create([](zx_signals_t signals) { return true; });
+InstrumentedProcess ProcessProxyTest::IgnoreSentSignals(zx::process&& process) {
+  return process_.IgnoreSentSignals(std::move(process));
 }
 
-zx::process ProcessProxyTest::IgnoreTarget() { return target_.Launch(); }
+InstrumentedProcess ProcessProxyTest::IgnoreTarget(zx::eventpair&& eventpair) {
+  return process_.IgnoreTarget(std::move(eventpair));
+}
 
-Options* ProcessProxyTest::IgnoreOptions() { return &ignored_; }
+InstrumentedProcess ProcessProxyTest::IgnoreAll() { return process_.IgnoreAll(); }
 
 void IgnoreReceivedSignals() {}
 
-void IgnoreErrors(ProcessProxyImpl* ignored) {}
+void IgnoreErrors(uint64_t ignored) {}
+
+void ProcessProxyTest::TearDown() { dispatcher_->Shutdown(); }
 
 }  // namespace fuzzing

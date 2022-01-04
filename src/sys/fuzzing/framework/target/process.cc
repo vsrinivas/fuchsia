@@ -16,6 +16,9 @@
 namespace fuzzing {
 namespace {
 
+using ::fuchsia::fuzzer::InstrumentedProcess;
+using ::fuchsia::fuzzer::LlvmModule;
+
 // Maximum number of LLVM modules per process. This limit matches libFuzzer.
 constexpr size_t kMaxModules = 4096;
 
@@ -77,6 +80,21 @@ void __sanitizer_cov_pcs_init(const uintptr_t* start, const uintptr_t* stop) {
   }
 }
 
+// TODO(fxbug.dev/85308): Add value-profile support.
+void __sanitizer_cov_trace_pc_indir(uintptr_t Callee) {}
+void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2) {}
+void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2) {}
+void __sanitizer_cov_trace_const_cmp4(uint32_t Arg1, uint32_t Arg2) {}
+void __sanitizer_cov_trace_const_cmp8(uint64_t Arg1, uint64_t Arg2) {}
+void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2) {}
+void __sanitizer_cov_trace_cmp2(uint16_t Arg1, uint16_t Arg2) {}
+void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2) {}
+void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2) {}
+void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t* Cases) {}
+void __sanitizer_cov_trace_div4(uint32_t Val) {}
+void __sanitizer_cov_trace_div8(uint64_t Val) {}
+void __sanitizer_cov_trace_gep(uintptr_t Idx) {}
+
 }  // extern "C"
 
 namespace fuzzing {
@@ -87,7 +105,10 @@ Process::Process() : next_purge_(zx::time::infinite()) {
   AddDefaults(&options_);
 }
 
-Process::~Process() { memset(&gContext, 0, sizeof(gContext)); }
+Process::~Process() {
+  memset(&gContext, 0, sizeof(gContext));
+  sync_.Signal();
+}
 
 void Process::AddDefaults(Options* options) {
   if (!options->has_detect_leaks()) {
@@ -119,7 +140,7 @@ void Process::AddDefaults(Options* options) {
 void Process::InstallHooks() {
   // This method can only be called once.
   static bool first = true;
-  FX_CHECK(!first) << "InstallHooks called more than once!";
+  FX_CHECK(first) << "InstallHooks called more than once!";
   first = false;
 
   // Warn about missing symbols.
@@ -140,28 +161,27 @@ void Process::InstallHooks() {
   std::atexit([]() { ExitHook(); });
 }
 
-void Process::Connect(ProcessProxySyncPtr&& proxy) {
-  std::lock_guard<std::mutex> lock(mutex_);
-
+void Process::Connect(InstrumentationSyncPtr&& instrumentation) {
   // This method can only be called once.
-  if (connected_) {
-    return;
-  }
-  proxy_ = std::move(proxy);
-  connected_ = true;
+  FX_CHECK(!instrumentation_);
+  instrumentation_ = std::move(instrumentation);
 
   // Create the eventpair.
-  auto eventpair =
-      coordinator_.Create([this](zx_signals_t observed) { return OnSignal(observed); });
+  auto ep = coordinator_.Create([this](zx_signals_t observed) { return OnSignal(observed); });
+  InstrumentedProcess instrumented;
+  instrumented.set_eventpair(std::move(ep));
 
   // Duplicate a handle to ourselves.
   zx::process process;
   auto self = zx::process::self();
   self->duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
+  instrumented.set_process(std::move(process));
 
-  // Connect to the engine.
-  proxy_->Connect(std::move(eventpair), std::move(process), &options_);
+  // Connect to the engine and wait for it to acknowledge it has added a proxy for this object.
+  sync_.Reset();
+  instrumentation_->Initialize(std::move(instrumented), &options_);
   AddDefaults(&options_);
+  sync_.WaitFor("engine to add process proxy");
 
   // Configure allocator purging.
   // TODO(fxbug.dev/85284): Add integration tests that produce these and following logs.
@@ -202,43 +222,12 @@ void Process::Connect(ProcessProxySyncPtr&& proxy) {
   malloc_limit_ = malloc_limit ? malloc_limit : std::numeric_limits<size_t>::max();
 
   // Send the early modules to the engine.
-  AddModulesLocked();
-  if (modules_.empty()) {
-    FX_LOGS(FATAL) << "No modules found; is the code instrumented for fuzzing?";
-  }
-
-  // Processes connect when started, as a result of processing a test input during a fuzzing run.
-  // This is after the engine would have sent a |kStart| signal, so match that state in |OnSignal|.
-  num_mallocs_ = 0;
-  num_frees_ = 0;
-  detecting_leaks_ = false;
-}
-
-void Process::AddModules() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  AddModulesLocked();
-}
-
-void Process::AddModulesLocked() {
-  FX_DCHECK(proxy_.is_bound());
-  for (size_t i = modules_.size(); i < gContext.num_counters && i < gContext.num_pcs; ++i) {
-    auto& info = gContext.modules[i];
-    FX_DCHECK(info.counters);
-    FX_DCHECK(info.counters_len);
-    FX_DCHECK(info.pcs);
-    FX_DCHECK(info.pcs_len);
-    if (info.counters_len == info.pcs_len * sizeof(uintptr_t) / sizeof(ModulePC)) {
-      Module module(info.counters, info.pcs, info.counters_len);
-      Feedback feedback;
-      feedback.set_id(module.id());
-      feedback.set_inline_8bit_counters(module.Share());
-      proxy_->AddFeedback(std::move(feedback));
-      modules_.push_back(std::move(module));
-    } else {
-      FX_LOGS(WARNING) << "Length mismatch: counters=" << info.counters_len
-                       << ", pcs=" << info.pcs_len << "; module will be skipped.";
+  AddModules();
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (modules_.empty()) {
+      FX_LOGS(FATAL) << "No modules found; is the code instrumented for fuzzing?";
     }
-    memset(&info, 0, sizeof(info));
   }
 }
 
@@ -257,45 +246,81 @@ void Process::OnDeath() { _Exit(options_.death_exitcode()); }
 void Process::OnExit() {
   // Exits may not be fatal, e.g. if detect_exits=false. May sure the process publishes all its
   // coverage before it ends as the framework will keep fuzzing.
-  Update();
+  UpdateModules();
 }
 
 bool Process::OnSignal(zx_signals_t observed) {
   if (observed & ZX_EVENTPAIR_PEER_CLOSED) {
+    sync_.Signal();
     return false;
   }
   switch (observed) {
+    case kSync:
+      detecting_leaks_ = false;
+      sync_.Signal();
+      return true;
     case kStart:
-    case kStartLeakCheck: {
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (auto& module : modules_) {
-          module.Clear();
-        }
-      }
-      // See |DetectLeaks| below.
-      num_mallocs_ = 0;
-      num_frees_ = 0;
-      if (can_detect_leaks_ && observed == kStartLeakCheck && !detecting_leaks_) {
-        detecting_leaks_ = true;
-        __lsan_disable();
-      }
+      ClearModules();
       return coordinator_.SignalPeer(kStart);
-    }
-    case kFinish: {
-      Update();
-      // See |DetectLeaks| below.
-      bool has_leak = DetectLeak();
-      if (next_purge_ < zx::clock::get_monotonic()) {
-        __sanitizer_purge_allocator();
-        next_purge_ = zx::deadline_after(zx::duration(options_.purge_interval()));
-      }
-      // TODO(fxbug.dev/84368): The check for OOM is missing!
-      return coordinator_.SignalPeer(has_leak ? kFinishWithLeaks : kFinish);
-    }
+    case kStartLeakCheck:
+      ClearModules();
+      ConfigureLeakDetection();
+      return coordinator_.SignalPeer(kStart);
+    case kFinish:
+      UpdateModules();
+      return coordinator_.SignalPeer(DetectLeak() ? kFinishWithLeaks : kFinish);
     default:
       FX_LOGS(FATAL) << "unexpected signal: 0x" << std::hex << observed << std::dec;
       return false;
+  }
+}
+
+void Process::AddModules() {
+  FX_DCHECK(instrumentation_.is_bound());
+  size_t offset;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    offset = modules_.size();
+  }
+  while (offset < gContext.num_counters && offset < gContext.num_pcs) {
+    auto& info = gContext.modules[offset++];
+    FX_DCHECK(info.counters);
+    FX_DCHECK(info.counters_len);
+    FX_DCHECK(info.pcs);
+    FX_DCHECK(info.pcs_len);
+    if (info.counters_len != info.pcs_len * sizeof(uintptr_t) / sizeof(ModulePC)) {
+      FX_LOGS(WARNING) << "Length mismatch: counters=" << info.counters_len
+                       << ", pcs=" << info.pcs_len << "; module will be skipped.";
+      continue;
+    }
+    Module module(info.counters, info.pcs, info.counters_len);
+    module.Clear();
+    sync_.Reset();
+    instrumentation_->AddLlvmModule(module.GetLlvmModule());
+    {
+      std::lock_guard<std::mutex> lock(mutex_);
+      modules_.push_back(std::move(module));
+    }
+    // Wait for the engine to acknowledge the receipt of this module.
+    sync_.WaitFor("engine to add module proxy");
+  }
+}
+
+void Process::ClearModules() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (auto& module : modules_) {
+      module.Clear();
+    }
+  }
+  num_mallocs_ = 0;
+  num_frees_ = 0;
+}
+
+void Process::ConfigureLeakDetection() {
+  if (can_detect_leaks_ && !detecting_leaks_) {
+    detecting_leaks_ = true;
+    __lsan_disable();
   }
 }
 
@@ -313,21 +338,25 @@ bool Process::DetectLeak() {
   //       If |num_mallocs| still does not match |num_frees|, it performs the (expensive) leak
   //       check. If a true leak, it will report it using info from the first iteration and exit.
   bool has_leak = num_mallocs_.exchange(0) != num_frees_.exchange(0);
-  if (!can_detect_leaks_ || !detecting_leaks_) {
-    return has_leak;
-  }
-  __lsan_enable();
-  detecting_leaks_ = false;
-  if (has_leak && __lsan_do_recoverable_leak_check() && AcquireCrashState()) {
-    if (__sanitizer_print_memory_profile) {
-      __sanitizer_print_memory_profile(kTopPercentChunks, kMaxUniqueContexts);
+  if (detecting_leaks_) {
+    __lsan_enable();
+    detecting_leaks_ = false;
+    if (has_leak && __lsan_do_recoverable_leak_check() && AcquireCrashState()) {
+      if (__sanitizer_print_memory_profile) {
+        __sanitizer_print_memory_profile(kTopPercentChunks, kMaxUniqueContexts);
+      }
+      _Exit(options_.leak_exitcode());
     }
-    _Exit(options_.leak_exitcode());
+  }
+  // TODO(fxbug.dev/84368): The check for OOM is missing!
+  if (next_purge_ < zx::clock::get_monotonic()) {
+    __sanitizer_purge_allocator();
+    next_purge_ = zx::deadline_after(zx::duration(options_.purge_interval()));
   }
   return has_leak;
 }
 
-void Process::Update() {
+void Process::UpdateModules() {
   std::lock_guard<std::mutex> lock(mutex_);
   for (auto& module : modules_) {
     module.Update();

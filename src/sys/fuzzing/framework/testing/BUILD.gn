@@ -20,6 +20,7 @@ source_set("testing") {
     "target.h",
   ]
   public_deps = [
+    "../coverage:coverage-lib",
     "../engine:engine-lib",
     "../target:no_hooks",
     "//src/sys/fuzzing/common",

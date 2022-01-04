@@ -15,37 +15,40 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/target/module.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
 #include "src/sys/fuzzing/framework/testing/target.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::ProcessProxy;
-using ::fuchsia::fuzzer::ProcessProxySyncPtr;
+using ::fuchsia::fuzzer::Instrumentation;
+using ::fuchsia::fuzzer::InstrumentationSyncPtr;
+using ::fuchsia::fuzzer::InstrumentedProcess;
 
-// This class directly creates a |ProcessProxyImpl| as if it were connected to a |Process|. It gives
-// tests fine-grained control over feedback exchanged with the process, and over the spawned test
-// process. It mimics the FIDL interfaces without any actual dispatching.
+// This class wraps a spawned |TestTarget| process and gives test additional control over it. Tests
+// can simulate calls by the process to the |fuchsia.fuzzer.Instrumentation| and the feedback
+// provided by the shared objects they exchange. Tests can also generate the target's
+// |InstrumentedProcess| directly and indicate which aspects are not relevant to a test. Finally,
+// test may manipulate the spawned task itself, forcing it to crash or exit.
 class FakeProcess final {
  public:
   FakeProcess() = default;
   ~FakeProcess() = default;
 
-  // Mimics a new request for |fuchsia.fuzzer.ProcessProxy|.
-  fidl::InterfaceRequest<ProcessProxy> NewRequest();
+  // Fake calls to |fuchsia.fuzzer.Instrumentation|.
+  fidl::InterfaceRequest<Instrumentation> NewRequest();
+  void AddProcess();
+  void AddLlvmModule();
 
-  // Mimics a call to |fuchsia.fuzzer.ProcessProxy.Connect|.
-  void Connect();
-
-  // Mimics a call to |fuchsia.fuzzer.ProcessProxy.AddFeedback|.
-  void AddFeedback();
-
-  // Fakes the appearance of mismatched malloc/frees.
+  // Fakes the feedback from a target process.
   void SetLeak(bool leak_suspected);
-
-  // Sets the inline, 8-bit code coverage counters.
   void SetCoverage(const Coverage& coverage);
+
+  // Creates |InstrumentedProcess| objects for this target.
+  InstrumentedProcess IgnoreSentSignals(zx::process&& process);
+  InstrumentedProcess IgnoreTarget(zx::eventpair&& eventpair);
+  InstrumentedProcess IgnoreAll();
 
   // Causes the spawned process to exit with the given |exitcode|.
   void Exit(int32_t exitcode);
@@ -54,12 +57,16 @@ class FakeProcess final {
   void Crash();
 
  private:
+  zx::eventpair MakeIgnoredEventpair();
+  zx::process MakeIgnoredProcess();
+
   void Reset();
 
   FakeFrameworkModule module_;
-  ProcessProxySyncPtr proxy_;
+  InstrumentationSyncPtr instrumentation_;
   SignalCoordinator coordinator_;
   TestTarget target_;
+  SyncWait sync_;
   bool leak_suspected_ = false;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeProcess);

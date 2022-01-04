@@ -53,4 +53,11 @@ Module& Module::operator=(Module&& other) noexcept {
   return *this;
 }
 
+LlvmModule Module::GetLlvmModule() {
+  LlvmModule llvm_module;
+  llvm_module.set_id(id());
+  llvm_module.set_inline_8bit_counters(Share());
+  return llvm_module;
+}
+
 }  // namespace fuzzing

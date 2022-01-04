@@ -15,6 +15,7 @@
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
 #include "src/sys/fuzzing/common/testing/module.h"
+#include "src/sys/fuzzing/framework/coverage/forwarder.h"
 #include "src/sys/fuzzing/framework/engine/runner.h"
 #include "src/sys/fuzzing/framework/testing/adapter.h"
 #include "src/sys/fuzzing/framework/testing/process.h"
@@ -38,7 +39,7 @@ class RunnerImplTest : public RunnerTest {
  private:
   FakeTargetAdapter target_adapter_;
   FakeProcess process_;
-  fidl::InterfaceRequestHandler<ProcessProxy> process_proxy_handler_;
+  CoverageForwarder coverage_forwarder_;
   bool stopped_ = true;
 };
 

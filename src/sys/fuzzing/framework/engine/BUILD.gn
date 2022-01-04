@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components/fuchsia_component.gni")
+
 source_set("adapter-client") {
   visibility = [ "../*" ]
   testonly = true
@@ -18,13 +20,18 @@ source_set("adapter-client") {
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
     "//zircon/system/ulib/sync",
   ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+  ]
 }
 
 source_set("engine-lib") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "coverage-client.cc",
+    "coverage-client.h",
     "dictionary.cc",
     "dictionary.h",
     "module-pool.cc",
@@ -43,10 +50,10 @@ source_set("engine-lib") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
-    "//src/lib/files",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//src/sys/fuzzing/framework/target:no_hooks",
     "//zircon/system/ulib/sync",
   ]
   deps = [
@@ -55,6 +62,8 @@ source_set("engine-lib") {
     "//zircon/system/ulib/inspector",
   ]
 }
+
+# Tests and test support.
 
 source_set("testing") {
   visibility = [ ":*" ]
@@ -82,6 +91,7 @@ source_set("unittests") {
   sources = [
     "adapter-client-unittest.cc",
     "corpus-unittest.cc",
+    "coverage-client-unittest.cc",
     "dictionary-unittest.cc",
     "module-pool-unittest.cc",
     "module-proxy-unittest.cc",
@@ -92,6 +102,7 @@ source_set("unittests") {
   deps = [
     ":testing",
     "../testing:target",
+    "//src/lib/files",
     "//src/sys/fuzzing/common:runner-unittests",
   ]
 }

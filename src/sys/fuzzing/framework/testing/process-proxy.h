@@ -26,14 +26,14 @@
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::Feedback;
-using ::fuchsia::fuzzer::ProcessProxy;
-using ::fuchsia::fuzzer::ProcessProxySyncPtr;
+using ::fuchsia::fuzzer::Instrumentation;
+using ::fuchsia::fuzzer::InstrumentationSyncPtr;
+using ::fuchsia::fuzzer::InstrumentedProcess;
+using ::fuchsia::fuzzer::LlvmModule;
 
-// A simple implementation of |fuchsia.fuzzer.ProcessProxy|. It records some details of the
-// parameters passed to |Connect|, and plumbs LLVM modules received via |AddFeedback| to a supplied
-// |ModulePool|.
-class FakeProcessProxy : public ProcessProxy {
+// This class combines a simple implementation of |Instrumentation| with the signal coordination of
+// |ProcessProxy| to create a test fixture for processes that bypasses the coverage component.
+class FakeProcessProxy : public Instrumentation {
  public:
   FakeProcessProxy(const std::shared_ptr<ModulePool>& pool);
   ~FakeProcessProxy() override = default;
@@ -45,16 +45,16 @@ class FakeProcessProxy : public ProcessProxy {
   void Configure(const std::shared_ptr<Options>& options);
 
   // FIDL methods.
-  ProcessProxySyncPtr Bind(bool disable_warnings);
-  void Connect(zx::eventpair eventpair, zx::process process, ConnectCallback callback) override;
-  void AddFeedback(Feedback feedback, AddFeedbackCallback callback) override;
+  InstrumentationSyncPtr Bind(bool disable_warnings);
+  void Initialize(InstrumentedProcess instrumented, InitializeCallback callback) override;
+  void AddLlvmModule(LlvmModule llvm_module, AddLlvmModuleCallback callback) override;
 
   // FakeSignalCoordinator methods.
   bool SignalPeer(Signal signal) { return coordinator_.SignalPeer(signal); }
   zx_signals_t AwaitSignal() { return coordinator_.AwaitSignal(); }
 
  private:
-  Binding<ProcessProxy> binding_;
+  Binding<Instrumentation> binding_;
   std::shared_ptr<ModulePool> pool_;
   std::shared_ptr<Options> options_;
   zx_koid_t process_koid_ = 0;

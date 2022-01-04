@@ -17,7 +17,12 @@ void RunnerImplTest::SetAdapterParameters(const std::vector<std::string>& parame
 void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
   RunnerTest::Configure(runner, options);
   auto* runner_impl = static_cast<RunnerImpl*>(runner);
-  process_proxy_handler_ = runner_impl->GetProcessProxyHandler();
+  stopped_ = true;
+
+  auto coverage_provider = std::make_unique<CoverageProviderClient>();
+  auto handler = coverage_forwarder_.GetCoverageProviderHandler();
+  handler(coverage_provider->TakeRequest());
+  runner_impl->SetCoverageProvider(std::move(coverage_provider));
 
   auto target_adapter_client = std::make_unique<TargetAdapterClient>(target_adapter_.GetHandler());
   runner_impl->SetTargetAdapter(std::move(target_adapter_client));
@@ -25,18 +30,15 @@ void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& o
 
 bool RunnerImplTest::HasTestInput(zx::time deadline) {
   zx_signals_t observed;
-  if (target_adapter_.AwaitSignal(deadline, &observed) != ZX_OK) {
-    return false;
-  }
-  EXPECT_EQ(observed, kStart);
-  return true;
+  return target_adapter_.AwaitSignal(deadline, &observed) == ZX_OK && observed == kStart;
 }
 
 Input RunnerImplTest::GetTestInput() {
   if (stopped_) {
-    process_proxy_handler_(process_.NewRequest());
-    process_.Connect();
-    process_.AddFeedback();
+    auto instrumentation_handler = coverage_forwarder_.GetInstrumentationHandler();
+    instrumentation_handler(process_.NewRequest());
+    process_.AddProcess();
+    process_.AddLlvmModule();
   }
   return target_adapter_.test_input();
 }

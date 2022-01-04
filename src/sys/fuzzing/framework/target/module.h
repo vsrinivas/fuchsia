@@ -16,6 +16,7 @@
 
 namespace fuzzing {
 
+using ::fuchsia::fuzzer::LlvmModule;
 using Identifier = std::array<uint64_t, 2>;
 
 // Represents an LLVM "module", e.g. a collection of translation units, such as a shared object
@@ -38,8 +39,11 @@ class Module final {
   // identifier will be the same for the same module across multiple processes and/or invocations.
   const Identifier& id() const { return id_; }
 
-  // Shares the VMO containing the code coverage.
+  // Shares the VMO containing the code coverage as a |fuchsia.mem.Buffer|.
   Buffer Share() { return counters_.Share(); }
+
+  // Shares the VMO containing the code coverage as an |fuchsia.fuzzer.LlvmModule|.
+  LlvmModule GetLlvmModule();
 
   // Update the code-coverage counters to produce feedback for this module.
   void Update() { counters_.Update(); }
