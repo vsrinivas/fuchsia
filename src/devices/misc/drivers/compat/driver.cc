@@ -187,46 +187,58 @@ result<std::tuple<zx::vmo, zx::vmo>, zx_status_t> Driver::Join(
 result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos) {
   auto& [loader_vmo, driver_vmo] = vmos;
 
-  // Replace loader service.
-  auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
-  if (endpoints.is_error()) {
-    return error(endpoints.status_value());
-  }
-  zx::channel loader_channel(dl_set_loader_service(endpoints->client.channel().release()));
-  fidl::ClientEnd<fldsvc::Loader> loader_client(std::move(loader_channel));
-  auto clone = service::Clone(loader_client, service::AssumeProtocolComposesNode);
-  if (clone.is_error()) {
-    FDF_LOG(ERROR, "Failed to load driver '%s', could not clone loader client: %s", url_.data(),
-            clone.status_string());
-    return error(clone.status_value());
-  }
+  // Replace loader service to load the DFv1 driver, load the driver,
+  // then place the original loader service back.
+  {
+    auto endpoints = fidl::CreateEndpoints<fldsvc::Loader>();
+    if (endpoints.is_error()) {
+      return error(endpoints.status_value());
+    }
+    zx::channel loader_channel(dl_set_loader_service(endpoints->client.channel().release()));
+    fidl::ClientEnd<fldsvc::Loader> loader_client(std::move(loader_channel));
+    auto clone = fidl::CreateEndpoints<fldsvc::Loader>();
+    if (clone.is_error()) {
+      return error(clone.status_value());
+    }
+    auto result = fidl::WireCall(loader_client)->Clone(std::move(clone->server));
+    if (!result.ok()) {
+      FDF_LOG(ERROR, "Failed to load driver '%s', cloning loader failed with FIDL status: %s",
+              url_.data(), result.status_string());
+      return error(result.status());
+    }
+    if (result->rv != ZX_OK) {
+      FDF_LOG(ERROR, "Failed to load driver '%s', cloning loader failed with status: %s",
+              url_.data(), zx_status_get_string(result->rv));
+      return error(result->rv);
+    }
 
-  // Start loader.
-  async::Loop loader_loop(&kAsyncLoopConfigNeverAttachToThread);
-  zx_status_t status = loader_loop.StartThread("loader-loop");
-  if (status != ZX_OK) {
-    FDF_LOG(ERROR, "Failed to load driver '%s', could not start thread for loader loop: %s",
-            url_.data(), zx_status_get_string(status));
-    return error(status);
-  }
-  Loader loader(loader_loop.dispatcher());
-  auto bind =
-      loader.Bind(fidl::ClientEnd<fldsvc::Loader>(std::move(loader_client)), std::move(loader_vmo));
-  if (bind.is_error()) {
-    return error(bind.status_value());
-  }
-  fidl::BindServer(loader_loop.dispatcher(), std::move(endpoints->server), &loader);
+    // Start loader.
+    async::Loop loader_loop(&kAsyncLoopConfigNeverAttachToThread);
+    zx_status_t status = loader_loop.StartThread("loader-loop");
+    if (status != ZX_OK) {
+      FDF_LOG(ERROR, "Failed to load driver '%s', could not start thread for loader loop: %s",
+              url_.data(), zx_status_get_string(status));
+      return error(status);
+    }
+    Loader loader(loader_loop.dispatcher());
+    auto bind = loader.Bind(fidl::ClientEnd<fldsvc::Loader>(std::move(loader_client)),
+                            std::move(loader_vmo));
+    if (bind.is_error()) {
+      return error(bind.status_value());
+    }
+    fidl::BindServer(loader_loop.dispatcher(), std::move(endpoints->server), &loader);
 
-  // Open driver.
-  library_ = dlopen_vmo(driver_vmo.get(), RTLD_NOW);
-  if (library_ == nullptr) {
-    FDF_LOG(ERROR, "Failed to load driver '%s', could not load library: %s", url_.data(),
-            dlerror());
-    return error(ZX_ERR_INTERNAL);
-  }
+    // Open driver.
+    library_ = dlopen_vmo(driver_vmo.get(), RTLD_NOW);
+    if (library_ == nullptr) {
+      FDF_LOG(ERROR, "Failed to load driver '%s', could not load library: %s", url_.data(),
+              dlerror());
+      return error(ZX_ERR_INTERNAL);
+    }
 
-  // Return original loader service.
-  loader_channel.reset(dl_set_loader_service(clone->channel().release()));
+    // Return original loader service.
+    loader_channel.reset(dl_set_loader_service(clone->client.channel().release()));
+  }
 
   // Load and verify symbols.
   auto note = static_cast<const zircon_driver_note_t*>(dlsym(library_, "__zircon_driver_note__"));
