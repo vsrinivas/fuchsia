@@ -28,3 +28,6 @@ To run the A2DP smoke test:
 
 To run the bt-init smoke test:
 `fx test bt-init-smoke-test`
+
+To run the bt-gap smoke test:
+`fx test bt-gap-smoke-test`

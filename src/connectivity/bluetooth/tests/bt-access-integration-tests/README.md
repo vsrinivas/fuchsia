@@ -1,6 +1,6 @@
-# fuchsia.bluetooth.sys.Access Integration Tests
+# fuchsia.bluetooth.sys/Access Integration Tests
 
-Integration tests for the Sapphire implementation of the fuchsia.bluetooth.sys.Access FIDL protocol.
+Integration tests for the Sapphire implementation of the fuchsia.bluetooth.sys/Access FIDL protocol.
 
 ## Testing
 
