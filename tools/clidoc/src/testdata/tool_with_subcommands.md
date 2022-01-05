@@ -30,6 +30,7 @@ __Commands:__
 
     subcommand1  Starts subcommand1
     subcommand2  Starts subcommand2
+    unrecognized Should not show up - returns Unrecognized argument:
     command      Should not be recursed
     subcommand   Should not be recursed
 ```

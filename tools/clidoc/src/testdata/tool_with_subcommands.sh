@@ -15,6 +15,7 @@ Options:
 Commands:
     subcommand1  Starts subcommand1
     subcommand2  Starts subcommand2
+    unrecognized Should not show up - returns Unrecognized argument:
     command      Should not be recursed
     subcommand   Should not be recursed
 EOF
@@ -30,6 +31,11 @@ elif [[ $1 == "subcommand2" ]] && [[ $2 == "--help" ]]; then
     cat <<EOF
 Usage: host-tool-cmd subcommand2
 Description goes here subcommand2
+
+EOF
+elif [[ $1 == "unrecognized" ]] && [[ $2 == "--help" ]]; then
+    cat <<EOF
+Unrecognized argument: This should not show up in the md file.
 
 EOF
 fi

@@ -7,6 +7,7 @@ use {
     anyhow::{bail, Context, Result},
     argh::FromArgs,
     flate2::{write::GzEncoder, Compression},
+    lazy_static::lazy_static,
     log::{debug, info, LevelFilter},
     std::{
         collections::HashSet,
@@ -22,6 +23,11 @@ use {
 };
 
 use simplelog::{Config, SimpleLogger};
+
+enum HelpError {
+    Ignore,
+    Fail(String),
+}
 
 /// CliDoc generates documentation for core Fuchsia developer tools.
 #[derive(Debug, FromArgs)]
@@ -100,6 +106,15 @@ const ALLOW_LIST: &'static [&'static str] = &[
     "zbi",
     "zxdb",
 ];
+
+// This Hashset includes all sdk tools which return stderr and non-zero error codes
+// when invoking --help.
+lazy_static! {
+    static ref IGNORE_ERR_CODE: HashSet<&'static str> = {
+        let h = HashSet::from(["bootserver", "minfs", "symbol-index", "symbolizer", "zxdb"]);
+        h
+    };
+}
 
 fn main() -> Result<()> {
     let opt: Opt = argh::from_env();
@@ -210,16 +225,13 @@ fn recurse_cmd_output<W: Write>(
     let cmd_heading_formatting = "#".repeat(cmd_level + 1);
 
     // Get terminal output for cmd <subcommands> --help for a given command.
-    let lines: Vec<String> = help_output_for(&cmd_path, &cmds_sequence)?;
-
-    // TODO(fxb/85803): This is a short term solution to prevent errantly documentating
-    // run-on sentences as args with ffx. Long term solution involves using help-json.
-    if lines.len() > 0 {
-        let first_line = &lines[0];
-        if first_line.contains("Unrecognized argument:") && cmd_path.ends_with("ffx") {
-            return Ok(());
-        }
-    }
+    let lines: Vec<String> = match help_output_for(&cmd_path, &cmds_sequence) {
+        Ok(lines) => lines,
+        Err(e) => match e {
+            HelpError::Ignore => return Ok(()),
+            HelpError::Fail(c) => bail!("Error running help: {}", c),
+        },
+    };
 
     debug!("Processing {:?} {:?}", cmd_path, cmds_sequence);
 
@@ -247,7 +259,7 @@ fn recurse_cmd_output<W: Write>(
                 // Command name is the first word on the line.
                 if let Some(command) = line.split_whitespace().next() {
                     match command.as_ref() {
-                        "commands" | "subcommands" => {
+                        "commands" | "subcommands" | "help" => {
                             debug!("skipping {:?} to avoid recursion", command);
                         }
                         _ => {
@@ -355,15 +367,17 @@ fn create_output_dir(path: &Path) -> Result<()> {
 }
 
 /// Get cmd --help output when given a full path to a cmd.
-fn help_output_for(tool: &Path, subcommands: &Vec<&String>) -> Result<Vec<String>> {
+fn help_output_for(tool: &Path, subcommands: &Vec<&String>) -> Result<Vec<String>, HelpError> {
     let output = Command::new(&tool)
         .args(&*subcommands)
         .arg("--help")
         .output()
-        .context(format!("Command failed for {:?}", &tool.display()))?;
+        .context(format!("Command failed for {:?}", &tool.display()))
+        .expect("get output");
 
     let stdout = output.stdout;
     let stderr = output.stderr;
+    let exit_code = output.status.code().expect("get help status code");
 
     // Convert string outputs to vector of lines.
     let stdout_string = String::from_utf8(stdout).expect("Help string from utf8");
@@ -371,8 +385,29 @@ fn help_output_for(tool: &Path, subcommands: &Vec<&String>) -> Result<Vec<String
 
     let stderr_string = String::from_utf8(stderr).expect("Help string from utf8");
     let stderr_lines = stderr_string.lines().map(String::from).collect::<Vec<_>>();
-
+    let stderr_empty = stderr_lines.is_empty();
     combined_lines.extend(stderr_lines);
+    if !combined_lines.is_empty() {
+        // TODO(fxbug.dev/85803): This is a short term solution to prevent errantly documenting
+        // run-on sentences as args with ffx. Long term solution involves using help-json.
+        let first_line = &combined_lines[0];
+        if first_line.contains("Unrecognized argument:") {
+            // TODO(fxbug.dev/90561): Create Error enums to better fit these errors.
+            return Err(HelpError::Ignore);
+        }
+    }
+    if !stderr_empty && exit_code != 0 {
+        let tool_name = tool.file_name().expect("get tool name");
+        if IGNORE_ERR_CODE.get(tool_name.to_str().expect("get tool str")) == None {
+            let error_message = format!(
+                "Unexpected non-zero error code with tool {:?}
+            and subcommands {:?}.",
+                tool.display(),
+                subcommands
+            );
+            return Err(HelpError::Fail(error_message));
+        }
+    }
 
     Ok(combined_lines)
 }
