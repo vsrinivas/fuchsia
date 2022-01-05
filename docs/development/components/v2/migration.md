@@ -820,7 +820,7 @@ the v1 `sys` realm by adding a declaration like the following to your core
 realm shard or `core.cml`.
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
     use: [
         {
@@ -857,25 +857,44 @@ in your manifest's [`include`][manifests-include].
 #### v1 component provides service {#v1-component-provides-service}
 
 You’ll reach this case if a mapping for the service exists in a sysmgr config
-file. To make the service available to your component, you offer it from `core`:
+file. To make the service available to your component, do the following.
 
-```json5
-// core.cml
-{
-    offer: [
-        ...
-        {
-            protocol: "fuchsia.pkg.FontResolver",
-            from: "self",
-            to: [ "#font_provider" ],
-        },
-        ...
-    ],
-}
-```
+1.  Make sure a declaration like the following is present in
+    `appmgr.core_shard.cml` (if the service is configured in fuchsia.git) or
+    your [core realm shard](#add-core-shard) (if it's configured outside
+    fuchsia.git):
 
-Note: You do _not_ offer the service from `appmgr`. `core` itself proxies
-to and from the v1 `sys` realm, which is why we have `core` offer the service.
+    ```json5
+    // appmgr.core_shard.cml / component.core_shard.cml
+    {
+        capabilities: [
+            ...
+            { protocol: "fuchsia.pkg.FontResolver" },
+            ...
+        ],
+    }
+    ```
+1.  Add the following to your component's [core realm shard](#add-core-shard) or
+    `core.cml`:
+
+    ```json5
+    // core.cml / component.core_shard.cml
+    {
+        offer: [
+            ...
+            {
+                protocol: "fuchsia.pkg.FontResolver",
+                from: "self",
+                to: [ "#font_provider" ],
+            },
+            ...
+        ],
+    }
+    ```
+
+    Note: You do _not_ offer the service from `appmgr`. `core` itself proxies
+    to and from the v1 `sys` realm, which is why we have `core` offer the
+    service.
 
 #### v2 component in core.cml provides service {#v2-core-cml-provides-service}
 
@@ -914,7 +933,7 @@ To avoid build-time errors resulting from dependency cycles, apply the
 `weak_for_migration` tag to one of the capability routes. For example:
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
     offer: [
         {
@@ -1189,7 +1208,7 @@ direct log messages back to the `debuglog` buffer.
     to offer this capability to your component from `core`:
 
     ```json5
-    // core.cml
+    // core.cml / component.core_shard.cml
     {
         offer: [
             ...
@@ -1303,7 +1322,7 @@ When [adding your component](#add-component-to-topology), assign the shared
 `full-resolver-env` as your component's `environment`.
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
   children: [
     ...
@@ -1370,7 +1389,7 @@ component appears in `critical_components` you should mark it as `on_terminate:
 reboot` in the parent component's manifest:
 
 ```
-// core.cml
+// core.cml / component.core_shard.cml
 {
     children: [
         ...
@@ -1544,7 +1563,7 @@ When [adding your component](#add-component-to-topology), you'll need to offer
 the appropriate storage path to your component from its parent realm.
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
     children: [
         ...
@@ -1682,7 +1701,7 @@ When [adding your component](#add-component-to-topology), you'll need to offer
 the directory capabilities to your component.
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
     children: [
         ...
@@ -1785,7 +1804,7 @@ When [adding your component](#add-component-to-topology), you'll need to offer
 the directory capability with the appropriate subdirectory to your component.
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
     children: [
         ...
@@ -1884,7 +1903,7 @@ When [adding your component](#add-component-to-topology), you'll need to offer
 the appropriate device path to your component from its parent realm.
 
 ```json5
-// core.cml
+// core.cml / component.core_shard.cml
 {
     children: [
         ...
