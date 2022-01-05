@@ -33,7 +33,10 @@ group("tests") {
 go_test("test") {
   output_name = "testparser_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testparser" ]
-  deps = [ ":testparser" ]
+  deps = [
+    ":testparser",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }
 
 go_library("main") {

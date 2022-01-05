@@ -7,6 +7,8 @@ package testparser
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"testing"
 )
 
@@ -32,8 +34,15 @@ func testCase(t *testing.T, stdout string, want string) {
 	}
 }
 
+func testCaseCmp(t *testing.T, stdout string, want []TestCaseResult) {
+	r := Parse([]byte(stdout))
+	if diff := cmp.Diff(want, r, cmpopts.SortSlices(func(a, b TestCaseResult) bool { return a.DisplayName < b.DisplayName })); diff != "" {
+		t.Errorf("Found mismatch in %s (-want +got):\n%s", stdout, diff)
+	}
+}
+
 func TestParseEmpty(t *testing.T) {
-	testCase(t, "", "[]")
+	testCaseCmp(t, "", []TestCaseResult{})
 }
 
 func TestParseInvalid(t *testing.T) {
@@ -43,30 +52,94 @@ Its fleece was white as snow
 And everywhere that Mary went
 The lamb was sure to go
 `
-	testCase(t, stdout, "[]")
+	testCaseCmp(t, stdout, []TestCaseResult{})
+}
+
+// If no test cases can be parsed, the output should be an empty slice, not a
+// nil slice, so it gets serialized as an empty JSON array instead of as null.
+func TestParseNoTestCases(t *testing.T) {
+	testCase(t, "non-test output", "[]")
 }
 
 func TestParseTrfTest(t *testing.T) {
 	stdout := `
-Running test 'fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm'
-[RUNNING]	tests::two_plus_two
-[PASSED]	tests::two_plus_two
-1 out of 1 tests passed...
-fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm completed with result: PASSED
-ok 23 fuchsia-pkg://fuchsia.com/twoplustwo-rust-unittest#meta/twoplustwo-rust-unittest.cm (1.05014413s)`
-	want := `
-        [
-                {
-                        "display_name": "tests::two_plus_two",
-                        "suite_name": "",
-                        "case_name": "tests::two_plus_two",
-                        "status": "Pass",
-                        "duration_nanos": 0,
-                        "format": "FTF"
-                }
-        ]
+Running test 'fuchsia-pkg://fuchsia.com/f2fs-fs-tests#meta/f2fs-unittest.cm'
+[RUNNING]	BCacheTest.Trim
+[PASSED]	BCacheTest.Trim
+[RUNNING]	BCacheTest.Exception
+[00371.417610][942028][942030][<root>] ERROR: [src/storage/f2fs/bcache.cc(45)] Invalid device size
+[00371.417732][942028][942030][<root>] ERROR: [src/storage/f2fs/bcache.cc(52)] Block count overflow
+[PASSED]	BCacheTest.Exception
+[RUNNING]	CheckpointTest.Version
+[PASSED]	CheckpointTest.Version
+[stdout - BCacheTest.Trim]
+magic [0xf2f52010 : 4076150800]
+[stdout - BCacheTest.Trim]
+major_ver [0x1 : 1]
+[stdout - BCacheTest.Trim]
+minor_ver [0x0 : 0]
+[RUNNING]	FormatFilesystemTest.MkfsOptionsLabel
+[00402.723886][969765][969767][<root>] INFO: [mkfs.cc(894)] This device doesn't support TRIM
+[00402.743120][969765][969767][<root>] INFO: [mkfs.cc(894)] This device doesn't support TRIM
+[stderr - FormatFilesystemTest.MkfsOptionsLabel]
+ERROR: label length should be less than 16.
+[PASSED]	FormatFilesystemTest.MkfsOptionsLabel
+[RUNNING]	NodeManagerTest.TruncateExceptionCase
+[stderr - NodeManagerTest.TruncateExceptionCase]
+Error reading test result:File(read call failed: A FIDL client's channel to the service (anonymous) File was closed: PEER_CLOSED
+[stderr - NodeManagerTest.TruncateExceptionCase]
+[stderr - NodeManagerTest.TruncateExceptionCase]
+Caused by:
+[stderr - NodeManagerTest.TruncateExceptionCase]
+    0: A FIDL client's channel to the service (anonymous) File was closed: PEER_CLOSED
+[stderr - NodeManagerTest.TruncateExceptionCase]
+    1: PEER_CLOSED)
+[FAILED]	NodeManagerTest.TruncateExceptionCase
+[RUNNING]	VnodeTest.TruncateExceptionCase
+[stderr - VnodeTest.TruncateExceptionCase]
+Test exited abnormally
+[FAILED]	VnodeTest.TruncateExceptionCase
+Failed tests: NodeManagerTest.TruncateExceptionCase, VnodeTest.TruncateExceptionCase
+100 out of 102 tests passed...
+fuchsia-pkg://fuchsia.com/f2fs-fs-tests#meta/f2fs-unittest.cm completed with result: FAILED
+One or more test runs failed.
 `
-	testCase(t, stdout, want)
+	want := []TestCaseResult{
+		{
+			DisplayName: "BCacheTest.Trim",
+			CaseName:    "BCacheTest.Trim",
+			Status:      "Pass",
+			Format:      "FTF",
+		}, {
+			DisplayName: "BCacheTest.Exception",
+			CaseName:    "BCacheTest.Exception",
+			Status:      "Pass",
+			Format:      "FTF",
+		}, {
+			DisplayName: "CheckpointTest.Version",
+			CaseName:    "CheckpointTest.Version",
+			Status:      "Pass",
+			Format:      "FTF",
+		}, {
+			DisplayName: "FormatFilesystemTest.MkfsOptionsLabel",
+			CaseName:    "FormatFilesystemTest.MkfsOptionsLabel",
+			Status:      "Pass",
+			Format:      "FTF",
+		}, {
+			DisplayName: "NodeManagerTest.TruncateExceptionCase",
+			CaseName:    "NodeManagerTest.TruncateExceptionCase",
+			Status:      "Fail",
+			Format:      "FTF",
+			FailReason:  "Error reading test result:File(read call failed: A FIDL client's channel to the service (anonymous) File was closed: PEER_CLOSED",
+		}, {
+			DisplayName: "VnodeTest.TruncateExceptionCase",
+			CaseName:    "VnodeTest.TruncateExceptionCase",
+			Status:      "Fail",
+			Format:      "FTF",
+			FailReason:  "Test exited abnormally",
+		},
+	}
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseGoogleTest(t *testing.T) {
@@ -100,83 +173,73 @@ Their prints get interleaved with the results.
 [==========] 9 tests from 1 test suite ran. (38 ms total)
 [  PASSED  ] 9 tests.
 `
-	want := `
-[
-	{
-		"display_name": "SynonymDictTest.IsInitializedEmpty",
-		"suite_name": "SynonymDictTest",
-		"case_name": "IsInitializedEmpty",
-		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.ReadingEmptyFileReturnsFalse",
-		"suite_name": "SynonymDictTest",
-		"case_name": "ReadingEmptyFileReturnsFalse",
-		"status": "Pass",
-		"duration_nanos": 3000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
-		"suite_name": "SynonymDictTest",
-		"case_name": "ReadingNonexistentFileReturnsFalse",
-		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.LoadDictionary",
-		"suite_name": "SynonymDictTest",
-		"case_name": "LoadDictionary",
-		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.GetSynonymsReturnsListOfWords",
-		"suite_name": "SynonymDictTest",
-		"case_name": "GetSynonymsReturnsListOfWords",
-		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
-		"suite_name": "SynonymDictTest",
-		"case_name": "GetSynonymsWhenNoSynonymsAreAvailable",
-		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
-		"suite_name": "SynonymDictTest",
-		"case_name": "AllWordsAreSynonymsOfEachOther",
-		"status": "Pass",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
-		"suite_name": "SynonymDictTest",
-		"case_name": "GetSynonymsReturnsListOfWordsWithStubs",
-		"status": "Fail",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "SynonymDictTest.CompoundWordBug",
-		"suite_name": "SynonymDictTest",
-		"case_name": "CompoundWordBug",
-		"status": "Skip",
-		"duration_nanos": 4000000,
-		"format": "GoogleTest"
+	want := []TestCaseResult{
+		{
+			DisplayName: "SynonymDictTest.IsInitializedEmpty",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "IsInitializedEmpty",
+			Status:      "Pass",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.ReadingEmptyFileReturnsFalse",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "ReadingEmptyFileReturnsFalse",
+			Status:      "Pass",
+			Duration:    3000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.ReadingNonexistentFileReturnsFalse",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "ReadingNonexistentFileReturnsFalse",
+			Status:      "Pass",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.LoadDictionary",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "LoadDictionary",
+			Status:      "Pass",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.GetSynonymsReturnsListOfWords",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "GetSynonymsReturnsListOfWords",
+			Status:      "Pass",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.GetSynonymsWhenNoSynonymsAreAvailable",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "GetSynonymsWhenNoSynonymsAreAvailable",
+			Status:      "Pass",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.AllWordsAreSynonymsOfEachOther",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "AllWordsAreSynonymsOfEachOther",
+			Status:      "Pass",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.GetSynonymsReturnsListOfWordsWithStubs",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "GetSynonymsReturnsListOfWordsWithStubs",
+			Status:      "Fail",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "SynonymDictTest.CompoundWordBug",
+			SuiteName:   "SynonymDictTest",
+			CaseName:    "CompoundWordBug",
+			Status:      "Skip",
+			Duration:    4000000,
+			Format:      "GoogleTest",
+		},
 	}
-]
-`
-	testCase(t, stdout, want)
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseGo(t *testing.T) {
@@ -205,83 +268,61 @@ func TestParseGo(t *testing.T) {
 		--- PASS: TestAdd/add_baz (0.00s)
 ok 8 host_x64/fake_tests (4.378744489s)
 `
-	want := `
-[
+	want := []TestCaseResult{
 		{
-			"display_name": "TestParseEmpty",
-			"suite_name": "",
-			"case_name": "TestParseEmpty",
-			"status": "Pass",
-			"duration_nanos": 10000000,
-			"format": "Go"
+			DisplayName: "TestParseEmpty",
+			CaseName:    "TestParseEmpty",
+			Status:      "Pass",
+			Duration:    10000000,
+			Format:      "Go",
+		}, {
+			DisplayName: "TestParseInvalid",
+			CaseName:    "TestParseInvalid",
+			Status:      "Pass",
+			Duration:    20000000,
+			Format:      "Go",
+		}, {
+			DisplayName: "TestParseGoogleTest",
+			CaseName:    "TestParseGoogleTest",
+			Status:      "Fail",
+			Duration:    3000000000,
+			Format:      "Go",
+		}, {
+			DisplayName: "TestFail",
+			CaseName:    "TestFail",
+			Status:      "Fail",
+			Format:      "Go",
+		}, {
+			DisplayName: "TestSkip",
+			CaseName:    "TestSkip",
+			Status:      "Skip",
+			Format:      "Go",
+		}, {
+			DisplayName: "TestAdd",
+			CaseName:    "TestAdd",
+			Status:      "Pass",
+			Format:      "Go",
+		}, {
+			DisplayName: "TestAdd/add_foo",
+			SuiteName:   "TestAdd",
+			CaseName:    "add_foo",
+			Status:      "Pass",
+			Format:      "Go",
+		}, {
+			DisplayName: "TestAdd/add_bar",
+			SuiteName:   "TestAdd",
+			CaseName:    "add_bar",
+			Status:      "Pass",
+			Format:      "Go",
+		}, {
+			DisplayName: "TestAdd/add_baz",
+			SuiteName:   "TestAdd",
+			CaseName:    "add_baz",
+			Status:      "Pass",
+			Format:      "Go",
 		},
-		{
-			"display_name": "TestParseInvalid",
-			"suite_name": "",
-			"case_name": "TestParseInvalid",
-			"status": "Pass",
-			"duration_nanos": 20000000,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestParseGoogleTest",
-			"suite_name": "",
-			"case_name": "TestParseGoogleTest",
-			"status": "Fail",
-			"duration_nanos": 3000000000,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestFail",
-			"suite_name": "",
-			"case_name": "TestFail",
-			"status": "Fail",
-			"duration_nanos": 0,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestSkip",
-			"suite_name": "",
-			"case_name": "TestSkip",
-			"status": "Skip",
-			"duration_nanos": 0,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestAdd",
-			"suite_name": "",
-			"case_name": "TestAdd",
-			"status": "Pass",
-			"duration_nanos": 0,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestAdd/add_foo",
-			"suite_name": "TestAdd",
-			"case_name": "add_foo",
-			"status": "Pass",
-			"duration_nanos": 0,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestAdd/add_bar",
-			"suite_name": "TestAdd",
-			"case_name": "add_bar",
-			"status": "Pass",
-			"duration_nanos": 0,
-			"format": "Go"
-		},
-		{
-			"display_name": "TestAdd/add_baz",
-			"suite_name": "TestAdd",
-			"case_name": "add_baz",
-			"status": "Pass",
-			"duration_nanos": 0,
-			"format": "Go"
-		}
-]
-`
-	testCase(t, stdout, want)
+	}
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseGoPanic(t *testing.T) {
@@ -345,71 +386,122 @@ testing.tRunner(0xc00014c120, 0x57a1a8)
 created by testing.(*T).Run
 	/usr/local/google/home/curtisgalloway/src/fuchsia/prebuilt/third_party/go/linux-x64/src/testing/testing.go:1042 +0x357
 	`
-	want := `
-[
-	{
-		"display_name": "TestReboot",
-		"suite_name": "",
-		"case_name": "TestReboot",
-		"status": "Fail",
-		"duration_nanos": 1000000000,
-		"format": "Go"
+	want := []TestCaseResult{
+		{
+			DisplayName: "TestReboot",
+			CaseName:    "TestReboot",
+			Status:      "Fail",
+			Duration:    1000000000,
+			Format:      "Go",
+		},
 	}
-]
-`
-	testCase(t, stdout, want)
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseRust(t *testing.T) {
 	stdout := `
 running 3 tests
 test tests::ignored_test ... ignored
+[stdout - legacy_test]
 test tests::test_add_hundred ... ok
+[stdout - legacy_test]
 test tests::test_add ... FAILED
-
+[stdout - legacy_test]
+test tests::test_substract ... FAILED
+[stdout - legacy_test]
+[stdout - legacy_test]
 failures:
-
+[stdout - legacy_test]
+[stdout - legacy_test]
+---- tests::test_add_hundred stdout ----
+[stdout - legacy_test]
+---- tests::test_add_hundred stderr ----
+[stdout - legacy_test]
+booooo I printed an error, but it doesn't count as fail reason
 ---- tests::test_add stdout ----
-thread 'tests::test_add' panicked at 'assertion failed: ` + "`(left == right)`" + `
-  left: ` + "`1`" + `,
- right: ` + "`2`" + `', src/lib.rs:12:9
-note: run with ` + "`RUST_BACKTRACE=1`" + ` environment variable to display a backtrace
-
-
+[stdout - legacy_test]
+---- tests::test_add stderr ----
+[stdout - legacy_test]
+thread 'main' panicked at 'assertion failed: ` + "`(left != right)`" + `
+[stdout - legacy_test]
+  left: ` + "`ObjectType(PORT)`" + `,
+[stdout - legacy_test]
+  right: ` + "`ObjectType(PORT)`', ../../src/lib/zircon/rust/src/channel.rs:761:9`" + `
+[stdout - legacy_test]
+stack backtrace:
+[stdout - legacy_test]
+{{{reset}}}
+[stdout - legacy_test]
+{{{module:0x0::elf:cb02c721da2e5287}}}
+[stdout - legacy_test]
+{{{mmap:0x2de1be9a000:0x11a5c:load:0x0:r:0x0}}}
+[stdout - legacy_test]
+[stdout - legacy_test]
+---- tests::test_substract stdout ----
+[stdout - legacy_test]
+---- tests::test_substract stderr ----
+[stdout - legacy_test]
+thread 'main' panicked at 'assertion failed: ` + "`(left != right)`" + `
+[stdout - legacy_test]
+  left: ` + "`Err((5, 0))`" + `,
+[stdout - legacy_test]
+  right: ` + "`Err((5, 0))`" + `', ../../src/lib/zircon/rust/src/channel.rs:783:9
+[stdout - legacy_test]
+stack backtrace:
+[stdout - legacy_test]
+{{{reset}}}
+[stdout - legacy_test]
+{{{module:0x0::elf:cb02c721da2e5287}}}
+[stdout - legacy_test]
+{{{mmap:0x3441843f000:0x11a5c:load:0x0:r:0x0}}}
+[stdout - legacy_test]
+{{{mmap:0x34418451000:0x18f90:load:0x0:rx:0x12000}}}
+[stdout - legacy_test]
 failures:
-    tests::test_add
+[stdout - legacy_test]
+    test tests::test_add
+[stdout - legacy_test]
+    test tests::test_substract
+[stdout - legacy_test]
+[stdout - legacy_test]
+test result: FAILED. 1 passed; 2 failed; 1 ignored; 0 measured; 0 filtered out; finished in 5.30s
+[stdout - legacy_test]
+[FAILED]	legacy_test
+Failed tests: legacy_test
+0 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/fuchsiatests#meta/some-tests.cm completed with result: FAILED
+One or more test runs failed.`
 
-test result: FAILED. 1 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out
-`
-	want := `
-[
-	{
-		"display_name": "tests::ignored_test",
-		"suite_name": "tests",
-		"case_name": "ignored_test",
-		"status": "Skip",
-		"duration_nanos": 0,
-		"format": "Rust"
-	},
-	{
-		"display_name": "tests::test_add_hundred",
-		"suite_name": "tests",
-		"case_name": "test_add_hundred",
-		"status": "Pass",
-		"duration_nanos": 0,
-		"format": "Rust"
-	},
-	{
-		"display_name": "tests::test_add",
-		"suite_name": "tests",
-		"case_name": "test_add",
-		"status": "Fail",
-		"duration_nanos": 0,
-		"format": "Rust"
+	want := []TestCaseResult{
+		{
+			DisplayName: "tests::ignored_test",
+			SuiteName:   "tests",
+			CaseName:    "ignored_test",
+			Status:      "Skip",
+			Format:      "Rust",
+		}, {
+			DisplayName: "tests::test_add_hundred",
+			SuiteName:   "tests",
+			CaseName:    "test_add_hundred",
+			Status:      "Pass",
+			Format:      "Rust",
+		}, {
+			DisplayName: "tests::test_add",
+			SuiteName:   "tests",
+			CaseName:    "test_add",
+			Status:      "Fail",
+			Format:      "Rust",
+			FailReason:  "thread 'main' panicked at 'assertion failed: `(left != right)`\n  left: `ObjectType(PORT)`,\n  right: `ObjectType(PORT)`', ../../src/lib/zircon/rust/src/channel.rs:761:9`",
+		}, {
+			DisplayName: "tests::test_substract",
+			SuiteName:   "tests",
+			CaseName:    "test_substract",
+			Status:      "Fail",
+			Format:      "Rust",
+			FailReason:  "thread 'main' panicked at 'assertion failed: `(left != right)`\n  left: `Err((5, 0))`,\n  right: `Err((5, 0))`', ../../src/lib/zircon/rust/src/channel.rs:783:9",
+		},
 	}
-]
-`
-	testCase(t, stdout, want)
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseZircon(t *testing.T) {
@@ -457,171 +549,151 @@ Results for test binary "host_x64-asan/fs-host":
     CASES:  6     SUCCESS:  5     FAILED:  1   
 ====================================================
 `
-	want := `
-[
-	{
-		"display_name": "minfs_truncate_tests.TestTruncateSmall",
-		"suite_name": "minfs_truncate_tests",
-		"case_name": "TestTruncateSmall",
-		"status": "Pass",
-		"duration_nanos": 1000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
-		"suite_name": "minfs_truncate_tests",
-		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
-		"status": "Pass",
-		"duration_nanos": 20414000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
-		"suite_name": "minfs_truncate_tests",
-		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
-		"status": "Pass",
-		"duration_nanos": 10012000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
-		"suite_name": "minfs_truncate_tests",
-		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
-		"status": "Fail",
-		"duration_nanos": 10973000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
-		"suite_name": "minfs_truncate_tests",
-		"case_name": "(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
-		"status": "Skip",
-		"duration_nanos": 0,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003c0, 0, kBlockSize\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003c0, 0, kBlockSize\u003e)",
-		"status": "Pass",
-		"duration_nanos": 19000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
-		"status": "Pass",
-		"duration_nanos": 20000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
-		"status": "Pass",
-		"duration_nanos": 19000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
-		"status": "Pass",
-		"duration_nanos": 19000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
-		"status": "Pass",
-		"duration_nanos": 19000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
-		"status": "Pass",
-		"duration_nanos": 20000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
-		"status": "Pass",
-		"duration_nanos": 24000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
-		"status": "Pass",
-		"duration_nanos": 24000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
-		"suite_name": "minfs_sparse_tests",
-		"case_name": "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
-		"status": "Pass",
-		"duration_nanos": 25000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_rw_workers_test.TestWorkSingleThread",
-		"suite_name": "minfs_rw_workers_test",
-		"case_name": "TestWorkSingleThread",
-		"status": "Pass",
-		"duration_nanos": 40920000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_maxfile_tests.test_maxfile",
-		"suite_name": "minfs_maxfile_tests",
-		"case_name": "test_maxfile",
-		"status": "Pass",
-		"duration_nanos": 62243000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_directory_tests.TestDirectoryLarge",
-		"suite_name": "minfs_directory_tests",
-		"case_name": "TestDirectoryLarge",
-		"status": "Pass",
-		"duration_nanos": 3251000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_directory_tests.TestDirectoryReaddir",
-		"suite_name": "minfs_directory_tests",
-		"case_name": "TestDirectoryReaddir",
-		"status": "Pass",
-		"duration_nanos": 69000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_directory_tests.TestDirectoryReaddirLarge",
-		"suite_name": "minfs_directory_tests",
-		"case_name": "TestDirectoryReaddirLarge",
-		"status": "Pass",
-		"duration_nanos": 6414000000,
-		"format": "Zircon utest"
-	},
-	{
-		"display_name": "minfs_basic_tests.test_basic",
-		"suite_name": "minfs_basic_tests",
-		"case_name": "test_basic",
-		"status": "Pass",
-		"duration_nanos": 21000000,
-		"format": "Zircon utest"
+
+	want := []TestCaseResult{
+		{
+			DisplayName: "minfs_truncate_tests.TestTruncateSmall",
+			SuiteName:   "minfs_truncate_tests",
+			CaseName:    "TestTruncateSmall",
+			Duration:    1000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
+			SuiteName:   "minfs_truncate_tests",
+			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 10, 1000\u003e)",
+			Duration:    20414000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
+			SuiteName:   "minfs_truncate_tests",
+			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 15, 500\u003e)",
+			Duration:    10012000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
+			SuiteName:   "minfs_truncate_tests",
+			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 20, 500\u003e)",
+			Duration:    10973000000,
+			Status:      "Fail",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_truncate_tests.(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
+			SuiteName:   "minfs_truncate_tests",
+			CaseName:    "(TestTruncateLarge\u003c1 \u003c\u003c 25, 500\u003e)",
+			Duration:    0,
+			Status:      "Skip",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003c0, 0, kBlockSize\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003c0, 0, kBlockSize\u003e)",
+			Duration:    19000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize / 2, 0, kBlockSize\u003e)",
+			Duration:    20000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize / 2, kBlockSize, kBlockSize\u003e)",
+			Duration:    19000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize, 0, kBlockSize\u003e)",
+			Duration:    19000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize, kBlockSize / 2, kBlockSize\u003e)",
+			Duration:    19000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 2\u003e)",
+			Duration:    20000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+			Duration:    24000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks - kBlockSize, kBlockSize * 32\u003e)",
+			Duration:    24000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_sparse_tests.(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
+			SuiteName:   "minfs_sparse_tests",
+			CaseName:    "(test_sparse\u003ckBlockSize * kDirectBlocks + kBlockSize, kBlockSize * kDirectBlocks + 2 * kBlockSize, kBlockSize * 32\u003e)",
+			Duration:    25000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_rw_workers_test.TestWorkSingleThread",
+			SuiteName:   "minfs_rw_workers_test",
+			CaseName:    "TestWorkSingleThread",
+			Duration:    40920000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_maxfile_tests.test_maxfile",
+			SuiteName:   "minfs_maxfile_tests",
+			CaseName:    "test_maxfile",
+			Duration:    62243000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_directory_tests.TestDirectoryLarge",
+			SuiteName:   "minfs_directory_tests",
+			CaseName:    "TestDirectoryLarge",
+			Duration:    3251000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_directory_tests.TestDirectoryReaddir",
+			SuiteName:   "minfs_directory_tests",
+			CaseName:    "TestDirectoryReaddir",
+			Duration:    69000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_directory_tests.TestDirectoryReaddirLarge",
+			SuiteName:   "minfs_directory_tests",
+			CaseName:    "TestDirectoryReaddirLarge",
+			Duration:    6414000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		}, {
+			DisplayName: "minfs_basic_tests.test_basic",
+			SuiteName:   "minfs_basic_tests",
+			CaseName:    "test_basic",
+			Duration:    21000000,
+			Status:      "Pass",
+			Format:      "Zircon utest",
+		},
 	}
-]
-`
-	testCase(t, stdout, want)
+	testCaseCmp(t, stdout, want)
 }
 
 // Regression test for fxbug.dev/51327
@@ -748,91 +820,81 @@ func TestFxb51327(t *testing.T) {
 [  PASSED  ] 13 tests.
 ok 9 fuchsia-pkg://fuchsia.com/audio_pipeline_tests#meta/audio_pipeline_tests.cmx (12.230948553s)
 `
-	want := `
-[
-	{
-		"display_name": "UltrasoundTest.CreateRenderer",
-		"suite_name": "UltrasoundTest",
-		"case_name": "CreateRenderer",
-		"status": "Pass",
-		"duration_nanos": 964000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.RendererDoesNotSupportSetPcmStreamType",
-		"suite_name": "UltrasoundTest",
-		"case_name": "RendererDoesNotSupportSetPcmStreamType",
-		"status": "Pass",
-		"duration_nanos": 142000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.RendererDoesNotSupportSetUsage",
-		"suite_name": "UltrasoundTest",
-		"case_name": "RendererDoesNotSupportSetUsage",
-		"status": "Pass",
-		"duration_nanos": 112000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.RendererDoesNotSupportBindGainControl",
-		"suite_name": "UltrasoundTest",
-		"case_name": "RendererDoesNotSupportBindGainControl",
-		"status": "Pass",
-		"duration_nanos": 151000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.RendererDoesNotSupportSetReferenceClock",
-		"suite_name": "UltrasoundTest",
-		"case_name": "RendererDoesNotSupportSetReferenceClock",
-		"status": "Pass",
-		"duration_nanos": 143000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.CreateCapturer",
-		"suite_name": "UltrasoundTest",
-		"case_name": "CreateCapturer",
-		"status": "Pass",
-		"duration_nanos": 32000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.CapturerDoesNotSupportSetPcmStreamType",
-		"suite_name": "UltrasoundTest",
-		"case_name": "CapturerDoesNotSupportSetPcmStreamType",
-		"status": "Pass",
-		"duration_nanos": 51000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.CapturerDoesNotSupportSetUsage",
-		"suite_name": "UltrasoundTest",
-		"case_name": "CapturerDoesNotSupportSetUsage",
-		"status": "Pass",
-		"duration_nanos": 42000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.CapturerDoesNotSupportBindGainControl",
-		"suite_name": "UltrasoundTest",
-		"case_name": "CapturerDoesNotSupportBindGainControl",
-		"status": "Pass",
-		"duration_nanos": 52000000,
-		"format": "GoogleTest"
-	},
-	{
-		"display_name": "UltrasoundTest.CapturerDoesNotSupportSetReferenceClock",
-		"suite_name": "UltrasoundTest",
-		"case_name": "CapturerDoesNotSupportSetReferenceClock",
-		"status": "Pass",
-		"duration_nanos": 41000000,
-		"format": "GoogleTest"
+	want := []TestCaseResult{
+		{
+			DisplayName: "UltrasoundTest.CreateRenderer",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "CreateRenderer",
+			Duration:    964000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.RendererDoesNotSupportSetPcmStreamType",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "RendererDoesNotSupportSetPcmStreamType",
+			Duration:    142000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.RendererDoesNotSupportSetUsage",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "RendererDoesNotSupportSetUsage",
+			Duration:    112000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.RendererDoesNotSupportBindGainControl",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "RendererDoesNotSupportBindGainControl",
+			Duration:    151000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.RendererDoesNotSupportSetReferenceClock",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "RendererDoesNotSupportSetReferenceClock",
+			Duration:    143000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.CreateCapturer",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "CreateCapturer",
+			Duration:    32000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.CapturerDoesNotSupportSetPcmStreamType",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "CapturerDoesNotSupportSetPcmStreamType",
+			Duration:    51000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.CapturerDoesNotSupportSetUsage",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "CapturerDoesNotSupportSetUsage",
+			Duration:    42000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.CapturerDoesNotSupportBindGainControl",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "CapturerDoesNotSupportBindGainControl",
+			Duration:    52000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		}, {
+			DisplayName: "UltrasoundTest.CapturerDoesNotSupportSetReferenceClock",
+			SuiteName:   "UltrasoundTest",
+			CaseName:    "CapturerDoesNotSupportSetReferenceClock",
+			Duration:    41000000,
+			Status:      "Pass",
+			Format:      "GoogleTest",
+		},
 	}
-]
-`
-	testCase(t, stdout, want)
+	testCaseCmp(t, stdout, want)
+
 }
 
 // Regression test for fxbug.dev/52363
@@ -847,43 +909,30 @@ test test_observer_stop_api ... ok
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ok 61 fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logs_integration_rust_tests.cmx (1.04732004s)
 `
-	want := `
-        [
-                {
-                        "display_name": "listen_for_klog",
-                        "suite_name": "",
-                        "case_name": "listen_for_klog",
-                        "status": "Pass",
-                        "duration_nanos": 0,
-                        "format": "Rust"
-                },
-                {
-                        "display_name": "listen_for_syslog",
-                        "suite_name": "",
-                        "case_name": "listen_for_syslog",
-                        "status": "Pass",
-                        "duration_nanos": 0,
-                        "format": "Rust"
-                },
-                {
-                        "display_name": "listen_for_klog_routed_stdio",
-                        "suite_name": "",
-                        "case_name": "listen_for_klog_routed_stdio",
-                        "status": "Pass",
-                        "duration_nanos": 0,
-                        "format": "Rust"
-                },
-                {
-                        "display_name": "test_observer_stop_api",
-                        "suite_name": "",
-                        "case_name": "test_observer_stop_api",
-                        "status": "Pass",
-                        "duration_nanos": 0,
-                        "format": "Rust"
-                }
-        ]
-`
-	testCase(t, stdout, want)
+	want := []TestCaseResult{
+		{
+			DisplayName: "listen_for_klog",
+			CaseName:    "listen_for_klog",
+			Status:      "Pass",
+			Format:      "Rust",
+		}, {
+			DisplayName: "listen_for_syslog",
+			CaseName:    "listen_for_syslog",
+			Status:      "Pass",
+			Format:      "Rust",
+		}, {
+			DisplayName: "listen_for_klog_routed_stdio",
+			CaseName:    "listen_for_klog_routed_stdio",
+			Status:      "Pass",
+			Format:      "Rust",
+		}, {
+			DisplayName: "test_observer_stop_api",
+			CaseName:    "test_observer_stop_api",
+			Status:      "Pass",
+			Format:      "Rust",
+		},
+	}
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseDartSystemTest(t *testing.T) {
@@ -965,27 +1014,24 @@ func TestParseDartSystemTest(t *testing.T) {
   ]
 }
 `
-	want := `
-[
-	{
-		"display_name": "foo_test/group1.test1",
-		"suite_name": "foo_test/group1",
-		"case_name": "test1",
-		"status": "Pass",
-		"duration_nanos": 52000000000,
-		"format": "dart_system_test"
-	},
-	{
-		"display_name": "foo_test/group1.test2",
-		"suite_name": "foo_test/group1",
-		"case_name": "test2",
-		"status": "Fail",
-		"duration_nanos": 30000000000,
-		"format": "dart_system_test"
+	want := []TestCaseResult{
+		{
+			DisplayName: "foo_test/group1.test1",
+			SuiteName:   "foo_test/group1",
+			CaseName:    "test1",
+			Duration:    52000000000,
+			Status:      "Pass",
+			Format:      "dart_system_test",
+		}, {
+			DisplayName: "foo_test/group1.test2",
+			SuiteName:   "foo_test/group1",
+			CaseName:    "test2",
+			Duration:    30000000000,
+			Status:      "Fail",
+			Format:      "dart_system_test",
+		},
 	}
-]
-`
-	testCase(t, stdout, want)
+	testCaseCmp(t, stdout, want)
 }
 
 func TestParseVulkanCts(t *testing.T) {
@@ -1001,47 +1047,33 @@ Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_9'..
 Fail (bad)
 Test case 'dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10'..
 `
-	want := `
-[
-	{
-		"display_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_8",
-		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
-		"case_name": "samples_8",
-		"status": "Pass",
-		"duration_nanos": 0,
-		"format": "VulkanCtsTest"
-	},
-	{
-		"display_name": "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32.test_stencil",
-		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32",
-		"case_name": "test_stencil",
-		"status": "Skip",
-		"duration_nanos": 0,
-		"format": "VulkanCtsTest"
-	},
-	{
-		"display_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_9",
-		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
-		"case_name": "samples_9",
-		"status": "Fail",
-		"duration_nanos": 0,
-		"format": "VulkanCtsTest"
-	},
-	{
-		"display_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10",
-		"suite_name": "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
-		"case_name": "samples_10",
-		"status": "Fail",
-		"duration_nanos": 0,
-		"format": "VulkanCtsTest"
-	}
-]
-`
-	testCase(t, stdout, want)
-}
 
-// If no test cases can be parsed, the output should be an empty slice, not a
-// nil slice, so it gets serialized as an empty JSON array instead of as null.
-func TestParseNoTestCases(t *testing.T) {
-	testCase(t, "non-test output", "[]")
+	want := []TestCaseResult{
+		{
+			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_8",
+			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
+			CaseName:    "samples_8",
+			Status:      "Pass",
+			Format:      "VulkanCtsTest",
+		}, {
+			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32.test_stencil",
+			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.separate_stencil_usage.d32_sfloat_s8_uint.samples_32",
+			CaseName:    "test_stencil",
+			Status:      "Skip",
+			Format:      "VulkanCtsTest",
+		}, {
+			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_9",
+			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
+			CaseName:    "samples_9",
+			Status:      "Fail",
+			Format:      "VulkanCtsTest",
+		}, {
+			DisplayName: "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint.samples_10",
+			SuiteName:   "dEQP-VK.renderpass.suballocation.multisample.r32g32_uint",
+			CaseName:    "samples_10",
+			Status:      "Fail",
+			Format:      "VulkanCtsTest",
+		},
+	}
+	testCaseCmp(t, stdout, want)
 }

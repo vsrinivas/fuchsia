@@ -22,5 +22,9 @@ type TestCaseResult struct {
 	CaseName    string         `json:"case_name"`
 	Status      TestCaseStatus `json:"status"`
 	Duration    time.Duration  `json:"duration_nanos"`
-	Format      string         `json:"format"`
+	// Format is the test runner used to execute the test.
+	Format string `json:"format"`
+	// FailReason is a concise and distinctive error message captured from stdout when the test case fails.
+	// The message is used to group similar failures and shouldn't contain stacktrace or line numbers.
+	FailReason string `json:"fail_reason"`
 }
