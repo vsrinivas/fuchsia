@@ -205,6 +205,59 @@ Info Tas58xx::GetInfo() {
 
 zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
+void Tas58xx::SetAgl(bool enable_agl) {
+  const uint8_t agl_value = 0x40 | (enable_agl ? kRegAglEnableBitByte0 : 0);
+
+  // clang-format off
+    const uint8_t buffer[] = {
+        kRegSelectBook, 0x8c,
+        kRegSelectPage, 0x2c,
+        kRegAgl, agl_value, 0x00, 0x00, 0x00,
+        kRegSelectPage, 0x00,
+        kRegSelectBook, 0x00,
+    };
+  // clang-format on
+
+  i2c_op_t ops[5] = {};
+
+  ops[0].data_buffer = &buffer[0];
+  ops[0].data_size = 2;
+  ops[0].is_read = false;
+  ops[0].stop = true;
+
+  ops[1].data_buffer = &buffer[2];
+  ops[1].data_size = 2;
+  ops[1].is_read = false;
+  ops[1].stop = true;
+
+  ops[2].data_buffer = &buffer[4];
+  ops[2].data_size = 5;
+  ops[2].is_read = false;
+  ops[2].stop = true;
+
+  ops[3].data_buffer = &buffer[9];
+  ops[3].data_size = 2;
+  ops[3].is_read = false;
+  ops[3].stop = true;
+
+  ops[4].data_buffer = &buffer[11];
+  ops[4].data_size = 2;
+  ops[4].is_read = false;
+  ops[4].stop = true;
+
+  sync_completion_t completion;
+  sync_completion_reset(&completion);
+
+  i2c_.Transact(
+      ops, countof(ops),
+      [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
+        sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
+      },
+      &completion);
+
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+}
+
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
 
 zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
@@ -269,58 +322,9 @@ void Tas58xx::SetGainState(GainState gain_state) {
                        gain_state.agc_enabled != last_agc_);
   fbl::AutoLock lock(&lock_);
   zx_status_t status;
+  // TODO(77042): Once clients are moved to the signal processing API remove this.
   if (gain_state.agc_enabled != last_agc_) {
-    // TODO(77042): Move to the signal processing API, for now use the AGC bit.
-    const uint8_t agl_value = 0x40 | (gain_state.agc_enabled ? kRegAglEnableBitByte0 : 0);
-
-    // clang-format off
-    const uint8_t buffer[] = {
-        kRegSelectBook, 0x8c,
-        kRegSelectPage, 0x2c,
-        kRegAgl, agl_value, 0x00, 0x00, 0x00,
-        kRegSelectPage, 0x00,
-        kRegSelectBook, 0x00,
-    };
-    // clang-format on
-
-    i2c_op_t ops[5] = {};
-
-    ops[0].data_buffer = &buffer[0];
-    ops[0].data_size = 2;
-    ops[0].is_read = false;
-    ops[0].stop = true;
-
-    ops[1].data_buffer = &buffer[2];
-    ops[1].data_size = 2;
-    ops[1].is_read = false;
-    ops[1].stop = true;
-
-    ops[2].data_buffer = &buffer[4];
-    ops[2].data_size = 5;
-    ops[2].is_read = false;
-    ops[2].stop = true;
-
-    ops[3].data_buffer = &buffer[9];
-    ops[3].data_size = 2;
-    ops[3].is_read = false;
-    ops[3].stop = true;
-
-    ops[4].data_buffer = &buffer[11];
-    ops[4].data_size = 2;
-    ops[4].is_read = false;
-    ops[4].stop = true;
-
-    sync_completion_t completion;
-    sync_completion_reset(&completion);
-
-    i2c_.Transact(
-        ops, std::size(ops),
-        [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-          sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
-        },
-        &completion);
-
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    SetAgl(gain_state.agc_enabled);
     last_agc_ = gain_state.agc_enabled;
   }
   // Report the time at which AGL was enabled. This along with the brownout protection driver trace

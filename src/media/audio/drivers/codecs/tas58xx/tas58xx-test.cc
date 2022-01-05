@@ -416,6 +416,59 @@ TEST(Tas58xxTest, SetGainAgc) {
   mock_i2c.VerifyAndClear();
 }
 
+TEST(Tas58xxTest, SetAgcSignalProcessing) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  mock_i2c::MockI2c mock_i2c;
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  ASSERT_OK(
+      SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(fake_parent.get(), mock_i2c.GetProto()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  // AGC enabled.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0xc0, 0x00, 0x00, 0x00})  // Enable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+    client.SetAgl(true);
+  }
+
+  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
+  {
+    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+    auto unused = client.GetInfo();
+    static_cast<void>(unused);
+  }
+
+  // AGC disabled.
+  {
+    mock_i2c
+        .ExpectWriteStop({0x7f, 0x8c})                    // book 0x8c.
+        .ExpectWriteStop({0x00, 0x2c})                    // page 0x2c.
+        .ExpectWriteStop({0x68, 0x40, 0x00, 0x00, 0x00})  // Disable AGL.
+        .ExpectWriteStop({0x00, 0x00})                    // page 0.
+        .ExpectWriteStop({0x7f, 0x00});                   // book 0.
+    client.SetAgl(false);
+  }
+
+  // Make a 2-way call to make sure the server (we know single threaded) completed previous calls.
+  {
+    mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x00});  // Check DIE ID.
+    auto unused = client.GetInfo();
+    static_cast<void>(unused);
+  }
+
+  mock_i2c.VerifyAndClear();
+}
+
 TEST(Tas58xxTest, Reset) {
   auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;

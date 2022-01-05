@@ -45,6 +45,8 @@ class Tas58xx : public SimpleCodecServer {
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
+  bool SupportsAgl() override { return true; }
+  void SetAgl(bool enable_agl) override;
 
   std::atomic<bool> initialized_ = false;  // Protected for unit tests.
 
