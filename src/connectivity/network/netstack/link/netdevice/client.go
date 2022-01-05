@@ -177,13 +177,6 @@ func (c *Client) write(port network.PortId, pkts stack.PacketBufferList, protoco
 	})
 }
 
-func (p *Port) WritePacket(_ stack.RouteInfo, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
-	var pkts stack.PacketBufferList
-	pkts.PushBack(pkt)
-	_, err := p.client.write(p.portInfo.Id, pkts, proto)
-	return err
-}
-
 func (p *Port) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	return p.client.write(p.portInfo.Id, pkts, proto)
 }

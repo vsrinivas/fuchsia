@@ -172,10 +172,6 @@ func (*stubEndpoint) AddHeader(local, remote tcpip.LinkAddress, protocol tcpip.N
 	panic("AddHeader unimplemented")
 }
 
-func (*stubEndpoint) WritePacket(_ stack.RouteInfo, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
-	panic("WritePacket unimplemented")
-}
-
 func (*stubEndpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	panic("WritePackets unimplemented")
 }
@@ -299,13 +295,21 @@ func TestBridgeWritePackets(t *testing.T) {
 	}
 	baddr := bridgeEP.LinkAddress()
 
-	t.Run("WritePacket", func(t *testing.T) {
+	t.Run("WritePackets", func(t *testing.T) {
 		dstAddr := linkAddr4
-		if err := bridgeEP.WritePacket(stack.RouteInfo{RemoteLinkAddress: dstAddr}, fakeNetworkProtocol, stack.NewPacketBuffer(stack.PacketBufferOptions{
+		var pkts stack.PacketBufferList
+		defer pkts.DecRef()
+		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
 			Data:               buffer.View(data[0]).ToVectorisedView(),
-		})); err != nil {
-			t.Errorf("bridgeEP.WritePacket({}, 0, _): %s", err)
+		})
+		pkts.PushBack(pkt)
+		pkt.EgressRoute.RemoteLinkAddress = dstAddr
+		pkt.NetworkProtocolNumber = fakeNetworkProtocol
+		if n, err := bridgeEP.WritePackets(stack.RouteInfo{}, pkts, 0); err != nil {
+			t.Fatalf("bridgeEP.WritePackets({}, _, 0): %s", err)
+		} else if n != 1 {
+			t.Fatalf("got bridgeEP.WritePackets({}, _, 0) = %d, want = 1", n)
 		}
 
 		for i, ep := range eps {
@@ -320,21 +324,26 @@ func TestBridgeWritePackets(t *testing.T) {
 	for i := 1; i <= len(data); i++ {
 		t.Run(fmt.Sprintf("WritePackets(N=%d)", i), func(t *testing.T) {
 			var pkts stack.PacketBufferList
-			for j := 0; j < i; j++ {
-				pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
-					ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
-					Data:               buffer.View(data[j]).ToVectorisedView(),
-				}))
-			}
+			defer pkts.DecRef()
 
 			dstAddr := linkAddr5
-			r := stack.RouteInfo{RemoteLinkAddress: dstAddr}
-			got, err := bridgeEP.WritePackets(r, pkts, fakeNetworkProtocol)
+
+			for j := 0; j < i; j++ {
+				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+					ReserveHeaderBytes: int(bridgeEP.MaxHeaderLength()),
+					Data:               buffer.View(data[j]).ToVectorisedView(),
+				})
+				pkt.EgressRoute.RemoteLinkAddress = dstAddr
+				pkt.NetworkProtocolNumber = fakeNetworkProtocol
+				pkts.PushBack(pkt)
+			}
+
+			got, err := bridgeEP.WritePackets(stack.RouteInfo{}, pkts, 0)
 			if err != nil {
-				t.Errorf("bridgeEP.WritePackets(%+v, %+v, 0): %s", r, pkts, err)
+				t.Errorf("bridgeEP.WritePackets({}, _, 0): %s", err)
 			}
 			if got != i {
-				t.Errorf("got bridgeEP.WritePackets(%+v, %+v, 0) = %d, want = %d", r, pkts, got, i)
+				t.Errorf("got bridgeEP.WritePackets({}, _, 0) = %d, want = %d", got, i)
 			}
 
 			for j := 0; j < i; j++ {

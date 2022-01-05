@@ -366,16 +366,24 @@ func TestClient(t *testing.T) {
 			t.Run("WritePacket", func(t *testing.T) {
 				for i := 0; i < int(depth)*10; i++ {
 					func() {
+						var pkts stack.PacketBufferList
+						defer pkts.DecRef()
+
 						pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 							ReserveHeaderBytes: int(client.MaxHeaderLength()) + len(packetHeader) + 5,
 							Data:               buffer.View(body).ToVectorisedView(),
 						})
-						defer pkt.DecRef()
+						pkts.PushBack(pkt)
+
 						if n := copy(pkt.NetworkHeader().Push(len(packetHeader)), packetHeader); n != len(packetHeader) {
 							t.Fatalf("got copy(...) = %d, want = %d", n, len(packetHeader))
 						}
-						if err := client.WritePacket(stack.RouteInfo{}, 1337, pkt); err != nil {
-							t.Fatalf("client.WritePacket({}, 1337, _): %s", err)
+
+						const protocol = 1337
+						if n, err := client.WritePackets(stack.RouteInfo{}, pkts, protocol); err != nil {
+							t.Fatalf("client.WritePackets({}, %d, _): %s", protocol, err)
+						} else if n != 1 {
+							t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", protocol, n)
 						}
 					}()
 

@@ -591,12 +591,7 @@ TEST(RawSocketICMPv6Test, FilterICMPPackets) {
     EXPECT_EQ(memcmp(&sender, &kLoopbackAddr, sizeof(kLoopbackAddr)), 0);
     EXPECT_EQ(got_packet.icmp6_type, kAllowedType);
     EXPECT_EQ(got_packet.icmp6_code, kUnusedICMPCode);
-#ifdef __Fuchsia__
-    // TODO(https://fxbug.dev/82541): Use same check as Linux.
-    EXPECT_EQ(got_packet.icmp6_cksum, 0);
-#else   // __Fuchsia__
     EXPECT_NE(got_packet.icmp6_cksum, 0);
-#endif  // __Fuchsia__
   }
 
   // Make sure no more packets delivered to the raw socket.

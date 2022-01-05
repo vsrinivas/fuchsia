@@ -382,7 +382,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func TestClient_WritePacket(t *testing.T) {
+func TestClient_WritePackets(t *testing.T) {
 	ctx := context.Background()
 
 	tunDev, _, client, port := createTunClientPairWithOnline(t, ctx, false)
@@ -399,13 +399,16 @@ func TestClient_WritePacket(t *testing.T) {
 	linkEndpoint := setupPortAndCreateEndpoint(t, port, &dispatcher)
 
 	func() {
-		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+		var pkts stack.PacketBufferList
+		defer pkts.DecRef()
+		pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
-		})
-		defer pkt.DecRef()
+		}))
 
-		if err := linkEndpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, pkt); err != nil {
-			t.Fatalf("WritePacket({}, %d, _): %s", header.IPv4ProtocolNumber, err)
+		if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, header.IPv4ProtocolNumber); err != nil {
+			t.Fatalf("WritePackets({}, _, %d): %s", header.IPv4ProtocolNumber, err)
+		} else if n != 1 {
+			t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", header.IPv4ProtocolNumber, n)
 		}
 	}()
 
@@ -423,7 +426,7 @@ func TestClient_WritePacket(t *testing.T) {
 	}
 }
 
-func TestWritePacket(t *testing.T) {
+func TestWritePackets(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
@@ -483,17 +486,21 @@ func TestWritePacket(t *testing.T) {
 			const protocol = tcpip.NetworkProtocolNumber(45)
 			const pktBody = "bar"
 			func() {
-				var r stack.RouteInfo
-				r.LocalLinkAddress = tcpip.LinkAddress(tunMac.Octets[:])
-				r.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
+				var pkts stack.PacketBufferList
+				defer pkts.DecRef()
+
 				pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 					ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 					Data:               buffer.View(pktBody).ToVectorisedView(),
 				})
-				defer pkt.DecRef()
+				pkt.EgressRoute.RemoteLinkAddress = tcpip.LinkAddress(otherMac.Octets[:])
+				pkt.NetworkProtocolNumber = protocol
+				pkts.PushBack(pkt)
 
-				if err := linkEndpoint.WritePacket(r, protocol, pkt); err != nil {
-					t.Fatalf("WritePacket(%#v, %d, _): %s", r, protocol, err)
+				if n, err := linkEndpoint.WritePackets(stack.RouteInfo{}, pkts, protocol); err != nil {
+					t.Fatalf("WritePackets({}, _, %d): %s", protocol, err)
+				} else if n != 1 {
+					t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", protocol, n)
 				}
 			}()
 			readFrameResult, err := tunDev.ReadFrame(ctx)
@@ -1119,12 +1126,15 @@ func TestPairExchangePackets(t *testing.T) {
 	send := func(endpoint stack.LinkEndpoint, prefix byte, errs chan error) {
 		for i := uint16(0); i < packetCount; i++ {
 			func() {
-				pkt := makeTestPacket(prefix, i)
-				defer pkt.DecRef()
+				var pkts stack.PacketBufferList
+				defer pkts.DecRef()
+				pkts.PushBack(makeTestPacket(prefix, i))
 
-				if err := endpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, pkt); err != nil {
-					errs <- fmt.Errorf("WritePacket error: %s", err)
+				if n, err := endpoint.WritePackets(stack.RouteInfo{}, pkts, header.IPv4ProtocolNumber); err != nil {
+					errs <- fmt.Errorf("WritePackets({}, _, %d): %s", header.IPv4ProtocolNumber, err)
 					return
+				} else if n != 1 {
+					t.Fatalf("got WritePackets({}, _, %d) = %d, want = 1", header.IPv4ProtocolNumber, n)
 				}
 			}()
 		}

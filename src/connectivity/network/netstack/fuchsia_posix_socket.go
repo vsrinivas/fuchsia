@@ -830,7 +830,7 @@ func (ep *endpoint) SetIpTtl(_ fidl.Context, value socket.OptionalUint8) (socket
 	case 0:
 		return socket.BaseNetworkSocketSetIpTtlResultWithErr(posix.ErrnoEinval), nil
 	}
-	if err := ep.ep.SetSockOptInt(tcpip.TTLOption, v); err != nil {
+	if err := ep.ep.SetSockOptInt(tcpip.IPv4TTLOption, v); err != nil {
 		return socket.BaseNetworkSocketSetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseNetworkSocketSetIpTtlResultWithResponse(socket.BaseNetworkSocketSetIpTtlResponse{}), nil
@@ -838,7 +838,7 @@ func (ep *endpoint) SetIpTtl(_ fidl.Context, value socket.OptionalUint8) (socket
 }
 
 func (ep *endpoint) GetIpTtl(fidl.Context) (socket.BaseNetworkSocketGetIpTtlResult, error) {
-	value, err := ep.ep.GetSockOptInt(tcpip.TTLOption)
+	value, err := ep.ep.GetSockOptInt(tcpip.IPv4TTLOption)
 	if err != nil {
 		return socket.BaseNetworkSocketGetIpTtlResultWithErr(tcpipErrorToCode(err)), nil
 	}

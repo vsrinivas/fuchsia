@@ -134,17 +134,14 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
-	ep.AddHeader(ep.LinkAddress(), r.RemoteLinkAddress, protocol, pkt)
-	return ep.WriteRawPacket(pkt)
-}
-
 // WritePackets returns the number of packets in hdrs that were successfully
 // written to all links.
-func (ep *Endpoint) WritePackets(r stack.RouteInfo, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (ep *Endpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, _ tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
 	cnt := 0
 	for pkt := pkts.Front(); pkt != nil; pkt = pkt.Next() {
-		switch err := ep.WritePacket(r, protocol, pkt); err.(type) {
+		ep.AddHeader(ep.LinkAddress(), pkt.EgressRoute.RemoteLinkAddress, pkt.NetworkProtocolNumber, pkt)
+
+		switch err := ep.WriteRawPacket(pkt); err.(type) {
 		case nil:
 			cnt++
 		default:
