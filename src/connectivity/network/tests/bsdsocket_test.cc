@@ -6163,17 +6163,17 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsg) {
   constexpr uint8_t tos = 42;
   ASSERT_EQ(setsockopt(connected().get(), SOL_IP, IP_TOS, &tos, sizeof(tos)), 0) << strerror(errno);
 
-  char control[CMSG_SPACE(sizeof(uint8_t)) + 1];
+  char control[CMSG_SPACE(sizeof(tos)) + 1];
   ASSERT_NO_FATAL_FAILURE(
       SendAndCheckReceivedMessage(control, sizeof(control), [tos](msghdr& msghdr) {
-        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(uint8_t)));
+        EXPECT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(tos)));
         cmsghdr* cmsg;
         ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
-        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(uint8_t)));
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(tos)));
         EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
         EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
         uint8_t recv_tos;
-        memcpy(&recv_tos, CMSG_DATA(cmsg), sizeof(tos));
+        memcpy(&recv_tos, CMSG_DATA(cmsg), sizeof(recv_tos));
         EXPECT_EQ(recv_tos, tos);
         EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
       }));
@@ -6184,17 +6184,17 @@ TEST_F(NetDatagramSocketsCmsgIpTosTest, RecvCmsgBufferTooSmallToBePadded) {
   ASSERT_EQ(setsockopt(connected().get(), SOL_IP, IP_TOS, &tos, sizeof(tos)), 0) << strerror(errno);
 
   // This test is only meaningful if the length of the data is not aligned.
-  ASSERT_NE(CMSG_ALIGN(sizeof(uint8_t)), sizeof(uint8_t));
+  ASSERT_NE(CMSG_ALIGN(sizeof(tos)), sizeof(tos));
   // Add an extra byte in the control buffer. It will be reported in the msghdr controllen field.
-  char control[CMSG_LEN(sizeof(uint8_t)) + 1];
+  char control[CMSG_LEN(sizeof(tos)) + 1];
   ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(control, sizeof(control), [](msghdr& msghdr) {
     // There is not enough space in the control buffer for it to be padded by CMSG_SPACE. So we
     // expect the size of the input control buffer in controllen instead. It indicates that every
     // bytes from the control buffer were used.
-    EXPECT_EQ(msghdr.msg_controllen, CMSG_LEN(sizeof(uint8_t)) + 1);
+    EXPECT_EQ(msghdr.msg_controllen, CMSG_LEN(sizeof(tos)) + 1);
     cmsghdr* cmsg;
     ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
-    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(uint8_t)));
+    EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(tos)));
     EXPECT_EQ(cmsg->cmsg_level, SOL_IP);
     EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
     EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
