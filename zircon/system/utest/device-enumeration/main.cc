@@ -184,6 +184,10 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
 
       "fusb302",
 
+      // USB
+      "sys/platform/00:00:2/xhci/usb-bus",
+      "sys/platform/00:00:2/xhci/usb-bus/000",  // USB 2.0 Hub
+
       // Thermal
       "sys/platform/05:06:28",
       "sys/platform/05:06:a",

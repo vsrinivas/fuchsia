@@ -30,6 +30,9 @@
 // USB Power Delivery (Fusb302)
 #define VIM3_FUSB302_INT A311D_GPIOAO(8)
 
+// USB Power Enable for USB 2.0 and USB 3.0 ports
+#define VIM3_USB_PWR A311D_GPIOA(6)
+
 // Make the GPIO expander indices start after the SoC GPIOs to avoid any overlap.
 #define VIM3_EXPANDER_GPIO_START (A311D_GPIOE_START + A311D_GPIOE_COUNT)
 #define VIM3_EXPANDER_GPIO(n) (VIM3_EXPANDER_GPIO_START + (n))

@@ -21,7 +21,8 @@
 #include <soc/aml-meson/g12b-clk.h>
 #include <usb/dwc2/metadata.h>
 
-#include "vim3.h"
+#include "src/devices/board/drivers/vim3/vim3-gpios.h"
+#include "src/devices/board/drivers/vim3/vim3.h"
 
 namespace vim3 {
 
@@ -130,6 +131,35 @@ static const dwc2_metadata_t dwc2_metadata = {
         },
 };
 
+static const pbus_mmio_t xhci_mmios[] = {
+    {
+        .base = A311D_USB0_BASE,
+        .length = A311D_USB0_LENGTH,
+    },
+};
+
+static const pbus_irq_t xhci_irqs[] = {
+    {
+        .irq = A311D_USB0_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_dev_t xhci_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "xhci";
+  dev.vid = PDEV_VID_GENERIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_USB_XHCI;
+  dev.mmio_list = xhci_mmios;
+  dev.mmio_count = std::size(xhci_mmios);
+  dev.irq_list = xhci_irqs;
+  dev.irq_count = std::size(xhci_irqs);
+  dev.bti_list = usb_btis;
+  dev.bti_count = std::size(usb_btis);
+  return dev;
+}();
+
 using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 
 static pbus_metadata_t usb_metadata[] = {
@@ -208,6 +238,10 @@ zx_status_t Vim3::UsbInit() {
     return status;
   }
 
+  // Power on USB and wait for 30 ms (sleep duration derived from trial and error).
+  gpio_impl_.ConfigOut(VIM3_USB_PWR, 1);
+  zx::nanosleep(zx::deadline_after(zx::msec(30)));
+
   // Create USB Phy Device
   status = pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
                                     std::size(usb_phy_fragments), nullptr);
@@ -242,6 +276,13 @@ zx_status_t Vim3::UsbInit() {
                                     std::size(dwc2_fragments), "dwc2-phy");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd(dwc2) failed %d", __func__, status);
+    return status;
+  }
+
+  // Create XHCI device.
+  status = pbus_.DeviceAdd(&xhci_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: DeviceAdd(xhci) failed %d", __func__, status);
     return status;
   }
 
