@@ -243,7 +243,7 @@ class PageSource : public fbl::RefCounted<PageSource> {
   void Close();
 
   // The returned properties will last at least until Detach() or Close().
-  const PageSourceProperties& properties() const;
+  const PageSourceProperties& properties() const { return page_provider_properties_; }
 
   void Dump() const;
 

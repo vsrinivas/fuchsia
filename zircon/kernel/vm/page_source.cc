@@ -457,11 +457,6 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   return status;
 }
 
-const PageSourceProperties& PageSource::properties() const {
-  canary_.Assert();
-  return page_provider_properties_;
-}
-
 void PageSource::Dump() const {
   Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);

@@ -1746,7 +1746,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
   max_out_pages = ktl::min(static_cast<uint64_t>(max_out_pages), ((size_ - offset) / PAGE_SIZE));
 
   if (is_slice_locked()) {
-    uint64_t parent_offset;
+    uint64_t parent_offset = 0;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
     return parent->LookupPagesLocked(offset + parent_offset, pf_flags, mark_dirty, max_out_pages,
@@ -1836,8 +1836,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
   uint64_t visible_length = writing ? PAGE_SIZE : PAGE_SIZE * max_out_pages;
   // Get content from parent if available, otherwise accept we are the owner of the yet to exist
   // page.
-  VmCowPages* page_owner;
-  uint64_t owner_offset;
+  VmCowPages* page_owner = nullptr;
+  uint64_t owner_offset = 0;
   if ((!page_or_mark || page_or_mark->IsEmpty()) && parent_) {
     // Pass nullptr if visible_length is PAGE_SIZE to allow the lookup to short-circuit the length
     // calculation, as the calculation involves additional page lookups at every level.
