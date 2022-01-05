@@ -5833,13 +5833,6 @@ class NetDatagramSocketsCmsgRecvTest : public NetDatagramSocketsCmsgTestBase,
     auto const& [domain, cmsg_sockopt] = GetParam();
     auto const& [level, cmsg_type, optname_to_enable_receive] = cmsg_sockopt;
 
-#if defined(__Fuchsia__)
-    // TODO(https://fxbug.dev/86524): Support receiving SOL_IP -> IP_TOS control message.
-    if (level == SOL_IP && optname_to_enable_receive == IP_RECVTOS) {
-      GTEST_SKIP() << "receiving SOL_IP -> IP_TOS control message not supported in Fuchsia";
-    }
-#endif
-
     ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(domain));
 
     // Enable the specified socket option.
