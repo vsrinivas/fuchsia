@@ -997,6 +997,13 @@ environment to form a full SDK."
   related_guides: ["<a href=\"/docs/development/hardware/paving.md\">Guide for installing Fuchsia with paver</a>"]
   area: ["System", "Devices"]
 
+- term: "PID"
+  short_description: "A process KOID. A KOID that uniquely identifies a process object."
+  full_description: ""
+  see_also: ["<a href=\"/docs/glossary#koid\">"]
+  related_guides: [""]
+  area: ["Zircon"]
+
 - term: "Platform source tree"
   short_description: "The open source code hosted on
   <a href=\"http://fuchsia.googlesource.com/\">fuchsia.googlesource.com</a>, which comprises the
