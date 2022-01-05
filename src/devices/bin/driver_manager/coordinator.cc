@@ -75,9 +75,6 @@ namespace fdr = fuchsia_driver_registrar;
 namespace fpm = fuchsia_power_manager;
 
 constexpr char kDriverHostPath[] = "/pkg/bin/driver_host";
-constexpr char kBootFirmwarePath[] = "lib/firmware";
-constexpr char kSystemPrefix[] = "/system/";
-constexpr char kSystemFirmwarePath[] = "/system/lib/firmware";
 constexpr const char* kItemsPath = fidl::DiscoverableProtocolDefaultPath<fuchsia_boot::Items>;
 
 // The driver_host doesn't just define its own __asan_default_options()
@@ -128,7 +125,6 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
                          async_dispatcher_t* dispatcher, async_dispatcher_t* firmware_dispatcher)
     : config_(std::move(config)),
       dispatcher_(dispatcher),
-      firmware_dispatcher_(firmware_dispatcher),
       base_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system),
@@ -147,6 +143,8 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
   suspend_resume_manager_ = std::make_unique<SuspendResumeManager>(this, config_.suspend_timeout);
+  firmware_loader_ =
+      std::make_unique<FirmwareLoader>(this, firmware_dispatcher, config_.path_prefix);
 }
 
 Coordinator::~Coordinator() {}
@@ -855,89 +853,6 @@ zx_status_t Coordinator::AddCompositeDevice(const fbl::RefPtr<Device>& dev, std:
 
   composite_devices_.push_back(std::move(new_device));
   return ZX_OK;
-}
-
-static zx_status_t LoadFirmwareAt(int fd, const char* path, zx::vmo* vmo, size_t* size) {
-  fbl::unique_fd firmware_fd(openat(fd, path, O_RDONLY));
-  if (firmware_fd.get() < 0) {
-    if (errno != ENOENT) {
-      return ZX_ERR_IO;
-    }
-    return ZX_ERR_NOT_FOUND;
-  }
-
-  *size = lseek(firmware_fd.get(), 0, SEEK_END);
-  zx_status_t status = fdio_get_vmo_clone(firmware_fd.get(), vmo->reset_and_get_address());
-  return status;
-}
-
-void Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname,
-                               const char* path,
-                               fit::callback<void(zx::status<LoadFirmwareResult>)> cb) {
-  const std::string fwdirs[] = {
-      config_.path_prefix + kBootFirmwarePath,
-      kSystemFirmwarePath,
-  };
-
-  // Must be a relative path and no funny business.
-  if (path[0] == '/' || path[0] == '.') {
-    cb(zx::error(ZX_ERR_INVALID_ARGS));
-    return;
-  }
-
-  // This is done ahead of time as it is not thread-safe.
-  const Driver* driver = LibnameToDriver(driver_libname);
-  fbl::unique_fd package_dir;
-  if (driver != nullptr && driver->package_dir.is_valid()) {
-    package_dir = driver->package_dir.duplicate();
-  }
-
-  bool is_system = strncmp(driver_libname, kSystemPrefix, std::size(kSystemPrefix) - 1) == 0;
-
-  // This must occur in a separate thread as fdio operations may block when accessing /system or
-  // /pkg, possibly deadlocking the system. See http://fxbug.dev/87127 for more context.
-  async::PostTask(firmware_dispatcher(), [dev = std::move(dev), path = std::string(path),
-                                          package_dir = std::move(package_dir), is_system, fwdirs,
-                                          cb = std::move(cb)]() mutable {
-    // We are only going to check /system/ if the driver was loaded out of /system.
-    // This ensures that /system is available and loaded, as otherwise touching /system
-    // will wait, potentially forever.
-    size_t directories_to_check = 1;
-    if (is_system) {
-      directories_to_check = std::size(fwdirs);
-    }
-
-    zx::vmo vmo;
-    size_t size;
-    for (unsigned n = 0; n < directories_to_check; n++) {
-      fbl::unique_fd fd(open(fwdirs[n].c_str(), O_RDONLY, O_DIRECTORY));
-      if (fd.get() < 0) {
-        continue;
-      }
-      zx_status_t status = LoadFirmwareAt(fd.get(), path.c_str(), &vmo, &size);
-      if (status == ZX_OK) {
-        cb(zx::ok(LoadFirmwareResult{std::move(vmo), size}));
-        return;
-      }
-      if (status != ZX_ERR_NOT_FOUND) {
-        cb(zx::error(status));
-        return;
-      }
-    }
-
-    if (!package_dir) {
-      cb(zx::error(ZX_ERR_NOT_FOUND));
-      return;
-    }
-    auto package_path = std::string("lib/firmware/") + path;
-
-    zx_status_t status = LoadFirmwareAt(package_dir.get(), package_path.c_str(), &vmo, &size);
-    if (status == ZX_OK) {
-      cb(zx::ok(LoadFirmwareResult{std::move(vmo), size}));
-      return;
-    }
-    cb(zx::error(status));
-  });
 }
 
 // Traverse up the device tree to find the metadata with the matching |type|.

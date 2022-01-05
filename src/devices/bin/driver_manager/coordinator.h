@@ -48,6 +48,7 @@
 #include "src/devices/bin/driver_manager/metadata.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
 #include "src/devices/bin/driver_manager/system_state_manager.h"
+#include "src/devices/bin/driver_manager/v1/firmware_loader.h"
 #include "src/devices/bin/driver_manager/v1/init_task.h"
 #include "src/devices/bin/driver_manager/v1/resume_task.h"
 #include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
@@ -60,6 +61,7 @@ using statecontrol_fidl::wire::SystemPowerState;
 namespace fdf = fuchsia_driver_framework;
 
 class DriverHostLoaderService;
+class FirmwareLoader;
 class FsProvider;
 class SuspendResumeManager;
 class SystemStateManager;
@@ -206,15 +208,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   zx_status_t GetTopologicalPath(const fbl::RefPtr<const Device>& dev, char* out, size_t max) const;
 
-  struct LoadFirmwareResult {
-    zx::vmo vmo;
-    size_t size;
-  };
-  // |cb| may be called in the caller's callstack, or from another thread, and therefore must be
-  // able to deal with both re-entrancy as well as thread-safe.
-  void LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname, const char* path,
-                    fit::callback<void(zx::status<LoadFirmwareResult>)> cb);
-
   zx_status_t GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
                           size_t buflen, size_t* size);
   zx_status_t GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_t type, size_t* size) {
@@ -233,7 +226,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void DumpState(VmoWriter* vmo) const;
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
-  async_dispatcher_t* firmware_dispatcher() const { return firmware_dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
   zx::duration resume_timeout() const { return config_.resume_timeout; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
@@ -301,6 +293,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
 
+  FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
+
   const zx::vmo& mexec_kernel_zbi() const { return mexec_kernel_zbi_; }
   const zx::vmo& mexec_data_zbi() const { return mexec_data_zbi_; }
 
@@ -366,7 +360,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   CoordinatorConfig config_;
   async_dispatcher_t* const dispatcher_;
-  async_dispatcher_t* const firmware_dispatcher_;
   bool running_ = false;
   bool launched_first_driver_host_ = false;
   bool power_manager_registered_ = false;
@@ -404,6 +397,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
       driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
+
+  std::unique_ptr<FirmwareLoader> firmware_loader_;
 
   // Stashed mexec inputs.
   zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
