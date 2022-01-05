@@ -124,6 +124,9 @@ protocol/member fuchsia.hardware.audio/Health.GetHealthState() -> (fuchsia.hardw
 protocol fuchsia.hardware.audio/Health
 table/member fuchsia.hardware.audio/HealthState.healthy bool
 table fuchsia.hardware.audio/HealthState
+union/member fuchsia.hardware.audio/Latency.latency_frames uint32
+union/member fuchsia.hardware.audio/Latency.latency_time int64
+flexible union fuchsia.hardware.audio/Latency
 const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_IN_RING_BUFFER uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_CHANNELS_TO_USE uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_CHANNEL_SETS uint32 64
@@ -142,6 +145,7 @@ const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_RATES uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_SAMPLE_FORMATS uint32 3
 const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_VALID_BITS_PER_SAMPLE uint32 8
 const fuchsia.hardware.audio/MAX_DAI_UI_STRING_SIZE uint32 256
+const fuchsia.hardware.audio/MAX_STRING_SIZE uint32 256
 const fuchsia.hardware.audio/MAX_UI_STRING_SIZE uint32 256
 struct/member fuchsia.hardware.audio/PcmFormat.bytes_per_sample uint8
 struct/member fuchsia.hardware.audio/PcmFormat.channels_to_use_bitmask uint64
@@ -162,7 +166,28 @@ strict enum fuchsia.hardware.audio/PlugDetectCapabilities uint32
 table/member fuchsia.hardware.audio/PlugState.plug_state_time int64
 table/member fuchsia.hardware.audio/PlugState.plugged bool
 table fuchsia.hardware.audio/PlugState
+table/member fuchsia.hardware.audio/ProcessingElement.can_disable bool
+table/member fuchsia.hardware.audio/ProcessingElement.description string:256
+table/member fuchsia.hardware.audio/ProcessingElement.id uint64
+table/member fuchsia.hardware.audio/ProcessingElement.is_enabled bool
+table/member fuchsia.hardware.audio/ProcessingElement.latency fuchsia.hardware.audio/Latency
+table/member fuchsia.hardware.audio/ProcessingElement.parameters fuchsia.hardware.audio/ProcessingElementParameters
+table/member fuchsia.hardware.audio/ProcessingElement.type fuchsia.hardware.audio/ProcessingElementType
 table fuchsia.hardware.audio/ProcessingElement
+union/member fuchsia.hardware.audio/ProcessingElementParameters.vendor_specific_parameters fuchsia.hardware.audio/VendorSpecificParameters
+flexible union fuchsia.hardware.audio/ProcessingElementParameters
+enum/member fuchsia.hardware.audio/ProcessingElementType.AUTOMATIC_GAIN_CONTROL 5
+enum/member fuchsia.hardware.audio/ProcessingElementType.AUTOMATIC_GAIN_LIMITER 6
+enum/member fuchsia.hardware.audio/ProcessingElementType.CONNECTION_POINT 3
+enum/member fuchsia.hardware.audio/ProcessingElementType.DELAY 9
+enum/member fuchsia.hardware.audio/ProcessingElementType.DYNAMIC_RANGE_COMPRESSION 7
+enum/member fuchsia.hardware.audio/ProcessingElementType.END_POINT 2
+enum/member fuchsia.hardware.audio/ProcessingElementType.EQUALIZER 10
+enum/member fuchsia.hardware.audio/ProcessingElementType.GAIN 4
+enum/member fuchsia.hardware.audio/ProcessingElementType.MUTE 8
+enum/member fuchsia.hardware.audio/ProcessingElementType.SAMPLE_RATE_CONVERSION 11
+enum/member fuchsia.hardware.audio/ProcessingElementType.VENDOR_SPECIFIC 1
+flexible enum fuchsia.hardware.audio/ProcessingElementType uint32
 protocol/member fuchsia.hardware.audio/RingBuffer.GetProperties() -> (fuchsia.hardware.audio/RingBufferProperties properties)
 protocol/member fuchsia.hardware.audio/RingBuffer.GetVmo(uint32 min_frames,uint32 clock_recovery_notifications_per_ring) -> (fuchsia.hardware.audio/RingBuffer_GetVmo_Result result)
 protocol/member fuchsia.hardware.audio/RingBuffer.SetActiveChannels(uint64 active_channels_bitmask) -> (fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result result)
@@ -224,4 +249,5 @@ table fuchsia.hardware.audio/StreamProperties
 table/member fuchsia.hardware.audio/SupportedFormats.pcm_supported_formats fuchsia.hardware.audio/PcmSupportedFormats
 table fuchsia.hardware.audio/SupportedFormats
 const fuchsia.hardware.audio/UNIQUE_ID_SIZE uint32 16
+table fuchsia.hardware.audio/VendorSpecificParameters
 library fuchsia.hardware.audio

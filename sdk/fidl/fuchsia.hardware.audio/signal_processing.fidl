@@ -5,12 +5,95 @@ library fuchsia.hardware.audio;
 
 using zx;
 
-const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
+// TODO(fxbug.dev/64877): Complete parameters and types for processing elements.
 
-type ProcessingElement = table {};
+const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
+const MAX_STRING_SIZE uint32 = 256;
+
+type ProcessingElementType = flexible enum {
+    /// Vendor Specific. A type of processing element not covered by any subsequent type definition.
+    VENDOR_SPECIFIC = 1;
+
+    /// Define pipelines start/end.
+    END_POINT = 2;
+
+    /// Controls pipelines channel mixing and routing.
+    CONNECTION_POINT = 3;
+
+    /// Gain control, a.k.a. Volume control.
+    GAIN = 4;
+
+    /// Automatic Gain Control.
+    /// Automatically maintains a suitable signal level regardless of varitation of its input.
+    AUTOMATIC_GAIN_CONTROL = 5;
+
+    /// Automatic Gain Limiter.
+    /// Automatically maintains a signal level below a level specified.
+    /// Input below the level is unaffected, and peaks above the level are attenuated.
+    AUTOMATIC_GAIN_LIMITER = 6;
+
+    /// Dynamic Range Compression.
+    /// Reduces the dynamic range by lowering higher signal levels and increasing lower signal
+    /// levels.
+    DYNAMIC_RANGE_COMPRESSION = 7;
+
+    /// Mute.
+    MUTE = 8;
+
+    /// Delay.
+    DELAY = 9;
+
+    /// Equalizer.
+    EQUALIZER = 10;
+
+    /// Sample Rate Conversion.
+    SAMPLE_RATE_CONVERSION = 11;
+};
+
+/// Parameters for a `ProcessingElement` with `type` equal to `VENDOR_SPECIFIC`.
+type VendorSpecificParameters = table {};
+
+type ProcessingElementParameters = flexible union {
+    1: vendor_specific_parameters VendorSpecificParameters;
+};
+
+type Latency = flexible union {
+    /// Latency added to the pipeline as a zx.duration.
+    1: latency_time zx.duration;
+
+    /// Latency added to the pipeline as a number of frames.
+    2: latency_frames uint32;
+};
+
+type ProcessingElement = table {
+    /// Unique ID for this element. The scope of this id is only within the `SignalProcessing`
+    /// protocol lifespan, i.e. until the channel associated with the protocol is closed.
+    /// Required.
+    1: id uint64;
+
+    /// Processing Element Type. Required.
+    2: type ProcessingElementType;
+
+    /// If included, parameters for the processing element.
+    3: parameters ProcessingElementParameters;
+
+    /// If included and true, the processing element is enabled.
+    /// If not included or false, the processing element is disabled.
+    4: is_enabled bool;
+
+    /// If included and true, the processing element can be disabled via `ProcessingElementControl`.
+    /// If not included or false, the processing element is always enabled.
+    5: can_disable bool;
+
+    /// If included, how much latency is added to the pipeline.
+    6: latency Latency;
+
+    /// If included, a textual description of the processing element.
+    7: description string:MAX_STRING_SIZE;
+};
 
 /// For an overview see
-/// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/signal_processing).
+/// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing).
 protocol SignalProcessing {
     /// Returns a vector of supported Processing Elements.
     GetProcessingElements() -> (struct {
