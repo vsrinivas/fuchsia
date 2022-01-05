@@ -5,6 +5,7 @@
 import("//build/dart/dart_app.gni")
 
 dart_app("echo-dart-server") {
+  null_safe = true
   main_dart = "lib/main.dart"
 
   meta = [

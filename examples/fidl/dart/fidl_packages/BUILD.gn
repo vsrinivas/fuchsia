@@ -9,6 +9,7 @@ import("//build/dart/test.gni")
 
 # [START test]
 dart_test("fidl-example-dart-test") {
+  null_safe = true
   sources = [ "types_test.dart" ]
   deps = [
     "//examples/fidl/fuchsia.examples",

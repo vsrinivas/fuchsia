@@ -13,6 +13,7 @@ group("tests") {
 
 dart_library("lib") {
   package_name = "hello-world"
+  null_safe = true
   source_dir = "lib"
   sources = [ "main.dart" ]
   deps = [

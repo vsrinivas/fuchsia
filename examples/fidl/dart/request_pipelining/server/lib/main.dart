@@ -2,25 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_examples/fidl_async.dart' as fidl_echo;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:meta/meta.dart';
 
 // [START echo-impl]
 // Implementation of Echo that responds with a prefix prepended to each response
 class _EchoImpl extends fidl_echo.Echo {
   // The EchoBinding is added as a member to make serving the protocol easier.
   final _binding = fidl_echo.EchoBinding();
-  final String prefix;
+  late final String prefix;
 
-  _EchoImpl({@required this.prefix}) : assert(prefix != null);
+  _EchoImpl({required this.prefix});
 
   void bind(fidl.InterfaceRequest<fidl_echo.Echo> request) {
     _binding.bind(this, request);
@@ -57,8 +53,9 @@ class _EchoLauncherImpl extends fidl_echo.EchoLauncher {
     final serverEnd = echoPair.passRequest();
     final clientEnd = echoPair.passHandle();
 
-    launchEchoServer(prefix, serverEnd);
-    return clientEnd;
+    // Throw exception if serverEnd or clientEnd is null
+    launchEchoServer(prefix, serverEnd!);
+    return clientEnd!;
   }
 
   // For the pipelined method, the client provides the server end of the channel

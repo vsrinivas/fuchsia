@@ -6,6 +6,7 @@ import("//build/dart/dart_app.gni")
 
 dart_app("echo-launcher-dart-client") {
   main_dart = "lib/main.dart"
+  null_safe = true
   meta = [
     {
       path = rebase_path("meta/client.cmx")
