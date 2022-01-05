@@ -60,6 +60,7 @@ Future<void> _startTestHarness() async {
       envServicesToInherit: [
         'fuchsia.net.name.Lookup',
         'fuchsia.posix.socket.Provider',
+        'fuchsia.sysmem.Allocator',
         'fuchsia.vulkan.loader.Loader',
       ],
       envServices: EnvironmentServicesSpec(
@@ -70,8 +71,6 @@ Future<void> _startTestHarness() async {
             'fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx',
         'fuchsia.identity.account.AccountManager':
             'fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx',
-        'fuchsia.sysmem.Allocator':
-            'fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx',
         'fuchsia.tracelink.Registry':
             'fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx',
         'fuchsia.ui.input.ImeService':
