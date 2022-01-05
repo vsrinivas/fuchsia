@@ -5,9 +5,9 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_DEVICE_VIRTIO_QUEUE_FAKE_H_
 
-#include <virtio/virtio_ring.h>
-
 #include <optional>
+
+#include <virtio/virtio_ring.h>
 
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 

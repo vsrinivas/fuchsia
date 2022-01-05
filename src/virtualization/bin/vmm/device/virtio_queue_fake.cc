@@ -77,8 +77,8 @@ zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
 
 void VirtioQueueFake::WriteAvail(uint16_t head_idx) {
   auto& avail = const_cast<volatile vring_avail&>(*ring_.avail);
-  auto& idx = const_cast<uint16_t&>(ring_.avail->idx);
-  avail.ring[idx++ % ring_.size] = head_idx;
+  avail.ring[avail.idx % ring_.size] = head_idx;
+  __atomic_store_n(&avail.idx, avail.idx + 1, __ATOMIC_RELEASE);
 }
 
 zx_status_t VirtioQueueFake::SetNext(uint16_t desc_idx, uint16_t next_idx) {
@@ -93,7 +93,7 @@ zx_status_t VirtioQueueFake::SetNext(uint16_t desc_idx, uint16_t next_idx) {
 }
 
 std::optional<VirtioQueueFake::UsedElement> VirtioQueueFake::NextUsed() {
-  if (ring_.used->idx != used_index_) {
+  if (__atomic_load_n(&ring_.used->idx, __ATOMIC_ACQUIRE) != used_index_) {
     const auto& elem = ring_.used->ring[used_index_++ % ring_.size];
     return VirtioQueueFake::UsedElement{elem.id, elem.len};
   } else {
