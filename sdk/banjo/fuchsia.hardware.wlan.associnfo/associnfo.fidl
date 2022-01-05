@@ -4,6 +4,7 @@
 library fuchsia.hardware.wlan.associnfo;
 
 using ddk.hw.wlan.ieee80211;
+using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.wlan.common;
 using fuchsia.wlan.ieee80211 as ieee80211;
 
@@ -89,32 +90,6 @@ const WLAN_GI__200NS uint8 = 0x4;
 const WLAN_GI__3200NS uint8 = 0x10;
 const WLAN_GI__1600NS uint8 = 0x20;
 
-type WlanPhyType = strict enum : uint8 {
-    /// IEEE 802.11 for 1, 2 Mbps.
-    DSSS = 0x01;
-
-    /// IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
-    CCK = 0x02;
-
-    /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
-    ERP = 0x04;
-
-    // IEEE 802.11a/g.
-    // TODO(http://fxbug.dev/74579): Clean this up.
-    //OFDM = 0x4;
-
-    /// IEEE 802.11n.
-    HT = 0x08;
-
-    /// IEEE 802.11ac.
-    VHT = 0x10;
-
-    /// IEEE 802.11ax.
-    HEW = 0x20;
-};
-
-const WLAN_PHY_TYPE_OFDM uint8 = 0x4;
-
 /// Access category
 /// WFA WMM v1.2, 2.2.2 Table 6
 type WlanAc = strict enum {
@@ -163,7 +138,7 @@ type WlanAssocCtx = struct {
     bssid ieee80211.MacAddr;
     aid uint16;
     listen_interval uint16;
-    phy WlanPhyType;
+    phy fuchsia.hardware.wlan.phyinfo.WlanInfoPhyType;
     channel fuchsia.wlan.common.WlanChannel;
 
     /// QoS capable and parameters

@@ -13,7 +13,6 @@ const fuchsia.hardware.wlan.associnfo/WLAN_GI__800NS uint8 1
 const fuchsia.hardware.wlan.associnfo/WLAN_MAC_MAX_EXT_RATES uint32 255
 const fuchsia.hardware.wlan.associnfo/WLAN_MAC_MAX_RATES uint32 263
 const fuchsia.hardware.wlan.associnfo/WLAN_MAC_MAX_SUPP_RATES uint32 8
-const fuchsia.hardware.wlan.associnfo/WLAN_PHY_TYPE_OFDM uint8 4
 enum/member fuchsia.hardware.wlan.associnfo/WlanAc.BACKGROUND 1
 enum/member fuchsia.hardware.wlan.associnfo/WlanAc.BEST_EFFORT 2
 enum/member fuchsia.hardware.wlan.associnfo/WlanAc.VIDEO 3
@@ -30,7 +29,7 @@ struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.has_vht_op bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_cap ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.ht_op fuchsia.hardware.wlan.associnfo/WlanHtOp
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.listen_interval uint16
-struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.phy fuchsia.hardware.wlan.associnfo/WlanPhyType
+struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.phy fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.qos bool
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.rates array<uint8,263>
 struct/member fuchsia.hardware.wlan.associnfo/WlanAssocCtx.rates_cnt uint16
@@ -77,13 +76,6 @@ enum/member fuchsia.hardware.wlan.associnfo/WlanKeyType.IGTK 3
 enum/member fuchsia.hardware.wlan.associnfo/WlanKeyType.PAIRWISE 1
 enum/member fuchsia.hardware.wlan.associnfo/WlanKeyType.PEER 4
 strict enum fuchsia.hardware.wlan.associnfo/WlanKeyType uint8
-enum/member fuchsia.hardware.wlan.associnfo/WlanPhyType.CCK 2
-enum/member fuchsia.hardware.wlan.associnfo/WlanPhyType.DSSS 1
-enum/member fuchsia.hardware.wlan.associnfo/WlanPhyType.ERP 4
-enum/member fuchsia.hardware.wlan.associnfo/WlanPhyType.HEW 32
-enum/member fuchsia.hardware.wlan.associnfo/WlanPhyType.HT 8
-enum/member fuchsia.hardware.wlan.associnfo/WlanPhyType.VHT 16
-strict enum fuchsia.hardware.wlan.associnfo/WlanPhyType uint8
 enum/member fuchsia.hardware.wlan.associnfo/WlanRxInfoValid.CHAN_WIDTH 4
 enum/member fuchsia.hardware.wlan.associnfo/WlanRxInfoValid.DATA_RATE 2
 enum/member fuchsia.hardware.wlan.associnfo/WlanRxInfoValid.MCS 8

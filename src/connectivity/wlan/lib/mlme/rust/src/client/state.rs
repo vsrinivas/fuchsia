@@ -2834,7 +2834,7 @@ mod tests {
         let assoc_ctx = m.fake_device.assocs.get(&BSSID.0).unwrap();
 
         assert_eq!(assoc_ctx.aid, 0);
-        assert_eq!(assoc_ctx.phy, banjo_fuchsia_hardware_wlan_associnfo::WlanPhyType::VHT);
+        assert_eq!(assoc_ctx.phy, banjo_fuchsia_hardware_wlan_phyinfo::WlanInfoPhyType::VHT);
         assert_eq!(assoc_ctx.qos, true);
         assert_eq!(assoc_ctx.rates_cnt, 6);
         assert_eq!(assoc_ctx.rates[..6], [125, 126, 127, 128, 129, 130]);

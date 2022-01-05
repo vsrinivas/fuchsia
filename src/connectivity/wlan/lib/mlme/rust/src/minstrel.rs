@@ -4,7 +4,8 @@
 
 use {
     crate::probe_sequence::{ProbeEntry, ProbeSequence},
-    banjo_fuchsia_hardware_wlan_associnfo as hw_wlan_info,
+    banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
+    banjo_fuchsia_hardware_wlan_phyinfo as banjo_wlan_phyinfo,
     banjo_fuchsia_hardware_wlan_softmac as hw_wlan_softmac,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
     fuchsia_zircon as zx,
@@ -127,7 +128,7 @@ struct Peer {
 }
 
 impl Peer {
-    fn from_assoc_ctx(assoc_ctx: &hw_wlan_info::WlanAssocCtx) -> Self {
+    fn from_assoc_ctx(assoc_ctx: &banjo_wlan_associnfo::WlanAssocCtx) -> Self {
         let mut peer = Self {
             addr: assoc_ctx.bssid,
             num_pkt_until_next_probe: PROBE_INTERVAL - 1,
@@ -214,26 +215,26 @@ impl Peer {
         let mcs_set = ht_cap.mcs_set;
         self.add_supported_ht(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             mcs_set.rx_mcs(),
         );
         if sgi_20 {
             self.add_supported_ht(
                 banjo_common::ChannelBandwidth::CBW20,
-                hw_wlan_info::WlanGi::G_400NS,
+                banjo_wlan_associnfo::WlanGi::G_400NS,
                 mcs_set.rx_mcs(),
             );
         }
         if ASSOC_CHAN_WIDTH == banjo_common::ChannelBandwidth::CBW40 {
             self.add_supported_ht(
                 banjo_common::ChannelBandwidth::CBW40,
-                hw_wlan_info::WlanGi::G_800NS,
+                banjo_wlan_associnfo::WlanGi::G_800NS,
                 mcs_set.rx_mcs(),
             );
             if sgi_40 {
                 self.add_supported_ht(
                     banjo_common::ChannelBandwidth::CBW40,
-                    hw_wlan_info::WlanGi::G_400NS,
+                    banjo_wlan_associnfo::WlanGi::G_400NS,
                     mcs_set.rx_mcs(),
                 );
             }
@@ -247,15 +248,19 @@ impl Peer {
     fn add_supported_ht(
         &mut self,
         channel_bandwidth: banjo_common::ChannelBandwidth,
-        gi: hw_wlan_info::WlanGi,
+        gi: banjo_wlan_associnfo::WlanGi,
         mcs_set: RxMcsBitmask,
     ) {
         let mut tx_stats_added = 0;
         for mcs_idx in 0..HT_NUM_MCS {
             if mcs_set.support(mcs_idx) {
-                let tx_vector =
-                    TxVector::new(hw_wlan_info::WlanPhyType::HT, gi, channel_bandwidth, mcs_idx)
-                        .expect("Should be a valid TxVector");
+                let tx_vector = TxVector::new(
+                    banjo_wlan_phyinfo::WlanInfoPhyType::HT,
+                    gi,
+                    channel_bandwidth,
+                    mcs_idx,
+                )
+                .expect("Should be a valid TxVector");
                 let tx_vector_idx = tx_vector.to_idx();
                 let perfect_tx_time = tx_time_ht(channel_bandwidth, gi, mcs_idx);
                 let tx_stats = TxStats { perfect_tx_time, ..TxStats::new(tx_vector_idx) };
@@ -282,7 +287,7 @@ impl Peer {
                         None
                     }
                 }?;
-                if tx_vector.phy() != hw_wlan_info::WlanPhyType::ERP {
+                if tx_vector.phy() != banjo_wlan_phyinfo::WlanInfoPhyType::ERP {
                     return None;
                 }
                 let tx_vector_idx = tx_vector.to_idx();
@@ -486,7 +491,7 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
         }
     }
 
-    pub fn add_peer(&mut self, assoc_ctx: &hw_wlan_info::WlanAssocCtx) {
+    pub fn add_peer(&mut self, assoc_ctx: &banjo_wlan_associnfo::WlanAssocCtx) {
         if self.peer_map.contains_key(&assoc_ctx.bssid) {
             error!("Attempted to add peer {:?} twice.", &assoc_ctx.bssid);
         } else {
@@ -591,7 +596,7 @@ fn tx_vec_idx_opt_to_u16(tx_vec_idx: &Option<TxVecIdx>) -> u16 {
 
 fn tx_time_ht(
     channel_bandwidth: banjo_common::ChannelBandwidth,
-    gi: hw_wlan_info::WlanGi,
+    gi: banjo_wlan_associnfo::WlanGi,
     relative_mcs_idx: u8,
 ) -> Duration {
     header_tx_time_ht() + payload_tx_time_ht(channel_bandwidth, gi, relative_mcs_idx)
@@ -609,7 +614,7 @@ fn header_tx_time_ht() -> Duration {
 // VHT)
 fn payload_tx_time_ht(
     channel_bandwidth: banjo_common::ChannelBandwidth,
-    gi: hw_wlan_info::WlanGi,
+    gi: banjo_wlan_associnfo::WlanGi,
     mcs_idx: u8,
 ) -> Duration {
     // N_{dbps} as defined in IEEE 802.11-2016 Table 19-26
@@ -638,12 +643,12 @@ fn payload_tx_time_ht(
 
     // Perform multiplication before division to prevent precision loss
     match gi {
-        hw_wlan_info::WlanGi::G_400NS => {
+        banjo_wlan_associnfo::WlanGi::G_400NS => {
             TX_TIME_PADDING_GI_400
                 + (TX_TIME_PER_SYMBOL_GI_400 * 8 * MINSTREL_FRAME_LENGTH)
                     / (nss as u32 * bits_per_symbol as u32)
         }
-        hw_wlan_info::WlanGi::G_800NS => {
+        banjo_wlan_associnfo::WlanGi::G_800NS => {
             (TX_TIME_PER_SYMBOL_GI_800 * 8 * MINSTREL_FRAME_LENGTH)
                 / (nss as u32 * bits_per_symbol as u32)
         }
@@ -721,7 +726,7 @@ mod tests {
     const RATES: [u8; 12] =
         [2, 4, 11, 22, 12 | BASIC_RATE_BIT, 18, 24, 36, 48, 72, 96, 108 | BASIC_RATE_BIT];
 
-    fn ht_assoc_ctx() -> hw_wlan_info::WlanAssocCtx {
+    fn ht_assoc_ctx() -> banjo_wlan_associnfo::WlanAssocCtx {
         let mut ht_cap = wlan_common::ie::fake_ht_capabilities();
         let mut ht_cap_info = HtCapabilityInfo(0);
         ht_cap_info.set_short_gi_40(true);
@@ -1089,7 +1094,7 @@ mod tests {
     #[track_caller]
     fn assert_data_rate(
         channel_bandwidth: banjo_common::ChannelBandwidth,
-        gi: hw_wlan_info::WlanGi,
+        gi: banjo_wlan_associnfo::WlanGi,
         relative_mcs_idx: u8,
         expected_mbit_per_second: f64,
     ) {
@@ -1097,7 +1102,7 @@ mod tests {
         const BYTES_PER_MBIT: f64 = 125000.0;
         let mut expected_tx_time =
             (MINSTREL_FRAME_LENGTH as f64 / BYTES_PER_MBIT) / expected_mbit_per_second;
-        if gi == hw_wlan_info::WlanGi::G_400NS {
+        if gi == banjo_wlan_associnfo::WlanGi::G_400NS {
             // Add 800ns test interval for short gap tx times. This becomes significant at high data rates.
             expected_tx_time += Duration::from_nanos(800).as_secs_f64();
         }
@@ -1111,37 +1116,37 @@ mod tests {
         // IEEE 802.11-2016 Tables 19-27 through 19-30 list data rates for CBW20. We test a sample here.
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             0,
             6.5,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_400NS,
+            banjo_wlan_associnfo::WlanGi::G_400NS,
             0,
             7.2,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             8,
             13.0,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_400NS,
+            banjo_wlan_associnfo::WlanGi::G_400NS,
             8,
             14.4,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             31,
             260.0,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW20,
-            hw_wlan_info::WlanGi::G_400NS,
+            banjo_wlan_associnfo::WlanGi::G_400NS,
             31,
             288.9,
         );
@@ -1152,37 +1157,37 @@ mod tests {
         // IEEE 802.11-2016 Tables 19-32 through 19-34 list data rates for CBW40. We test a sample here.
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW40,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             0,
             13.5,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW40,
-            hw_wlan_info::WlanGi::G_400NS,
+            banjo_wlan_associnfo::WlanGi::G_400NS,
             0,
             15.0,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW40,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             8,
             27.0,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW40,
-            hw_wlan_info::WlanGi::G_400NS,
+            banjo_wlan_associnfo::WlanGi::G_400NS,
             8,
             30.0,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW40,
-            hw_wlan_info::WlanGi::G_800NS,
+            banjo_wlan_associnfo::WlanGi::G_800NS,
             31,
             540.0,
         );
         assert_data_rate(
             banjo_common::ChannelBandwidth::CBW40,
-            hw_wlan_info::WlanGi::G_400NS,
+            banjo_wlan_associnfo::WlanGi::G_400NS,
             31,
             600.0,
         );

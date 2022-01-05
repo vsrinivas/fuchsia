@@ -5,6 +5,7 @@
 use {
     crate::{buffer::OutBuf, key},
     banjo_fuchsia_hardware_wlan_associnfo::*,
+    banjo_fuchsia_hardware_wlan_phyinfo::WlanInfoPhyType,
     banjo_fuchsia_hardware_wlan_softmac::{
         self as banjo_wlan_softmac, WlanRxPacket, WlanSoftmacInfo, WlanTxPacket, WlanTxStatus,
     },
@@ -112,7 +113,7 @@ impl Device {
                 // TODO(fxbug.dev/43456): Log stats about minstrel usage vs default tx vector.
                 let mcs_idx = if frame_control.is_data() { 7 } else { 3 };
                 tx_vector::TxVector::new(
-                    WlanPhyType::ERP,
+                    WlanInfoPhyType::ERP,
                     WlanGi::G_800NS,
                     banjo_common::ChannelBandwidth::CBW20,
                     mcs_idx,
@@ -1276,7 +1277,7 @@ mod tests {
             bssid: [1, 2, 3, 4, 5, 6],
             aid: 1,
             listen_interval: 2,
-            phy: WlanPhyType::ERP,
+            phy: WlanInfoPhyType::ERP,
             channel: banjo_common::WlanChannel {
                 primary: 3,
                 cbw: banjo_common::ChannelBandwidth::CBW20,
