@@ -12,6 +12,23 @@ import 'package:logging/logging.dart';
 import 'package:quiver/check.dart';
 import 'package:sl4f/sl4f.dart';
 
+String getVmServicePortFromInspectSnapshot(
+    List<Map<String, dynamic>> inspectSnapshot) {
+  for (Map<String, dynamic> item in inspectSnapshot) {
+    final payload = item['payload'];
+    if (payload == null) continue;
+
+    final root = payload['root'];
+    if (root == null) continue;
+
+    final runner = root['runner'];
+    if (runner == null) continue;
+
+    return runner['vm_service_port'];
+  }
+  return null;
+}
+
 /// Controls connections to the DUT's observatory.
 ///
 /// This class wraps around Flutter's fuchsia_remote_debug_protocol library to
@@ -37,11 +54,14 @@ import 'package:sl4f/sl4f.dart';
 class FlutterDriverConnector {
   final _logger = Logger('fuchsia_flutter_driver_connector');
   final Sl4f _sl4f;
+  final Inspect _inspect;
   final TcpProxyController _proxyController;
 
   frdp.FuchsiaRemoteConnection _connection;
 
-  FlutterDriverConnector(this._sl4f) : _proxyController = _sl4f.proxy;
+  FlutterDriverConnector(this._sl4f)
+      : _proxyController = _sl4f.proxy,
+        _inspect = Inspect(_sl4f);
 
   /// Initializes the connection to fuchsia.
   ///
@@ -71,6 +91,42 @@ class FlutterDriverConnector {
     _connection = null;
   }
 
+  /// Connects to [FlutterDriver] for an isolate that matches [namePattern] and
+  /// [selector].
+  ///
+  /// Note that if no isolates match namePattern, this function will wait until
+  /// one comes up, for up to 1 minute after which it returns null. See also
+  /// [frdp.FuchsiaRemoteConnection.getMainIsolatesByPattern].
+  ///
+  /// [selector] is the producer of the diagnostics data.
+  ///
+  /// [printCommunication] and [logCommunicationToFile] are forwarded to
+  /// [FlutterDriver.connect] so they have the same effect.
+  Future<FlutterDriver> driverForIsolateBySelector(
+    String namePattern,
+    String selector, {
+    bool printCommunication = false,
+    bool logCommunicationToFile = false,
+  }) async {
+    final isolate = await this.isolate(namePattern);
+    final inspectSnapshot = await _inspect.snapshot(['$selector:root']);
+    final vmServicePort = getVmServicePortFromInspectSnapshot(inspectSnapshot);
+    if (vmServicePort == null) {
+      _logger.severe('Could not find the vm service port for $selector');
+      return null;
+    }
+
+    final openPort = await _proxyController.openProxy(int.parse(vmServicePort));
+    final vmUri =
+        Uri(scheme: 'ws', host: _sl4f.ssh.target, port: openPort, path: '/ws');
+
+    return FlutterDriver.connect(
+        dartVmServiceUrl: vmUri.toString(),
+        isolateNumber: isolate.number,
+        printCommunication: printCommunication,
+        logCommunicationToFile: logCommunicationToFile);
+  }
+
   /// Connects to [FlutterDriver] for an isolate that matches [namePattern].
   ///
   /// Note that if no isolates match namePattern, this function will wait until
@@ -81,6 +137,7 @@ class FlutterDriverConnector {
   /// [FlutterDriver.connect] so they have the same effect.
   Future<FlutterDriver> driverForIsolate(
     Pattern namePattern, {
+    String componentMoniker,
     bool printCommunication = false,
     bool logCommunicationToFile = false,
   }) async {
