@@ -9,6 +9,8 @@ import("//build/go/go_test.gni")
 go_library("lib") {
   sources = [
     "mock.go",
+    "nsjail.go",
+    "nsjail_test.go",
     "outputs.go",
     "outputs_test.go",
     "result.go",
