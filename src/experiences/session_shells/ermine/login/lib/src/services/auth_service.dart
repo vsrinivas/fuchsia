@@ -8,6 +8,7 @@ import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_vfs/vfs.dart';
+import 'package:mobx/mobx.dart';
 import 'package:zircon/zircon.dart';
 
 const kAccountName = 'created_by_user';
@@ -35,7 +36,7 @@ class AuthService {
     // Connect to AccountManager and get list of all account ids.
     Incoming.fromSvcPath().connectToService(_accountManager);
     _accountManager.getAccountIds().then((ids) {
-      _ready.value = true;
+      runInAction(() => _ready.value = true);
       _accountIds.addAll(ids);
       if (ids.length > 1) {
         log.shout(
