@@ -47,25 +47,25 @@ class BlobfsComponentRunnerTest : public testing::Test {
   BlobfsComponentRunnerTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
-    ASSERT_EQ(loop_.StartThread("blobfs test dispatcher"), ZX_OK);
-
     device_ = std::make_unique<block_client::FakeBlockDevice>(kNumBlocks, kBlockSize);
     ASSERT_EQ(FormatFilesystem(device_.get(), FilesystemOptions{}), ZX_OK);
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ASSERT_EQ(endpoints.status_value(), ZX_OK);
+    root_ = fidl::BindSyncClient(std::move(endpoints->client));
+    server_end_ = std::move(endpoints->server);
   }
   void TearDown() override {}
 
   void StartServe(fidl::ClientEnd<fuchsia_device_manager::Administrator> device_admin_client) {
     runner_ = std::make_unique<ComponentRunner>(loop_);
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    ASSERT_EQ(endpoints.status_value(), ZX_OK);
-    auto status = runner_->ServeRoot(std::move(endpoints->server),
+    auto status = runner_->ServeRoot(std::move(server_end_),
                                      fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle>(),
                                      std::move(device_admin_client), zx::resource());
     ASSERT_EQ(status.status_value(), ZX_OK);
-    root_ = fidl::BindSyncClient(std::move(endpoints->client));
   }
 
-  fidl::ClientEnd<fuchsia_io::Directory> GetSvcDir() {
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcDir() const {
     auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_EQ(svc_endpoints.status_value(), ZX_OK);
     root_->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable,
@@ -78,6 +78,7 @@ class BlobfsComponentRunnerTest : public testing::Test {
   std::unique_ptr<block_client::FakeBlockDevice> device_;
   std::unique_ptr<ComponentRunner> runner_;
   fidl::WireSyncClient<fuchsia_io::Directory> root_;
+  fidl::ServerEnd<fuchsia_io::Directory> server_end_;
 };
 
 TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfs) {
@@ -98,19 +99,28 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfs) {
 
   auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(svc_dir.borrow());
   ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  auto query_client = fidl::BindSyncClient(std::move(*query_client_end));
+  fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
+                                                         loop_.dispatcher());
 
-  auto query_res = query_client->GetInfo();
-  ASSERT_EQ(query_res.status(), ZX_OK);
-  ASSERT_TRUE(!query_res->result.is_err());
-  ASSERT_EQ(query_res->result.response().info.fs_type, VFS_TYPE_BLOBFS);
+  std::atomic<bool> query_complete = false;
+  query_client->GetInfo([query_complete = &query_complete](
+                            fidl::WireUnownedResult<fuchsia_fs::Query::GetInfo>& info) {
+    EXPECT_EQ(info.status(), ZX_OK);
+    EXPECT_TRUE(info->result.is_response()) << zx_status_get_string(info->result.err());
+    EXPECT_EQ(info->result.response().info.fs_type, VFS_TYPE_BLOBFS);
+    *query_complete = true;
+  });
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
+  ASSERT_TRUE(query_complete);
 
-  sync_completion_t callback_called;
+  std::atomic<bool> callback_called = false;
   runner_->Shutdown([callback_called = &callback_called](zx_status_t status) {
     EXPECT_EQ(status, ZX_OK);
-    sync_completion_signal(callback_called);
+    *callback_called = true;
   });
-  ASSERT_EQ(sync_completion_wait(&callback_called, ZX_TIME_INFINITE), ZX_OK);
+  // Shutdown quits the loop.
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_ERR_CANCELED);
+  ASSERT_TRUE(callback_called);
 
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
@@ -128,19 +138,82 @@ TEST_F(BlobfsComponentRunnerTest, ServeAndConfigureStartsBlobfsWithoutDriverMana
 
   auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(svc_dir.borrow());
   ASSERT_EQ(query_client_end.status_value(), ZX_OK);
-  auto query_client = fidl::BindSyncClient(std::move(*query_client_end));
+  fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
+                                                         loop_.dispatcher());
 
-  auto query_res = query_client->GetInfo();
-  ASSERT_EQ(query_res.status(), ZX_OK);
-  ASSERT_TRUE(!query_res->result.is_err());
-  ASSERT_EQ(query_res->result.response().info.fs_type, VFS_TYPE_BLOBFS);
+  std::atomic<bool> query_complete = false;
+  query_client->GetInfo([query_complete = &query_complete](
+                            fidl::WireUnownedResult<fuchsia_fs::Query::GetInfo>& info) {
+    EXPECT_EQ(info.status(), ZX_OK);
+    EXPECT_TRUE(info->result.is_response()) << zx_status_get_string(info->result.err());
+    EXPECT_EQ(info->result.response().info.fs_type, VFS_TYPE_BLOBFS);
+    *query_complete = true;
+  });
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
+  ASSERT_TRUE(query_complete);
 
-  sync_completion_t callback_called;
+  std::atomic<bool> callback_called = false;
   runner_->Shutdown([callback_called = &callback_called](zx_status_t status) {
     EXPECT_EQ(status, ZX_OK);
-    sync_completion_signal(callback_called);
+    *callback_called = true;
   });
-  ASSERT_EQ(sync_completion_wait(&callback_called, ZX_TIME_INFINITE), ZX_OK);
+  // Shutdown quits the loop.
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_ERR_CANCELED);
+  ASSERT_TRUE(callback_called);
+}
+
+TEST_F(BlobfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
+  FakeDriverManagerAdmin driver_admin;
+  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
+  ASSERT_TRUE(admin_endpoints.is_ok());
+  fidl::BindServer(loop_.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
+
+  // Start a call to the query interface. We expect that this request will be queued and won't
+  // return until Configure is called on the runner. Initially, GetSvcDir will fire off an open
+  // call on the root_ connection, but as the server end isn't serving anything yet, the request is
+  // queued there. Once root_ starts serving requests, and the svc dir exists, (which is done by
+  // StartServe below) that open call succeeds, but the Query service itself should be waiting to
+  // serve any open calls it gets, queuing any requests. Once Configure is called, the Query
+  // service should start servicing requests, and the request will succeed.
+  auto svc_dir = GetSvcDir();
+  auto query_client_end = service::ConnectAt<fuchsia_fs::Query>(svc_dir.borrow());
+  ASSERT_EQ(query_client_end.status_value(), ZX_OK);
+  fidl::WireSharedClient<fuchsia_fs::Query> query_client(std::move(*query_client_end),
+                                                         loop_.dispatcher());
+
+  std::atomic<bool> query_complete = false;
+  query_client->GetInfo([query_complete = &query_complete](
+                            fidl::WireUnownedResult<fuchsia_fs::Query::GetInfo>& info) {
+    EXPECT_EQ(info.status(), ZX_OK);
+    EXPECT_TRUE(info->result.is_response()) << zx_status_get_string(info->result.err());
+    EXPECT_EQ(info->result.response().info.fs_type, VFS_TYPE_BLOBFS);
+    *query_complete = true;
+  });
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
+  ASSERT_FALSE(query_complete);
+
+  ASSERT_NO_FATAL_FAILURE(StartServe(std::move(admin_endpoints->client)));
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
+  ASSERT_FALSE(query_complete);
+
+  auto client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(svc_dir.borrow());
+  ASSERT_EQ(client_end.status_value(), ZX_OK);
+
+  MountOptions options;
+  auto status = runner_->Configure(std::move(device_), options);
+  ASSERT_EQ(status.status_value(), ZX_OK);
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
+  ASSERT_TRUE(query_complete);
+
+  std::atomic<bool> callback_called = false;
+  runner_->Shutdown([callback_called = &callback_called](zx_status_t status) {
+    EXPECT_EQ(status, ZX_OK);
+    *callback_called = true;
+  });
+  ASSERT_EQ(loop_.RunUntilIdle(), ZX_ERR_CANCELED);
+  ASSERT_TRUE(callback_called);
+
+  EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
 }  // namespace

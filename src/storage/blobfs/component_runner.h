@@ -54,20 +54,21 @@ class ComponentRunner : public fs::PagedVfs {
 
   zx::resource vmex_resource_;
 
-  // startup service is always initialized
+  // These are initialized when ServeRoot is called.
+  fbl::RefPtr<fs::PseudoDir> outgoing_;
   fbl::RefPtr<StartupService> startup_svc_;
+  fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
 
-  // these are only initialized by configure after a call to the startup service
+  // These are created when ServeRoot is called, and are consumed by a successful call to
+  // Configure. This causes any incoming requests to queue in the channel pair until we start
+  // serving the directories, after we start the filesystem and the services.
+  fidl::ServerEnd<fuchsia_io::Directory> svc_server_end_;
+  fidl::ServerEnd<fuchsia_io::Directory> root_server_end_;
+
+  // These are only initialized by configure after a call to the startup service.
   std::unique_ptr<Blobfs> blobfs_;
   fbl::RefPtr<HealthCheckService> health_check_svc_;
   fbl::RefPtr<fs::QueryService> query_svc_;
-
-  // the basic outgoing directory structure is always initialized. svc is place in the outgoing
-  // directory at `/svc`.
-  fbl::RefPtr<fs::PseudoDir> outgoing_;
-  fbl::RefPtr<fs::PseudoDir> svc_;
-
-  fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
 };
 
 }  // namespace blobfs

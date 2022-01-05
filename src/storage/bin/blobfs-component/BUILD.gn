@@ -34,6 +34,9 @@ test("blobfs_component_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
     "//src/storage/testing:storage_driver_test_support",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
   ]
 }

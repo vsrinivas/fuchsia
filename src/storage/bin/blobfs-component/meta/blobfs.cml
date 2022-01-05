@@ -26,9 +26,12 @@
             protocol: [
                 "fuchsia.fs.Admin",
                 "fuchsia.fs.Query",
-                "fuchsia.fs.startup.Startup",
                 "fuchsia.update.verify.BlobfsVerifier",
             ],
+        },
+        {
+            protocol: "fuchsia.fs.startup.Startup",
+            path: "/startup/fuchsia.fs.startup.Startup",
         },
     ],
     use: [

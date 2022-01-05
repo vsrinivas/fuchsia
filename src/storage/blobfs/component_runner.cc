@@ -10,6 +10,7 @@
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/storage/blobfs/admin_service.h"
 #include "src/storage/blobfs/service/lifecycle.h"
 
@@ -17,8 +18,8 @@ namespace blobfs {
 
 ComponentRunner::ComponentRunner(async::Loop& loop) : fs::PagedVfs(loop.dispatcher()), loop_(loop) {
   outgoing_ = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  svc_ = fbl::MakeRefCounted<fs::PseudoDir>(this);
-  outgoing_->AddEntry("svc", svc_);
+  auto startup = fbl::MakeRefCounted<fs::PseudoDir>(this);
+  outgoing_->AddEntry("startup", startup);
 
   FX_LOGS(INFO) << "setting up startup service";
   startup_svc_ = fbl::MakeRefCounted<StartupService>(
@@ -30,7 +31,7 @@ ComponentRunner::ComponentRunner(async::Loop& loop) : fs::PagedVfs(loop.dispatch
         }
         return status;
       });
-  svc_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs_startup::Startup>, startup_svc_);
+  startup->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs_startup::Startup>, startup_svc_);
 }
 
 void ComponentRunner::RemoveSystemDrivers(fit::callback<void(zx_status_t)> callback) {
@@ -104,6 +105,25 @@ zx::status<> ComponentRunner::ServeRoot(
   }
   driver_admin_ = std::move(driver_admin);
 
+  // Make dangling endpoints for the root directory and the service directory. Creating the
+  // endpoints and putting them into the filesystem tree has the effect of queuing incoming
+  // requests until the server end of the endpoints is bound.
+  auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (svc_endpoints.is_error()) {
+    FX_LOGS(ERROR) << "mount failed; could not create service directory endpoints";
+    return svc_endpoints.take_error();
+  }
+  outgoing_->AddEntry("svc", fbl::MakeRefCounted<fs::RemoteDir>(std::move(svc_endpoints->client)));
+  svc_server_end_ = std::move(svc_endpoints->server);
+  auto root_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (root_endpoints.is_error()) {
+    FX_LOGS(ERROR) << "mount failed; could not create root directory endpoints";
+    return root_endpoints.take_error();
+  }
+  outgoing_->AddEntry("root",
+                      fbl::MakeRefCounted<fs::RemoteDir>(std::move(root_endpoints->client)));
+  root_server_end_ = std::move(root_endpoints->server);
+
   vmex_resource_ = std::move(vmex_resource);
   zx_status_t status = ServeDirectory(outgoing_, std::move(root));
   if (status != ZX_OK) {
@@ -124,7 +144,7 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
   auto blobfs_or = Blobfs::Create(loop_.dispatcher(), std::move(device), this, options,
                                   std::move(vmex_resource_));
   if (blobfs_or.is_error()) {
-    FX_LOGS(ERROR) << "configure failed; could not create blobfs";
+    FX_LOGS(ERROR) << "configure failed; could not create blobfs: " << blobfs_or.status_string();
     return blobfs_or.take_error();
   }
   blobfs_ = std::move(blobfs_or.value());
@@ -133,7 +153,14 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
   fbl::RefPtr<fs::Vnode> root;
   zx_status_t status = blobfs_->OpenRootNode(&root);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "configure failed; could not get root blob";
+    FX_LOGS(ERROR) << "configure failed; could not get root blob: " << zx_status_get_string(status);
+    return zx::error(status);
+  }
+
+  status = ServeDirectory(std::move(root), std::move(root_server_end_));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "configure failed; could not serve root directory: "
+                   << zx_status_get_string(status);
     return zx::error(status);
   }
 
@@ -152,24 +179,31 @@ zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
         return ZX_OK;
       });
 
-  outgoing_->AddEntry(kOutgoingDataRoot, std::move(root));
-
+  // Add the diagnostics directory straight to the outgoing directory. Nothing should be relying on
+  // the diagnostics directory queuing incoming requests.
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
   outgoing_->AddEntry("diagnostics", diagnostics_dir);
   diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
 
+  auto svc_dir = fbl::MakeRefCounted<fs::PseudoDir>(this);
   query_svc_ = fbl::MakeRefCounted<fs::QueryService>(this);
-  svc_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Query>, query_svc_);
 
   health_check_svc_ = fbl::MakeRefCounted<HealthCheckService>(loop_.dispatcher(), *blobfs_);
-  svc_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
-                 health_check_svc_);
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_update_verify::BlobfsVerifier>,
+                    health_check_svc_);
 
-  svc_->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
-                 fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),
-                                                   [this](fs::FuchsiaVfs::ShutdownCallback cb) {
-                                                     this->Shutdown(std::move(cb));
-                                                   }));
+  svc_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs::Admin>,
+                    fbl::MakeRefCounted<AdminService>(blobfs_->dispatcher(),
+                                                      [this](fs::FuchsiaVfs::ShutdownCallback cb) {
+                                                        this->Shutdown(std::move(cb));
+                                                      }));
+
+  status = ServeDirectory(std::move(svc_dir), std::move(svc_server_end_));
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "configure failed; could not serve svc dir: " << zx_status_get_string(status);
+    return zx::error(status);
+  }
 
   return zx::ok();
 }
