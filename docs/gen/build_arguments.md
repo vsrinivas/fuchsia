@@ -962,6 +962,12 @@ is actually parsed.
 
 From //build/images/custom_signing.gni:21
 
+### custom_vulkan_loader_library_name
+
+**Current value (from the default):** `""`
+
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/dcde9226b0bf2a39ce78a895000ed38ed242b25f/BUILD.gn#22)
+
 ### dart_default_build_cfg
 TODO(fxbug.dev/64153) renable aot builds
  if (dart_force_product) {
