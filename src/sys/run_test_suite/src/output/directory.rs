@@ -313,12 +313,12 @@ impl DirectoryWrite for DirectoryDirectoryWriter {
         let new_path = self.path.join(path);
         // The path must be relative to the parent directory (no absolute paths) and cannot have
         // any parent components (which can escape the parent directory).
-        if !new_path.starts_with(&self.path) || new_path.components().any(|c| {
-            match c {
+        if !new_path.starts_with(&self.path)
+            || new_path.components().any(|c| match c {
                 std::path::Component::ParentDir => true,
                 _ => false,
-            }
-        }) {
+            })
+        {
             return Err(Error::new(
                 ErrorKind::Other,
                 format_err!(
@@ -383,8 +383,9 @@ fn construct_serializable_run(run_entry: &EntityEntry) -> directory::TestRunResu
         artifacts: run_entry
             .artifacts
             .iter()
-            .map(|(name, metadata)| (run_entry.artifact_dir.join(name), metadata.clone()))
+            .map(|(name, metadata)| (Path::new(&name).to_path_buf(), metadata.clone()))
             .collect(),
+        artifact_dir: run_entry.artifact_dir.clone(),
         outcome: run_entry.outcome,
         suites,
         duration_milliseconds,
@@ -406,8 +407,9 @@ fn construct_serializable_suite(
             directory::TestCaseResultV0 {
                 artifacts: artifacts
                     .into_iter()
-                    .map(|(name, metadata)| (artifact_dir.join(name), metadata))
+                    .map(|(name, metadata)| (name.into(), metadata.clone()))
                     .collect(),
+                artifact_dir,
                 outcome,
                 duration_milliseconds,
                 start_time,
@@ -421,8 +423,9 @@ fn construct_serializable_suite(
     directory::SuiteResult::V0 {
         artifacts: artifacts
             .into_iter()
-            .map(|(name, metadata)| (artifact_dir.join(name), metadata))
+            .map(|(name, metadata)| (name.into(), metadata.clone()))
             .collect(),
+        artifact_dir,
         outcome,
         cases,
         duration_milliseconds,

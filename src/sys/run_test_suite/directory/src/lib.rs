@@ -32,8 +32,15 @@ pub enum TestRunResult {
     #[serde(rename = "0")]
     V0 {
         /// A mapping from paths to artifacts to metadata associated with the artifact.
-        /// The paths are relative to the root of the output directory.
+        /// The paths are given relative to |artifact_dir|. Artifacts are always placed
+        /// in the top level directory of |artifact_dir|. Note that some artifacts are
+        /// themselves directories. In this case, the root directory of the artifact is
+        /// a direct child of |artifact_dir|.
         artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
+        /// Path to the directory containing artifacts for the suite. The path is given
+        /// relative to the root of the output directory. |artifact_dir| is always in the root
+        /// output directory; it will never be in a subdirectory.
+        artifact_dir: PathBuf,
         outcome: Outcome,
         suites: Vec<SuiteEntryV0>,
         /// Approximate start time, as milliseconds since the epoch.
@@ -60,8 +67,15 @@ pub enum SuiteResult {
     #[serde(rename = "0")]
     V0 {
         /// A mapping from paths to artifacts to metadata associated with the artifact.
-        /// The paths are relative to the root of the output directory.
+        /// The paths are given relative to |artifact_dir|. Artifacts are always placed
+        /// in the top level directory of |artifact_dir|. Note that some artifacts are
+        /// themselves directories. In this case, the root directory of the artifact is
+        /// a direct child of |artifact_dir|.
         artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
+        /// Path to the directory containing artifacts for the suite. The path is given
+        /// relative to the root of the output directory. |artifact_dir| is always in the root
+        /// output directory; it will never be in a subdirectory.
+        artifact_dir: PathBuf,
         outcome: Outcome,
         name: String,
         cases: Vec<TestCaseResultV0>,
@@ -77,8 +91,15 @@ pub enum SuiteResult {
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
 pub struct TestCaseResultV0 {
     /// A mapping from paths to artifacts to metadata associated with the artifact.
-    /// The paths are relative to the root of the output directory.
+    /// The paths are given relative to |artifact_dir|. Artifacts are always placed
+    /// in the top level directory of |artifact_dir|. Note that some artifacts are
+    /// themselves directories. In this case, the root directory of the artifact is
+    /// a direct child of |artifact_dir|.
     pub artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
+    /// Path to the directory containing artifacts for the suite. The path is given
+    /// relative to the root of the output directory. |artifact_dir| is always in the root
+    /// output directory; it will never be in a subdirectory.
+    pub artifact_dir: PathBuf,
     pub outcome: Outcome,
     pub name: String,
     /// Approximate start time, as milliseconds since the epoch.
@@ -132,6 +153,7 @@ mod test {
         // This is a sanity check that verifies version is serialized.
         let run_result = TestRunResult::V0 {
             artifacts: HashMap::new(),
+            artifact_dir: Path::new("a").to_path_buf(),
             outcome: Outcome::Inconclusive,
             suites: vec![],
             duration_milliseconds: None,
@@ -144,6 +166,7 @@ mod test {
         let expected = json!({
             "version": "0",
             "artifacts": {},
+            "artifact_dir": "a",
             "outcome": "INCONCLUSIVE",
             "suites": [],
         });
@@ -169,6 +192,7 @@ mod test {
     fn suite_version_serialized() {
         let suite_result = SuiteResult::V0 {
             artifacts: HashMap::new(),
+            artifact_dir: Path::new("a").to_path_buf(),
             outcome: Outcome::Inconclusive,
             cases: vec![],
             name: "suite".to_string(),
@@ -182,6 +206,7 @@ mod test {
         let expected = json!({
             "version": "0",
             "artifacts": {},
+            "artifact_dir": "a",
             "outcome": "INCONCLUSIVE",
             "cases": [],
             "name": "suite",
@@ -215,6 +240,7 @@ mod test {
         let cases = vec![
             TestRunResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Skipped,
                 suites: vec![],
                 duration_milliseconds: None,
@@ -222,8 +248,9 @@ mod test {
             },
             TestRunResult::V0 {
                 artifacts: hashmap! {
-                    Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into(),
+                    Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into(),
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Skipped,
                 suites: vec![SuiteEntryV0 { summary: "suite-summary.json".to_string() }],
                 duration_milliseconds: None,
@@ -231,12 +258,13 @@ mod test {
             },
             TestRunResult::V0 {
                 artifacts: hashmap! {
-                    Path::new("a/b.txt").to_path_buf() => ArtifactType::Stderr.into(),
-                    Path::new("c/d.txt").to_path_buf() => ArtifactMetadataV0 {
+                    Path::new("b.txt").to_path_buf() => ArtifactType::Stderr.into(),
+                    Path::new("d.txt").to_path_buf() => ArtifactMetadataV0 {
                         artifact_type: ArtifactType::Syslog,
                         component_moniker: Some("component".to_string())
                     },
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Skipped,
                 suites: vec![
                     SuiteEntryV0 { summary: "suite-summary-1.json".to_string() },
@@ -269,6 +297,7 @@ mod test {
         let cases = vec![
             SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 name: "my test suite".to_string(),
                 cases: vec![],
@@ -277,10 +306,12 @@ mod test {
             },
             SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("b").to_path_buf(),
                 outcome: Outcome::Failed,
                 name: "another suite".to_string(),
                 cases: vec![TestCaseResultV0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("b-case").to_path_buf(),
                     outcome: Outcome::Inconclusive,
                     name: "test case".to_string(),
                     duration_milliseconds: Some(12),
@@ -291,19 +322,21 @@ mod test {
             },
             SuiteResult::V0 {
                 artifacts: hashmap! {
-                    Path::new("suite/a.txt").to_path_buf() => ArtifactType::Stderr.into(),
+                    Path::new("a.txt").to_path_buf() => ArtifactType::Stderr.into(),
                 },
+                artifact_dir: Path::new("c").to_path_buf(),
                 outcome: Outcome::Failed,
                 name: "another suite".to_string(),
                 cases: vec![
                     TestCaseResultV0 {
                         artifacts: hashmap! {
-                            Path::new("case-0/b.txt").to_path_buf() => ArtifactType::Stdout.into(),
-                            Path::new("case-0/c.txt").to_path_buf() => ArtifactMetadataV0 {
+                            Path::new("b.txt").to_path_buf() => ArtifactType::Stdout.into(),
+                            Path::new("c.txt").to_path_buf() => ArtifactMetadataV0 {
                                 artifact_type: ArtifactType::Syslog,
                                 component_moniker: Some("component".to_string())
                             },
                         },
+                        artifact_dir: Path::new("case-0").to_path_buf(),
                         outcome: Outcome::Timedout,
                         name: "test case".to_string(),
                         duration_milliseconds: None,
@@ -311,9 +344,10 @@ mod test {
                     },
                     TestCaseResultV0 {
                         artifacts: hashmap![
-                            Path::new("case-1/d.txt").to_path_buf() => ArtifactType::Stdout.into(),
-                            Path::new("case-1/e.txt").to_path_buf() => ArtifactType::Stdout.into(),
+                            Path::new("d.txt").to_path_buf() => ArtifactType::Stdout.into(),
+                            Path::new("e.txt").to_path_buf() => ArtifactType::Stdout.into(),
                         ],
+                        artifact_dir: Path::new("case-1").to_path_buf(),
                         outcome: Outcome::Error,
                         name: "test case 2".to_string(),
                         duration_milliseconds: Some(37),

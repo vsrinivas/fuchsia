@@ -52,6 +52,10 @@
         "artifacts": {
             "$ref": "#/$defs/artifacts"
         },
+        "artifact_dir": {
+            "description": "Subdirectory containing all artifacts scoped to the run.",
+            "type": "string"
+        },
         "duration_milliseconds": {
             "description": "Run duration in milliseconds",
             "type": "integer"

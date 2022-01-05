@@ -37,6 +37,10 @@
                 "artifacts": {
                     "$ref": "#/$defs/artifacts"
                 },
+                "artifact_dir": {
+                    "description": "Subdirectory containing all artifacts scoped to the test case.",
+                    "type": "string"
+                },
                 "duration_milliseconds": {
                     "description": "Run duration in milliseconds",
                     "type": "integer"
@@ -79,6 +83,10 @@
     "properties": {
         "artifacts": {
             "$ref": "#/$defs/artifacts"
+        },
+        "artifact_dir": {
+            "description": "Subdirectory containing all artifacts scoped to the suite.",
+            "type": "string"
         },
         "cases": {
             "description": "list of test cases",

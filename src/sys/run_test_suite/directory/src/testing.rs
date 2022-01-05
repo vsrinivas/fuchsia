@@ -122,8 +122,14 @@ type ArtifactMetadataToAssertionMap = HashMap<ArtifactMetadataV0, ExpectedArtifa
 /// contain the results and artifacts in `expected_run`.
 pub fn assert_run_result(root: &Path, actual_run: &TestRunResult, expected_run: &ExpectedTestRun) {
     let context = EntityContext::Run;
-    let &TestRunResult::V0 { artifacts, outcome, suites: _, start_time, duration_milliseconds } =
-        &actual_run;
+    let &TestRunResult::V0 {
+        artifacts,
+        artifact_dir,
+        outcome,
+        suites: _,
+        start_time,
+        duration_milliseconds,
+    } = &actual_run;
     assert_match_option!(
         expected_run.duration_milliseconds,
         *duration_milliseconds,
@@ -135,7 +141,7 @@ pub fn assert_run_result(root: &Path, actual_run: &TestRunResult, expected_run: 
         format!("Start time for {}", context)
     );
     assert_eq!(outcome, &expected_run.outcome, "Outcome for {}", context);
-    assert_artifacts(root, &artifacts, &expected_run.artifacts, EntityContext::Run);
+    assert_artifacts(root, &artifact_dir, &artifacts, &expected_run.artifacts, EntityContext::Run);
 }
 
 /// Assert that the suite results contained in `actual_suites` and the directory specified by `root`
@@ -177,8 +183,15 @@ pub fn assert_suite_result(
     expected_suite: &ExpectedSuite,
 ) {
     let context = EntityContext::Suite(expected_suite);
-    let &SuiteResult::V0 { artifacts, outcome, name, cases, duration_milliseconds, start_time } =
-        &actual_suite;
+    let &SuiteResult::V0 {
+        artifacts,
+        artifact_dir,
+        outcome,
+        name,
+        cases,
+        duration_milliseconds,
+        start_time,
+    } = &actual_suite;
     assert_eq!(outcome, &expected_suite.outcome, "Outcome for {}", context);
     assert_eq!(name, &expected_suite.name, "Name for {}", context);
     assert_match_option!(
@@ -192,7 +205,7 @@ pub fn assert_suite_result(
         format!("Start time for {}", context)
     );
 
-    assert_artifacts(root, &artifacts, &expected_suite.artifacts, context);
+    assert_artifacts(root, &artifact_dir, &artifacts, &expected_suite.artifacts, context);
 
     assert_eq!(cases.len(), expected_suite.cases.len());
     for case in cases.iter() {
@@ -221,11 +234,18 @@ fn assert_case_result(
         actual_case.start_time,
         format!("Start time for {}", context)
     );
-    assert_artifacts(root, &actual_case.artifacts, &expected_case.artifacts, context);
+    assert_artifacts(
+        root,
+        &actual_case.artifact_dir,
+        &actual_case.artifacts,
+        &expected_case.artifacts,
+        context,
+    );
 }
 
 fn assert_artifacts(
     root: &Path,
+    artifact_dir: &Path,
     actual_artifacts: &HashMap<PathBuf, ArtifactMetadataV0>,
     expected_artifacts: &ArtifactMetadataToAssertionMap,
     entity_context: EntityContext<'_>,
@@ -261,11 +281,12 @@ fn assert_artifacts(
     );
 
     for (expected_metadata, expected_artifact) in expected_artifacts.iter() {
-        let actual_filepath = actual_artifacts_by_metadata.get(expected_metadata).unwrap();
+        let actual_filepath =
+            artifact_dir.join(actual_artifacts_by_metadata.get(expected_metadata).unwrap());
         match expected_artifact {
             ExpectedArtifact::File { name, assertion_fn } => {
                 assert_file(
-                    &root.join(actual_filepath),
+                    &root.join(&actual_filepath),
                     name,
                     assertion_fn,
                     ArtifactContext { entity: &entity_context, metadata: expected_metadata },
@@ -283,7 +304,7 @@ fn assert_artifacts(
                         actual_filepath.file_name().unwrap().to_str().unwrap()
                     ),
                 }
-                let actual_entries: HashSet<_> = std::fs::read_dir(root.join(actual_filepath))
+                let actual_entries: HashSet<_> = std::fs::read_dir(root.join(&actual_filepath))
                     .expect("Failed to read directory artifact path")
                     .map(|entry| match entry {
                         Ok(dir_entry) if dir_entry.file_type().unwrap().is_file() => {
@@ -303,7 +324,7 @@ fn assert_artifacts(
                 );
                 for (name, assertion) in files {
                     assert_file(
-                        &root.join(actual_filepath).join(name),
+                        &root.join(&actual_filepath).join(name),
                         &None,
                         assertion,
                         ArtifactContext { entity: &entity_context, metadata: expected_metadata },
@@ -597,6 +618,7 @@ mod test {
                 make_tempdir(|_| ()),
                 TestRunResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: Some(64),
@@ -608,6 +630,7 @@ mod test {
                 make_tempdir(|_| ()),
                 TestRunResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: Some(64),
@@ -619,6 +642,7 @@ mod test {
                 make_tempdir(|_| ()),
                 TestRunResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -633,8 +657,9 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into()
+                        Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into()
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -653,8 +678,9 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into()
+                        Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into()
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -681,6 +707,7 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Failed,
                 suites: vec![],
                 start_time: None,
@@ -698,6 +725,7 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Failed,
                 suites: vec![],
                 start_time: Some(64),
@@ -715,6 +743,7 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Failed,
                 suites: vec![],
                 start_time: None,
@@ -734,6 +763,7 @@ mod test {
                 artifacts: hashmap! {
                     Path::new("missing").to_path_buf() => ArtifactType::Syslog.into()
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Failed,
                 suites: vec![],
                 start_time: None,
@@ -754,6 +784,7 @@ mod test {
                 make_tempdir(|_| ()),
                 SuiteResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     name: "suite".into(),
                     cases: vec![],
@@ -768,6 +799,7 @@ mod test {
                 make_tempdir(|_| ()),
                 SuiteResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     name: "suite".into(),
                     cases: vec![],
@@ -782,6 +814,7 @@ mod test {
                 make_tempdir(|_| ()),
                 SuiteResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     name: "suite".into(),
                     cases: vec![],
@@ -799,8 +832,9 @@ mod test {
                 }),
                 SuiteResult::V0 {
                     artifacts: hashmap! {
-                        Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into()
+                        Path::new("b.txt").to_path_buf() => ArtifactType::Syslog.into()
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     name: "suite".into(),
                     cases: vec![],
@@ -817,10 +851,12 @@ mod test {
                 make_tempdir(|_| ()),
                 SuiteResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Failed,
                     name: "suite".into(),
                     cases: vec![TestCaseResultV0 {
                         artifacts: hashmap! {},
+                        artifact_dir: Path::new("a").to_path_buf(),
                         outcome: Outcome::Passed,
                         name: "case".into(),
                         start_time: None,
@@ -850,6 +886,7 @@ mod test {
             dir.path(),
             &SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 name: "suite".into(),
                 cases: vec![],
@@ -868,6 +905,7 @@ mod test {
             dir.path(),
             &SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 name: "suite".into(),
                 cases: vec![],
@@ -886,6 +924,7 @@ mod test {
             dir.path(),
             &SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 name: "suite".into(),
                 cases: vec![],
@@ -904,6 +943,7 @@ mod test {
             dir.path(),
             &SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Failed,
                 name: "suite".into(),
                 cases: vec![],
@@ -926,10 +966,12 @@ mod test {
             dir.path(),
             &SuiteResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Failed,
                 name: "suite".into(),
                 cases: vec![TestCaseResultV0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     name: "case".into(),
                     start_time: None,
@@ -950,6 +992,7 @@ mod test {
                 make_tempdir(|_| ()),
                 TestRunResult::V0 {
                     artifacts: hashmap! {},
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -964,8 +1007,9 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        "a/b.txt".into() => ArtifactType::Stderr.into(),
+                        "b.txt".into() => ArtifactType::Stderr.into(),
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -984,8 +1028,9 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        "a/b.txt".into() => ArtifactType::Stderr.into(),
+                        "b.txt".into() => ArtifactType::Stderr.into(),
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -1004,8 +1049,9 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        "a/b.txt".into() => ArtifactType::Stderr.into(),
+                        "b.txt".into() => ArtifactType::Stderr.into(),
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -1024,11 +1070,12 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        "a/b.txt".into() => ArtifactMetadataV0 {
+                        "b.txt".into() => ArtifactMetadataV0 {
                             artifact_type: ArtifactType::Syslog,
                             component_moniker: Some("moniker".into())
                         },
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -1052,8 +1099,9 @@ mod test {
                 }),
                 TestRunResult::V0 {
                     artifacts: hashmap! {
-                        "a/b".into() => ArtifactType::Custom.into(),
+                        "b".into() => ArtifactType::Custom.into(),
                     },
+                    artifact_dir: Path::new("a").to_path_buf(),
                     outcome: Outcome::Passed,
                     suites: vec![],
                     start_time: None,
@@ -1082,6 +1130,7 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {},
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
@@ -1107,9 +1156,10 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {
-                    "a/b.txt".into() => ArtifactType::Stdout.into(),
-                    "a/c.txt".into() => ArtifactType::Stderr.into(),
+                    "b.txt".into() => ArtifactType::Stdout.into(),
+                    "c.txt".into() => ArtifactType::Stderr.into(),
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
@@ -1134,8 +1184,9 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {
-                    "a/b.txt".into() => ArtifactType::Syslog.into()
+                    "b.txt".into() => ArtifactType::Syslog.into()
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
@@ -1160,8 +1211,9 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {
-                    "a/b.txt".into() => ArtifactType::Syslog.into()
+                    "b.txt".into() => ArtifactType::Syslog.into()
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
@@ -1187,8 +1239,9 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {
-                    "a/b".into() => ArtifactType::Custom.into()
+                    "b".into() => ArtifactType::Custom.into()
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
@@ -1213,8 +1266,9 @@ mod test {
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {
-                    "a/b".into() => ArtifactType::Custom.into()
+                    "b".into() => ArtifactType::Custom.into()
                 },
+                artifact_dir: Path::new("a").to_path_buf(),
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
