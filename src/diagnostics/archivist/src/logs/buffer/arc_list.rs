@@ -13,7 +13,7 @@ use std::{
     sync::Arc,
     task::{Context, Poll, Waker},
 };
-use tracing::trace;
+use tracing::{trace, warn};
 
 /// A list that can be iterated despite concurrent insertions and deletions.
 pub struct ArcList<T> {
@@ -108,10 +108,10 @@ impl<T> Default for InnerArcList<T> {
 impl<T> InnerArcList<T> {
     fn push_back(&mut self, item: T) {
         self.entries_seen += 1;
-        assert!(
-            self.entries_seen <= self.final_entry,
-            "push_back() must not be called after terminate()"
-        );
+        if self.entries_seen > self.final_entry {
+            warn!("push_back() must not be called after terminate()");
+            return;
+        }
 
         let id = self.entries_seen;
         self.items.push_back(ArcListItem { id, value: Arc::new(item) });
