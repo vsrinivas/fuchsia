@@ -41,6 +41,7 @@ class Backend {
   virtual void DriverStatusOk() = 0;
   virtual void DriverStatusAck() = 0;
   virtual void DeviceReset() = 0;
+  virtual void WaitForDeviceReset() = 0;
 
   //// Read/Write the device config
   virtual void ReadDeviceConfig(uint16_t offset, uint8_t* value) = 0;

@@ -113,6 +113,7 @@ class PciLegacyBackend : public PciBackend {
   void DriverStatusOk() final;
   void DriverStatusAck() final;
   void DeviceReset() final;
+  void WaitForDeviceReset() final;
   uint32_t IsrStatus() final;
   bool ReadFeature(uint32_t feature) final;
   void SetFeature(uint32_t feature) final;
@@ -158,6 +159,7 @@ class PciModernBackend : public PciBackend {
   void DriverStatusOk() final;
   void DriverStatusAck() final;
   void DeviceReset() final;
+  void WaitForDeviceReset() final;
   uint32_t IsrStatus() final;
   bool ReadFeature(uint32_t feature) final;
   void SetFeature(uint32_t feature) final;

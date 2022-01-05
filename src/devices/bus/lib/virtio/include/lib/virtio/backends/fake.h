@@ -25,6 +25,13 @@ namespace virtio {
 // registers.
 class FakeBackend : public Backend {
  public:
+  enum class State {
+    DEVICE_VOID,
+    DEVICE_RESET,
+    DEVICE_STATUS_ACK,
+    DRIVER_OK,
+  };
+
   ~FakeBackend() override = default;
 
   zx_status_t Bind() override { return ZX_OK; }
@@ -44,6 +51,7 @@ class FakeBackend : public Backend {
     state_ = State::DEVICE_RESET;
     kicked_queues_.clear();
   }
+  void WaitForDeviceReset() override { EXPECT_EQ(state_, State::DEVICE_RESET); }
   void ReadDeviceConfig(uint16_t offset, uint8_t* value) override {
     auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
     EXPECT_GT(registers8_.count(shifted_offset), 0, "offset-%xh/8", offset);
@@ -93,6 +101,8 @@ class FakeBackend : public Backend {
   uint32_t IsrStatus() override { return registers8_.find(kISRStatus)->second; }
   zx::status<uint32_t> WaitForInterrupt() override { return zx::ok(0); }
   void InterruptAck(uint32_t key) override {}
+
+  State DeviceState() const { return state_; }
 
  protected:
   // virtio header register offsets.
@@ -154,6 +164,11 @@ class FakeBackend : public Backend {
   }
 
   template <typename T>
+  void SetClassRegister(uint16_t offset, T value) {
+    SetRegister(offset + kISRStatus + 1, value);
+  }
+
+  template <typename T>
   void ReadRegister(uint16_t offset, T* output) {
     if constexpr (sizeof(T) == 1) {
       *output = registers8_.find(offset)->second;
@@ -165,13 +180,6 @@ class FakeBackend : public Backend {
   }
 
  private:
-  enum class State {
-    DEVICE_VOID,
-    DEVICE_RESET,
-    DEVICE_STATUS_ACK,
-    DRIVER_OK,
-  };
-
   State state_ = State::DEVICE_VOID;
   std::map<uint16_t, uint8_t> registers8_;
   std::map<uint16_t, uint16_t> registers16_;

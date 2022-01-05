@@ -438,11 +438,11 @@ void EthernetDevice::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* ne
 
   // If VIRTIO_NET_F_CSUM is not negotiated, the driver MUST set flags to
   // zero and SHOULD supply a fully checksummed packet to the device.
-  tx_hdr->flags = 0;
+  tx_hdr->base.flags = 0;
 
   // If none of the VIRTIO_NET_F_HOST_TSO4, TSO6 or UFO options have been
   // negotiated, the driver MUST set gso_type to VIRTIO_NET_HDR_GSO_NONE.
-  tx_hdr->gso_type = VIRTIO_NET_HDR_GSO_NONE;
+  tx_hdr->base.gso_type = VIRTIO_NET_HDR_GSO_NONE;
 
   void* tx_buf = GetFrameData(bufs_.get(), kTxId, id, virtio_hdr_len_);
   memcpy(tx_buf, data, length);

@@ -171,6 +171,15 @@ void PciLegacyBackend::DeviceReset() {
   zxlogf(TRACE, "%s: device reset", tag());
 }
 
+void PciLegacyBackend::WaitForDeviceReset() {
+  fbl::AutoLock guard(&lock());
+  uint8_t status = 0xFF;
+  while (status != 0) {
+    legacy_io_->Read(bar0_base_ + VIRTIO_PCI_DEVICE_STATUS, &status);
+  }
+  zxlogf(TRACE, "%s: device reset complete", tag());
+}
+
 void PciLegacyBackend::SetStatusBits(uint8_t bits) {
   fbl::AutoLock guard(&lock());
   uint8_t status;

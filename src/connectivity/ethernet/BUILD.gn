@@ -18,6 +18,7 @@ group("drivers") {
     "drivers/usb-cdc-ecm",
     "drivers/usb-cdc-function",
     "drivers/virtio:virtio_ethernet",
+    "drivers/virtio:virtio_netdevice",
   ]
 
   if (current_cpu == "x64") {

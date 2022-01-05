@@ -215,8 +215,8 @@ TEST_F(VirtioNetTest, SendToGuest) {
 
   // Validate virtio headers.
   EXPECT_EQ(packet->header.num_buffers, 1);
-  EXPECT_EQ(packet->header.gso_type, VIRTIO_NET_HDR_GSO_NONE);
-  EXPECT_EQ(packet->header.flags, 0);
+  EXPECT_EQ(packet->header.base.gso_type, VIRTIO_NET_HDR_GSO_NONE);
+  EXPECT_EQ(packet->header.base.flags, 0);
 
   // Validate payload.
   for (size_t i = 0; i != kPacketSize; ++i) {

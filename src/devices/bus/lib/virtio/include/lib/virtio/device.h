@@ -71,12 +71,13 @@ class Device {
 
   // Devie lifecycle methods
   void DeviceReset() { backend_->DeviceReset(); }
+  void WaitForDeviceReset() { backend_->WaitForDeviceReset(); }
   void DriverStatusAck() { backend_->DriverStatusAck(); }
   void DriverStatusOk() { backend_->DriverStatusOk(); }
   uint32_t IsrStatus() const { return backend_->IsrStatus(); }
 
   // Device config management
-  zx_status_t CopyDeviceConfig(void* _buf, size_t len) const;
+  void CopyDeviceConfig(void* _buf, size_t len) const;
   template <typename T>
   void ReadDeviceConfig(uint16_t offset, T* val) {
     backend_->ReadDeviceConfig(offset, val);

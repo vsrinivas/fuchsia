@@ -69,10 +69,64 @@ fuchsia_unittest_package("virtio-ethernet-test-package") {
   deps = [ ":virtio-ethernet-test" ]
 }
 
+test("virtio-netdevice-test") {
+  sources = [ "netdevice_test.cc" ]
+  deps = [
+    ":virtio_netdevice_lib",
+    "//src/devices/bus/lib/virtio",
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/mock-ddk",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("virtio-netdevice-test-package") {
+  package_name = "virtio-netdevice-test"
+  deps = [ ":virtio-netdevice-test" ]
+}
+
+source_set("virtio_netdevice_lib") {
+  sources = [
+    "netdevice.cc",
+    "netdevice.h",
+  ]
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
+    "//src/connectivity/network/drivers/network-device/device:shared_lock",
+    "//src/devices/bus/lib/virtio",
+    "//src/devices/lib/dev-operation",
+    "//src/lib/ddktl",
+    "//src/lib/vmo_store",
+  ]
+}
+
+fuchsia_driver("virtio_netdevice-driver") {
+  output_name = "virtio_netdevice"
+  sources = [ "netdevice_driver.cc" ]
+  deps = [
+    ":virtio_ethernet_bind",
+    ":virtio_netdevice_lib",
+    "//src/devices/lib/driver",
+  ]
+}
+
+fuchsia_driver_component("virtio_netdevice") {
+  component_name = "virtio_netdevice"
+  deps = [ ":virtio_netdevice-driver" ]
+  info = "virtio_ethernet-info.json"
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":virtio-ethernet-test-package",
+    ":virtio-netdevice-test-package",
     ":virtio_ethernet_bind_test",
   ]
 }

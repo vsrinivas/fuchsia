@@ -64,12 +64,12 @@ class RxStream {
 
       // If none of the VIRTIO_NET_F_GUEST_TSO4, TSO6 or UFO options have been
       // negotiated, the device MUST set gso_type to VIRTIO_NET_HDR_GSO_NONE.
-      header->gso_type = VIRTIO_NET_HDR_GSO_NONE;
+      header->base.gso_type = VIRTIO_NET_HDR_GSO_NONE;
 
       // If VIRTIO_NET_F_GUEST_CSUM is not negotiated, the device MUST set
       // flags to zero and SHOULD supply a fully checksummed packet to the
       // driver.
-      header->flags = 0;
+      header->base.flags = 0;
 
       uintptr_t offset = phys_mem_->offset(header + 1);
       uintptr_t length = desc.len - sizeof(*header);

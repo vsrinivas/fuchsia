@@ -27,6 +27,7 @@
 //src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-driver
 //src/connectivity/ethernet/drivers/usb-cdc-function:usb-cdc-function-driver
 //src/connectivity/ethernet/drivers/virtio:virtio_ethernet-driver
+//src/connectivity/ethernet/drivers/virtio:virtio_netdevice-driver
 //src/connectivity/network/drivers/network-device:network-device-driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-luis-mfg_driver
 //src/connectivity/openthread/drivers/ot-radio:ot-radio-luis_driver

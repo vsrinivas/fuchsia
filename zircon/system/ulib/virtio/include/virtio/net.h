@@ -54,14 +54,18 @@ typedef struct virtio_net_config {
   uint16_t max_virtqueue_pairs;
 } __PACKED virtio_net_config_t;
 
-typedef struct virtio_net_hdr {
+typedef struct virtio_legacy_net_hdr {
   uint8_t flags;
   uint8_t gso_type;
   uint16_t hdr_len;
   uint16_t gso_size;
   uint16_t csum_start;
   uint16_t csum_offset;
-  // Only if |VIRTIO_NET_F_MRG_RXBUF| or |VIRTIO_F_VERSION_1|.
+} __PACKED virtio_legacy_net_hdr_t;
+
+// Only if |VIRTIO_NET_F_MRG_RXBUF| or |VIRTIO_F_VERSION_1|.
+typedef struct virtio_net_hdr {
+  virtio_legacy_net_hdr_t base;
   uint16_t num_buffers;
 } __PACKED virtio_net_hdr_t;
 

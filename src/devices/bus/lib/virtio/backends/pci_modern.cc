@@ -408,6 +408,15 @@ void PciModernBackend::DeviceReset() {
   MmioWrite<uint8_t>(&common_cfg_->device_status, 0u);
 }
 
+void PciModernBackend::WaitForDeviceReset() {
+  fbl::AutoLock guard(&lock());
+
+  uint8_t device_status = 0xFF;
+  while (device_status != 0) {
+    MmioRead(&common_cfg_->device_status, &device_status);
+  }
+}
+
 void PciModernBackend::DriverStatusOk() {
   fbl::AutoLock guard(&lock());
 

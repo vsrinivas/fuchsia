@@ -5,8 +5,8 @@
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_RING_H_
 
 #include <lib/ddk/debug.h>
-#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/hw/arch_ops.h>
+#include <lib/ddk/io-buffer.h>
 #include <zircon/types.h>
 
 #include <virtio/virtio_ring.h>
@@ -18,7 +18,10 @@ class Device;
 class Ring {
  public:
   Ring(Device* device);
+  Ring(Ring&& other) noexcept;
   ~Ring();
+
+  Ring& operator=(Ring&& other) noexcept;
 
   // Initialize ring |index| with default (device-offered) size.
   zx_status_t Init(uint16_t index);
@@ -40,6 +43,9 @@ class Ring {
   void SetNoInterrupt() { ring_.avail->flags |= VRING_AVAIL_F_NO_INTERRUPT; }
   void ClearNoInterrupt() { ring_.avail->flags &= ~VRING_AVAIL_F_NO_INTERRUPT; }
   bool HasWork() { return ring_.used->idx != ring_.last_used; }
+
+  // Provides access to the underlying memory. Meant for use in tests.
+  vring& vring_unsafe() { return ring_; }
 
  private:
   Device* device_ = nullptr;

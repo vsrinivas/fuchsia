@@ -26,7 +26,29 @@ void virtio_dump_desc(const struct vring_desc* desc) {
 
 Ring::Ring(Device* device) : device_(device) { memset(&ring_buf_, 0, sizeof(ring_buf_)); }
 
+Ring::Ring(Ring&& other) noexcept {
+  index_ = other.index_;
+  device_ = other.device_;
+  other.device_ = nullptr;
+  ring_buf_ = other.ring_buf_;
+  other.ring_buf_ = io_buffer_t{};
+  ring_ = other.ring_;
+  other.ring_ = vring{};
+}
+
 Ring::~Ring() { io_buffer_release(&ring_buf_); }
+
+Ring& Ring::operator=(Ring&& other) noexcept {
+  io_buffer_release(&ring_buf_);
+  index_ = other.index_;
+  device_ = other.device_;
+  other.device_ = nullptr;
+  ring_buf_ = other.ring_buf_;
+  other.ring_buf_ = io_buffer_t{};
+  ring_ = other.ring_;
+  other.ring_ = vring{};
+  return *this;
+}
 
 zx_status_t Ring::Init(uint16_t index) {
   return Init(/*index=*/index, /*count=*/device_->GetRingSize(index));
