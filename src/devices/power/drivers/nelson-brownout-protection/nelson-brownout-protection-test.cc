@@ -38,6 +38,8 @@ class FakeCodec : public audio::SimpleCodecServer {
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
+  bool SupportsAgl() override { return true; }
+  void SetAgl(bool enable_agl) override { agl_enabled_ = enable_agl; }
   audio::DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx::status<audio::CodecFormatInfo> SetDaiFormat(const audio::DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -45,10 +47,12 @@ class FakeCodec : public audio::SimpleCodecServer {
   audio::GainFormat GetGainFormat() override { return {.min_gain = -103.0f}; }
   audio::GainState GetGainState() override { return gain_state; }
   void SetGainState(audio::GainState state) override { gain_state = state; }
+  bool agl_enabled() { return agl_enabled_; }
   inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
 
  private:
   audio::GainState gain_state = {};
+  bool agl_enabled_ = false;
 };
 
 class FakePowerSensor : public ddk::PowerSensorProtocol<FakePowerSensor, ddk::base_protocol>,
@@ -120,21 +124,21 @@ TEST(NelsonBrownoutProtectionTest, Test) {
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   child_dev2->InitOp();
-  EXPECT_FALSE(codec->GetGainState().agc_enabled);
+  EXPECT_FALSE(codec->agl_enabled());
 
   power_sensor.set_voltage(10.0f);  // Must be less than 11.5 to stay in the brownout state.
 
   alert_gpio_interrupt.trigger(0, zx::clock::get_monotonic());
 
-  while (!codec->GetGainState().agc_enabled) {
+  while (!codec->agl_enabled()) {
   }
 
   EXPECT_EQ(codec->GetGainState().gain, 10.0f);
   EXPECT_FALSE(codec->GetGainState().muted);
 
-  power_sensor.set_voltage(12.0f);  // End the brownout state and make sure AGC gets re-enabled.
+  power_sensor.set_voltage(12.0f);  // End the brownout state and make sure AGL gets disabled.
 
-  while (codec->GetGainState().agc_enabled) {
+  while (codec->agl_enabled()) {
   }
 
   EXPECT_EQ(codec->GetGainState().gain, 10.0f);

@@ -206,9 +206,12 @@ Info Tas58xx::GetInfo() {
 zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
 void Tas58xx::SetAgl(bool enable_agl) {
-  const uint8_t agl_value = 0x40 | (enable_agl ? kRegAglEnableBitByte0 : 0);
+  fbl::AutoLock lock(&lock_);
+  TRACE_DURATION_BEGIN("tas58xx", "SetAgl", "Enable AGL", enable_agl != last_agl_);
+  if (enable_agl != last_agl_) {
+    const uint8_t agl_value = 0x40 | (enable_agl ? kRegAglEnableBitByte0 : 0);
 
-  // clang-format off
+    // clang-format off
     const uint8_t buffer[] = {
         kRegSelectBook, 0x8c,
         kRegSelectPage, 0x2c,
@@ -216,46 +219,50 @@ void Tas58xx::SetAgl(bool enable_agl) {
         kRegSelectPage, 0x00,
         kRegSelectBook, 0x00,
     };
-  // clang-format on
+    // clang-format on
 
-  i2c_op_t ops[5] = {};
+    i2c_op_t ops[5] = {};
 
-  ops[0].data_buffer = &buffer[0];
-  ops[0].data_size = 2;
-  ops[0].is_read = false;
-  ops[0].stop = true;
+    ops[0].data_buffer = &buffer[0];
+    ops[0].data_size = 2;
+    ops[0].is_read = false;
+    ops[0].stop = true;
 
-  ops[1].data_buffer = &buffer[2];
-  ops[1].data_size = 2;
-  ops[1].is_read = false;
-  ops[1].stop = true;
+    ops[1].data_buffer = &buffer[2];
+    ops[1].data_size = 2;
+    ops[1].is_read = false;
+    ops[1].stop = true;
 
-  ops[2].data_buffer = &buffer[4];
-  ops[2].data_size = 5;
-  ops[2].is_read = false;
-  ops[2].stop = true;
+    ops[2].data_buffer = &buffer[4];
+    ops[2].data_size = 5;
+    ops[2].is_read = false;
+    ops[2].stop = true;
 
-  ops[3].data_buffer = &buffer[9];
-  ops[3].data_size = 2;
-  ops[3].is_read = false;
-  ops[3].stop = true;
+    ops[3].data_buffer = &buffer[9];
+    ops[3].data_size = 2;
+    ops[3].is_read = false;
+    ops[3].stop = true;
 
-  ops[4].data_buffer = &buffer[11];
-  ops[4].data_size = 2;
-  ops[4].is_read = false;
-  ops[4].stop = true;
+    ops[4].data_buffer = &buffer[11];
+    ops[4].data_size = 2;
+    ops[4].is_read = false;
+    ops[4].stop = true;
 
-  sync_completion_t completion;
-  sync_completion_reset(&completion);
+    sync_completion_t completion;
+    sync_completion_reset(&completion);
 
-  i2c_.Transact(
-      ops, countof(ops),
-      [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-        sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
-      },
-      &completion);
-
-  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    i2c_.Transact(
+        ops, countof(ops),
+        [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
+          sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
+        },
+        &completion);
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    last_agl_ = enable_agl;
+  }
+  // Report the time at which AGL was enabled. This along with the brownout protection driver trace
+  // will let us calculate the total latency.
+  TRACE_DURATION_END("tas58xx", "SetAgl", "timestamp", zx::clock::get_monotonic().get());
 }
 
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
@@ -318,22 +325,10 @@ GainFormat Tas58xx::GetGainFormat() {
 }
 
 void Tas58xx::SetGainState(GainState gain_state) {
-  TRACE_DURATION_BEGIN("tas58xx", "SetGainState", "Enable AGL",
-                       gain_state.agc_enabled != last_agc_);
   fbl::AutoLock lock(&lock_);
-  zx_status_t status;
-  // TODO(77042): Once clients are moved to the signal processing API remove this.
-  if (gain_state.agc_enabled != last_agc_) {
-    SetAgl(gain_state.agc_enabled);
-    last_agc_ = gain_state.agc_enabled;
-  }
-  // Report the time at which AGL was enabled. This along with the brownout protection driver trace
-  // will let us calculate the total latency.
-  TRACE_DURATION_END("tas58xx", "SetGainState", "timestamp", zx::clock::get_monotonic().get());
-
   float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(48 - gain * 2);
-  status = WriteReg(kRegDigitalVol, gain_reg);
+  zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
   if (status != ZX_OK) {
     return;
   }
@@ -341,7 +336,10 @@ void Tas58xx::SetGainState(GainState gain_state) {
   static_cast<void>(UpdateReg(kRegDeviceCtrl2, 0x08, gain_state.muted ? 0x08 : 0x00));
 }
 
-GainState Tas58xx::GetGainState() { return gain_state_; }
+GainState Tas58xx::GetGainState() {
+  fbl::AutoLock lock(&lock_);
+  return gain_state_;
+}
 
 zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buf[2];

@@ -60,11 +60,11 @@ class Tas58xx : public SimpleCodecServer {
   zx_status_t ReadReg(uint8_t reg, uint8_t* value) TA_REQ(lock_);
   zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value) TA_REQ(lock_);
 
-  ddk::I2cChannel i2c_;
-  GainState gain_state_ = {};
+  ddk::I2cChannel i2c_ TA_GUARDED(lock_);
+  GainState gain_state_ TA_GUARDED(lock_) = {};
   fbl::Mutex lock_;
   metadata::ti::TasConfig metadata_ = {};
-  bool last_agc_ = false;
+  bool last_agl_ TA_GUARDED(lock_) = false;
 };
 }  // namespace audio
 

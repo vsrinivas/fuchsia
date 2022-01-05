@@ -143,7 +143,10 @@ int NelsonBrownoutProtection::Thread() {
   while (run_thread_ && alert_interrupt_.wait(&timestamp) == ZX_OK) {
     {
       TRACE_DURATION("brownout-protection", "Enable AGL", "timestamp", timestamp.get());
-      EnableAgl();
+      zx_status_t status = codec_.SetAgl(true);
+      if (status != ZX_OK) {
+        zxlogf(WARNING, "Failed to enable AGL: %s", zx_status_get_string(status));
+      }
     }
 
     while (run_thread_) {
@@ -154,30 +157,13 @@ int NelsonBrownoutProtection::Thread() {
       }
     }
 
-    DisableAgl();
+    zx_status_t status = codec_.SetAgl(false);
+    if (status != ZX_OK) {
+      zxlogf(WARNING, "Failed to disable AGL: %s", zx_status_get_string(status));
+    }
   }
 
   return thrd_success;
-}
-
-void NelsonBrownoutProtection::EnableAgl() {
-  // TODO(77042): Move to the signal processing API, here and below.
-  zx::status<audio::GainState> gain_state = codec_.GetGainState();
-  if (gain_state.is_ok()) {
-    gain_state->agc_enabled = true;
-    codec_.SetGainState(gain_state.value());
-  } else {
-    // Something went wrong, but we should still at least try to enable AGL.
-    codec_.SetGainState({.gain = default_gain_, .muted = true, .agc_enabled = true});
-  }
-}
-
-void NelsonBrownoutProtection::DisableAgl() {
-  zx::status<audio::GainState> gain_state = codec_.GetGainState();
-  if (gain_state.is_ok()) {
-    gain_state->agc_enabled = false;
-    codec_.SetGainState(gain_state.value());
-  }
 }
 
 static constexpr zx_driver_ops_t nelson_brownout_protection_driver_ops = []() {

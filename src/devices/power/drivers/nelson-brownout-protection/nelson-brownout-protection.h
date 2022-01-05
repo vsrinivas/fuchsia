@@ -44,9 +44,6 @@ class NelsonBrownoutProtection : public DeviceType {
 
   int Thread();
 
-  void EnableAgl();
-  void DisableAgl();
-
   thrd_t thread_;
   audio::SimpleCodecClient codec_;
   fidl::WireSyncClient<fuchsia_hardware_power_sensor::Device> power_sensor_;
