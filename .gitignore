@@ -58,15 +58,14 @@ fidl-tags
 tags
 TAGS
 Thumbs.db
-tools/cipd.gni
-topaz/
 tmp/
 json_generator_tests_*.txt
 tables_generator_tests_*.txt
 
-
-### Specific files
-/garnet/tools/cipd.gni
+### Checkout generated files
+/build/cipd.gni
+/zircon/prebuilt/config.gni
+/zircon/prebuilt/downloads/
 
 ### Directories to be ignored across the tree
 .cipd/
@@ -112,7 +111,6 @@ tables_generator_tests_*.txt
 /third_party/openssl-ecjpake/src
 
 /tmp/
-/topaz/
 /vendor/
 /src/experiences
 /build/secondary/third_party/protobuf
