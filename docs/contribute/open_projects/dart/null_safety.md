@@ -70,7 +70,8 @@ close it after your change has merged.
 
 ## Examples
 
-*   [584343: [cts][net] Enable null-safety](https://fuchsia-review.googlesource.com/c/fuchsia/+/584343)
+*   [[cts][net] Enable null-safety](https://fuchsia-review.googlesource.com/c/fuchsia/+/584343)
+*   [[examples] Enable null safety check](https://fuchsia-review.googlesource.com/c/fuchsia/+/626781)
 
 ## Sponsors
 
