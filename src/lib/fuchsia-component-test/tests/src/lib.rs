@@ -9,8 +9,9 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_component_test::new::{
-        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
+    fuchsia_component_test::{
+        error::Error as RealmBuilderError,
+        new::{Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route},
     },
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt, TryStreamExt},
     std::convert::TryInto,
@@ -864,16 +865,13 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
         builder
             .add_legacy_child("echo-client", V1_ECHO_CLIENT_URL, ChildOptions::new().eager())
             .await?;
-        let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;
-        let realm_instance =
-            builder.build_in_nested_component_manager("#meta/component_manager.cm").await?;
 
-        assert!(
-            receive_echo_server_called.next().await.is_some(),
-            "failed to observe the mock server report a successful connection",
-        );
-
-        realm_instance.destroy().await?;
+        // assert_matches wants to pretty-print what went wrong if the assert fails, but neither
+        // sub-type in the returned Result here implements Debug.
+        match builder.build_in_nested_component_manager("#meta/component_manager.cm").await {
+            Err(RealmBuilderError::LegacyChildrenUnsupportedInNestedComponentManager) => (),
+            _ => panic!("legacy children should be unsupported in nested component managers"),
+        }
     }
 
     {

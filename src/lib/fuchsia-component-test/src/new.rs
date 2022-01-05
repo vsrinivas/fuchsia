@@ -11,8 +11,11 @@ use {
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
     fuchsia_component::client as fclient,
-    futures::future::BoxFuture,
-    std::fmt::{self, Display, Formatter},
+    futures::{future::BoxFuture, lock::Mutex},
+    std::{
+        fmt::{self, Display, Formatter},
+        sync::Arc,
+    },
 };
 
 pub use crate::local_component_runner::LocalComponentHandles;
@@ -521,6 +524,7 @@ impl RealmBuilder {
                 realm_proxy,
                 realm_path: vec![],
                 local_component_runner_builder: local_component_runner_builder.clone(),
+                has_legacy_children: Arc::new(Mutex::new(false)),
             },
             builder_proxy,
             local_component_runner_builder,
@@ -588,6 +592,9 @@ impl RealmBuilder {
         self,
         component_manager_relative_url: &str,
     ) -> Result<RealmInstance, Error> {
+        if *self.root_realm.has_legacy_children.lock().await {
+            return Err(Error::LegacyChildrenUnsupportedInNestedComponentManager);
+        }
         let collection_name = self.collection_name.clone();
         let (root_url, local_component_runner_task) = self.initialize().await?;
 
@@ -762,6 +769,18 @@ pub struct SubRealmBuilder {
     realm_proxy: ftest::RealmProxy,
     realm_path: Vec<String>,
     local_component_runner_builder: LocalComponentRunnerBuilder,
+
+    /// We don't currently support automatically gracefully tearing down realms built in a nested
+    /// component manager. This is typically not a big deal, because any resources those components
+    /// are using (jobs, processes, etc.) live under the nested component manager's job, with the
+    /// singular and important exception of legacy components, which run under the system's appmgr.
+    /// To prevent flakiness and resource leakage caused by this, we disallow legacy children in
+    /// realms constructed in a nested component manager. To accomplish this, we track if legacy
+    /// children have been added to a realm here.
+    ///
+    /// In order to share the single boolean with any related SubRealmBuilders, we put it in an
+    /// Arc<Mutex<_>>
+    has_legacy_children: Arc<Mutex<bool>>,
 }
 
 impl SubRealmBuilder {
@@ -781,6 +800,7 @@ impl SubRealmBuilder {
             realm_proxy: child_realm_proxy,
             realm_path: child_path,
             local_component_runner_builder: self.local_component_runner_builder.clone(),
+            has_legacy_children: self.has_legacy_children.clone(),
         })
     }
 
@@ -828,6 +848,7 @@ impl SubRealmBuilder {
         legacy_url: impl Into<String>,
         options: ChildOptions,
     ) -> Result<ChildRef, Error> {
+        *self.has_legacy_children.lock().await = true;
         let name: String = name.into();
         self.realm_proxy.add_legacy_child(&name, &legacy_url.into(), options.into()).await??;
         Ok(ChildRef::new(name, self.realm_path.clone()))

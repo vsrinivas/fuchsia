@@ -43,6 +43,11 @@ pub enum Error {
     #[error("unable to use reference {0} in realm {1:?}")]
     RefUsedInWrongRealm(Ref, String),
 
+    #[error(
+        "realms built in a nested component manager are not allowed to contain legacy children"
+    )]
+    LegacyChildrenUnsupportedInNestedComponentManager,
+
     // NOTE: everything below this line in Error will be deleted once the soft migration to the new
     // protocol is complete
     #[error("failed to set component decl for {0}: {1:?}")]
