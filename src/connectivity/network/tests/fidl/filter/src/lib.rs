@@ -317,16 +317,11 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
     // flakes in CQ due to ARP timeouts and ARP resolution is immaterial to the
     // tests we run here.
     let () = futures::stream::iter([
-        (&server, &server_ep, &CLIENT_MAC_ADDRESS, &CLIENT_IPV4_SUBNET.addr),
-        (&client, &client_ep, &SERVER_MAC_ADDRESS, &SERVER_IPV4_SUBNET.addr),
+        (&server, &server_ep, CLIENT_IPV4_SUBNET.addr, SERVER_MAC_ADDRESS),
+        (&client, &client_ep, SERVER_IPV4_SUBNET.addr, CLIENT_MAC_ADDRESS),
     ])
-    .for_each_concurrent(None, |(realm, ep, mac, addr)| {
-        let controller = realm
-            .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
-            .expect("connect to protocol");
-        controller.add_entry(ep.id(), &mut addr.clone(), &mut mac.clone()).map(|r| {
-            r.expect("add_entry").expect("add_entry failed");
-        })
+    .for_each_concurrent(None, |(realm, ep, addr, mac)| {
+        realm.add_neighbor_entry(ep.id(), addr, mac).map(|r| r.expect("add_neighbor_entry"))
     })
     .await;
 

@@ -15,6 +15,7 @@ use fidl_fuchsia_hardware_network as fnetwork;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
+use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul as fnetemul;
@@ -550,6 +551,26 @@ impl<'a> TestRealm<'a> {
                 }
             }
         }
+    }
+
+    /// Add a static neighbor entry.
+    ///
+    /// Useful to prevent NUD resolving too slow and causing spurious test failures.
+    pub async fn add_neighbor_entry(
+        &self,
+        interface: u64,
+        mut addr: fnet::IpAddress,
+        mut mac: fnet::MacAddress,
+    ) -> Result {
+        let controller = self
+            .connect_to_protocol::<fnet_neighbor::ControllerMarker>()
+            .context("connect to protocol")?;
+        controller
+            .add_entry(interface, &mut addr, &mut mac)
+            .await
+            .context("add_entry")?
+            .map_err(zx::Status::from_raw)
+            .context("add_entry failed")
     }
 }
 

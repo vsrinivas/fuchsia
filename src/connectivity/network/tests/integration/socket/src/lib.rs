@@ -12,7 +12,7 @@ use futures::{
     io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, StreamExt as _,
     TryFutureExt as _, TryStreamExt as _,
 };
-use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
+use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     ping,
@@ -62,6 +62,11 @@ async fn run_udp_socket_test(
     let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
+const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
+const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
+const CLIENT_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:00:00:00:02");
+const SERVER_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:00:00:00:00:01");
+
 #[variants_test]
 async fn test_udp_socket<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -71,20 +76,38 @@ async fn test_udp_socket<E: netemul::Endpoint>(name: &str) {
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create client realm");
 
-    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
-    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
-
-    let _client_ep = client
-        .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
+    let client_ep = client
+        .join_network_with(
+            &net,
+            "client",
+            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)),
+            &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET),
+        )
         .await
         .expect("client failed to join network");
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
         .expect("failed to create server realm");
-    let _server_ep = server
-        .join_network::<E, _>(&net, "server", &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
+    let server_ep = server
+        .join_network_with(
+            &net,
+            "server",
+            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)),
+            &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET),
+        )
         .await
         .expect("server failed to join network");
+
+    // Add static ARP entries as we've observed flakes in CQ due to ARP timeouts
+    // and ARP resolution is immaterial to this test.
+    futures::stream::iter([
+        (&server, &server_ep, CLIENT_SUBNET.addr, CLIENT_MAC),
+        (&client, &client_ep, SERVER_SUBNET.addr, SERVER_MAC),
+    ])
+    .for_each_concurrent(None, |(realm, ep, addr, mac)| {
+        realm.add_neighbor_entry(ep.id(), addr, mac).map(|r| r.expect("add_neighbor_entry"))
+    })
+    .await;
 
     run_udp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
@@ -146,27 +169,45 @@ async fn run_tcp_socket_test(
 
 #[variants_test]
 async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
-    const CLIENT_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
-    const SERVER_SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
-
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");
 
     let client = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create client realm");
-    let _client_ep = client
-        .join_network::<E, _>(&net, "client", &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET))
+    let client_ep = client
+        .join_network_with(
+            &net,
+            "client",
+            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC)),
+            &netemul::InterfaceConfig::StaticIp(CLIENT_SUBNET),
+        )
         .await
         .expect("client failed to join network");
 
     let server = sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create server realm");
-    let _server_ep = server
-        .join_network::<E, _>(&net, "server", &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET))
+    let server_ep = server
+        .join_network_with(
+            &net,
+            "server",
+            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC)),
+            &netemul::InterfaceConfig::StaticIp(SERVER_SUBNET),
+        )
         .await
         .expect("server failed to join network");
+
+    // Add static ARP entries as we've observed flakes in CQ due to ARP timeouts
+    // and ARP resolution is immaterial to this test.
+    futures::stream::iter([
+        (&server, &server_ep, CLIENT_SUBNET.addr, CLIENT_MAC),
+        (&client, &client_ep, SERVER_SUBNET.addr, SERVER_MAC),
+    ])
+    .for_each_concurrent(None, |(realm, ep, addr, mac)| {
+        realm.add_neighbor_entry(ep.id(), addr, mac).map(|r| r.expect("add_neighbor_entry"))
+    })
+    .await;
 
     run_tcp_socket_test(&server, SERVER_SUBNET.addr, &client, CLIENT_SUBNET.addr).await
 }
