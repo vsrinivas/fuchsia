@@ -263,7 +263,14 @@ class ConsoleOut {
       switch (msg_in.msg_case()) {
         case vm_tools::vsh::HostMessage::MsgCase::kDataMessage: {
           auto data = msg_in.data_message().data();
-          write(STDOUT_FILENO, data.data(), data.size());
+          size_t bytes_written = 0;
+          while (bytes_written < data.size()) {
+            ssize_t actual =
+                write(STDOUT_FILENO, data.data() + bytes_written, data.size() - bytes_written);
+            FX_CHECK(actual != -1) << "Failed to write to stdout: " << errno;
+            bytes_written += actual;
+          }
+          FX_DCHECK(bytes_written == data.size());
         } break;
         case vm_tools::vsh::HostMessage::MsgCase::kStatusMessage:
           if (msg_in.status_message().status() != vm_tools::vsh::READY) {
