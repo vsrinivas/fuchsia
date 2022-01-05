@@ -55,6 +55,12 @@ void ProcessUpdateAction::Run(GestureContext gesture_context) {
     return;
   }
 
+  // The focused node may not be describable. If not, we should not try to speak
+  // it.
+  if (!NodeIsDescribable(focused_node)) {
+    return;
+  }
+
   last_spoken_feedback_ = now;
   auto promise = BuildSpeechTaskFromNodePromise(a11y_focus->view_ref_koid, a11y_focus->node_id)
                      // Cancel any promises if this class goes out of scope.

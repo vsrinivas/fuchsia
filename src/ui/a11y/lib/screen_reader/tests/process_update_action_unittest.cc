@@ -40,8 +40,12 @@ class ProcessUpdateActionTest : public ScreenReaderActionTest {
     node2.set_node_id(1u);
     node2.mutable_attributes()->set_label("node2");
 
+    fuchsia::accessibility::semantics::Node node3;
+    node3.set_node_id(2u);
+
     mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node));
     mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node2));
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node3));
   }
 };
 
@@ -99,6 +103,16 @@ TEST_F(ProcessUpdateActionTest, FrequentNodeUpdatesRespectDelayOfOutputs) {
   action.Run({});
   RunLoopUntilIdle();
   ASSERT_EQ(mock_speaker()->node_ids().size(), 2u);
+}
+
+TEST_F(ProcessUpdateActionTest, FocusedNodeIsNotDescribable) {
+  mock_a11y_focus_manager()->SetA11yFocus(mock_semantic_provider()->koid(), 2u,
+                                          [](bool result) { EXPECT_TRUE(result); });
+  mock_screen_reader_context()->set_describable_content_changed(true);
+  a11y::ProcessUpdateAction action(action_context(), mock_screen_reader_context());
+  action.Run({});
+  RunLoopUntilIdle();
+  EXPECT_FALSE(mock_speaker()->ReceivedSpeak());
 }
 
 }  // namespace
