@@ -3084,7 +3084,7 @@ static zx_status_t iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
   key_flags |= cpu_to_le16(STA_KEY_FLG_WEP_KEY_MAP);
 
   switch (key->cipher_type) {
-    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
+    case CIPHER_SUITE_TYPE_CCMP_128:
       key_flags |= cpu_to_le16(STA_KEY_FLG_CCM);
       memcpy(u.cmd.common.key, key->key, key->keylen);
       break;
@@ -3132,14 +3132,14 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_k
   /* verify the key details match the required command's expectations */
   if (WARN_ON((keyconf->key_type == WLAN_KEY_TYPE_PAIRWISE) ||
               (keyconf->keyidx != 4 && keyconf->keyidx != 5) ||
-              (keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128 &&
-               keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128 &&
-               keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256))) {
+              (keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_CMAC_128 &&
+               keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_GMAC_128 &&
+               keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_GMAC_256))) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (WARN_ON(!iwl_mvm_has_new_rx_api(mvm) &&
-              keyconf->cipher_type != fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128)) {
+              keyconf->cipher_type != CIPHER_SUITE_TYPE_BIP_CMAC_128)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -3150,11 +3150,11 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_k
     igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_NOT_VALID);
   } else {
     switch (keyconf->cipher_type) {
-      case fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128:
+      case CIPHER_SUITE_TYPE_BIP_CMAC_128:
         igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_CCM);
         break;
-      case fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128:
-      case fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256:
+      case CIPHER_SUITE_TYPE_BIP_GMAC_128:
+      case CIPHER_SUITE_TYPE_BIP_GMAC_256:
         igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_GCMP);
         break;
       default:
@@ -3162,7 +3162,7 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, const struct iwl_mvm_sta_k
     }
 
     memcpy(igtk_cmd.igtk, keyconf->key, keyconf->keylen);
-    if (keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256) {
+    if (keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
       igtk_cmd.ctrl_flags |= cpu_to_le32(STA_KEY_FLG_KEY_32BYTES);
     }
     igtk_cmd.receive_seq_cnt = cpu_to_le64(keyconf->rx_seq);
@@ -3224,7 +3224,7 @@ static zx_status_t __iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif
   }
 
   switch (keyconf->cipher_type) {
-    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
+    case CIPHER_SUITE_TYPE_CCMP_128:
       ret = iwl_mvm_send_sta_key(mvm, sta_id, keyconf, mcast, 0, NULL, 0, key_offset, mfp);
       break;
     default:
@@ -3303,9 +3303,9 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
     sta_id = mvmvif->mcast_sta.sta_id;
   }
 
-  if (keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128 ||
-      keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128 ||
-      keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256) {
+  if (keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
+      keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
+      keyconf->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
     ret = iwl_mvm_send_sta_igtk(mvm, keyconf, sta_id, false);
     goto end;
   }
@@ -3348,8 +3348,8 @@ zx_status_t iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
    * to the same key slot (offset).
    * If this fails, remove the original as well.
    */
-  if ((keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_40 ||
-       keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_104) &&
+  if ((keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_40 ||
+       keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_104) &&
       mvmsta) {
     ret = __iwl_mvm_set_sta_key(mvm, mvmvif, mvmsta, keyconf, key_offset, !mcast);
     if (ret != ZX_OK) {
@@ -3417,8 +3417,8 @@ zx_status_t iwl_mvm_remove_sta_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_st
   }
 
   /* delete WEP key twice to get rid of (now useless) offset */
-  if (keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_40 ||
-      keyconf->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_WEP_104) {
+  if (keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_40 ||
+      keyconf->cipher_type == CIPHER_SUITE_TYPE_WEP_104) {
     ret = __iwl_mvm_remove_sta_key(mvm, sta_id, keyconf, hw_key_idx, !mcast);
   }
 

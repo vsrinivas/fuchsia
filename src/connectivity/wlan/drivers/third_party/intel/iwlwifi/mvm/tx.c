@@ -400,7 +400,7 @@ static zx_status_t iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct iwl_mvm
                                              struct iwl_tx_cmd* tx_cmd,
                                              struct ieee80211_mac_packet* pkt) {
   switch (key->cipher_type) {
-    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
+    case CIPHER_SUITE_TYPE_CCMP_128:
       // Insert the CCMP header into the headroom space.
       if (sizeof(pkt->headroom) - pkt->headroom_used_size < 8) {
         return ZX_ERR_NO_SPACE;

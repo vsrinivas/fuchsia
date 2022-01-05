@@ -3069,7 +3069,7 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
   }
 
   switch (key->cipher_type) {
-    case fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128:
+    case CIPHER_SUITE_TYPE_CCMP_128:
       if (iwl_mvm_has_new_tx_api(mvm)) {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -3091,9 +3091,9 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
      * we don't support them for RX, so do the same.
      * CMAC/GMAC in AP/IBSS modes must be done in software.
      */
-    if (key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_CMAC_128 ||
-        key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_128 ||
-        key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_BIP_GMAC_256) {
+    if (key->cipher_type == CIPHER_SUITE_TYPE_BIP_CMAC_128 ||
+        key->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_128 ||
+        key->cipher_type == CIPHER_SUITE_TYPE_BIP_GMAC_256) {
       ret = ZX_ERR_NOT_SUPPORTED;
     } else {
       ret = ZX_OK;
@@ -3102,10 +3102,10 @@ zx_status_t iwl_mvm_mac_set_key(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
 
   if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && mvmsta &&
       iwl_mvm_has_new_rx_api(mvm) && key->key_type == WLAN_KEY_TYPE_PAIRWISE &&
-      (key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_CCMP_128 ||
+      (key->cipher_type == CIPHER_SUITE_TYPE_CCMP_128 ||
 
-       key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_GCMP_128 ||
-       key->cipher_type == fuchsia_wlan_ieee80211_CipherSuiteType_GCMP_256)) {
+       key->cipher_type == CIPHER_SUITE_TYPE_GCMP_128 ||
+       key->cipher_type == CIPHER_SUITE_TYPE_GCMP_256)) {
     int tid, q;
 
     ptk_pn = calloc(1, sizeof(*ptk_pn) + sizeof(ptk_pn->q->pn) * mvm->trans->num_rx_queues);

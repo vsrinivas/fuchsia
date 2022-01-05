@@ -37,7 +37,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SCAN_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SCAN_H_
 
-#include <fuchsia/wlan/ieee80211/c/fidl.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
 

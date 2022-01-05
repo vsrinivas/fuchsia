@@ -35,7 +35,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_
 
-#include <fuchsia/wlan/ieee80211/c/fidl.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 
 #define FMAC_GROUP 0x10
 

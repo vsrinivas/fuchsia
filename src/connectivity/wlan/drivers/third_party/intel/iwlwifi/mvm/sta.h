@@ -39,7 +39,7 @@
 
 #include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
-#include <fuchsia/wlan/ieee80211/c/fidl.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <threads.h>
 #include <zircon/types.h>
 
@@ -363,7 +363,7 @@ struct iwl_mvm_txq {
 struct iwl_mvm_sta_key_conf {
   atomic64_t tx_pn;
   uint64_t rx_seq;
-  fuchsia_wlan_ieee80211_CipherSuiteType cipher_type;
+  cipher_suite_type_t cipher_type;
   wlan_key_type_t key_type;
   uint8_t keyidx;
   size_t keylen;
