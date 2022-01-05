@@ -49,7 +49,7 @@ impl From<Permits> for PermitsManager {
 
 impl StreamController for PermitsManager {
     type Token = Arc<Vec<Permit>>;
-    // TOOD(fxbug.dev/77016): Use id to actually grab only the permits owned by PeerId
+    // TODO(fxbug.dev/77016): Use id to actually grab only the permits owned by PeerId
     fn suspend(&self, _id: Option<PeerId>) -> Result<Self::Token, Error> {
         if let Some(token) = self.held.borrow().upgrade() {
             return Ok(token);

@@ -65,7 +65,7 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::GoldfishPipeProtocol<FragmentProxy>,
                       public ddk::DsiProtocol<FragmentProxy>,
                       public ddk::GoldfishSyncProtocol<FragmentProxy>,
-                      // TOOD(fxbug.dev/32978): PciProxyBase implements
+                      // TODO(fxbug.dev/32978): PciProxyBase implements
                       // ddk::PciProtocol so it can be shared between the two
                       // PCI drivers until migration is complete.
                       public ddk::PciProtocol<FragmentProxy>,

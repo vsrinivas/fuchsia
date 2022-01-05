@@ -494,7 +494,7 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
 #endif
 }
 
-// TOOD(fxbug.dev/61631): Without USERSPACE_PCI defined in proxy it presently
+// TODO(fxbug.dev/61631): Without USERSPACE_PCI defined in proxy it presently
 // will always return the kernel implementation which avoids the channel call
 // and returns ZX_OK. This needs to be re-enabled after the migration.
 TEST_F(PciProtocolTests, DISABLED_AckingIrqModes) {

@@ -67,7 +67,7 @@ class Formatter {
       void operator()(const TypeEnum& enm) { ret = formatter->Format(enm.enum_data()).type_name; }
       void operator()(const TypeHandle& handle) {
         ret = "zx_handle_t";
-        // TOOD(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to
+        // TODO(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to
         // add the underlying handle type here like "zx_handle_t /*vmo*/" or similar.
       }
       void operator()(const TypePointer& pointer) {

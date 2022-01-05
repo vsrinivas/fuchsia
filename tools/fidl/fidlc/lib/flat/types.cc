@@ -18,7 +18,7 @@ bool ArrayType::ApplyConstraints(const flat::LibraryMediator& lib,
   size_t num_constraints = constraints.items.size();
   // assume that a lone constraint was an attempt at specifying `optional` and provide a more
   // specific error
-  // TOOD(fxbug.dev/75112): actually try to compile the optional constraint
+  // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
     return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
   if (num_constraints > 1)
@@ -307,7 +307,7 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
     case Decl::Kind::kTable:
       // assume that a lone constraint was an attempt at specifying `optional` and provide a more
       // specific error
-      // TOOD(fxbug.dev/75112): actually try to compile the optional constraint
+      // TODO(fxbug.dev/75112): actually try to compile the optional constraint
       if (num_constraints == 1)
         return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
       if (num_constraints > 1) {
@@ -369,7 +369,7 @@ bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConst
   size_t num_constraints = constraints.items.size();
   // assume that a lone constraint was an attempt at specifying `optional` and provide a more
   // specific error
-  // TOOD(fxbug.dev/75112): actually try to compile the optional constraint
+  // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
     return lib.Fail(ErrBoxCannotBeNullable, constraints.items[0]->span);
   if (num_constraints > 1)
@@ -394,7 +394,7 @@ bool PrimitiveType::ApplyConstraints(const flat::LibraryMediator& lib,
   size_t num_constraints = constraints.items.size();
   // assume that a lone constraint was an attempt at specifying `optional` and provide a more
   // specific error
-  // TOOD(fxbug.dev/75112): actually try to compile the optional constraint
+  // TODO(fxbug.dev/75112): actually try to compile the optional constraint
   if (num_constraints == 1)
     return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
   if (num_constraints > 1)

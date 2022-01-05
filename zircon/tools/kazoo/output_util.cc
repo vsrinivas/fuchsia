@@ -116,7 +116,7 @@ std::string CNameImpl(const Type& type) {
     void operator()(const TypeEnum& enm) { ret = "zx_" + enm.enum_data().base_name() + "_t"; }
     void operator()(const TypeHandle& handle) {
       ret = "zx_handle_t";
-      // TOOD(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to
+      // TODO(syscall-fidl-transition): Once we're not trying to match abigen, it might be nice to
       // add the underlying handle type here like "zx_handle_t /*vmo*/ handle" or similar.
     }
     void operator()(const TypePointer& pointer) {
