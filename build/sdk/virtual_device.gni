@@ -16,9 +16,11 @@ template("virtual_device_specification") {
   schema_target = "//build/sdk/meta/virtual_device-93A41932.json"
 
   output = "${target_gen_dir}/virtual_device.json"
+  template_output = "${target_gen_dir}/emulator_flags.json.template"
 
   # TODO(fxbug.dev/84738): Generate a virtual device specification.
   copy_target = "${target_name}_copy_test_file"
+  template_target = "${target_name}_copy_template_file"
 
   # Copy a sample virtual device specification to unblock finalization of the
   # spec. Remove this when fxbug.dev/84738 is fixed.
@@ -31,6 +33,21 @@ template("virtual_device_specification") {
         {
           label = get_label_info(":$target_name", "label_with_toolchain")
           name = "virtual_device"
+          path = rebase_path(output, root_build_dir)
+          type = "manifest"
+        },
+      ]
+    }
+  }
+
+  copy(template_target) {
+    sources = [ "//src/developer/ffx/plugins/emulator/testdata/emulator_flags.json.template" ]
+    outputs = [ template_output ]
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":$target_name", "label_with_toolchain")
+          name = "emulator_flags"
           path = rebase_path(output, root_build_dir)
           type = "manifest"
         },
@@ -62,6 +79,7 @@ template("virtual_device_specification") {
                            ])
     deps = [
       ":${copy_target}",
+      ":${template_target}",
       ":${validator_target}",
     ]
   }
