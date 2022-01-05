@@ -52,10 +52,14 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -327,10 +331,14 @@ struct ::fidl::internal::WireServerDispatcher<
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

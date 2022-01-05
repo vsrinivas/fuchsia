@@ -54,11 +54,15 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*
           impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(
       ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>*
           impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -236,7 +240,8 @@ class ::fidl::WireUnownedResult<
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<::fidl::WireResponse<
           ::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&&
-          decoded)
+          decoded,
+      ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());

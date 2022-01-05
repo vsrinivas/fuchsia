@@ -11,8 +11,10 @@ template<>
 struct {{ .WireServerDispatcher }} final {
   {{ .WireServerDispatcher.Self }}() = delete;
   static ::fidl::DispatchResult TryDispatch({{ .WireServer }}* impl, ::fidl::IncomingMessage& msg,
+                                            internal::IncomingTransportContext transport_context,
                                             ::fidl::Transaction* txn);
   static void Dispatch({{ .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
                        ::fidl::Transaction* txn);
 
  private:
@@ -29,7 +31,8 @@ struct {{ .WireServerDispatcher }} final {
 constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::entries_[] = {
   {{- range .ClientMethods }}
     { {{ .OrdinalName }},
-      [](void* interface, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+      [](void* interface, ::fidl::IncomingMessage&& msg,
+        internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
         {{- if .RequestArgs }}
         ::fidl::DecodedMessage<{{ .WireRequest }}> decoded{std::move(msg)};
         if (unlikely(!decoded.ok())) {
@@ -41,7 +44,12 @@ constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::e
         {{- end }}
         {{ .WireCompleter }}::Sync completer(txn);
         reinterpret_cast<{{ $.WireServer }}*>(interface)->{{ .Name }}(
+            {{- if eq .Transport.Name "Driver" }}
+            primary, fdf::Arena(transport_context.release<::fidl::internal::DriverTransport>()),
+            completer);
+            {{- else }}
             primary, completer);
+            {{- end }}
         return ZX_OK;
       },
     },
@@ -52,21 +60,24 @@ const ::fidl::internal::MethodEntry* {{ .WireServerDispatcher.NoLeading }}::entr
     &entries_[{{- len .ClientMethods -}}];
 
 ::fidl::DispatchResult {{ .WireServerDispatcher.NoLeading }}::TryDispatch(
-    {{ .WireServer }}* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+    {{ .WireServer }}* impl, ::fidl::IncomingMessage& msg,
+    internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(
+    impl, msg, std::move(transport_context), txn, entries_, entries_end_);
 }
 
 {{ EnsureNamespace "" }}
 void {{ .WireServerDispatcher.NoLeading }}::Dispatch(
-    {{- .WireServer }}* impl, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+    {{- .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
+    internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn, entries_, entries_end_);
 }
 
 {{- EnsureNamespace "" }}
 void {{ .WireServer.NoLeading }}::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
-  {{ .WireServerDispatcher }}::Dispatch(this, std::move(msg), txn);
+  {{ .WireServerDispatcher }}::Dispatch(this, std::move(msg), std::move(transport_context), txn);
 }
 {{- EndifFuchsia -}}
 

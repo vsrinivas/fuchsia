@@ -41,7 +41,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
   }
   ::fidl::DecodedMessage<{{ .WireResponse }}> decoded{std::move(msg)};
   ::fidl::Result maybe_error = decoded;
-  {{ .WireUnownedResult }} result{std::move(decoded)};
+  {{ .WireUnownedResult }} result{std::move(decoded), transport_context};
   OnResult(result);
   if (unlikely(!maybe_error.ok())) {
     return ::fidl::UnbindInfo(maybe_error);

@@ -70,9 +70,7 @@ struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal 
   {{- template "Method:UnownedResult:MessagingHeader" . }}
 {{- end }}
 
-{{- if .Transport.HasEvents }}
 {{- template "Protocol:EventHandler:MessagingHeader" . }}
-{{- end }}
 {{- if .Transport.HasSyncClient }}
 {{- template "Protocol:Caller:MessagingHeader" . }}
 {{- end }}
@@ -156,16 +154,18 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{ template "Protocol:ClientImpl:MessagingSource" . }}
 
-{{- if .Transport.HasEvents }}
 {{ template "Protocol:EventHandler:MessagingSource" . }}
-{{- end }}
 
 {{- /* Server implementation */}}
 {{ template "Protocol:Dispatcher:MessagingSource" . }}
 
 {{- if .Methods }}
   {{- range .TwoWayMethods -}}
+    {{- if eq .Transport.Name "Driver" }}
+    {{- template "Method:CompleterBase:driver/MessagingSource" . }}
+    {{- else }}
     {{- template "Method:CompleterBase:MessagingSource" . }}
+    {{- end }}
   {{- end }}
 
   {{- range .Methods }}

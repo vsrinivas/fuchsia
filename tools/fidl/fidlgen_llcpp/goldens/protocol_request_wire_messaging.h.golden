@@ -83,9 +83,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent>
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_protocolrequest::Parent>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(::fidl::WireServer<::test_protocolrequest::Parent>* impl,
-                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -391,9 +395,9 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final
   explicit WireUnownedResult(const ::fidl::Result& result)
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
-      ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>&&
-          decoded)
+      ::fidl::DecodedMessage<::fidl::WireResponse<
+          ::test_protocolrequest::Parent::GetChild>>&& decoded,
+      ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -538,7 +542,8 @@ class ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<::fidl::WireResponse<
-          ::test_protocolrequest::Parent::GetChildRequest>>&& decoded)
+          ::test_protocolrequest::Parent::GetChildRequest>>&& decoded,
+      ::fidl::internal::IncomingTransportContext context)
       : ::fidl::Result(decoded) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
@@ -952,9 +957,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_protocolrequest::Child>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl,
-                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

@@ -65,7 +65,8 @@ std::unique_ptr<Transaction> CompleterBase::TakeOwnership() {
   return clone;
 }
 
-fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message) {
+fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message,
+                                      internal::OutgoingTransportContext transport_context) {
   ScopedLock lock(lock_);
   EnsureHasTransaction(&lock);
   if (unlikely(!needs_to_reply_)) {
@@ -79,7 +80,10 @@ fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message) {
     transaction_->InternalError(fidl::UnbindInfo{*message}, fidl::ErrorOrigin::kSend);
     return *message;
   }
-  zx_status_t status = transaction_->Reply(message);
+  fidl::WriteOptions write_options = {
+      .outgoing_transport_context = std::move(transport_context),
+  };
+  zx_status_t status = transaction_->Reply(message, std::move(write_options));
   if (status != ZX_OK) {
     auto error = fidl::Result::TransportError(status);
     transaction_->InternalError(fidl::UnbindInfo{error}, fidl::ErrorOrigin::kSend);

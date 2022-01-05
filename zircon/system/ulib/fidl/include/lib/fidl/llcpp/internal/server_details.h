@@ -61,19 +61,23 @@ struct MethodEntry {
   //
   // The function must consume the handles in |msg|.
   // The function should perform decoding, and return the decoding status.
-  zx_status_t (*dispatch)(void* interface, ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+  zx_status_t (*dispatch)(void* interface, ::fidl::IncomingMessage&& msg,
+                          internal::IncomingTransportContext transport_context,
+                          ::fidl::Transaction* txn);
 };
 
 // The compiler generates an array of MethodEntry for each protocol.
 // The TryDispatch method for each protocol calls this function using the generated entries, which
 // searches through the array using the method ordinal to find the corresponding dispatch function.
 ::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
+                                   fidl::internal::IncomingTransportContext transport_context,
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end);
 
 // Similar to |TryDispatch|, but closes all the handles in |msg| and notifies
 // |txn| of an error in case of an unknown FIDL method.
-void Dispatch(void* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn,
+void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
+              fidl::internal::IncomingTransportContext transport_context, ::fidl::Transaction* txn,
               const MethodEntry* begin, const MethodEntry* end);
 
 // The common bits in a weak event sender, i.e. an event sender that allows the

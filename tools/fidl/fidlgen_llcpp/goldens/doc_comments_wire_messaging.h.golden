@@ -59,9 +59,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface>
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_doccomments::Interface>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl,
-                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];

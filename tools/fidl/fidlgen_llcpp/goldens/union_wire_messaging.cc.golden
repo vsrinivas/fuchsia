@@ -33,8 +33,10 @@ extern "C" const fidl_type_t
                    ::test_union::TestProtocol::
                        StrictXUnionHenceResponseMayBeStackAllocated>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
@@ -52,8 +54,10 @@ extern "C" const fidl_type_t
                        StrictXUnionHenceResponseMayBeStackAllocated>* request,
                zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
@@ -121,7 +125,8 @@ namespace test_union {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
@@ -141,7 +146,8 @@ namespace test_union {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<
@@ -232,11 +238,15 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
@@ -276,11 +286,15 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
       _request{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
     StrictXUnionHenceResponseMayBeStackAllocated(
@@ -292,11 +306,15 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
       _request{};
 
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireRequest<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::test_union::TestProtocol::
+                              StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 ::fidl::WireResult<
     ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
@@ -367,10 +385,13 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
@@ -413,10 +434,13 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
     FlexibleXUnionHenceResponseMustBeHeapAllocated(
@@ -430,10 +454,13 @@ void fidl::internal::WireClientImpl<::test_union::TestProtocol>::
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireRequest<::test_union::TestProtocol::
-                              FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+                              FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 ::fidl::WireResult<
     ::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>
@@ -580,6 +607,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_union::
             kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           auto* primary = reinterpret_cast<::fidl::WireRequest<
               ::test_union::TestProtocol::
@@ -599,6 +627,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
         ::test_union::
             kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           auto* primary = reinterpret_cast<::fidl::WireRequest<
               ::test_union::TestProtocol::
@@ -623,20 +652,26 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 ::fidl::DispatchResult
 fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::TryDispatch(
     ::fidl::WireServer<::test_union::TestProtocol>* impl,
-    ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+    ::fidl::IncomingMessage& msg,
+    internal::IncomingTransportContext transport_context,
+    ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
+                                       txn, entries_, entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(
     ::fidl::WireServer<::test_union::TestProtocol>* impl,
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+    ::fidl::IncomingMessage&& msg,
+    internal::IncomingTransportContext transport_context,
+    ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
+                             entries_, entries_end_);
 }
 void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(
-      this, std::move(msg), txn);
+      this, std::move(msg), std::move(transport_context), txn);
 }
 #endif  // __Fuchsia__
 
@@ -648,13 +683,16 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>
       _response{xu};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
-      ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>,
+      ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<
       ::test_union::TestProtocol::
           StrictXUnionHenceResponseMayBeStackAllocated>::
-      SendReply(&_response_message.GetOutgoingMessage());
+      SendReply(&_response_message.GetOutgoingMessage(),
+                ::fidl::internal::OutgoingTransportContext());
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -667,7 +705,8 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
   ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
       ::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
+  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
+                                  ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 
@@ -682,12 +721,14 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
       ::fidl::WireResponse<::test_union::TestProtocol::
-                               FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+                               FlexibleXUnionHenceResponseMustBeHeapAllocated>,
+      ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<
       ::test_union::TestProtocol::
           FlexibleXUnionHenceResponseMustBeHeapAllocated>::
-      SendReply(&_response_message.GetOutgoingMessage());
+      SendReply(&_response_message.GetOutgoingMessage(),
+                ::fidl::internal::OutgoingTransportContext());
 }
 
 ::fidl::Result fidl::internal::WireCompleterBase<
@@ -701,7 +742,8 @@ void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
       ::fidl::WireResponse<::test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
+  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
+                                  ::fidl::internal::OutgoingTransportContext());
 }
 #endif  // __Fuchsia__
 

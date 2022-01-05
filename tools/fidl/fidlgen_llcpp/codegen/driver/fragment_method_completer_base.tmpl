@@ -5,7 +5,7 @@
 */}}
 
 
-{{- define "Method:CompleterBase:MessagingHeader" }}
+{{- define "Method:CompleterBase:driver/MessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- if .HasResponse }}
   template<>
@@ -19,16 +19,17 @@
     // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
     //
     // Because the reply status is identical to the unbinding status, it can be safely ignored.
-    ::fidl::Result Reply({{ RenderParams .ResponseArgs }});
+    ::fidl::Result Reply({{ RenderParams .ResponseArgs }}, fdf::Arena _arena);
         {{- if .Result }}
-    ::fidl::Result ReplySuccess({{ RenderParams .Result.ValueMembers }});
-    ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error);
+    ::fidl::Result ReplySuccess({{ RenderParams .Result.ValueMembers }}, fdf::Arena _arena);
+    ::fidl::Result ReplyError({{ .Result.ErrorDecl }} error, fdf::Arena _arena);
         {{- end }}
         {{- if .ResponseArgs }}
-    ::fidl::Result Reply({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }});
+    ::fidl::Result Reply({{ RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }},
+                         fdf::Arena _arena);
           {{- if .Result }}
     ::fidl::Result ReplySuccess(
-        {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }});
+        {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }}, fdf::Arena _arena);
           {{- end }}
         {{- end }}
 
@@ -43,75 +44,82 @@
 {{- end }}
 {{- end }}
 
-{{- define "Method:CompleterBase:MessagingSource" }}
+{{- define "Method:CompleterBase:driver/MessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result
-{{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}) {
+{{ .WireCompleterBase.NoLeading }}::Reply({{ RenderParams .ResponseArgs }}, fdf::Arena _arena) {
   {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
     ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
-  return {{ .WireCompleterBase }}::SendReply(&_response_message.GetOutgoingMessage(),
-                                             ::fidl::internal::OutgoingTransportContext());
+  return {{ .WireCompleterBase }}::SendReply(
+    &_response_message.GetOutgoingMessage(),
+    ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.release()));
 }
 
 {{- if .Result }}
   ::fidl::Result
   {{ .WireCompleterBase.NoLeading }}::ReplySuccess(
-        {{ RenderParams .Result.ValueMembers }}) {
+        {{ RenderParams .Result.ValueMembers }}, fdf::Arena _arena) {
     {{ .Result.ValueStructDecl }} _response;
     {{- range .Result.ValueMembers }}
       _response.{{ .Name }} = std::move({{ .Name }});
     {{- end }}
 
     {{- if .Result.Value.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)));
+    return Reply({{ .Result.ResultDecl }}::WithResponse(std::move(_response)),
+                  std::move(_arena));
     {{- else }}
     return Reply({{ .Result.ResultDecl }}::WithResponse(
-        ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&_response)));
+        ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&_response)),
+        std::move(_arena));
     {{- end }}
   }
 
   ::fidl::Result
-  {{ .WireCompleterBase.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error) {
+  {{ .WireCompleterBase.NoLeading }}::ReplyError({{ .Result.ErrorDecl }} error, fdf::Arena _arena) {
     {{- if .Result.Error.InlineInEnvelope }}
-    return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
+    return Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)),
+                  std::move(arena));
     {{- else }}
     return Reply({{ .Result.ResultDecl }}::WithErr(
-        ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)));
+        ::fidl::ObjectView<{{ .Result.ErrorDecl }}>::FromExternal(&error)),
+        fdf::Arena _arena);
     {{- end }}
   }
 {{- end }}
 {{- if .ResponseArgs }}
 
   ::fidl::Result {{ .WireCompleterBase.NoLeading }}::Reply(
-        {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}) {
+        {{- RenderParams "::fidl::BufferSpan _buffer" .ResponseArgs }}, fdf::Arena _arena) {
     {{ .WireResponse }} _response{ {{ RenderForwardParams .ResponseArgs }} };
     ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response_message(
           _buffer.data, _buffer.capacity, &_response);
-    return CompleterBase::SendReply(&_response_message.GetOutgoingMessage(),
-                                    ::fidl::internal::OutgoingTransportContext());
-  }
+    return CompleterBase::SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<::fidl::internal::DriverTransport>(_arena.release()));
+    }
 
   {{- if .Result }}
     ::fidl::Result {{ .WireCompleterBase.NoLeading }}::ReplySuccess(
-          {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }}) {
+          {{- RenderParams "::fidl::BufferSpan _buffer" .Result.ValueMembers }},
+          fdf::Arena _arena) {
       {{ .Result.ValueStructDecl }} response;
       {{- range .Result.ValueMembers }}
         response.{{ .Name }} = std::move({{ .Name }});
       {{- end }}
       {{- if .Result.Value.InlineInEnvelope }}
       return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(
-            std::move(response)));
+            std::move(response)), std::move(arena));
       {{- else }}
       return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(
-            ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&response)));
+            ::fidl::ObjectView<{{ .Result.ValueStructDecl }}>::FromExternal(&response)),
+            std::move(_arena));
       {{- end }}
     }
   {{- end }}
 {{- end }}
 {{- EndifFuchsia -}}
 {{- end }}
-

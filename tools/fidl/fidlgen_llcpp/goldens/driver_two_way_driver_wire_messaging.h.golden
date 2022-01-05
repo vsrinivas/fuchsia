@@ -45,9 +45,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
-                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -133,8 +137,10 @@ class ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
       : ::fidl::Result(result) {}
   explicit WireUnownedResult(
       ::fidl::DecodedMessage<
-          ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>&& decoded)
-      : ::fidl::Result(decoded) {
+          ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>&& decoded,
+      ::fidl::internal::IncomingTransportContext context)
+      : ::fidl::Result(decoded),
+        arena_(context.release<::fidl::internal::DriverTransport>()) {
     if (decoded.ok()) {
       bytes_ = reinterpret_cast<uint8_t*>(decoded.PrimaryObject());
     } else {
@@ -181,9 +187,62 @@ class ::fidl::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final
       const {
     return value();
   }
+  fdf::Arena& arena() {
+    ZX_DEBUG_ASSERT(ok());
+    return arena_;
+  }
 
  private:
   uint8_t* bytes_;
+  fdf::Arena arena_;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::test_drivertwoway::TwoWay>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_drivertwoway::TwoWay>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_drivertwoway::TwoWay> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay> final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::test_drivertwoway::TwoWay>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::test_drivertwoway::TwoWay>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::IncomingTransportContext transport_context) override;
 };
 
 template <>
@@ -200,8 +259,9 @@ class ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>
   //
   // Because the reply status is identical to the unbinding status, it can be
   // safely ignored.
-  ::fidl::Result Reply(uint16_t sum);
-  ::fidl::Result Reply(::fidl::BufferSpan _buffer, uint16_t sum);
+  ::fidl::Result Reply(uint16_t sum, fdf::Arena _arena);
+  ::fidl::Result Reply(::fidl::BufferSpan _buffer, uint16_t sum,
+                       fdf::Arena _arena);
 
  protected:
   using ::fidl::CompleterBase::CompleterBase;
@@ -231,7 +291,8 @@ class ::fidl::WireServer<::test_drivertwoway::TwoWay>
   using AddRequestView =
       ::fidl::internal::WireRequestView<::test_drivertwoway::TwoWay::Add>;
 
-  virtual void Add(AddRequestView request, AddCompleter::Sync& _completer) = 0;
+  virtual void Add(AddRequestView request, fdf::Arena arena,
+                   AddCompleter::Sync& _completer) = 0;
 
  private:
   void dispatch_message(
@@ -278,11 +339,11 @@ class ::fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay> final
   // Asynchronous variant of |TwoWay.Add()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  void Add(uint16_t addend1, uint16_t addend2,
+  void Add(fdf::Arena arena, uint16_t addend1, uint16_t addend2,
            ::fidl::WireClientCallback<::test_drivertwoway::TwoWay::Add> _cb);
 
   void Add(
-      uint16_t addend1, uint16_t addend2,
+      fdf::Arena arena, uint16_t addend1, uint16_t addend2,
       ::fit::callback<void(
           ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)>
           _cb);
@@ -292,7 +353,8 @@ class ::fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay> final
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   void Add(
-      ::fidl::BufferSpan _request_buffer, uint16_t addend1, uint16_t addend2,
+      fdf::Arena arena, ::fidl::BufferSpan _request_buffer, uint16_t addend1,
+      uint16_t addend2,
       ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context);
   WireClientImpl() = default;
 };

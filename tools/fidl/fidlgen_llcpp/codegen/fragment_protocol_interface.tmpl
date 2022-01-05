@@ -6,7 +6,11 @@
 
 {{- define "Protocol:Interface:MessagingHeader" }}
 {{- range .ClientMethods }}
+  {{- if eq .Transport.Name "Driver" }}
+  {{- template "Method:CompleterBase:driver/MessagingHeader" . }}
+  {{- else }}
   {{- template "Method:CompleterBase:MessagingHeader" . }}
+  {{- end }}
 {{- end }}
 
 // Pure-virtual interface to be implemented by a server.
@@ -29,7 +33,11 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 
   {{ .Docs }}
   virtual void {{ .Name }}(
+    {{- if eq .Transport.Name "Driver" }}
+    {{ .WireRequestViewArg }} request, fdf::Arena arena, {{ .WireCompleterArg }}& _completer)
+    {{- else }}
     {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer)
+    {{- end }}
       {{- if .Transitional -}}
         { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
       {{- else -}}

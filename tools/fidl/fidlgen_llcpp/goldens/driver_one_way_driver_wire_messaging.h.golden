@@ -45,9 +45,13 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>
   WireServerDispatcher() = delete;
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::test_driveroneway::OneWay>* impl,
-      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+      ::fidl::IncomingMessage& msg,
+      internal::IncomingTransportContext transport_context,
+      ::fidl::Transaction* txn);
   static void Dispatch(::fidl::WireServer<::test_driveroneway::OneWay>* impl,
-                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+                       ::fidl::IncomingMessage&& msg,
+                       internal::IncomingTransportContext transport_context,
+                       ::fidl::Transaction* txn);
 
  private:
   static const ::fidl::internal::MethodEntry entries_[];
@@ -102,6 +106,54 @@ class ::fidl::WireUnownedResult<::test_driveroneway::OneWay::Send> final
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+template <>
+class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::test_driveroneway::OneWay>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_driveroneway::OneWay>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::test_driveroneway::OneWay>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::test_driveroneway::OneWay> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::test_driveroneway::OneWay> client_end);
+};
+
+template <>
+class ::fidl::internal::WireEventDispatcher<::test_driveroneway::OneWay> final
+    : public ::fidl::internal::IncomingEventDispatcher<
+          ::fidl::WireAsyncEventHandler<::test_driveroneway::OneWay>> {
+ public:
+  explicit WireEventDispatcher(
+      ::fidl::WireAsyncEventHandler<::test_driveroneway::OneWay>* event_handler)
+      : IncomingEventDispatcher(event_handler) {}
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::IncomingTransportContext transport_context) override;
+};
 
 // Pure-virtual interface to be implemented by a server.
 // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
@@ -121,7 +173,7 @@ class ::fidl::WireServer<::test_driveroneway::OneWay>
   using SendRequestView =
       ::fidl::internal::WireRequestView<::test_driveroneway::OneWay::Send>;
 
-  virtual void Send(SendRequestView request,
+  virtual void Send(SendRequestView request, fdf::Arena arena,
                     SendCompleter::Sync& _completer) = 0;
 
  private:
@@ -154,10 +206,11 @@ class ::fidl::internal::WireClientImpl<::test_driveroneway::OneWay> final
  public:
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::Result Send(const ::test_driveroneway::wire::Payload& payload);
+  ::fidl::Result Send(fdf::Arena arena,
+                      const ::test_driveroneway::wire::Payload& payload);
 
   // Caller provides the backing storage for FIDL message via request buffer.
-  ::fidl::Result Send(::fidl::BufferSpan _buffer_span,
+  ::fidl::Result Send(fdf::Arena arena, ::fidl::BufferSpan _buffer_span,
                       const ::test_driveroneway::wire::Payload& payload);
   WireClientImpl() = default;
 };

@@ -208,7 +208,8 @@ enum class DispatchResult;
 template <typename FidlProtocol>
 void WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& msg,
                   fidl::Transaction* txn) {
-  fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), txn);
+  fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(
+      impl, std::move(msg), internal::IncomingTransportContext(), txn);
 }
 
 // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -227,7 +228,8 @@ template <typename FidlProtocol>
 fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
                                      fidl::IncomingMessage& msg, fidl::Transaction* txn) {
   FIDL_EMIT_STATIC_ASSERT_ERROR_FOR_TRY_DISPATCH(FidlProtocol);
-  return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
+  return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(
+      impl, msg, internal::IncomingTransportContext(), txn);
 }
 #endif  // __Fuchsia__
 

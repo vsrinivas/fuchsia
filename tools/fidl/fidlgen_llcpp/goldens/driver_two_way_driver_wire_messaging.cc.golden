@@ -15,7 +15,7 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddResponseMessageTable;
 #ifdef __Fuchsia__
 
 void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
-    uint16_t addend1, uint16_t addend2,
+    fdf::Arena arena, uint16_t addend1, uint16_t addend2,
     ::fidl::WireClientCallback<::test_drivertwoway::TwoWay::Add> _cb) {
   using Callback = decltype(_cb);
   class ResponseContext final
@@ -38,14 +38,20 @@ void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
                                                                  addend2};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::internal::DriverTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
+  write_options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<
+          ::fidl::internal::DriverTransport>(arena.release());
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 
 void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
-    uint16_t addend1, uint16_t addend2,
+    fdf::Arena arena, uint16_t addend1, uint16_t addend2,
     ::fit::callback<
         void(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* response)>
         _cb) {
@@ -74,13 +80,20 @@ void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
                                                                  addend2};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
+      ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::internal::DriverTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{}, &_request);
+  fidl::WriteOptions write_options = {};
+  write_options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<
+          ::fidl::internal::DriverTransport>(arena.release());
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
-    ::fidl::BufferSpan _request_buffer, uint16_t addend1, uint16_t addend2,
+    fdf::Arena arena, ::fidl::BufferSpan _request_buffer, uint16_t addend1,
+    uint16_t addend2,
     ::fidl::WireResponseContext<::test_drivertwoway::TwoWay::Add>* _context) {
   ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add> _request{addend1,
                                                                  addend2};
@@ -89,8 +102,13 @@ void fidl::internal::WireClientImpl<::test_drivertwoway::TwoWay>::Add(
       ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
       _request_message(_request_buffer.data, _request_buffer.capacity,
                        &_request);
+  fidl::WriteOptions write_options = {};
+  write_options.outgoing_transport_context =
+      ::fidl::internal::OutgoingTransportContext::Create<
+          ::fidl::internal::DriverTransport>(arena.release());
   ::fidl::internal::ClientBase::SendTwoWay(
-      _request_message.GetOutgoingMessage(), _context);
+      _request_message.GetOutgoingMessage(), _context,
+      std::move(write_options));
 }
 void fidl::internal::
     WireWeakAsyncBufferClientImpl<::test_drivertwoway::TwoWay>::Add(
@@ -119,11 +137,27 @@ void fidl::internal::
 
 #ifdef __Fuchsia__
 
+::fidl::Result
+fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>::HandleOneEvent(
+    ::fidl::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end) {
+  ZX_PANIC("events not supported for transport 'Driver'");
+}
+std::optional<::fidl::UnbindInfo>
+fidl::internal::WireEventDispatcher<::test_drivertwoway::TwoWay>::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    internal::IncomingTransportContext transport_context) {
+  ZX_PANIC("events not supported for transport 'Driver'");
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     ::test_drivertwoway::TwoWay>::entries_[] = {
     {
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           ::fidl::DecodedMessage<
               ::fidl::WireRequest<::test_drivertwoway::TwoWay::Add>>
@@ -136,7 +170,11 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
               ::test_drivertwoway::TwoWay::Add>::Sync completer(txn);
           reinterpret_cast<::fidl::WireServer<::test_drivertwoway::TwoWay>*>(
               interface)
-              ->Add(primary, completer);
+              ->Add(
+                  primary,
+                  fdf::Arena(transport_context
+                                 .release<::fidl::internal::DriverTransport>()),
+                  completer);
           return ZX_OK;
         },
     },
@@ -148,43 +186,55 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 ::fidl::DispatchResult
 fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::TryDispatch(
     ::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
-    ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+    ::fidl::IncomingMessage& msg,
+    internal::IncomingTransportContext transport_context,
+    ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
+                                       txn, entries_, entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::
     Dispatch(::fidl::WireServer<::test_drivertwoway::TwoWay>* impl,
-             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+             ::fidl::IncomingMessage&& msg,
+             internal::IncomingTransportContext transport_context,
+             ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
+                             entries_, entries_end_);
 }
 void fidl::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(
-      this, std::move(msg), txn);
+      this, std::move(msg), std::move(transport_context), txn);
 }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 ::fidl::Result fidl::internal::WireCompleterBase<
-    ::test_drivertwoway::TwoWay::Add>::Reply(uint16_t sum) {
+    ::test_drivertwoway::TwoWay::Add>::Reply(uint16_t sum, fdf::Arena _arena) {
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> _response{sum};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
+      ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>,
+      ::fidl::internal::DriverTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>::
-      SendReply(&_response_message.GetOutgoingMessage());
+      SendReply(&_response_message.GetOutgoingMessage(),
+                ::fidl::internal::OutgoingTransportContext::Create<
+                    ::fidl::internal::DriverTransport>(_arena.release()));
 }
 
 ::fidl::Result
 fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add>::Reply(
-    ::fidl::BufferSpan _buffer, uint16_t sum) {
+    ::fidl::BufferSpan _buffer, uint16_t sum, fdf::Arena _arena) {
   ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add> _response{sum};
   ::fidl::UnownedEncodedMessage<
       ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>>
       _response_message(_buffer.data, _buffer.capacity, &_response);
-  return CompleterBase::SendReply(&_response_message.GetOutgoingMessage());
+  return CompleterBase::SendReply(
+      &_response_message.GetOutgoingMessage(),
+      ::fidl::internal::OutgoingTransportContext::Create<
+          ::fidl::internal::DriverTransport>(_arena.release()));
 }
 #endif  // __Fuchsia__
 

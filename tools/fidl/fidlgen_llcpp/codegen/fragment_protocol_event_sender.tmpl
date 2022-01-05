@@ -81,7 +81,7 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) const {
   {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response_message{
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   auto& _message = _response_message.GetOutgoingMessage();
@@ -109,7 +109,7 @@ fidl::Result {{ $.WireWeakEventSender.NoLeading }}::{{ .Name }}(
     {{- RenderParams .ResponseArgs }}) const {
   {{ .WireResponse }} _response{ {{- RenderForwardParams .ResponseArgs }} };
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response_message{
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}, {{ .Transport.Type }}> _response_message{
       ::fidl::internal::AllowUnownedInputRef{}, &_response
   };
   return inner_.SendEvent(_response_message.GetOutgoingMessage());

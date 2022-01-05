@@ -166,7 +166,8 @@ class CompleterBase {
 
   ~CompleterBase();
 
-  fidl::Result SendReply(::fidl::OutgoingMessage* message);
+  fidl::Result SendReply(::fidl::OutgoingMessage* message,
+                         fidl::internal::OutgoingTransportContext transport_context);
 
   // Move the contents of |transaction_| to heap and return it.
   std::unique_ptr<Transaction> TakeOwnership();

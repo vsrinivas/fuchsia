@@ -21,6 +21,7 @@ if (is_host) {
       "codegen/driver/file_header.tmpl",
       "codegen/driver/file_messaging_header.tmpl",
       "codegen/driver/file_messaging_source.tmpl",
+      "codegen/driver/fragment_method_completer_base.tmpl",
       "codegen/file_header.tmpl",
       "codegen/file_markers.tmpl",
       "codegen/file_messaging_header.tmpl",

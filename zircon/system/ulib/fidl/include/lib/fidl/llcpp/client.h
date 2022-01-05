@@ -463,7 +463,7 @@ class WireSharedClient final {
             fidl::WireAsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     controller_.Bind(std::make_shared<ClientImpl>(),
-                     internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
+                     internal::MakeAnyTransport(client_end.TakeHandle()), dispatcher,
                      internal::MakeAnyEventDispatcher(event_handler), std::move(teardown_observer),
                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   }

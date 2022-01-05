@@ -12,6 +12,7 @@ group("tests_no_e2e") {
     "//examples/fidl:tests",
     "//sdk/cts/tests/pkg/fidl/cpp:tests",
     "//sdk/lib/fidl/cpp/fuzzing:tests",
+    "//sdk/lib/fidl_driver/tests",
     "//src/lib/fidl:tests",
     "//src/lib/fidl_table_validation/fidl_table_validation_tests",
     "//src/tests/fidl/go_bindings_test",

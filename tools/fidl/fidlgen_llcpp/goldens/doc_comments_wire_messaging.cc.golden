@@ -28,7 +28,8 @@ extern "C" const fidl_type_t test_doccomments_InterfaceOnEventEventMessageTable;
     ::fidl::WireRequest<::test_doccomments::Interface::Method>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>>
+      ::fidl::WireRequest<::test_doccomments::Interface::Method>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.channel());
@@ -45,11 +46,13 @@ fidl::internal::WireClientImpl<::test_doccomments::Interface>::Method() {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::WireRequest<::test_doccomments::Interface::Method> _request_object{};
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_doccomments::Interface::Method>>
+      ::fidl::WireRequest<::test_doccomments::Interface::Method>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
+  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage(), std::move(write_options));
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_doccomments::Interface>::Method() {
@@ -147,6 +150,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_doccomments::kInterface_Method_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           auto* primary = reinterpret_cast<
               ::fidl::WireRequest<::test_doccomments::Interface::Method>*>(
@@ -167,20 +171,28 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::test_doccomments::Interface>::TryDispatch(
         ::fidl::WireServer<::test_doccomments::Interface>* impl,
-        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+        ::fidl::IncomingMessage& msg,
+        internal::IncomingTransportContext transport_context,
+        ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
+                                       txn, entries_, entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::
     Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl,
-             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+             ::fidl::IncomingMessage&& msg,
+             internal::IncomingTransportContext transport_context,
+             ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
+                             entries_, entries_end_);
 }
 void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
-      ::test_doccomments::Interface>::Dispatch(this, std::move(msg), txn);
+      ::test_doccomments::Interface>::Dispatch(this, std::move(msg),
+                                               std::move(transport_context),
+                                               txn);
 }
 #endif  // __Fuchsia__
 
@@ -201,7 +213,8 @@ fidl::Result fidl::WireEventSender<::test_doccomments::Interface>::OnEvent()
   ::fidl::WireResponse<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>
+      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   auto& _message = _response_message.GetOutgoingMessage();
   _message.Write(server_end_.channel());
@@ -213,7 +226,8 @@ fidl::Result fidl::internal::WireWeakEventSender<
   ::fidl::WireResponse<::test_doccomments::Interface::OnEvent> _response{};
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>>
+      ::fidl::WireResponse<::test_doccomments::Interface::OnEvent>,
+      ::fidl::internal::ChannelTransport>
       _response_message{::fidl::internal::AllowUnownedInputRef{}, &_response};
   return inner_.SendEvent(_response_message.GetOutgoingMessage());
 }

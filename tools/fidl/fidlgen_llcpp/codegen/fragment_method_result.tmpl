@@ -68,7 +68,8 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{ .WireResult }}::{{ .WireResult.Self }}(::fidl::UnownedClientEnd<{{ .Protocol }}> client,
     {{ .WireRequest }}* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> request_message(::fidl::internal::AllowUnownedInputRef{},
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> request_message(
+      ::fidl::internal::AllowUnownedInputRef{},
       request);
   auto& outgoing = request_message.GetOutgoingMessage();
   {{- if .HasResponse }}
@@ -84,7 +85,7 @@ class {{ .WireResult }} final : public ::fidl::Result {
 {{ .WireResult }}::{{ .WireResult.Self }}(::fidl::UnownedClientEnd<{{ .Protocol }}> client,
     {{ .WireRequest }}* request, zx_time_t deadline) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
-  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> request_message(
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}, {{ .Transport.Type }}> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Call<{{ .WireResponse }}>(

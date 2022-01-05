@@ -61,7 +61,7 @@ class {{ .WireEventDispatcher }} final :
 {{- define "Protocol:EventHandler:MessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia }}
-
+{{ if .Transport.HasEvents }}
 ::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::fidl::UnownedClientEnd<{{ . }}> client_end) {
   zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -126,6 +126,18 @@ std::optional<::fidl::UnbindInfo>
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 
+{{- else }}{{/* not .Transport.HasEvents */}}
+::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
+    ::fidl::UnownedClientEnd<{{ . }}> client_end) {
+      ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
+}
+std::optional<::fidl::UnbindInfo>
+{{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    internal::IncomingTransportContext transport_context) {
+      ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
+}
+{{- end }}
 {{- EndifFuchsia }}
 {{- end }}
 

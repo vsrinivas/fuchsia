@@ -21,7 +21,8 @@ extern "C" const fidl_type_t
         request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
+      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.channel());
@@ -39,11 +40,13 @@ namespace test_service {
   ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>
       _request_object{};
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>>
+      ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
+  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage(), std::move(write_options));
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_service::SecondProtocol>::MethodOnSecond() {
@@ -120,6 +123,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_service::kSecondProtocol_MethodOnSecond_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           auto* primary = reinterpret_cast<::fidl::WireRequest<
               ::test_service::SecondProtocol::MethodOnSecond>*>(msg.bytes());
@@ -140,20 +144,28 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::test_service::SecondProtocol>::TryDispatch(
         ::fidl::WireServer<::test_service::SecondProtocol>* impl,
-        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+        ::fidl::IncomingMessage& msg,
+        internal::IncomingTransportContext transport_context,
+        ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
+                                       txn, entries_, entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_service::SecondProtocol>::
     Dispatch(::fidl::WireServer<::test_service::SecondProtocol>* impl,
-             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+             ::fidl::IncomingMessage&& msg,
+             internal::IncomingTransportContext transport_context,
+             ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
+                             entries_, entries_end_);
 }
 void fidl::WireServer<::test_service::SecondProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
-      ::test_service::SecondProtocol>::Dispatch(this, std::move(msg), txn);
+      ::test_service::SecondProtocol>::Dispatch(this, std::move(msg),
+                                                std::move(transport_context),
+                                                txn);
 }
 #endif  // __Fuchsia__
 
@@ -184,7 +196,8 @@ extern "C" const fidl_type_t
         request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
+      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
+      ::fidl::internal::ChannelTransport>
       request_message(::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   outgoing.Write(client.channel());
@@ -202,11 +215,13 @@ fidl::internal::WireClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
   ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>
       _request_object{};
   ::fidl::OwnedEncodedMessage<
-      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>>
+      ::fidl::WireRequest<::test_service::FirstProtocol::MethodOnFirst>,
+      ::fidl::internal::ChannelTransport>
       _request_message(::fidl::internal::AllowUnownedInputRef{},
                        &_request_object);
+  fidl::WriteOptions write_options = {};
   return ::fidl::internal::ClientBase::SendOneWay(
-      _request_message.GetOutgoingMessage());
+      _request_message.GetOutgoingMessage(), std::move(write_options));
 }
 ::fidl::Result fidl::internal::WireWeakOnewayBufferClientImpl<
     ::test_service::FirstProtocol>::MethodOnFirst() {
@@ -282,6 +297,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
     {
         ::test_service::kFirstProtocol_MethodOnFirst_Ordinal,
         [](void* interface, ::fidl::IncomingMessage&& msg,
+           internal::IncomingTransportContext transport_context,
            ::fidl::Transaction* txn) {
           auto* primary = reinterpret_cast<::fidl::WireRequest<
               ::test_service::FirstProtocol::MethodOnFirst>*>(msg.bytes());
@@ -302,20 +318,28 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::test_service::FirstProtocol>::TryDispatch(
         ::fidl::WireServer<::test_service::FirstProtocol>* impl,
-        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+        ::fidl::IncomingMessage& msg,
+        internal::IncomingTransportContext transport_context,
+        ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, std::move(transport_context),
+                                       txn, entries_, entries_end_);
 }
 
 void fidl::internal::WireServerDispatcher<::test_service::FirstProtocol>::
     Dispatch(::fidl::WireServer<::test_service::FirstProtocol>* impl,
-             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+             ::fidl::IncomingMessage&& msg,
+             internal::IncomingTransportContext transport_context,
+             ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, std::move(transport_context), txn,
+                             entries_, entries_end_);
 }
 void fidl::WireServer<::test_service::FirstProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::IncomingTransportContext transport_context) {
   ::fidl::internal::WireServerDispatcher<
-      ::test_service::FirstProtocol>::Dispatch(this, std::move(msg), txn);
+      ::test_service::FirstProtocol>::Dispatch(this, std::move(msg),
+                                               std::move(transport_context),
+                                               txn);
 }
 #endif  // __Fuchsia__
 
