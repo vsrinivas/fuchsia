@@ -21,9 +21,10 @@ commands as appropriate to the component runtime.
 
 ## Providing runner capabilities {#provide}
 
-To provide a runner capability, a component must declare the capability backed
-by the [`fuchsia.component.runner.ComponentRunner`][fidl-runner] FIDL protocol
-and [route](#route) it from `self`.
+To provide a runner capability, a component must declare a `runner`
+capability, whose `path` designates a FIDL protocol implementing
+[`fuchsia.component.runner.ComponentRunner`][fidl-runner] served from the
+component's [outgoing directory][glossary.outgoing-directory].
 
 ```json5
 {
@@ -32,17 +33,13 @@ and [route](#route) it from `self`.
             runner: "web",
             path: "/svc/fuchsia.component.runner.ComponentRunner",
         },
-        { protocol: "fuchsia.component.runner.ComponentRunner" },
     ],
 }
 ```
 
-Component manager submits requests to launch a component to the associated
-[protocol capability][protocol-capabilities].
-
-Note: Component runner implementations also serve an instance of the
-[`fuchsia.component.runner.ComponentController`][fidl-runner] protocol,
-but this does not need to be declared as a capability.
+Component manager sends `ComponentRunner/Start` requests to this protocol.
+Each request includes a [`ComponentController`][fidl-controller] channel which
+the runner should serve to handle lifecycle events for the component.
 
 ## Routing runner capabilities {#route}
 
@@ -64,10 +61,6 @@ capability:
             runner: "web",
             from: "self",
         },
-        {
-            protocol: "fuchsia.component.runner.ComponentRunner",
-            from: "self",
-        },
     ],
 }
 ```
@@ -86,11 +79,6 @@ capability:
     offer: [
         {
             runner: "web",
-            from: "self",
-            to: [ "#child-a" ],
-        },
-        {
-            protocol: "fuchsia.component.runner.ComponentRunner",
             from: "self",
             to: [ "#child-a" ],
         },
@@ -189,5 +177,5 @@ Component framework provides the following built-in component runners:
 [elf-runner]: /docs/concepts/components/v2/elf_runner.md
 [environment]: /docs/concepts/components/v2/environments.md
 [fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl
-[fidl-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
-[protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
+[fidl-runner]: https://fuchsia.dev/reference/fidl/fuchsia.component.runner#ComponentRunner
+[fidl-controller]: https://fuchsia.dev/reference/fidl/fuchsia.component.runner#ComponentController

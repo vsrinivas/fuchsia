@@ -18,9 +18,10 @@ an associated package, the component resolver also returns a
 
 ## Providing resolver capabilities {#provide}
 
-To provide a resolver capability, a component must declare the capability backed
-by the [`fuchsia.sys2.ComponentResolver`][fidl-resolver] FIDL protocol and
-[route](#route) it from `self`.
+To provide a resolver capability, a component must declare a `resolver`
+capability, whose `path` designates a FIDL protocol implementing
+[`fuchsia.sys2.ComponentResolver`][fidl-resolver] served from the component's
+[outgoing directory][glossary.outgoing-directory].
 
 ```json5
 {
@@ -29,13 +30,11 @@ by the [`fuchsia.sys2.ComponentResolver`][fidl-resolver] FIDL protocol and
             resolver: "my_resolver",
             path: "/svc/fuchsia.sys2.ComponentResolver",
         },
-        { protocol: "fuchsia.sys2.ComponentResolver" },
     ],
 }
 ```
 
-Component manager submits requests to resolve a component URL to the associated
-[protocol capability][protocol-capabilities].
+Component manager submits requests to resolve a component URL to this protocol.
 
 ## Routing resolver capabilities {#route}
 
@@ -57,10 +56,6 @@ capability:
             resolver: "my_resolver",
             from: "self",
         },
-        {
-            protocol: "fuchsia.sys2.ComponentResolver",
-            from: "self",
-        },
     ],
 }
 ```
@@ -75,11 +70,6 @@ capability:
     offer: [
         {
             resolver: "my_resolver",
-            from: "self",
-            to: [ "#child-a" ],
-        },
-        {
-            protocol: "fuchsia.sys2.ComponentResolver",
             from: "self",
             to: [ "#child-a" ],
         },
@@ -128,12 +118,12 @@ support standard Fuchsia URL schemes:
 
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [glossary.environment]: /docs/glossary/README.md#environment
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [environment]: /docs/concepts/components/v2/environments.md
 [fidl-resolver]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
 [fidl-decl]: /sdk/fidl/fuchsia.component.decl/component.fidl
 [fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl
-[protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
 [url-boot]: /docs/concepts/components/component_urls.md#fuchsia-boot
 [url-pkg]: /docs/concepts/components/component_urls.md#fuchsia-pkg
