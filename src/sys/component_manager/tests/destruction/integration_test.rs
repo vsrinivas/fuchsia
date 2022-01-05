@@ -8,75 +8,134 @@ use {
         matcher::EventMatcher,
         sequence::{EventSequence, Ordering},
     },
-    fuchsia_async as fasync,
-    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
-    test_utils_lib::opaque_test::*,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn destroy() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/collection_realm.cm",
-    )
-    .await
-    .unwrap();
-
-    let mut event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Purged::NAME], EventMode::Sync)])
+    let builder = RealmBuilder::new().await.unwrap();
+    builder
+        .add_child("collection_realm", "#meta/collection_realm.cm", ChildOptions::new().eager())
         .await
         .unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("collection_realm")]),
+        )
+        .await
+        .unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let mut event_source = EventSource::from_proxy(proxy);
+
     let expectation = EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().r#type(Stopped::TYPE).moniker_regex("./coll:parent/trigger_a"),
-                EventMatcher::ok().r#type(Stopped::TYPE).moniker_regex("./coll:parent/trigger_b"),
+                EventMatcher::ok()
+                    .r#type(Stopped::TYPE)
+                    .moniker_regex("./collection_realm/coll:parent/trigger_a"),
+                EventMatcher::ok()
+                    .r#type(Stopped::TYPE)
+                    .moniker_regex("./collection_realm/coll:parent/trigger_b"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker_regex("./coll:parent"))
+        .then(
+            EventMatcher::ok()
+                .r#type(Stopped::TYPE)
+                .moniker_regex("./collection_realm/coll:parent"),
+        )
         .all_of(
             vec![
-                EventMatcher::ok().r#type(Purged::TYPE).moniker_regex("./coll:parent/trigger_a"),
-                EventMatcher::ok().r#type(Purged::TYPE).moniker_regex("./coll:parent/trigger_b"),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .moniker_regex("./collection_realm/coll:parent/trigger_a"),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .moniker_regex("./collection_realm/coll:parent/trigger_b"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Purged::TYPE).moniker_regex("./coll:parent"))
+        .then(
+            EventMatcher::ok().r#type(Purged::TYPE).moniker_regex("./collection_realm/coll:parent"),
+        )
         .subscribe_and_expect(&mut event_source)
         .await
         .unwrap();
     event_source.start_component_tree().await;
 
-    // Wait for `coll:parent` to be purged.
-    let event = EventMatcher::ok()
-        .moniker_regex("./coll:parent$")
-        .wait::<Purged>(&mut event_stream)
-        .await
-        .unwrap();
-
-    // Assert that parent component has no children.
-    let child_dir_path = test.get_hub_v2_path().join("children");
-    let child_dir_path = child_dir_path.to_str().expect("invalid chars");
-    let child_dir = open_directory_in_namespace(child_dir_path, OPEN_RIGHT_READABLE).unwrap();
-    let child_dir_contents = list_directory(&child_dir).await.unwrap();
-    assert!(child_dir_contents.is_empty());
-
     // Assert the expected lifecycle events. The leaves can be stopped/purged in either order.
-    event.resume().await.unwrap();
     expectation.await.unwrap();
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn destroy_and_recreate() {
-    let mut test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/destroy_and_recreate.cm",
-    )
-    .await
-    .expect("failed to start test");
-    let event_source = test.connect_to_event_source().await.unwrap();
+    let builder = RealmBuilder::new().await.unwrap();
+    builder
+        .add_child(
+            "destroy_and_recreate",
+            "#meta/destroy_and_recreate.cm",
+            ChildOptions::new().eager(),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("destroy_and_recreate")]),
+        )
+        .await
+        .unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let event_source = EventSource::from_proxy(proxy);
+
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(
+            vec![Started::NAME, Destroyed::NAME, Purged::NAME],
+            EventMode::Async,
+        )])
+        .await
+        .unwrap();
+
     event_source.start_component_tree().await;
-    let status = test.component_manager_app.wait().await.expect("failed to wait for component");
-    assert!(status.success(), "test failed");
+
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok()
+                    .r#type(Started::TYPE)
+                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+                EventMatcher::ok()
+                    .r#type(Destroyed::TYPE)
+                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+            ],
+            Ordering::Ordered,
+        )
+        .has_subset(
+            vec![
+                EventMatcher::ok()
+                    .r#type(Started::TYPE)
+                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+                EventMatcher::ok()
+                    .r#type(Purged::TYPE)
+                    .moniker_regex("./destroy_and_recreate/coll:trigger"),
+            ],
+            // The previous instance can be purged before/after the new instance is started.
+            // That is why this sequence is unordered.
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 }

@@ -12,8 +12,9 @@ rustc_test("destruction_integration_test_bin") {
   source_root = "integration_test.rs"
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
@@ -105,14 +106,13 @@ fuchsia_component("destroy_and_recreate") {
 }
 
 fuchsia_unittest_package("destruction_integration_test") {
-  package_deps_for_infra_only =
-      [ "//src/sys/component_manager:component-manager" ]
-  manifest = "meta/destruction_integration_test.cmx"
+  manifest = "meta/destruction_integration_test.cml"
   deps = [
     ":collection_realm",
     ":destroy_and_recreate",
     ":destruction_integration_test_bin",
     ":trigger",
     ":trigger_realm",
+    "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
   ]
 }
