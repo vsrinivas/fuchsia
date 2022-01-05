@@ -30,6 +30,8 @@ class ConReg : public hwreg::RegisterBase<ConReg, uint32_t, hwreg::EnablePrinter
  public:
   enum Mode { kModeSlave = 0, kModeMaster = 1 };
 
+  static constexpr uint32_t kDataRateMax = 0b111;
+
   DEF_FIELD(31, 25, burst_length);
   DEF_FIELD(24, 19, bits_per_word);
   DEF_FIELD(18, 16, data_rate);
@@ -92,6 +94,9 @@ class PeriodReg : public hwreg::RegisterBase<PeriodReg, uint32_t, hwreg::EnableP
 
 class TestReg : public hwreg::RegisterBase<TestReg, uint32_t, hwreg::EnablePrinter> {
  public:
+  static constexpr uint32_t kDefaultDlyctl = 0x15;
+
+  DEF_BIT(24, clk_free_en);
   DEF_FIELD(23, 22, fiforst);
   DEF_FIELD(21, 16, dlyctl);
   DEF_BIT(15, swap);
@@ -101,6 +106,7 @@ class TestReg : public hwreg::RegisterBase<TestReg, uint32_t, hwreg::EnablePrint
   DEF_FIELD(4, 0, txcnt);
 
   static auto Get() { return hwreg::RegisterAddr<TestReg>(AML_SPI_TESTREG); }
+  static auto GetFromDefaultValue() { return Get().FromValue(0).set_dlyctl(kDefaultDlyctl); }
 };
 
 class LdCntl0 : public hwreg::RegisterBase<LdCntl0, uint32_t, hwreg::EnablePrinter> {
@@ -128,6 +134,8 @@ class LdCntl1 : public hwreg::RegisterBase<LdCntl1, uint32_t, hwreg::EnablePrint
 class EnhanceCntl : public hwreg::RegisterBase<EnhanceCntl, uint32_t, hwreg::EnablePrinter> {
  public:
   enum SpiClkSelect { kConReg = 0, kEnhanceCntl = 1 };
+
+  static constexpr uint32_t kEnhanceClkDivMax = 0xff;
 
   DEF_BIT(29, main_clock_always_on);
   DEF_BIT(28, clk_cs_delay_enable);
