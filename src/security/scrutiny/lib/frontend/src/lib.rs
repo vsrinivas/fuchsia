@@ -5,6 +5,5 @@
 pub mod command_builder;
 pub mod launcher;
 mod logo;
-mod rest;
 pub mod scrutiny;
 mod shell;

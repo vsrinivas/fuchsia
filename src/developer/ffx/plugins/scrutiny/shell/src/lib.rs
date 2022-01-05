@@ -39,12 +39,6 @@ pub async fn scrutiny_shell(cmd: ScrutinyShellCommand) -> Result<(), Error> {
         config.runtime.logging.verbosity = LoggingVerbosity::from(verbosity);
     }
 
-    if let Some(server_config) = &mut config.runtime.server {
-        if let Some(port) = cmd.port {
-            server_config.port = port;
-        }
-    }
-
     launcher::launch_from_config(config)?;
 
     Ok(())

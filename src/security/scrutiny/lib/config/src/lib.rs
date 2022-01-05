@@ -39,10 +39,8 @@ impl Config {
     }
 
     /// The minimal runtime configuration is intended for most integration use
-    /// cases where the REST server is not required for instance. This can be
-    /// used to launch the runtime for static analysis verification or for
-    /// basic core functionality. The toolkit and search plugin and other
-    /// features are not loaded.
+    /// cases. This can be used to launch the runtime for static analysis verification or for
+    /// basic core functionality. The toolkit and search plugin and other features are not loaded.
     pub fn minimal() -> Config {
         Config { launch: LaunchConfig::minimal(), runtime: RuntimeConfig::minimal() }
     }
@@ -124,9 +122,6 @@ pub struct RuntimeConfig {
     pub model: ModelConfig,
     /// Provides the set of plugins that should be loaded by the runtime.
     pub plugin: PluginConfig,
-    /// Configuration about the optional Scrutiny server. If None the server
-    /// will not be launched.
-    pub server: Option<ServerConfig>,
 }
 
 impl RuntimeConfig {
@@ -135,7 +130,6 @@ impl RuntimeConfig {
             logging: LoggingConfig::default(),
             model: ModelConfig::default(),
             plugin: PluginConfig::default(),
-            server: Some(ServerConfig::default()),
         }
     }
     /// Default configuration with a special plugin list.
@@ -150,8 +144,6 @@ impl RuntimeConfig {
             logging: LoggingConfig::minimal(),
             model: ModelConfig::minimal(),
             plugin: PluginConfig::minimal(),
-            // The server feature is disabled runtime configuration.
-            server: None,
         }
     }
 
@@ -328,23 +320,6 @@ impl PluginConfig {
     // TODO(benwright) - Make this a smaller set once API usages are cleaned up.
     pub fn minimal() -> PluginConfig {
         Self::default()
-    }
-}
-
-/// The Scrutiny Server is an optional runtime feature that launches a server
-/// to display the Scrutiny visualizers.
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub struct ServerConfig {
-    /// The port to run the server from.
-    pub port: u16,
-    /// A visualizer path to server Data Visualizers from, this is always
-    /// relative to $FUCHSIA_DIR.
-    pub visualizer_path: String,
-}
-
-impl ServerConfig {
-    pub fn default() -> ServerConfig {
-        ServerConfig { port: 8080, visualizer_path: "/scripts/scrutiny".to_string() }
     }
 }
 
