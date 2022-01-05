@@ -116,6 +116,9 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultp
 			log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testID, err)
 			continue
 		}
+		if testCase.FailReason != "" {
+			r.FailureReason = &resultpb.FailureReason{PrimaryErrorMessage: testCase.FailReason}
+		}
 		r.Status = testCaseStatus
 		r.StartTime = timestamppb.New(testDetail.StartTime)
 		if testCase.Duration > 0 {
