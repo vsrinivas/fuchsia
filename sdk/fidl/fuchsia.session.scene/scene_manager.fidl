@@ -35,6 +35,7 @@ protocol Manager {
     ///
     /// Returns once the view associated with `view_ref` has been focused, or if there
     /// was an error focusing the specified view.
+    @deprecated("use fuchsia.ui.views.Focuser instead")
     RequestFocus(resource struct {
         view_ref fuchsia.ui.views.ViewRef;
     }) -> (struct {}) error fuchsia.ui.views.Error;
