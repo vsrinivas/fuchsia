@@ -362,6 +362,12 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                                GetProcessingElementsCompleter::Sync& completer) override {
       completer.Reply({});
     }
+    void SetProcessingElement(SetProcessingElementRequestView request,
+                              SetProcessingElementCompleter::Sync& completer) override {
+      completer.Reply(
+          fuchsia_hardware_audio::wire::SignalProcessingSetProcessingElementResult::WithErr(
+              ZX_ERR_NOT_SUPPORTED));
+    }
 
     void GetSupportedFormats(GetSupportedFormatsRequestView request,
                              GetSupportedFormatsCompleter::Sync& completer) override {

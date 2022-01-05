@@ -7,6 +7,7 @@ use fidl::prelude::*;
 use fidl_fuchsia_hardware_audio::*;
 use fidl_fuchsia_media as media;
 use fuchsia_async as fasync;
+use fuchsia_zircon::{self as zx};
 use futures::{future::MaybeDone, StreamExt};
 use log::info;
 use std::sync::Arc;
@@ -129,6 +130,13 @@ async fn process_audio_requests(
             }
             StreamConfigRequest::GetProcessingElements { responder } => {
                 responder.send(&mut Ok(vec![ProcessingElement::EMPTY]))?;
+            }
+            StreamConfigRequest::SetProcessingElement {
+                processing_element_id: _,
+                control: _,
+                responder,
+            } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             StreamConfigRequest::GetProperties { responder } => {
                 let prop = StreamProperties {

@@ -65,6 +65,12 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
       ::fuchsia::hardware::audio::Dai::GetProcessingElementsCallback callback) override {
     callback({});
   }
+  void SetProcessingElement(
+      uint64_t processing_element_id, ::fuchsia::hardware::audio::ProcessingElementControl control,
+      ::fuchsia::hardware::audio::Dai::SetProcessingElementCallback callback) override {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
   void GetRingBufferFormats(GetRingBufferFormatsCallback callback) override;
   void GetDaiFormats(GetDaiFormatsCallback callback) override;
   void CreateRingBuffer(

@@ -92,6 +92,27 @@ type ProcessingElement = table {
     7: description string:MAX_STRING_SIZE;
 };
 
+/// Control for a `ProcessingElement` with `type` equal to `VENDOR_SPECIFIC`.
+type VendorSpecificControl = table {};
+
+/// Processing element control parameters.
+/// The type of processing element control is defined by the type of parameters provided in this
+/// union. Must match the type returned in the corresponding `ProcessingElementType` entry in the
+/// corresponding `ProcessingElement`.
+type ProcessingElementControlParameters = flexible union {
+    1: vendor_specific_control VendorSpecificControl;
+};
+
+type ProcessingElementControl = table {
+    /// Control for the processing element. Required.
+    1: control ProcessingElementControlParameters;
+
+    /// Enable/disable the process element. If the corresponding `ProcessingElement` returned
+    /// `can_disable` equals to `false`, then this field has to be `true`.
+    /// Required.
+    2: enabled bool;
+};
+
 /// For an overview see
 /// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing).
 protocol SignalProcessing {
@@ -99,4 +120,14 @@ protocol SignalProcessing {
     GetProcessingElements() -> (struct {
         processing_elements vector<ProcessingElement>:MAX_COUNT_PROCESSING_ELEMENTS;
     }) error zx.status;
+
+    /// Controls a processing element using a unique id returned by `GetProcessingElements`.
+    /// Returns `ZX_ERR_INVALID_ARGS` if the `processing_element_id` does not match an id returned
+    /// by `GetProcessingElements` or the type of `ProcessingElementControlParameters` does not
+    /// match the `ProcessingElementType` of the processing element returned by
+    /// `GetProcessingElements` for this id.
+    SetProcessingElement(struct {
+        processing_element_id uint64;
+        control ProcessingElementControl;
+    }) -> (struct {}) error zx.status;
 };

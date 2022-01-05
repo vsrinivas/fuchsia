@@ -279,6 +279,13 @@ impl SoftPcmOutput {
             StreamConfigRequest::GetProcessingElements { responder } => {
                 responder.send(&mut Ok(vec![ProcessingElement::EMPTY]))?;
             }
+            StreamConfigRequest::SetProcessingElement {
+                processing_element_id: _,
+                control: _,
+                responder,
+            } => {
+                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+            }
             StreamConfigRequest::GetProperties { responder } => {
                 #[rustfmt::skip]
                 let prop = StreamProperties {

@@ -47,6 +47,12 @@ class DaiTest : public DaiTestDeviceType,
   void WatchPlugState(WatchPlugStateCallback callback) override;
   void GetHealthState(GetHealthStateCallback callback) override { callback({}); }
   void GetProcessingElements(GetProcessingElementsCallback callback) override { callback({}); }
+  void SetProcessingElement(uint64_t processing_element_id,
+                            ::fuchsia::hardware::audio::ProcessingElementControl control,
+                            SetProcessingElementCallback callback) override {
+    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithErr(
+        ZX_ERR_NOT_SUPPORTED));
+  }
 
   std::optional<fidl::Binding<::fuchsia::hardware::audio::StreamConfig>> stream_config_binding_;
   ::fuchsia::hardware::audio::DaiSyncPtr dai_;
