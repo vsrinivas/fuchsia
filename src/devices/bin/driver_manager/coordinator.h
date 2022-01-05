@@ -47,10 +47,10 @@
 #include "src/devices/bin/driver_manager/inspect.h"
 #include "src/devices/bin/driver_manager/metadata.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
-#include "src/devices/bin/driver_manager/suspend_handler.h"
 #include "src/devices/bin/driver_manager/system_state_manager.h"
 #include "src/devices/bin/driver_manager/v1/init_task.h"
 #include "src/devices/bin/driver_manager/v1/resume_task.h"
+#include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/bin/driver_manager/vmo_writer.h"
@@ -61,60 +61,11 @@ namespace fdf = fuchsia_driver_framework;
 
 class DriverHostLoaderService;
 class FsProvider;
+class SuspendResumeManager;
 class SystemStateManager;
 
 constexpr zx::duration kDefaultResumeTimeout = zx::sec(30);
 constexpr zx::duration kDefaultSuspendTimeout = zx::sec(30);
-
-// Tracks the global resume state that is currently in progress.
-class ResumeContext {
- public:
-  enum class Flags : uint32_t {
-    kResume = 0u,
-    kSuspended = 1u,
-  };
-  ResumeContext() = default;
-
-  ResumeContext(Flags flags, SystemPowerState resume_state)
-      : target_state_(resume_state), flags_(flags) {}
-
-  ~ResumeContext() {}
-
-  ResumeContext(ResumeContext&&) = default;
-  ResumeContext& operator=(ResumeContext&&) = default;
-
-  Flags flags() const { return flags_; }
-  void set_flags(Flags flags) { flags_ = flags; }
-  void push_pending_task(fbl::RefPtr<ResumeTask> task) {
-    pending_resume_tasks_.push_back(std::move(task));
-  }
-  void push_completed_task(fbl::RefPtr<ResumeTask> task) {
-    completed_resume_tasks_.push_back(std::move(task));
-  }
-
-  bool pending_tasks_is_empty() { return pending_resume_tasks_.is_empty(); }
-  bool completed_tasks_is_empty() { return completed_resume_tasks_.is_empty(); }
-
-  std::optional<fbl::RefPtr<ResumeTask>> take_pending_task(Device& dev) {
-    for (size_t i = 0; i < pending_resume_tasks_.size(); i++) {
-      if (&pending_resume_tasks_[i]->device() == &dev) {
-        auto task = pending_resume_tasks_.erase(i);
-        return std::move(task);
-      }
-    }
-    return {};
-  }
-
-  void reset_completed_tasks() { completed_resume_tasks_.reset(); }
-
-  SystemPowerState target_state() const { return target_state_; }
-
- private:
-  fbl::Vector<fbl::RefPtr<ResumeTask>> pending_resume_tasks_;
-  fbl::Vector<fbl::RefPtr<ResumeTask>> completed_resume_tasks_;
-  SystemPowerState target_state_;
-  Flags flags_ = Flags::kSuspended;
-};
 
 using ResumeCallback = std::function<void(zx_status_t)>;
 
@@ -197,13 +148,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void BindFallbackDrivers();
   void AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers);
   void DriverAdded(Driver* drv, const char* version);
-
-  void Suspend(
-      uint32_t flags, SuspendCallback = [](zx_status_t status) {});
-  void Resume(
-      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
-  bool InSuspend() const;
-  bool InResume() const;
 
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
   const Driver* LibnameToDriver(std::string_view libname) const;
@@ -291,6 +235,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   async_dispatcher_t* firmware_dispatcher() const { return firmware_dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
+  zx::duration resume_timeout() const { return config_.resume_timeout; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
   SystemPowerState shutdown_system_state() const { return shutdown_system_state_; }
   SystemPowerState default_shutdown_system_state() const {
@@ -327,8 +272,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
                                   const std::string& package_url);
 
-  uint32_t GetSuspendFlagsFromSystemPowerState(SystemPowerState state);
-
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
   void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
@@ -351,11 +294,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
 
-  SuspendHandler& suspend_handler() { return suspend_handler_; }
-  const SuspendHandler& suspend_handler() const { return suspend_handler_; }
-
-  ResumeContext& resume_context() { return resume_context_; }
-  const ResumeContext& resume_context() const { return resume_context_; }
+  SuspendResumeManager* suspend_resume_manager() { return suspend_resume_manager_.get(); }
 
   const Driver* fragment_driver() { return driver_loader_.LoadDriverUrl(GetFragmentDriverUrl()); }
 
@@ -415,8 +354,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) const;
   void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
 
-  void Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback);
-
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
   zx_status_t BindDriver(Driver* drv) {
@@ -460,9 +397,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   fbl::RefPtr<Device> root_device_;
   fbl::RefPtr<Device> sys_device_;
 
-  SuspendHandler suspend_handler_;
-  ResumeContext resume_context_;
-
   InspectManager* const inspect_manager_;
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
@@ -473,6 +407,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   // Stashed mexec inputs.
   zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
+
+  std::unique_ptr<SuspendResumeManager> suspend_resume_manager_;
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

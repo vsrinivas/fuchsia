@@ -10,8 +10,8 @@
 
 #include <inspector/inspector.h>
 
-#include "coordinator.h"
-#include "driver_host.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/lib/log/log.h"
 
 namespace {

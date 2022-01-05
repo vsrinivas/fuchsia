@@ -132,7 +132,6 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       base_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system),
-      suspend_handler_(this, config.suspend_timeout),
       inspect_manager_(inspect_manager),
       package_resolver_(config.boot_args) {
   if (config_.oom_event) {
@@ -146,6 +145,8 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
                                   zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+
+  suspend_resume_manager_ = std::make_unique<SuspendResumeManager>(this, config_.suspend_timeout);
 }
 
 Coordinator::~Coordinator() {}
@@ -198,12 +199,6 @@ void Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
       fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
                                   zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
-}
-
-bool Coordinator::InSuspend() const { return suspend_handler().InSuspend(); }
-
-bool Coordinator::InResume() const {
-  return (resume_context().flags() == ResumeContext::Flags::kResume);
 }
 
 void Coordinator::RegisterWithPowerManager(fidl::ClientEnd<fio::Directory> devfs,
@@ -520,13 +515,13 @@ zx_status_t Coordinator::AddDevice(
   static_assert(fdm::wire::kDeviceNameMax == ZX_DEVICE_NAME_MAX);
   static_assert(fdm::wire::kPropertiesMax <= UINT32_MAX);
 
-  if (InSuspend()) {
+  if (suspend_resume_manager_->InSuspend()) {
     LOGF(ERROR, "Add device '%.*s' forbidden in suspend", static_cast<int>(name.size()),
          name.data());
     return ZX_ERR_BAD_STATE;
   }
 
-  if (InResume()) {
+  if (suspend_resume_manager_->InResume()) {
     LOGF(ERROR, "Add device '%.*s' forbidden in resume", static_cast<int>(name.size()),
          name.data());
     return ZX_ERR_BAD_STATE;
@@ -1391,98 +1386,6 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
   return ZX_OK;
 }
 
-void Coordinator::Suspend(uint32_t flags, SuspendCallback callback) {
-  // TODO(ravoorir) : Change later to queue the suspend when resume is in progress.
-  // Similarly, when Suspend is in progress, resume should be queued. When a resume is
-  // in queue, and another suspend request comes in, we should nullify the resume that
-  // is in queue.
-  if (InResume()) {
-    LOGF(ERROR, "Aborting system-suspend, a system resume is in progress");
-    if (callback) {
-      callback(ZX_ERR_UNAVAILABLE);
-    }
-    return;
-  }
-
-  suspend_handler_.Suspend(flags, std::move(callback));
-}
-
-void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> callback) {
-  if (!sys_device_->proxy()) {
-    return;
-  }
-  if (InSuspend()) {
-    return;
-  }
-
-  auto schedule_resume = [this, callback](fbl::RefPtr<Device> dev) {
-    auto completion = [this, dev, callback](zx_status_t status) {
-      dev->clear_active_resume();
-
-      auto& ctx = resume_context();
-      if (status != ZX_OK) {
-        LOGF(ERROR, "Failed to resume: %s", zx_status_get_string(status));
-        ctx.set_flags(ResumeContext::Flags::kSuspended);
-        auto task = ctx.take_pending_task(*dev);
-        callback(status);
-        return;
-      }
-      std::optional<fbl::RefPtr<ResumeTask>> task = ctx.take_pending_task(*dev);
-      if (task.has_value()) {
-        ctx.push_completed_task(std::move(task.value()));
-      } else {
-        // Something went wrong
-        LOGF(ERROR, "Failed to resume, cannot find matching pending task");
-        callback(ZX_ERR_INTERNAL);
-        return;
-      }
-      if (ctx.pending_tasks_is_empty()) {
-        async::PostTask(dispatcher_, [this, callback] {
-          resume_context().reset_completed_tasks();
-          callback(ZX_OK);
-        });
-      }
-    };
-    auto task = ResumeTask::Create(dev, static_cast<uint32_t>(resume_context().target_state()),
-                                   std::move(completion));
-    resume_context().push_pending_task(task);
-    dev->SetActiveResume(std::move(task));
-  };
-
-  resume_context() = std::move(ctx);
-  for (auto& dev : devices_) {
-    schedule_resume(fbl::RefPtr(&dev));
-    if (dev.proxy()) {
-      schedule_resume(dev.proxy());
-    }
-  }
-  schedule_resume(sys_device_);
-  schedule_resume(sys_device_->proxy());
-
-  // Post a delayed task in case drivers do not complete the resume.
-  auto status = async::PostDelayedTask(
-      dispatcher_,
-      [this, callback] {
-        if (!InResume()) {
-          return;
-        }
-        LOGF(ERROR, "System resume timed out");
-        callback(ZX_ERR_TIMED_OUT);
-        // TODO(ravoorir): Figure out what is the best strategy
-        // of for recovery here. Should we put back all devices
-        // in suspend? In future, this could be more interactive
-        // with the UI.
-      },
-      config_.resume_timeout);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failure to create resume timeout watchdog");
-  }
-}
-
-void Coordinator::Resume(SystemPowerState target_state, ResumeCallback callback) {
-  Resume(ResumeContext(ResumeContext::Flags::kResume, target_state), std::move(callback));
-}
-
 // DriverAdded is called when a driver is added after the
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
@@ -1790,30 +1693,6 @@ void Coordinator::BindFallbackDrivers() {
   }
 
   AddAndBindDrivers(std::move(fallback_drivers_));
-}
-
-// TODO(fxbug.dev/42257): Temporary helper to convert state to flags.
-// Will be removed eventually.
-uint32_t Coordinator::GetSuspendFlagsFromSystemPowerState(
-    statecontrol_fidl::wire::SystemPowerState state) {
-  switch (state) {
-    case statecontrol_fidl::wire::SystemPowerState::kFullyOn:
-      return 0;
-    case statecontrol_fidl::wire::SystemPowerState::kReboot:
-      return DEVICE_SUSPEND_FLAG_REBOOT;
-    case statecontrol_fidl::wire::SystemPowerState::kRebootBootloader:
-      return DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER;
-    case statecontrol_fidl::wire::SystemPowerState::kRebootRecovery:
-      return DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY;
-    case statecontrol_fidl::wire::SystemPowerState::kPoweroff:
-      return DEVICE_SUSPEND_FLAG_POWEROFF;
-    case statecontrol_fidl::wire::SystemPowerState::kMexec:
-      return DEVICE_SUSPEND_FLAG_MEXEC;
-    case statecontrol_fidl::wire::SystemPowerState::kSuspendRam:
-      return DEVICE_SUSPEND_FLAG_SUSPEND_RAM;
-    default:
-      return 0;
-  }
 }
 
 zx::status<std::vector<fdd::wire::DriverInfo>> Coordinator::GetDriverInfo(
@@ -2133,15 +2012,15 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
 }
 
 void Coordinator::Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) {
-  Suspend(request->flags, [completer = completer.ToAsync()](zx_status_t status) mutable {
-    completer.Reply(status);
-  });
+  suspend_resume_manager_->Suspend(
+      request->flags,
+      [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
 }
 
 void Coordinator::UnregisterSystemStorageForShutdown(
     UnregisterSystemStorageForShutdownRequestView request,
     UnregisterSystemStorageForShutdownCompleter::Sync& completer) {
-  suspend_handler().UnregisterSystemStorageForShutdown(
+  suspend_resume_manager_->suspend_handler().UnregisterSystemStorageForShutdown(
       [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
 }
 
@@ -2293,7 +2172,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 
 void Coordinator::OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                              zx_status_t status, const zx_packet_signal_t* signal) {
-  suspend_handler_.ShutdownFilesystems([](zx_status_t status) {});
+  suspend_resume_manager_->suspend_handler().ShutdownFilesystems([](zx_status_t status) {});
 }
 
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }

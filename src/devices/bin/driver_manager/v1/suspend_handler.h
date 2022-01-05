@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_HANDLER_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_HANDLER_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_V1_SUSPEND_HANDLER_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_V1_SUSPEND_HANDLER_H_
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 
@@ -68,4 +68,4 @@ class SuspendHandler {
   uint32_t sflags_ = 0u;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_SUSPEND_HANDLER_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_SUSPEND_HANDLER_H_

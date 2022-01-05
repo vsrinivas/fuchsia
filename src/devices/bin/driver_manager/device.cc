@@ -842,7 +842,7 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
   auto dev = fbl::RefPtr(this);
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
-  if (dev->coordinator->InSuspend()) {
+  if (dev->coordinator->suspend_resume_manager()->InSuspend()) {
     LOGF(ERROR, "'bind-device' is forbidden in suspend");
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
