@@ -72,7 +72,7 @@ impl From<RenderableCell> for LayerContent {
         match cell.inner {
             RenderableCellContent::Cursor(cursor_key) => Self::Cursor(cursor_key.style),
             RenderableCellContent::Chars(chars) => {
-                let flags = cell.flags & Flags::BOLD_ITALIC;
+                let flags = cell.flags & (Flags::BOLD_ITALIC | Flags::UNDERLINE | Flags::STRIKEOUT);
                 // Ignore hidden cells and render tabs as spaces to prevent font issues.
                 if chars[0] == '\t' || cell.flags.contains(Flags::HIDDEN) {
                     Self::Char((' ', flags))
@@ -114,6 +114,20 @@ fn path_for_underline(size: &Size, render_context: &mut RenderContext) -> Path {
         .line_to(point2(size.width, top))
         .line_to(point2(size.width, size.height))
         .line_to(point2(0.0, size.height))
+        .line_to(point2(0.0, top));
+    path_builder.build()
+}
+
+fn path_for_strikeout(size: &Size, render_context: &mut RenderContext) -> Path {
+    let mut path_builder = render_context.path_builder().expect("path_builder");
+    let thickness = size.height * LINE_THICKNESS_FACTOR;
+    let top = size.height / 2.0;
+    let bottom = top + thickness;
+    path_builder
+        .move_to(point2(0.0, top))
+        .line_to(point2(size.width, top))
+        .line_to(point2(size.width, bottom))
+        .line_to(point2(0.0, bottom))
         .line_to(point2(0.0, top));
     path_builder.build()
 }
@@ -189,14 +203,14 @@ fn maybe_raster_for_cursor_style(
     })
 }
 
-fn maybe_raster_for_char(
+fn maybe_glyph_for_char(
     context: &mut RenderContext,
     c: char,
     flags: Flags,
     textgrid: &TextGrid,
     font_set: &FontSet,
-) -> Option<Raster> {
-    let maybe_bold_italic_font = match flags {
+) -> Option<Glyph> {
+    let maybe_bold_italic_font = match flags & Flags::BOLD_ITALIC {
         Flags::BOLD => font_set.bold_font.as_ref(),
         Flags::ITALIC => font_set.italic_font.as_ref(),
         Flags::BOLD_ITALIC => font_set.bold_italic_font.as_ref(),
@@ -210,7 +224,7 @@ fn maybe_raster_for_char(
     for font in maybe_bold_italic_font.iter().chain(std::iter::once(&regular_font)) {
         if let Some(glyph_index) = font.face.glyph_index(c) {
             let glyph = Glyph::with_scale_and_offset(context, font, scale, offset, glyph_index);
-            return Some(glyph.raster.clone());
+            return Some(glyph);
         }
     }
 
@@ -219,6 +233,41 @@ fn maybe_raster_for_char(
     //
 
     None
+}
+
+fn maybe_raster_for_char(
+    context: &mut RenderContext,
+    c: char,
+    flags: Flags,
+    textgrid: &TextGrid,
+    font_set: &FontSet,
+) -> Option<Raster> {
+    // Get a potential glyph for this character.
+    let maybe_glyph = maybe_glyph_for_char(context, c, flags, textgrid, font_set);
+
+    // Create an extra raster if underline or strikeout flag is set.
+    let maybe_extra_raster = if flags.intersects(Flags::UNDERLINE | Flags::STRIKEOUT) {
+        let mut raster_builder = context.raster_builder().expect("raster_builder");
+        if flags.contains(Flags::UNDERLINE) {
+            // TODO(fxbug.dev/90967): Avoid glyph overlap and get position/thickness from font.
+            raster_builder.add(&path_for_underline(&textgrid.cell_size, context), None);
+        }
+        if flags.contains(Flags::STRIKEOUT) {
+            // TODO(fxbug.dev/90967): Get position/thickness from font.
+            raster_builder.add(&path_for_strikeout(&textgrid.cell_size, context), None);
+        }
+        Some(raster_builder.build())
+    } else {
+        None
+    };
+
+    // Return a union of glyph raster and extra raster.
+    match (maybe_glyph, maybe_extra_raster) {
+        (Some(glyph), Some(extra_raster)) => Some(glyph.raster + extra_raster),
+        (Some(glyph), None) => Some(glyph.raster),
+        (None, Some(extra_raster)) => Some(extra_raster),
+        _ => None,
+    }
 }
 
 fn maybe_raster_for_layer_content(
