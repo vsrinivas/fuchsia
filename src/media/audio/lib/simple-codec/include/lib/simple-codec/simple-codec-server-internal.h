@@ -31,6 +31,8 @@ class SimpleCodecServerInternal {
  private:
   using Codec = ::fuchsia::hardware::audio::Codec;
 
+  static constexpr uint64_t agl_pe_id_ = 1;
+
   friend class SimpleCodecServer;
   friend class SimpleCodecServerInstance<T>;
 
@@ -42,13 +44,10 @@ class SimpleCodecServerInternal {
   void Start(Codec::StartCallback callback, SimpleCodecServerInstance<T>* instance);
   void GetInfo(Codec::GetInfoCallback callback);
   void GetHealthState(Codec::GetHealthStateCallback callback) { callback({}); }
-  void GetProcessingElements(Codec::GetProcessingElementsCallback callback) { callback({}); }
+  void GetProcessingElements(Codec::GetProcessingElementsCallback callback);
   void SetProcessingElement(
       uint64_t processing_element_id, ::fuchsia::hardware::audio::ProcessingElementControl control,
-      ::fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback) {
-    callback(fuchsia::hardware::audio::SignalProcessing_SetProcessingElement_Result::WithErr(
-        ZX_ERR_NOT_SUPPORTED));
-  }
+      ::fuchsia::hardware::audio::SignalProcessing::SetProcessingElementCallback callback);
   void IsBridgeable(Codec::IsBridgeableCallback callback);
   void SetBridgedMode(bool enable_bridged_mode);
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);

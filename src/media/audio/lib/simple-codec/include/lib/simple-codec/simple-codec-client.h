@@ -67,6 +67,7 @@ class SimpleCodecClient {
   zx::status<GainFormat> GetGainFormat();
   zx::status<GainState> GetGainState();
   void SetGainState(GainState state);
+  zx_status_t SetAgl(bool enable_agl);
 
  protected:
   ddk::CodecProtocolClient proto_client_;
@@ -99,6 +100,7 @@ class SimpleCodecClient {
 
   fbl::Mutex gain_state_lock_;
   zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_BAD_STATE);
+  std::optional<uint64_t> agl_pe_id_;
 };
 
 }  // namespace audio

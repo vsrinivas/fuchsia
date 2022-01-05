@@ -144,6 +144,45 @@ void SimpleCodecServerInternal<T>::GetInfo(Codec::GetInfoCallback callback) {
 }
 
 template <class T>
+void SimpleCodecServerInternal<T>::GetProcessingElements(
+    Codec::GetProcessingElementsCallback callback) {
+  if (static_cast<T*>(this)->SupportsAgl()) {
+    audio_fidl::ProcessingElement pe;
+    pe.set_id(agl_pe_id_);
+    pe.set_type(audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+
+    std::vector<audio_fidl::ProcessingElement> pes;
+    pes.emplace_back(std::move(pe));
+    audio_fidl::SignalProcessing_GetProcessingElements_Response response(std::move(pes));
+    audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+    result.set_response(std::move(response));
+    callback(std::move(result));
+  } else {
+    callback(
+        audio_fidl::SignalProcessing_GetProcessingElements_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+}
+
+template <class T>
+void SimpleCodecServerInternal<T>::SetProcessingElement(
+    uint64_t processing_element_id, audio_fidl::ProcessingElementControl control,
+    audio_fidl::SignalProcessing::SetProcessingElementCallback callback) {
+  if (static_cast<T*>(this)->SupportsAgl()) {
+    if (processing_element_id == agl_pe_id_) {
+      static_cast<T*>(this)->SetAgl(control.has_enabled() && control.enabled());
+      callback(audio_fidl::SignalProcessing_SetProcessingElement_Result::WithResponse(
+          audio_fidl::SignalProcessing_SetProcessingElement_Response()));
+    } else {
+      callback(
+          audio_fidl::SignalProcessing_SetProcessingElement_Result::WithErr(ZX_ERR_INVALID_ARGS));
+    }
+  } else {
+    callback(
+        audio_fidl::SignalProcessing_SetProcessingElement_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
+  }
+}
+
+template <class T>
 void SimpleCodecServerInternal<T>::IsBridgeable(Codec::IsBridgeableCallback callback) {
   callback(static_cast<T*>(this)->IsBridgeable());
 }
@@ -309,7 +348,7 @@ template <class T>
 void SimpleCodecServerInternal<T>::GetPlugDetectCapabilities(
     Codec::GetPlugDetectCapabilitiesCallback callback) {
   // Only hardwired in simple codec.
-  callback(::fuchsia::hardware::audio::PlugDetectCapabilities::HARDWIRED);
+  callback(audio_fidl::PlugDetectCapabilities::HARDWIRED);
 }
 
 template <class T>

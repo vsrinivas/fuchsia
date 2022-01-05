@@ -24,9 +24,9 @@ namespace audio_fidl = ::fuchsia::hardware::audio;
 class SimpleCodecTest : public inspect::InspectTestHelper, public zxtest::Test {};
 
 // Server tests.
-struct TestCodec : public SimpleCodecServer {
-  explicit TestCodec(zx_device_t* parent)
-      : SimpleCodecServer(parent), proto_({&codec_protocol_ops_, this}) {}
+class TestCodec : public SimpleCodecServer {
+ public:
+  explicit TestCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
   zx_status_t Shutdown() override { return ZX_OK; }
@@ -41,17 +41,22 @@ struct TestCodec : public SimpleCodecServer {
   zx_status_t Start() override { return ZX_OK; }
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
+  bool SupportsAgl() override { return true; }
+  void SetAgl(bool enable_agl) override { agl_mode_ = enable_agl; }
   DaiSupportedFormats GetDaiFormats() override { return {}; }
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   GainFormat GetGainFormat() override { return {}; }
-  GainState GetGainState() override { return gain_state; }
-  void SetGainState(GainState state) override { gain_state = state; }
-  codec_protocol_t proto_ = {};
+  GainState GetGainState() override { return gain_state_; }
+  void SetGainState(GainState state) override { gain_state_ = state; }
+
+  bool agl_mode() { return agl_mode_; }
   inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
 
-  GainState gain_state = {};
+ private:
+  GainState gain_state_ = {};
+  bool agl_mode_ = false;
 };
 
 TEST_F(SimpleCodecTest, ChannelConnection) {
@@ -156,6 +161,78 @@ TEST_F(SimpleCodecTest, PlugState) {
   ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
   ASSERT_EQ(out_plug_state.plugged(), true);
   ASSERT_GT(out_plug_state.plug_state_time(), 0);
+}
+
+TEST_F(SimpleCodecTest, AglStateServerWithClientViaSignalProcessingApi) {
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
+  auto codec_proto = codec->GetProto();
+  ddk::CodecProtocolClient codec_proto2(&codec_proto);
+
+  zx::channel channel_remote, channel_local;
+  ASSERT_OK(zx::channel::create(0, &channel_local, &channel_remote));
+  ddk::CodecProtocolClient proto_client;
+  ASSERT_OK(codec_proto2.Connect(std::move(channel_remote)));
+  audio_fidl::CodecSyncPtr codec_client;
+  codec_client.Bind(std::move(channel_local));
+
+  // We should get one PE with AGL support.
+  audio_fidl::SignalProcessing_GetProcessingElements_Result result;
+  ASSERT_OK(codec_client->GetProcessingElements(&result));
+  ASSERT_FALSE(result.is_err());
+  ASSERT_EQ(result.response().processing_elements.size(), 1);
+  ASSERT_EQ(result.response().processing_elements[0].type(),
+            audio_fidl::ProcessingElementType::AUTOMATIC_GAIN_LIMITER);
+  ASSERT_FALSE(codec->agl_mode());
+
+  // Control with enabled = true.
+  audio_fidl::SignalProcessing_SetProcessingElement_Result result_enable;
+  audio_fidl::ProcessingElementControl control_enable;
+  control_enable.set_enabled(true);
+  ASSERT_OK(codec_client->SetProcessingElement(result.response().processing_elements[0].id(),
+                                               std::move(control_enable), &result_enable));
+  ASSERT_FALSE(result_enable.is_err());
+  ASSERT_TRUE(codec->agl_mode());
+}
+
+TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClient) {
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  ASSERT_OK(client.SetProtocol(&codec_proto));
+
+  ASSERT_OK(client.SetAgl(true));
+  ASSERT_TRUE(codec->agl_mode());
+
+  ASSERT_OK(client.SetAgl(false));
+  ASSERT_FALSE(codec->agl_mode());
+}
+
+TEST_F(SimpleCodecTest, AglStateServerViaSimpleCodecClientNoSupport) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  struct TestCodecNoAgl : public TestCodec {
+    explicit TestCodecNoAgl(zx_device_t* parent) : TestCodec(parent) {}
+    bool SupportsAgl() override { return false; }
+  };
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodecNoAgl>(fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
+  auto codec_proto = codec->GetProto();
+  SimpleCodecClient client;
+  ASSERT_OK(client.SetProtocol(&codec_proto));
+
+  ASSERT_EQ(client.SetAgl(true), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST_F(SimpleCodecTest, Inspect) {

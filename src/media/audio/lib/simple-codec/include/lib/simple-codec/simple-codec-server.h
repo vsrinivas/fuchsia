@@ -104,6 +104,13 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
       zxlogf(ERROR, "bridged mode not supported");
     }
   }
+  // Default to no support for AGL.
+  virtual bool SupportsAgl() { return false; }
+  virtual void SetAgl(bool enable_agl) {
+    if (enable_agl) {
+      zxlogf(ERROR, "AGL not supported");
+    }
+  }
 
   zx_status_t CodecConnect(zx::channel(channel));
   // The dispatcher's loop is guaranteed to be shutdown before "this" is deleted.

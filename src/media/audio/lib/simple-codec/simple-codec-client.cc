@@ -65,6 +65,23 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
   auto mutable_response = response.value();
   // Update the stored gain state, and start a hanging get to receive further gain state changes.
   UpdateGainState(&mutable_response);
+
+  auto pes = codec_->GetProcessingElements_Sync();
+  if (pes->result.is_err()) {
+    return ZX_OK;  // We allow servers not supporting signal processing.
+  }
+  for (auto& pe : pes->result.response().processing_elements) {
+    if (pe.type() == fuchsia_hardware_audio::wire::ProcessingElementType::kAutomaticGainLimiter) {
+      if (pe.has_id()) {
+        if (!agl_pe_id_.has_value()) {  // Use the first PE with AGL support.
+          agl_pe_id_.emplace(pe.id());
+        }
+      } else {
+        return ZX_ERR_INVALID_ARGS;
+      }
+    }
+  }
+
   return ZX_OK;
 }
 
@@ -205,6 +222,17 @@ void SimpleCodecClient::SetGainState(GainState state) {
     fbl::AutoLock lock(&gain_state_lock_);
     gain_state_ = zx::ok(state);
   }
+}
+
+zx_status_t SimpleCodecClient::SetAgl(bool agl_enable) {
+  fidl::Arena allocator;
+  if (!agl_pe_id_.has_value()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  fuchsia_hardware_audio::wire::ProcessingElementControl control(allocator);
+  control.set_enabled(agl_enable);
+  codec_->SetProcessingElement_Sync(agl_pe_id_.value(), std::move(control));
+  return ZX_OK;
 }
 
 void SimpleCodecClient::UpdateGainState(
