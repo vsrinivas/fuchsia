@@ -38,6 +38,7 @@
 #include <fbl/vector.h>
 
 #include "lib/async/dispatcher.h"
+#include "src/devices/bin/driver_manager/bind_driver_manager.h"
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
@@ -60,6 +61,7 @@ namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 using statecontrol_fidl::wire::SystemPowerState;
 namespace fdf = fuchsia_driver_framework;
 
+class BindDriverManager;
 class DriverHostLoaderService;
 class FirmwareLoader;
 class FsProvider;
@@ -154,29 +156,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
   const Driver* LibnameToDriver(std::string_view libname) const;
 
-  // Function that is invoked to request a driver try to bind to a device
-  using AttemptBindFunc =
-      fit::function<zx_status_t(const Driver* drv, const fbl::RefPtr<Device>& dev)>;
-
-  // Attempts to bind the given driver to the given device.  Returns ZX_OK on
-  // success, ZX_ERR_ALREADY_BOUND if there is a driver bound to the device
-  // and the device is not allowed to be bound multiple times, ZX_ERR_NEXT if
-  // the driver is not capable of binding to the device, and a different error
-  // if the driver was capable of binding but failed to bind.
-  zx_status_t MatchAndBindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                                         bool autobind) {
-    return MatchAndBindDriverToDevice(dev, driver, autobind,
-                                      fit::bind_member(this, &Coordinator::AttemptBind));
-  }
-
-  // The same as above, but the given function is called to perform the
-  // bind attempt.
-  zx_status_t MatchAndBindDriverToDevice(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                                         bool autobind, const AttemptBindFunc& attempt_bind);
-
-  zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const MatchedDriver& driver,
-                                 const AttemptBindFunc& attempt_bind);
-
   // Used to implement fuchsia::device::manager::Coordinator.
   // TODO(fxbug.dev/43370): remove |always_init| once init tasks can be enabled for all devices.
   zx_status_t AddDevice(const fbl::RefPtr<Device>& parent,
@@ -257,8 +236,15 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
     return devices_;
   }
 
+  // Called when a new driver becomes available to the Coordinator. Existing devices are
+  // inspected to see if the new driver is bindable to them (unless they are already bound).
   // This method is public only for the test suite.
-  zx_status_t BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind);
+  zx_status_t BindDriver(Driver* drv);
+
+  // Callback function to attempt binding a driver to the device.
+  // TODO(fxb/90932): Remove this callback, as it makes things more complex and is only useful
+  // for testing.
+  zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
 
   // This method is public only for the LoadDriverPackageTest.
   zx_status_t LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
@@ -279,8 +265,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
       fidl::ClientEnd<fuchsia_device_manager::SystemStateTransition> system_state_transition,
       fidl::ClientEnd<fuchsia_io::Directory> devfs, RegisterWithPowerManagerCompletion completion);
 
-  zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
-
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
 
@@ -292,6 +276,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   InspectManager& inspect_manager() { return *inspect_manager_; }
   DriverLoader& driver_loader() { return driver_loader_; }
+
+  BindDriverManager* bind_driver_manager() const { return bind_driver_manager_.get(); }
 
   FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
 
@@ -319,20 +305,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void DumpBindingProperties(DumpBindingPropertiesRequestView request,
                              DumpBindingPropertiesCompleter::Sync& completer) override;
 
-  void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
-  zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                            const DriverLoader::MatchDeviceConfig& config);
-
-  // Given a device, return all of the Drivers whose bind programs match with the device.
-  // The returned vector is organized by priority, so if only one driver is being bound it
-  // should be the first in the vector.
-  // If `drvlibname` is not empty then the device will only be checked against the driver
-  // with that specific name.
-  zx::status<std::vector<MatchedDriver>> MatchDevice(const fbl::RefPtr<Device>& dev,
-                                                     std::string_view drvlibname);
-  zx_status_t MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                                  bool autobind);
-
   zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
       fidl::AnyArena& allocator, const std::vector<const Driver*>& drivers);
   zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
@@ -349,10 +321,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void DumpDeviceProps(VmoWriter* vmo, const Device* dev) const;
 
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
-
-  zx_status_t BindDriver(Driver* drv) {
-    return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));
-  }
 
   // Schedule unbind and remove tasks for all devices in |driver_host|.
   // Used as part of RestartDriverHosts().
@@ -383,9 +351,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   // All composite devices
   fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>> composite_devices_;
-  // All the composite devices gotten from the DriverIndex.
-  // This maps driver URLs to the CompositeDevice object.
-  std::unordered_map<std::string, std::unique_ptr<CompositeDevice>> driver_index_composite_devices_;
 
   fbl::RefPtr<Device> root_device_;
   fbl::RefPtr<Device> sys_device_;
@@ -404,10 +369,12 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx::vmo mexec_kernel_zbi_, mexec_data_zbi_;
 
   std::unique_ptr<SuspendResumeManager> suspend_resume_manager_;
+
+  std::unique_ptr<BindDriverManager> bind_driver_manager_;
 };
 
-bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
-                        const fbl::Array<const zx_device_prop_t>& props,
-                        const fbl::Array<const StrProperty>& str_props, bool autobind);
+bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
+                     const fbl::Array<const zx_device_prop_t>& props,
+                     const fbl::Array<const StrProperty>& str_props, bool autobind);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_

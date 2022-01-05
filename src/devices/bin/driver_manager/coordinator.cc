@@ -117,6 +117,158 @@ bool driver_host_is_asan() {
   return is_asan;
 }
 
+// send message to driver_host, requesting the creation of a device
+zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
+                              const char* args, zx::channel rpc_proxy) {
+  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
+  if (coordinator_endpoints.is_error()) {
+    return coordinator_endpoints.error_value();
+  }
+
+  auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
+
+  fidl::Arena arena;
+  if (dev->libname().size() != 0) {
+    zx::vmo vmo;
+    if (auto status = dev->coordinator->LibnameToVmo(dev->libname(), &vmo); status != ZX_OK) {
+      return status;
+    }
+
+    auto driver_path = fidl::StringView::FromExternal(dev->libname().data(), dev->libname().size());
+    auto args_view = fidl::StringView::FromExternal(args, strlen(args));
+
+    fdm::wire::ProxyDevice proxy{driver_path, std::move(vmo), std::move(rpc_proxy), args_view};
+    auto type = fdm::wire::DeviceType::WithProxy(arena, std::move(proxy));
+
+    dh->controller()->CreateDevice(
+        std::move(coordinator_endpoints->client), std::move(device_controller_request),
+        std::move(type), dev->local_id(),
+        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+          if (!result.ok()) {
+            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          if (result->status != ZX_OK) {
+            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+          }
+        });
+  } else {
+    fdm::wire::StubDevice stub{dev->protocol_id()};
+    auto type = fdm::wire::DeviceType::WithStub(stub);
+    dh->controller()->CreateDevice(
+        std::move(coordinator_endpoints->client), std::move(device_controller_request),
+        std::move(type), dev->local_id(),
+        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+          if (!result.ok()) {
+            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          if (result->status != ZX_OK) {
+            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+          }
+        });
+  }
+
+  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
+  return ZX_OK;
+}
+
+zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
+                                 fidl::ClientEnd<fio::Directory> incoming_dir) {
+  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
+  if (coordinator_endpoints.is_error()) {
+    return coordinator_endpoints.error_value();
+  }
+
+  auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
+
+  fdm::wire::NewProxyDevice new_proxy{std::move(incoming_dir)};
+  auto type = fdm::wire::DeviceType::WithNewProxy(std::move(new_proxy));
+
+  dh->controller()->CreateDevice(
+      std::move(coordinator_endpoints->client), std::move(device_controller_request),
+      std::move(type), dev->local_id(),
+      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+        if (!result.ok()) {
+          LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
+          return;
+        }
+        if (result->status != ZX_OK) {
+          LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+        }
+      });
+
+  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
+  return ZX_OK;
+}
+
+// Binds the driver to the device by sending a request to driver_host.
+zx_status_t BindDriverToDevice(const fbl::RefPtr<Device>& dev, const char* libname) {
+  zx::vmo vmo;
+  zx_status_t status = dev->coordinator->LibnameToVmo(libname, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  dev->device_controller()->BindDriver(
+      fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo),
+      [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
+        if (!result.ok()) {
+          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(), result.status_string());
+          dev->flags &= (~DEV_CTX_BOUND);
+          return;
+        }
+        if (result->status != ZX_OK) {
+          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
+               zx_status_get_string(result->status));
+          dev->flags &= (~DEV_CTX_BOUND);
+          return;
+        }
+
+        fbl::RefPtr<Device> real_parent;
+        if (dev->flags & DEV_CTX_PROXY) {
+          real_parent = dev->parent();
+        } else {
+          real_parent = dev;
+        }
+        for (auto& child : real_parent->children()) {
+          const char* drivername =
+              dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
+          auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
+
+          auto compat_test_enabled = (*dev->coordinator->boot_args())
+                                         ->GetBool(fidl::StringView::FromExternal(bootarg), false);
+          if (compat_test_enabled.ok() && compat_test_enabled->value &&
+              (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
+            bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
+            auto test_wait_time = (*dev->coordinator->boot_args())
+                                      ->GetString(fidl::StringView::FromExternal(bootarg));
+            zx::duration test_time = kDefaultTestTimeout;
+            if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
+              auto test_timeout =
+                  std::string{test_wait_time->value.data(), test_wait_time->value.size()};
+              test_time = zx::msec(atoi(test_timeout.data()));
+            }
+            real_parent->DriverCompatibilityTest(test_time, std::nullopt);
+            break;
+          } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
+            real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);
+            break;
+          }
+        }
+        if (result->test_output.is_valid()) {
+          LOGF(INFO, "Setting test channel for driver '%s'", dev->name().data());
+          auto status =
+              dev->set_test_output(std::move(result->test_output), dev->coordinator->dispatcher());
+          if (status != ZX_OK) {
+            LOGF(ERROR, "Failed to wait on test output for driver '%s': %s", dev->name().data(),
+                 zx_status_get_string(status));
+          }
+        }
+      });
+  dev->flags |= DEV_CTX_BOUND;
+  return ZX_OK;
+}
+
 }  // namespace
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
@@ -141,6 +293,9 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
                                   zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+
+  bind_driver_manager_ =
+      std::make_unique<BindDriverManager>(this, fit::bind_member(this, &Coordinator::AttemptBind));
 
   suspend_resume_manager_ = std::make_unique<SuspendResumeManager>(this, config_.suspend_timeout);
   firmware_loader_ =
@@ -167,7 +322,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver,
   // Bind all the drivers we loaded.
   AddAndBindDrivers(std::move(drivers_));
   DriverLoader::MatchDeviceConfig config;
-  BindAllDevicesDriverIndex(config);
+  bind_driver_manager_->BindAllDevicesDriverIndex(config);
 
   // Bind the fallback drivers if we don't require the full system.
   if (config_.require_system) {
@@ -180,7 +335,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver,
   driver_loader_.WaitForBaseDrivers([this]() {
     DriverLoader::MatchDeviceConfig config;
     config.only_return_base_and_fallback_drivers = true;
-    BindAllDevicesDriverIndex(config);
+    bind_driver_manager_->BindAllDevicesDriverIndex(config);
   });
 
   devfs_publish(root_device_, sys_device_);
@@ -911,162 +1066,6 @@ zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
   return ZX_OK;
 }
 
-namespace {
-
-// send message to driver_host, requesting the creation of a device
-zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
-                              const char* args, zx::channel rpc_proxy) {
-  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
-  if (coordinator_endpoints.is_error()) {
-    return coordinator_endpoints.error_value();
-  }
-
-  auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
-
-  fidl::Arena arena;
-  if (dev->libname().size() != 0) {
-    zx::vmo vmo;
-    if (auto status = dev->coordinator->LibnameToVmo(dev->libname(), &vmo); status != ZX_OK) {
-      return status;
-    }
-
-    auto driver_path = fidl::StringView::FromExternal(dev->libname().data(), dev->libname().size());
-    auto args_view = fidl::StringView::FromExternal(args, strlen(args));
-
-    fdm::wire::ProxyDevice proxy{driver_path, std::move(vmo), std::move(rpc_proxy), args_view};
-    auto type = fdm::wire::DeviceType::WithProxy(arena, std::move(proxy));
-
-    dh->controller()->CreateDevice(
-        std::move(coordinator_endpoints->client), std::move(device_controller_request),
-        std::move(type), dev->local_id(),
-        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-          if (!result.ok()) {
-            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
-            return;
-          }
-          if (result->status != ZX_OK) {
-            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
-          }
-        });
-  } else {
-    fdm::wire::StubDevice stub{dev->protocol_id()};
-    auto type = fdm::wire::DeviceType::WithStub(stub);
-    dh->controller()->CreateDevice(
-        std::move(coordinator_endpoints->client), std::move(device_controller_request),
-        std::move(type), dev->local_id(),
-        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-          if (!result.ok()) {
-            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
-            return;
-          }
-          if (result->status != ZX_OK) {
-            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
-          }
-        });
-  }
-
-  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
-  return ZX_OK;
-}
-
-zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
-                                 fidl::ClientEnd<fio::Directory> incoming_dir) {
-  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
-  if (coordinator_endpoints.is_error()) {
-    return coordinator_endpoints.error_value();
-  }
-
-  auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
-
-  fdm::wire::NewProxyDevice new_proxy{std::move(incoming_dir)};
-  auto type = fdm::wire::DeviceType::WithNewProxy(std::move(new_proxy));
-
-  dh->controller()->CreateDevice(
-      std::move(coordinator_endpoints->client), std::move(device_controller_request),
-      std::move(type), dev->local_id(),
-      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
-        if (!result.ok()) {
-          LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
-          return;
-        }
-        if (result->status != ZX_OK) {
-          LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
-        }
-      });
-
-  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
-  return ZX_OK;
-}
-
-// send message to driver_host, requesting the binding of a driver to a device
-zx_status_t BindDriver(const fbl::RefPtr<Device>& dev, const char* libname) {
-  zx::vmo vmo;
-  zx_status_t status = dev->coordinator->LibnameToVmo(libname, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  dev->device_controller()->BindDriver(
-      fidl::StringView::FromExternal(libname, strlen(libname)), std::move(vmo),
-      [dev](fidl::WireUnownedResult<fdm::DeviceController::BindDriver>& result) {
-        if (!result.ok()) {
-          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(), result.status_string());
-          dev->flags &= (~DEV_CTX_BOUND);
-          return;
-        }
-        if (result->status != ZX_OK) {
-          LOGF(ERROR, "Failed to bind driver '%s': %s", dev->name().data(),
-               zx_status_get_string(result->status));
-          dev->flags &= (~DEV_CTX_BOUND);
-          return;
-        }
-
-        fbl::RefPtr<Device> real_parent;
-        if (dev->flags & DEV_CTX_PROXY) {
-          real_parent = dev->parent();
-        } else {
-          real_parent = dev;
-        }
-        for (auto& child : real_parent->children()) {
-          const char* drivername =
-              dev->coordinator->LibnameToDriver(child.libname().data())->name.data();
-          auto bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-enable", drivername);
-
-          auto compat_test_enabled = (*dev->coordinator->boot_args())
-                                         ->GetBool(fidl::StringView::FromExternal(bootarg), false);
-          if (compat_test_enabled.ok() && compat_test_enabled->value &&
-              (real_parent->test_state() == Device::TestStateMachine::kTestNotStarted)) {
-            bootarg = fbl::StringPrintf("driver.%s.compatibility-tests-wait-time", drivername);
-            auto test_wait_time = (*dev->coordinator->boot_args())
-                                      ->GetString(fidl::StringView::FromExternal(bootarg));
-            zx::duration test_time = kDefaultTestTimeout;
-            if (test_wait_time.ok() && !test_wait_time->value.is_null()) {
-              auto test_timeout =
-                  std::string{test_wait_time->value.data(), test_wait_time->value.size()};
-              test_time = zx::msec(atoi(test_timeout.data()));
-            }
-            real_parent->DriverCompatibilityTest(test_time, std::nullopt);
-            break;
-          } else if (real_parent->test_state() == Device::TestStateMachine::kTestBindSent) {
-            real_parent->test_event().signal(0, TEST_BIND_DONE_SIGNAL);
-            break;
-          }
-        }
-        if (result->test_output.is_valid()) {
-          LOGF(INFO, "Setting test channel for driver '%s'", dev->name().data());
-          auto status =
-              dev->set_test_output(std::move(result->test_output), dev->coordinator->dispatcher());
-          if (status != ZX_OK) {
-            LOGF(ERROR, "Failed to wait on test output for driver '%s': %s", dev->name().data(),
-                 zx_status_get_string(status));
-          }
-        }
-      });
-  dev->flags |= DEV_CTX_BOUND;
-  return ZX_OK;
-}
-
-}  // namespace
-
 // Create the proxy node for the given device if it doesn't exist and ensure it
 // has a driver_host.  If |target_driver_host| is not nullptr and the proxy doesn't have
 // a driver_host yet, |target_driver_host| will be used for it.  Otherwise a new driver_host
@@ -1196,7 +1195,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
       LOGF(ERROR, "Cannot bind to device '%s', it has no driver_host", dev->name().data());
       return ZX_ERR_BAD_STATE;
     }
-    return ::BindDriver(dev, drv->libname.c_str());
+    return BindDriverToDevice(dev, drv->libname.c_str());
   }
 
   zx_status_t status;
@@ -1206,14 +1205,14 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
     if (status != ZX_OK) {
       return status;
     }
-    status = ::BindDriver(dev->new_proxy(), drv->libname.c_str());
+    status = BindDriverToDevice(dev->new_proxy(), drv->libname.c_str());
   } else {
     VLOGF(1, "Preparing old proxy for %s", dev->name().data());
     status = PrepareProxy(dev, nullptr /* target_driver_host */);
     if (status != ZX_OK) {
       return status;
     }
-    status = ::BindDriver(dev->proxy(), drv->libname.c_str());
+    status = BindDriverToDevice(dev->proxy(), drv->libname.c_str());
   }
   // TODO(swetland): arrange to mark us unbound when the proxy (or its driver_host) goes away
   if ((status == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
@@ -1332,60 +1331,8 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   }
 }
 
-zx_status_t Coordinator::MatchAndBindDriverToDevice(const fbl::RefPtr<Device>& dev,
-                                                    const Driver* drv, bool autobind,
-                                                    const AttemptBindFunc& attempt_bind) {
-  auto driver = MatchedDriver{.driver = drv};
-  zx_status_t status = MatchDeviceToDriver(dev, drv, autobind);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return BindDriverToDevice(dev, driver, attempt_bind);
-}
-
-zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev,
-                                            const MatchedDriver& driver,
-                                            const AttemptBindFunc& attempt_bind) {
-  if (driver.composite) {
-    std::string name(driver.driver->libname.c_str());
-    if (driver_index_composite_devices_.count(name) == 0) {
-      std::unique_ptr<CompositeDevice> dev;
-      zx_status_t status = CompositeDevice::CreateFromDriverIndex(driver, &dev);
-      if (status != ZX_OK) {
-        LOGF(ERROR, "%s: Failed to create CompositeDevice from DriverIndex: %s", __func__,
-             zx_status_get_string(status));
-        return status;
-      }
-      driver_index_composite_devices_[name] = std::move(dev);
-    }
-    auto& composite = driver_index_composite_devices_[name];
-    zx_status_t status = composite->BindFragment(driver.composite->node, dev);
-    if (status != ZX_OK) {
-      LOGF(ERROR, "%s: Failed to BindFragment for '%s': %s", __func__, dev->name().data(),
-           zx_status_get_string(status));
-      return status;
-    }
-  } else {
-    zx_status_t status = attempt_bind(driver.driver, dev);
-    // If we get this here it means we've successfully bound one driver
-    // and the device isn't multi-bind.
-    if (status == ZX_ERR_ALREADY_BOUND) {
-      return ZX_OK;
-    }
-    if (status != ZX_OK) {
-      LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__,
-           driver.driver->libname.data(), dev->name().data(), zx_status_get_string(status));
-    }
-  }
-  return ZX_OK;
-}
-
-// BindDriver is called when a new driver becomes available to
-// the Coordinator.  Existing devices are inspected to see if the
-// new driver is bindable to them (unless they are already bound).
-zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind) {
-  zx_status_t status =
-      MatchAndBindDriverToDevice(root_device_, drv, true /* autobind */, attempt_bind);
+zx_status_t Coordinator::BindDriver(Driver* drv) {
+  zx_status_t status = bind_driver_manager_->MatchAndBind(root_device_, drv, true /* autobind */);
   if (status != ZX_ERR_NEXT) {
     return status;
   }
@@ -1394,7 +1341,7 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   }
   for (auto& dev : devices_) {
     zx_status_t status =
-        MatchAndBindDriverToDevice(fbl::RefPtr(&dev), drv, true /* autobind */, attempt_bind);
+        bind_driver_manager_->MatchAndBind(fbl::RefPtr(&dev), drv, true /* autobind */);
     if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
       continue;
     }
@@ -1403,129 +1350,6 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
     }
   }
   return ZX_OK;
-}
-
-zx_status_t Coordinator::MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, const Driver* driver,
-                                             bool autobind) {
-  if (dev->IsAlreadyBound()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  if (autobind && dev->should_skip_autobind()) {
-    return ZX_ERR_NEXT;
-  }
-
-  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
-    return ZX_ERR_NEXT;
-  }
-  if (!driver_is_bindable(driver, dev->protocol_id(), dev->props(), dev->str_props(), autobind)) {
-    return ZX_ERR_NEXT;
-  }
-  return ZX_OK;
-}
-
-void Coordinator::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config) {
-  zx_status_t status = MatchAndBindDeviceDriverIndex(root_device_, config);
-  if (status != ZX_OK && status != ZX_ERR_NEXT) {
-    LOGF(ERROR, "DriverIndex failed to match root_device: %d", status);
-    return;
-  }
-
-  for (auto& dev : devices_) {
-    auto dev_ref = fbl::RefPtr(&dev);
-    zx_status_t status = MatchAndBindDeviceDriverIndex(dev_ref, config);
-    if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
-      continue;
-    }
-    if (status != ZX_OK) {
-      return;
-    }
-  }
-}
-
-zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(
-    const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) {
-  if (dev->IsAlreadyBound()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-
-  if (dev->should_skip_autobind()) {
-    return ZX_ERR_NEXT;
-  }
-
-  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
-    return ZX_ERR_NEXT;
-  }
-
-  auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, config);
-  for (auto driver : drivers) {
-    zx_status_t status =
-        BindDriverToDevice(dev, driver, fit::bind_member(this, &Coordinator::AttemptBind));
-    // If we get this here it means we've successfully bound one driver
-    // and the device isn' multi-bind.
-    if (status == ZX_ERR_ALREADY_BOUND) {
-      return ZX_OK;
-    }
-  }
-  return ZX_OK;
-}
-
-zx::status<std::vector<MatchedDriver>> Coordinator::MatchDevice(const fbl::RefPtr<Device>& dev,
-                                                                std::string_view drvlibname) {
-  // shouldn't be possible to get a bind request for a proxy device
-  if (dev->flags & DEV_CTX_PROXY) {
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  std::vector<MatchedDriver> matched_drivers;
-
-  // A libname of "" means a general rebind request
-  // instead of a specific request
-  bool autobind = drvlibname.size() == 0;
-
-  for (const Driver& driver : drivers_) {
-    if (!autobind && drvlibname.compare(driver.libname)) {
-      continue;
-    }
-    zx_status_t status = MatchDeviceToDriver(dev, &driver, autobind);
-    if (status == ZX_ERR_ALREADY_BOUND) {
-      return zx::error(ZX_ERR_ALREADY_BOUND);
-    }
-    if (status == ZX_ERR_NEXT) {
-      continue;
-    }
-
-    if (status == ZX_OK) {
-      auto matched = MatchedDriver{.driver = &driver};
-      matched_drivers.push_back(std::move(matched));
-    }
-
-    // If the device doesn't support multibind (this is a devmgr-internal setting),
-    // then return on first match or failure.
-    // Otherwise, keep checking all the drivers.
-    if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      return zx::ok(std::move(matched_drivers));
-    }
-  }
-
-  // Check the Driver Index for a driver.
-  {
-    DriverLoader::MatchDeviceConfig config;
-    config.libname = drvlibname;
-    auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, config);
-    for (auto driver : drivers) {
-      if (dev->IsAlreadyBound()) {
-        return zx::error(ZX_ERR_ALREADY_BOUND);
-      }
-
-      matched_drivers.push_back(driver);
-    }
-  }
-
-  return zx::ok(std::move(matched_drivers));
 }
 
 zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
@@ -1563,15 +1387,15 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_
   }
 
   // TODO: disallow if we're in the middle of enumeration, etc
-  zx::status<std::vector<MatchedDriver>> result = MatchDevice(dev, drvlibname);
+  zx::status<std::vector<MatchedDriver>> result =
+      bind_driver_manager_->GetMatchingDrivers(dev, drvlibname);
   if (!result.is_ok()) {
     return result.error_value();
   }
 
   auto drivers = std::move(result.value());
   for (auto& driver : drivers) {
-    zx_status_t status =
-        BindDriverToDevice(dev, driver, fit::bind_member(this, &Coordinator::AttemptBind));
+    zx_status_t status = bind_driver_manager_->BindDriverToDevice(driver, dev);
     if (status != ZX_OK) {
       return status;
     }

@@ -41,6 +41,8 @@ source_set("lib") {
   sources = [
     "base_package_resolver.cc",
     "base_package_resolver.h",
+    "bind_driver_manager.cc",
+    "bind_driver_manager.h",
     "binding.cc",
     "binding_internal.h",
     "component_lifecycle.cc",

@@ -34,8 +34,8 @@ bool match_bind_rules(const uint8_t* bytecode, const zx_device_prop_t* props,
     memcpy(str_properties.data(), str_props, sizeof(str_props[0]) * str_props_sz);
   }
 
-  return driver_is_bindable(&driver, protocol_id, std::move(properties), std::move(str_properties),
-                            autobind);
+  return can_driver_bind(&driver, protocol_id, std::move(properties), std::move(str_properties),
+                         autobind);
 }
 
 TEST(BindingV2Test, SingleAbortInstruction) {

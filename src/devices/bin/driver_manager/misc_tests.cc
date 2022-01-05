@@ -313,7 +313,8 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
         BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ROOT),
     };
     auto root_drv = make_fake_driver(root_drv_bind);
-    ASSERT_OK(coordinator.BindDriver(root_drv.get(), CallOnce{__LINE__}));
+    coordinator.bind_driver_manager()->set_attempt_bind(CallOnce{__LINE__});
+    ASSERT_OK(coordinator.BindDriver(root_drv.get()));
   }
 
   {
@@ -322,7 +323,8 @@ TEST(MiscTestCase, BindDriversForBuiltins) {
         BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     };
     auto root_drv = make_fake_driver(root_drv_bind);
-    ASSERT_OK(coordinator.BindDriver(root_drv.get(), CallOnce{__LINE__}));
+    coordinator.bind_driver_manager()->set_attempt_bind(CallOnce{__LINE__});
+    ASSERT_OK(coordinator.BindDriver(root_drv.get()));
   }
 }
 

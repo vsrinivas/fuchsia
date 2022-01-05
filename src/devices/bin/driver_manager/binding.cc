@@ -116,9 +116,9 @@ bool EvaluateBindProgram(BindProgramContext* ctx) {
 
 }  // namespace internal
 
-bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
-                        const fbl::Array<const zx_device_prop_t>& props,
-                        const fbl::Array<const StrProperty>& str_props, bool autobind) {
+bool can_driver_bind(const Driver* drv, uint32_t protocol_id,
+                     const fbl::Array<const zx_device_prop_t>& props,
+                     const fbl::Array<const StrProperty>& str_props, bool autobind) {
   if (drv->bytecode_version == 1) {
     auto* binding = std::get_if<std::unique_ptr<zx_bind_inst_t[]>>(&drv->binding);
     if (!binding && drv->binding_size > 0) {
