@@ -255,7 +255,10 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
         data_directory: ServerEnd<DirectoryMarker>,
     ) -> Result<(), faccount::Error> {
         match &*self.state.lock().await {
-            State::Locked => Err(faccount::Error::FailedPrecondition),
+            State::Locked => {
+                warn!("get_data_directory: account is locked");
+                Err(faccount::Error::FailedPrecondition)
+            }
             State::Unlocked { minfs, .. } => minfs
                 .root_dir()
                 .open(
@@ -267,7 +270,10 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
                     DEFAULT_DIR,
                     ServerEnd::new(data_directory.into_channel()),
                 )
-                .map_err(|_| faccount::Error::Resource),
+                .map_err(|err| {
+                    error!("get_data_directory: couldn't open data dir out of minfs: {}", err);
+                    faccount::Error::Resource
+                }),
         }
     }
 }

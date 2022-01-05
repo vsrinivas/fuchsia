@@ -16,7 +16,7 @@ use fidl_fuchsia_identity_account::{
     self as faccount, AccountManagerRequest, AccountManagerRequestStream, AccountMarker,
 };
 use futures::{lock::Mutex, prelude::*};
-use log::{error, warn};
+use log::{error, info, warn};
 use std::{collections::HashMap, sync::Arc};
 
 pub type AccountId = u64;
@@ -198,6 +198,19 @@ where
         password: &str,
         server_end: ServerEnd<AccountMarker>,
     ) -> Result<(), faccount::Error> {
+        // Load metadata from account metadata store.
+        // If account metadata missing, there's no way to get the account, return NotFound.
+        let account_metadata = {
+            let ams_locked = self.account_metadata_store.lock().await;
+            ams_locked.load(&id).await?.ok_or_else(|| {
+                warn!(
+                    "get_account: requested account ID {} not found in account metadata store",
+                    id
+                );
+                faccount::Error::NotFound
+            })?
+        };
+
         // Since we directly use a singleton partition below, and that partition is associated with
         // GLOBAL_ACCOUNT_ID, we should make sure that we don't allow any other account IDs to be
         // used here.
@@ -205,15 +218,9 @@ where
             // We prefer Internal to NotFound here because we still return the account ID in
             // get_account_ids, and it's more that account_manager's policy layer is forbidding its
             // use than that we failed to find the account ID.
+            warn!("get_account: rejecting unexpected account ID {} in account metadata store", id);
             return Err(faccount::Error::Internal);
         }
-
-        // Load metadata from account metadata store.
-        // If account metadata missing, there's no way to get the account, return NotFound.
-        let account_metadata = {
-            let ams_locked = self.account_metadata_store.lock().await;
-            ams_locked.load(&id).await?.ok_or_else(|| faccount::Error::NotFound)?
-        };
 
         // If account metadata present, derive key (using the appropriate scheme for the
         // AccountMetadata instance).
@@ -241,6 +248,11 @@ where
                     }
                     CheckNewClientResult::UnlockedDifferentKey => {
                         // The account is unsealed but the keys don't match.
+                        warn!(
+                            "get_account: account ID {} is already unsealed, but an incorrect \
+                              password was given",
+                            id
+                        );
                         return Err(faccount::Error::FailedAuthentication);
                     }
                 }
@@ -248,12 +260,17 @@ where
             Some(AccountState::Provisioning(_)) => {
                 // This account is in the process of being provisioned, treat it like it doesn't
                 // exist.
+                warn!("get_account: account ID {} is still provisioning", id);
                 return Err(faccount::Error::NotFound);
             }
             None => {
                 // There is no account associated with the ID in memory. Check if the account can
                 // be unsealed from disk.
-                let account = self.unseal_account(id, &key).await?;
+                let account = self.unseal_account(id, &key).await.map_err(|err| {
+                    warn!("get_account: failed to unseal account ID {}: {:?}", id, err);
+                    err
+                })?;
+                info!("get_account: unsealed account ID {}", id);
                 accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
                 account
             }
@@ -266,6 +283,7 @@ where
             )
             .await
             .map_err(|_| faccount::Error::Resource)?;
+        info!("get_account for account ID {} successful", id);
         Ok(())
     }
 
@@ -274,20 +292,43 @@ where
         id: AccountId,
         key: &Key,
     ) -> Result<Arc<Account<DM::EncryptedBlockDevice, DM::Minfs>>, faccount::Error> {
-        let account_ids = self.get_account_ids().await.map_err(|_| faccount::Error::NotFound)?;
+        let account_ids = self.get_account_ids().await.map_err(|err| {
+            warn!("unseal_account: couldn't list account IDs: {}", err);
+            faccount::Error::NotFound
+        })?;
         if account_ids.into_iter().find(|i| *i == id).is_none() {
             return Err(faccount::Error::NotFound);
         }
-        let block_device = self.find_account_partition().await.ok_or(faccount::Error::NotFound)?;
-        let encrypted_block = self.disk_manager.bind_to_encrypted_block(block_device).await?;
+        let block_device =
+            self.find_account_partition().await.ok_or(faccount::Error::NotFound).map_err(
+                |err| {
+                    error!("unseal_account: couldn't find account partition");
+                    err
+                },
+            )?;
+        let encrypted_block =
+            self.disk_manager.bind_to_encrypted_block(block_device).await.map_err(|err| {
+                error!(
+                    "unseal_account: couldn't bind zxcrypt driver to encrypted block device: {}",
+                    err
+                );
+                err
+            })?;
         let block_device = match encrypted_block.unseal(&key).await {
             Ok(block_device) => block_device,
-            Err(DiskError::FailedToUnsealZxcrypt(_)) => {
-                return Err(faccount::Error::FailedAuthentication)
+            Err(DiskError::FailedToUnsealZxcrypt(err)) => {
+                info!("unseal_account: failed to unseal zxcrypt (wrong password?): {}", err);
+                return Err(faccount::Error::FailedAuthentication);
             }
-            Err(err) => return Err(err.into()),
+            Err(err) => {
+                warn!("unseal_account: failed to unseal zxcrypt: {}", err);
+                return Err(err.into());
+            }
         };
-        let minfs = self.disk_manager.serve_minfs(block_device).await?;
+        let minfs = self.disk_manager.serve_minfs(block_device).await.map_err(|err| {
+            error!("unseal_account: couldn't serve minfs: {}", err);
+            err
+        })?;
         Ok(Arc::new(Account::new(key.clone(), encrypted_block, minfs)))
     }
 
@@ -298,7 +339,7 @@ where
     ) -> Result<AccountId, faccount::Error> {
         // Clients must provide a name in the account metadata.
         let name = account_metadata.name.as_ref().ok_or_else(|| {
-            warn!("Refusing to provision new account with no name in metadata");
+            error!("provision_new_account: refusing to provision account with no name in metadata");
             faccount::Error::InvalidRequest
         })?;
 
@@ -309,6 +350,11 @@ where
         } else {
             if password.len() < 8 {
                 // Passwords, if present, must be a minimum of 8 characters
+                warn!(
+                    "provision_new_account: refusing to provision account with password of \
+                      length {}",
+                    password.len()
+                );
                 return Err(faccount::Error::InvalidRequest);
             }
             AccountMetadata::new_scrypt(name.to_string())
@@ -316,17 +362,23 @@ where
         // For now, we only contemplate one account ID
         let account_id = GLOBAL_ACCOUNT_ID;
 
+        info!("provision_new_account: attempting to provision new account");
+
         // Acquire the lock for all accounts.
         let mut accounts_locked = self.accounts.lock().await;
 
         // Check if the global account is already provisioned or being provisioned.
         if let Some(state) = accounts_locked.get(&GLOBAL_ACCOUNT_ID) {
             match state {
-                AccountState::Provisioned(_) => return Err(faccount::Error::FailedPrecondition),
+                AccountState::Provisioned(_) => {
+                    warn!("provision_new_account: global account is already provisioned");
+                    return Err(faccount::Error::FailedPrecondition);
+                }
                 AccountState::Provisioning(lock) => {
                     // The account was being provisioned at some point. Try to acquire the lock.
                     if lock.try_lock().is_none() {
                         // The lock is locked, someone else is provisioning the account.
+                        warn!("provision_new_account: global account is already being provisioned");
                         return Err(faccount::Error::FailedPrecondition);
                     }
                     // The lock was unlocked, meaning the original provisioner failed.
@@ -334,7 +386,12 @@ where
             }
         }
 
-        let block = self.find_account_partition().await.ok_or(faccount::Error::NotFound)?;
+        let block = self.find_account_partition().await.ok_or(faccount::Error::NotFound).map_err(
+            |err| {
+                error!("provision_new_account: couldn't find account partition to provision");
+                err
+            },
+        )?;
 
         // Reserve the new account ID and mark it as being provisioned so other tasks don't try to
         // provision the same account or unseal it.
@@ -349,17 +406,53 @@ where
         drop(accounts_locked);
 
         // Provision the new account.
-        let key = metadata.derive_key(&password).await?;
+        let key = metadata.derive_key(&password).await.map_err(|err| {
+            error!("provision_new_account: key derivation failed during provisioning: {}", err);
+            err
+        })?;
         let res: Result<AccountId, ProvisionError> = async {
-            let encrypted_block = self.disk_manager.bind_to_encrypted_block(block).await?;
-            encrypted_block.format(&key).await?;
-            let unsealed_block = encrypted_block.unseal(&key).await?;
-            self.disk_manager.format_minfs(&unsealed_block).await?;
-            let minfs = self.disk_manager.serve_minfs(unsealed_block).await?;
+            let encrypted_block =
+                self.disk_manager.bind_to_encrypted_block(block).await.map_err(|err| {
+                    error!(
+                        "provision_new_account: couldn't bind zxcrypt driver to encrypted \
+                           block device: {}",
+                        err
+                    );
+                    err
+                })?;
+            encrypted_block.format(&key).await.map_err(|err| {
+                error!("provision_new_account: couldn't format encrypted block device: {}", err);
+                err
+            })?;
+            let unsealed_block = encrypted_block.unseal(&key).await.map_err(|err| {
+                error!("provision_new_account: couldn't unseal encrypted block device: {}", err);
+                err
+            })?;
+            self.disk_manager.format_minfs(&unsealed_block).await.map_err(|err| {
+                error!(
+                    "provision_new_account: couldn't format minfs on inner block device: {}",
+                    err
+                );
+                err
+            })?;
+            let minfs = self.disk_manager.serve_minfs(unsealed_block).await.map_err(|err| {
+                error!(
+                    "provision_new_account: couldn't serve minfs on inner unsealed block \
+                       device: {}",
+                    err
+                );
+                err
+            })?;
 
             // Save the new account metadata.  Drop the lock once done.
             let mut ams_locked = self.account_metadata_store.lock().await;
-            ams_locked.save(&account_id, &metadata).await?;
+            ams_locked.save(&account_id, &metadata).await.map_err(|err| {
+                error!(
+                    "provision_new_account: couldn't save account metadata for account ID {}",
+                    &account_id
+                );
+                err
+            })?;
             drop(ams_locked);
 
             // Register the newly provisioned and unsealed account.
@@ -372,13 +465,10 @@ where
             Ok(account_id)
         }
         .await;
-        match res {
-            Ok(id) => Ok(id),
-            Err(err) => {
-                error!("Failed to provision new account: {:?}", err);
-                Err(err.into())
-            }
-        }
+
+        let id = res?;
+        info!("provision_new_account: successfully provisioned new account {}", id);
+        Ok(id)
     }
 
     #[cfg(test)]
@@ -778,18 +868,17 @@ mod test {
 
     #[fuchsia::test]
     async fn test_get_account_unsupported_id() {
-        // All account IDs except for 1 are rejected with Internal.
-        const NON_EXISTENT_ACCOUNT_ID: u64 = 42;
+        // All account IDs except for 1 are rejected with Internal (but only if the account
+        // metadata is actually present for such a non-1 account).
+        const UNSUPPORTED_ACCOUNT_ID: u64 = 42;
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition_any_key());
         let account_metadata_store =
-            MemoryAccountMetadataStore::new().with_password_account(&GLOBAL_ACCOUNT_ID);
+            MemoryAccountMetadataStore::new().with_password_account(&UNSUPPORTED_ACCOUNT_ID);
         let account_manager = AccountManager::new(disk_manager, account_metadata_store);
         let (_, server) = fidl::endpoints::create_endpoints::<AccountMarker>().unwrap();
         assert_eq!(
-            account_manager
-                .get_account(NON_EXISTENT_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server)
-                .await,
+            account_manager.get_account(UNSUPPORTED_ACCOUNT_ID, TEST_SCRYPT_PASSWORD, server).await,
             Err(faccount::Error::Internal)
         );
     }
