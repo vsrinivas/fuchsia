@@ -127,8 +127,8 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<FileProxy, OpenError>
 
 /// Gracefully closes the file proxy from the remote end.
 pub async fn close(file: FileProxy) -> Result<(), CloseError> {
-    let status = file.close().await.map_err(CloseError::SendCloseRequest)?;
-    zx_status::Status::ok(status).map_err(CloseError::CloseError)
+    let result = file.close2().await.map_err(CloseError::SendCloseRequest)?;
+    result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
 
 /// Write the given data into a file at `path` in the current namespace. The path must be an

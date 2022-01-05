@@ -158,6 +158,8 @@ mod test {
             let request = file.try_next().await;
             if let Ok(Some(FileRequest::Close { responder })) = request {
                 responder.send(0).unwrap();
+            } else if let Ok(Some(FileRequest::Close2 { responder })) = request {
+                responder.send(&mut Ok(())).unwrap();
             } else {
                 panic!("did not get close request: {:?}", request)
             }

@@ -203,8 +203,8 @@ pub fn open_in_namespace(path: &str, flags: u32) -> Result<NodeProxy, OpenError>
 
 /// Gracefully closes the node proxy from the remote end.
 pub async fn close(node: NodeProxy) -> Result<(), CloseError> {
-    let status = node.close().await.map_err(CloseError::SendCloseRequest)?;
-    zx_status::Status::ok(status).map_err(CloseError::CloseError)
+    let result = node.close2().await.map_err(CloseError::SendCloseRequest)?;
+    result.map_err(|s| CloseError::CloseError(zx_status::Status::from_raw(s)))
 }
 
 /// Consume the first event from this NodeProxy's event stream, returning the proxy if it is
