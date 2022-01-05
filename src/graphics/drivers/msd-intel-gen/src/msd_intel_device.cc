@@ -705,12 +705,21 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
   if (context->killed())
     return DRET_MSG(MAGMA_STATUS_CONTEXT_KILLED, "Context killed");
 
-  EngineCommandStreamer* command_streamer = render_engine_cs_.get();
+  auto context_command_streamer = context->GetTargetCommandStreamer();
+  DASSERT(context_command_streamer);
 
-  if (batch->IsCommandBuffer() && (static_cast<CommandBuffer*>(batch.get())->GetFlags() &
-                                   kMagmaIntelGenCommandBufferForVideo)) {
-    command_streamer = video_command_streamer_.get();
+  EngineCommandStreamer* command_streamer = nullptr;
+
+  switch (*context_command_streamer) {
+    case RENDER_COMMAND_STREAMER:
+      command_streamer = render_engine_cs_.get();
+      break;
+    case VIDEO_COMMAND_STREAMER:
+      command_streamer = video_command_streamer_.get();
+      break;
   }
+
+  DASSERT(command_streamer);
 
   if (!context->IsInitializedForEngine(command_streamer->id())) {
     if (!InitContextForEngine(context.get(), command_streamer))

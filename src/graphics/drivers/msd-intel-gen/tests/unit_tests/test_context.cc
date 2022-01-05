@@ -7,6 +7,7 @@
 #include <mock/mock_bus_mapper.h>
 
 #include "address_space.h"
+#include "magma_intel_gen_defs.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "ringbuffer.h"
@@ -116,101 +117,6 @@ class TestContext {
     EXPECT_EQ(cpu_addr, context->GetCachedContextBufferCpuAddr(RENDER_COMMAND_STREAMER));
   }
 
-  static void SubmitCommandBuffer(uint32_t command_buffer_count, uint32_t semaphore_count) {
-    DLOG("SubmitCommandBuffer command_buffer_count %u semaphore_count %u", command_buffer_count,
-         semaphore_count);
-
-    class ConnectionOwner : public MsdIntelConnection::Owner {
-     public:
-      ConnectionOwner(std::function<void(std::unique_ptr<CommandBuffer> command_buffer)> callback)
-          : callback_(callback) {
-        address_space_owner_ = std::make_unique<TestContext::AddressSpaceOwner>();
-      }
-
-      magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
-        DASSERT(batch->IsCommandBuffer());
-        auto command_buffer = static_cast<CommandBuffer*>(batch.release());
-        callback_(std::unique_ptr<CommandBuffer>(command_buffer));
-        return MAGMA_STATUS_OK;
-      }
-
-      void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}
-
-      magma::PlatformBusMapper* GetBusMapper() override {
-        return address_space_owner_->GetBusMapper();
-      }
-
-      std::function<void(std::unique_ptr<CommandBuffer>)> callback_;
-      std::unique_ptr<magma::PlatformSemaphore> semaphore_;
-      std::unique_ptr<AddressSpaceOwner> address_space_owner_;
-    };
-
-    std::vector<std::unique_ptr<CommandBuffer>> submitted_command_buffers;
-    auto finished_semaphore =
-        std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
-
-    auto owner = std::make_unique<ConnectionOwner>(
-        [&submitted_command_buffers, finished_semaphore,
-         command_buffer_count](std::unique_ptr<CommandBuffer> command_buffer) {
-          submitted_command_buffers.push_back(std::move(command_buffer));
-          if (submitted_command_buffers.size() == command_buffer_count)
-            finished_semaphore->Signal();
-        });
-
-    auto connection =
-        std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), 0u));
-    auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
-
-    auto context = std::make_shared<MsdIntelContext>(address_space, connection);
-
-    std::vector<std::unique_ptr<CommandBuffer>> command_buffers;
-    std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
-
-    for (uint32_t i = 0; i < command_buffer_count; i++) {
-      // Don't need a fully initialized command buffer
-      std::shared_ptr<MsdIntelBuffer> command_buffer_content =
-          MsdIntelBuffer::Create(PAGE_SIZE, "test");
-      magma_command_buffer* command_buffer_desc;
-      ASSERT_TRUE(command_buffer_content->platform_buffer()->MapCpu(
-          reinterpret_cast<void**>(&command_buffer_desc)));
-
-      command_buffer_desc->resource_count = 0;
-      command_buffer_desc->batch_buffer_resource_index = 0;
-      command_buffer_desc->batch_start_offset = 0;
-      command_buffer_desc->wait_semaphore_count = 0;
-      command_buffer_desc->signal_semaphore_count = 0;
-      command_buffer_desc->flags = 0;
-
-      std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
-      for (uint32_t i = 0; i < semaphore_count; i++) {
-        auto semaphore =
-            std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
-        wait_semaphores.push_back(semaphore);
-        semaphores.push_back(semaphore);
-      }
-      command_buffer_desc->wait_semaphore_count = semaphore_count;
-
-      auto command_buffer =
-          TestCommandBuffer::Create(command_buffer_content, context, {}, wait_semaphores, {});
-      ASSERT_NE(command_buffer, nullptr);
-
-      command_buffers.push_back(std::move(command_buffer));
-
-      magma::Status status = context->SubmitCommandBuffer(std::move(command_buffers[i]));
-      EXPECT_EQ(MAGMA_STATUS_OK, status.get());
-      EXPECT_EQ(submitted_command_buffers.empty(), semaphore_count > 0);
-    }
-
-    for (uint32_t i = 0; i < semaphores.size(); i++) {
-      semaphores[i]->Signal();
-    }
-
-    EXPECT_TRUE(finished_semaphore->Wait(5000));
-    ASSERT_EQ(submitted_command_buffers.size(), command_buffers.size());
-
-    context->Shutdown();
-  }
-
  private:
   static MsdIntelBuffer* get_buffer(MsdIntelContext* context, EngineCommandStreamerId id) {
     return context->get_context_buffer(id);
@@ -238,10 +144,133 @@ TEST(MsdIntelContext, GlobalMap) {
   test.Map(true);
 }
 
-TEST(MsdIntelContext, SubmitCommandBuffer) {
-  TestContext::SubmitCommandBuffer(1, 0);
-  TestContext::SubmitCommandBuffer(1, 1);
-  TestContext::SubmitCommandBuffer(2, 1);
-  TestContext::SubmitCommandBuffer(3, 2);
-  TestContext::SubmitCommandBuffer(2, 5);
+struct Param {
+  uint32_t command_buffer_count;
+  uint32_t semaphore_count;
+  uint64_t flags;
+};
+
+class MsdIntelContextSubmit : public testing::TestWithParam<Param> {
+ public:
+  class ConnectionOwner : public MsdIntelConnection::Owner {
+   public:
+    ConnectionOwner(std::function<void(std::unique_ptr<CommandBuffer> command_buffer)> callback)
+        : callback_(callback) {
+      address_space_owner_ = std::make_unique<TestContext::AddressSpaceOwner>();
+    }
+
+    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
+      DASSERT(batch->IsCommandBuffer());
+      auto command_buffer = static_cast<CommandBuffer*>(batch.release());
+      callback_(std::unique_ptr<CommandBuffer>(command_buffer));
+      return MAGMA_STATUS_OK;
+    }
+
+    void DestroyContext(std::shared_ptr<MsdIntelContext> client_context) override {}
+
+    magma::PlatformBusMapper* GetBusMapper() override {
+      return address_space_owner_->GetBusMapper();
+    }
+
+    std::function<void(std::unique_ptr<CommandBuffer>)> callback_;
+    std::unique_ptr<magma::PlatformSemaphore> semaphore_;
+    std::unique_ptr<AddressSpaceOwner> address_space_owner_;
+  };
+};
+
+TEST_P(MsdIntelContextSubmit, SubmitCommandBuffer) {
+  Param p = GetParam();
+
+  DLOG("SubmitCommandBuffer command_buffer_count %u semaphore_count %u", p.command_buffer_count,
+       p.semaphore_count);
+
+  std::vector<std::unique_ptr<CommandBuffer>> submitted_command_buffers;
+  auto finished_semaphore =
+      std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+
+  auto owner =
+      std::make_unique<ConnectionOwner>([&submitted_command_buffers, finished_semaphore,
+                                         p](std::unique_ptr<CommandBuffer> command_buffer) {
+        submitted_command_buffers.push_back(std::move(command_buffer));
+        if (submitted_command_buffers.size() == p.command_buffer_count)
+          finished_semaphore->Signal();
+      });
+
+  auto connection =
+      std::shared_ptr<MsdIntelConnection>(MsdIntelConnection::Create(owner.get(), 0u));
+  auto address_space = std::make_shared<AllocatingAddressSpace>(owner.get(), 0, PAGE_SIZE);
+
+  auto context = std::make_shared<MsdIntelContext>(address_space, connection);
+
+  std::vector<std::unique_ptr<CommandBuffer>> command_buffers;
+  std::vector<std::shared_ptr<magma::PlatformSemaphore>> semaphores;
+
+  for (uint32_t i = 0; i < p.command_buffer_count; i++) {
+    // Don't need a fully initialized command buffer
+    std::shared_ptr<MsdIntelBuffer> command_buffer_content =
+        MsdIntelBuffer::Create(PAGE_SIZE, "test");
+    magma_command_buffer* command_buffer_desc;
+    ASSERT_TRUE(command_buffer_content->platform_buffer()->MapCpu(
+        reinterpret_cast<void**>(&command_buffer_desc)));
+
+    command_buffer_desc->resource_count = 0;
+    command_buffer_desc->batch_buffer_resource_index = 0;
+    command_buffer_desc->batch_start_offset = 0;
+    command_buffer_desc->wait_semaphore_count = 0;
+    command_buffer_desc->signal_semaphore_count = 0;
+    command_buffer_desc->flags = p.flags;
+
+    std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores;
+    for (uint32_t i = 0; i < p.semaphore_count; i++) {
+      auto semaphore =
+          std::shared_ptr<magma::PlatformSemaphore>(magma::PlatformSemaphore::Create());
+      wait_semaphores.push_back(semaphore);
+      semaphores.push_back(semaphore);
+    }
+    command_buffer_desc->wait_semaphore_count = p.semaphore_count;
+
+    auto command_buffer =
+        TestCommandBuffer::Create(command_buffer_content, context, {}, wait_semaphores, {});
+    ASSERT_NE(command_buffer, nullptr);
+
+    command_buffers.push_back(std::move(command_buffer));
+
+    magma::Status status = context->SubmitCommandBuffer(std::move(command_buffers[i]));
+
+    EXPECT_EQ(MAGMA_STATUS_OK, status.get());
+    EXPECT_TRUE(context->GetTargetCommandStreamer());
+    if (p.flags == kMagmaIntelGenCommandBufferForVideo) {
+      EXPECT_EQ(*context->GetTargetCommandStreamer(), VIDEO_COMMAND_STREAMER);
+    } else {
+      EXPECT_EQ(*context->GetTargetCommandStreamer(), RENDER_COMMAND_STREAMER);
+    }
+    EXPECT_EQ(submitted_command_buffers.empty(), p.semaphore_count > 0);
+  }
+
+  for (uint32_t i = 0; i < semaphores.size(); i++) {
+    semaphores[i]->Signal();
+  }
+
+  EXPECT_TRUE(finished_semaphore->Wait(5000));
+  ASSERT_EQ(submitted_command_buffers.size(), command_buffers.size());
+
+  context->Shutdown();
 }
+
+INSTANTIATE_TEST_SUITE_P(MsdIntelContextSubmit, MsdIntelContextSubmit,
+                         testing::Values(Param{.command_buffer_count = 1, .semaphore_count = 0},
+                                         Param{.command_buffer_count = 1, .semaphore_count = 1},
+                                         Param{.command_buffer_count = 2, .semaphore_count = 1},
+                                         Param{.command_buffer_count = 3, .semaphore_count = 2},
+                                         Param{.command_buffer_count = 2, .semaphore_count = 5},
+                                         Param{.command_buffer_count = 1,
+                                               .semaphore_count = 0,
+                                               .flags = kMagmaIntelGenCommandBufferForVideo}),
+                         [](testing::TestParamInfo<Param> info) {
+                           char name[128];
+                           snprintf(name, sizeof(name),
+                                    "command_buffer_count_%u_semaphore_count_%u_flags_0x%lx",
+                                    info.param.command_buffer_count, info.param.semaphore_count,
+                                    info.param.flags);
+                           return std::string(name);
+                         });

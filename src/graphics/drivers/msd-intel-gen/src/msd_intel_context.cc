@@ -6,6 +6,7 @@
 
 #include "address_space.h"
 #include "command_buffer.h"
+#include "magma_intel_gen_defs.h"
 #include "msd_intel_connection.h"
 #include "platform_logger.h"
 #include "platform_thread.h"
@@ -124,6 +125,25 @@ magma::Status MsdIntelContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer
   TRACE_DURATION("magma", "SubmitCommandBuffer");
   uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
   TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
+
+  {
+    auto context_command_streamer = GetTargetCommandStreamer();
+
+    EngineCommandStreamerId desired_command_streamer =
+        (command_buffer->GetFlags() & kMagmaIntelGenCommandBufferForVideo)
+            ? VIDEO_COMMAND_STREAMER
+            : RENDER_COMMAND_STREAMER;
+
+    if (context_command_streamer) {
+      if (*context_command_streamer != desired_command_streamer)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "Context command streamer %d != desired command streamer %d",
+                        *context_command_streamer, desired_command_streamer);
+
+    } else {
+      SetTargetCommandStreamer(desired_command_streamer);
+    }
+  }
 
   {
     std::shared_ptr<MsdIntelContext> context = command_buffer->GetContext().lock();

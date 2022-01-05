@@ -36,6 +36,17 @@ class MsdIntelContext {
 
   ~MsdIntelContext();
 
+  // The context has a single target command streamer so that mapping release batches and pipeline
+  // fence batches are processed by the appropriate command streamer.
+  void SetTargetCommandStreamer(EngineCommandStreamerId id) {
+    DASSERT(!target_command_streamer_);
+    target_command_streamer_ = id;
+  }
+
+  std::optional<EngineCommandStreamerId> GetTargetCommandStreamer() {
+    return target_command_streamer_;
+  }
+
   void SetEngineState(EngineCommandStreamerId id, std::unique_ptr<MsdIntelBuffer> context_buffer,
                       std::unique_ptr<Ringbuffer> ringbuffer);
 
@@ -100,6 +111,7 @@ class MsdIntelContext {
     void* context_buffer_cpu_addr = nullptr;
   };
 
+  std::optional<EngineCommandStreamerId> target_command_streamer_;
   std::map<EngineCommandStreamerId, PerEngineState> state_map_;
   std::queue<std::unique_ptr<MappedBatch>> pending_batch_queue_;
   std::shared_ptr<AddressSpace> address_space_;

@@ -90,6 +90,8 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     // At least one context needed for callback to be invoked
     auto context = MsdIntelConnection::CreateContext(connection);
 
+    context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
+
     connection->SetNotificationCallback(KillCallbackStatic, this);
 
     std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
@@ -129,6 +131,10 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     std::vector<std::shared_ptr<MsdIntelContext>> contexts;
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
     contexts.push_back(MsdIntelConnection::CreateContext(connection));
+
+    for (auto& context : contexts) {
+      context->SetTargetCommandStreamer(RENDER_COMMAND_STREAMER);
+    }
 
     std::shared_ptr<MsdIntelBuffer> buffer = MsdIntelBuffer::Create(PAGE_SIZE, "test");
     std::shared_ptr<GpuMapping> mapping;

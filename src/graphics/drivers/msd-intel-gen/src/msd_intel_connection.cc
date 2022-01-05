@@ -154,6 +154,9 @@ void MsdIntelConnection::ReleaseBuffer(
 
     // Send pipeline fence batch for each context which may have queued command buffers.
     for (auto& context : context_list_) {
+      if (!context->GetTargetCommandStreamer())
+        continue;
+
       auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
 
       magma::Status status =
