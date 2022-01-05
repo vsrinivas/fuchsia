@@ -96,6 +96,8 @@ def create_test_workspace(sdk, output, workspace_info):
 
     # Tests that generated FIDL bindings are usable.
     for library in workspace_info.fidl_libraries:
+        # The zx library is special - we don't generate C++ bindings for it.
+        # TODO(https://fxbug.dev/90838): Make zx library less special-cased.
         if library == 'zx': continue
         dir = os.path.join(output, 'fidl', library)
         write_file(make_dir(os.path.join(dir, 'BUILD')), 'fidl_build', {
