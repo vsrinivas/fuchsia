@@ -29,8 +29,7 @@ FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp,
   ZX_ASSERT(paver_ != nullptr);
 
   if (!sysinfo_) {
-    constexpr char kSysInfoPath[] = "/dev/sys/platform";
-    zx::status client_end = service::Connect<fuchsia_sysinfo::SysInfo>(kSysInfoPath);
+    zx::status client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
     if (client_end.is_ok()) {
       sysinfo_ = std::move(client_end.value());
     }

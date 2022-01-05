@@ -8,7 +8,6 @@ group("bootstrap") {
   deps = [
     ":zedboot",
     "//src/bringup/bin/run-vc",
-    "//src/bringup/bin/sysinfo",
     "//src/bringup/bin/watch",
   ]
 }
@@ -31,6 +30,7 @@ group("zedboot") {
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/pwrbtn-monitor:bootfs",
     "//src/bringup/bin/svchost:bootfs",
+    "//src/bringup/bin/sysinfo",
     "//src/bringup/bin/sysinfo:bootfs",
     "//src/bringup/bin/waitfor",
   ]

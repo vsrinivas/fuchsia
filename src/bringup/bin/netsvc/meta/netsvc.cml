@@ -5,11 +5,11 @@
         binary: "bin/netsvc",
     },
     use: [
-        // For ethernet and network device access.
+        // For ethernet device access.
         {
-            directory: "dev",
+            directory: "dev-class-ethernet",
             rights: [ "rw*" ],
-            path: "/dev",
+            path: "/dev/class/ethernet",
         },
 
         // For netcp access.
