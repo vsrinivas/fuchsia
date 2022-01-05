@@ -320,7 +320,10 @@
         {
             storage: "custom_artifacts",
             from: "self",
-            to: "#tests",
+            to: [
+                "#system-tests",
+                "#tests",
+            ],
         },
 
         // temporary solution for tests that depend on having admin rights on
