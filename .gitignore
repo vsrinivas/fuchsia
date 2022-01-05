@@ -67,6 +67,10 @@ tables_generator_tests_*.txt
 /zircon/prebuilt/config.gni
 /zircon/prebuilt/downloads/
 
+### Infra files
+# These files may exist in a checkout on an Infra VM but not locally
+/.GUARD_FILE
+
 ### Directories to be ignored across the tree
 .cipd/
 .idea/
