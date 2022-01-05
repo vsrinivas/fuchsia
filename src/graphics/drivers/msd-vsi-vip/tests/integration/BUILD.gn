@@ -40,6 +40,7 @@ fuchsia_unittest_package("test-magma-vsi-exec") {
 test("msd_vsi_vip_integration_tests") {
   sources = [
     "run_unit_tests.cc",
+    "test_vsi_icd.cc",
     "test_vsi_query.cc",
   ]
 
@@ -50,6 +51,7 @@ test("msd_vsi_vip_integration_tests") {
     "//src/graphics/lib/magma/src/magma_util/platform:buffer",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -9,6 +9,8 @@
 #include <chrono>
 #include <thread>
 
+#include <fbl/string_printf.h>
+
 #include "address_space_layout.h"
 #include "command_buffer.h"
 #include "instructions.h"
@@ -1292,4 +1294,23 @@ magma_status_t msd_device_query_returns_buffer(msd_device_t* device, uint64_t id
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {
   MsdVsiDevice::cast(device)->DumpStatusToLog();
+}
+
+magma_status_t msd_device_get_icd_list(struct msd_device_t* abi_device, uint64_t count,
+                                       msd_icd_info_t* icd_info_out, uint64_t* actual_count_out) {
+  const char* kSuffixes[] = {"_test", ""};
+  if (icd_info_out && count < std::size(kSuffixes)) {
+    return MAGMA_STATUS_INVALID_ARGS;
+  }
+  *actual_count_out = std::size(kSuffixes);
+  if (icd_info_out) {
+    for (uint32_t i = 0; i < std::size(kSuffixes); i++) {
+      strcpy(icd_info_out[i].component_url,
+             fbl::StringPrintf("fuchsia-pkg://fuchsia.com/libopencl_vsi_vip%s#meta/opencl.cm",
+                               kSuffixes[i])
+                 .c_str());
+      icd_info_out[i].support_flags = ICD_SUPPORT_FLAG_OPENCL;
+    }
+  }
+  return MAGMA_STATUS_OK;
 }
