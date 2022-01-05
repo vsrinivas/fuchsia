@@ -462,16 +462,24 @@ toolchain.
 
 For instance, in the Fuchsia Source Tree we would expect the configuration:
 
-   (*, library zx) → kazoo (low_level_cpp, not library zx) → fidlgen_llcpp
-   (high_level_cpp, not library zx) → fidlgen_hlcpp (rust, not library zx) →
-   fidlgen_rust (docs, *) → fidldoc
+```
+(*, library zx) → kazoo
+(low_level_cpp, not library zx) → fidlgen_llcpp
+(high_level_cpp, not library zx) → fidlgen_hlcpp
+(rust, not library zx) → fidlgen_rust
+(docs, *) → fidldoc
+```
 
 With the [unified C++
 bindings](/docs/contribute/roadmap/2020/overview.md#unifying-fidl-cpp-bindings),
 this configuration would change to:
 
-   (*, library zx) → kazoo (cpp, not library zx) → fidlgen_cpp (rust, not
-   library zx) → fidlgen_rust (docs, *) → fidldoc
+```
+(*, library zx) → kazoo
+(cpp, not library zx) → fidlgen_cpp
+(rust, not library zx) → fidlgen_rust
+(docs, *) → fidldoc
+```
 
 #### Impact on incremental compilation
 
