@@ -267,58 +267,6 @@ constexpr auto BadAlignmentTest = [](auto&& elf) {
 
 TEST(ElfldltlPhdrTests, BadAlignment) { TestAllFormats(BadAlignmentTest); }
 
-constexpr auto UnalignedVaddrTest = [](auto&& elf) {
-  using Elf = std::decay_t<decltype(elf)>;
-  using Phdr = typename Elf::Phdr;
-
-  constexpr Phdr kPhdrs[] = {
-      // OK
-      {
-          .type = ElfPhdrType::kLoad,
-          .offset = kAlign,
-          .vaddr = kAlign,
-          .align = kAlign,
-      },
-      // OK
-      {
-          .type = ElfPhdrType::kDynamic,
-          .vaddr = 0x123abc,
-          .align = 0,
-      },
-      {
-          .type = ElfPhdrType::kInterp,
-          .offset = kAlign - 1,
-          .vaddr = kAlign - 1,
-          .align = kAlign,
-      },
-      {
-          .type = ElfPhdrType::kNote,
-          .offset = kAlign + 1,
-          .vaddr = kAlign + 1,
-          .align = kAlign,
-      },
-  };
-
-  std::vector<std::string> errors;
-  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
-  std::optional<Phdr> load, dynamic, interp, note;
-  EXPECT_TRUE(
-      elfldltl::DecodePhdrs(diag, cpp20::span(kPhdrs),  //
-                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kLoad>(load),
-                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kDynamic>(dynamic),
-                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kInterp>(interp),
-                            elfldltl::PhdrSingletonObserver<Elf, ElfPhdrType::kNote>(note)));
-
-  EXPECT_EQ(2, diag.errors());
-  EXPECT_EQ(0, diag.warnings());
-
-  ASSERT_EQ(errors.size(), 2);
-  EXPECT_STR_EQ(errors[0], "PT_INTERP header has `p_vaddr % p_align != 0`");
-  EXPECT_STR_EQ(errors[1], "PT_NOTE header has `p_vaddr % p_align != 0`");
-};
-
-TEST(ElfldltlPhdrTests, UnalignedVaddr) { TestAllFormats(UnalignedVaddrTest); }
-
 constexpr auto OffsetNotEquivVaddrTest = [](auto&& elf) {
   using Elf = std::decay_t<decltype(elf)>;
   using Phdr = typename Elf::Phdr;
@@ -736,6 +684,36 @@ constexpr auto MetadataObserverNoPhdrTest = [](auto&& elf) {
 };
 
 TEST(ElfldltlPhdrTests, MetadataObserverNoPhdr) { TestAllFormats(MetadataObserverNoPhdrTest); }
+
+constexpr auto MetadataObserverUnalignedVaddrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Phdr = typename Elf::Phdr;
+
+  constexpr Phdr kPhdrs[] = {
+      {
+          .type = ElfPhdrType::kInterp,
+          .offset = kAlign + 1,
+          .vaddr = kAlign + 1,
+          .align = kAlign,
+      },
+  };
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+  std::optional<Phdr> phdr;
+  EXPECT_TRUE(elfldltl::DecodePhdrs(
+      diag, cpp20::span(kPhdrs), elfldltl::PhdrMetadataObserver<Elf, ElfPhdrType::kInterp>(phdr)));
+
+  EXPECT_EQ(1, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+
+  ASSERT_EQ(errors.size(), 1);
+  EXPECT_STR_EQ(errors[0], "PT_INTERP header has `p_vaddr % p_align != 0`");
+};
+
+TEST(ElfldltlPhdrTests, MetadataObserverUnalignedVaddr) {
+  TestAllFormats(MetadataObserverUnalignedVaddrTest);
+}
 
 constexpr auto MetadataObserverFileszNotEqMemszTest = [](auto&& elf) {
   using Elf = std::decay_t<decltype(elf)>;

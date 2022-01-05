@@ -90,11 +90,11 @@ constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
         return false;
       }
     }
-    if (phdr.vaddr() % align != 0) {
-      if (ok = diag.FormatError(Error::kUnalignedVaddr); !ok) {
-        return false;
-      }
-    }
+
+    // While not a general spec'd constraint, this is the case in practice:
+    // either this a explicit requirement or the stronger constraint of
+    // `p_offset` and `p_vaddr` being `p_align`-aligned (e.g., zero) is
+    // expected to hold.
     if (phdr.offset() % align != phdr.vaddr() % align) {
       if (ok = diag.FormatError(Error::kOffsetNotEquivVaddr); !ok) {
         return false;
@@ -254,6 +254,14 @@ class PhdrMetadataObserver : public PhdrSingletonObserver<Elf, Type> {
 
     if (alignof(EntryType) > phdr->align() &&  //
         !diag.FormatError(PhdrError::kIncompatibleEntryAlignment)) {
+      return false;
+    }
+
+    // Note that `p_vaddr % p_align == 0` implies that
+    // `p_offset % p_align == 0` by virtue of the general equivalence check
+    // made in DecodePhdrs().
+    if (phdr->vaddr() % phdr->align() != 0 &&  //
+        !diag.FormatError(PhdrError::kUnalignedVaddr)) {
       return false;
     }
 
