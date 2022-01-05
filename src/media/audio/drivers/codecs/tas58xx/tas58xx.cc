@@ -38,6 +38,7 @@ constexpr uint8_t kRegDeviceCtrl1Bits1SpwMode  = 0x01;
 constexpr uint8_t kRegSapCtrl1Bits16bits       = 0x00;
 constexpr uint8_t kRegSapCtrl1Bits32bits       = 0x03;
 constexpr uint8_t kRegSapCtrl1BitsTdmSmallFs   = 0x14;
+constexpr uint8_t kRegDeviceCtrl2BitsDeepSleep = 0x00;
 constexpr uint8_t kRegDeviceCtrl2BitsHiZ       = 0x02;
 constexpr uint8_t kRegDeviceCtrl2BitsPlay      = 0x03;
 constexpr uint8_t kRegDieId                    = 0x67;
@@ -81,11 +82,21 @@ Tas58xx::Tas58xx(zx_device_t* device, const ddk::I2cChannel& i2c)
 
 zx_status_t Tas58xx::Stop() {
   fbl::AutoLock lock(&lock_);
-  return UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
+  // Datasheet states it is required to go to HiZ before going to Deep sleep when coming from Play.
+  zx_status_t status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsDeepSleep);
 }
 
 zx_status_t Tas58xx::Start() {
   fbl::AutoLock lock(&lock_);
+  // Datasheet states it is required to go to HiZ before going to Play when coming from Deep sleep.
+  zx_status_t status = UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsHiZ);
+  if (status != ZX_OK) {
+    return status;
+  }
   return UpdateReg(kRegDeviceCtrl2, 0x3, kRegDeviceCtrl2BitsPlay);
 }
 
@@ -130,6 +141,8 @@ zx_status_t Tas58xx::Reset() {
       }
     }
 
+    // Per datasheet, 5ms "for device settle down" after kRegDeviceCtrl2 is set to
+    // kRegDeviceCtrl2BitsHiZ before it is set to kRegDeviceCtrl2BitsPlay during startup.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
     const uint8_t kDefaultsEnd[][2] = {
@@ -310,6 +323,8 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
       return zx::error(status);
     }
   }
+  // No turn off/on delay in the datasheet. Only 5ms after going to HiZ when starting up.
+  // Hence we don't set turn_on_delay and turn_off_delay values.
   return zx::ok(CodecFormatInfo{});
 }
 

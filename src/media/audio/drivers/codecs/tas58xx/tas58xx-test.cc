@@ -541,9 +541,13 @@ TEST(Tas58xxTest, StopStart) {
   {
     // Reset with PBTL mode on.
     mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
-        {0x03, 0x02});  // Stop, go to HiZ.
+        {0x03, 0x02});  // Stop, first go to HiZ.
     mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
-        {0x03, 0x03});  // Start, go back to play mode.
+        {0x03, 0x00});  // Stop, go to deep sleep.
+    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+        {0x03, 0x02});  // Start, first go to HiZ.
+    mock_i2c.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+        {0x03, 0x03});  // Start, then go back to play mode.
     ASSERT_OK(client.Stop());
     ASSERT_OK(client.Start());
   }
