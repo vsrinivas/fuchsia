@@ -75,9 +75,6 @@ toc:
 - title: "Source code"
   section:
   - include: /docs/concepts/source_code/_toc.yaml
-- title: "System"
-  section:
-  - include: /docs/concepts/system/_toc.yaml
 - title: "Testing"
   section:
   - include: /docs/concepts/testing/_toc.yaml

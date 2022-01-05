@@ -80,8 +80,8 @@ toc:
     path: /docs/concepts/kernel/watchdog.md
   - title: "Kernel Thread Signaling"
     path: /docs/concepts/kernel/kernel_thread_signaling.md
-
-
 - title: "Entropy quality tests"
   path:  /docs/concepts/kernel/entropy_quality_tests.md
-
+- title: "Jitterentropy"
+  section:
+  - include: /docs/concepts/kernel/jitterentropy/_toc.yaml

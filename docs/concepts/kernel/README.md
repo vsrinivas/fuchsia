@@ -60,7 +60,7 @@ This page is a non-comprehensive index of the zircon documentation.
 
 + [Compile-time object collections](/docs/development/languages/c-cpp/compile_time_object_collections.md)
 + [ACPI debugging](/docs/development/debugging/acpi.md)
-+ [Entropy collection TODOs](/docs/concepts/system/jitterentropy/entropy_collection_todos.md)
++ [Entropy collection TODOs](/docs/concepts/kernel/jitterentropy/entropy_collection_todos.md)
 + [Memory usage analysis tools](/docs/development/kernel/memory/memory.md)
 + [Symbolizer](/docs/reference/kernel/symbolizer_markup.md)
 + [Relationship with LK](zx_and_lk.md)
