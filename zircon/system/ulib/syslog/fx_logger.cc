@@ -50,6 +50,7 @@ void fx_logger::ActivateFallback(int fallback_fd) {
   }
   ZX_DEBUG_ASSERT(fallback_fd >= -1);
   if (tagstr_.empty()) {
+    fbl::AutoLock tag_lock(&tags_mutex_);
     for (size_t i = 0; i < tags_.size(); i++) {
       if (tagstr_.empty()) {
         tagstr_ = tags_[i];
@@ -196,10 +197,13 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     if (tag) {
       syslog_backend::WriteKeyValue(&buffer, "tag", tag);
     }
-    for (size_t i = 0; i < tags_.size(); i++) {
-      size_t len = tags_[i].length();
-      ZX_DEBUG_ASSERT(len < 128);
-      syslog_backend::WriteKeyValue(&buffer, "tag", tags_[i].data());
+    {
+      fbl::AutoLock tag_lock(&tags_mutex_);
+      for (size_t i = 0; i < tags_.size(); i++) {
+        size_t len = tags_[i].length();
+        ZX_DEBUG_ASSERT(len < 128);
+        syslog_backend::WriteKeyValue(&buffer, "tag", tags_[i].data());
+      }
     }
     syslog_backend::EndRecord(&buffer);
     if (!syslog_backend::FlushRecord(&buffer)) {
@@ -243,10 +247,13 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     if (tag) {
       buf_ptr->WriteKeyValue("tag", tag);
     }
-    for (size_t i = 0; i < tags_.size(); i++) {
-      size_t len = tags_[i].length();
-      ZX_DEBUG_ASSERT(len < 128);
-      buf_ptr->WriteKeyValue("tag", tags_[i].data());
+    {
+      fbl::AutoLock tags_lock(&tags_mutex_);
+      for (size_t i = 0; i < tags_.size(); i++) {
+        size_t len = tags_[i].length();
+        ZX_DEBUG_ASSERT(len < 128);
+        buf_ptr->WriteKeyValue("tag", tags_[i].data());
+      }
     }
     if (buf_ptr->FlushRecord()) {
       return ZX_OK;
@@ -268,12 +275,18 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
 
   // Write tags
   size_t pos = 0;
-  for (size_t i = 0; i < tags_.size(); i++) {
-    size_t len = tags_[i].length();
-    ZX_DEBUG_ASSERT(len < 128);
-    packet.data[pos++] = static_cast<char>(len);
-    memcpy(packet.data + pos, tags_[i].c_str(), len);
-    pos += len;
+  {
+    fbl::AutoLock tag_lock(&tags_mutex_);
+    for (size_t i = 0; i < tags_.size(); i++) {
+      size_t len = tags_[i].length();
+      ZX_DEBUG_ASSERT(len < 128);
+      if (pos + 1 + len > sizeof(packet.data)) {
+        return ZX_ERR_OUT_OF_RANGE;
+      }
+      packet.data[pos++] = static_cast<char>(len);
+      memcpy(packet.data + pos, tags_[i].c_str(), len);
+      pos += len;
+    }
   }
   if (tag != NULL) {
     size_t len = strlen(tag);
@@ -446,7 +459,7 @@ zx_status_t fx_logger::SetTags(const char* const* tags, size_t ntags) {
   if (ntags > FX_LOG_MAX_TAGS) {
     return ZX_ERR_INVALID_ARGS;
   }
-
+  fbl::AutoLock tag_lock(&tags_mutex_);
   tags_.reset();
   tagstr_ = "";
 
@@ -460,9 +473,8 @@ zx_status_t fx_logger::SetTags(const char* const* tags, size_t ntags) {
       } else {
         tagstr_ = fbl::String::Concat({tagstr_, ", ", str});
       }
-    } else {
-      tags_.push_back(str);
     }
+    tags_.push_back(str);
   }
   return ZX_OK;
 }

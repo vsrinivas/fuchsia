@@ -12,6 +12,7 @@
 
 #include <atomic>
 
+#include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
@@ -49,6 +50,14 @@ struct fx_logger {
   }
 
   ~fx_logger() = default;
+
+  template <typename Callback>
+  void GetTags(const Callback& callback) {
+    fbl::AutoLock tag_lock(&tags_mutex_);
+    for (auto tag : tags_) {
+      callback(tag);
+    }
+  }
 
   zx_status_t VLogWrite(fx_log_severity_t severity, const char* tag, const char* format,
                         va_list args, const char* file = nullptr, uint32_t line = 0) {
@@ -99,7 +108,7 @@ struct fx_logger {
   std::atomic<uint32_t> dropped_logs_;
   std::atomic<int> logger_fd_ = -1;
   zx::socket socket_;
-  fbl::Vector<fbl::String> tags_;
+  fbl::Vector<fbl::String> tags_ __TA_GUARDED(tags_mutex_);
 
   // This field is just used to close fd when
   // logger object goes out of scope
@@ -107,6 +116,9 @@ struct fx_logger {
 
   // string representation to print in fallback mode
   fbl::String tagstr_;
+
+  // Mutex protecting tags
+  fbl::Mutex tags_mutex_;
 
   fbl::Mutex logger_mutex_;
 

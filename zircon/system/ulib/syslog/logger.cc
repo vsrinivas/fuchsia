@@ -176,6 +176,14 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
   return ZX_OK;
 }
 
+// Retrieves the tag at the specified index or nullptr if no
+// such tag exists.
+SYSLOG_EXPORT
+void fx_logger_get_tags(fx_logger_t* logger, void (*callback)(void* context, const char* tag),
+                        void* context) {
+  logger->GetTags([=](const fbl::String& tag) { callback(context, tag.c_str()); });
+}
+
 SYSLOG_EXPORT
 zx_status_t fx_logger_create(const fx_logger_config_t* config, fx_logger_t** out_logger) {
   return fx_logger_create_internal(config, out_logger, true);

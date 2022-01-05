@@ -208,6 +208,13 @@ zx_status_t fx_logger_log(fx_logger_t* logger, fx_log_severity_t severity, const
 zx_status_t fx_logger_log_with_source(fx_logger_t* logger, fx_log_severity_t severity,
                                       const char* tag, const char* file, int line, const char* msg);
 
+// Retrieves the list of tags. The callback function will be invoked
+// for each take. This function blocks until all tags have been returned.
+// The caller must not invoke any logging functions from within the callback
+// or this function will panic.
+void fx_logger_get_tags(fx_logger_t* logger, void (*callback)(void* context, const char* tag),
+                        void* context);
+
 __END_CDECLS
 
 #endif  // LIB_SYSLOG_LOGGER_H_

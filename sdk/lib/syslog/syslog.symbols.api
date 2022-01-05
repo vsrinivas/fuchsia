@@ -6,6 +6,7 @@ fx_logger_create_internal
 fx_logger_destroy
 fx_logger_get_connection_status
 fx_logger_get_min_severity
+fx_logger_get_tags
 fx_logger_log
 fx_logger_log_with_source
 fx_logger_logf

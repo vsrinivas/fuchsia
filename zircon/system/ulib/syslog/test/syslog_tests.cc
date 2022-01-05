@@ -194,6 +194,24 @@ TEST(SyslogTests, test_log_write_with_global_tag) {
   close(pipefd[1]);
 }
 
+TEST(SyslogTests, test_get_tags) {
+  int pipefd[2];
+  EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
+  const char* tags[] = {"gtag", "gTag"};
+  EXPECT_EQ(ZX_OK, init_helper(pipefd[0], tags, 2), "");
+  std::vector<std::string> logger_tags;
+  fx_logger_get_tags(
+      fx_log_get_logger(),
+      [](void* context, const char* tag) {
+        static_cast<std::vector<std::string>*>(context)->push_back(tag);
+      },
+      &logger_tags);
+  EXPECT_EQ(logger_tags.size(), 2);
+  EXPECT_EQ(logger_tags[0], "gtag");
+  EXPECT_EQ(logger_tags[1], "gTag");
+  close(pipefd[1]);
+}
+
 TEST(SyslogTests, test_log_write_with_multi_global_tag) {
   int pipefd[2];
   EXPECT_NE(pipe2(pipefd, O_NONBLOCK), -1, "");
