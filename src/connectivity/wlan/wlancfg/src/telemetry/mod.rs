@@ -1772,6 +1772,11 @@ impl StatsLogger {
                     event_codes: vec![],
                     payload: MetricEventPayload::IntegerValue(duration_minutes),
                 });
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::NETWORK_ROAMING_DISCONNECT_COUNTS_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
             }
         } else {
             metric_events.push(MetricEvent {
@@ -1779,12 +1784,23 @@ impl StatsLogger {
                 event_codes: vec![],
                 payload: MetricEventPayload::IntegerValue(duration_minutes),
             });
+            metric_events.push(MetricEvent {
+                metric_id: metrics::NETWORK_NON_ROAMING_DISCONNECT_COUNTS_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::Count(1),
+            });
         }
 
         metric_events.push(MetricEvent {
             metric_id: metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID,
             event_codes: vec![],
             payload: MetricEventPayload::IntegerValue(duration_minutes),
+        });
+
+        metric_events.push(MetricEvent {
+            metric_id: metrics::NETWORK_DISCONNECT_COUNTS_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::Count(1),
         });
 
         log_cobalt_1dot1_batch!(
@@ -3852,7 +3868,8 @@ mod tests {
         assert_eq!(breakdowns_by_channel[0].event_codes, vec![channel.primary as u32]);
         assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
 
-        // Check that non-roaming and total disconnects are logged but not a roaming disconnect.
+        // Check that non-roaming and total disconnects counts and connection durations are logged
+        // but not a roaming disconnect.
         let roam_connected_duration = test_helper
             .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
         assert_eq!(roam_connected_duration.len(), 0);
@@ -3867,6 +3884,20 @@ mod tests {
             test_helper.get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID);
         assert_eq!(total_connected_duration.len(), 1);
         assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(300));
+
+        let roam_disconnect_counts =
+            test_helper.get_logged_metrics(metrics::NETWORK_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
+        assert!(roam_disconnect_counts.is_empty());
+
+        let non_roam_disconnect_counts = test_helper
+            .get_logged_metrics(metrics::NETWORK_NON_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
+        assert_eq!(non_roam_disconnect_counts.len(), 1);
+        assert_eq!(non_roam_disconnect_counts[0].payload, MetricEventPayload::Count(1));
+
+        let total_disconnect_counts =
+            test_helper.get_logged_metrics(metrics::NETWORK_DISCONNECT_COUNTS_METRIC_ID);
+        assert_eq!(total_disconnect_counts.len(), 1);
+        assert_eq!(total_disconnect_counts[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
@@ -3892,7 +3923,8 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        // Check that a roam and total disconnect is logged, and not a non-roaming disconnect.
+        // Check that connected durations for roam and total disconnects are logged, and not for
+        // a non-roaming disconnect.
         let roam_connected_duration = test_helper
             .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
         assert_eq!(roam_connected_duration.len(), 1);
@@ -3907,6 +3939,21 @@ mod tests {
             test_helper.get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID);
         assert_eq!(total_connected_duration.len(), 1);
         assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(DUR_MIN));
+
+        // Check that a roam and total disconnect is logged, and not a non-roaming disconnect.
+        let roam_disconnect_counts =
+            test_helper.get_logged_metrics(metrics::NETWORK_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
+        assert_eq!(roam_disconnect_counts.len(), 1);
+        assert_eq!(roam_disconnect_counts[0].payload, MetricEventPayload::Count(1));
+
+        let non_roam_disconnect_counts = test_helper
+            .get_logged_metrics(metrics::NETWORK_NON_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
+        assert!(non_roam_disconnect_counts.is_empty());
+
+        let total_disconnect_counts =
+            test_helper.get_logged_metrics(metrics::NETWORK_DISCONNECT_COUNTS_METRIC_ID);
+        assert_eq!(total_disconnect_counts.len(), 1);
+        assert_eq!(total_disconnect_counts[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
@@ -3932,8 +3979,7 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        // Check that nothing was logged for connected durations before roaming and non-roaming
-        // disconnects.
+        // Check that nothing was logged for roaming and non-roaming disconnects.
         let roam_connected_duration = test_helper
             .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
         assert_eq!(roam_connected_duration.len(), 0);
@@ -3943,11 +3989,24 @@ mod tests {
         );
         assert_eq!(non_roam_connected_duration.len(), 0);
 
-        // Check that a connected duration was logged for overall disconnects.
+        let roam_disconnect_counts =
+            test_helper.get_logged_metrics(metrics::NETWORK_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
+        assert!(roam_disconnect_counts.is_empty());
+
+        let non_roam_disconnect_counts = test_helper
+            .get_logged_metrics(metrics::NETWORK_NON_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
+        assert!(non_roam_disconnect_counts.is_empty());
+
+        // Check that a connected duration and a count were logged for overall disconnects.
         let total_connected_duration =
             test_helper.get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID);
         assert_eq!(total_connected_duration.len(), 1);
         assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(DUR_MIN));
+
+        let total_disconnect_counts =
+            test_helper.get_logged_metrics(metrics::NETWORK_DISCONNECT_COUNTS_METRIC_ID);
+        assert_eq!(total_disconnect_counts.len(), 1);
+        assert_eq!(total_disconnect_counts[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
