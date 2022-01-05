@@ -11,6 +11,7 @@ use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
 
 mod pbm;
+mod template_helpers;
 
 #[ffx_plugin("emu.experimental")]
 pub async fn start(cmd: StartCommand, _daemon_proxy: bridge::DaemonProxy) -> Result<()> {

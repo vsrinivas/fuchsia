@@ -15,6 +15,7 @@ pub fn convert_bundle_to_configs(
     product_bundle: &ProductBundleV1,
     virtual_device: &VirtualDeviceV1,
     sdk_root: &PathBuf,
+    fms_path: &PathBuf,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
 
@@ -32,13 +33,16 @@ pub fn convert_bundle_to_configs(
         storage: virtual_device.hardware.storage.clone(),
     };
 
+    if let Some(template) = &virtual_device.start_up_args_template {
+        emulator_configuration.runtime.template = fms_path.join(&template);
+    }
+
     if let Some(manifests) = &product_bundle.manifests {
         if let Some(emu) = &manifests.emu {
             emulator_configuration.guest = GuestConfig {
                 // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
                 fvm_image: Some(sdk_root.join(&emu.disk_images[0])),
                 kernel_image: sdk_root.join(&emu.kernel),
-                kernel_args: Vec::new(),
                 zbi_image: sdk_root.join(&emu.initial_ramdisk),
             };
         } else {
@@ -97,11 +101,13 @@ mod tests {
                 memory: DataAmount { quantity: 4, units: DataUnits::Gigabytes },
                 window_size: Screen { height: 480, width: 640, units: ScreenUnits::Pixels },
             },
+            start_up_args_template: Some("path/to/template".to_string()),
         };
 
         let sdk_root = PathBuf::from("/some/sdk-root");
+        let fms_path = PathBuf::from("/some/sdk-path/fms-path");
         // Run the conversion, then assert everything in the config matches the manifest data.
-        let config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
+        let config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -137,7 +143,8 @@ mod tests {
             memory: DataAmount { quantity: 2048, units: DataUnits::Megabytes },
             window_size: Screen { height: 1024, width: 1280, units: ScreenUnits::Pixels },
         };
-        let config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
+        device.start_up_args_template = Some("path/to/template".to_string());
+        let config = convert_bundle_to_configs(&pb, &device, &sdk_root, &fms_path)?;
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);

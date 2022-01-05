@@ -79,6 +79,13 @@ pub struct StartCommand {
     #[argh(positional)]
     pub product_bundle: Option<String>,
 
+    /// specify a template file to populate the command line flags for the emulator.
+    /// Defaults to a Handlebars template specified in the Product Bundle manifest.
+    /// TODO(fxbug.dev/90948): Make this non-optional once the template file is
+    /// included in the SDK.
+    #[argh(option)]
+    pub start_up_args_template: Option<PathBuf>,
+
     /// run emulator with network in bridge mode via tun/tap.
     /// This option is not supported on MacOS.
     /// TODO(fxbug.dev/88327): Support SLIRP and No network.

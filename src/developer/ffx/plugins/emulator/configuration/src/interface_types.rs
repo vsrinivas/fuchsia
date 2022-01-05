@@ -119,10 +119,6 @@ pub struct GuestConfig {
     /// The Fuchsia kernel, which loads alongside the ZBI and brings up the OS.
     pub kernel_image: PathBuf,
 
-    /// Additional command line arguments passed through to the emulation program.
-    /// These are not validated by ffx; they are passed verbatim to the emulator.
-    pub kernel_args: Vec<String>,
-
     /// Zircon Boot image, this is Fuchsia's initial ram disk used in the boot process.
     pub zbi_image: PathBuf,
 }
@@ -133,6 +129,9 @@ pub struct HostConfig {
     /// Determines the type of hardware acceleration to use for emulation, such as KVM.
     pub acceleration: AccelerationMode,
 
+    /// Indicates the CPU architecture of the host system.
+    pub architecture: String,
+
     /// Determines the type of graphics acceleration, to improve rendering in the guest OS.
     pub gpu: GpuType,
 
@@ -141,6 +140,9 @@ pub struct HostConfig {
 
     /// Determines the networking type for the emulator.
     pub networking: NetworkingMode,
+
+    /// Indicates the operating system the host system is running.
+    pub os: String,
 }
 
 /// A collection of properties which control/influence the
@@ -179,4 +181,8 @@ pub struct RuntimeConfig {
     /// The human-readable name for this instance. Must be unique from any other current
     /// instance on the host.
     pub name: String,
+
+    /// Path to an enumeration flags template file, which contains a Handlebars-renderable
+    /// set of arguments to be passed to the Command which starts the emulator.
+    pub template: PathBuf,
 }

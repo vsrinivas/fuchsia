@@ -4,19 +4,22 @@
 
 //! Utilities for Product Bundle Metadata (PBM).
 
-use anyhow::{anyhow, Result};
-use ffx_emulator_common::{config, config::FfxConfigWrapper};
+use crate::template_helpers::{EqHelper, UnitAbbreviationHelper};
+use anyhow::{anyhow, Context, Result};
+use ffx_emulator_common::config::{FfxConfigWrapper, SDK_ROOT};
 use ffx_emulator_config::{
-    convert_bundle_to_configs, ConsoleType, EmulatorConfiguration, LogLevel, NetworkingMode,
+    convert_bundle_to_configs, ConsoleType, EmulatorConfiguration, FlagData, LogLevel,
+    NetworkingMode,
 };
 use ffx_emulator_start_args::StartCommand;
 use fms;
+use handlebars::Handlebars;
 use std::path::PathBuf;
 
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(
     cmd: &StartCommand,
-    config: &FfxConfigWrapper,
+    ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
     let fms_entries = fms::Entries::from_config().await?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)?;
@@ -28,14 +31,33 @@ pub(crate) async fn make_configs(
         );
     }
 
-    let sdk_root = config.file(config::SDK_ROOT).await?;
+    // TODO(fxbug.dev/90948): Don't hard-code the image directory path, once it's in the SDK.
+    let sdk_root = ffx_config.file(SDK_ROOT).await?;
+    let fms_path = sdk_root.join("gen/build/images");
 
     // Apply the values from the manifest to an emulation configuration.
-    let config = convert_bundle_to_configs(product_bundle, virtual_device, &sdk_root)?;
+    let mut emu_config =
+        convert_bundle_to_configs(product_bundle, virtual_device, &sdk_root, &fms_path)?;
 
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.
-    apply_command_line_options(config, cmd)
+    emu_config = apply_command_line_options(emu_config, cmd)?;
+
+    // Determine which template file to process, then populate it from the configuration.
+    let template;
+    if let Some(template_file) = &cmd.start_up_args_template {
+        // The user specified a path to a flag template on the command line.
+        template = std::fs::read_to_string(&template_file)
+            .context(format!("couldn't locate template file from path {:?}", template_file))?;
+    } else {
+        // Use the default template as specified in PBM.
+        template = std::fs::read_to_string(&emu_config.runtime.template).context(format!(
+            "couldn't locate template file from path {:?}",
+            &emu_config.runtime.template
+        ))?;
+    }
+    emu_config.flags = process_flag_template(&template, &mut emu_config).await?;
+    Ok(emu_config)
 }
 
 /// Given an EmulatorConfiguration and a StartCommand, write the values from the
@@ -52,6 +74,8 @@ fn apply_command_line_options(
     }
     config.host.networking =
         if cmd.tuntap { NetworkingMode::Bridged } else { NetworkingMode::None };
+    config.host.os = std::env::consts::OS.to_string();
+    config.host.architecture = std::env::consts::ARCH.to_string();
 
     // RuntimeConfig options
     if cmd.console {
@@ -77,15 +101,32 @@ fn apply_command_line_options(
     config.runtime.hidpi_scaling = cmd.hidpi_scaling;
     config.runtime.log_level = if cmd.verbose { LogLevel::Verbose } else { LogLevel::Info };
     config.runtime.name = cmd.name.clone();
+
     Ok(config)
+}
+
+async fn process_flag_template(
+    template: &str,
+    emu_config: &mut EmulatorConfiguration,
+) -> Result<FlagData> {
+    // This performs all the variable substitution and condition resolution.
+    let mut handlebars = Handlebars::new();
+    handlebars.set_strict_mode(true);
+    handlebars.register_helper("eq", Box::new(EqHelper {}));
+    handlebars.register_helper("ua", Box::new(UnitAbbreviationHelper {}));
+    let json = handlebars.render_template(&template, &emu_config)?;
+
+    // Deserialize and return the flags from the template.
+    let flags = serde_json::from_str(&json)?;
+    Ok(flags)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use ffx_emulator_config::{
-        AccelerationMode, ConsoleType, EmulatorConfiguration, EngineType, GpuType, LogLevel,
-        NetworkingMode,
+        AccelerationMode, AudioModel, ConsoleType, DataUnits, EmulatorConfiguration, EngineType,
+        GpuType, LogLevel, NetworkingMode,
     };
 
     #[test]
@@ -147,6 +188,186 @@ mod tests {
         cmd.monitor = true;
         let opts = apply_command_line_options(opts, &cmd)?;
         assert_eq!(opts.runtime.console, ConsoleType::Monitor);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_empty_template() -> Result<()> {
+        // Fails because empty templates can't be rendered.
+        let empty_template = "";
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let flags = process_flag_template(empty_template, &mut emu_config).await;
+        assert!(flags.is_err());
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_empty_vector_template() -> Result<()> {
+        // Succeeds without any content in the vectors.
+        let empty_vectors_template = r#"
+        {
+            "args": [],
+            "features": [],
+            "kernel_args": [],
+            "options": []
+        }"#;
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let flags = process_flag_template(empty_vectors_template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_invalid_template() -> Result<()> {
+        // Fails because it doesn't have all the required fields.
+        let invalid_template = r#"
+        {
+            "args": [],
+            "features": [],
+            "kernel_args": []
+            {{! It's missing the options field }}
+        }"#;
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let flags = process_flag_template(invalid_template, &mut emu_config).await;
+        assert!(flags.is_err());
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_ok_template() -> Result<()> {
+        // Succeeds with a single string "value" in the options field.
+        let ok_template = r#"
+        {
+            "args": [],
+            "features": [],
+            "kernel_args": [],
+            "options": ["value"]
+        }"#;
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let flags = process_flag_template(ok_template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 1);
+        assert!(flags.as_ref().unwrap().options.contains(&"value".to_string()));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_substitution_template() -> Result<()> {
+        // Succeeds with the default value of AudioModel in the args field.
+        let substitution_template = r#"
+        {
+            "args": ["{{device.audio.model}}"],
+            "features": [],
+            "kernel_args": [],
+            "options": []
+        }"#;
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let flags = process_flag_template(substitution_template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+        assert!(flags.as_ref().unwrap().args.contains(&format!("{}", AudioModel::default())));
+
+        emu_config.device.audio.model = AudioModel::Hda;
+
+        let flags = process_flag_template(substitution_template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+        assert!(flags.as_ref().unwrap().args.contains(&format!("{}", AudioModel::Hda)));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_conditional_template() -> Result<()> {
+        // Succeeds. If headless is set, features contains the "ok" value.
+        // If headless is not set, features contains the "none" value.
+        let conditional_template = r#"
+        {
+            "args": [],
+            "features": [{{#if runtime.headless}}"ok"{{else}}"none"{{/if}}],
+            "kernel_args": [],
+            "options": []
+        }"#;
+        let mut emu_config = EmulatorConfiguration::default();
+
+        emu_config.runtime.headless = false;
+
+        let flags = process_flag_template(conditional_template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+        assert!(flags.as_ref().unwrap().features.contains(&"none".to_string()));
+
+        emu_config.runtime.headless = true;
+
+        let flags = process_flag_template(conditional_template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+        assert!(flags.as_ref().unwrap().features.contains(&"ok".to_string()));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_ua_template() -> Result<()> {
+        // Succeeds, with the abbreviated form of the units field in the kernel_args field.
+        // The default value of units is Bytes, which has an empty abbreviation.
+        // The DataUnits::Megabytes value has the abbreviated form "M".
+        let template = r#"
+        {
+            "args": [],
+            "features": [],
+            "kernel_args": ["{{ua device.storage.units}}"],
+            "options": []
+        }"#;
+
+        let mut emu_config = EmulatorConfiguration::default();
+
+        let flags = process_flag_template(template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+        assert!(flags.as_ref().unwrap().kernel_args.contains(&"".to_string()));
+
+        emu_config.device.storage.units = DataUnits::Megabytes;
+
+        let flags = process_flag_template(template, &mut emu_config).await;
+        assert!(flags.is_ok(), "{:?}", flags);
+        assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().features.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().options.len(), 0);
+        assert!(flags.as_ref().unwrap().kernel_args.contains(&"M".to_string()));
 
         Ok(())
     }

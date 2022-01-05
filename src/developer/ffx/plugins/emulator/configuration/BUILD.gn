@@ -17,7 +17,6 @@ if (is_host) {
     ]
     deps = [
       "//build/sdk/meta:rust",
-      "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:log",

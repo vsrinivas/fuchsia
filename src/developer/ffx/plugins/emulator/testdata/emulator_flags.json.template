@@ -1,0 +1,94 @@
+{{! Copyright 2021 The Fuchsia Authors. All rights reserved. }}
+{{! Use of this source code is governed by a BSD-style license that can be
+    found in the LICENSE file. }}
+{{! This template is processed by Handlebars to render a json file. }}
+{{! Note the use of the nested "eq" helper below: "#if" expects a single
+    parameter which is evaluated for "truthiness". The "eq" helper takes two
+    parameters and compares them against each other using "param1 == param2",
+    returning "true" if they match and nothing otherwise. }}
+{{! Also note the use of the "ua" helper: the device.memory.units variable
+    normally serializes as the full word, e.g. "megabytes", but the Qemu flag
+    it populates expects a single-character abbreviation, e.g. "M". The "ua"
+    helper calls a rust function to perform that substitution. If the parameter
+    doesn't deserialize to a DataUnits, the helper just returns the usual
+    serialized value of the parameter. }}
+{
+    "args": [
+        "-smp",
+        {{! These should probably be predicated on the host CPU. }}
+        "4,threads=2",
+        "-machine",
+        "q35",
+        {{#if (eq host.acceleration "none")}}
+            "-cpu",
+            "Haswell,+smap,-check,-fsgsbase",
+        {{else}}
+            {{#if (eq host.os "linux")}}
+                "-enable-kvm",
+                "-cpu",
+                "host,migratable=no,+invtsc",
+            {{else}}
+                {{#if (eq host.os "macos")}}
+                    "-enable-hvf",
+                    "-cpu",
+                    "Haswell",
+                {{/if}}
+            {{/if}}
+        {{/if}}
+        {{#if (eq device.pointing_device "mouse")}}
+            "-device",
+            "virtio-mouse-pci",
+        {{/if}}
+        {{#if (eq device.pointing_device "touch")}}
+            "-device",
+            "virtio_input_multi_touch_pci_1",
+        {{/if}}
+        "-m",
+        "{{device.memory.quantity}}{{ua device.memory.units}}",
+        {{! TODO(fxbug.dev/90005): These last few items were hard-coded into
+            device_launcher, but need to be reevaluated as part of the template
+            here. }}
+        "-vga",
+        "none",
+        "-device",
+        "virtio-keyboard-pci"
+    ],
+    "features": [
+        {{#if (eq host.acceleration "hyper")}}
+            {{#if (eq host.os "linux")}}
+                "KVM",
+            {{else}}
+                "HVF",
+            {{/if}}
+        {{/if}}
+        {{#if (eq device.pointing_device "mouse")}}
+            "VirtioMouse",
+        {{/if}}
+        "VirtioInput",
+        "GLDirectMem",
+        "Vulkan",
+        "RefCountPipe"
+    ],
+    "kernel_args": [
+        {{#if (eq host.acceleration "hyper")}}
+            {{#if (eq host.os "macos")}}
+                "kernel.page-scanner.page-table-eviction-policy=never",
+            {{/if}}
+        {{/if}}
+        {{#if (eq runtime.log_level "verbose")}}
+            "verbose",
+        {{/if}}
+        "kernel.serial=legacy",
+        "TERM=xterm-256color",
+        "kernel.entropy-mixin=42ac2452e99c1c979ebfca03bce0cbb14126e4021a6199ccfeca217999c0aaa0",
+        "kernel.halt-on-panic=true",
+        "zircon.nodename=fuchsia-5254-0063-5e7a",
+        "kernel.lockup-detector.critical-section-fatal-threshold-ms=0",
+        "kernel.lockup-detector.critical-section-threshold-ms=5000",
+        "kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0"
+    ],
+    "options": [
+        "-metrics-collection",
+        "-no-location-ui"
+    ]
+}

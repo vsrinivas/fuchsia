@@ -17,11 +17,15 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
+      "//third_party/rust_crates:handlebars",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
     ]
     args_sources = [ "src/args.rs" ]
     sources = [
       "src/lib.rs",
       "src/pbm.rs",
+      "src/template_helpers.rs",
     ]
   }
 

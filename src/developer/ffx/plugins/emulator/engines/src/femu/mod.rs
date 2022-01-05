@@ -54,7 +54,7 @@ impl EmulatorEngine for FemuEngine {
         let aemu = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
             Ok(aemu_path) => aemu_path,
             Err(e) => {
-                print!("Need to fix {:?}", e);
+                println!("Need to fix {:?}", e);
                 backup_aemu
             }
         };

@@ -25,6 +25,7 @@
                 "units": "gigabytes"
             }
         },
+        "start_up_args_template": "emulator_flags.json.template",
         "name": "qemu-x64",
         "type": "virtual_device"
     },

@@ -95,6 +95,11 @@ pub struct VirtualDeviceV1 {
 
     /// Details about the properties of the device.
     pub hardware: Hardware,
+
+    /// An optional path to the file containing the start-up arguments Handlebars template.
+    /// TODO(fxbug.dev/90948): Make this non-optional, as soon as the template file is included
+    /// with the SDK.
+    pub start_up_args_template: Option<String>,
 }
 
 impl JsonObject for Envelope<VirtualDeviceV1> {
@@ -143,46 +148,8 @@ mod tests {
                         "quantity": 1,
                         "units": "gigabytes"
                     }
-                }
-            }
-        }
-        "#,
-        valid = true,
-    }
-
-    test_validation! {
-        name = test_validation_skip_behaviors,
-        kind = Envelope::<VirtualDeviceV1>,
-        data = r#"
-        {
-            "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
-            "data": {
-                "name": "generic-x64",
-                "type": "virtual_device",
-                "hardware": {
-                    "audio": {
-                        "model": "hda"
-                    },
-                    "cpu": {
-                        "arch": "x64"
-                    },
-                    "inputs": {
-                        "pointing_device": "touch"
-                    },
-                    "window_size": {
-                        "width": 640,
-                        "height": 480,
-                        "units": "pixels"
-                    },
-                    "memory": {
-                        "quantity": 1,
-                        "units": "gigabytes"
-                    },
-                    "storage": {
-                        "quantity": 1,
-                        "units": "gigabytes"
-                    }
-                }
+                },
+                "start_up_args_template": "/path/to/args"
             }
         }
         "#,
