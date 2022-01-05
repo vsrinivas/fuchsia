@@ -15,6 +15,7 @@ namespace {
 // for clients to know what the limit is, since it can't increase once allocation has completed.
 inline constexpr uint32_t kNumClientBuffers = 5;
 inline constexpr uint32_t kNumMonitorMLFRBuffers = 4;
+inline constexpr uint32_t kNumMonitorMLDSBuffers = 3;
 inline constexpr uint32_t kGdcBytesPerRowDivisor = 16;
 inline constexpr uint32_t kGe2dBytesPerRowDivisor = 32;
 inline constexpr uint32_t kIspBytesPerRowDivisor = 128;
