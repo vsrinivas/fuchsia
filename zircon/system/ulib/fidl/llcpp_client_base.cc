@@ -96,11 +96,11 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
 }
 
 void ClientBase::SendTwoWay(fidl::OutgoingMessage& message, ResponseContext* context,
-                            const fidl::WriteOptions& write_options) {
+                            fidl::WriteOptions write_options) {
   if (auto transport = GetTransport()) {
     PrepareAsyncTxn(context);
     message.set_txid(context->Txid());
-    message.Write(*transport, write_options);
+    message.Write(*transport, std::move(write_options));
     if (!message.ok()) {
       ForgetAsyncTxn(context);
       TryAsyncDeliverError(message.error(), context);
@@ -112,10 +112,10 @@ void ClientBase::SendTwoWay(fidl::OutgoingMessage& message, ResponseContext* con
 }
 
 fidl::Result ClientBase::SendOneWay(::fidl::OutgoingMessage& message,
-                                    const fidl::WriteOptions& write_options) {
+                                    fidl::WriteOptions write_options) {
   if (auto transport = GetTransport()) {
     message.set_txid(0);
-    message.Write(*transport, write_options);
+    message.Write(*transport, std::move(write_options));
     if (!message.ok()) {
       HandleSendError(message.error());
       return message.error();
@@ -147,7 +147,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return event_dispatcher_->DispatchEvent(msg, transport_context);
+    return event_dispatcher_->DispatchEvent(msg, std::move(transport_context));
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.
@@ -163,7 +163,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
           Result::UnexpectedMessage(ZX_ERR_NOT_FOUND, fidl::internal::kErrorUnknownTxId)};
     }
   }
-  return context->OnRawResult(std::move(msg), transport_context);
+  return context->OnRawResult(std::move(msg), std::move(transport_context));
 }
 
 void ClientController::Bind(std::shared_ptr<ClientBase>&& client_impl,

@@ -18,7 +18,7 @@ namespace fs {
 namespace internal {
 
 zx_status_t FidlTransaction::Reply(fidl::OutgoingMessage* message,
-                                   const fidl::WriteOptions& write_options) {
+                                   fidl::WriteOptions write_options) {
   ZX_ASSERT(transaction_id_ != 0);
   message->set_txid(transaction_id_);
   transaction_id_ = 0;

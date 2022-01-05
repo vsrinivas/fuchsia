@@ -18,7 +18,7 @@ namespace internal {
 
 namespace {
 
-zx_status_t socket_write(fidl_handle_t handle, const WriteOptions& write_options, const void* data,
+zx_status_t socket_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
                          uint32_t data_count, const fidl_handle_t* handles,
                          const void* handle_metadata, uint32_t handles_count) {
   ZX_ASSERT(handles_count == 0);
@@ -33,8 +33,7 @@ zx_status_t socket_write(fidl_handle_t handle, const WriteOptions& write_options
   return ZX_OK;
 }
 
-void socket_read(fidl_handle_t handle, const ReadOptions& read_options,
-                 TransportReadCallback callback) {
+void socket_read(fidl_handle_t handle, ReadOptions read_options, TransportReadCallback callback) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   size_t actual;
   zx_status_t status = zx_socket_read(handle, 0, bytes, ZX_CHANNEL_MAX_MSG_BYTES, &actual);

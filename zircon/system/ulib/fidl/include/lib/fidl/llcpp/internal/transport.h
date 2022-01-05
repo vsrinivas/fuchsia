@@ -27,62 +27,80 @@ struct TransportVTable;
 class TransportContextBase {
  public:
   TransportContextBase() = default;
-  TransportContextBase(TransportContextBase&&) = default;
-  TransportContextBase(const TransportContextBase&) = default;
-  TransportContextBase& operator=(TransportContextBase&&) = default;
-  TransportContextBase& operator=(const TransportContextBase&) = default;
+  TransportContextBase(const TransportContextBase&) = delete;
+  TransportContextBase& operator=(const TransportContextBase&) = delete;
 
- protected:
-  TransportContextBase(fidl_transport_type type, void* data) : type_(type), data_(data) {}
+  TransportContextBase(TransportContextBase&& other) : vtable_(other.vtable_), data_(other.data_) {
+    other.vtable_ = nullptr;
+    other.data_ = nullptr;
+  }
+  TransportContextBase& operator=(TransportContextBase&& other) {
+    if (this == &other) {
+      return *this;
+    }
 
-  void* get(fidl_transport_type type) const {
-    ZX_ASSERT(type == type_);
-    return data_;
+    vtable_ = other.vtable_;
+    data_ = other.data_;
+
+    other.vtable_ = nullptr;
+    other.data_ = nullptr;
+
+    return *this;
   }
 
- private:
-  fidl_transport_type type_ = FIDL_TRANSPORT_TYPE_INVALID;
+ protected:
+  TransportContextBase(const TransportVTable* vtable, void* data) : vtable_(vtable), data_(data) {}
+
+  void* release(const TransportVTable* vtable);
+
+  const TransportVTable* vtable_ = nullptr;
   void* data_ = nullptr;
 };
 
 class IncomingTransportContext final : public TransportContextBase {
  public:
-  using TransportContextBase::TransportContextBase;
+  IncomingTransportContext() = default;
+  IncomingTransportContext(IncomingTransportContext&&) = default;
+  IncomingTransportContext& operator=(IncomingTransportContext&&) = default;
+  ~IncomingTransportContext();
 
   template <typename Transport>
   static IncomingTransportContext Create(typename Transport::IncomingTransportContextType* value) {
-    return IncomingTransportContext(Transport::VTable.type, value);
+    return IncomingTransportContext(&Transport::VTable, value);
   }
 
   template <typename Transport>
-  typename Transport::IncomingTransportContextType* get() const {
+  typename Transport::IncomingTransportContextType* release() {
     return static_cast<typename Transport::IncomingTransportContextType*>(
-        TransportContextBase::get(Transport::VTable.type));
+        TransportContextBase::release(&Transport::VTable));
   }
 
  private:
-  IncomingTransportContext(fidl_transport_type type, void* data)
-      : TransportContextBase(type, data) {}
+  IncomingTransportContext(const TransportVTable* vtable, void* data)
+      : TransportContextBase(vtable, data) {}
 };
 
 class OutgoingTransportContext final : public TransportContextBase {
  public:
-  using TransportContextBase::TransportContextBase;
+  OutgoingTransportContext() = default;
+  OutgoingTransportContext(OutgoingTransportContext&&) = default;
+  OutgoingTransportContext& operator=(OutgoingTransportContext&&) = default;
+  ~OutgoingTransportContext();
 
   template <typename Transport>
   static OutgoingTransportContext Create(typename Transport::OutgoingTransportContextType* value) {
-    return OutgoingTransportContext(Transport::VTable.type, value);
+    return OutgoingTransportContext(&Transport::VTable, value);
   }
 
   template <typename Transport>
-  typename Transport::OutgoingTransportContextType* get() const {
+  typename Transport::OutgoingTransportContextType* release() {
     return static_cast<typename Transport::OutgoingTransportContextType*>(
-        TransportContextBase::get(Transport::VTable.type));
+        TransportContextBase::release(&Transport::VTable));
   }
 
  private:
-  OutgoingTransportContext(fidl_transport_type type, void* data)
-      : TransportContextBase(type, data) {}
+  OutgoingTransportContext(const TransportVTable* vtable, void* data)
+      : TransportContextBase(vtable, data) {}
 };
 
 }  // namespace internal
@@ -189,7 +207,7 @@ struct TransportVTable {
   // Write to the transport.
   // |handle_metadata| contains transport-specific metadata produced by
   // EncodingConfiguration::decode_process_handle.
-  zx_status_t (*write)(fidl_handle_t handle, const WriteOptions& options, const void* data,
+  zx_status_t (*write)(fidl_handle_t handle, WriteOptions options, const void* data,
                        uint32_t data_count, const fidl_handle_t* handles,
                        const void* handle_metadata, uint32_t handles_count);
 
@@ -197,12 +215,12 @@ struct TransportVTable {
   // |callback| is called with the results of the read. The reason for using a callback is to
   // provide a scope within which the buffer is valid. The callback must complete synchronously
   // before read() is completed.
-  void (*read)(fidl_handle_t handle, const ReadOptions& options, TransportReadCallback callback);
+  void (*read)(fidl_handle_t handle, ReadOptions options, TransportReadCallback callback);
 
   // Perform a call on the transport.
   // The arguments are formatted in |cargs|, with the write direction args corresponding to
   // those in |write| and the read direction args corresponding to those in |read|.
-  zx_status_t (*call)(fidl_handle_t handle, const CallOptions& options, const CallMethodArgs& cargs,
+  zx_status_t (*call)(fidl_handle_t handle, CallOptions options, const CallMethodArgs& cargs,
                       uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count);
 
 #ifdef __Fuchsia__
@@ -217,6 +235,11 @@ struct TransportVTable {
 
   // Close the handle.
   void (*close)(fidl_handle_t);
+
+  // Closes incoming/outgoing transport context contents.
+  // Set to nullptr if no close function is needed.
+  void (*close_incoming_transport_context)(void*);
+  void (*close_outgoing_transport_context)(void*);
 };
 
 // A type-erased unowned transport (e.g. generalized zx::unowned_channel).
@@ -248,20 +271,21 @@ class AnyUnownedTransport {
 
   fidl_transport_type type() const { return vtable_->type; }
 
-  zx_status_t write(const WriteOptions& options, const void* data, uint32_t data_count,
+  zx_status_t write(WriteOptions options, const void* data, uint32_t data_count,
                     const fidl_handle_t* handles, const void* handle_metadata,
                     uint32_t handles_count) const {
-    return vtable_->write(handle_, options, data, data_count, handles, handle_metadata,
+    return vtable_->write(handle_, std::move(options), data, data_count, handles, handle_metadata,
                           handles_count);
   }
 
-  void read(const ReadOptions& options, TransportReadCallback callback) const {
+  void read(ReadOptions options, TransportReadCallback callback) const {
     return vtable_->read(handle_, options, std::move(callback));
   }
 
-  zx_status_t call(const CallOptions& options, const CallMethodArgs& cargs,
+  zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
-    return vtable_->call(handle_, options, cargs, out_data_actual_count, out_handles_actual_count);
+    return vtable_->call(handle_, std::move(options), cargs, out_data_actual_count,
+                         out_handles_actual_count);
   }
 
 #ifdef __Fuchsia__
@@ -335,20 +359,21 @@ class AnyTransport {
 
   fidl_transport_type type() const { return vtable_->type; }
 
-  zx_status_t write(const WriteOptions& options, const void* data, uint32_t data_count,
+  zx_status_t write(WriteOptions options, const void* data, uint32_t data_count,
                     const fidl_handle_t* handles, const void* handle_metadata,
                     uint32_t handles_count) const {
-    return vtable_->write(handle_, options, data, data_count, handles, handle_metadata,
+    return vtable_->write(handle_, std::move(options), data, data_count, handles, handle_metadata,
                           handles_count);
   }
 
-  void read(const ReadOptions& options, TransportReadCallback callback) const {
+  void read(ReadOptions options, TransportReadCallback callback) const {
     return vtable_->read(handle_, options, std::move(callback));
   }
 
-  zx_status_t call(const CallOptions& options, const CallMethodArgs& cargs,
+  zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
                    uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
-    return vtable_->call(handle_, options, cargs, out_data_actual_count, out_handles_actual_count);
+    return vtable_->call(handle_, std::move(options), cargs, out_data_actual_count,
+                         out_handles_actual_count);
   }
 
 #ifdef __Fuchsia__

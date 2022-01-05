@@ -18,7 +18,7 @@ namespace fidl {
 namespace internal {
 
 namespace {
-zx_status_t driver_write(fidl_handle_t handle, const WriteOptions& write_options, const void* data,
+zx_status_t driver_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
                          uint32_t data_count, const fidl_handle_t* handles,
                          const void* handle_metadata, uint32_t handles_count) {
   // Note: in order to force the encoder to only output one iovec, only provide an iovec buffer of
@@ -28,7 +28,8 @@ zx_status_t driver_write(fidl_handle_t handle, const WriteOptions& write_options
   ZX_ASSERT(handle_metadata == nullptr);
 
   const zx_channel_iovec_t& iovec = static_cast<const zx_channel_iovec_t*>(data)[0];
-  fdf_arena_t* arena = write_options.outgoing_transport_context.get<internal::DriverTransport>();
+  fdf_arena_t* arena =
+      write_options.outgoing_transport_context.release<internal::DriverTransport>();
   void* arena_data = fdf_arena_allocate(arena, iovec.capacity);
   memcpy(arena_data, const_cast<void*>(iovec.buffer), iovec.capacity);
 
@@ -40,8 +41,7 @@ zx_status_t driver_write(fidl_handle_t handle, const WriteOptions& write_options
   return status;
 }
 
-void driver_read(fidl_handle_t handle, const ReadOptions& read_options,
-                 TransportReadCallback callback) {
+void driver_read(fidl_handle_t handle, ReadOptions read_options, TransportReadCallback callback) {
   fdf_arena_t* out_arena;
   void* out_data;
   uint32_t out_num_bytes;
@@ -70,6 +70,8 @@ zx_status_t driver_create_waiter(fidl_handle_t handle, async_dispatcher_t* dispa
 
 void driver_close(fidl_handle_t handle) { fdf_handle_close(handle); }
 
+void driver_close_context(void* arena) { fdf_arena_destroy(static_cast<fdf_arena_t*>(arena)); }
+
 }  // namespace
 
 const TransportVTable DriverTransport::VTable = {
@@ -79,6 +81,8 @@ const TransportVTable DriverTransport::VTable = {
     .read = driver_read,
     .create_waiter = driver_create_waiter,
     .close = driver_close,
+    .close_incoming_transport_context = driver_close_context,
+    .close_outgoing_transport_context = driver_close_context,
 };
 
 zx_status_t DriverWaiter::Begin() {
@@ -99,7 +103,7 @@ zx_status_t DriverWaiter::Begin() {
                 return state->failure_handler(fidl::UnbindInfo{msg});
               }
               state->channel_read = std::nullopt;
-              return state->success_handler(msg, incoming_transport_context);
+              return state->success_handler(msg, std::move(incoming_transport_context));
             });
       });
   return state_->channel_read->Begin(fdf_dispatcher_from_async_dispatcher(state_->dispatcher));

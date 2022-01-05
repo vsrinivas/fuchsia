@@ -17,7 +17,7 @@ namespace internal {
 
 namespace {
 
-zx_status_t channel_write(fidl_handle_t handle, const WriteOptions& write_options, const void* data,
+zx_status_t channel_write(fidl_handle_t handle, WriteOptions write_options, const void* data,
                           uint32_t data_count, const fidl_handle_t* handles,
                           const void* handle_metadata, uint32_t handles_count) {
 #ifndef __Fuchsia__
@@ -40,8 +40,7 @@ zx_status_t channel_write(fidl_handle_t handle, const WriteOptions& write_option
 #endif
 }
 
-void channel_read(fidl_handle_t handle, const ReadOptions& read_options,
-                  TransportReadCallback callback) {
+void channel_read(fidl_handle_t handle, ReadOptions read_options, TransportReadCallback callback) {
 #ifndef __Fuchsia__
   ZX_PANIC("channel_read unsupported on host");
 #else
@@ -82,7 +81,7 @@ void channel_read(fidl_handle_t handle, const ReadOptions& read_options,
 #endif
 }
 
-zx_status_t channel_call(fidl_handle_t handle, const CallOptions& call_options,
+zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
                          const CallMethodArgs& cargs, uint32_t* out_data_actual_count,
                          uint32_t* out_handles_actual_count) {
 #ifndef __Fuchsia__

@@ -147,7 +147,7 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
 
    private:
     std::unique_ptr<Transaction> TakeOwnership() final { ZX_PANIC("Not used"); }
-    zx_status_t Reply(fidl::OutgoingMessage* message, const fidl::WriteOptions&) final {
+    zx_status_t Reply(fidl::OutgoingMessage* message, fidl::WriteOptions) final {
       ZX_PANIC("Not used");
     }
     void Close(zx_status_t epitaph) final { ZX_PANIC("Not used"); }

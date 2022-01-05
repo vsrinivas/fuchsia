@@ -51,12 +51,11 @@ class FidlTransaction : public fidl::Transaction {
     return std::make_unique<FidlTransaction>(std::move(*this));
   }
 
-  zx_status_t Reply(fidl::OutgoingMessage* message,
-                    const fidl::WriteOptions& write_options) override {
+  zx_status_t Reply(fidl::OutgoingMessage* message, fidl::WriteOptions write_options) override {
     ZX_ASSERT(txid_ != 0);
     message->set_txid(txid_);
     txid_ = 0;
-    message->Write(channel_, write_options);
+    message->Write(channel_, std::move(write_options));
     return message->status();
   }
 

@@ -178,12 +178,12 @@ void OutgoingMessage::EncodeImpl(const fidl_type_t* message_type, void* data) {
   message_.iovec.num_iovecs = 1;
 }
 
-void OutgoingMessage::Write(internal::AnyUnownedTransport transport, const WriteOptions& options) {
+void OutgoingMessage::Write(internal::AnyUnownedTransport transport, WriteOptions options) {
   if (!ok()) {
     return;
   }
   ZX_ASSERT(transport_type() == transport.type());
-  zx_status_t status = transport.write(options, iovecs(), iovec_actual(), handles(),
+  zx_status_t status = transport.write(std::move(options), iovecs(), iovec_actual(), handles(),
                                        message_.iovec.handle_metadata, handle_actual());
   ReleaseHandles();
   if (status != ZX_OK) {
@@ -195,7 +195,7 @@ void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
                                const fidl_type_t* response_type, uint8_t* result_bytes,
                                uint32_t result_byte_capacity, fidl_handle_t* result_handles,
                                fidl_handle_metadata_t* result_handle_metadata,
-                               uint32_t result_handle_capacity, const CallOptions& options) {
+                               uint32_t result_handle_capacity, CallOptions options) {
   if (status() != ZX_OK) {
     return;
   }
@@ -216,7 +216,8 @@ void OutgoingMessage::CallImpl(internal::AnyUnownedTransport transport,
       .rd_handles_capacity = result_handle_capacity,
   };
 
-  zx_status_t status = transport.call(options, args, &actual_num_bytes, &actual_num_handles);
+  zx_status_t status =
+      transport.call(std::move(options), args, &actual_num_bytes, &actual_num_handles);
   ReleaseHandles();
   if (status != ZX_OK) {
     SetResult(fidl::Result::TransportError(status));

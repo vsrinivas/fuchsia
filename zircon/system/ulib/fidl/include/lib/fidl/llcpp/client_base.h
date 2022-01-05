@@ -317,15 +317,14 @@ class ClientBase {
   //
   // Errors are notified via |context|.
   void SendTwoWay(fidl::OutgoingMessage& message, ResponseContext* context,
-                  const fidl::WriteOptions& write_options = {});
+                  fidl::WriteOptions write_options = {});
 
   // Sends a one way message.
   //
   // |message| will have its transaction ID set to zero.
   //
   // Errors are returned to the caller.
-  fidl::Result SendOneWay(::fidl::OutgoingMessage& message,
-                          const fidl::WriteOptions& write_options = {});
+  fidl::Result SendOneWay(::fidl::OutgoingMessage& message, fidl::WriteOptions write_options = {});
 
   // For debugging.
   size_t GetTransactionCount() {

@@ -176,11 +176,12 @@ class OutgoingMessage : public ::fidl::Result {
 
   // Various helper functions for writing to other channel-like types.
 
-  void Write(internal::AnyUnownedTransport transport, const WriteOptions& options = {});
+  void Write(internal::AnyUnownedTransport transport, WriteOptions options = {});
 
   template <typename TransportObject>
-  void Write(TransportObject&& transport, const WriteOptions& options = {}) {
-    Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)), options);
+  void Write(TransportObject&& transport, WriteOptions options = {}) {
+    Write(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
+          std::move(options));
   }
 
   // For requests with a response, uses zx_channel_call_etc to write the message.
@@ -190,21 +191,21 @@ class OutgoingMessage : public ::fidl::Result {
   void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
             uint32_t result_byte_capacity, fidl_handle_t* result_handles,
             fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
-            const CallOptions& options = {}) {
+            CallOptions options = {}) {
     CallImpl(transport, FidlType::Type, result_bytes, result_byte_capacity, result_handles,
-             result_handle_metadata, result_handle_capacity, options);
+             result_handle_metadata, result_handle_capacity, std::move(options));
   }
 
   template <typename FidlType, typename TransportObject>
   void Call(TransportObject&& transport, uint8_t* result_bytes, uint32_t result_byte_capacity,
-            const CallOptions& options = {}) {
+            CallOptions options = {}) {
     fidl_handle_t result_handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     typename internal::AssociatedTransport<TransportObject>::HandleMetadata
         result_handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport)),
                    result_bytes, result_byte_capacity, result_handles,
                    reinterpret_cast<fidl_handle_metadata_t*>(result_handle_metadata),
-                   ZX_CHANNEL_MAX_MSG_HANDLES, options);
+                   ZX_CHANNEL_MAX_MSG_HANDLES, std::move(options));
   }
 
   bool is_transactional() const { return is_transactional_; }
@@ -218,7 +219,7 @@ class OutgoingMessage : public ::fidl::Result {
   void CallImpl(internal::AnyUnownedTransport transport, const fidl_type_t* response_type,
                 uint8_t* result_bytes, uint32_t result_byte_capacity, fidl_handle_t* result_handles,
                 fidl_handle_metadata_t* result_handle_metadata, uint32_t result_handle_capacity,
-                const CallOptions& options);
+                CallOptions options);
 
   uint32_t iovec_capacity() const { return iovec_capacity_; }
   uint32_t handle_capacity() const { return handle_capacity_; }
@@ -538,7 +539,7 @@ template <typename TransportObject, typename Callback,
           typename ReturnTypeOfCallback = std::invoke_result_t<
               Callback, IncomingMessage, fidl::internal::IncomingTransportContext>>
 ReturnTypeOfCallback MessageRead(TransportObject&& transport, Callback callback,
-                                 const ReadOptions& options = {}) {
+                                 ReadOptions options = {}) {
   auto type_erased_transport =
       internal::MakeAnyUnownedTransport(std::forward<TransportObject>(transport));
 
@@ -555,7 +556,7 @@ ReturnTypeOfCallback MessageRead(TransportObject&& transport, Callback callback,
             static_cast<typename internal::AssociatedTransport<TransportObject>::HandleMetadata*>(
                 handle_metadata),
             handles_count),
-        incoming_transport_context);
+        std::move(incoming_transport_context));
   };
 
   if constexpr (std::is_same_v<ReturnTypeOfCallback, void>) {
@@ -570,7 +571,7 @@ ReturnTypeOfCallback MessageRead(TransportObject&& transport, Callback callback,
                      void* handle_metadata, uint32_t handles_count,
                      fidl::internal::IncomingTransportContext incoming_transport_context) {
           ret = call_callback(result, data, data_count, handles, handle_metadata, handles_count,
-                              incoming_transport_context);
+                              std::move(incoming_transport_context));
         });
     return ret;
   }
@@ -683,8 +684,8 @@ class UnownedEncodedMessage final {
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
   template <typename TransportObject>
-  void Write(TransportObject&& client, const WriteOptions& options = {}) {
-    message_.Write(std::forward<TransportObject>(client), options);
+  void Write(TransportObject&& client, WriteOptions options = {}) {
+    message_.Write(std::forward<TransportObject>(client), std::move(options));
   }
 
  private:
@@ -726,8 +727,8 @@ class OwnedEncodedMessage final {
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
   template <typename TransportObject>
-  void Write(TransportObject&& client, const WriteOptions& options = {}) {
-    message_.Write(std::forward<TransportObject>(client), options);
+  void Write(TransportObject&& client, WriteOptions options = {}) {
+    message_.Write(std::forward<TransportObject>(client), std::move(options));
   }
 
  private:

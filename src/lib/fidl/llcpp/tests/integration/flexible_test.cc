@@ -46,7 +46,7 @@ class RewriteTransaction : public fidl::Transaction {
   }
 
   zx_status_t Reply(fidl::OutgoingMessage* indicator_msg,
-                    const fidl::WriteOptions& write_options) override {
+                    fidl::WriteOptions write_options) override {
     ZX_ASSERT(txid_ != 0);
     auto indicator_msg_bytes = indicator_msg->CopyBytes();
     ZX_ASSERT(

@@ -52,7 +52,7 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher,
   transport_.create_waiter(
       dispatcher,
       [this](fidl::IncomingMessage& msg, internal::IncomingTransportContext transport_context) {
-        this->MessageHandler(msg, transport_context);
+        this->MessageHandler(msg, std::move(transport_context));
       },
       [this](UnbindInfo info) { this->WaitFailureHandler(info); }, any_transport_waiter_);
 }
@@ -66,7 +66,7 @@ void AsyncBinding::MessageHandler(fidl::IncomingMessage& msg,
   bool next_wait_begun_early = false;
   // Dispatch the message.
   cpp17::optional<DispatchError> maybe_error =
-      Dispatch(msg, &next_wait_begun_early, transport_context);
+      Dispatch(msg, &next_wait_begun_early, std::move(transport_context));
   // If |next_wait_begun_early| is true, then the interest for the next
   // message had been eagerly registered in the method handler, and another
   // thread may already be running |MessageHandler|. We should exit without
@@ -354,7 +354,7 @@ std::optional<DispatchError> AsyncServerBinding::Dispatch(
     internal::IncomingTransportContext transport_context) {
   auto* hdr = msg.header();
   SyncTransaction txn(hdr->txid, this, next_wait_begun_early);
-  return txn.Dispatch(std::move(msg), transport_context);
+  return txn.Dispatch(std::move(msg), std::move(transport_context));
 }
 
 void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref,
@@ -417,7 +417,7 @@ AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
 
 std::optional<DispatchError> AsyncClientBinding::Dispatch(
     fidl::IncomingMessage& msg, bool*, internal::IncomingTransportContext transport_context) {
-  std::optional<UnbindInfo> info = client_->Dispatch(msg, transport_context);
+  std::optional<UnbindInfo> info = client_->Dispatch(msg, std::move(transport_context));
   if (info.has_value()) {
     // A client binding does not propagate synchronous sending errors as part of
     // handling a message. All client callbacks return `void`.

@@ -36,7 +36,7 @@ class SyncTransaction final : public Transaction {
   std::optional<DispatchError> Dispatch(fidl::IncomingMessage&& msg,
                                         internal::IncomingTransportContext transport_context);
 
-  zx_status_t Reply(fidl::OutgoingMessage* message, const WriteOptions& write_options) final;
+  zx_status_t Reply(fidl::OutgoingMessage* message, WriteOptions write_options) final;
 
   void EnableNextDispatch() final;
 
@@ -76,7 +76,7 @@ class AsyncTransaction final : public Transaction {
   AsyncTransaction(AsyncTransaction&& other) noexcept = default;
   AsyncTransaction& operator=(AsyncTransaction&& other) noexcept = default;
 
-  zx_status_t Reply(fidl::OutgoingMessage* message, const WriteOptions& write_options) final;
+  zx_status_t Reply(fidl::OutgoingMessage* message, WriteOptions write_options) final;
 
   void EnableNextDispatch() final;
 

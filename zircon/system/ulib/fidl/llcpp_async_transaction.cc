@@ -19,19 +19,18 @@ namespace internal {
 std::optional<DispatchError> SyncTransaction::Dispatch(
     fidl::IncomingMessage&& msg, internal::IncomingTransportContext transport_context) {
   ZX_ASSERT(binding_);
-  binding_->interface()->dispatch_message(std::move(msg), this, transport_context);
+  binding_->interface()->dispatch_message(std::move(msg), this, std::move(transport_context));
   return error_;
 }
 
-zx_status_t SyncTransaction::Reply(fidl::OutgoingMessage* message,
-                                   const WriteOptions& write_options) {
+zx_status_t SyncTransaction::Reply(fidl::OutgoingMessage* message, WriteOptions write_options) {
   ZX_ASSERT(txid_ != 0);
   auto txid = txid_;
   txid_ = 0;
 
   ZX_ASSERT(binding_);
   message->set_txid(txid);
-  message->Write(binding_->transport(), write_options);
+  message->Write(binding_->transport(), std::move(write_options));
   return message->status();
 }
 
@@ -99,8 +98,7 @@ bool SyncTransaction::IsUnbound() { return false; }
 // Asynchronous transaction methods
 //
 
-zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message,
-                                    const WriteOptions& write_options) {
+zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message, WriteOptions write_options) {
   ZX_ASSERT(txid_ != 0);
   auto txid = txid_;
   txid_ = 0;
@@ -110,7 +108,7 @@ zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message,
     return ZX_ERR_CANCELED;
 
   message->set_txid(txid);
-  message->Write(binding->transport(), write_options);
+  message->Write(binding->transport(), std::move(write_options));
   return message->status();
 }
 

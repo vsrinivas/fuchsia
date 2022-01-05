@@ -19,7 +19,7 @@ void ChannelTransaction::Dispatch(fidl::IncomingMessage& msg) {
 }
 
 zx_status_t ChannelTransaction::Reply(fidl::OutgoingMessage* message,
-                                      const fidl::WriteOptions& write_options) {
+                                      fidl::WriteOptions write_options) {
   ZX_ASSERT(txid_ != 0);
   message->set_txid(txid_);
   txid_ = 0;
