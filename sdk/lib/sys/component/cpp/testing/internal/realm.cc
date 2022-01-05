@@ -68,6 +68,11 @@ void DestroyChild(fuchsia::component::Realm_Sync* realm,
                                      realm->DestroyChild(std::move(child_ref), &result), result);
 }
 
+void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::ChildRef child_ref) {
+  ZX_SYS_ASSERT_NOT_NULL(realm);
+  realm->DestroyChild(std::move(child_ref), [](fuchsia::component::Realm_DestroyChild_Result _) {});
+}
+
 }  // namespace internal
 }  // namespace testing
 }  // namespace sys

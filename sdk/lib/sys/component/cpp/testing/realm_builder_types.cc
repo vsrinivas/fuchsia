@@ -20,32 +20,32 @@ namespace {
 constexpr char kSvcDirectoryPath[] = "/svc";
 }
 
-MockComponent::~MockComponent() = default;
+LocalComponent::~LocalComponent() = default;
 
-void MockComponent::Start(std::unique_ptr<MockHandles> mock_handles) {}
+void LocalComponent::Start(std::unique_ptr<LocalComponentHandles> mock_handles) {}
 
-MockHandles::MockHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir)
+LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}
 
-MockHandles::~MockHandles() { ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK); }
+LocalComponentHandles::~LocalComponentHandles() { ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK); }
 
-MockHandles::MockHandles(MockHandles&& other) noexcept
+LocalComponentHandles::LocalComponentHandles(LocalComponentHandles&& other) noexcept
     : namespace_(other.namespace_), outgoing_dir_(std::move(other.outgoing_dir_)) {
   other.namespace_ = nullptr;
 }
 
-MockHandles& MockHandles::operator=(MockHandles&& other) noexcept {
+LocalComponentHandles& LocalComponentHandles::operator=(LocalComponentHandles&& other) noexcept {
   namespace_ = other.namespace_;
   outgoing_dir_ = std::move(other.outgoing_dir_);
   other.namespace_ = nullptr;
   return *this;
 }
 
-fdio_ns_t* MockHandles::ns() { return namespace_; }
+fdio_ns_t* LocalComponentHandles::ns() { return namespace_; }
 
-OutgoingDirectory* MockHandles::outgoing() { return &outgoing_dir_; }
+OutgoingDirectory* LocalComponentHandles::outgoing() { return &outgoing_dir_; }
 
-ServiceDirectory MockHandles::svc() {
+ServiceDirectory LocalComponentHandles::svc() {
   zx::channel local;
   zx::channel remote;
   ZX_ASSERT(zx::channel::create(0, &local, &remote) == ZX_OK);

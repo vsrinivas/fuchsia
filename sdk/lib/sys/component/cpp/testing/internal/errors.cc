@@ -11,6 +11,43 @@ namespace sys {
 namespace testing {
 namespace internal {
 
+const char* ConvertToString(fuchsia::component::test::RealmBuilderError2& error) {
+  switch (error) {
+    case fuchsia::component::test::RealmBuilderError2::CHILD_ALREADY_EXISTS:
+      return "CHILD_ALREADY_EXISTS";
+    case fuchsia::component::test::RealmBuilderError2::INVALID_MANIFEST_EXTENSION:
+      return "INVALID_MANIFEST_EXTENSION";
+    case fuchsia::component::test::RealmBuilderError2::INVALID_COMPONENT_DECL:
+      return "INVALID_COMPONENT_DECL";
+    case fuchsia::component::test::RealmBuilderError2::NO_SUCH_CHILD:
+      return "NO_SUCH_CHILD";
+    case fuchsia::component::test::RealmBuilderError2::CHILD_DECL_NOT_VISIBLE:
+      return "CHILD_DECL_NOT_VISIBLE";
+    case fuchsia::component::test::RealmBuilderError2::NO_SUCH_SOURCE:
+      return "NO_SUCH_SOURCE";
+    case fuchsia::component::test::RealmBuilderError2::NO_SUCH_TARGET:
+      return "NO_SUCH_TARGET";
+    case fuchsia::component::test::RealmBuilderError2::CAPABILITIES_EMPTY:
+      return "CAPABILITIES_EMPTY";
+    case fuchsia::component::test::RealmBuilderError2::TARGETS_EMPTY:
+      return "TARGETS_EMPTY";
+    case fuchsia::component::test::RealmBuilderError2::SOURCE_AND_TARGET_MATCH:
+      return "SOURCE_AND_TARGET_MATCH";
+    case fuchsia::component::test::RealmBuilderError2::DECL_NOT_FOUND:
+      return "DECL_NOT_FOUND";
+    case fuchsia::component::test::RealmBuilderError2::DECL_READ_ERROR:
+      return "DECL_READ_ERROR";
+    case fuchsia::component::test::RealmBuilderError2::BUILD_ALREADY_CALLED:
+      return "BUILD_ALREADY_CALLED";
+    case fuchsia::component::test::RealmBuilderError2::CAPABILITY_INVALID:
+      return "CAPABILITY_INVALID";
+    case fuchsia::component::test::RealmBuilderError2::INVALID_CHILD_REALM_HANDLE:
+      return "INVALID_CHILD_REALM_HANDLE";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 const char* ConvertToString(fuchsia::component::test::RealmBuilderError& error) {
   switch (error) {
     case fuchsia::component::test::RealmBuilderError::NODE_BEHIND_CHILD_DECL:
@@ -78,6 +115,12 @@ const char* ConvertToString(fuchsia::component::Error& error) {
 void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t status) {
   ZX_PANIC("[%s] FIDL method %s failed with status: %s", stacktrace, context,
            zx_status_get_string(status));
+}
+
+void PanicWithMessage(const char* stacktrace, const char* context,
+                      fuchsia::component::test::RealmBuilderError2& error) {
+  ZX_PANIC("[%s] FIDL method %s failed with error: %s\n", stacktrace, context,
+           ConvertToString(error));
 }
 
 void PanicWithMessage(const char* stacktrace, const char* context,

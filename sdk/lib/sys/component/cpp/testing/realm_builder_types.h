@@ -5,6 +5,7 @@
 #ifndef LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
 #define LIB_SYS_COMPONENT_CPP_TESTING_REALM_BUILDER_TYPES_H_
 
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
@@ -61,16 +62,9 @@ struct Directory final {
   fuchsia::io2::Operations rights;
 };
 
-// A storage capability.
-// See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities/storage.
-struct Storage final {
-  std::string_view name;
-  std::string_view path;
-};
-
 // A capability to be routed from one component to another.
 // See: https://fuchsia.dev/fuchsia-src/concepts/components/v2/capabilities
-using Capability = cpp17::variant<Protocol, Directory, Storage>;
+using Capability = cpp17::variant<Protocol, Directory>;
 
 // A routing of a capability from source to multiple targets.
 struct CapabilityRoute final {
@@ -93,17 +87,17 @@ struct LegacyComponentUrl final {
 
 // [START mock_handles_cpp]
 // Handles provided to mock component.
-class MockHandles final {
+class LocalComponentHandles final {
  public:
   // [START_EXCLUDE]
-  MockHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir);
-  ~MockHandles();
+  LocalComponentHandles(fdio_ns_t* ns, OutgoingDirectory outgoing_dir);
+  ~LocalComponentHandles();
 
-  MockHandles(MockHandles&&) noexcept;
-  MockHandles& operator=(MockHandles&&) noexcept;
+  LocalComponentHandles(LocalComponentHandles&&) noexcept;
+  LocalComponentHandles& operator=(LocalComponentHandles&&) noexcept;
 
-  MockHandles(MockHandles&) = delete;
-  MockHandles& operator=(MockHandles&) = delete;
+  LocalComponentHandles(LocalComponentHandles&) = delete;
+  LocalComponentHandles& operator=(LocalComponentHandles&) = delete;
   // [END_EXCLUDE]
 
   // Returns the namespace provided to the mock component. The returned pointer
@@ -127,19 +121,29 @@ class MockHandles final {
 };
 // [END mock_handles_cpp]
 
+// TODO(fxbug.dev/88421): Remove this alias once clients are migrated off old
+// API.
+using MockHandles = LocalComponentHandles;
+
 // [START mock_interface_cpp]
 // The interface for backing implementations of components with a Source of Mock.
-class MockComponent {
+class LocalComponent {
  public:
-  virtual ~MockComponent();
+  virtual ~LocalComponent();
 
   // Invoked when the Component Manager issues a Start request to the component.
   // |mock_handles| contains the outgoing directory and namespace of
   // the component.
-  virtual void Start(std::unique_ptr<MockHandles> mock_handles);
+  virtual void Start(std::unique_ptr<LocalComponentHandles> mock_handles);
 };
 // [END mock_interface_cpp]
 
+// TODO(fxbug.dev/88421): Remove this alias once clients are migrated off old
+// API.
+using MockComponent = LocalComponent;
+
+// TODO(fxbug.dev/88421): Remove this class once clients are migrated off old
+// API.
 // A reference to a mock component.
 struct Mock final {
   MockComponent* impl;
@@ -152,11 +156,39 @@ using Source = cpp17::variant<ComponentUrl, LegacyComponentUrl, Mock>;
 // A component as referred to by its source.
 struct Component final {
   Source source;
+  bool eager = false;
+};
+
+using StartupMode = fuchsia::component::decl::StartupMode;
+
+struct ChildOptions {
   // Flag used to determine if component should be started eagerly or not.
   // If started eagerly, then it will start as soon as it's resolved.
   // Otherwise, the component will start once another component requests
   // a capability that it offers.
-  bool eager = false;
+  StartupMode startup_mode;
+
+  // Set the environment for this child to run in. The environment specified
+  // by this field must already exist by the time this is set.
+  // Otherwise, calls to AddChild will panic.
+  std::string_view environment;
+};
+
+// If this is used for the root Realm, then this endpoint refers to the test
+// component itself. This used to route capabilities to/from the test component.
+// If this ise used in a sub Realm, then `Parent` will refer to its parent Realm.
+struct ParentRef {};
+
+struct ChildRef {
+  std::string_view name;
+};
+
+using Ref = cpp17::variant<ParentRef, ChildRef>;
+
+struct Route {
+  std::vector<Capability> capabilities;
+  Ref source;
+  std::vector<Ref> targets;
 };
 
 }  // namespace testing

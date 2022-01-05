@@ -24,8 +24,8 @@ class MockRunner final {
   MockRunner(MockRunner&& other) = delete;
   MockRunner& operator=(MockRunner&& other) = delete;
 
-  MockRunner(MockRunner& other) = delete;
-  MockRunner& operator=(MockRunner& other) = delete;
+  MockRunner(const MockRunner& other) = delete;
+  MockRunner& operator=(const MockRunner& other) = delete;
 
   void Register(std::string mock_id, MockComponent* mock);
 

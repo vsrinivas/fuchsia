@@ -44,6 +44,23 @@ executable("realm_builder_test_bin") {
   ]
 }
 
+executable("local_component_runner_test_bin") {
+  testonly = true
+
+  sources = [ "local_component_runner_test.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/testing/fidl:placeholders",
+  ]
+}
+
 fuchsia_component("echo_server") {
   deps = [ ":echo_server_bin" ]
   manifest = "meta/echo_server.cml"
@@ -63,8 +80,15 @@ fuchsia_component("realm_builder_test") {
   manifest = "meta/realm_builder_test.cml"
 }
 
+fuchsia_unittest_component("local_component_runner_test") {
+  deps = [ ":local_component_runner_test_bin" ]
+}
+
 fuchsia_test_package("component_cpp_tests") {
-  test_components = [ ":realm_builder_test" ]
+  test_components = [
+    ":realm_builder_test",
+    ":local_component_runner_test",
+  ]
   deps = [
     ":echo_server",
     ":echo_server_legacy",

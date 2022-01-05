@@ -27,6 +27,7 @@ void CreateChild(fuchsia::component::Realm_Sync* realm, std::string collection, 
 
 void DestroyChild(fuchsia::component::Realm_Sync* realm,
                   fuchsia::component::decl::ChildRef child_ref);
+void DestroyChild(fuchsia::component::Realm* realm, fuchsia::component::decl::ChildRef child_ref);
 
 }  // namespace internal
 }  // namespace testing

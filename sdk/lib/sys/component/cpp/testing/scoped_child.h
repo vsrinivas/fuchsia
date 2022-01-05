@@ -7,10 +7,13 @@
 
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/component/decl/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
+#include <memory>
 
 namespace sys {
 namespace testing {
@@ -32,13 +35,33 @@ class ScopedChild final {
   static ScopedChild New(fuchsia::component::RealmSyncPtr realm_proxy, std::string collection,
                          std::string url);
 
+  // Create a dynamic child component using the fuchsia.component.Realm API.
+  // |collection| is the name of the collection to create the child under. This
+  // field must refer to a name in the current component's manifest file.
+  // |name| is the name to assign to the child.
+  // |url| is the component component URL of the child component.
+  // |svc| is used to make a connection to the protocol. If it's not provided,
+  // then the namespace entry will be used.
+  static ScopedChild New(std::string collection, std::string name, std::string url,
+                         std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
+
+  // Same as above with a randomly generated `name`.
+  static ScopedChild New(std::string collection, std::string url,
+                         std::shared_ptr<sys::ServiceDirectory> svc = nullptr);
+
   ~ScopedChild();
 
   ScopedChild(ScopedChild&&) noexcept;
   ScopedChild& operator=(ScopedChild&&) noexcept;
 
-  ScopedChild(ScopedChild&) = delete;
-  ScopedChild& operator=(ScopedChild&) = delete;
+  ScopedChild(const ScopedChild&) = delete;
+  ScopedChild& operator=(const ScopedChild&) = delete;
+
+  // When the destructor of this object is invoked, call
+  // fuchsia.component/Realm.DestroyChild asynchronously. This will make the
+  // operation non-blocking, which is useful if a test has a slow running
+  // teardown or if destruction *must* be async for any other reason.
+  void MakeTeardownAsync(async_dispatcher_t* dispatcher = nullptr);
 
   // Connect to an interface in the exposed directory of the child component.
   //
@@ -96,13 +119,14 @@ class ScopedChild final {
   }
 
  private:
-  explicit ScopedChild(fuchsia::component::RealmSyncPtr,
-                       fuchsia::component::decl::ChildRef child_ref_, ServiceDirectory exposed_dir);
+  ScopedChild(std::shared_ptr<sys::ServiceDirectory> svc,
+              fuchsia::component::decl::ChildRef child_ref, ServiceDirectory exposed_dir);
 
-  fuchsia::component::RealmSyncPtr realm_proxy_;
+  std::shared_ptr<sys::ServiceDirectory> svc_ = nullptr;
   fuchsia::component::decl::ChildRef child_ref_;
   ServiceDirectory exposed_dir_;
-  bool has_moved_;
+  async_dispatcher_t* dispatcher_ = nullptr;
+  bool has_moved_ = false;
 };
 
 }  // namespace testing
