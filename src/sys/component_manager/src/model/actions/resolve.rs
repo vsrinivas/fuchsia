@@ -93,6 +93,7 @@ async fn do_resolve(component: &Arc<ComponentInstance>) -> Result<Component, Mod
                 Ok(EventPayload::Resolved {
                     component: WeakComponentInstance::from(component),
                     resolved_url: component_info.resolved_url.clone(),
+                    config: component_info.config.clone(),
                     decl: component_info.decl.clone(),
                 }),
             );

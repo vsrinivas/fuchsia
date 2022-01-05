@@ -18,9 +18,10 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
-    cm_rust::{CapabilityPath, ComponentDecl, ConfigDecl},
+    cm_rust::{CapabilityPath, ComponentDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
+    config_encoder::ConfigFields,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2::LifecycleControllerMarker,
@@ -272,25 +273,15 @@ impl Hub {
 
     fn add_config(
         directory: Directory,
-        component_decl: &ComponentDecl,
+        config: &ConfigFields,
         abs_moniker: &AbsoluteMoniker,
     ) -> Result<(), ModelError> {
-        if let Some(ConfigDecl { fields, .. }) = &component_decl.config {
-            if fields.is_empty() {
-                return Ok(());
-            }
-
-            let config_dir = pfs::simple();
-            for field in fields {
-                let value_type = format!("{:?}", field.value_type);
-                config_dir.add_node(
-                    &field.key,
-                    read_only_static(value_type.into_bytes()),
-                    &abs_moniker,
-                )?;
-            }
-            directory.add_node("config", config_dir, &abs_moniker)?;
+        let config_dir = pfs::simple();
+        for field in &config.fields {
+            let value = format!("{:?}", field.value);
+            config_dir.add_node(&field.key, read_only_static(value.into_bytes()), &abs_moniker)?;
         }
+        directory.add_node("config", config_dir, &abs_moniker)?;
         Ok(())
     }
 
@@ -422,6 +413,7 @@ impl Hub {
         target: &WeakComponentInstance,
         resolved_url: String,
         component_decl: &'a ComponentDecl,
+        config: &Option<ConfigFields>,
     ) -> Result<(), ModelError> {
         let mut instances_map = self.instances.lock().await;
 
@@ -454,7 +446,10 @@ impl Hub {
         )?;
 
         Self::add_instance_id_file(resolved_directory.clone(), target_moniker, target.clone())?;
-        Self::add_config(resolved_directory.clone(), &component_decl, target_moniker)?;
+
+        if let Some(config) = config {
+            Self::add_config(resolved_directory.clone(), config, target_moniker)?;
+        }
 
         instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
         instance.has_resolved_directory = true;
@@ -656,9 +651,15 @@ impl Hook for Hub {
             Ok(EventPayload::Started { component, runtime, component_decl, .. }) => {
                 self.on_started_async(target_moniker, component, &runtime, &component_decl).await?;
             }
-            Ok(EventPayload::Resolved { component, resolved_url, decl, .. }) => {
-                self.on_resolved_async(target_moniker, component, resolved_url.clone(), &decl)
-                    .await?;
+            Ok(EventPayload::Resolved { component, resolved_url, decl, config, .. }) => {
+                self.on_resolved_async(
+                    target_moniker,
+                    component,
+                    resolved_url.clone(),
+                    &decl,
+                    &config,
+                )
+                .await?;
             }
             Ok(EventPayload::Stopped { .. }) => {
                 self.on_stopped_async(target_moniker).await?;
@@ -1028,15 +1029,9 @@ mod tests {
         )
         .expect("Failed to open directory");
         assert_eq!(vec!["logging", "tags", "verbosity"], list_directory(&config_dir).await);
-        assert_eq!("Bool(ConfigBooleanType)", read_file(&config_dir, "logging").await);
-        assert_eq!(
-            "String(ConfigStringType { max_size: 10 })",
-            read_file(&config_dir, "verbosity").await
-        );
-        assert_eq!(
-            "Vector(ConfigVectorType { max_count: 10, element_type: String(ConfigStringType { max_size: 20 }) })",
-            read_file(&config_dir, "tags").await
-        );
+        assert_eq!("Single(Flag(true))", read_file(&config_dir, "logging").await);
+        assert_eq!("Single(Text(\"DEBUG\"))", read_file(&config_dir, "verbosity").await);
+        assert_eq!("List(TextList([\"foo\", \"bar\"]))", read_file(&config_dir, "tags").await);
     }
 
     #[fuchsia::test]

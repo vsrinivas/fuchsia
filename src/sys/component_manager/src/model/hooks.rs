@@ -14,6 +14,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     cm_rust::{CapabilityName, ComponentDecl},
+    config_encoder::ConfigFields,
     fidl_fuchsia_diagnostics_types as fdiagnostics,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
@@ -297,6 +298,7 @@ pub enum EventPayload {
         component: WeakComponentInstance,
         resolved_url: String,
         decl: ComponentDecl,
+        config: Option<ConfigFields>,
     },
     Started {
         component: WeakComponentInstance,
@@ -367,9 +369,10 @@ impl fmt::Debug for EventPayload {
             EventPayload::Started { component_decl, .. } => {
                 formatter.field("component_decl", &component_decl).finish()
             }
-            EventPayload::Resolved { component: _, resolved_url, decl } => {
+            EventPayload::Resolved { component: _, resolved_url, decl, config } => {
                 formatter.field("resolved_url", resolved_url);
-                formatter.field("decl", decl).finish()
+                formatter.field("decl", decl);
+                formatter.field("config", config).finish()
             }
             EventPayload::Stopped { status } => formatter.field("status", status).finish(),
             EventPayload::Purged
