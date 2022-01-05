@@ -557,7 +557,6 @@ TEST(Tas58xxTest, ExternalConfig) {
   mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
 
   metadata::ti::TasConfig metadata = {};
-  metadata.bridged = true;
   metadata.number_of_writes1 = 2;
   metadata.init_sequence1[0].address = 0x12;
   metadata.init_sequence1[0].value = 0x34;
@@ -586,12 +585,9 @@ TEST(Tas58xxTest, ExternalConfig) {
     mock_i2c
         .ExpectWriteStop({0x12, 0x34})  // External config.
         .ExpectWriteStop({0x56, 0x78})  // External config.
-        .ExpectWriteStop({0x11, 0x22})  // External config.
-        .ExpectWriteStop({0x33, 0x44})  // External config.
-        .ExpectWriteStop({0x55, 0x66})  // External config.
         .ExpectWriteStop({0x00, 0x00})  // Page 0.
         .ExpectWriteStop({0x7f, 0x00})  // book 0.
-        .ExpectWriteStop({0x02, 0x05})  // Normal modulation, mono, PBTL (bridged mono).
+        .ExpectWriteStop({0x02, 0x01})  // Normal modulation, mono, no PBTL (Stereo BTL).
         .ExpectWriteStop({0x03, 0x03})  // Play,
         .ExpectWriteStop({0x00, 0x00})  // Page 0.
         .ExpectWriteStop({0x7f, 0x00})  // book 0.
@@ -601,6 +597,25 @@ TEST(Tas58xxTest, ExternalConfig) {
         .ExpectReadStop({0x00})
         .ExpectWriteStop({0x03, 0x08});  // Muted = true.
     ASSERT_OK(client.Reset());
+  }
+
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use_bitmask = 3;
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::I2S;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 32;
+    format.bits_per_sample = 32;
+    mock_i2c.ExpectWriteStop({0x33, 0x03});  // 32 bits.
+    mock_i2c.ExpectWriteStop({0x34, 0x00});  // Keep data start sclk.
+    mock_i2c.ExpectWriteStop({0x11, 0x22});  // External config.
+    mock_i2c.ExpectWriteStop({0x33, 0x44});  // External config.
+    mock_i2c.ExpectWriteStop({0x55, 0x66});  // External config.
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
   }
 
   mock_i2c.VerifyAndClear();

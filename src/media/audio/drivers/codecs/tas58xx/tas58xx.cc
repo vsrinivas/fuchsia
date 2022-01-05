@@ -132,16 +132,6 @@ zx_status_t Tas58xx::Reset() {
 
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
 
-    // Run the second init sequence from metadata if available, and then kDefaultsEnd.
-    for (size_t i = 0; i < metadata_.number_of_writes2; ++i) {
-      auto status =
-          WriteReg(metadata_.init_sequence2[i].address, metadata_.init_sequence2[i].value);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "Failed to write I2C register 0x%02X", metadata_.init_sequence2[i].address);
-        return status;
-      }
-    }
-
     const uint8_t kDefaultsEnd[][2] = {
         {kRegSelectPage, 0x00},
         {kRegSelectBook, 0x00},
@@ -310,6 +300,15 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
                         : 0x00);
   if (status != ZX_OK) {
     return zx::error(status);
+  }
+  // Run the second initialization sequence from metadata if available.
+  // This allows for initialization sequences that are affected by the DAI format to be applied
+  // after the DAI format is set.
+  for (size_t i = 0; i < metadata_.number_of_writes2; ++i) {
+    status = WriteReg(metadata_.init_sequence2[i].address, metadata_.init_sequence2[i].value);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
   }
   return zx::ok(CodecFormatInfo{});
 }
