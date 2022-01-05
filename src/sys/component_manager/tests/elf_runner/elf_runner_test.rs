@@ -4,24 +4,29 @@
 
 use {
     component_events::{events::*, matcher::*},
-    fuchsia_async as fasync,
-    test_utils_lib::opaque_test::*,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::{ChildOptions, RealmBuilder},
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn echo_with_args() {
-    run_single_test("fuchsia-pkg://fuchsia.com/elf-runner-test#meta/reporter_args.cm").await
+    run_single_test("#meta/reporter_args.cm").await
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn echo_without_args() {
-    run_single_test("fuchsia-pkg://fuchsia.com/elf-runner-test#meta/reporter_no_args.cm").await
+    run_single_test("#meta/reporter_no_args.cm").await
 }
 
 async fn run_single_test(url: &str) {
-    let test = OpaqueTest::default(url).await.unwrap();
+    let builder = RealmBuilder::new().await.unwrap();
+    builder.add_child("reporter", url, ChildOptions::new().eager()).await.unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
 
-    let event_source = test.connect_to_event_source().await.unwrap();
+    let event_source = EventSource::from_proxy(proxy);
 
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
@@ -32,6 +37,7 @@ async fn run_single_test(url: &str) {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
+        .moniker_regex("./reporter")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

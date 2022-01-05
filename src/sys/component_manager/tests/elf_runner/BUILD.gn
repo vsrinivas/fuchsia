@@ -17,13 +17,10 @@ rustc_test("elf_runner_test_bin") {
   edition = "2018"
   source_root = "elf_runner_test.rs"
   deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-runtime",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "elf_runner_test.rs" ]
@@ -56,12 +53,11 @@ fuchsia_component("reporter_args") {
 }
 
 fuchsia_unittest_package("elf-runner-test") {
-  package_deps_for_infra_only =
-      [ "//src/sys/component_manager:component-manager" ]
-  manifest = "meta/elf-runner-test.cmx"
+  manifest = "meta/elf-runner-test.cml"
   deps = [
     ":elf_runner_test_bin",
     ":reporter_args",
     ":reporter_no_args",
+    "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
   ]
 }
