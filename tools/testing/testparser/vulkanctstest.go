@@ -43,11 +43,12 @@ func parseVulkanCtsTest(lines [][]byte) []TestCaseResult {
 			"Pending",
 			"ResourceError",
 			"InternalError",
-			"Crash",
-			"Timeout":
+			"Crash":
 			status = Fail
 		case "NotSupported":
 			status = Skip
+		case "Timeout":
+			status = Abort
 		}
 		res = append(res, TestCaseResult{
 			DisplayName: displayName,

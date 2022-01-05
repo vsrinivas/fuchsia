@@ -100,6 +100,8 @@ Caused by:
 Test exited abnormally
 [FAILED]	VnodeTest.TruncateExceptionCase
 Failed tests: NodeManagerTest.TruncateExceptionCase, VnodeTest.TruncateExceptionCase
+[duration - virtualization::virtualization_netdevice::remove_network]:	Still running after 60 seconds
+[TIMED_OUT]	virtualization::virtualization_netdevice::remove_network
 100 out of 102 tests passed...
 fuchsia-pkg://fuchsia.com/f2fs-fs-tests#meta/f2fs-unittest.cm completed with result: FAILED
 One or more test runs failed.
@@ -137,6 +139,11 @@ One or more test runs failed.
 			Status:      "Fail",
 			Format:      "FTF",
 			FailReason:  "Test exited abnormally",
+		}, {
+			DisplayName: "virtualization::virtualization_netdevice::remove_network",
+			CaseName:    "virtualization::virtualization_netdevice::remove_network",
+			Status:      "Abort",
+			Format:      "FTF",
 		},
 	}
 	testCaseCmp(t, stdout, want)

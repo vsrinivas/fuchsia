@@ -214,6 +214,8 @@ func testCaseStatusToResultDBStatus(result testparser.TestCaseStatus) (resultpb.
 		return resultpb.TestStatus_FAIL, nil
 	case testparser.Skip:
 		return resultpb.TestStatus_SKIP, nil
+	case testparser.Abort:
+		return resultpb.TestStatus_ABORT, nil
 	}
 	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("cannot map Result: %s to result_sink test_result status", result)
 }

@@ -82,7 +82,7 @@ func createTRFTestCase(caseName, result string) TestCaseResult {
 	case "INCONCLUSIVE":
 		status = Fail
 	case "TIMED_OUT":
-		status = Fail
+		status = Abort
 	case "ERROR":
 		status = Fail
 	case "SKIPPED":

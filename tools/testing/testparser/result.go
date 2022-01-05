@@ -11,9 +11,10 @@ import (
 type TestCaseStatus string
 
 const (
-	Pass TestCaseStatus = "Pass"
-	Fail TestCaseStatus = "Fail"
-	Skip TestCaseStatus = "Skip"
+	Pass  TestCaseStatus = "Pass"
+	Fail  TestCaseStatus = "Fail"
+	Skip  TestCaseStatus = "Skip"
+	Abort TestCaseStatus = "Abort"
 )
 
 type TestCaseResult struct {
