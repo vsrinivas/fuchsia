@@ -566,7 +566,7 @@ impl PackageDataCollector {
             for capability in &mani.uses {
                 if let Capability::Protocol(cap) = capability {
                     let service_name = &cap.source_name;
-                    let target_id = {
+                    let source_component_id = {
                         if service_map.contains_key(service_name) {
                             // FIXME: Options do not impl Try so we cannot ? but there must be some better way to get at a value...
                             components.get(service_map.get(service_name).unwrap()).unwrap().id
@@ -593,8 +593,8 @@ impl PackageDataCollector {
                     route_idx += 1;
                     routes.push(Route {
                         id: route_idx,
-                        src_id: mani.component_id,
-                        dst_id: target_id,
+                        src_id: source_component_id,
+                        dst_id: mani.component_id,
                         service_name: service_name.to_string(),
                         protocol_id: 0, // FIXME:
                     });
@@ -1101,6 +1101,17 @@ pub mod tests {
         assert_eq!(2, response.components.len());
         assert_eq!(1, response.manifests.len());
         assert_eq!(1, response.routes.len());
+        // Component 2 is inferred, providing the fuchsia.test.foo.bar service to component 1.
+        assert_eq!(
+            vec![Route {
+                id: 1,
+                src_id: 2,
+                dst_id: 1,
+                service_name: String::from("fuchsia.test.foo.bar"),
+                protocol_id: 0
+            }],
+            response.routes
+        );
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
         // 1 inferred, 0 zbi/bootfs, 1 (non-static) package, 0 static packages.
@@ -1626,6 +1637,93 @@ pub mod tests {
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/foo#meta/served1.cmx",
             result.services.get("fuchsia.test.foo.service1").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_inferred_service_route_directionality() {
+        // Create a single test package with a single unknown service dependency.
+        let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
+        let cms = create_test_cmx_map(vec![(String::from("meta/baz.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let served = vec![pkg];
+
+        let services = HashMap::new();
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
+        let response = PackageDataCollector::extract(
+            fake_model_config().update_package_url(),
+            &mut artifact_loader,
+            served,
+            services,
+            &None,
+        )
+        .unwrap();
+
+        // The inferred component provides the service; assert its component id so that we can also
+        // be sure that the route source is correct.
+        let inferred = response
+            .components
+            .get("fuchsia-pkg://inferred#meta/fuchsia.test.foo.bar.cmx")
+            .expect("to find inferred route for service");
+        assert_eq!(inferred.id, 2);
+        // Component 2 is inferred, providing the fuchsia.test.foo.bar service to component 1.
+        assert_eq!(
+            vec![Route {
+                id: 1,
+                src_id: 2,
+                dst_id: 1,
+                service_name: String::from("fuchsia.test.foo.bar"),
+                protocol_id: 0,
+            }],
+            response.routes
+        );
+    }
+
+    #[test]
+    fn test_route_directionality_with_known_services() {
+        // Create two test packages, one that depends on a service provided by the other.
+        let sb = create_test_sandbox(vec![String::from("fuchsia.test.taurus")]);
+        let cms = create_test_cmx_map(vec![(String::from("meta/bar.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+
+        let sb2 = create_test_sandbox(Vec::new());
+        let cms2 = create_test_cmx_map(vec![(String::from("meta/taurus.cmx"), sb2)]);
+        let pkg2 =
+            create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/aries"), cms2);
+        let served = vec![pkg, pkg2];
+
+        // Map the service the first package requires to the second package.
+        let mut services = HashMap::new();
+        services.insert(
+            String::from("fuchsia.test.taurus"),
+            String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
+        );
+
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
+        let response = PackageDataCollector::extract(
+            fake_model_config().update_package_url(),
+            &mut artifact_loader,
+            served,
+            services,
+            &None,
+        )
+        .unwrap();
+
+        assert_eq!(2, response.components.len());
+        let server = response
+            .components
+            .get("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx")
+            .expect("to find serving component");
+        assert_eq!(server.id, 2);
+        assert_eq!(
+            vec![Route {
+                id: 1,
+                src_id: 2,
+                dst_id: 1,
+                service_name: String::from("fuchsia.test.taurus"),
+                protocol_id: 0,
+            }],
+            response.routes
         );
     }
 }
