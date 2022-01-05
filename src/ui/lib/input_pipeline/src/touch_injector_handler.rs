@@ -7,7 +7,7 @@ use {
     crate::input_handler::InputHandler,
     crate::touch_binding,
     crate::utils::{Position, Size},
-    anyhow::Error,
+    anyhow::{Context, Error, Result},
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
     fidl::endpoints::create_proxy,
@@ -15,9 +15,8 @@ use {
     fidl_fuchsia_ui_pointerinjector_configuration as pointerinjector_config,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    futures::lock::Mutex,
     futures::stream::StreamExt,
-    std::{collections::HashMap, convert::TryInto, option::Option, rc::Rc},
+    std::{cell::RefCell, collections::HashMap, convert::TryInto, option::Option, rc::Rc},
 };
 
 /// An input handler that parses touch events and forwards them to Scenic through the
@@ -25,7 +24,7 @@ use {
 #[derive(Debug)]
 pub struct TouchInjectorHandler {
     /// The mutable fields of this handler.
-    inner: Mutex<TouchInjectorHandlerInner>,
+    inner: RefCell<TouchInjectorHandlerInner>,
 
     /// The scope and coordinate system of injection.
     /// See fidl_fuchsia_pointerinjector::Context for more details.
@@ -72,10 +71,16 @@ impl InputHandler for TouchInjectorHandler {
         } = input_event
         {
             // Create a new injector if this is the first time seeing device_id.
-            self.ensure_injector_registered(&touch_device_descriptor).await;
+            if let Err(e) = self.ensure_injector_registered(&touch_device_descriptor).await {
+                fx_log_err!("{}", e);
+            }
 
             // Handle the event.
-            self.handle_touch_event(&touch_event, &touch_device_descriptor, event_time).await;
+            if let Err(e) =
+                self.send_event_to_scenic(&touch_event, &touch_device_descriptor, event_time).await
+            {
+                fx_log_err!("{}", e);
+            }
 
             // Consume the input event.
             input_event.handled = input_device::Handled::Yes
@@ -133,7 +138,7 @@ impl TouchInjectorHandler {
     ///
     /// # Parameters
     /// - `configuration_proxy`: A proxy used to get configuration details for pointer
-    ///    injection.  If none is provided, connect to protocol routed to this component.
+    ///    injection.
     /// - `injector_registry_proxy`: A proxy used to register new pointer injectors.  If
     ///    none is provided, connect to protocol routed to this component.
     /// - `display_size`: The size of the associated touch display.
@@ -148,9 +153,8 @@ impl TouchInjectorHandler {
         // Get the context and target views to inject into.
         let (context_view_ref, target_view_ref) = configuration_proxy.get_view_refs().await?;
 
-        // Continuously watch for viewport updates.
         let handler = Rc::new(Self {
-            inner: Mutex::new(TouchInjectorHandlerInner {
+            inner: RefCell::new(TouchInjectorHandlerInner {
                 viewport: None,
                 injectors: HashMap::new(),
             }),
@@ -172,26 +176,26 @@ impl TouchInjectorHandler {
     async fn ensure_injector_registered(
         self: &Rc<Self>,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
-    ) {
-        let mut inner = self.inner.lock().await;
+    ) -> Result<(), anyhow::Error> {
+        let mut inner = self.inner.borrow_mut();
         if inner.injectors.contains_key(&touch_descriptor.device_id) {
-            return;
+            return Ok(());
         }
 
         // Create a new injector.
-        let (device_proxy, device_server) =
-            create_proxy::<pointerinjector::DeviceMarker>().expect("Failed to create DeviceProxy.");
+        let (device_proxy, device_server) = create_proxy::<pointerinjector::DeviceMarker>()
+            .context("Failed to create DeviceProxy.")?;
         let context = fuchsia_scenic::duplicate_view_ref(&self.context_view_ref)
-            .expect("Failed to duplicate context view ref.");
+            .context("Failed to duplicate context view ref.")?;
         let target = fuchsia_scenic::duplicate_view_ref(&self.target_view_ref)
-            .expect("Failed to duplicate target view ref.");
+            .context("Failed to duplicate target view ref.")?;
         let viewport = inner.viewport.clone();
         let config = pointerinjector::Config {
             device_id: Some(touch_descriptor.device_id),
             device_type: Some(pointerinjector::DeviceType::Touch),
             context: Some(pointerinjector::Context::View(context)),
             target: Some(pointerinjector::Target::View(target)),
-            viewport: viewport,
+            viewport,
             dispatch_policy: Some(pointerinjector::DispatchPolicy::TopHitAndAncestorsInTarget),
             scroll_v_range: None,
             scroll_h_range: None,
@@ -203,25 +207,27 @@ impl TouchInjectorHandler {
         self.injector_registry_proxy
             .register(config, device_server)
             .await
-            .expect("Failed to register injector.");
+            .context("Failed to register injector.")?;
         fx_log_info!("Registered injector with device id {:?}", touch_descriptor.device_id);
 
         // Keep track of the injector.
         inner.injectors.insert(touch_descriptor.device_id, device_proxy);
+
+        Ok(())
     }
 
-    /// Handles the given event and sends it to Scenic.
+    /// Sends the given event to Scenic.
     ///
     /// # Parameters
     /// - `touch_event`: The touch event to send to Scenic.
     /// - `touch_descriptor`: The descriptor for the device that sent the touch event.
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
-    async fn handle_touch_event(
+    async fn send_event_to_scenic(
         &self,
         touch_event: &touch_binding::TouchEvent,
         touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         event_time: input_device::EventTime,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         // The order in which events are sent to clients.
         let ordered_phases = vec![
             pointerinjector::EventPhase::Add,
@@ -247,13 +253,16 @@ impl TouchInjectorHandler {
             events.extend(new_events);
         }
 
-        let inner = self.inner.lock().await;
+        let inner = self.inner.borrow();
         if let Some(injector) = inner.injectors.get(&touch_descriptor.device_id) {
             let events_to_send = &mut events.into_iter();
-            let fut = injector.inject(events_to_send);
-            let _ = fut.await;
+            let _ = injector.inject(events_to_send).await;
+            Ok(())
         } else {
-            fx_log_err!("No injector found for touch device {}.", touch_descriptor.device_id);
+            Err(anyhow::format_err!(
+                "No injector found for touch device {}.",
+                touch_descriptor.device_id
+            ))
         }
     }
 
@@ -341,7 +350,7 @@ impl TouchInjectorHandler {
             match viewport_stream.next().await {
                 Some(Ok(new_viewport)) => {
                     // Update the viewport tracked by this handler.
-                    let mut inner = self.inner.lock().await;
+                    let mut inner = self.inner.borrow_mut();
                     inner.viewport = Some(new_viewport.clone());
 
                     // Update Scenic with the latest viewport.
@@ -443,7 +452,7 @@ mod tests {
                 _ => {}
             };
         } else {
-            assert!(false, "RegistryRequestStream failed.");
+            panic!("RegistryRequestStream failed.");
         }
     }
 
@@ -458,18 +467,14 @@ mod tests {
         let mut injector_stream =
             injector_stream_receiver.await.expect("Failed to get DeviceRequestStream.");
         match injector_stream.next().await {
-            Some(request) => match request {
-                Ok(pointerinjector::DeviceRequest::Inject { events, responder }) => {
-                    assert_eq!(events.len(), 1);
-                    assert_eq!(events[0].timestamp, expected_event.timestamp);
-                    assert_eq!(events[0].data, expected_event.data);
-                    responder.send().expect("failed to respond");
-                }
-                _ => {
-                    assert!(false, "Unexpected DeviceRequest.");
-                }
-            },
-            None => assert!(false, "Expected another event."),
+            Some(Ok(pointerinjector::DeviceRequest::Inject { events, responder })) => {
+                assert_eq!(events.len(), 1);
+                assert_eq!(events[0].timestamp, expected_event.timestamp);
+                assert_eq!(events[0].data, expected_event.data);
+                responder.send().expect("failed to respond");
+            }
+            Some(Err(e)) => panic!("FIDL error {}", e),
+            None => panic!("Expected another event."),
         }
     }
 
@@ -484,8 +489,8 @@ mod tests {
 
     // Tests that TouchInjectorHandler::watch_viewport() tracks viewport updates and notifies
     // injectors about said updates.
-    #[test]
-    fn watch_viewport() {
+    #[fuchsia::test]
+    fn receives_viewport_updates() {
         let mut exec = fasync::TestExecutor::new().expect("executor needed");
 
         // Create touch handler.
@@ -506,25 +511,20 @@ mod tests {
             touch_handler_fut,
             config_request_stream_fut,
         ));
-        if touch_handler_res.is_err() {
-            panic!("Failed to create touch handler.")
-        }
-        let touch_handler = touch_handler_res.unwrap();
+        let touch_handler = touch_handler_res.expect("Failed to create touch handler.");
 
         // Add an injector.
         let (injector_device_proxy, mut injector_device_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<pointerinjector::DeviceMarker>()
                 .expect("Failed to create pointerinjector Registry proxy and stream.");
-        exec.run_singlethreaded(async {
-            let mut inner = touch_handler.inner.lock().await;
-            inner.injectors.insert(1, injector_device_proxy);
-        });
+        touch_handler.inner.borrow_mut().injectors.insert(1, injector_device_proxy);
 
+        // This nested block is used to bound the lifetime of `watch_viewport_fut`.
         {
-            // Watch for viewport changes.
+            // Request a viewport update.
             let watch_viewport_fut = touch_handler.clone().watch_viewport();
             futures::pin_mut!(watch_viewport_fut);
-            let _ = exec.run_until_stalled(&mut watch_viewport_fut);
+            assert!(exec.run_until_stalled(&mut watch_viewport_fut).is_pending());
 
             // Send a viewport update.
             match exec.run_singlethreaded(&mut configuration_request_stream.next()) {
@@ -535,24 +535,28 @@ mod tests {
                 }
                 other => panic!("Received unexpected value: {:?}", other),
             };
-            let _ = exec.run_until_stalled(&mut watch_viewport_fut);
+            assert!(exec.run_until_stalled(&mut watch_viewport_fut).is_pending());
 
             // Check that the injector received an updated viewport
-            let expected_data = pointerinjector::Data::Viewport(create_viewport(0.0, 100.0));
             exec.run_singlethreaded(async {
                 match injector_device_request_stream.next().await {
                     Some(Ok(pointerinjector::DeviceRequest::Inject { events, responder })) => {
                         assert_eq!(events.len(), 1);
                         assert!(events[0].data.is_some());
-                        assert_eq!(events[0].data, Some(expected_data));
+                        assert_eq!(
+                            events[0].data,
+                            Some(pointerinjector::Data::Viewport(create_viewport(0.0, 100.0)))
+                        );
                         responder.send().expect("injector stream failed to respond.");
                     }
                     other => panic!("Received unexpected value: {:?}", other),
                 }
             });
 
-            // Send another viewport update.
-            let _ = exec.run_until_stalled(&mut watch_viewport_fut);
+            // Request viewport update.
+            assert!(exec.run_until_stalled(&mut watch_viewport_fut).is_pending());
+
+            // Send viewport update.
             match exec.run_singlethreaded(&mut configuration_request_stream.next()) {
                 Some(Ok(pointerinjector_config::SetupRequest::WatchViewport {
                     responder, ..
@@ -563,16 +567,20 @@ mod tests {
                 }
                 other => panic!("Received unexpected value: {:?}", other),
             };
-            let _ = exec.run_until_stalled(&mut watch_viewport_fut);
+
+            // Process viewport update.
+            assert!(exec.run_until_stalled(&mut watch_viewport_fut).is_pending());
 
             // Check that the injector received an updated viewport
-            let expected_data = pointerinjector::Data::Viewport(create_viewport(100.0, 200.0));
             exec.run_singlethreaded(async {
                 match injector_device_request_stream.next().await {
                     Some(Ok(pointerinjector::DeviceRequest::Inject { events, responder })) => {
                         assert_eq!(events.len(), 1);
                         assert!(events[0].data.is_some());
-                        assert_eq!(events[0].data, Some(expected_data));
+                        assert_eq!(
+                            events[0].data,
+                            Some(pointerinjector::Data::Viewport(create_viewport(100.0, 200.0)))
+                        );
                         responder.send().expect("injector stream failed to respond.");
                     }
                     other => panic!("Received unexpected value: {:?}", other),
@@ -582,9 +590,7 @@ mod tests {
 
         // Check the viewport on the handler is accurate.
         let expected_viewport = create_viewport(100.0, 200.0);
-        exec.run_singlethreaded(async {
-            assert_eq!(touch_handler.inner.lock().await.viewport, Some(expected_viewport));
-        });
+        assert_eq!(touch_handler.inner.borrow().viewport, Some(expected_viewport));
     }
 
     // Tests that an add contact event is handled correctly.
@@ -607,10 +613,7 @@ mod tests {
             Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
         );
         let (touch_handler_res, _) = futures::join!(touch_handler_fut, config_request_stream_fut);
-        if touch_handler_res.is_err() {
-            panic!("Failed to create touch handler.")
-        }
-        let touch_handler = touch_handler_res.unwrap();
+        let touch_handler = touch_handler_res.expect("Failed to create touch handler.");
 
         // Create touch event.
         let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
