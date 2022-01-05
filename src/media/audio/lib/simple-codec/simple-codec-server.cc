@@ -149,6 +149,11 @@ void SimpleCodecServerInternal<T>::IsBridgeable(Codec::IsBridgeableCallback call
 }
 
 template <class T>
+void SimpleCodecServerInternal<T>::SetBridgedMode(bool enable_bridged_mode) {
+  static_cast<T*>(this)->SetBridgedMode(enable_bridged_mode);
+}
+
+template <class T>
 void SimpleCodecServerInternal<T>::GetDaiFormats(Codec::GetDaiFormatsCallback callback) {
   auto formats = static_cast<T*>(this)->GetDaiFormats();
   std::vector<audio_fidl::DaiFrameFormat> frame_formats;

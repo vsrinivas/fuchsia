@@ -43,8 +43,6 @@ class Tas5782 : public SimpleCodecServer {
   Info GetInfo() override;
   zx_status_t Stop() override { return ZX_ERR_NOT_SUPPORTED; }
   zx_status_t Start() override { return ZX_ERR_NOT_SUPPORTED; }
-  bool IsBridgeable() override;
-  void SetBridgedMode(bool enable_bridged_mode) override;
   DaiSupportedFormats GetDaiFormats() override;
   zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override;
   GainFormat GetGainFormat() override;

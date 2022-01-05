@@ -92,13 +92,18 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   virtual Info GetInfo() = 0;
   virtual zx_status_t Stop() = 0;
   virtual zx_status_t Start() = 0;
-  virtual bool IsBridgeable() = 0;
-  void SetBridgedMode(bool enable_bridged_mode) override = 0;
   virtual DaiSupportedFormats GetDaiFormats() = 0;
   virtual zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) = 0;
   virtual GainFormat GetGainFormat() = 0;
   virtual GainState GetGainState() = 0;
   virtual void SetGainState(GainState state) = 0;
+  // Default to not bridgable.
+  virtual bool IsBridgeable() { return false; }
+  virtual void SetBridgedMode(bool enable_bridged_mode) {
+    if (enable_bridged_mode) {
+      zxlogf(ERROR, "bridged mode not supported");
+    }
+  }
 
   zx_status_t CodecConnect(zx::channel(channel));
   // The dispatcher's loop is guaranteed to be shutdown before "this" is deleted.

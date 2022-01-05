@@ -161,12 +161,6 @@ Info Max98373::GetInfo() {
   return {.unique_id = "", .manufacturer = "Maxim", .product_name = "MAX98373"};
 }
 
-bool Max98373::IsBridgeable() { return false; }
-
-void Max98373::SetBridgedMode(bool enable_bridged_mode) {
-  // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
-}
-
 DaiSupportedFormats Max98373::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx::status<CodecFormatInfo> Max98373::SetDaiFormat(const DaiFormat& format) {

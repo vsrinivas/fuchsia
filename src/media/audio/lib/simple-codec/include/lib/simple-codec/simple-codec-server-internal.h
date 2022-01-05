@@ -50,7 +50,7 @@ class SimpleCodecServerInternal {
         ZX_ERR_NOT_SUPPORTED));
   }
   void IsBridgeable(Codec::IsBridgeableCallback callback);
-  virtual void SetBridgedMode(bool enable_bridged_mode) = 0;
+  void SetBridgedMode(bool enable_bridged_mode);
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);
   void SetDaiFormat(::fuchsia::hardware::audio::DaiFormat format,
                     Codec::SetDaiFormatCallback callback);

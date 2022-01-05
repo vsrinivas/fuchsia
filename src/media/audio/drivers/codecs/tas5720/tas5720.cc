@@ -216,13 +216,6 @@ zx_status_t Tas5720::Start() {
   return WriteReg(kRegPowerControl, r);
 }
 
-bool Tas5720::IsBridgeable() { return false; }
-
-void Tas5720::SetBridgedMode(bool enable_bridged_mode) {
-  if (enable_bridged_mode) {
-    zxlogf(INFO, "tas5720: bridged mode note supported");
-  }
-}
 DaiSupportedFormats Tas5720::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx::status<CodecFormatInfo> Tas5720::SetDaiFormat(const DaiFormat& format) {

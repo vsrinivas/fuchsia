@@ -205,12 +205,6 @@ Info Tas58xx::GetInfo() {
 
 zx_status_t Tas58xx::Shutdown() { return ZX_OK; }
 
-bool Tas58xx::IsBridgeable() { return false; }
-
-void Tas58xx::SetBridgedMode(bool enable_bridged_mode) {
-  // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
-}
-
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
 
 zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {

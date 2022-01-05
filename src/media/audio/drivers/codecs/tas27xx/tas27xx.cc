@@ -407,14 +407,6 @@ zx_status_t Tas27xx::Shutdown() {
   return ZX_OK;
 }
 
-bool Tas27xx::IsBridgeable() { return false; }
-
-void Tas27xx::SetBridgedMode(bool enable_bridged_mode) {
-  if (enable_bridged_mode) {
-    zxlogf(INFO, "tas27xx: bridged mode note supported");
-  }
-}
-
 DaiSupportedFormats Tas27xx::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx::status<CodecFormatInfo> Tas27xx::SetDaiFormat(const DaiFormat& format) {

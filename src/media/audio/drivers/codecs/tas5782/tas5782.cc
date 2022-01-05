@@ -107,12 +107,6 @@ Info Tas5782::GetInfo() {
   return {.unique_id = "", .manufacturer = "Texas Instruments", .product_name = "TAS5782m"};
 }
 
-bool Tas5782::IsBridgeable() { return false; }
-
-void Tas5782::SetBridgedMode(bool enable_bridged_mode) {
-  // TODO(andresoportus): Add support and report true in CodecIsBridgeable.
-}
-
 DaiSupportedFormats Tas5782::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx::status<CodecFormatInfo> Tas5782::SetDaiFormat(const DaiFormat& format) {
