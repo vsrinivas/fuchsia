@@ -7,14 +7,15 @@
 //! Library for resolving and encoding the runtime configuration values of a component.
 
 use cm_rust::{
-    ConfigDecl, ConfigStringType, ConfigValueType, ConfigVectorElementType, ConfigVectorType,
+    ConfigDecl, ConfigField as ConfigFieldDecl, ConfigStringType, ConfigValueType,
+    ConfigVectorElementType, ConfigVectorType,
 };
 use dynfidl::{BasicField, Field, Structure, VectorField};
 use fidl_fuchsia_component_config::{ListValue, SingleValue, Value, ValueSpec, ValuesData};
 use thiserror::Error;
 
 /// The resolved configuration for a component.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConfigFields {
     /// A list of all resolved fields, in the order of the compiled manifest.
     pub fields: Vec<ConfigField>,
@@ -47,7 +48,7 @@ impl ConfigFields {
             .iter()
             .zip(specs_fields.into_iter())
             .map(|(decl_field, spec_field)| {
-                ConfigField::resolve(spec_field, &decl_field.value_type).map_err(|source| {
+                ConfigField::resolve(spec_field, &decl_field).map_err(|source| {
                     ResolutionError::InvalidValue { key: decl_field.key.clone(), source }
                 })
             })
@@ -144,17 +145,21 @@ impl ConfigFields {
 }
 
 /// A single resolved configuration field.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ConfigField {
+    /// The configuration field's key.
+    pub key: String,
+
     /// The configuration field's value.
     pub value: Value,
 }
 
 impl ConfigField {
-    fn resolve(spec_field: ValueSpec, ty: &ConfigValueType) -> Result<Self, ValueError> {
+    fn resolve(spec_field: ValueSpec, decl_field: &ConfigFieldDecl) -> Result<Self, ValueError> {
         let resolved_value = spec_field.value.ok_or(ValueError::MissingValue)?;
+        let key = decl_field.key.clone();
 
-        match (&resolved_value, ty) {
+        match (&resolved_value, &decl_field.value_type) {
             (Value::Single(SingleValue::Flag(_)), ConfigValueType::Bool(..))
             | (Value::Single(SingleValue::Unsigned8(_)), ConfigValueType::Uint8(..))
             | (Value::Single(SingleValue::Unsigned16(_)), ConfigValueType::Uint16(..))
@@ -226,7 +231,7 @@ impl ConfigField {
             }
         }
 
-        Ok(ConfigField { value: resolved_value })
+        Ok(ConfigField { key, value: resolved_value })
     }
 }
 
@@ -339,26 +344,59 @@ mod tests {
 
         let expected = ConfigFields {
             fields: vec![
-                ConfigField { value: Single(Flag(false)) },
-                ConfigField { value: Single(Unsigned8(255)) },
-                ConfigField { value: Single(Unsigned16(65535)) },
-                ConfigField { value: Single(Unsigned32(4000000000)) },
-                ConfigField { value: Single(Unsigned64(8000000000)) },
-                ConfigField { value: Single(Signed8(-127)) },
-                ConfigField { value: Single(Signed16(-32766)) },
-                ConfigField { value: Single(Signed32(-2000000000)) },
-                ConfigField { value: Single(Signed64(-4000000000)) },
-                ConfigField { value: Single(Text("hello, world!".into())) },
-                ConfigField { value: List(FlagList(vec![true, false])) },
-                ConfigField { value: List(Unsigned8List(vec![1, 2, 3])) },
-                ConfigField { value: List(Unsigned16List(vec![2, 3, 4])) },
-                ConfigField { value: List(Unsigned32List(vec![3, 4, 5])) },
-                ConfigField { value: List(Unsigned64List(vec![4, 5, 6])) },
-                ConfigField { value: List(Signed8List(vec![-1, -2, 3])) },
-                ConfigField { value: List(Signed16List(vec![-2, -3, 4])) },
-                ConfigField { value: List(Signed32List(vec![-3, -4, 5])) },
-                ConfigField { value: List(Signed64List(vec![-4, -5, 6])) },
-                ConfigField { value: List(TextList(vec!["valid".into(), "valid".into()])) },
+                ConfigField { key: "my_flag".to_string(), value: Single(Flag(false)) },
+                ConfigField { key: "my_uint8".to_string(), value: Single(Unsigned8(255)) },
+                ConfigField { key: "my_uint16".to_string(), value: Single(Unsigned16(65535)) },
+                ConfigField { key: "my_uint32".to_string(), value: Single(Unsigned32(4000000000)) },
+                ConfigField { key: "my_uint64".to_string(), value: Single(Unsigned64(8000000000)) },
+                ConfigField { key: "my_int8".to_string(), value: Single(Signed8(-127)) },
+                ConfigField { key: "my_int16".to_string(), value: Single(Signed16(-32766)) },
+                ConfigField { key: "my_int32".to_string(), value: Single(Signed32(-2000000000)) },
+                ConfigField { key: "my_int64".to_string(), value: Single(Signed64(-4000000000)) },
+                ConfigField {
+                    key: "my_string".to_string(),
+                    value: Single(Text("hello, world!".into())),
+                },
+                ConfigField {
+                    key: "my_vector_of_flag".to_string(),
+                    value: List(FlagList(vec![true, false])),
+                },
+                ConfigField {
+                    key: "my_vector_of_uint8".to_string(),
+                    value: List(Unsigned8List(vec![1, 2, 3])),
+                },
+                ConfigField {
+                    key: "my_vector_of_uint16".to_string(),
+                    value: List(Unsigned16List(vec![2, 3, 4])),
+                },
+                ConfigField {
+                    key: "my_vector_of_uint32".to_string(),
+                    value: List(Unsigned32List(vec![3, 4, 5])),
+                },
+                ConfigField {
+                    key: "my_vector_of_uint64".to_string(),
+                    value: List(Unsigned64List(vec![4, 5, 6])),
+                },
+                ConfigField {
+                    key: "my_vector_of_int8".to_string(),
+                    value: List(Signed8List(vec![-1, -2, 3])),
+                },
+                ConfigField {
+                    key: "my_vector_of_int16".to_string(),
+                    value: List(Signed16List(vec![-2, -3, 4])),
+                },
+                ConfigField {
+                    key: "my_vector_of_int32".to_string(),
+                    value: List(Signed32List(vec![-3, -4, 5])),
+                },
+                ConfigField {
+                    key: "my_vector_of_int64".to_string(),
+                    value: List(Signed64List(vec![-4, -5, 6])),
+                },
+                ConfigField {
+                    key: "my_vector_of_string".to_string(),
+                    value: List(TextList(vec!["valid".into(), "valid".into()])),
+                },
             ],
             declaration_checksum: decl.declaration_checksum.clone(),
         };
@@ -524,7 +562,8 @@ mod tests {
         ($test_name:ident: { $($ty_toks:tt)* }, $valid_spec:pat) => {
             #[test]
             fn $test_name() {
-                let config_ty = fidl_fuchsia_component_config_ext::config_ty!($($ty_toks)*);
+                let value_type = fidl_fuchsia_component_config_ext::config_ty!($($ty_toks)*);
+                let decl = ConfigFieldDecl { key: "test_key".to_string(), value_type };
                 for value in [
                     // one value of each type
                     Single(Flag(true)),
@@ -550,12 +589,12 @@ mod tests {
                 ] {
                     let should_succeed = matches!(value, $valid_spec);
                     let spec = ValueSpec { value: Some(value), ..ValueSpec::EMPTY };
-                    match ConfigField::resolve(spec, &config_ty) {
+                    match ConfigField::resolve(spec, &decl) {
                         Ok(..) if should_succeed => (),
                         Err(ValueError::TypeMismatch { .. }) if !should_succeed => (),
                         other => panic!(
                             "test case {:?} received unexpected resolved value {:#?}",
-                            config_ty, other
+                            decl, other
                         ),
                     }
                 }

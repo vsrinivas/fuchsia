@@ -15,12 +15,12 @@ use {
     ::routing::{component_instance::ComponentInstanceInterface, policy::GlobalPolicyChecker},
     async_trait::async_trait,
     cm_runner::Runner,
+    config_encoder::ConfigFields,
     fidl::{
         endpoints::{self, Proxy, ServerEnd},
         Vmo,
     },
-    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_mem as fmem, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
@@ -99,7 +99,7 @@ async fn do_start(
             component_info.resolved_url.clone(),
             component_info.package,
             &component_info.decl,
-            component_info.config_values,
+            component_info.config,
         )
         .await?;
 
@@ -226,7 +226,7 @@ async fn make_execution_runtime(
     url: String,
     package: Option<Package>,
     decl: &cm_rust::ComponentDecl,
-    config_values: Option<fconfig::ValuesData>,
+    config: Option<ConfigFields>,
 ) -> Result<
     (Runtime, fcrunner::ComponentStartInfo, ServerEnd<fcrunner::ComponentControllerMarker>),
     ModelError,
@@ -260,11 +260,8 @@ async fn make_execution_runtime(
         DirectoryProxy::from_channel(fasync::Channel::from_channel(runtime_dir_client).unwrap())
     });
 
-    let encoded_config = if let Some(config_decl) = decl.config.as_ref() {
-        let values = config_values.ok_or(ModelError::ConfigValuesMissing)?;
-        let resolved = config_encoder::ConfigFields::resolve(config_decl, values)
-            .map_err(ModelError::ConfigResolutionFailed)?;
-        let encoded = resolved.encode_as_fidl_struct();
+    let encoded_config = if let Some(config) = config {
+        let encoded = config.encode_as_fidl_struct();
         let encoded_size = encoded.len() as u64;
         let vmo = Vmo::create(encoded_size).map_err(ModelError::VmoCreateFailed)?;
         vmo.write(&encoded, 0).map_err(ModelError::VmoWriteFailed)?;

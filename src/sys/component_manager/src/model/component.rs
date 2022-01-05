@@ -40,9 +40,10 @@ use {
     cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
+    config_encoder::ConfigFields,
     fidl::endpoints::{self, Proxy, ServerEnd},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_config as fconfig,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol,
     fidl_fuchsia_io::{
         self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -142,8 +143,8 @@ pub struct Component {
     pub decl: ComponentDecl,
     /// The package info, if the component came from a package.
     pub package: Option<Package>,
-    /// The configuration values, if the component came with them.
-    pub config_values: Option<fconfig::ValuesData>,
+    /// The components validated configuration. If None, no configuration was provided.
+    pub config: Option<ConfigFields>,
 }
 
 /// Package information possibly returned by the resolver.
@@ -161,8 +162,18 @@ impl TryFrom<ResolvedComponent> for Component {
     fn try_from(
         ResolvedComponent { resolved_url, decl, package, config_values }: ResolvedComponent,
     ) -> Result<Self, Self::Error> {
+        // Verify the component configuration, if it exists
+        let config = if let Some(config_decl) = decl.config.as_ref() {
+            let values = config_values.ok_or(ModelError::ConfigValuesMissing)?;
+            let config = ConfigFields::resolve(config_decl, values)
+                .map_err(ModelError::ConfigResolutionFailed)?;
+            Some(config)
+        } else {
+            None
+        };
+
         let package = package.map(|p| p.try_into()).transpose()?;
-        Ok(Self { resolved_url, decl, package, config_values })
+        Ok(Self { resolved_url, decl, package, config })
     }
 }
 

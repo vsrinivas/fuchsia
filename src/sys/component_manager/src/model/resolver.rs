@@ -154,7 +154,7 @@ impl Resolver for RemoteResolver {
         let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
         let decl = read_and_validate_manifest(decl_buffer).await?;
         let config_values = if decl.config.is_some() {
-            Some(read_and_validate_config_values(
+            Some(read_config_values(
                 component.config_values.ok_or(ResolverError::RemoteInvalidData)?,
             )?)
         } else {
@@ -203,7 +203,7 @@ pub async fn read_and_validate_manifest(
     Ok(component_decl.fidl_into_native())
 }
 
-fn read_and_validate_config_values(data: fmem::Data) -> Result<fconfig::ValuesData, ResolverError> {
+fn read_config_values(data: fmem::Data) -> Result<fconfig::ValuesData, ResolverError> {
     let bytes = match data {
         fmem::Data::Bytes(bytes) => bytes,
         fmem::Data::Buffer(buffer) => {
@@ -216,8 +216,6 @@ fn read_and_validate_config_values(data: fmem::Data) -> Result<fconfig::ValuesDa
     };
     let values: fconfig::ValuesData = fidl::encoding::decode_persistent(&bytes)
         .map_err(|err| ResolverError::config_values_invalid(err))?;
-
-    // TODO(https://fxbug.dev/88971) validate the value file before returning
 
     Ok(values)
 }
