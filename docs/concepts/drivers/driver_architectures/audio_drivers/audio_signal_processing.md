@@ -48,13 +48,22 @@ application such as `audio_core`.
 ## Basic operation
 
 The client is responsible for requesting and then configuring any signal processing capabilities.
+Once the server provides its PEs by replying to a client's `GetProcessingElements`, the client may
+dynamically control the PEs parameters as needed by calling `SetProcessingElement`.
 
-## GetProcessingElements
+### GetProcessingElements
 
 `GetProcessingElements` allows to optionally get a list of all PEs (a server not supporting PEs may
 return an empty vector). For instance this method may be called by a glue driver on a codec. Once
 the list of PEs is known to the client, the client may configure the PEs based on the parameters
 exposed by the PE types.
+
+### SetProcessingElement
+
+`SetProcessingElement` allows a client to control the parameters of a PE using an id returned by
+`GetProcessingElements`. PEs of different types may have different controls exposed to
+clients, the `SetProcessingElement` parameter `control` has a different type depending on the type
+of PE.
 
 <!-- Reference links -->
 
