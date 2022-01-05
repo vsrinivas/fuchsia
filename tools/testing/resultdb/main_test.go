@@ -6,7 +6,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,9 +43,9 @@ func TestParse2Summary(t *testing.T) {
 	for _, name := range []string{"summary.json", "summary2.json"} {
 		summary, err := ParseSummary(filepath.Join(*testDataDir, name))
 		if err != nil {
-			log.Fatal(err)
+			t.Fatal(err)
 		}
-		testResults := SummaryToResultSink(summary, []*resultpb.StringPair{}, name)
+		testResults, skipped := SummaryToResultSink(summary, []*resultpb.StringPair{}, name)
 		expectRequests += (len(testResults)-1)/chunkSize + 1
 		requests = append(requests, createTestResultsRequests(testResults, chunkSize)...)
 		for _, testResult := range testResults {
@@ -54,9 +53,29 @@ func TestParse2Summary(t *testing.T) {
 				t.Errorf("Empty testId is not allowed.")
 			}
 		}
+		if len(skipped) != 0 {
+			t.Errorf("Tests got skipped %v, expect no skip", skipped)
+		}
 	}
 	if len(requests) != expectRequests {
 		t.Errorf("Incorrect number of request chuncks, got: %d want %d", len(requests), expectRequests)
+	}
+}
+
+func TestFailWithLongTestName(t *testing.T) {
+	summary, err := ParseSummary(filepath.Join(*testDataDir, "summary_long_name.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, testsSkipped := SummaryToResultSink(summary, []*resultpb.StringPair{}, "")
+
+	skippedTestName := "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack-inspect-integration-test.cm/:fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_inspect_dhcp_netdevice::_multiple_invalid_port_and_single_invalid_trans_proto_vec_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_udp_port_invalid_port_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_udp_port_invalid_port_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_tcp_port_dhcp_client_port_"
+
+	if len(testsSkipped) != 1 {
+		t.Errorf("Incorrect number of skipped tests got: %d want %d", len(testsSkipped), 1)
+	}
+	if testsSkipped[0] != skippedTestName {
+		t.Errorf("Incorrect skipped test, got: %s want %s", testsSkipped[0], skippedTestName)
 	}
 }
 

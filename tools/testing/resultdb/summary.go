@@ -23,6 +23,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
+// Test name is limited to 512 bytes max.
+// https://source.chromium.org/chromium/infra/infra/+/main:go/src/go.chromium.org/luci/resultdb/pbutil/test_result.go;l=44;drc=910bdba5763842c67a81741b7cb26e7f7d2793fc
+const MAX_TEST_ID_SIZE_BYTES = 512
+
 // ParseSummary unmarshalls the summary.json file content into runtests.TestSummary struct.
 func ParseSummary(filePath string) (*runtests.TestSummary, error) {
 	content, err := ioutil.ReadFile(filePath)
@@ -37,22 +41,25 @@ func ParseSummary(filePath string) (*runtests.TestSummary, error) {
 }
 
 // SummaryToResultSink converts runtests.TestSummary data into an array of result_sink TestResult.
-func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair, outputRoot string) []*sinkpb.TestResult {
+func SummaryToResultSink(s *runtests.TestSummary, tags []*resultpb.StringPair, outputRoot string) ([]*sinkpb.TestResult, []string) {
 	if len(outputRoot) == 0 {
 		outputRoot, _ = os.Getwd()
 	}
 	rootPath, _ := filepath.Abs(outputRoot)
 	var r []*sinkpb.TestResult
+	var ts []string
 	for _, test := range s.Tests {
 		if len(test.Cases) > 0 {
-			testCases := testCaseToResultSink(test.Cases, tags, &test)
+			testCases, testsSkipped := testCaseToResultSink(test.Cases, tags, &test)
 			r = append(r, testCases...)
+			ts = append(ts, testsSkipped...)
 		}
-		if testResult, err := testDetailsToResultSink(tags, &test, rootPath); err == nil {
+		if testResult, testsSkipped, err := testDetailsToResultSink(tags, &test, rootPath); err == nil {
 			r = append(r, testResult)
+			ts = append(ts, testsSkipped...)
 		}
 	}
-	return r
+	return r, ts
 }
 
 // invocationLevelArtifacts creates resultdb artifacts for syslog and serial log to be sent to ResultDB.
@@ -85,8 +92,9 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 // testCaseToResultSink converts TestCaseResult defined in //tools/testing/testparser/result.go
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
-func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails) []*sinkpb.TestResult {
+func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultpb.StringPair, testDetail *runtests.TestDetails) ([]*sinkpb.TestResult, []string) {
 	var testResult []*sinkpb.TestResult
+	var testsSkipped []string
 
 	// Ignore error, testStatus will be set to resultpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
 	// And when passed to determineExpected, resultpb.TestStatus_STATUS_UNSPECIFIED will be handled correctly.
@@ -94,6 +102,11 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultp
 
 	for _, testCase := range testCases {
 		testID := fmt.Sprintf("%s/%s:%s", testDetail.Name, testCase.SuiteName, testCase.CaseName)
+		if len(testID) > MAX_TEST_ID_SIZE_BYTES {
+			log.Printf("[ERROR] Skip uploading to ResultDB due to test_id exceeding %d bytes max limit: %q", MAX_TEST_ID_SIZE_BYTES, testID)
+			testsSkipped = append(testsSkipped, testID)
+			continue
+		}
 		r := sinkpb.TestResult{
 			TestId: testID,
 			Tags:   append([]*resultpb.StringPair{{Key: "format", Value: testCase.Format}}, tags...),
@@ -111,13 +124,19 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, tags []*resultp
 		r.Expected = determineExpected(testStatus, testCaseStatus)
 		testResult = append(testResult, &r)
 	}
-	return testResult
+	return testResult, testsSkipped
 }
 
 // testDetailsToResultSink converts TestDetail defined in /tools/testing/runtests/runtests.go
 // to ResultSink's TestResult. Returns (nil, error) if a test result cannot be mapped to
 // result_sink.Status
-func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, error) {
+func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.TestDetails, outputRoot string) (*sinkpb.TestResult, []string, error) {
+	var testsSkipped []string
+	if len(testDetail.Name) > MAX_TEST_ID_SIZE_BYTES {
+		testsSkipped = append(testsSkipped, testDetail.Name)
+		log.Printf("[ERROR] Skip uploading to ResultDB due to test_id exceeding %d bytes max limit: %q", MAX_TEST_ID_SIZE_BYTES, testDetail.Name)
+		return nil, testsSkipped, fmt.Errorf("The test name exceeds %d bytes max limit: %q ", MAX_TEST_ID_SIZE_BYTES, testDetail.Name)
+	}
 	r := sinkpb.TestResult{
 		TestId: testDetail.Name,
 		Tags: append([]*resultpb.StringPair{
@@ -127,8 +146,8 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 	}
 	testStatus, err := testDetailResultToResultDBStatus(testDetail.Result)
 	if err != nil {
-		log.Printf("[Warn] Skip uploading testcase: %s to ResultDB due to error: %v", testDetail.Name, err)
-		return nil, err
+		log.Printf("[Warn] Skip uploading test target: %s to ResultDB due to error: %v", testDetail.Name, err)
+		return nil, testsSkipped, err
 	}
 	r.Status = testStatus
 
@@ -156,7 +175,7 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 	`
 
 	r.Expected = determineExpected(testStatus, resultpb.TestStatus_STATUS_UNSPECIFIED)
-	return &r, nil
+	return &r, testsSkipped, nil
 }
 
 // determineExpected checks if a test result is expected.

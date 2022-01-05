@@ -44,6 +44,8 @@ func mainImpl() error {
 	flag.Parse()
 
 	var requests []*sinkpb.ReportTestResultsRequest
+	var allTestsSkipped []string
+
 	tagPairs, err := convertTags(tags)
 	if err != nil {
 		return err
@@ -53,10 +55,11 @@ func mainImpl() error {
 		if err != nil {
 			return err
 		}
-		testResults := SummaryToResultSink(summary, tagPairs, outputRoot)
+		testResults, testsSkipped := SummaryToResultSink(summary, tagPairs, outputRoot)
 		// Group 500 testResults per ReportTestResultsRequest. This reduces the number of HTTP calls
 		// we make to result_sink. 500 is the maximum number of testResults allowed.
 		requests = append(requests, createTestResultsRequests(testResults, 500)...)
+		allTestsSkipped = append(allTestsSkipped, testsSkipped...)
 	}
 
 	invocationRequest := &sinkpb.ReportInvocationLevelArtifactsRequest{
@@ -92,7 +95,13 @@ func mainImpl() error {
 		return sendData(ctx, testResult, "ReportInvocationLevelArtifacts", client)
 	})
 
-	return eg.Wait()
+	if err := eg.Wait(); err != nil {
+		return err
+	}
+	if len(allTestsSkipped) > 0 {
+		return fmt.Errorf("Some tests could not be uploaded due to testname exceeding byte limit %d.", MAX_TEST_ID_SIZE_BYTES)
+	}
+	return nil
 }
 
 func sendData(ctx *ResultSinkContext, data, endpoint string, client *http.Client) error {

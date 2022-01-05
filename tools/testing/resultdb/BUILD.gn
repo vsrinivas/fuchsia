@@ -60,6 +60,7 @@ if (is_host) {
       "testdata/serial_log.txt",
       "testdata/summary.json",
       "testdata/summary2.json",
+      "testdata/summary_long_name.json",
       "testdata/syslog.txt",
       "testdata/test_output.txt",
     ]

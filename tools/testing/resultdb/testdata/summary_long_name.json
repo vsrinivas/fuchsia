@@ -1,0 +1,152 @@
+{
+    "tests": [
+        {
+            "name": "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netstack-inspect-integration-test.cm",
+            "gn_label": "label6",
+            "output_file": "path/to/output.txt",
+            "result": "PASS",
+            "cases": [
+                {
+                    "display_name": "fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_inspect_dhcp_netdevice::_multiple_invalid_port_and_single_invalid_trans_proto_vec_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_udp_port_invalid_port_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_udp_port_invalid_port_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_tcp_port_dhcp_client_port_",
+                    "suite_name": "",
+                    "case_name": "fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_fuchsia_inspect_dhcp_netdevice::_multiple_invalid_port_and_single_invalid_trans_proto_vec_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_udp_port_invalid_port_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_udp_port_invalid_port_packetattributes_ip_proto_packet_formats_ip_ipv4proto_proto_packet_formats_ip_ipproto_tcp_port_dhcp_client_port_",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "FTF"
+                }
+            ]
+        },
+        {
+            "name": "prefix/testtarget1",
+            "gn_label": "label1",
+            "output_file": "tools/testing/resultdb/testdata/test_output.txt",
+            "result": "PASS",
+            "cases": [
+                {
+                    "display_name": "SuiteA.CaseA",
+                    "suite_name": "SuiteA",
+                    "case_name": "CaseA",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "GoogleTest"
+                },
+                {
+                    "display_name": "SuiteA.CaseB",
+                    "suite_name": "SuiteA",
+                    "case_name": "CaseB",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "GoogleTest"
+                },
+                {
+                    "display_name": "SuiteA.CaseC",
+                    "suite_name": "SuiteA",
+                    "case_name": "CaseC",
+                    "status": "Pass",
+                    "duration_nanos": 130480000000,
+                    "format": "GoogleTest"
+                },
+                {
+                    "display_name": "SuiteA.CaseD",
+                    "suite_name": "SuiteA",
+                    "case_name": "CaseD",
+                    "status": "Pass",
+                    "duration_nanos": 1000000,
+                    "format": "GoogleTest"
+                }
+            ],
+            "start_time": "2020-06-13T22:28:37.358413499Z",
+            "duration_milliseconds": 130496,
+            "is_testing_failure_mode": false
+        },
+        {
+            "name": "host_x64/testtarget2",
+            "gn_label": "label2",
+            "output_file": "path/to/output.txt",
+            "result": "FAIL",
+            "cases": [],
+            "start_time": "2020-06-13T22:30:47.854886724Z",
+            "duration_milliseconds": 37700,
+            "is_testing_failure_mode": false
+        },
+        {
+            "name": "host_x64/testtarget3",
+            "gn_label": "label3",
+            "output_file": "path/to/output.txt",
+            "result": "PASS",
+            "cases": [],
+            "start_time": "2020-06-13T22:31:25.560342251Z",
+            "duration_milliseconds": 36468,
+            "is_testing_failure_mode": false
+        },
+        {
+            "name": "host_x64/testtarget4",
+            "gn_label": "label4",
+            "output_file": "path/to/output.txt",
+            "result": "FAIL",
+            "cases": [
+                {
+                    "display_name": "suiteA::test::caseA",
+                    "suite_name": "suiteA",
+                    "case_name": "test::caseA",
+                    "status": "Fail",
+                    "duration_nanos": 0,
+                    "format": "Rust"
+                },
+                {
+                    "display_name": "suiteB::test::caseA",
+                    "suite_name": "suiteB",
+                    "case_name": "test::caseA",
+                    "status": "Fail",
+                    "duration_nanos": 0,
+                    "format": "Rust"
+                },
+                {
+                    "display_name": "suiteB::test::caseB",
+                    "suite_name": "suiteB",
+                    "case_name": "test::caseB",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "Rust"
+                },
+                {
+                    "display_name": "suiteC::test::caseA",
+                    "suite_name": "suiteC",
+                    "case_name": "test::caseA",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "Rust"
+                },
+                {
+                    "display_name": "suiteC::test::caseB",
+                    "suite_name": "suiteC",
+                    "case_name": "test::caseB",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "Rust"
+                },
+                {
+                    "display_name": "suiteC::test::caseC",
+                    "suite_name": "suiteC",
+                    "case_name": "test::caseC",
+                    "status": "Pass",
+                    "duration_nanos": 0,
+                    "format": "Rust"
+                }
+            ],
+            "start_time": "2020-06-13T22:33:37.580652373Z",
+            "duration_milliseconds": 8098,
+            "is_testing_failure_mode": false
+        },
+        {
+            "name": "host_x64/testtarget5",
+            "gn_label": "label5",
+            "output_file": "path/to/output.txt",
+            "result": "PASS",
+            "cases": [],
+            "start_time": "2020-06-13T22:33:45.680667255Z",
+            "duration_milliseconds": 0,
+            "is_testing_failure_mode": false
+        }
+    ]
+}

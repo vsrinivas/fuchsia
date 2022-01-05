@@ -19,7 +19,7 @@ import (
 func TestParseSummary(t *testing.T) {
 	const testCount = 10
 	summary := createTestSummary(testCount)
-	testResults := SummaryToResultSink(summary, []*resultpb.StringPair{}, "")
+	testResults, _ := SummaryToResultSink(summary, []*resultpb.StringPair{}, "")
 	if len(testResults) != testCount {
 		t.Errorf(
 			"Parsed incorrect number of resultdb tests in TestSummary, got %d, want %d",
@@ -46,7 +46,7 @@ func TestSetTestDetailsToResultSink(t *testing.T) {
 	extraTags := []*resultpb.StringPair{
 		{Key: "key1", Value: "value1"},
 	}
-	result, err := testDetailsToResultSink(extraTags, detail, "")
+	result, _, err := testDetailsToResultSink(extraTags, detail, "")
 	if err != nil {
 		t.Fatalf("Cannot parse test detail. got %s", err)
 	}
