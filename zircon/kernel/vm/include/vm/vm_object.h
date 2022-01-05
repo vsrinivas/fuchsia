@@ -156,6 +156,16 @@ class VmHierarchyState : public fbl::RefCounted<VmHierarchyState> {
   uint64_t hierarchy_generation_count_ TA_GUARDED(lock_) = 1;
 };
 
+inline void VmHierarchyBase::IncrementHierarchyGenerationCountLocked() {
+  AssertHeld(hierarchy_state_ptr_->lock_ref());
+  hierarchy_state_ptr_->IncrementHierarchyGenerationCountLocked();
+}
+
+inline uint64_t VmHierarchyBase::GetHierarchyGenerationCountLocked() const {
+  AssertHeld(hierarchy_state_ptr_->lock_ref());
+  return hierarchy_state_ptr_->GetHierarchyGenerationCountLocked();
+}
+
 // Cursor to allow for walking global vmo lists without needing to hold the lock protecting them all
 // the time. This can be required to enforce order of acquisition with another lock (as in the case
 // of |discardable_reclaim_candidates_|), or it can be desirable for performance reasons (as in the
