@@ -42,7 +42,10 @@ async fn list_devices(device_watcher: &DeviceWatcherProxy, args: &Args) -> Resul
         let channel = fidl::AsyncChannel::from_channel(device)?;
         let device = fidl_fuchsia_hardware_usb_device::DeviceProxy::new(channel);
 
-        list_device(&device, idx, 0, 0, &args).await?;
+        match list_device(&device, idx, 0, 0, &args).await {
+            Ok(()) => {}
+            Err(e) => eprintln!("Error: {:?}", e),
+        }
 
         idx += 1
     }
@@ -79,21 +82,13 @@ async fn list_device(
         .await
         .context(format!("DeviceGetDeviceSpeed failed for {}", devname))?;
 
-    let (status, string_manu_desc, _) = device
-        .get_string_descriptor(device_desc.i_manufacturer, EN_US)
+    let string_manu_desc = get_string_descriptor(device, device_desc.i_manufacturer)
         .await
         .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
 
-    zx::Status::ok(status)
-        .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
-
-    let (status, string_prod_desc, _) = device
-        .get_string_descriptor(device_desc.i_product, EN_US)
+    let string_prod_desc = get_string_descriptor(device, device_desc.i_product)
         .await
         .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
-
-    zx::Status::ok(status)
-        .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
 
     let left_pad = depth * 4;
     let right_pad = (max_depth - depth) * 4;
@@ -131,13 +126,10 @@ async fn list_device(
         println!("  {:<33}{} {}", "iManufacturer", device_desc.i_manufacturer, string_manu_desc);
         println!("  {:<33}{} {}", "iProduct", device_desc.i_product, string_prod_desc);
 
-        let (status, serial_number, _) = device
-            .get_string_descriptor(device_desc.i_serial_number, EN_US)
+        let serial_number = get_string_descriptor(device, device_desc.i_serial_number)
             .await
             .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
 
-        zx::Status::ok(status)
-            .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
         println!("  {:<33}{} {}", "iSerialNumber", device_desc.i_serial_number, serial_number);
         println!("  {:<33}{}", "bNumConfigurations", device_desc.b_num_configurations);
 
@@ -171,13 +163,9 @@ async fn list_device(
                         "{:>4}{:<31}{}",
                         "", "bConfigurationValue", config_desc.b_configuration_value
                     );
-                    let (status, config_str, _) = device
-                        .get_string_descriptor(config_desc.i_configuration, EN_US)
+                    let config_str = get_string_descriptor(device, config_desc.i_configuration)
                         .await
                         .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
-                    zx::Status::ok(status).map_err(|e| {
-                        return anyhow::anyhow!("Failed to get string descriptor: {}", e);
-                    })?;
                     println!(
                         "{:>4}{:<31}{} {}",
                         "", "iConfiguration", config_desc.i_configuration, config_str
@@ -196,13 +184,9 @@ async fn list_device(
                     println!("{:>6}{:<29}{}", "", "bInterfaceSubClass", info.b_interface_sub_class);
                     println!("{:>6}{:<29}{}", "", "bInterfaceProtocol", info.b_interface_protocol);
 
-                    let (status, interface_str, _) = device
-                        .get_string_descriptor(info.i_interface, EN_US)
+                    let interface_str = get_string_descriptor(device, info.i_interface)
                         .await
                         .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
-                    zx::Status::ok(status).map_err(|e| {
-                        return anyhow::anyhow!("Failed to get string descriptor: {}", e);
-                    })?;
                     println!("{:>6}{:<29}{}{}", "", "iInterface", info.i_interface, interface_str);
                 }
                 Descriptor::Endpoint(info) => {
@@ -346,7 +330,10 @@ fn do_list_tree<'a>(
         for device in devices.iter() {
             if device.hub_id == hub_id {
                 let depth = device.depth.lock().unwrap().unwrap().clone();
-                list_device(&device.device, device.devnum, depth, max_depth, args).await?;
+                match list_device(&device.device, device.devnum, depth, max_depth, args).await {
+                    Ok(()) => {}
+                    Err(e) => eprintln!("Error: {:?}", e),
+                }
                 do_list_tree(devices, device.device_id, max_depth, args).await?;
             }
         }
@@ -368,6 +355,26 @@ async fn get_device_info(
         device.get_hub_device_id().await.context(format!("GeHubId failed for {}", devname))?;
 
     Ok(DeviceNode { device, devnum, device_id, hub_id, depth: Mutex::new(None) })
+}
+
+async fn get_string_descriptor(
+    device: &fidl_fuchsia_hardware_usb_device::DeviceProxy,
+    desc_id: u8,
+) -> Result<String, anyhow::Error> {
+    match desc_id {
+        0 => return Ok(String::from("UNKNOWN")),
+        _ => {
+            return device.get_string_descriptor(desc_id, EN_US).await.map(
+                |(status, value, _)| {
+                    if zx::Status::ok(status).is_ok() {
+                        Ok(value)
+                    } else {
+                        Ok(String::from("UNKNOWN"))
+                    }
+                },
+            )?
+        }
+    };
 }
 
 #[cfg(test)]
