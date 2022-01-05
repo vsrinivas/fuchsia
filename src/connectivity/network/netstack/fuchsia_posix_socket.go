@@ -2825,6 +2825,39 @@ func (s *rawSocketImpl) GetIcmpv6Filter(fidl.Context) (rawsocket.SocketGetIcmpv6
 	}), nil
 }
 
+func (s *rawSocketImpl) SetIpv6Checksum(_ fidl.Context, value rawsocket.Ipv6ChecksumConfiguration) (rawsocket.SocketSetIpv6ChecksumResult, error) {
+	var v int
+	switch value.Which() {
+	case rawsocket.Ipv6ChecksumConfigurationDisabled:
+		v = -1
+	case rawsocket.Ipv6ChecksumConfigurationOffset:
+		v = int(value.Offset)
+	default:
+		panic(fmt.Sprintf("unhandled variant = %#v", value))
+	}
+
+	if err := s.ep.SetSockOptInt(tcpip.IPv6Checksum, v); err != nil {
+		return rawsocket.SocketSetIpv6ChecksumResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return rawsocket.SocketSetIpv6ChecksumResultWithResponse(rawsocket.SocketSetIpv6ChecksumResponse{}), nil
+}
+
+func (s *rawSocketImpl) GetIpv6Checksum(fidl.Context) (rawsocket.SocketGetIpv6ChecksumResult, error) {
+	v, err := s.ep.GetSockOptInt(tcpip.IPv6Checksum)
+	if err != nil {
+		return rawsocket.SocketGetIpv6ChecksumResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	var config rawsocket.Ipv6ChecksumConfiguration
+	if v < 0 {
+		config.SetDisabled(rawsocket.Empty{})
+	} else {
+		config.SetOffset(int32(v))
+	}
+	return rawsocket.SocketGetIpv6ChecksumResultWithResponse(rawsocket.SocketGetIpv6ChecksumResponse{
+		Config: config,
+	}), nil
+}
+
 // Adapted from helper function `nicStateFlagsToLinux` in gvisor's
 // sentry/socket/netstack package.
 func nicInfoFlagsToFIDL(info stack.NICInfo) socket.InterfaceFlags {

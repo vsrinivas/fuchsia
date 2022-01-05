@@ -2108,6 +2108,20 @@ zx_status_t socket_with_event<RawSocket>::getsockopt(int level, int optname, voi
                                 [](const auto& response) { return response.filter; });
         }
         break;
+      case SOL_IPV6:
+        switch (optname) {
+          case IPV6_CHECKSUM:
+            return proc.Process(
+                zxio_socket_with_event().client->GetIpv6Checksum(), [](const auto& response) {
+                  switch (response.config.which()) {
+                    case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kDisabled:
+                      return -1;
+                    case frawsocket::wire::Ipv6ChecksumConfiguration::Tag::kOffset:
+                      return response.config.offset();
+                  };
+                });
+        }
+        break;
       case SOL_IP:
         switch (optname) {
           case IP_HDRINCL:
@@ -2137,6 +2151,22 @@ zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, con
                 [this](frawsocket::wire::Icmpv6Filter value) {
                   return zxio_socket_with_event().client->SetIcmpv6Filter(value);
                 });
+        }
+        break;
+      case SOL_IPV6:
+        switch (optname) {
+          case IPV6_CHECKSUM:
+            return proc.Process<int32_t>([this](int32_t value) {
+              frawsocket::wire::Ipv6ChecksumConfiguration config;
+
+              if (value < 0) {
+                config.set_disabled(frawsocket::wire::Empty{});
+              } else {
+                config.set_offset(value);
+              }
+
+              return zxio_socket_with_event().client->SetIpv6Checksum(config);
+            });
         }
         break;
       case SOL_IP:

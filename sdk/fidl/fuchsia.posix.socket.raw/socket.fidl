@@ -51,6 +51,23 @@ type Icmpv6Filter = struct {
     blocked_types array<uint32, 8>;
 };
 
+/// IPv6 socket checksum configuration.
+type Ipv6ChecksumConfiguration = strict union {
+    /// Indicates that the stack should not calculate checksums for outgoing
+    /// packets and valiate checksums for incoming packets.
+    1: disabled Empty;
+
+    /// Indicates that the stack should calculate checksums for outgoing packets
+    /// and validate checksums for incoming packets.
+    ///
+    /// `offset` indicates where the checksum is found in the IPv6 packet's
+    /// payload.
+    ///
+    /// The offset must be aligned to the size of an internet checksum as
+    /// specified in RFC 1071. That is, the offset must be 2-byte aligned.
+    2: offset int32;
+};
+
 /// A raw network socket.
 ///
 /// Once a socket has been retrieved from a provider, this interface is then
@@ -129,7 +146,17 @@ protocol Socket {
     SetIcmpv6Filter(struct {
         filter Icmpv6Filter;
     }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_ICMPV6` -> `ICMP6_FILTER`.
     GetIcmpv6Filter() -> (struct {
         filter Icmpv6Filter;
+    }) error fuchsia.posix.Errno;
+
+    /// Set `SOL_IPV6` -> `IPV6_CHECKSUM`.
+    SetIpv6Checksum(struct {
+        config Ipv6ChecksumConfiguration;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_IPV6` -> `IPV6_CHECKSUM`.
+    GetIpv6Checksum() -> (struct {
+        config Ipv6ChecksumConfiguration;
     }) error fuchsia.posix.Errno;
 };

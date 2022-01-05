@@ -15,6 +15,8 @@
 #include <linux/capability.h>
 #endif
 
+#include <zircon/compiler.h>
+
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
@@ -604,6 +606,140 @@ TEST(RawSocketICMPv6Test, FilterICMPPackets) {
               -1);
     EXPECT_EQ(errno, EAGAIN);
   }
+}
+
+TEST(RawSocketICMPv6Test, NegativeIPv6ChecksumsFoldToNegativeOne) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
+
+  auto check = [&](int v) {
+    ASSERT_EQ(setsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &v, sizeof(v)), 0) << strerror(errno);
+
+    int got;
+    socklen_t got_len = sizeof(got);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &got, &got_len), 0) << strerror(errno);
+    ASSERT_EQ(got_len, sizeof(got));
+    EXPECT_EQ(got, -1);
+  };
+
+  ASSERT_NO_FATAL_FAILURE(check(-1));
+  ASSERT_NO_FATAL_FAILURE(check(-2));
+  ASSERT_NO_FATAL_FAILURE(std::numeric_limits<int>::min());
+}
+
+TEST(RawSocketICMPv6Test, SetIPv6ChecksumErrorForOddValues) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
+
+  int intV = 3;
+  ASSERT_EQ(setsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &intV, sizeof(intV)), -1);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
+
+  intV = 5;
+  ASSERT_EQ(setsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &intV, sizeof(intV)), -1);
+  EXPECT_EQ(errno, EINVAL) << strerror(errno);
+}
+
+TEST(RawSocketICMPv6Test, SetIPv6ChecksumSuccessForEvenValues) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
+
+  int intV = 2;
+  ASSERT_EQ(setsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &intV, sizeof(intV)), 0)
+      << strerror(errno);
+
+  intV = 4;
+  ASSERT_EQ(setsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &intV, sizeof(intV)), 0)
+      << strerror(errno);
+}
+
+TEST(RawSocketICMPv6Test, IPv6Checksum_ValidateAndCalculate) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd checksum_set;
+  ASSERT_TRUE(checksum_set = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP)))
+      << strerror(errno);
+
+  fbl::unique_fd checksum_not_set;
+  ASSERT_TRUE(checksum_not_set = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP)))
+      << strerror(errno);
+
+  const sockaddr_in6 addr = {
+      .sin6_family = AF_INET6,
+      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
+  };
+
+  auto bind_and_set_checksum = [&](const fbl::unique_fd& fd, int v) {
+    ASSERT_EQ(bind(fd.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+        << strerror(errno);
+
+    int got;
+    socklen_t got_len = sizeof(got);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &got, &got_len), 0) << strerror(errno);
+    ASSERT_EQ(got_len, sizeof(got));
+    EXPECT_EQ(got, -1);
+
+    ASSERT_EQ(setsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &v, sizeof(v)), 0) << strerror(errno);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_IPV6, IPV6_CHECKSUM, &got, &got_len), 0) << strerror(errno);
+    ASSERT_EQ(got_len, sizeof(got));
+    EXPECT_EQ(got, v);
+  };
+
+  struct udp_packet {
+    udphdr udp;
+    uint32_t value;
+  } __PACKED;
+
+  ASSERT_NO_FATAL_FAILURE(
+      bind_and_set_checksum(checksum_set, offsetof(udp_packet, udp) + offsetof(udphdr, uh_sum)));
+  ASSERT_NO_FATAL_FAILURE(bind_and_set_checksum(checksum_not_set, -1));
+
+  auto send = [&](const fbl::unique_fd& fd, uint32_t v) {
+    const udp_packet packet = {
+        .value = v,
+    };
+
+    ssize_t n = sendto(fd.get(), &packet, sizeof(packet), /*flags=*/0,
+                       reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, static_cast<ssize_t>(sizeof(packet)));
+  };
+
+  auto expect_receive = [&](const fbl::unique_fd& fd, uint32_t v, bool should_check_xsum) {
+    udp_packet packet;
+    sockaddr_in6 sender;
+    socklen_t sender_len = sizeof(sender);
+    ssize_t n = recvfrom(fd.get(), &packet, sizeof(packet), /*flags=*/0,
+                         reinterpret_cast<sockaddr*>(&sender), &sender_len);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, static_cast<ssize_t>(sizeof(packet)));
+    ASSERT_EQ(sender_len, sizeof(sender));
+    EXPECT_EQ(memcmp(&sender, &addr, sizeof(addr)), 0);
+    EXPECT_EQ(packet.value, v);
+    if (should_check_xsum) {
+      EXPECT_NE(packet.udp.uh_sum, 0);
+    } else {
+      EXPECT_EQ(packet.udp.uh_sum, 0);
+    }
+  };
+
+  uint32_t counter = 1;
+  // Packets sent through checksum_not_set will not have a valid checksum set so
+  // checksum_set should not accept those packets.
+  ASSERT_NO_FATAL_FAILURE(send(checksum_not_set, counter));
+  ASSERT_NO_FATAL_FAILURE(expect_receive(checksum_not_set, counter, false));
+
+  // Packets sent through checksum_set will have a valid checksum so both
+  // sockets should accept them.
+  ASSERT_NO_FATAL_FAILURE(send(checksum_set, ++counter));
+  ASSERT_NO_FATAL_FAILURE(expect_receive(checksum_set, counter, true));
+  ASSERT_NO_FATAL_FAILURE(expect_receive(checksum_not_set, counter, true));
 }
 
 }  // namespace
