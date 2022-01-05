@@ -16,10 +16,16 @@ rustc_binary("configc") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
+    "//tools/lib/config_client",
     "//tools/lib/config_value_file",
   ]
 
-  sources = [ "src/main.rs" ]
+  sources = [
+    "src/client_fidl.rs",
+    "src/client_rust.rs",
+    "src/cvf.rs",
+    "src/main.rs",
+  ]
 }
 
 install_host_tools("install") {

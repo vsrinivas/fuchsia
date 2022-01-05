@@ -51,6 +51,7 @@ template("cvf") {
     outputs = [ compiled_output ]
 
     args = [
+      "cvf",
       "--cm",
       rebase_path(input_manifest, root_build_dir),
       "--values",
