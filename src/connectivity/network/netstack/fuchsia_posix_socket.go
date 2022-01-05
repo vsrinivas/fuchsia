@@ -2806,6 +2806,25 @@ func (s *rawSocketImpl) GetIpHeaderIncluded(fidl.Context) (rawsocket.SocketGetIp
 	return rawsocket.SocketGetIpHeaderIncludedResultWithResponse(rawsocket.SocketGetIpHeaderIncludedResponse{Value: value}), nil
 }
 
+func (s *rawSocketImpl) SetIcmpv6Filter(_ fidl.Context, value rawsocket.Icmpv6Filter) (rawsocket.SocketSetIcmpv6FilterResult, error) {
+	if err := s.ep.SetSockOpt(&tcpip.ICMPv6Filter{DenyType: value.BlockedTypes}); err != nil {
+		return rawsocket.SocketSetIcmpv6FilterResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return rawsocket.SocketSetIcmpv6FilterResultWithResponse(rawsocket.SocketSetIcmpv6FilterResponse{}), nil
+}
+
+func (s *rawSocketImpl) GetIcmpv6Filter(fidl.Context) (rawsocket.SocketGetIcmpv6FilterResult, error) {
+	var filter tcpip.ICMPv6Filter
+	if err := s.ep.GetSockOpt(&filter); err != nil {
+		return rawsocket.SocketGetIcmpv6FilterResultWithErr(tcpipErrorToCode(err)), nil
+	}
+	return rawsocket.SocketGetIcmpv6FilterResultWithResponse(rawsocket.SocketGetIcmpv6FilterResponse{
+		Filter: rawsocket.Icmpv6Filter{
+			BlockedTypes: filter.DenyType,
+		},
+	}), nil
+}
+
 // Adapted from helper function `nicStateFlagsToLinux` in gvisor's
 // sentry/socket/netstack package.
 func nicInfoFlagsToFIDL(info stack.NICInfo) socket.InterfaceFlags {

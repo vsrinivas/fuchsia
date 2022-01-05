@@ -39,6 +39,18 @@ protocol Provider {
     }) error fuchsia.posix.Errno;
 };
 
+/// A filter for ICMPv6 types.
+type Icmpv6Filter = struct {
+    /// Indicates whether or not an ICMPv6 type should be blocked.
+    ///
+    /// Each bit index encodes an ICMPv6 type; bit 0 in `blocked_types[0]` holds
+    /// the flag for ICMPv6 type 0 and bit 31 in `blocked_types[7]` holds the
+    /// flag for ICMPv6 type 255.
+    ///
+    /// Equivalent to Linux's `icmp6_filter.icmp6_filt`.
+    blocked_types array<uint32, 8>;
+};
+
 /// A raw network socket.
 ///
 /// Once a socket has been retrieved from a provider, this interface is then
@@ -111,5 +123,13 @@ protocol Socket {
     /// Get `SOL_IP` -> `IP_HDRINCL`.
     GetIpHeaderIncluded() -> (struct {
         value bool;
+    }) error fuchsia.posix.Errno;
+
+    /// Set `SOL_ICMPV6` -> `ICMP6_FILTER`.
+    SetIcmpv6Filter(struct {
+        filter Icmpv6Filter;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    GetIcmpv6Filter() -> (struct {
+        filter Icmpv6Filter;
     }) error fuchsia.posix.Errno;
 };

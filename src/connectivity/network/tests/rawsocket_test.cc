@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <arpa/inet.h>
+#include <netinet/icmp6.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/udp.h>
@@ -498,5 +499,116 @@ TEST_P(RawSocketTest, SockOptIPHdrIncl) {
 INSTANTIATE_TEST_SUITE_P(AllRawSocketTests, RawSocketTest,
                          testing::Combine(testing::Values(AF_INET, AF_INET6),
                                           testing::Values(IPPROTO_TCP, IPPROTO_UDP, IPPROTO_RAW)));
+
+TEST(RawSocketICMPv6Test, GetSetFilterSucceeds) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6))) << strerror(errno);
+
+  icmp6_filter set_filter;
+  ICMP6_FILTER_SETBLOCKALL(&set_filter);
+  ICMP6_FILTER_SETPASS(std::numeric_limits<uint8_t>::min(), &set_filter);
+  ICMP6_FILTER_SETPASS(std::numeric_limits<uint8_t>::max() / 2, &set_filter);
+  ICMP6_FILTER_SETPASS(std::numeric_limits<uint8_t>::max(), &set_filter);
+  ASSERT_EQ(setsockopt(fd.get(), SOL_ICMPV6, ICMP6_FILTER, &set_filter, sizeof(set_filter)), 0)
+      << strerror(errno);
+
+  {
+    icmp6_filter got_filter;
+    socklen_t got_filter_len = sizeof(got_filter);
+    ASSERT_EQ(getsockopt(fd.get(), SOL_ICMPV6, ICMP6_FILTER, &got_filter, &got_filter_len), 0)
+        << strerror(errno);
+    EXPECT_EQ(memcmp(&got_filter, &set_filter, sizeof(set_filter)), 0);
+  }
+
+  // We use a length smaller than a full filter length and expect that only the
+  // bytes up to the provided length are modified. The last element should be
+  // unmodified when getsockopt returns.
+  {
+    icmp6_filter got_filter = {};
+    constexpr socklen_t kShortFilterLen = sizeof(got_filter) - sizeof(got_filter.icmp6_filt[0]);
+    socklen_t got_filter_len = kShortFilterLen;
+    ASSERT_EQ(getsockopt(fd.get(), SOL_ICMPV6, ICMP6_FILTER, &got_filter, &got_filter_len), 0)
+        << strerror(errno);
+    ASSERT_EQ(got_filter_len, kShortFilterLen);
+    icmp6_filter expected_filter = set_filter;
+    expected_filter.icmp6_filt[std::size(expected_filter.icmp6_filt) - 1] = 0;
+    EXPECT_EQ(memcmp(&got_filter, &expected_filter, sizeof(expected_filter)), 0);
+  }
+}
+
+TEST(RawSocketICMPv6Test, FilterICMPPackets) {
+  SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW | SOCK_NONBLOCK, IPPROTO_ICMPV6)))
+      << strerror(errno);
+
+  constexpr sockaddr_in6 kLoopbackAddr = {
+      .sin6_family = AF_INET6,
+      .sin6_addr = IN6ADDR_LOOPBACK_INIT,
+  };
+
+  constexpr uint8_t kAllowedType = 111;
+
+  // Pass only the allowed type.
+  {
+    icmp6_filter set_filter;
+    ICMP6_FILTER_SETBLOCKALL(&set_filter);
+    ICMP6_FILTER_SETPASS(kAllowedType, &set_filter);
+    ASSERT_EQ(setsockopt(fd.get(), SOL_ICMPV6, ICMP6_FILTER, &set_filter, sizeof(set_filter)), 0)
+        << strerror(errno);
+  }
+
+  // Send an ICMP packet for each type.
+  uint8_t icmp_type = 0;
+  constexpr uint8_t kUnusedICMPCode = 0;
+  do {
+    const icmp6_hdr packet = {
+        .icmp6_type = icmp_type,
+        .icmp6_code = kUnusedICMPCode,
+        // The stack will calculate the checksum.
+        .icmp6_cksum = 0,
+    };
+
+    ssize_t n = sendto(fd.get(), &packet, sizeof(packet), 0,
+                       reinterpret_cast<const sockaddr*>(&kLoopbackAddr), sizeof(kLoopbackAddr));
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, static_cast<ssize_t>(sizeof(packet)));
+  } while (icmp_type++ != std::numeric_limits<uint8_t>::max());
+
+  // Make sure only the allowed type was received.
+  {
+    icmp6_hdr got_packet;
+    sockaddr_in6 sender;
+    socklen_t sender_len = sizeof(sender);
+    ssize_t n = recvfrom(fd.get(), &got_packet, sizeof(got_packet), 0 /* flags */,
+                         reinterpret_cast<sockaddr*>(&sender), &sender_len);
+    ASSERT_GE(n, 0) << strerror(errno);
+    ASSERT_EQ(n, static_cast<ssize_t>(sizeof(got_packet)));
+    ASSERT_EQ(sender_len, sizeof(sender));
+    EXPECT_EQ(memcmp(&sender, &kLoopbackAddr, sizeof(kLoopbackAddr)), 0);
+    EXPECT_EQ(got_packet.icmp6_type, kAllowedType);
+    EXPECT_EQ(got_packet.icmp6_code, kUnusedICMPCode);
+#ifdef __Fuchsia__
+    // TODO(https://fxbug.dev/82541): Use same check as Linux.
+    EXPECT_EQ(got_packet.icmp6_cksum, 0);
+#else   // __Fuchsia__
+    EXPECT_NE(got_packet.icmp6_cksum, 0);
+#endif  // __Fuchsia__
+  }
+
+  // Make sure no more packets delivered to the raw socket.
+  {
+    icmp6_hdr got_packet;
+    sockaddr_in6 sender;
+    socklen_t sender_len = sizeof(sender);
+    ASSERT_EQ(recvfrom(fd.get(), &got_packet, sizeof(got_packet), 0 /* flags */,
+                       reinterpret_cast<sockaddr*>(&sender), &sender_len),
+              -1);
+    EXPECT_EQ(errno, EAGAIN);
+  }
+}
 
 }  // namespace

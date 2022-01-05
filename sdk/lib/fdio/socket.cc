@@ -9,6 +9,7 @@
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
 #include <net/if.h>
+#include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -526,6 +527,15 @@ SockOptResult GetSockOptProcessor::StoreOption(const fnet::wire::Ipv4Address& va
 }
 
 template <>
+SockOptResult GetSockOptProcessor::StoreOption(const frawsocket::wire::Icmpv6Filter& value) {
+  static_assert(sizeof(icmp6_filter) ==
+                (decltype(value.blocked_types)::size() * sizeof(value.blocked_types[0])));
+  *optlen_ = std::min(static_cast<socklen_t>(sizeof(icmp6_filter)), *optlen_);
+  memcpy(optval_, value.blocked_types.data(), *optlen_);
+  return SockOptResult::Ok();
+}
+
+template <>
 SockOptResult GetSockOptProcessor::StoreOption(const fsocket::wire::TcpInfo& value) {
   tcp_info info;
   // Explicitly initialize unsupported fields to a garbage value. It would probably be quieter to
@@ -755,6 +765,19 @@ int16_t SetSockOptProcessor::Get(fsocket::wire::Ipv6MulticastMembership* out) {
   out->iface = req.ipv6mr_interface;
   auto const& mcast = req.ipv6mr_multiaddr.s6_addr;
   std::copy(std::begin(mcast), std::end(mcast), out->mcast_addr.addr.begin());
+  return 0;
+}
+
+template <>
+int16_t SetSockOptProcessor::Get(frawsocket::wire::Icmpv6Filter* out) {
+  struct icmp6_filter filter;
+  if (Get(&filter) != 0) {
+    return EINVAL;
+  }
+
+  static_assert(sizeof(filter) ==
+                (decltype(out->blocked_types)::size() * sizeof(out->blocked_types[0])));
+  memcpy(out->blocked_types.data(), &filter, sizeof(filter));
   return 0;
 }
 
@@ -2076,14 +2099,20 @@ template <>
 zx_status_t socket_with_event<RawSocket>::getsockopt(int level, int optname, void* optval,
                                                      socklen_t* optlen, int16_t* out_code) {
   SockOptResult result = [&]() {
+    GetSockOptProcessor proc(optval, optlen);
     switch (level) {
+      case SOL_ICMPV6:
+        switch (optname) {
+          case ICMP6_FILTER:
+            return proc.Process(zxio_socket_with_event().client->GetIcmpv6Filter(),
+                                [](const auto& response) { return response.filter; });
+        }
+        break;
       case SOL_IP:
         switch (optname) {
-          case IP_HDRINCL: {
-            GetSockOptProcessor proc(optval, optlen);
+          case IP_HDRINCL:
             return proc.Process(zxio_socket_with_event().client->GetIpHeaderIncluded(),
                                 [](const auto& response) { return response.value; });
-          }
         }
         break;
     }
@@ -2098,15 +2127,24 @@ template <>
 zx_status_t socket_with_event<RawSocket>::setsockopt(int level, int optname, const void* optval,
                                                      socklen_t optlen, int16_t* out_code) {
   SockOptResult result = [&]() {
+    SetSockOptProcessor proc(optval, optlen);
+
     switch (level) {
+      case SOL_ICMPV6:
+        switch (optname) {
+          case ICMP6_FILTER:
+            return proc.Process<frawsocket::wire::Icmpv6Filter>(
+                [this](frawsocket::wire::Icmpv6Filter value) {
+                  return zxio_socket_with_event().client->SetIcmpv6Filter(value);
+                });
+        }
+        break;
       case SOL_IP:
         switch (optname) {
-          case IP_HDRINCL: {
-            SetSockOptProcessor proc(optval, optlen);
+          case IP_HDRINCL:
             return proc.Process<bool>([this](bool value) {
               return zxio_socket_with_event().client->SetIpHeaderIncluded(value);
             });
-          }
         }
         break;
     }
