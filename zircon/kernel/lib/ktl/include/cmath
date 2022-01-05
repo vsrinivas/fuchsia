@@ -8,7 +8,40 @@
 #define ZIRCON_KERNEL_LIB_KTL_INCLUDE_CMATH_
 
 // The kernel doesn't want this file but some libc++ headers we need
-// wind up including it.  They don't actually use any of the math
+// wind up including it.  They don't actually most of the math
 // declarations except under #if conditions that aren't true.
+
+#include <__config>
+#include <type_traits>
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+// These are used in templates that won't ever be instantiated in kernel code.
+
+template <typename T>
+constexpr bool isinf(T&& x) {
+  static_assert(!is_same_v<T, T>, "must not be instantiated in kernel code");
+  return false;
+}
+
+template <typename T>
+constexpr bool isnan(T&& x) {
+  static_assert(!is_same_v<T, T>, "must not be instantiated in kernel code");
+  return false;
+}
+
+template <typename T>
+constexpr bool signbit(T&& x) {
+  static_assert(!is_same_v<T, T>, "must not be instantiated in kernel code");
+  return false;
+}
+
+template <typename T>
+constexpr T frexp(T&& x, int* exponent) {
+  static_assert(!is_same_v<T, T>, "must not be instantiated in kernel code");
+  return x;
+}
+
+_LIBCPP_END_NAMESPACE_STD
 
 #endif  // ZIRCON_KERNEL_LIB_KTL_INCLUDE_CMATH_
