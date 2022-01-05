@@ -11,38 +11,17 @@
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 
+#include "src/virtualization/bin/vmm/arch/x64/i8250_registers.h"
 #include "src/virtualization/bin/vmm/guest.h"
 #include "src/virtualization/bin/vmm/zbi.h"
 
-// I8250 state flags.
-static constexpr uint64_t kI8250LineStatusEmpty = 1u << 5;
-static constexpr uint64_t kI8250LineStatusIdle = 1u << 6;
+I8250::I8250() : interrupt_id_(kI8250InterruptIdNoInterrupt) {}
 
-static constexpr uint64_t kI8250Base0 = 0x3f8;
-static constexpr uint64_t kI8250Base1 = 0x2f8;
-static constexpr uint64_t kI8250Base2 = 0x3e8;
-static constexpr uint64_t kI8250Base3 = 0x2e8;
-static constexpr uint64_t kI8250Size = 0x8;
-
-// clang-format off
-
-// I8250 registers.
-enum class I8250Register : uint64_t {
-    RECEIVE             = 0x0,
-    TRANSMIT            = 0x0,
-    INTERRUPT_ENABLE    = 0x1,
-    INTERRUPT_ID        = 0x2,
-    LINE_CONTROL        = 0x3,
-    MODEM_CONTROL       = 0x4,
-    LINE_STATUS         = 0x5,
-    MODEM_STATUS        = 0x6,
-    SCRATCH             = 0x7,
-};
-
-// clang-format on
-
-zx_status_t I8250::Init(Guest* guest, zx::socket* socket, uint64_t addr) {
+zx_status_t I8250::Init(Guest* guest, zx::socket* socket, uint64_t addr,
+                        InterruptHandler interrupt_handler, uint32_t irq) {
   socket_ = socket;
+  interrupt_handler_ = std::move(interrupt_handler);
+  irq_ = irq;
   return guest->CreateMapping(TrapType::PIO_SYNC, addr, kI8250Size, 0, this);
 }
 
@@ -67,7 +46,17 @@ zx_status_t I8250::Read(uint64_t addr, IoValue* io) {
       io->u8 = kI8250LineStatusIdle | kI8250LineStatusEmpty;
       return ZX_OK;
     case I8250Register::RECEIVE:
+      io->access_size = 1;
+      io->u8 = 0;
+      return ZX_OK;
     case I8250Register::INTERRUPT_ID:
+      io->access_size = 1;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        io->u8 = interrupt_id_;
+        interrupt_id_ = kI8250InterruptIdNoInterrupt;
+      }
+      return ZX_OK;
     case I8250Register::MODEM_CONTROL:
     case I8250Register::MODEM_STATUS... I8250Register::SCRATCH:
       io->access_size = 1;
@@ -81,11 +70,24 @@ zx_status_t I8250::Read(uint64_t addr, IoValue* io) {
 
 zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
   switch (static_cast<I8250Register>(addr)) {
-    case I8250Register::TRANSMIT:
-      for (int i = 0; i < io.access_size; i++) {
-        Print(io.data[i]);
+    case I8250Register::TRANSMIT: {
+      bool need_interrupt = false;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (int i = 0; i < io.access_size; i++) {
+          PrintLocked(io.data[i]);
+        }
+        if (interrupt_enable_ & kI8250InterruptEnableTransmitEmpty) {
+          // THR is always empty as soon as we send.
+          interrupt_id_ = kI8250InterruptIdTransmitEmpty;
+          need_interrupt = true;
+        }
+      }
+      if (need_interrupt) {
+        interrupt_handler_(irq_);
       }
       return ZX_OK;
+    }
     case I8250Register::INTERRUPT_ENABLE:
       if (io.access_size != 1) {
         return ZX_ERR_IO;
@@ -113,8 +115,7 @@ zx_status_t I8250::Write(uint64_t addr, const IoValue& io) {
   }
 }
 
-void I8250::Print(uint8_t ch) {
-  std::lock_guard<std::mutex> lock(mutex_);
+void I8250::PrintLocked(uint8_t ch) {
   tx_buffer_[tx_offset_++] = ch;
   if (tx_offset_ < kBufferSize && ch != '\r') {
     return;
@@ -129,15 +130,19 @@ void I8250::Print(uint8_t ch) {
 
 I8250Group::I8250Group(zx::socket socket) : socket_(std::move(socket)) {}
 
-zx_status_t I8250Group::Init(Guest* guest) {
-  const uint64_t kUartBases[kNumUarts] = {
-      kI8250Base0,
-      kI8250Base1,
-      kI8250Base2,
-      kI8250Base3,
+zx_status_t I8250Group::Init(Guest* guest, const I8250::InterruptHandler& interrupt_handler) {
+  const struct {
+    uint64_t base;
+    uint32_t irq;
+  } kUarts[kNumUarts] = {
+      {kI8250Base0, kI8250Irq0},
+      {kI8250Base1, kI8250Irq1},
+      {kI8250Base2, kI8250Irq2},
+      {kI8250Base3, kI8250Irq3},
   };
   for (size_t i = 0; i < kNumUarts; i++) {
-    zx_status_t status = uarts_[i].Init(guest, &socket_, kUartBases[i]);
+    zx_status_t status =
+        uarts_[i].Init(guest, &socket_, kUarts[i].base, interrupt_handler, kUarts[i].irq);
     if (status != ZX_OK) {
       return status;
     }
@@ -148,7 +153,7 @@ zx_status_t I8250Group::Init(Guest* guest) {
 zx_status_t I8250Group::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   dcfg_simple_pio_t zbi_uart = {
       .base = kI8250Base0,
-      .irq = 4,
+      .irq = kI8250Irq0,
   };
   zbitl::Image image(zbi);
   return LogIfZbiError(image.Append(

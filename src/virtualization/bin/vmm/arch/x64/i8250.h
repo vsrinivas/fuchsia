@@ -18,7 +18,11 @@ class Guest;
 // Implements the I8250 UART.
 class I8250 : public IoHandler {
  public:
-  zx_status_t Init(Guest* guest, zx::socket* socket, uint64_t addr);
+  using InterruptHandler = std::function<void(uint32_t)>;
+
+  I8250();
+  zx_status_t Init(Guest* guest, zx::socket* socket, uint64_t addr, InterruptHandler interrupt,
+                   uint32_t irq);
 
   // |IoHandler|
   zx_status_t Read(uint64_t addr, IoValue* io) override;
@@ -34,15 +38,19 @@ class I8250 : public IoHandler {
   uint16_t tx_offset_ __TA_GUARDED(mutex_) = 0;
 
   uint8_t interrupt_enable_ __TA_GUARDED(mutex_) = 0;
+  uint8_t interrupt_id_ __TA_GUARDED(mutex_);
   uint8_t line_control_ __TA_GUARDED(mutex_) = 0;
 
-  void Print(uint8_t ch);
+  InterruptHandler interrupt_handler_;
+  uint32_t irq_ = 0;
+
+  void PrintLocked(uint8_t ch) __TA_REQUIRES(mutex_);
 };
 
 class I8250Group : public PlatformDevice {
  public:
   I8250Group(zx::socket socket);
-  zx_status_t Init(Guest* guest);
+  zx_status_t Init(Guest* guest, const I8250::InterruptHandler& interrupt);
 
   // |PlatformDevice|
   zx_status_t ConfigureZbi(cpp20::span<std::byte> zbi) const override;

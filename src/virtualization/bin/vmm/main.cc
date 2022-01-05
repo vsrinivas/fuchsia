@@ -125,14 +125,6 @@ int main(int argc, char** argv) {
 
   std::vector<PlatformDevice*> platform_devices;
 
-  // Setup UARTs.
-  Uart uart(guest_controller.SerialSocket());
-  status = uart.Init(&guest);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to create UART";
-    return status;
-  }
-  platform_devices.push_back(&uart);
   // Setup interrupt controller.
   InterruptController interrupt_controller(&guest);
 #if __aarch64__
@@ -147,6 +139,22 @@ int main(int argc, char** argv) {
     return status;
   }
   platform_devices.push_back(&interrupt_controller);
+
+  // Setup UARTs.
+  Uart uart(guest_controller.SerialSocket());
+#if __aarch64__
+  status = uart.Init(&guest);
+#elif __x86_64__
+  status = uart.Init(
+      &guest, [&interrupt_controller](uint32_t irq) { interrupt_controller.Interrupt(irq); });
+#else
+#error Unknown architecture.
+#endif
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to create UART";
+    return status;
+  }
+  platform_devices.push_back(&uart);
 
 #if __aarch64__
   // Setup PL031 RTC.
