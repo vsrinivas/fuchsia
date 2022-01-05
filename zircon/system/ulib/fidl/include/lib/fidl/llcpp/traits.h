@@ -6,13 +6,14 @@
 #define LIB_FIDL_LLCPP_TRAITS_H_
 
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport.h>
+#include <zircon/fidl.h>
+
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>
 #endif
-#include <stdint.h>
-#include <zircon/fidl.h>
 
+#include <cstdint>
 #include <type_traits>
 
 // Defines type traits used in the low-level C++ binding.

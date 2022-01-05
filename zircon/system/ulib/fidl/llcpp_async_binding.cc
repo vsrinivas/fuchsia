@@ -9,7 +9,7 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/async_transaction.h>
 #include <lib/fidl/llcpp/client_base.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/trace.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>

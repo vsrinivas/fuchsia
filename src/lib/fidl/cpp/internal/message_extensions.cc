@@ -4,6 +4,7 @@
 
 #include <lib/fidl/cpp/encoder.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 

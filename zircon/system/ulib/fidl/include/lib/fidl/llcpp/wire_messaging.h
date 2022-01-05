@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fit/function.h>
 
 #ifdef __Fuchsia__

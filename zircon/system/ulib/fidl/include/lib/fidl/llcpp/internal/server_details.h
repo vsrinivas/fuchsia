@@ -6,7 +6,7 @@
 #define LIB_FIDL_LLCPP_INTERNAL_SERVER_DETAILS_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>

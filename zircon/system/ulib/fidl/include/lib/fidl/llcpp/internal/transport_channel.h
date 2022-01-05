@@ -10,6 +10,8 @@
 #ifdef __Fuchsia__
 #include <lib/async/dispatcher.h>
 #include <lib/async/wait.h>
+#include <lib/fidl/llcpp/client_end.h>
+#include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/channel.h>
 #include <zircon/syscalls.h>
 #endif
@@ -80,6 +82,52 @@ class ChannelWaiter : private async_wait_t, public TransportWaiter {
   async_dispatcher_t* dispatcher_;
   TransportWaitSuccessHandler success_handler_;
   TransportWaitFailureHandler failure_handler_;
+};
+
+template <typename Protocol>
+class ClientEndImpl<Protocol, internal::ChannelTransport>
+    : public internal::ClientEndBase<Protocol, internal::ChannelTransport> {
+  using ClientEndBase = internal::ClientEndBase<Protocol, internal::ChannelTransport>;
+
+ public:
+  using ClientEndBase::ClientEndBase;
+
+  // The underlying channel.
+  const zx::channel& channel() const { return ClientEndBase::handle_; }
+  zx::channel& channel() { return ClientEndBase::handle_; }
+
+  // Transfers ownership of the underlying channel to the caller.
+  zx::channel TakeChannel() { return std::move(ClientEndBase::handle_); }
+};
+
+template <typename Protocol>
+class ServerEndImpl<Protocol, internal::ChannelTransport>
+    : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
+  using ServerEndBase = internal::ServerEndBase<Protocol, internal::ChannelTransport>;
+
+ public:
+  using ServerEndBase::ServerEndBase;
+
+  const zx::channel& channel() const { return ServerEndBase::handle_; }
+  zx::channel& channel() { return ServerEndBase::handle_; }
+
+  // Transfers ownership of the underlying channel to the caller.
+  zx::channel TakeChannel() { return ServerEndBase::TakeHandle(); }
+
+  // Sends an epitaph over the underlying channel, then closes the channel.
+  // An epitaph is a final optional message sent over a server-end towards
+  // the client, before the server-end is closed down. See the FIDL
+  // language spec for more information about epitaphs.
+  //
+  // The server-end must be holding a valid underlying channel.
+  // Returns the status of the channel write operation.
+  zx_status_t Close(zx_status_t epitaph_value) {
+    if (!ServerEndBase::is_valid()) {
+      ZX_PANIC("Cannot close an invalid ServerEnd.");
+    }
+    zx::channel channel = TakeChannel();
+    return fidl_epitaph_write(channel.get(), epitaph_value);
+  }
 };
 #endif
 

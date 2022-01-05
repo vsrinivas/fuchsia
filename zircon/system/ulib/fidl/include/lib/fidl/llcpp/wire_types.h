@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_TYPES_H_
 #define LIB_FIDL_LLCPP_WIRE_TYPES_H_
 
+#include <lib/fidl/llcpp/internal/transport_channel.h>
+
 // # Wire domain objects
 //
 // This header contains forward definitions that are part of wire domain

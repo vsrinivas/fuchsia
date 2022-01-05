@@ -6,7 +6,7 @@
 #define LIB_FIDL_LLCPP_CLIENT_END_H_
 
 #include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/internal/transport_end.h>
 #include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -90,22 +90,6 @@ class UnownedClientEndBase : public UnownedTransportEnd<Protocol, Transport> {
   // NOLINTNEXTLINE
   UnownedClientEndBase(const ClientEnd<Protocol>& owner)
       : UnownedClientEndBase(owner.handle()->get()) {}
-};
-
-template <typename Protocol>
-class ClientEndImpl<Protocol, internal::ChannelTransport>
-    : public internal::ClientEndBase<Protocol, internal::ChannelTransport> {
-  using ClientEndBase = internal::ClientEndBase<Protocol, internal::ChannelTransport>;
-
- public:
-  using ClientEndBase::ClientEndBase;
-
-  // The underlying channel.
-  const zx::channel& channel() const { return ClientEndBase::handle_; }
-  zx::channel& channel() { return ClientEndBase::handle_; }
-
-  // Transfers ownership of the underlying channel to the caller.
-  zx::channel TakeChannel() { return std::move(ClientEndBase::handle_); }
 };
 
 template <typename Protocol, typename Transport>

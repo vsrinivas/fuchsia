@@ -7,6 +7,7 @@
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fit/function.h>
 #include <zircon/fidl.h>

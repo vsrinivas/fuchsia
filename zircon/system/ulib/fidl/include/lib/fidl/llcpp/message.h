@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_MESSAGE_H_
 #define LIB_FIDL_LLCPP_MESSAGE_H_
 
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/txn_header.h>

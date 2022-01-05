@@ -6,7 +6,7 @@
 #define LIB_FIDL_LLCPP_SERVER_END_H_
 
 #include <lib/fidl/epitaph.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/internal/transport_end.h>
 #include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/fidl/llcpp/traits.h>
@@ -26,36 +26,6 @@ class ServerEndBase : public TransportEnd<Protocol, Transport> {
 
 template <typename Protocol, typename Transport>
 class ServerEndImpl;
-
-template <typename Protocol>
-class ServerEndImpl<Protocol, internal::ChannelTransport>
-    : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
-  using ServerEndBase = internal::ServerEndBase<Protocol, internal::ChannelTransport>;
-
- public:
-  using ServerEndBase::ServerEndBase;
-
-  const zx::channel& channel() const { return ServerEndBase::handle_; }
-  zx::channel& channel() { return ServerEndBase::handle_; }
-
-  // Transfers ownership of the underlying channel to the caller.
-  zx::channel TakeChannel() { return ServerEndBase::TakeHandle(); }
-
-  // Sends an epitaph over the underlying channel, then closes the channel.
-  // An epitaph is a final optional message sent over a server-end towards
-  // the client, before the server-end is closed down. See the FIDL
-  // language spec for more information about epitaphs.
-  //
-  // The server-end must be holding a valid underlying channel.
-  // Returns the status of the channel write operation.
-  zx_status_t Close(zx_status_t epitaph_value) {
-    if (!ServerEndBase::is_valid()) {
-      ZX_PANIC("Cannot close an invalid ServerEnd.");
-    }
-    zx::channel channel = TakeChannel();
-    return fidl_epitaph_write(channel.get(), epitaph_value);
-  }
-};
 
 }  // namespace internal
 
