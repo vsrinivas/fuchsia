@@ -155,7 +155,7 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   EXPECT_TRUE(result);
   EXPECT_EQ(*result, WLAN_SCAN_RESULT_SUCCESS);
 
-  // There is only one AP in the environmnet, but two scan results will be heard from SME since the
+  // There is only one AP in the environment, but two scan results will be heard from SME since the
   // scan dwell time is twice the beacon interval.
   auto scan_result_list = client_ifc_.ScanResultList(kDefaultScanTxnId);
   EXPECT_EQ(scan_result_list->size(), 2U);

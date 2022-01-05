@@ -1301,6 +1301,25 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif,
   cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
 }
 
+// Bring the IF down. Synaptics recommends using this to reset the IF after a
+// connection attempt.
+static zx_status_t brcmf_bss_reset(brcmf_if* ifp) {
+  bcme_status_t fw_err;
+
+  zx_status_t status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+  }
+
+  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+  }
+  return status;
+}
+
 static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::ReasonCode reason_code,
                             uint16_t event_code) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
@@ -1322,6 +1341,8 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
       cfg80211_disconnected(vif, reason_code, event_code);
     }
   }
+  brcmf_bss_reset(vif->ifp);
+
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_SCAN_STATUS_SUPPRESS, &cfg->scan_status);
@@ -2262,6 +2283,8 @@ static zx_status_t brcmf_cfg80211_disconnect(struct net_device* ndev,
     status = ZX_ERR_INVALID_ARGS;
     goto done;
   }
+  // In case the connection is still in progress, stop the timer
+  cfg->connect_timer->Stop();
 
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
@@ -3077,19 +3100,10 @@ static wlan_stop_result_t brcmf_cfg80211_stop_ap(struct net_device* ndev) {
   bss_down.value = 0;
   status = brcmf_fil_bsscfg_data_set(ifp, "bss", &bss_down, sizeof(bss_down));
   if (status != ZX_OK) {
-    BRCMF_ERR("bss down failed %s. Issue C_DOWN (will take down client IF too)",
-              zx_status_get_string(status));
-    // If bss down does not work, use C_DOWN which has the side effect of
-    // taking down all active IFs
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+    // If "bss" fails, issue C_DOWN/UP to cleanly shutdown the SoftAP
+    status = brcmf_bss_reset(ifp);
     if (status != ZX_OK) {
-      BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s", zx_status_get_string(status),
-                brcmf_fil_get_errstr(fw_err));
-    }
-
-    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-    if (status != ZX_OK) {
-      BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s", zx_status_get_string(status),
+      BRCMF_ERR("BRCMF_C_DOWN/UP error: %s, fw err %s", zx_status_get_string(status),
                 brcmf_fil_get_errstr(fw_err));
     }
   }
@@ -5229,6 +5243,7 @@ static zx_status_t brcmf_clear_firmware_connection_state(brcmf_if* ifp) {
               zx_status_get_string(status), brcmf_fil_get_errstr(fw_err));
   }
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_DISCONNECTING, &ifp->vif->sme_state);
+  status = brcmf_bss_reset(ifp);
   return status;
 }
 
@@ -5270,6 +5285,10 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
       default: {
         BRCMF_WARN("Unsuccessful connection: connect_status %s assoc_result %d",
                    brcmf_get_connect_status_str(connect_status), static_cast<int>(assoc_result));
+        zx_status_t err = brcmf_clear_firmware_connection_state(ifp);
+        if (err != ZX_OK) {
+          BRCMF_ERR("Failed to clear firmware connection state.");
+        }
         brcmf_return_assoc_result(ndev, assoc_result);
         break;
       }
@@ -5428,21 +5447,14 @@ static zx_status_t brcmf_process_auth_event(struct brcmf_if* ifp, const struct b
                brcmf_fweh_get_event_status_str(e->status), static_cast<int>(e->reason), e->flags);
     // It appears FW continues to be busy with authentication when this event is received
     // specifically with WEP. Attempt to shutdown the IF.
-    bcme_status_t fwerr = BCME_OK;
-    zx_status_t status;
-    brcmf_bss_ctrl bss_down;
-    bss_down.bsscfgidx = ifp->bsscfgidx;
-    bss_down.value = 0;
-    BRCMF_DBG(CONN, "Attempt to stop IF id:%d", ifp->ifidx);
-    status = brcmf_fil_bsscfg_data_set(ifp, "bss", &bss_down, sizeof(bss_down));
-    if (status != ZX_OK) {
-      BRCMF_ERR("bss iovar error: %s, fw err %s", zx_status_get_string(status),
-                brcmf_fil_get_errstr(fwerr));
-    }
+    brcmf_bss_reset(ifp);
 
     if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_SAE_AUTHENTICATING, &ifp->vif->sme_state)) {
       // Issue assoc_mgr_cmd to resume firmware from waiting for the success of SAE authentication.
+      bcme_status_t fwerr = BCME_OK;
+      zx_status_t status;
       assoc_mgr_cmd_t cmd;
+
       cmd.version = ASSOC_MGR_CURRENT_VERSION;
       cmd.length = sizeof(cmd);
       cmd.cmd = ASSOC_MGR_CMD_PAUSE_ON_EVT;

@@ -335,6 +335,7 @@ class SimFirmware {
     int32_t bsscfgidx;
     bool allocated;
     int8_t iface_id;
+    uint32_t is_up;
     bool ap_mode;
     ApConfig ap_config;
 
@@ -527,7 +528,6 @@ class SimFirmware {
   int32_t power_mode_ = 0;              // Default value of PM in FW is 0 (OFF)
   struct brcmf_fil_country_le country_code_;
   uint32_t assoc_max_retries_ = 0;
-  bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
   uint32_t beacon_timeout_ = kBeaconTimeoutSeconds;
   std::atomic<unsigned long> error_inject_bits_ = 0;

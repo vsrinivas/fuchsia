@@ -472,18 +472,18 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_UP:
       // The value in the IOVAR does not matter (according to Broadcom)
-      // TODO(karthikrish) Use dev_is_up_ to disable Tx, Rx, etc.
-      dev_is_up_ = true;
+      iface_tbl_[ifidx].is_up = 1;
       break;
     case BRCMF_C_DOWN: {
       // The value in the IOVAR does not matter (according to Broadcom)
       // If any of the IFs are operational (i.e., client is associated or
       // softap is started) disconnect as appropriate.
-      if (softap_ifidx_ != std::nullopt) {
+      if (softap_ifidx_ == ifidx) {
         StopSoftAP(softap_ifidx_.value());
+      } else if (kClientIfidx == ifidx) {
+        DisassocLocalClient(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
       }
-      DisassocLocalClient(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
-      dev_is_up_ = false;
+      iface_tbl_[ifidx].is_up = 0;
       break;
     }
     case BRCMF_C_SET_INFRA:
@@ -554,6 +554,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
 
             // Set the auth_type of softap to OPEN.
             iface_tbl_[ifidx].auth_type = BRCMF_AUTH_MODE_OPEN;
+            iface_tbl_[ifidx].is_up = 1;
 
             // And Enable Rx
             hw_.EnableRx();
@@ -599,6 +600,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
           memcpy(assoc_opts->ssid.data, join_params->ssid_le.SSID,
                  wlan_ieee80211::MAX_SSID_BYTE_LEN);
           AssocInit(std::move(assoc_opts), channel);
+          iface_tbl_[ifidx].is_up = 1;
 
           BRCMF_DBG(SIM, "Auth start from C_SET_SSID");
           // Schedule AuthStart to break the call chain for SAE authentication.
@@ -1609,9 +1611,8 @@ void SimFirmware::SetAssocState(AssocState::AssocStateName state) {
 
 // Disassociate the Local Client (request coming in from the driver)
 void SimFirmware::DisassocLocalClient(wlan_ieee80211::ReasonCode reason) {
-  common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
-
   if (assoc_state_.state == AssocState::ASSOCIATED) {
+    common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
     common::MacAddr bssid(assoc_state_.opts->bssid);
     // Transmit the disassoc req and since there is no response for it, indicate disassoc done to
     // driver now
@@ -1619,6 +1620,7 @@ void SimFirmware::DisassocLocalClient(wlan_ieee80211::ReasonCode reason) {
     hw_.Tx(disassoc_req_frame);
     SetStateToDisassociated(reason, true);
   } else if (auth_state_.state == AuthState::AUTHENTICATED) {
+    common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
     common::MacAddr bssid(assoc_state_.opts->bssid);
     // Transmit the deauth frame clear AP state.
     simulation::SimDeauthFrame deauth_req_frame(srcAddr, bssid, reason);
@@ -1855,6 +1857,7 @@ zx_status_t SimFirmware::StopInterface(const int32_t bsscfgidx) {
   } else {
     DisassocLocalClient(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC);
   }
+  iface_tbl_[ifidx].is_up = 0;
   return ZX_OK;
 }
 

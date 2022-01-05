@@ -209,6 +209,46 @@ static zx_status_t modified_get_metadata(brcmf_bus* bus, void* data, size_t exp_
   return ZX_OK;
 }
 
+// Modified Sim bus txctl to check if C_DOWN & C_UP were set from the driver during
+// client disconnect.
+static brcmf_bus_ops original_bus_ops;
+static uint32_t c_down_cnt = 0;
+static uint32_t c_up_cnt = 0;
+static zx_status_t modified_bus_txctl(brcmf_bus* bus, unsigned char* msg, unsigned int len) {
+  brcmf_proto_bcdc_dcmd* dcmd;
+  constexpr size_t hdr_size = sizeof(struct brcmf_proto_bcdc_dcmd);
+
+  if (len < hdr_size) {
+    BRCMF_DBG(SIM, "Message length (%u) smaller than BCDC header size (%zd)", len, hdr_size);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  dcmd = reinterpret_cast<brcmf_proto_bcdc_dcmd*>(msg);
+  size_t data_len = len - hdr_size;
+
+  if (dcmd->len > data_len) {
+    BRCMF_DBG(SIM, "BCDC total message length (%zd) exceeds buffer size (%u)", dcmd->len + hdr_size,
+              len);
+    // The real firmware allows the true buffer size (dcmd->len) to exceed the length of the txctl
+    // itself (len - hdr_size). For an iovar get, we know this is allowed, so the sim firmware
+    // should let such a call through.
+    if (dcmd->cmd != BRCMF_C_GET_VAR) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  switch (dcmd->cmd) {
+    case BRCMF_C_UP:
+      c_up_cnt++;
+      break;
+    case BRCMF_C_DOWN:
+      c_down_cnt++;
+      break;
+    default:
+      break;
+  }
+  return original_bus_ops.txctl(bus, msg, len);
+}
+
 static zx_status_t validate_not_invoked_on_del(struct brcmf_if* ifp,
                                                const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
@@ -636,6 +676,40 @@ TEST_F(DynamicIfTest, ClientDefaultMacFallback) {
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
 }
 
+// Test to check if C_DOWN & C_UP are set in FW during client disconnect.
+TEST_F(DynamicIfTest, CheckIfDownUpCalled) {
+  // Call Preinit to create the sim device (initialization is done in Init()).
+  PreInit();
+  brcmf_simdev* sim = device_->GetSim();
+  // Replace txctl with the local function
+  brcmf_bus_ops modified_bus_ops = *(sim->drvr->bus_if->ops);
+  modified_bus_ops.txctl = &modified_bus_txctl;
+  original_bus_ops = *(sim->drvr->bus_if->ops);
+  sim->drvr->bus_if->ops = &modified_bus_ops;
+
+  // Complete initialization.
+  Init();
+  ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_, std::nullopt, kFakeMac), ZX_OK);
+  c_down_cnt = 0;
+  c_up_cnt = 0;
+  // Associate to FakeAp
+  client_ifc_.AssociateWith(ap_, zx::msec(10));
+
+  constexpr reason_code_t deauth_reason = REASON_CODE_LEAVING_NETWORK_DISASSOC;
+  // Schedule a deauth from SME
+  env_->ScheduleNotification([&] { client_ifc_.DeauthenticateFrom(kDefaultBssid, deauth_reason); },
+                             zx::sec(1));
+  env_->Run(kTestDuration);
+  // Check if C_DOWN & C_UP are set in FW.
+  EXPECT_EQ(c_down_cnt, 1u);
+  EXPECT_EQ(c_up_cnt, 1u);
+
+  // Set sim->drvr->bus_if->ops back to the original set of brcmf_bus_ops
+  sim->drvr->bus_if->ops = &original_bus_ops;
+  EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
+}
+
 TEST_F(DynamicIfTest, DualInterfaces) {
   Init();
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_);
@@ -671,7 +745,7 @@ TEST_F(DynamicIfTest, ConnectBothInterfaces) {
   EXPECT_EQ(client_ifc_.stats_.assoc_successes, 1U);
   // Verify Assoc with SoftAP succeeded
   VerifyAssocWithSoftAP();
-  // TODO(karthikrish) Will add disassoc once support in SIM FW is available
+  // Disassoc related tests are in assoc_test.cc
 }
 
 void DynamicIfTest::TestApStop(bool use_cdown) {
@@ -757,11 +831,11 @@ TEST_F(DynamicIfTest, StopAPDoesntAffectClientIF) {
 }
 
 // Start both client and SoftAP interfaces simultaneously and check if stopping the AP with iovar
-// bss fail, brings down the client as well because C_DOWN is issued
-TEST_F(DynamicIfTest, UsingCdownDisconnectsClient) {
+// bss fails, does not bring down the client when C_DOWN is issued
+TEST_F(DynamicIfTest, UsingCdownDoesntAffectClientIF) {
   TestApStop(true);
-  // Verify that the client interface was also shut down
-  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
+  // Verify that the client interface did not disconnect.
+  EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 0U);
 }
 
 TEST_F(DynamicIfTest, SetClientChanspecAfterAPStarted) {
