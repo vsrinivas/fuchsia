@@ -32,6 +32,13 @@ static const pbus_mmio_t spi_mmios[] = {
     },
 };
 
+static const pbus_irq_t spi_irqs[] = {
+    {
+        .irq = T931_SPICC0_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static const spi_channel_t spi_channels[] = {
     // Thread SPI
     {
@@ -61,6 +68,8 @@ static pbus_dev_t spi_dev = []() {
   dev.did = PDEV_DID_AMLOGIC_SPI;
   dev.mmio_list = spi_mmios;
   dev.mmio_count = countof(spi_mmios);
+  dev.irq_list = spi_irqs;
+  dev.irq_count = countof(spi_irqs);
   return dev;
 }();
 
@@ -74,8 +83,17 @@ static constexpr device_fragment_part_t gpio_spicc0_ss0_fragment[] = {
     {std::size(gpio_spicc0_ss0_match), gpio_spicc0_ss0_match},
 };
 
+static const zx_bind_inst_t spi0_reset_register_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
+    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_SPICC0_RESET),
+};
+static const device_fragment_part_t spi0_reset_register_fragment[] = {
+    {std::size(spi0_reset_register_match), spi0_reset_register_match},
+};
+
 static constexpr device_fragment_t fragments[] = {
     {"gpio-cs-0", std::size(gpio_spicc0_ss0_fragment), gpio_spicc0_ss0_fragment},
+    {"reset", std::size(spi0_reset_register_fragment), spi0_reset_register_fragment},
 };
 
 zx_status_t Sherlock::SpiInit() {
