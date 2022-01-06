@@ -23,6 +23,11 @@ class FakeCodec : public audio::SimpleCodecServer {
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
   zx_status_t Shutdown() override { return ZX_OK; }
+
+  // The test can check directly the state of AGL enablement in its thread.
+  bool agl_enabled() { return agl_enabled_; }
+
+ private:
   zx::status<audio::DriverIds> Initialize() override {
     return zx::ok(audio::DriverIds{.vendor_id = 0, .device_id = 0});
   }
@@ -47,12 +52,11 @@ class FakeCodec : public audio::SimpleCodecServer {
   audio::GainFormat GetGainFormat() override { return {.min_gain = -103.0f}; }
   audio::GainState GetGainState() override { return gain_state; }
   void SetGainState(audio::GainState state) override { gain_state = state; }
-  bool agl_enabled() { return agl_enabled_; }
   inspect::Inspector& inspect() { return SimpleCodecServer::inspect(); }
 
- private:
   audio::GainState gain_state = {};
-  bool agl_enabled_ = false;
+  // agl_enabled_ is accessed from different threads in SetAgl() and agl_enabled().
+  std::atomic<bool> agl_enabled_ = false;
 };
 
 class FakePowerSensor : public ddk::PowerSensorProtocol<FakePowerSensor, ddk::base_protocol>,
@@ -98,7 +102,6 @@ TEST(NelsonBrownoutProtectionTest, Test) {
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<FakeCodec>();
-  codec->SetGainState({10.0f, false, false});
   FakePowerSensor power_sensor(loop.dispatcher());
   ddk::MockGpio alert_gpio;
 
@@ -133,16 +136,10 @@ TEST(NelsonBrownoutProtectionTest, Test) {
   while (!codec->agl_enabled()) {
   }
 
-  EXPECT_EQ(codec->GetGainState().gain, 10.0f);
-  EXPECT_FALSE(codec->GetGainState().muted);
-
   power_sensor.set_voltage(12.0f);  // End the brownout state and make sure AGL gets disabled.
 
   while (codec->agl_enabled()) {
   }
-
-  EXPECT_EQ(codec->GetGainState().gain, 10.0f);
-  EXPECT_FALSE(codec->GetGainState().muted);
 
   ASSERT_NO_FATAL_FAILURES(alert_gpio.VerifyAndClear());
 }
