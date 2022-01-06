@@ -38,13 +38,12 @@ TEST_F(GatherProcessesAndMemoryTest, MemoryStats) {
   zx_handle_t info_resource;
   ASSERT_EQ(harvester::GetInfoResource(&info_resource), ZX_OK);
   harvester::DockyardProxyFake dockyard_proxy;
+  harvester::g_slow_data_task_tree.Gather();
   harvester::GatherProcessesAndMemory gatherer(info_resource, &dockyard_proxy);
   gatherer.Gather();
 
   std::string test_string;
-  if (!dockyard_proxy.CheckStringSent(KoidPath("name"), &test_string)) {
-    GTEST_SKIP() << "TODO(https://fxbug.dev/90350): order-dependent test";
-  }
+  ASSERT_TRUE(dockyard_proxy.CheckStringSent(KoidPath("name"), &test_string));
   // This is the name of our generated test process. If the testing harness
   // changes this may need to be updated. The intent is to test for a process
   // that is running.
