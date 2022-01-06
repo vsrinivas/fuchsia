@@ -105,7 +105,6 @@ assemble_system("guest") {
     "//src/storage/bin/umount",
     "//src/storage/blobfs:decompressor-sandbox",
     "//src/storage/fshost:bootfs",
-    "//src/storage/fshost:no_minfs_zxcrypt",
     "//src/storage/fshost",
     "//src/storage/fvm/driver",
     "//src/sys/bin/psutils",
@@ -116,6 +115,8 @@ assemble_system("guest") {
     "//src/ui/input/drivers/virtio:virtio_input",
     "//zircon/third_party/uapp/dash",
   ]
+
+  fshost_config = [ "no-zxcrypt" ]
 
   if (current_cpu == "x64") {
     bootfs_labels += [

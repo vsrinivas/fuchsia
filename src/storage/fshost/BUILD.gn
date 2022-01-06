@@ -523,25 +523,6 @@ group("bootfs") {
   ]
 }
 
-generated_fshost_config("fvm_ramdisk") {
-  fvm_ramdisk = true
-}
-
-generated_fshost_config("no_minfs_zxcrypt") {
-  no_minfs_zxcrypt = true
-}
-
-# A configuration that allows access to multiple devices with GUID partition schemes; the default
-# will only attach a driver to the first device that appears to have a GUID partition scheme.
-generated_fshost_config("gpt_all") {
-  gpt_all = true
-}
-
-# Writes default configuration plus any changes to global variables.
-generated_fshost_config("default_config") {
-  sandbox_decompression = false
-}
-
 generated_fshost_config("integration_test_config") {
   # Some of the tests require us to be able to match against multiple GPT devices.
   gpt_all = true

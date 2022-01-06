@@ -45,8 +45,8 @@ board_recovery_bootfs_labels += _common_bootfs_deps
 # Some users leave a USB key (containing zedboot) plugged into their
 # device at all times. To avoid unintentionally breaking remote workflows,
 # we permit multiple GPT devices.
-board_bootfs_labels += [ "//src/storage/fshost:gpt_all" ]
-board_zedboot_bootfs_labels += [ "//src/storage/fshost:gpt_all" ]
+board_fshost_config += [ "gpt-all" ]
+board_zedboot_fshost_config += [ "gpt-all" ]
 
 board_bootfs_labels -= [ "//src/power/power-manager:base_config" ]
 board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
