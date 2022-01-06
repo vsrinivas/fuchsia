@@ -58,18 +58,31 @@ Examples
 // can confuse users who wonder why nothing is working. As a result, make the message really big.
 void DisplayConnectionFailed(const Err& err) {
   OutputBuffer out;
-  out.Append(Syntax::kError, "╒═══════════════════════════════════════════╕\n│ ");
-  out.Append(Syntax::kHeading, "Connection to the debugged system failed. ");
-  out.Append(Syntax::kError, "│\n╘═══════════════════════════════════════════╛\n");
-  out.Append(err);
-  out.Append(Syntax::kError, "\n\nThe debugger will not be usable without connecting.\n\n");
-
+  if (Console::get()->context().session()->IsConnected()) {
+    // There could be a race connection (like the user hit enter twice rapidly when issuing the
+    // connection command) that will cause a connection to fail because there's already one pending.
+    // This might not have been knowable before issuing the command. If there's already a
+    // connection, skip the big scary message.
+    out.Append(err);
+  } else {
+    out.Append(Syntax::kError, "╒═══════════════════════════════════════════╕\n│ ");
+    out.Append(Syntax::kHeading, "Connection to the debugged system failed. ");
+    out.Append(Syntax::kError, "│\n╘═══════════════════════════════════════════╛\n");
+    out.Append(err);
+    out.Append(Syntax::kError, "\n\nThe debugger will not be usable without connecting.\n\n");
+  }
   Console::get()->Output(out);
 }
 
 Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
                    CommandCallback callback = nullptr) {
   SessionConnectionInfo connection_info;
+
+  // Catch the "already connected" case early to display a simple low-key error message. This
+  // avoids the more complex error messages issues by the Session object which might seem
+  // out-of-context.
+  if (context->session()->IsConnected())
+    return Err("connect: Already connected to the debugged system. Type \"status\" for more.");
 
   if (cmd.HasSwitch(kUnixSwitch)) {
     connection_info.type = SessionConnectionType::kUnix;

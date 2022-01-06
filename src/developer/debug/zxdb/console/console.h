@@ -58,7 +58,11 @@ class Console {
                               line_input::ModalLineInput::ModalCompletionCallback cb) = 0;
 
   // Parses and dispatches the given line of input.
-  virtual void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) = 0;
+  //
+  // When posting programmatic commands, set add_to_history = false or the command will confusingly
+  // appear as the "last command" (when they hit enter again) and in the "up" history.
+  virtual void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr,
+                                bool add_to_history = true) = 0;
 
  protected:
   static Console* singleton_;

@@ -38,28 +38,28 @@ Err SetupActions(const CommandLineOptions& options, std::vector<Action>* actions
 
     std::string cmd = VerbToString(Verb::kOpenDump) + " " + *options.core;
     actions->push_back(Action("Open Dump", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
     }));
   }
 
   if (options.connect) {
     std::string cmd = "connect " + *options.connect;
     actions->push_back(Action("Connect", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
     }));
   }
 
   if (options.unix_connect) {
     std::string cmd = "connect -u " + *options.unix_connect;
     actions->push_back(Action("Connect", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
     }));
   }
 
   if (options.run) {
     std::string cmd = "run " + *options.run;
     actions->push_back(Action("Run", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
     }));
   }
 
@@ -72,7 +72,7 @@ Err SetupActions(const CommandLineOptions& options, std::vector<Action>* actions
   for (const auto& filter : options.filter) {
     std::string cmd = "filter attach " + filter;
     actions->push_back(Action("Filter", [cmd](const Action&, const Session&, Console* console) {
-      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
     }));
   }
 

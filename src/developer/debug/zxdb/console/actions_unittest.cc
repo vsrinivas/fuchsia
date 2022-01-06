@@ -27,7 +27,8 @@ class ConsoleTest : public ConsoleImpl {
  public:
   ConsoleTest(Session* session) : ConsoleImpl(session) {}
 
-  void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override {
+  void ProcessInputLine(const std::string& line, CommandCallback callback,
+                        bool add_to_history) override {
     // We update the info
     calls.push_back(line);
     if (callback) {

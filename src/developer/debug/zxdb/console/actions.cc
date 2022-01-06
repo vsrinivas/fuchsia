@@ -109,7 +109,7 @@ std::vector<Action> CommandsToActions(const std::string& input) {
     result.push_back(Action(
         commands[i],
         [&, cmd = commands[i]](const Action& action, const Session& session, Console* console) {
-          console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+          console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback, false);
         }));
   }
   return result;

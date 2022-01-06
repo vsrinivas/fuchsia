@@ -230,16 +230,19 @@ void ConsoleImpl::Clear() {
   line_input_.Show();
 }
 
-void ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback) {
+void ConsoleImpl::ProcessInputLine(const std::string& line, CommandCallback callback,
+                                   bool add_to_history) {
   Command cmd;
   Err err;
   if (line.empty()) {
     // Repeat the previous command, don't add to history.
     err = ParseCommand(previous_line_, &cmd);
   } else {
-    line_input_.AddToHistory(line);
     err = ParseCommand(line, &cmd);
-    previous_line_ = line;
+    if (add_to_history) {
+      line_input_.AddToHistory(line);
+      previous_line_ = line;
+    }
   }
 
   if (err.ok()) {

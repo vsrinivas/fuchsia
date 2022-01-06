@@ -75,7 +75,8 @@ void MockConsole::ModalGetOption(const line_input::ModalPromptOptions& options,
   Output(message);
 }
 
-void MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback) {
+void MockConsole::ProcessInputLine(const std::string& line, CommandCallback callback,
+                                   bool add_to_history) {
   FX_DCHECK(!line.empty());
 
   Command cmd;
