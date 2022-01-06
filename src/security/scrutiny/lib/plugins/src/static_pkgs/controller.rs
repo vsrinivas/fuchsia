@@ -5,10 +5,7 @@
 use {
     crate::static_pkgs::collection::StaticPkgsCollection,
     anyhow::{Context, Result},
-    scrutiny::{
-        model::controller::{ConnectionMode, DataController},
-        model::model::DataModel,
-    },
+    scrutiny::{model::controller::DataController, model::model::DataModel},
     scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
@@ -43,11 +40,6 @@ model configuration (not as a controller parameter) because all data is loaded
 by collectors.",
             )
             .build()
-    }
-
-    /// ExtractStaticPkgs is only available to the local shell.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }
 

@@ -5,10 +5,7 @@
 use {
     crate::devmgr_config::collection::DevmgrConfigCollection,
     anyhow::{Context, Result},
-    scrutiny::{
-        model::controller::{ConnectionMode, DataController},
-        model::model::*,
-    },
+    scrutiny::{model::controller::DataController, model::model::*},
     scrutiny_utils::usage::UsageBuilder,
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
@@ -42,10 +39,5 @@ impl DataController for ExtractDevmgrConfigController {
   controller parameter) because ZBI is loaded by a collector.",
             )
             .build()
-    }
-
-    /// ExtractDevmgrConfig is only available to the local shell.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }

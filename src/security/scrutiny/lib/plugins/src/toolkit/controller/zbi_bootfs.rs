@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Result},
     scrutiny::{
-        model::controller::{ConnectionMode, DataController, HintDataType},
+        model::controller::{DataController, HintDataType},
         model::model::*,
     },
     scrutiny_utils::{bootfs::*, usage::*, zbi::*},
@@ -61,10 +61,5 @@ impl DataController for ZbiListBootfsController {
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
         vec![("--input".to_string(), HintDataType::NoType)]
-    }
-
-    /// ZbiListBootfs is only available to the local shell.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }

@@ -6,7 +6,7 @@ use {
     anyhow::Result,
     log::info,
     scrutiny::{
-        model::controller::{ConnectionMode, DataController, HintDataType},
+        model::controller::{DataController, HintDataType},
         model::model::*,
     },
     scrutiny_utils::{blobfs::*, bootfs::*, fvm::*, usage::*, zbi::*},
@@ -149,11 +149,5 @@ impl DataController for ZbiExtractController {
             ("--input".to_string(), HintDataType::NoType),
             ("--output".to_string(), HintDataType::NoType),
         ]
-    }
-
-    /// ZbiExtract is only available to the local shell as it directly
-    /// modifies files on disk.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }

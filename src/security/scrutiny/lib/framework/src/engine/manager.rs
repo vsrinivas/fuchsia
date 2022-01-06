@@ -265,7 +265,7 @@ mod tests {
             engine::hook::PluginHooks,
             model::{
                 collector::DataCollector,
-                controller::{ConnectionMode, DataController},
+                controller::DataController,
                 model::DataModel,
             },
         },
@@ -447,7 +447,7 @@ mod tests {
             dispatcher
                 .read()
                 .unwrap()
-                .query(ConnectionMode::Remote, "/api/foo/bar".to_string(), json!(""))
+                .query("/api/foo/bar".to_string(), json!(""))
                 .unwrap(),
             json!("foo")
         );
@@ -455,7 +455,7 @@ mod tests {
             dispatcher
                 .read()
                 .unwrap()
-                .query(ConnectionMode::Remote, "/api/foo/baz".to_string(), json!(""))
+                .query("/api/foo/baz".to_string(), json!(""))
                 .unwrap(),
             json!("foo")
         );
@@ -465,7 +465,7 @@ mod tests {
             dispatcher
                 .read()
                 .unwrap()
-                .query(ConnectionMode::Remote, "/api/foo/bar".to_string(), json!(""))
+                .query("/api/foo/bar".to_string(), json!(""))
                 .is_err(),
             true
         );
@@ -473,7 +473,7 @@ mod tests {
             dispatcher
                 .read()
                 .unwrap()
-                .query(ConnectionMode::Remote, "/api/foo/baz".to_string(), json!(""))
+                .query("/api/foo/baz".to_string(), json!(""))
                 .unwrap(),
             json!("foo")
         );
@@ -482,7 +482,7 @@ mod tests {
             dispatcher
                 .read()
                 .unwrap()
-                .query(ConnectionMode::Remote, "/api/foo/baz".to_string(), json!(""))
+                .query("/api/foo/baz".to_string(), json!(""))
                 .is_err(),
             true
         );

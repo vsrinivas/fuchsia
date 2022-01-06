@@ -6,7 +6,7 @@ use {
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
     scrutiny::{
-        model::controller::{ConnectionMode, DataController, HintDataType},
+        model::controller::{DataController, HintDataType},
         model::model::*,
     },
     scrutiny_utils::usage::*,
@@ -70,11 +70,5 @@ impl DataController for FarMetaExtractController {
 
     fn hints(&self) -> Vec<(String, HintDataType)> {
         vec![("--input".to_string(), HintDataType::NoType)]
-    }
-
-    /// FarMetaExtract is only available to the local shell as it directly
-    /// modifies files on disk.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }

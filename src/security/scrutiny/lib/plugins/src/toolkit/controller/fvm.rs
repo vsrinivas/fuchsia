@@ -5,7 +5,7 @@
 use {
     anyhow::Result,
     scrutiny::{
-        model::controller::{ConnectionMode, DataController, HintDataType},
+        model::controller::{DataController, HintDataType},
         model::model::*,
     },
     scrutiny_utils::{fvm::*, usage::*},
@@ -94,11 +94,5 @@ impl DataController for FvmExtractController {
             ("--input".to_string(), HintDataType::NoType),
             ("--output".to_string(), HintDataType::NoType),
         ]
-    }
-
-    /// FvmExtract is only available to the local shell as it directly
-    /// modifies files on disk.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }

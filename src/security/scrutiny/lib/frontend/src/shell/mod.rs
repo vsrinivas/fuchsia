@@ -21,13 +21,10 @@ use {
         hint::Hinter,
         CompletionType, Config, Editor, Helper,
     },
-    scrutiny::{
-        engine::{
-            dispatcher::{ControllerDispatcher, DispatcherError},
-            manager::{PluginManager, PluginState},
-            plugin::PluginDescriptor,
-        },
-        model::controller::ConnectionMode,
+    scrutiny::engine::{
+        dispatcher::{ControllerDispatcher, DispatcherError},
+        manager::{PluginManager, PluginState},
+        plugin::PluginDescriptor,
     },
     serde_json::{self, json, Value},
     std::{
@@ -350,7 +347,7 @@ impl Shell {
         }
         let (namespace, query) = command_result.unwrap();
 
-        let result = self.dispatcher.read().unwrap().query(ConnectionMode::Local, namespace, query);
+        let result = self.dispatcher.read().unwrap().query(namespace, query);
         match result {
             Err(e) => {
                 if let Some(dispatch_error) = e.downcast_ref::<DispatcherError>() {

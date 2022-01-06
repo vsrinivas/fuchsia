@@ -7,7 +7,7 @@ use {
     anyhow::{anyhow, Context, Result},
     fuchsia_archive::Reader as FarReader,
     scrutiny::{
-        model::controller::{ConnectionMode, DataController, HintDataType},
+        model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
     scrutiny_utils::{key_value::parse_key_value, usage::UsageBuilder},
@@ -193,11 +193,5 @@ impl DataController for PackageExtractController {
             ("--url".to_string(), HintDataType::NoType),
             ("--output".to_string(), HintDataType::NoType),
         ]
-    }
-
-    /// PackageExtract is only available to the local shell as it directly
-    /// modifies files on disk.
-    fn connection_mode(&self) -> ConnectionMode {
-        ConnectionMode::Local
     }
 }
