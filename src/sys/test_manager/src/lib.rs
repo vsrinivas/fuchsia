@@ -33,6 +33,7 @@ use {
             Ref, Route, SubRealmBuilder,
         },
     },
+    fuchsia_url::pkg_url::PkgUrl,
     fuchsia_zircon as zx,
     futures::{
         channel::{mpsc, oneshot},
@@ -58,6 +59,7 @@ use {
 
 mod diagnostics;
 mod error;
+mod resolver;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
 const WRAPPER_REALM_NAME: &'static str = "test_wrapper";
@@ -67,6 +69,7 @@ const ENCLOSING_ENV_REALM_NAME: &'static str = "enclosing_env";
 
 const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
+const HERMETIC_RESOLVER_REALM_NAME: &'static str = "hermetic_resolver";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
 const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
@@ -1124,9 +1127,14 @@ impl RunningSuite {
                 .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
         let archive_accessor_arc = Arc::new(archive_accessor);
+        let test_package = match PkgUrl::parse(test_url) {
+            Ok(package_url) => package_url.name().to_string(),
+            Err(_) => return Err(LaunchTestError::InvalidResolverData),
+        };
         let builder = get_realm(
             Arc::downgrade(&archive_accessor_arc),
             test_url,
+            test_package,
             test_collection,
             above_root_capabilities_for_test,
         )
@@ -1419,6 +1427,7 @@ where
 async fn get_realm(
     archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
+    test_package: String,
     collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<RealmBuilder, RealmBuilderError> {
@@ -1447,6 +1456,20 @@ async fn get_realm(
             ChildOptions::new(),
         )
         .await?;
+
+    // If this is realm is inside the hermetic tests collections, set up the
+    // hermetic resolver local component.
+    if collection.eq(HERMETIC_TESTS_COLLECTION) {
+        wrapper_realm
+            .add_local_child(
+                HERMETIC_RESOLVER_REALM_NAME,
+                move |handles| {
+                    Box::pin(resolver::serve_hermetic_resolver(handles, vec![test_package.clone()]))
+                },
+                ChildOptions::new(),
+            )
+            .await?;
+    }
 
     // Parent to archivist
     builder
