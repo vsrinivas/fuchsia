@@ -8,6 +8,7 @@
 #include <lib/fit/defer.h>
 #include <stdio.h>
 #include <threads.h>
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -50,6 +51,8 @@ typedef struct acpi_ec_device {
 
   zx_handle_t interrupt_event;
 
+  std::mutex lock_;
+
   bool gpe_setup : 1;
   bool thread_setup : 1;
   bool ec_space_setup : 1;
@@ -70,6 +73,25 @@ static zx_status_t wait_for_interrupt(acpi_ec_device_t* dev);
 static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val);
 static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t val);
 static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* val);
+
+static void acquire_lock(acpi_ec_device_t* dev, uint32_t* handle) __TA_NO_THREAD_SAFETY_ANALYSIS
+    __TA_ACQUIRE(dev->lock_) {
+  if (dev->use_global_lock) {
+    while (AcpiAcquireGlobalLock(0xFFFF, handle) != AE_OK)
+      ;
+  } else {
+    dev->lock_.lock();
+  }
+}
+
+static void release_lock(acpi_ec_device_t* dev, uint32_t handle) __TA_NO_THREAD_SAFETY_ANALYSIS
+    __TA_RELEASE(dev->lock_) {
+  if (dev->use_global_lock) {
+    AcpiReleaseGlobalLock(handle);
+  } else {
+    dev->lock_.unlock();
+  }
+}
 
 static zx_status_t check_needs_global_lock(acpi_ec_device_t* dev) {
   dev->use_global_lock = false;
@@ -98,7 +120,8 @@ static zx_status_t check_needs_global_lock(acpi_ec_device_t* dev) {
 }
 
 // Execute the EC_CMD_READ operation.  Requires the ACPI global lock be held.
-static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val) {
+static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val)
+    __TA_REQUIRES(dev->lock_) {
   // Issue EC command
   outp(dev->cmd_port, EC_CMD_READ);
 
@@ -127,7 +150,8 @@ static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t*
 }
 
 // Execute the EC_CMD_WRITE operation.  Requires the ACPI global lock be held.
-static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t val) {
+static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t val)
+    __TA_REQUIRES(dev->lock_) {
   // Issue EC command
   outp(dev->cmd_port, EC_CMD_WRITE);
 
@@ -165,7 +189,8 @@ static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t
 }
 
 // Execute the EC_CMD_QUERY operation.  Requires the ACPI global lock be held.
-static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* event) {
+static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* event)
+    __TA_REQUIRES(dev->lock_) {
   // Query EC command
   outp(dev->cmd_port, EC_CMD_QUERY);
 
@@ -210,10 +235,7 @@ static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRE
   }
 
   UINT32 global_lock = 0;
-  if (dev->use_global_lock) {
-    while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
-      ;
-  }
+  acquire_lock(dev, &global_lock);
 
   // NB: The processing of the read/write ops below will generate interrupts,
   // which will unfortunately cause spurious wakeups on the event thread.  One
@@ -246,9 +268,7 @@ static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRE
   }
 
 finish:
-  if (dev->use_global_lock) {
-    AcpiReleaseGlobalLock(global_lock);
-  }
+  release_lock(dev, global_lock);
   return status;
 }
 
@@ -282,10 +302,7 @@ static int acpi_ec_thread(void* arg) {
       goto exiting_without_lock;
     }
 
-    if (dev->use_global_lock) {
-      while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
-        ;
-    }
+    acquire_lock(dev, &global_lock);
 
     uint8_t status;
     bool processed_evt = false;
@@ -319,15 +336,11 @@ static int acpi_ec_thread(void* arg) {
       xprintf("acpi-ec: Spurious wakeup, no evt: %#x", status);
     }
 
-    if (dev->use_global_lock) {
-      AcpiReleaseGlobalLock(global_lock);
-    }
+    release_lock(dev, global_lock);
   }
 
 exiting_with_lock:
-  if (dev->use_global_lock) {
-    AcpiReleaseGlobalLock(global_lock);
-  }
+  release_lock(dev, global_lock);
 exiting_without_lock:
   xprintf("acpi-ec: thread terminated");
   return 0;
