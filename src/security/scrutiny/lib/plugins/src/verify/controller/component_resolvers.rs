@@ -93,16 +93,15 @@ impl ComponentInstanceVisitor for ComponentResolversVisitor {
                 Err(err) => return Err(anyhow!("failed to route to a resolver: {:?} ", err)),
             };
 
-            let moniker =
-                moniker::AbsoluteMoniker::parse_string_without_instances(&self.request.moniker)?
-                    .to_string();
+            let moniker = moniker::PartialAbsoluteMoniker::parse_string_without_instances(
+                &self.request.moniker,
+            )?;
 
-            if resolver_source.abs_moniker().to_string() == moniker {
+            if *resolver_source.partial_abs_moniker() == moniker {
                 for use_decl in &resolver_source.decl_for_testing().uses {
                     if let UseDecl::Protocol(name) = use_decl {
                         if name.source_name == CapabilityName(self.request.protocol.clone()) {
-                            let moniker = instance.abs_moniker();
-                            self.monikers.push(moniker.to_string_without_instances());
+                            self.monikers.push(instance.partial_abs_moniker().to_string());
                         }
                     }
                 }
