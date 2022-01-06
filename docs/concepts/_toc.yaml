@@ -16,9 +16,6 @@ toc:
 - title: "Architecture principles"
   section:
   - include: /docs/concepts/principles/_toc.yaml
-- title: "Architecture support"
-  section:
-  - include: /docs/concepts/architecture/_toc.yaml
 - title: "Components"
   section:
   - include: /docs/concepts/components/_toc.yaml
