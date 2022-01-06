@@ -219,14 +219,36 @@ async fn create_realm_instance(
     for ChildDef { source, name, exposes, uses, program_args, eager, .. } in
         children.unwrap_or_default()
     {
-        let fnetemul::ChildSource::Component(url) =
-            source.ok_or(CreateRealmError::SourceNotProvided)?;
+        let source = source.ok_or(CreateRealmError::SourceNotProvided)?;
         let name = name.ok_or(CreateRealmError::NameNotProvided)?;
         let mut child = ChildOptions::new();
         if eager.unwrap_or(false) {
             child = child.eager();
         }
-        let _: &RealmBuilder = builder.add_child(name.as_ref(), &url, child).await?;
+        let _: &RealmBuilder = match source {
+            fnetemul::ChildSource::Component(url) => {
+                builder.add_child(name.as_ref(), &url, child).await?
+            }
+            fnetemul::ChildSource::Mock(dir) => {
+                let dir = dir.into_proxy().expect("failed to create proxy from channel");
+                builder
+                    .add_mock_child(
+                        name.as_ref(),
+                        move |mock_handles: fcomponent::mock::MockHandles| {
+                            futures::future::ready(
+                                dir.clone(
+                                    fio::CLONE_FLAG_SAME_RIGHTS,
+                                    mock_handles.outgoing_dir.into_channel().into(),
+                                )
+                                .context("cloning directory for mock handles"),
+                            )
+                            .boxed()
+                        },
+                        child,
+                    )
+                    .await?
+            }
+        };
         if let Some(program_args) = program_args {
             // This assertion should always pass because `RealmBuilder::add_child` will have
             // failed already if a component with the same moniker already exists in the realm.
@@ -2520,5 +2542,48 @@ mod tests {
             counter.increment().await.expect("failed to increment counter"),
             STARTING_VALUE + 1,
         );
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn mock_child(sandbox: fnetemul::SandboxProxy) {
+        let (mock_dir, server_end) = fidl::endpoints::create_endpoints().expect("create endpoints");
+
+        let mut fs = ServiceFs::new();
+        let _: &mut ServiceFsDir<'_, _> =
+            fs.dir("svc").add_fidl_service(|s: fnetemul_test::CounterRequestStream| s);
+
+        let _: &mut ServiceFs<_> =
+            fs.serve_connection(server_end.into_channel()).expect("serve connection");
+
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![fnetemul::ChildDef {
+                    source: Some(fnetemul::ChildSource::Mock(mock_dir)),
+                    ..counter_component()
+                }]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter = realm.connect_to_protocol::<CounterMarker>();
+        let counter_fut = counter.increment();
+
+        let counter_request = fs
+            .flatten()
+            .try_next()
+            .await
+            .expect("next request")
+            .expect("service fs ended unexpectedly");
+
+        const RESPONSE_VALUE: u32 = 1234;
+        match counter_request {
+            fnetemul_test::CounterRequest::Increment { responder } => {
+                let () = responder.send(RESPONSE_VALUE).expect("failed to send response");
+            }
+            r => panic!("unexpected request {:?}", r),
+        }
+
+        assert_eq!(counter_fut.await.expect("increment failed"), RESPONSE_VALUE);
     }
 }

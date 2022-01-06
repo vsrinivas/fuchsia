@@ -49,19 +49,16 @@ protocol Sandbox {
             /// Child components to dynamically create in this realm.
             ///
             /// If not set, interpreted as an empty vector.
-            2: children vector<@generated_name("ChildDef") table {
+            2: children vector<@generated_name("ChildDef") resource table {
                 /// The runtime source for creating this child.
                 ///
                 /// Required.
-                1: source @generated_name("ChildSource") strict union {
+                1: source @generated_name("ChildSource") strict resource union {
                     /// Spawn a child from a component with the provided URL.
                     1: component fuchsia.url.Url;
-                    // TODO(https://fxbug.dev/91081): Introduce mock child
-                    // variant, should look something like:
-                    //
-                    // Spawn a mock child which serves its exposed directory
-                    // through the provided handle.
-                    // 2: mock client_end:fuchsia.io.Directory;
+                    /// Spawn a mock child which serves its exposed directory
+                    /// through the provided handle.
+                    2: mock client_end:fuchsia.io.Directory;
                 };
                 /// The name of this child local to its containing realm.
                 ///
