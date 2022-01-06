@@ -3541,6 +3541,21 @@ mod tests {
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
 
+        let realm_with_child_decl_file = io_util::open_file_in_namespace(
+            "/pkg/meta/realm_with_child.cm",
+            fio::OPEN_RIGHT_READABLE,
+        )
+        .expect("failed to open manifest");
+        let mut realm_with_child_decl =
+            io_util::read_file_fidl::<fcdecl::Component>(&realm_with_child_decl_file)
+                .await
+                .expect("failed to read manifest")
+                .fidl_into_native();
+
+        // The "a" child is rewritten by realm builder
+        realm_with_child_decl.children =
+            realm_with_child_decl.children.into_iter().filter(|c| &c.name != "a").collect();
+
         let a_decl_file =
             io_util::open_file_in_namespace("/pkg/meta/a.cm", fio::OPEN_RIGHT_READABLE)
                 .expect("failed to open manifest");
@@ -3558,16 +3573,7 @@ mod tests {
                     ..ftest::ChildOptions::EMPTY
                 },
                 ComponentTree {
-                    decl: cm_rust::ComponentDecl {
-                        children: vec![cm_rust::ChildDecl {
-                            name: "b".to_string(),
-                            url: "test:///b".to_string(),
-                            startup: fcdecl::StartupMode::Lazy,
-                            on_terminate: None,
-                            environment: None,
-                        }],
-                        ..cm_rust::ComponentDecl::default()
-                    },
+                    decl: realm_with_child_decl,
                     children: vec![(
                         "a".to_string(),
                         ftest::ChildOptions::EMPTY,
