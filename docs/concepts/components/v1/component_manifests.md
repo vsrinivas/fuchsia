@@ -64,12 +64,12 @@ equivalent:
 You can review the outcome of merging any and all includes into a component
 manifest file by invoking the following command:
 
+Note: The `fx` command below is for developers working in a fuchsia source
+checkout environment.
+
 ```sh
 fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includeroot $FUCHSIA_DIR --includepath $FUCHSIA_DIR/sdk/lib
 ```
-
-Note: the `fx` command below is for developers working in a fuchsia source
-checkout environment.
 
 Includes can be recursive, meaning that shards can have their own includes.
 
