@@ -54,7 +54,6 @@ per-file set-petal=abarth@google.com
 per-file set-relay=tamird@google.com
 per-file             setup-go = olivernewman@google.com
 # per-file-COMPONENT setup-go = Infra>Platform
-per-file setup-usb-ethernet=cjn@google.com
 per-file show-package=brunodalbo@google.com
 per-file smoke-test.fx=shayba@google.com
 per-file smoke-test=shayba@google.com,surajmalhotra@google.com
