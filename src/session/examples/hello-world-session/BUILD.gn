@@ -10,7 +10,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 # [START session_import]
-import("//src/session/build/session_config.gni")
+import("//src/session/build/session_manager.gni")
 
 # [END session_import]
 
@@ -20,7 +20,7 @@ group("tests") {
 }
 
 # [START session_config]
-session_config("hello-world-session-config.json") {
+session_manager_package("hello-world-session-manager") {
   config = "meta/hello-world-session-config.json"
 }
 

@@ -34,10 +34,10 @@ ffx session launch fuchsia-pkg://fuchsia.com/your_session#meta/your_session.cm
 
 ### Launching a session on boot
 
-`session_manager` will launch a session on boot if the build contains
-a `session_config` configuration.
+`session_manager` attempts to launch a session on boot based on the contents of
+its `session_url` configuration parameter.
 
-To boot into session, create a configuration file that specifies which session
+To boot into a session, create a configuration file that specifies which session
 to launch on boot:
 
 ```
@@ -47,16 +47,16 @@ to launch on boot:
 Add to your `BUILD.gn` file:
 
 ```
-import("//src/session/build/session_config.gni")
+import("//src/session/build/session_manager.gni")
 
-session_config("your_session_config") {
-    config = "path/to/config.json"
+session_manager_package("your_session_manager") {
+  config = "path/to/config.json"
 }
 ```
 
-Then, ensure that the target `:your_session_config` is included in the base
-image (for example, using `--with-base`, or as a direct dependency of a product
-build group).
+Then, ensure that the target `:your_session_manager` is included in the base
+package set (for example, using `--with-base`, or as a direct dependency of a
+product build group).
 
 Re-build, re-pave, and restart your device and it will boot into
 `session_manager` and launch your session.

@@ -1,0 +1,54 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+
+# Define a session manager package with a provided configuration file.
+#
+# Parameters
+#
+# `config` (required, string): path to a JSON configuration file configuring startup URL.
+#
+# `package_name` (optional, string): name of the package to create, defaults to `session_manager`.
+template("session_manager_package") {
+  assert(defined(invoker.config),
+         "must define `config` as a path to JSON file with startup config")
+
+  package_name = "session_manager"
+  if (defined(invoker.package_name)) {
+    package_name = invoker.package_name
+  }
+
+  component_target = "${target_name}_component"
+  package_target = "${target_name}_package"
+  config_target = "${target_name}_config"
+
+  fuchsia_component(component_target) {
+    component_name = "session_manager"
+    manifest = "//src/session/bin/session_manager/meta/session_manager.cml"
+    deps = [ "//src/session/bin/session_manager:bin" ]
+  }
+
+  fuchsia_package(package_target) {
+    package_name = package_name
+    deps = [ ":${component_target}" ]
+  }
+
+  config_data(config_target) {
+    for_pkg = package_name
+    sources = [ invoker.config ]
+    outputs = [ "startup.config" ]
+  }
+
+  group(target_name) {
+    deps = [
+      ":${config_target}",
+      ":${package_target}",
+
+      # Needed by the `session-manager-env` environment in core.cml
+      "//src/sys/universe-resolver",
+    ]
+  }
+}

@@ -113,19 +113,19 @@ the the session component.
 ### Imports {#imports}
 
 The file starts by importing GN templates that are used in this `BUILD.gn`. To
-build a session component, import the `session_config.gni`:
+build a session component, import `session_manager.gni`:
 
 ```gn
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="session_import" adjust_indentation="auto" %}
 ```
 
-### Session config {#session-config}
+### Session manager package {#session-config}
 
-The added import statement gives the `BUILD.gn` access to the `session_config`
-command. This command tells the build where to find the `session_config.json`
-for this component.
+The added import statement gives the `BUILD.gn` access to the
+`session_manager_package` template. This template creates a `session_manager`
+package which is configured to start the session URL in the above config.
 
-Add the `session_config` to the `BUILD.gn` file:
+Add the `session_manager_package` to the `BUILD.gn` file:
 
 ```gn
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/session/examples/hello-world-session/BUILD.gn" region_tag="session_config" adjust_indentation="auto" %}
@@ -157,18 +157,18 @@ To build the session `fx set` must first be used to configure the build so that
 in the base package set. This is done using the `--with-base` flag.
 
 ```posix-terminal
-fx set core.x64 --with-base //src/session \
+fx set core.x64 \
     --with-base {{ '<var label="session path">//path/to/your/session</var>' }} \
-    --with-base {{ '<var label="config path">//path/to/your/session:your_session_config</var>' }}
+    --with-base {{ '<var label="config path">//path/to/your/session:your_session_manager_package</var>' }}
 ```
 
 If you are using the example project from the `//src/session/examples` directory,
 the `fx set` command would be:
 
 ```posix-terminal
-fx set core.x64 --with-base //src/session \
+fx set core.x64 \
     --with-base //src/session/examples/hello-world-session \
-    --with-base //src/session/examples/hello-world-session:hello-world-session-config.json
+    --with-base //src/session/examples/hello-world-session:hello-world-session-manager
 ```
 
 Once that's done and built `session_manager` should automatically start your
