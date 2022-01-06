@@ -210,22 +210,7 @@ impl TestSandbox {
         let name = {
             let max_len = usize::try_from(fidl_fuchsia_hardware_ethertap::MAX_NAME_LENGTH)
                 .context("fuchsia.hardware.ethertap/MAX_NAME_LENGTH does not fit in usize")?;
-            let name = name.into();
-            match name.len().checked_sub(max_len) {
-                None => name,
-                Some(start) => {
-                    // NB: Drop characters from the front because it's likely that a name that
-                    // exceeds the length limit is the full name of a test whose suffix is more
-                    // informative because nesting of test cases appends suffixes.
-                    match name {
-                        Cow::Borrowed(name) => Cow::Borrowed(&name[start..]),
-                        Cow::Owned(mut name) => {
-                            let _: std::string::Drain<'_> = name.drain(..start);
-                            Cow::Owned(name)
-                        }
-                    }
-                }
-            }
+            truncate_dropping_front(name.into(), max_len)
         };
 
         let epm = self.get_endpoint_manager()?;
@@ -783,15 +768,26 @@ impl<'a> TestEndpoint<'a> {
         }
     }
 
-    async fn add_to_stack(
+    /// Adds the [`TestEndpoint`] to the provided `realm` with an optional
+    /// interface name.
+    ///
+    /// Returns the interface ID and control protocols on success.
+    pub async fn add_to_stack(
         &self,
         realm: &TestRealm<'a>,
-        name: Option<String>,
+        name: Option<impl Into<Cow<'a, str>>>,
     ) -> Result<(
         u64,
         fidl_fuchsia_net_interfaces_ext::admin::Control,
         Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
     )> {
+        let name = name.map(|n| {
+            truncate_dropping_front(
+                n.into(),
+                fidl_fuchsia_net_interfaces::INTERFACE_NAME_LENGTH.into(),
+            )
+            .to_string()
+        });
         match self.get_device().await.context("get_device failed")? {
             fnetemul_network::DeviceConnection::Ethernet(eth) => {
                 let id = {
@@ -1251,5 +1247,23 @@ impl RealmTcpStream for fuchsia_async::net::TcpStream {
             Result::Ok(stream)
         }
         .boxed_local()
+    }
+}
+
+fn truncate_dropping_front(s: Cow<'_, str>, len: usize) -> Cow<'_, str> {
+    match s.len().checked_sub(len) {
+        None => s,
+        Some(start) => {
+            // NB: Drop characters from the front because it's likely that a name that
+            // exceeds the length limit is the full name of a test whose suffix is more
+            // informative because nesting of test cases appends suffixes.
+            match s {
+                Cow::Borrowed(s) => Cow::Borrowed(&s[start..]),
+                Cow::Owned(mut s) => {
+                    let _: std::string::Drain<'_> = s.drain(..start);
+                    Cow::Owned(s)
+                }
+            }
+        }
     }
 }

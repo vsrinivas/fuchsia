@@ -73,6 +73,7 @@ async fn interfaces_watcher_after_invalid_state_request<N: Netstack>(name: &str)
         ))
         .collect(),
         NetstackVersion::Netstack3 => HashMap::new(),
+        NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);
 }

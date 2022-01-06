@@ -37,6 +37,7 @@ use crate::Result;
 pub enum NetstackVersion {
     Netstack2,
     Netstack3,
+    ProdNetstack2,
 }
 
 impl NetstackVersion {
@@ -45,13 +46,14 @@ impl NetstackVersion {
         match self {
             NetstackVersion::Netstack2 => "#meta/netstack-debug.cm",
             NetstackVersion::Netstack3 => "#meta/netstack3.cm",
+            NetstackVersion::ProdNetstack2 => "#meta/netstack.cm",
         }
     }
 
     /// Gets the services exposed by this Netstack component.
     pub fn get_services(&self) -> &[&'static str] {
         match self {
-            NetstackVersion::Netstack2 => &[
+            NetstackVersion::Netstack2 | NetstackVersion::ProdNetstack2 => &[
                 fnet_filter::FilterMarker::PROTOCOL_NAME,
                 fnet_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
@@ -217,13 +219,35 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 exposes: Some(
                     version.get_services().iter().map(|service| service.to_string()).collect(),
                 ),
-                uses: Some(fnetemul::ChildUses::Capabilities(vec![
-                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                    // NB: intentionally do not route SecureStore; it is intentionally not available
-                    // in all tests to ensure that its absence is handled gracefully. Note also that
-                    // netstack-debug does not have a use declaration for this protocol for the same
-                    // reason.
-                ])),
+                uses: Some(fnetemul::ChildUses::Capabilities(
+                    std::iter::once(fnetemul::Capability::LogSink(fnetemul::Empty {}))
+                        .chain(match version {
+                            // NB: intentionally do not route SecureStore; it is
+                            // intentionally not available in all tests to
+                            // ensure that its absence is handled gracefully.
+                            // Note also that netstack-debug does not have a use
+                            // declaration for this protocol for the same
+                            // reason.
+                            NetstackVersion::Netstack2 | NetstackVersion::Netstack3 => {
+                                itertools::Either::Left(std::iter::empty())
+                            }
+                            NetstackVersion::ProdNetstack2 => {
+                                itertools::Either::Right(IntoIterator::into_iter([
+                                    fnetemul::Capability::ChildDep(protocol_dep::<
+                                        fstash::SecureStoreMarker,
+                                    >(
+                                        constants::secure_stash::COMPONENT_NAME,
+                                    )),
+                                    fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                                        variant: Some(fnetemul::StorageVariant::Cache),
+                                        path: Some("/cache".to_string()),
+                                        ..fnetemul::StorageDep::EMPTY
+                                    }),
+                                ]))
+                            }
+                        })
+                        .collect(),
+                )),
                 ..fnetemul::ChildDef::EMPTY
             },
             KnownServiceProvider::Manager(management_agent) => fnetemul::ChildDef {

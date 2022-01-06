@@ -46,6 +46,7 @@ fuchsia_test_package("netstack-integration-tests") {
     "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
 
     # netstack is under test.
+    "//src/connectivity/network/netstack:component",
     "//src/connectivity/network/netstack:component-debug",
 
     # netstack3 is under test.

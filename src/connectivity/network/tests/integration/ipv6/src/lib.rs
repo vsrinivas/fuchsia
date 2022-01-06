@@ -24,9 +24,9 @@ use net_types::{
 };
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
-    realms::{constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt},
+    realms::{constants, KnownServiceProvider, Netstack, Netstack2, NetstackVersion},
     send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
-    Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+    ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
@@ -69,50 +69,23 @@ const EXPECTED_DAD_RETRANSMIT_TIMER: zx::Duration = zx::Duration::from_seconds(1
 /// [RFC 7217]: https://tools.ietf.org/html/rfc7217#section-6
 const DAD_IDGEN_DELAY: zx::Duration = zx::Duration::from_seconds(1);
 
-/// Launches a new netstack with the endpoint and returns the IPv6 addresses
-/// initially assigned to it.
-///
-/// If `run_netstack_and_get_ipv6_addrs_for_endpoint` returns successfully, it
-/// is guaranteed that the launched netstack has been terminated. Note, if
-/// `run_netstack_and_get_ipv6_addrs_for_endpoint` does not return successfully,
-/// the launched netstack will still be terminated, but no guarantees are made
-/// about when that will happen.
-async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
+async fn install_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
     realm: &netemul::TestRealm<'_>,
     endpoint: &netemul::TestEndpoint<'_>,
     name: String,
-) -> Result<Vec<net::Subnet>> {
-    // Connect to the netstack service, causing the netstack to start.
-    let netstack = realm
-        .connect_to_protocol::<netstack::NetstackMarker>()
-        .context("failed to connect to netstack service")?;
+) -> Vec<net::Subnet> {
+    let (id, control, _device_control) =
+        endpoint.add_to_stack(realm, Some(name)).await.expect("installing interface");
+    let did_enable = control.enable().await.expect("calling enable").expect("enable failed");
+    assert!(did_enable);
 
-    // Add the device and get its interface state from netstack. TODO(https://fxbug.dev/48907)
-    // Support Network Device. This helper fn should use stack.fidl and be agnostic over interface
-    // type.
-    let id = netstack
-        .add_ethernet_device(
-            &name,
-            &mut netstack::InterfaceConfig {
-                name: name[..fidl_fuchsia_net_interfaces::INTERFACE_NAME_LENGTH.into()].to_string(),
-                filepath: "/fake/filepath/for_test".to_string(),
-                metric: 0,
-            },
-            endpoint
-                .get_ethernet()
-                .await
-                .context("add_ethernet_device requires an Ethernet endpoint")?,
-        )
-        .await
-        .context("add_ethernet_device FIDL error")?
-        .map_err(fuchsia_zircon::Status::from_raw)
-        .context("add_ethernet_device error")?;
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("failed to connect to fuchsia.net.interfaces/State service")?;
+        .expect("failed to connect to fuchsia.net.interfaces/State service");
     let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id.into());
     let ipv6_addresses = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("creating interface event stream"),
         &mut state,
         |fidl_fuchsia_net_interfaces_ext::Properties {
              id: _,
@@ -123,29 +96,26 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
              has_default_ipv4_route: _,
              has_default_ipv6_route: _,
          }| {
-            Some(
-                addresses
-                    .iter()
-                    .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| addr)
-                    .filter(|fidl_fuchsia_net::Subnet { addr, prefix_len: _ }| match addr {
-                        net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
-                        net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => true,
-                    })
-                    .copied()
-                    .collect(),
-            )
+            let ipv6_addresses = addresses
+                .iter()
+                .map(|fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| addr)
+                .filter(|fidl_fuchsia_net::Subnet { addr, prefix_len: _ }| match addr {
+                    net::IpAddress::Ipv4(net::Ipv4Address { addr: _ }) => false,
+                    net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => true,
+                })
+                .copied()
+                .collect::<Vec<_>>();
+            if ipv6_addresses.is_empty() {
+                None
+            } else {
+                Some(ipv6_addresses)
+            }
         },
     )
     .await
-    .context("failed to observe interface addition")?;
+    .expect("failed to observe interface addition");
 
-    // Stop the netstack.
-    let () = realm
-        .stop_child_component(constants::netstack::COMPONENT_NAME)
-        .await
-        .context("failed to stop netstack")?;
-
-    Ok(ipv6_addresses)
+    ipv6_addresses
 }
 
 /// Test that across netstack runs, a device will initially be assigned the same
@@ -154,28 +124,34 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
 async fn consistent_initial_ipv6_addrs<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm = sandbox
-        .create_netstack_realm_with::<Netstack2, _, _>(name, &[KnownServiceProvider::SecureStash])
+        .create_realm(
+            name,
+            &[
+                // This test exercises stash persistence. Netstack-debug, which
+                // is the default used by test helpers, does not use
+                // persistence.
+                KnownServiceProvider::Netstack(NetstackVersion::ProdNetstack2),
+                KnownServiceProvider::SecureStash,
+            ],
+        )
         .expect("failed to create realm");
-    let endpoint = sandbox
-        .create_endpoint::<netemul::Ethernet, _>(name)
-        .await
-        .expect("failed to create endpoint");
+    let endpoint = sandbox.create_endpoint::<E, _>(name).await.expect("failed to create endpoint");
+    let () = endpoint.set_link_up(true).await.expect("failed to set link up");
 
     // Make sure netstack uses the same addresses across runs for a device.
-    let first_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
-        &realm,
-        &endpoint,
-        name.to_string(),
-    )
-    .await
-    .expect("error running netstack and getting addresses for the first time");
-    let second_run_addrs = run_netstack_and_get_ipv6_addrs_for_endpoint::<Netstack2>(
-        &realm,
-        &endpoint,
-        name.to_string(),
-    )
-    .await
-    .expect("error running netstack and getting addresses for the second time");
+    let first_run_addrs =
+        install_and_get_ipv6_addrs_for_endpoint::<Netstack2>(&realm, &endpoint, name.to_string())
+            .await;
+
+    // Stop the netstack.
+    let () = realm
+        .stop_child_component(constants::netstack::COMPONENT_NAME)
+        .await
+        .expect("failed to stop netstack");
+
+    let second_run_addrs =
+        install_and_get_ipv6_addrs_for_endpoint::<Netstack2>(&realm, &endpoint, name.to_string())
+            .await;
     assert_eq!(first_run_addrs, second_run_addrs);
 }
 
@@ -583,7 +559,7 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         control: &'b fidl_fuchsia_net_interfaces_admin::ControlProxy,
         fail_dad_fn: FN,
         want_state: fidl_fuchsia_net_interfaces_admin::AddressAssignmentState,
-    ) -> std::result::Result<
+    ) -> Result<
         fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy,
         fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError,
     > {
@@ -1107,7 +1083,7 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
                 let mut data = &data[..];
 
                 let eth = EthernetFrame::parse(&mut data, EthernetFrameLengthCheck::Check)
-                    .context("error parsing ethernet frame")?;
+                    .expect("error parsing ethernet frame");
 
                 if eth.ethertype() != Some(EtherType::Ipv6) {
                     // Ignore non-IPv6 packets.
@@ -1116,7 +1092,7 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
 
                 let (mut payload, src_ip, dst_ip, proto, ttl) =
                     parse_ip_packet::<net_types_ip::Ipv6>(&data)
-                        .context("error parsing IPv6 packet")?;
+                        .expect("error parsing IPv6 packet");
 
                 if proto != Ipv6Proto::Icmpv6 {
                     // Ignore non-ICMPv6 packets.
@@ -1124,7 +1100,7 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
                 }
 
                 let icmp = Icmpv6Packet::parse(&mut payload, IcmpParseArgs::new(src_ip, dst_ip))
-                    .context("error parsing ICMPv6 packet")?;
+                    .expect("error parsing ICMPv6 packet");
 
                 let mld = if let Icmpv6Packet::Mld(mld) = icmp {
                     mld

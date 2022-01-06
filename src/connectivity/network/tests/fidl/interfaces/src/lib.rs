@@ -248,6 +248,7 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
         ))
         .collect(),
         NetstackVersion::Netstack3 => HashMap::new(),
+        NetstackVersion::ProdNetstack2 => panic!("unexpected netstack version"),
     };
     assert_eq!(interfaces, expected);
 }
