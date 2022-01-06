@@ -3,14 +3,17 @@
 // found in the LICENSE file.
 
 use {
+    crate::paths::{
+        maybe_path_for_char, maybe_path_for_cursor_style, path_for_strikeout, path_for_underline,
+    },
     carnelian::{
         color::Color,
         drawing::{FontFace, Glyph, TextGrid},
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Path, Raster, Style},
+        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
         scene::{LayerGroup, SceneOrder},
         Size,
     },
-    euclid::point2,
+    euclid::{point2, Rect},
     rustc_hash::{FxHashMap, FxHashSet},
     std::{collections::hash_map::Entry, convert::TryFrom, mem},
     term_model::{
@@ -90,107 +93,6 @@ struct LayerId {
     rgb: Rgb,
 }
 
-// Thickness of lines is determined by multiplying thickness factor
-// with the cell height. 1/16 has been chosen as that results in 1px
-// thick lines for a 16px cell height.
-const LINE_THICKNESS_FACTOR: f32 = 1.0 / 16.0;
-
-fn path_for_block(size: &Size, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    path_builder
-        .move_to(point2(0.0, 0.0))
-        .line_to(point2(size.width, 0.0))
-        .line_to(point2(size.width, size.height))
-        .line_to(point2(0.0, size.height))
-        .line_to(point2(0.0, 0.0));
-    path_builder.build()
-}
-
-fn path_for_underline(size: &Size, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    let top = size.height - size.height * LINE_THICKNESS_FACTOR;
-    path_builder
-        .move_to(point2(0.0, top))
-        .line_to(point2(size.width, top))
-        .line_to(point2(size.width, size.height))
-        .line_to(point2(0.0, size.height))
-        .line_to(point2(0.0, top));
-    path_builder.build()
-}
-
-fn path_for_strikeout(size: &Size, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    let thickness = size.height * LINE_THICKNESS_FACTOR;
-    let top = size.height / 2.0;
-    let bottom = top + thickness;
-    path_builder
-        .move_to(point2(0.0, top))
-        .line_to(point2(size.width, top))
-        .line_to(point2(size.width, bottom))
-        .line_to(point2(0.0, bottom))
-        .line_to(point2(0.0, top));
-    path_builder.build()
-}
-
-fn path_for_beam(size: &Size, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    let right = size.height * LINE_THICKNESS_FACTOR;
-    path_builder
-        .move_to(point2(0.0, 0.0))
-        .line_to(point2(right, 0.0))
-        .line_to(point2(right, size.height))
-        .line_to(point2(0.0, size.height))
-        .line_to(point2(0.0, 0.0));
-    path_builder.build()
-}
-
-fn path_for_hollow_block(size: &Size, render_context: &mut RenderContext) -> Path {
-    let mut path_builder = render_context.path_builder().expect("path_builder");
-    let inset = size.height * LINE_THICKNESS_FACTOR;
-    let bottom_start = size.height - inset;
-    let right_start = size.width - inset;
-    path_builder
-        // top
-        .move_to(point2(0.0, 0.0))
-        .line_to(point2(size.width, 0.0))
-        .line_to(point2(size.width, inset))
-        .line_to(point2(0.0, inset))
-        .line_to(point2(0.0, 0.0))
-        // bottom
-        .move_to(point2(0.0, bottom_start))
-        .line_to(point2(size.width, bottom_start))
-        .line_to(point2(size.width, size.height))
-        .line_to(point2(0.0, size.height))
-        .line_to(point2(0.0, bottom_start))
-        // left
-        .move_to(point2(0.0, inset))
-        .line_to(point2(inset, inset))
-        .line_to(point2(inset, bottom_start))
-        .line_to(point2(0.0, bottom_start))
-        .line_to(point2(0.0, inset))
-        // right
-        .move_to(point2(right_start, inset))
-        .line_to(point2(size.width, inset))
-        .line_to(point2(size.width, bottom_start))
-        .line_to(point2(right_start, bottom_start))
-        .line_to(point2(right_start, inset));
-    path_builder.build()
-}
-
-fn maybe_path_for_cursor_style(
-    render_context: &mut RenderContext,
-    cursor_style: CursorStyle,
-    cell_size: &Size,
-) -> Option<Path> {
-    match cursor_style {
-        CursorStyle::Block => Some(path_for_block(cell_size, render_context)),
-        CursorStyle::Underline => Some(path_for_underline(cell_size, render_context)),
-        CursorStyle::Beam => Some(path_for_beam(cell_size, render_context)),
-        CursorStyle::HollowBlock => Some(path_for_hollow_block(cell_size, render_context)),
-        CursorStyle::Hidden => None,
-    }
-}
-
 fn maybe_raster_for_cursor_style(
     render_context: &mut RenderContext,
     cursor_style: CursorStyle,
@@ -200,6 +102,20 @@ fn maybe_raster_for_cursor_style(
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(p, None);
         raster_builder.build()
+    })
+}
+
+fn maybe_fallback_glyph_for_char(
+    render_context: &mut RenderContext,
+    c: char,
+    cell_size: &Size,
+) -> Option<Glyph> {
+    maybe_path_for_char(render_context, c, cell_size).as_ref().map(|p| {
+        let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+        raster_builder.add(p, None);
+        let raster = raster_builder.build();
+        let bounding_box = Rect::from_size(*cell_size);
+        Glyph { raster, bounding_box }
     })
 }
 
@@ -228,11 +144,8 @@ fn maybe_glyph_for_char(
         }
     }
 
-    //
-    // This is a good place to add fallback glyphs in the future.
-    //
-
-    None
+    // Try fallback glyph if we failed to locate glyph in fonts.
+    maybe_fallback_glyph_for_char(context, c, &textgrid.cell_size)
 }
 
 fn maybe_raster_for_char(
