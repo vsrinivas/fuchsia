@@ -26,25 +26,22 @@ namespace fio = fuchsia_io;
 // some directory between "/" and a mount point), so it has
 // to emulate directory behavior.
 struct LocalConnection {
+  LocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn);
+  ~LocalConnection() = default;
+
   // Hack to embed LocalConnection in the |storage| field of the |fdio_t| struct.
   // See definition of |zxio_storage_t|, where |zxio_t io| is also the first element.
   // This allows us to track extra state related to the local connection, as
   // witnessed by the fields below.
   zxio_t io;
 
-  // For the following two fields, although these are raw pointers for
-  // C compatibility, they are actually strong references to both the
-  // namespace and vnode object.
-  //
-  // On close, they must be destroyed.
-
   // The namespace instance, containing a directory tree terminating
   // with various remote channels.
-  const fdio_namespace* fs;
+  fbl::RefPtr<const fdio_namespace> fs;
 
   // The vnode corresponding to this directory. |vn| references some
   // directory in |fs|.
-  LocalVnode* vn;
+  fbl::RefPtr<LocalVnode> vn;
 };
 
 static_assert(offsetof(LocalConnection, io) == 0, "LocalConnection must be castable to zxio_t");
@@ -53,17 +50,15 @@ static_assert(offsetof(zxio_storage_t, io) == 0, "LocalConnection must be castab
 static_assert(sizeof(LocalConnection) <= sizeof(zxio_storage_t),
               "LocalConnection must fit inside zxio_storage_t.");
 
+LocalConnection::LocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn)
+    : fs(std::move(fs)), vn(std::move(vn)) {}
+
 struct local_connection : public base {
   LocalConnection& local_dir() { return *reinterpret_cast<LocalConnection*>(&zxio_storage().io); }
 
   zx_status_t close() override {
     auto& dir = local_dir();
-    // Reclaim a strong reference to |fs| which was leaked during
-    // |CreateLocalConnection()|
-    __UNUSED auto fs = fbl::ImportFromRawPtr<const fdio_namespace>(dir.fs);
-    __UNUSED auto vn = fbl::ImportFromRawPtr<const LocalVnode>(dir.vn);
-    dir.fs = nullptr;
-    dir.vn = nullptr;
+    dir.~LocalConnection();
     return ZX_OK;
   }
 
@@ -153,18 +148,11 @@ zx::status<fdio_ptr> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-  // Invoke placement new on the new LocalConnection. Since the object is trivially
-  // destructible, we can avoid invoking the destructor.
-  static_assert(std::is_trivially_destructible<LocalConnection>::value,
-                "LocalConnection must have trivial destructor");
+  // Invoke placement new on the new LocalConnection. It will be destroyed in close.
   zxio_storage_t& storage = io->zxio_storage();
-  auto* dir = new (&storage) LocalConnection();
+  new (&storage) LocalConnection(std::move(fs), std::move(vn));
   zxio_default_init(&storage.io);
 
-  // Leak a strong reference to |this| which will be reclaimed
-  // in |zxio_dir_close()|.
-  dir->fs = fbl::ExportToRawPtr(&fs);
-  dir->vn = fbl::ExportToRawPtr(&vn);
   return zx::ok(io);
 }
 

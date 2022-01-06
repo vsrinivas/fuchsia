@@ -88,7 +88,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
       if (child == nullptr) {
         // If no child exists with this name, we either failed to lookup a node,
         // or we must transmit this request to the remote node.
-        if (!vn->Remote().is_valid()) {
+        if (!vn->RemoteValid()) {
           return ZX_ERR_NOT_FOUND;
         }
 
@@ -130,7 +130,7 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
       return zx::error(status);
     }
 
-    if (!vn->Remote().is_valid()) {
+    if (!vn->RemoteValid()) {
       // The Vnode exists, but it has no remote object. Open a local reference.
       return CreateConnection(vn);
     }
@@ -155,10 +155,9 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char
 
   // Active remote connections are immutable, so referencing remote here
   // is safe. We don't want to do a blocking open under the ns lock.
-  status = fidl::WireCall(vn->Remote())
-               ->Open(flags, mode, fidl::StringView::FromExternal(path, length),
-                      std::move(endpoints->server))
-               .status();
+  status = zxio_open_async(vn->Remote(), flags, mode, path, length,
+                           endpoints->server.TakeChannel().release());
+
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -179,7 +178,7 @@ zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const c
     return status;
   }
 
-  if (!vn->Remote().is_valid()) {
+  if (!vn->RemoteValid()) {
     // The Vnode exists, but it has no remote object.
     // we simply return a ZX_ERR_NOT_SUPPORTED
     // as we do not support inotify for local-namespace filesystem
@@ -193,13 +192,10 @@ zx_status_t fdio_namespace::AddInotifyFilter(fbl::RefPtr<LocalVnode> vn, const c
     return status;
   }
 
-  auto event_mask = static_cast<::fuchsia_io2::wire::InotifyWatchMask>(mask);
   // Active remote connections are immutable, so referencing remote here
   // is safe. But we do not want to do a blocking call under the ns lock.
-  return fidl::WireCall(vn->Remote())
-      ->AddInotifyFilter(fidl::StringView::FromExternal(path, length), event_mask, watch_descriptor,
-                         std::move(socket))
-      .status();
+  return zxio_add_inotify_filter(vn->Remote(), path, length, mask, watch_descriptor,
+                                 socket.release());
 }
 
 zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
@@ -272,12 +268,18 @@ zx_status_t fdio_namespace::Connect(const char* path, uint32_t flags,
     }
 
     // cannot connect via non-mountpoint nodes
-    if (!vn->Remote().is_valid()) {
+    if (!vn->RemoteValid()) {
       return ZX_ERR_NOT_SUPPORTED;
     }
   }
 
-  return fdio_open_at(vn->Remote().channel().get(), path, flags, client_end.channel().release());
+  zx_handle_t borrowed_handle = ZX_HANDLE_INVALID;
+  zx_status_t status = zxio_borrow(vn->Remote(), &borrowed_handle);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return fdio_open_at(borrowed_handle, path, flags, client_end.channel().release());
 }
 
 zx_status_t fdio_namespace::Unbind(const char* path) {
@@ -307,7 +309,7 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
       return status;
     }
 
-    if (vn->Remote().is_valid()) {
+    if (vn->RemoteValid()) {
       // Since shadowing is disallowed, this must refer to an invalid path.
       return ZX_ERR_NOT_FOUND;
     }
@@ -338,7 +340,7 @@ zx_status_t fdio_namespace::Unbind(const char* path) {
 
     if (!next) {
       // This is the last segment; we must match.
-      if (!vn->Remote().is_valid()) {
+      if (!vn->RemoteValid()) {
         return ZX_ERR_NOT_FOUND;
       }
       // This assertion must hold without shadowing: |vn| should
@@ -364,7 +366,7 @@ bool fdio_namespace::IsBound(const char* path) {
   if (status != ZX_OK) {
     return false;
   }
-  return strcmp(path, ".") == 0 && vn->Remote().is_valid();
+  return strcmp(path, ".") == 0 && vn->RemoteValid();
 }
 
 zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Directory> remote) {
@@ -380,7 +382,7 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
 
   fbl::AutoLock lock(&lock_);
   if (path[0] == 0) {
-    if (root_->Remote().is_valid()) {
+    if (root_->RemoteValid()) {
       // Cannot re-bind after initial bind.
       return ZX_ERR_ALREADY_EXISTS;
     }
@@ -413,7 +415,7 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
       return status;
     }
 
-    if (vn->Remote().is_valid()) {
+    if (vn->RemoteValid()) {
       // Shadowing is disallowed.
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -456,7 +458,7 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
     return root_;
   }();
 
-  if (!vn->Remote().is_valid()) {
+  if (!vn->RemoteValid()) {
     return CreateConnection(vn);
   }
 
@@ -465,15 +467,15 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
     return endpoints.take_error();
   }
 
-  zx_status_t status = fidl::WireCall(vn->Remote())
-                           ->Clone(fio::wire::kCloneFlagSameRights | fio::wire::kOpenFlagDescribe,
-                                   std::move(endpoints->server))
-                           .status();
+  zx::channel clone;
+  zx_status_t status =
+      zxio_reopen(vn->Remote(), ZXIO_REOPEN_DESCRIBE, clone.reset_and_get_address());
+
   if (status != ZX_OK) {
     return zx::error(status);
   }
 
-  return fdio::create_with_on_open(std::move(endpoints->client));
+  return fdio::create_with_on_open(fidl::ClientEnd<fio::Node>(std::move(clone)));
 }
 
 zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
@@ -511,8 +513,7 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
     return root_;
   }();
 
-  auto count_callback = [&es](const cpp17::string_view& path,
-                              const fidl::ClientEnd<fio::Directory>& client_end) {
+  auto count_callback = [&es](const cpp17::string_view& path, zxio_t* remote) {
     // Each entry needs one slot in the handle table,
     // one slot in the type table, and one slot in the
     // path table, plus storage for the path and NUL
@@ -539,15 +540,15 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
   es.buffer = reinterpret_cast<char*>(es.path + es.count);
   es.count = 0;
 
-  auto export_callback = [&es](const cpp17::string_view& path,
-                               const fidl::ClientEnd<fio::Directory>& client_end) {
-    zx::channel remote(fdio_service_clone(client_end.channel().get()));
-    if (!remote.is_valid()) {
-      return ZX_ERR_BAD_STATE;
+  auto export_callback = [&es](const cpp17::string_view& path, zxio_t* remote) {
+    zx::channel remote_clone;
+    zx_status_t status = zxio_clone(remote, remote_clone.reset_and_get_address());
+    if (status != ZX_OK) {
+      return status;
     }
     strlcpy(es.buffer, path.data(), path.length() + 1);
     es.path[es.count] = es.buffer;
-    es.handle[es.count] = remote.release();
+    es.handle[es.count] = remote_clone.release();
     es.type[es.count] = PA_HND(PA_NS_DIR, static_cast<uint32_t>(es.count));
     es.buffer += (path.length() + 1);
     es.count++;

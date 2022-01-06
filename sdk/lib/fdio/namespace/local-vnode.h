@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
+#include <lib/zxio/types.h>
 #include <limits.h>
 #include <zircon/types.h>
 
@@ -22,8 +23,7 @@
 
 namespace fdio_internal {
 
-using EnumerateCallback = fbl::Function<zx_status_t(
-    cpp17::string_view path, const fidl::ClientEnd<fuchsia_io::Directory>& client_end)>;
+using EnumerateCallback = fbl::Function<zx_status_t(cpp17::string_view path, zxio_t* entry)>;
 
 // Represents a mapping from a string name to a remote connection.
 //
@@ -77,17 +77,21 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 
   // Remote is "set-once". If it is valid, this class guarantees that
   // the value of |Remote()| will not change for the lifetime of |LocalVnode|.
-  const fidl::ClientEnd<fuchsia_io::Directory>& Remote() const { return remote_; }
+  bool RemoteValid() const { return remote_valid_; }
+  zxio_t* Remote() const { return const_cast<zxio_t*>(&remote_storage_.io); }
   const fbl::String& Name() const { return name_; }
 
   bool has_children() const { return !entries_by_id_.is_empty(); }
 
  private:
+  friend class fbl::RefPtr<LocalVnode>;
+
   void AddEntry(fbl::RefPtr<LocalVnode> vn);
   void RemoveEntry(LocalVnode* vn);
   void UnlinkChildren();
   LocalVnode(fbl::RefPtr<LocalVnode> parent, fidl::ClientEnd<fuchsia_io::Directory> remote,
              fbl::String name);
+  ~LocalVnode();
 
   struct IdTreeTag {};
   struct NameTreeTag {};
@@ -130,7 +134,8 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
   EntryByNameMap entries_by_name_;
 
   fbl::RefPtr<LocalVnode> parent_;
-  const fidl::ClientEnd<fuchsia_io::Directory> remote_;
+  bool remote_valid_;
+  const zxio_storage_t remote_storage_;
   const fbl::String name_;
 };
 

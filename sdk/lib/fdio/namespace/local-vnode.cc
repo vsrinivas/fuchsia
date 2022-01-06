@@ -6,6 +6,8 @@
 
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
+#include <lib/zxio/cpp/create_with_type.h>
+#include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 
 #include <fbl/auto_lock.h>
@@ -62,7 +64,23 @@ fbl::RefPtr<LocalVnode> LocalVnode::Lookup(cpp17::string_view name) const {
 
 LocalVnode::LocalVnode(fbl::RefPtr<LocalVnode> parent,
                        fidl::ClientEnd<fuchsia_io::Directory> remote, fbl::String name)
-    : parent_(std::move(parent)), remote_(std::move(remote)), name_(std::move(name)) {}
+    : parent_(std::move(parent)),
+      remote_valid_(remote.is_valid()),
+      remote_storage_({}),
+      name_(std::move(name)) {
+  if (remote_valid_) {
+    zxio::CreateDirectory(const_cast<zxio_storage_t*>(&remote_storage_), std::move(remote));
+  }
+}
+
+LocalVnode::~LocalVnode() {
+  if (remote_valid_) {
+    // Close the channel underlying the remote connection without making a Close call to
+    // preserve previous behavior.
+    zx::channel remote_channel;
+    zxio_release(Remote(), remote_channel.reset_and_get_address());
+  }
+}
 
 void LocalVnode::UnlinkChildren() {
   for (auto& entry : entries_by_name_) {
@@ -87,7 +105,7 @@ zx_status_t EnumerateInternal(const LocalVnode& vn, fbl::StringBuffer<PATH_MAX>*
   // Add this current node to the path, and enumerate it if it has a remote
   // object.
   path->Append(vn.Name().data(), vn.Name().length());
-  if (vn.Remote().is_valid()) {
+  if (vn.RemoteValid()) {
     func(cpp17::string_view(path->data(), path->length()), vn.Remote());
   }
 
