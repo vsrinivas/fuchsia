@@ -3846,13 +3846,13 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
   uint32_t val = WLC_BAND_2G;
   zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
   if (status == ZX_OK) {
-    bw_cap[WLAN_INFO_BAND_2GHZ] = val;
+    bw_cap[WLAN_INFO_BAND_TWO_GHZ] = val;
 
     // 5 GHz
     val = WLC_BAND_5G;
     status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val, nullptr);
     if (status == ZX_OK) {
-      bw_cap[WLAN_INFO_BAND_5GHZ] = val;
+      bw_cap[WLAN_INFO_BAND_FIVE_GHZ] = val;
       return;
     }
     BRCMF_WARN(
@@ -3872,14 +3872,14 @@ static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
 
   switch (mimo_bwcap) {
     case WLC_N_BW_40ALL:
-      bw_cap[WLAN_INFO_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
+      bw_cap[WLAN_INFO_BAND_TWO_GHZ] |= WLC_BW_40MHZ_BIT;
       __FALLTHROUGH;
     case WLC_N_BW_20IN2G_40IN5G:
-      bw_cap[WLAN_INFO_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
+      bw_cap[WLAN_INFO_BAND_FIVE_GHZ] |= WLC_BW_40MHZ_BIT;
       __FALLTHROUGH;
     case WLC_N_BW_20ALL:
-      bw_cap[WLAN_INFO_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
-      bw_cap[WLAN_INFO_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;
+      bw_cap[WLAN_INFO_BAND_TWO_GHZ] |= WLC_BW_20MHZ_BIT;
+      bw_cap[WLAN_INFO_BAND_FIVE_GHZ] |= WLC_BW_20MHZ_BIT;
       break;
     default:
       BRCMF_ERR("invalid mimo_bw_cap value");
@@ -4065,10 +4065,10 @@ static void brcmf_dump_80211_vht_caps(ieee80211_vht_capabilities_t* caps) {
 static void brcmf_dump_if_band_caps(wlan_fullmac_band_capabilities_t* band) {
   char band_id_str[32];
   switch (band->band_id) {
-    case WLAN_INFO_BAND_2GHZ:
+    case WLAN_INFO_BAND_TWO_GHZ:
       sprintf(band_id_str, "2GHz");
       break;
-    case WLAN_INFO_BAND_5GHZ:
+    case WLAN_INFO_BAND_FIVE_GHZ:
       sprintf(band_id_str, "5GHz");
       break;
     default:
@@ -4188,13 +4188,13 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     }
     wlan_fullmac_band_capabilities_t* band = &info->bands[i - 1];
     if (bandlist[i] == WLC_BAND_2G) {
-      band->band_id = WLAN_INFO_BAND_2GHZ;
+      band->band_id = WLAN_INFO_BAND_TWO_GHZ;
       band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_g_rates_size);
       memcpy(band->rates, wl_g_rates, band->num_rates * sizeof(uint16_t));
       band->base_frequency = 2407;
       band_2ghz = band;
     } else if (bandlist[i] == WLC_BAND_5G) {
-      band->band_id = WLAN_INFO_BAND_5GHZ;
+      band->band_id = WLAN_INFO_BAND_FIVE_GHZ;
       band->num_rates = std::min<size_t>(WLAN_INFO_BAND_INFO_MAX_RATES, wl_a_rates_size);
       memcpy(band->rates, wl_a_rates, band->num_rates * sizeof(uint16_t));
       band->base_frequency = 5000;
@@ -4271,7 +4271,7 @@ void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info) {
     brcmf_get_bwcap(ifp, bw_cap);
   }
   BRCMF_DBG(QUERY, "nmode=%d, vhtmode=%d, bw_cap=(%d, %d)", nmode, vhtmode,
-            bw_cap[WLAN_INFO_BAND_2GHZ], bw_cap[WLAN_INFO_BAND_5GHZ]);
+            bw_cap[WLAN_INFO_BAND_TWO_GHZ], bw_cap[WLAN_INFO_BAND_FIVE_GHZ]);
 
   // LDPC support, applies to both HT and VHT
   ldpc_cap = 0;

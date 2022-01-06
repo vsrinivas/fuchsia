@@ -72,7 +72,7 @@ static const struct iwl_base_params iwl9000_base_params = {
 static const struct iwl_ht_params iwl9000_ht_params = {
     .stbc = true,
     .ldpc = true,
-    .ht40_bands = BIT(WLAN_INFO_BAND_2GHZ) | BIT(WLAN_INFO_BAND_5GHZ),
+    .ht40_bands = BIT(WLAN_INFO_BAND_TWO_GHZ) | BIT(WLAN_INFO_BAND_FIVE_GHZ),
 };
 
 static const struct iwl_tt_params iwl9000_tt_params = {

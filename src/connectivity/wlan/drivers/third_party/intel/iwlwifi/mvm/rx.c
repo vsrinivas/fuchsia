@@ -274,7 +274,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   }
 
   wlan_info_band_t band =
-      phy_flags & RX_RES_PHY_FLAGS_BAND_24 ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
+      phy_flags & RX_RES_PHY_FLAGS_BAND_24 ? WLAN_INFO_BAND_TWO_GHZ : WLAN_INFO_BAND_FIVE_GHZ;
   rx_info.channel.primary = le16_to_cpu(phy_info->channel);
 
 #if 0   // NEEDS_PORTING

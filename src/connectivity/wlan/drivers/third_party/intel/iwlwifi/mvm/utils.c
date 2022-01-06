@@ -223,9 +223,9 @@ static const uint32_t mac80211_idx_to_data_rate_[] = {
 zx_status_t mac80211_idx_to_data_rate(wlan_info_band_t band, int mac_idx, uint32_t* data_rate) {
   int band_offset;
 
-  if (band == WLAN_INFO_BAND_2GHZ) {
+  if (band == WLAN_INFO_BAND_TWO_GHZ) {
     band_offset = 0;
-  } else if (band == WLAN_INFO_BAND_5GHZ) {
+  } else if (band == WLAN_INFO_BAND_FIVE_GHZ) {
     band_offset = IWL_FIRST_OFDM_RATE;
   } else {
     return ZX_ERR_NOT_SUPPORTED;
@@ -284,7 +284,7 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_info
 #endif  // NEEDS_PORTING
 
   /* Legacy rate format, search for match in table */
-  if (band == WLAN_INFO_BAND_5GHZ) {
+  if (band == WLAN_INFO_BAND_FIVE_GHZ) {
     band_offset = IWL_FIRST_OFDM_RATE;
   }
   for (int chan_idx = band_offset; chan_idx < IWL_RATE_COUNT_LEGACY; chan_idx++) {

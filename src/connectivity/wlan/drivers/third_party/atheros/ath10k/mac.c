@@ -147,7 +147,7 @@ static const struct ath10k_channel ath10k_5ghz_channels[] = {
 // Band information that is consistent across all supported ath10k chipsets
 static const struct ath10k_band ath10k_supported_bands[] = {
     {
-        .band_id = WLAN_INFO_BAND_2GHZ,
+        .band_id = WLAN_INFO_BAND_TWO_GHZ,
         .ht_supported = true,
         .vht_supported = false,
         // TODO(28891):
@@ -160,7 +160,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
     },
 
     {
-        .band_id = WLAN_INFO_BAND_5GHZ,
+        .band_id = WLAN_INFO_BAND_FIVE_GHZ,
         .ht_supported = true,
         .vht_supported = true,
         // TODO(28891):
@@ -1427,7 +1427,7 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
 
   switch (band) {
-    case WLAN_INFO_BAND_2GHZ:
+    case WLAN_INFO_BAND_TWO_GHZ:
       switch (cbw) {
         case CHANNEL_BANDWIDTH_CBW20:
           new_center_freq = center_freq->cbw20;
@@ -1447,7 +1447,7 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
       }
       break;
 
-    case WLAN_INFO_BAND_5GHZ:
+    case WLAN_INFO_BAND_FIVE_GHZ:
       switch (cbw) {
         case CHANNEL_BANDWIDTH_CBW20:
           new_center_freq = center_freq->cbw20;
@@ -2588,7 +2588,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
   arg->peer_flags |= ar->wmi.peer_flags->vht;
 
   wlan_info_band_t band = chan_to_band(assoc->channel.primary);
-  if (band == WLAN_INFO_BAND_2GHZ) {
+  if (band == WLAN_INFO_BAND_TWO_GHZ) {
     arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
   }
 
@@ -2701,7 +2701,7 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* ass
   COND_WARN(__builtin_popcount(assoc->phy) != 1);  // Assume only one bit asserted.
 
   switch (band) {
-    case WLAN_INFO_BAND_2GHZ:
+    case WLAN_INFO_BAND_TWO_GHZ:
       if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
         if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11AC_VHT40;
@@ -2721,7 +2721,7 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* ass
       }
       break;
 
-    case WLAN_INFO_BAND_5GHZ:
+    case WLAN_INFO_BAND_FIVE_GHZ:
       /*
        * Check VHT first.
        */

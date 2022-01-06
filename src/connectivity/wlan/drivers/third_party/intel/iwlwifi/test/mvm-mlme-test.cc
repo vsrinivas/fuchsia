@@ -80,7 +80,7 @@ TEST_F(WlanDeviceTest, ComposeBandList) {
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   nvm_data.sku_cap_band_24ghz_enable = true;
   EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_INFO_BAND_2GHZ, bands[0]);
+  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, bands[0]);
   EXPECT_EQ(kInvalidBandId, bands[1]);
 
   // 5GHz only
@@ -88,7 +88,7 @@ TEST_F(WlanDeviceTest, ComposeBandList) {
   memset(bands, kInvalidBandIdFillByte, sizeof(bands));
   nvm_data.sku_cap_band_52ghz_enable = true;
   EXPECT_EQ(1, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, bands[0]);
+  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, bands[0]);
   EXPECT_EQ(kInvalidBandId, bands[1]);
 
   // both bands enabled
@@ -97,8 +97,8 @@ TEST_F(WlanDeviceTest, ComposeBandList) {
   nvm_data.sku_cap_band_24ghz_enable = true;
   nvm_data.sku_cap_band_52ghz_enable = true;
   EXPECT_EQ(2, compose_band_list(&nvm_data, bands));
-  EXPECT_EQ(WLAN_INFO_BAND_2GHZ, bands[0]);
-  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, bands[1]);
+  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, bands[0]);
+  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, bands[1]);
 }
 
 // Short-cut to access the iwl_cfg80211_rates[] structure and convert it to 802.11 rate.
@@ -117,8 +117,8 @@ TEST_F(WlanDeviceTest, FillBandInfos) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
-      WLAN_INFO_BAND_2GHZ,
-      WLAN_INFO_BAND_5GHZ,
+      WLAN_INFO_BAND_TWO_GHZ,
+      WLAN_INFO_BAND_FIVE_GHZ,
   };
   wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
 
@@ -126,7 +126,7 @@ TEST_F(WlanDeviceTest, FillBandInfos) {
                   band_infos);
   // 2.4Ghz
   wlan_info_band_info_t* exp_band_info = &band_infos[0];
-  EXPECT_EQ(WLAN_INFO_BAND_2GHZ, exp_band_info->band);
+  EXPECT_EQ(WLAN_INFO_BAND_TWO_GHZ, exp_band_info->band);
   EXPECT_EQ(true, exp_band_info->ht_supported);
   EXPECT_EQ(expected_rate(0), exp_band_info->rates[0]);    // 1Mbps
   EXPECT_EQ(expected_rate(11), exp_band_info->rates[11]);  // 54Mbps
@@ -135,7 +135,7 @@ TEST_F(WlanDeviceTest, FillBandInfos) {
   EXPECT_EQ(13, exp_band_info->supported_channels.channels[12]);
   // 5GHz
   exp_band_info = &band_infos[1];
-  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, exp_band_info->band);
+  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, exp_band_info->band);
   EXPECT_EQ(true, exp_band_info->ht_supported);
   EXPECT_EQ(expected_rate(4), exp_band_info->rates[0]);   // 6Mbps
   EXPECT_EQ(expected_rate(11), exp_band_info->rates[7]);  // 54Mbps
@@ -148,7 +148,7 @@ TEST_F(WlanDeviceTest, FillBandInfosOnly5GHz) {
   // The default 'nvm_data' is loaded from test/sim-default-nvm.cc.
 
   wlan_info_band_t bands[WLAN_INFO_BAND_COUNT] = {
-      WLAN_INFO_BAND_5GHZ,
+      WLAN_INFO_BAND_FIVE_GHZ,
       0,
   };
   wlan_info_band_info_t band_infos[WLAN_INFO_BAND_COUNT] = {};
@@ -156,7 +156,7 @@ TEST_F(WlanDeviceTest, FillBandInfosOnly5GHz) {
   fill_band_infos(iwl_trans_get_mvm(sim_trans_.iwl_trans())->nvm_data, bands, 1, band_infos);
   // 5GHz
   wlan_info_band_info_t* exp_band_info = &band_infos[0];
-  EXPECT_EQ(WLAN_INFO_BAND_5GHZ, exp_band_info->band);
+  EXPECT_EQ(WLAN_INFO_BAND_FIVE_GHZ, exp_band_info->band);
   EXPECT_EQ(true, exp_band_info->ht_supported);
   EXPECT_EQ(expected_rate(4), exp_band_info->rates[0]);   // 6Mbps
   EXPECT_EQ(expected_rate(11), exp_band_info->rates[7]);  // 54Mbps
@@ -190,8 +190,8 @@ TEST_F(WlanDeviceTest, MacQuery) {
   //
   // The below code assumes the test/sim-default-nvm.cc contains 2 bands.
   //
-  //   .bands[0]: WLAN_INFO_BAND_2GHZ
-  //   .bands[1]: WLAN_INFO_BAND_5GHZ
+  //   .bands[0]: WLAN_INFO_BAND_TWO_GHZ
+  //   .bands[1]: WLAN_INFO_BAND_FIVE_GHZ
   //
   ASSERT_EQ(2, info.bands_count);
   EXPECT_EQ(expected_rate(0), info.bands[0].rates[0]);    // 1 Mbps

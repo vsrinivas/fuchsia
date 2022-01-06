@@ -55,7 +55,7 @@ const wlan_channel_t default_channel = {
 // Returns:
 //   the band ID.
 wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num) {
-  return chan_num < 14 ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
+  return chan_num < 14 ? WLAN_INFO_BAND_TWO_GHZ : WLAN_INFO_BAND_FIVE_GHZ;
 }
 
 /* Maps the driver specific channel width definition to the fw values */
@@ -225,8 +225,8 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
   uint8_t active_cnt, idle_cnt;
 
   /* Set the channel info data */
-  cmd->ci.band =
-      iwl_mvm_get_channel_band(chandef->primary) == WLAN_INFO_BAND_2GHZ ? PHY_BAND_24 : PHY_BAND_5;
+  cmd->ci.band = iwl_mvm_get_channel_band(chandef->primary) == WLAN_INFO_BAND_TWO_GHZ ? PHY_BAND_24
+                                                                                      : PHY_BAND_5;
 
   cmd->ci.channel = chandef->primary;
   cmd->ci.width = iwl_mvm_get_channel_width(chandef);

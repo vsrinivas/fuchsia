@@ -1,5 +1,3 @@
-const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_BAND_2GHZ uint32 0
-const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_BAND_5GHZ uint32 1
 const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_BAND_INFO_MAX_RATES uint32 12
 const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 64
 const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_MAX_BANDS uint32 2

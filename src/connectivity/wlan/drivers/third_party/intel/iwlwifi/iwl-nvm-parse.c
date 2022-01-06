@@ -327,7 +327,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
     n_channels++;
 
     channel->ch_num = nvm_chan[ch_idx];
-    channel->band = is_5ghz ? WLAN_INFO_BAND_5GHZ : WLAN_INFO_BAND_2GHZ;
+    channel->band = is_5ghz ? WLAN_INFO_BAND_FIVE_GHZ : WLAN_INFO_BAND_TWO_GHZ;
     channel->center_freq = ieee80211_get_center_freq((uint8_t)channel->ch_num);
 
     /* Initialize regulatory-based run-time data */
@@ -739,11 +739,11 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   struct ieee80211_supported_band* sband;
 
   n_channels = iwl_init_channel_map(dev, cfg, data, nvm_ch_flags, sbands_flags);
-  sband = &data->bands[WLAN_INFO_BAND_2GHZ];
-  sband->band = WLAN_INFO_BAND_2GHZ;
+  sband = &data->bands[WLAN_INFO_BAND_TWO_GHZ];
+  sband->band = WLAN_INFO_BAND_TWO_GHZ;
   sband->bitrates = &iwl_cfg80211_rates[RATES_24_OFFS];
   sband->n_bitrates = N_RATES_24;
-  n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_2GHZ);
+  n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_TWO_GHZ);
 #if 0   // NEEDS_PORTING
   // TODO(36683): HT support.
   iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_2GHZ, tx_chains, rx_chains);
@@ -753,11 +753,11 @@ static void iwl_init_sbands(struct iwl_trans* trans, struct iwl_nvm_data* data,
   }
 #endif  // NEEDS_PORTING
 
-  sband = &data->bands[WLAN_INFO_BAND_5GHZ];
-  sband->band = WLAN_INFO_BAND_5GHZ;
+  sband = &data->bands[WLAN_INFO_BAND_FIVE_GHZ];
+  sband->band = WLAN_INFO_BAND_FIVE_GHZ;
   sband->bitrates = &iwl_cfg80211_rates[RATES_52_OFFS];
   sband->n_bitrates = N_RATES_52;
-  n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_5GHZ);
+  n_used += iwl_init_sband_channels(data, sband, n_channels, WLAN_INFO_BAND_FIVE_GHZ);
 #if 0   // NEEDS_PORTING
   // TODO(36683): HT support.
   iwl_init_ht_hw_capab(cfg, data, &sband->ht_cap, NL80211_BAND_5GHZ, tx_chains, rx_chains);
@@ -1058,8 +1058,8 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
   }
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-  iwl_init_he_override(trans, &data->bands[WLAN_INFO_BAND_2GHZ]);
-  iwl_init_he_override(trans, &data->bands[WLAN_INFO_BAND_5GHZ]);
+  iwl_init_he_override(trans, &data->bands[WLAN_INFO_BAND_TWO_GHZ]);
+  iwl_init_he_override(trans, &data->bands[WLAN_INFO_BAND_FIVE_GHZ]);
 #endif
   if (lar_fw_supported && lar_enabled) {
     sbands_flags |= IWL_NVM_SBANDS_FLAGS_LAR;

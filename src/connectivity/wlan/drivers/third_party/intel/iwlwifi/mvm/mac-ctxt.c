@@ -601,7 +601,7 @@ static zx_status_t iwl_mvm_mac_ctxt_cmd_sta(struct iwl_mvm_vif* mvmvif, uint32_t
   WARN_ON(mvmvif->mac_role != WLAN_INFO_MAC_ROLE_CLIENT);
 
   /* Fill the common data for all mac context types */
-  iwl_mvm_mac_ctxt_cmd_common(mvmvif, WLAN_INFO_BAND_2GHZ,  // Use default value.
+  iwl_mvm_mac_ctxt_cmd_common(mvmvif, WLAN_INFO_BAND_TWO_GHZ,  // Use default value.
                               mvmvif->ht_enabled, &cmd, bssid_override, action);
 
 #if 1  // NEEDS_PORTING

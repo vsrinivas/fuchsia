@@ -59,7 +59,7 @@ static zx_status_t iwl_mvm_binding_cmd(struct iwl_mvm* mvm, uint32_t action,
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT)) {
     size = sizeof(cmd);
-    if (iwl_mvm_get_channel_band(phyctxt->chandef.primary) == WLAN_INFO_BAND_2GHZ ||
+    if (iwl_mvm_get_channel_band(phyctxt->chandef.primary) == WLAN_INFO_BAND_TWO_GHZ ||
         !iwl_mvm_is_cdb_supported(mvm)) {
       cmd.lmac_id = cpu_to_le32(IWL_LMAC_24G_INDEX);
     } else {

@@ -154,9 +154,6 @@ type WlanInfoBand = strict enum {
     COUNT = 2;
 };
 
-const WLAN_INFO_BAND_2GHZ uint32 = 0;
-const WLAN_INFO_BAND_5GHZ uint32 = 1;
-
 /// The maximum number of supported channels in a WlanInfoChannelList.
 const WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 = 64;
 

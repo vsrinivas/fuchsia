@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -104,8 +105,8 @@ struct MockDevice : public DeviceInterface {
         WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT | WLAN_INFO_PHY_TYPE_VHT;
     wlan_softmac_info.driver_features = 0;
     wlan_softmac_info.bands_count = 2;
-    wlan_softmac_info.bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_2GHZ);
-    wlan_softmac_info.bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_5GHZ);
+    wlan_softmac_info.bands[0] = test_utils::FakeBandInfo(WLAN_INFO_BAND_TWO_GHZ);
+    wlan_softmac_info.bands[1] = test_utils::FakeBandInfo(WLAN_INFO_BAND_FIVE_GHZ);
     wlan_softmac_info.caps = 0;
     state->set_channel({
         .primary = 1,

@@ -92,15 +92,15 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlan_softmac_info_t* info) {
   std::memcpy(info->sta_addr, mac, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
 
   // Fill out a minimal set of wlan device capabilities
-  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR |
-                         WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
+  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR | WLAN_INFO_PHY_TYPE_OFDM |
+                         WLAN_INFO_PHY_TYPE_HT;
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
   info->mac_role = role_;
   info->caps = 0;
   info->bands_count = 2;
   // clang-format off
     info->bands[0] = {
-        .band = WLAN_INFO_BAND_2GHZ,
+        .band = WLAN_INFO_BAND_TWO_GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,
@@ -113,7 +113,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlan_softmac_info_t* info) {
            },
     };
     info->bands[1] = {
-        .band = WLAN_INFO_BAND_5GHZ,
+        .band = WLAN_INFO_BAND_FIVE_GHZ,
         .ht_supported = false,
         .ht_caps = {},
         .vht_supported = false,

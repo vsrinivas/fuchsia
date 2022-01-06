@@ -92,10 +92,10 @@ size_t compose_band_list(const struct iwl_nvm_data* nvm_data,
   size_t bands_count = 0;
 
   if (nvm_data->sku_cap_band_24ghz_enable) {
-    bands[bands_count++] = WLAN_INFO_BAND_2GHZ;
+    bands[bands_count++] = WLAN_INFO_BAND_TWO_GHZ;
   }
   if (nvm_data->sku_cap_band_52ghz_enable) {
-    bands[bands_count++] = WLAN_INFO_BAND_5GHZ;
+    bands[bands_count++] = WLAN_INFO_BAND_FIVE_GHZ;
   }
   ZX_ASSERT(bands_count <= WLAN_INFO_BAND_COUNT);
 
@@ -135,10 +135,10 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
     // Fill the channel list of this band.
     wlan_info_channel_list_t* ch_list = &band_info->supported_channels;
     switch (band_info->band) {
-      case WLAN_INFO_BAND_2GHZ:
+      case WLAN_INFO_BAND_TWO_GHZ:
         ch_list->base_freq = 2407;
         break;
-      case WLAN_INFO_BAND_5GHZ:
+      case WLAN_INFO_BAND_FIVE_GHZ:
         ch_list->base_freq = 5000;
         break;
       default:
@@ -200,8 +200,8 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info) {
   info->mac_role = mvmvif->mac_role;
   // TODO(43517): Better handling of driver features bits/flags
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
-  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR |
-                         WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
+  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR | WLAN_INFO_PHY_TYPE_OFDM |
+                         WLAN_INFO_PHY_TYPE_HT;
   info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
                WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
                WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME;

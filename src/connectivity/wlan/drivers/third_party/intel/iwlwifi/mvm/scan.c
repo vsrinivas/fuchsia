@@ -154,7 +154,7 @@ static inline __le16 iwl_mvm_scan_rx_chain(struct iwl_mvm* mvm) {
 }
 
 static inline __le32 iwl_mvm_scan_rxon_flags(wlan_info_band_t band) {
-  if (band == WLAN_INFO_BAND_2GHZ) {
+  if (band == WLAN_INFO_BAND_TWO_GHZ) {
     return cpu_to_le32(PHY_BAND_24);
   } else {
     return cpu_to_le32(PHY_BAND_5);
@@ -168,7 +168,7 @@ static inline __le32 iwl_mvm_scan_rate_n_flags(struct iwl_mvm* mvm, wlan_info_ba
   iwl_mvm_toggle_tx_ant(mvm, &mvm->scan_last_antenna_idx);
   tx_ant = BIT(mvm->scan_last_antenna_idx) << RATE_MCS_ANT_POS;
 
-  if (band == WLAN_INFO_BAND_2GHZ && !no_cck) {
+  if (band == WLAN_INFO_BAND_TWO_GHZ && !no_cck) {
     return cpu_to_le32(IWL_RATE_1M_PLCP | RATE_MCS_CCK_MSK | tx_ant);
   } else {
     return cpu_to_le32(IWL_RATE_6M_PLCP | tx_ant);
@@ -627,11 +627,11 @@ static int iwl_mvm_lmac_scan_abort(struct iwl_mvm* mvm) {
 static void iwl_mvm_scan_fill_tx_cmd(struct iwl_mvm* mvm, struct iwl_scan_req_tx_cmd* tx_cmd,
                                      bool no_cck) {
   tx_cmd[0].tx_flags = cpu_to_le32(TX_CMD_FLG_SEQ_CTL | TX_CMD_FLG_BT_DIS);
-  tx_cmd[0].rate_n_flags = iwl_mvm_scan_rate_n_flags(mvm, WLAN_INFO_BAND_2GHZ, no_cck);
+  tx_cmd[0].rate_n_flags = iwl_mvm_scan_rate_n_flags(mvm, WLAN_INFO_BAND_TWO_GHZ, no_cck);
   tx_cmd[0].sta_id = mvm->aux_sta.sta_id;
 
   tx_cmd[1].tx_flags = cpu_to_le32(TX_CMD_FLG_SEQ_CTL | TX_CMD_FLG_BT_DIS);
-  tx_cmd[1].rate_n_flags = iwl_mvm_scan_rate_n_flags(mvm, WLAN_INFO_BAND_5GHZ, no_cck);
+  tx_cmd[1].rate_n_flags = iwl_mvm_scan_rate_n_flags(mvm, WLAN_INFO_BAND_FIVE_GHZ, no_cck);
   tx_cmd[1].sta_id = mvm->aux_sta.sta_id;
 }
 
@@ -884,8 +884,8 @@ zx_status_t iwl_mvm_scan_lmac(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* p
 
   cmd->scan_flags = cpu_to_le32(iwl_mvm_scan_lmac_flags(mvm, params));
 
-  cmd->flags = iwl_mvm_scan_rxon_flags(params->channels[0] <= 14 ? WLAN_INFO_BAND_2GHZ
-                                                                 : WLAN_INFO_BAND_5GHZ);
+  cmd->flags = iwl_mvm_scan_rxon_flags(params->channels[0] <= 14 ? WLAN_INFO_BAND_TWO_GHZ
+                                                                 : WLAN_INFO_BAND_FIVE_GHZ);
   cmd->filter_flags = cpu_to_le32(MAC_FILTER_ACCEPT_GRP | MAC_FILTER_IN_BEACON);
   iwl_mvm_scan_fill_tx_cmd(mvm, cmd->tx_cmd, params->no_cck);
 #if 0   // NEEDS_PORTING
@@ -957,11 +957,11 @@ static __le32 iwl_mvm_scan_config_rates(struct iwl_mvm* mvm) {
   uint16_t rates = 0;
   int i;
 
-  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_2GHZ];
+  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_TWO_GHZ];
   for (i = 0; i < band->n_bitrates; i++) {
     rates |= rate_to_scan_rate_flag(iwl_get_rate_index(band->bitrates[i]));
   }
-  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_5GHZ];
+  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_FIVE_GHZ];
   for (i = 0; i < band->n_bitrates; i++) {
     rates |= rate_to_scan_rate_flag(iwl_get_rate_index(band->bitrates[i]));
   }
@@ -983,11 +983,11 @@ static void iwl_mvm_fill_channels(struct iwl_mvm* mvm, uint8_t* channels) {
   struct ieee80211_supported_band* band;
   int i, j = 0;
 
-  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_2GHZ];
+  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_TWO_GHZ];
   for (i = 0; i < band->n_channels; i++, j++) {
     channels[j] = band->channels[i].ch_num;
   }
-  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_5GHZ];
+  band = &mvm->nvm_data->bands[WLAN_INFO_BAND_FIVE_GHZ];
   for (i = 0; i < band->n_channels; i++, j++) {
     channels[j] = band->channels[i].ch_num;
   }
@@ -1027,8 +1027,8 @@ static void iwl_mvm_fill_scan_config(struct iwl_mvm* mvm, void* config, uint32_t
   if (iwl_mvm_is_cdb_supported(mvm)) {
     enum iwl_mvm_scan_type lb_type, hb_type;
 
-    lb_type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_2GHZ);
-    hb_type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_5GHZ);
+    lb_type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_TWO_GHZ);
+    hb_type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_FIVE_GHZ);
 
     cfg->out_of_channel_time[SCAN_LB_LMAC_IDX] = cpu_to_le32(scan_timing[lb_type].max_out_time);
     cfg->suspend_time[SCAN_LB_LMAC_IDX] = cpu_to_le32(scan_timing[lb_type].suspend_time);
@@ -1061,8 +1061,8 @@ zx_status_t iwl_mvm_config_scan(struct iwl_mvm* mvm) {
   };
   enum iwl_mvm_scan_type type = IWL_SCAN_TYPE_NOT_SET;
   enum iwl_mvm_scan_type hb_type = IWL_SCAN_TYPE_NOT_SET;
-  uint32_t num_channels = mvm->nvm_data->bands[WLAN_INFO_BAND_2GHZ].n_channels +
-                          mvm->nvm_data->bands[WLAN_INFO_BAND_5GHZ].n_channels;
+  uint32_t num_channels = mvm->nvm_data->bands[WLAN_INFO_BAND_TWO_GHZ].n_channels +
+                          mvm->nvm_data->bands[WLAN_INFO_BAND_FIVE_GHZ].n_channels;
   uint32_t flags;
   uint8_t channel_flags;
 
@@ -1071,8 +1071,8 @@ zx_status_t iwl_mvm_config_scan(struct iwl_mvm* mvm) {
   }
 
   if (iwl_mvm_is_cdb_supported(mvm)) {
-    type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_2GHZ);
-    hb_type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_5GHZ);
+    type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_TWO_GHZ);
+    hb_type = iwl_mvm_get_scan_type_band(mvm, WLAN_INFO_BAND_FIVE_GHZ);
     if (type == mvm->scan_type && hb_type == mvm->hb_scan_type) {
       return ZX_OK;
     }
