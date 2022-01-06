@@ -48,18 +48,6 @@
             rights: [ "r*" ],
             path: "/pkgfs/system",
         },
-        {
-            directory: "pkgfs-ctl",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/pkgfs/ctl",
-        },
-        {
-            directory: "pkgfs-packages",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/pkgfs/packages",
-        },
     ],
     expose: [
         {
