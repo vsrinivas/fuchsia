@@ -50,10 +50,19 @@ protocol Sandbox {
             ///
             /// If not set, interpreted as an empty vector.
             2: children vector<@generated_name("ChildDef") table {
-                /// The component URL of this child.
+                /// The runtime source for creating this child.
                 ///
                 /// Required.
-                1: url fuchsia.url.Url;
+                1: source @generated_name("ChildSource") strict union {
+                    /// Spawn a child from a component with the provided URL.
+                    1: component fuchsia.url.Url;
+                    // TODO(https://fxbug.dev/91081): Introduce mock child
+                    // variant, should look something like:
+                    //
+                    // Spawn a mock child which serves its exposed directory
+                    // through the provided handle.
+                    // 2: mock client_end:fuchsia.io.Directory;
+                };
                 /// The name of this child local to its containing realm.
                 ///
                 /// Required.

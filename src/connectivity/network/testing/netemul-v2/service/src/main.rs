@@ -47,8 +47,8 @@ const HUB: &str = "hub";
 
 #[derive(Error, Debug)]
 enum CreateRealmError {
-    #[error("url not provided")]
-    UrlNotProvided,
+    #[error("source not provided")]
+    SourceNotProvided,
     #[error("name not provided")]
     NameNotProvided,
     #[error("capability source not provided")]
@@ -74,7 +74,7 @@ enum CreateRealmError {
 impl Into<zx::Status> for CreateRealmError {
     fn into(self) -> zx::Status {
         match self {
-            CreateRealmError::UrlNotProvided
+            CreateRealmError::SourceNotProvided
             | CreateRealmError::NameNotProvided
             | CreateRealmError::CapabilitySourceNotProvided
             | CreateRealmError::CapabilityNameNotProvided
@@ -216,10 +216,11 @@ async fn create_realm_instance(
             ChildOptions::new(),
         )
         .await?;
-    for ChildDef { url, name, exposes, uses, program_args, eager, .. } in
+    for ChildDef { source, name, exposes, uses, program_args, eager, .. } in
         children.unwrap_or_default()
     {
-        let url = url.ok_or(CreateRealmError::UrlNotProvided)?;
+        let fnetemul::ChildSource::Component(url) =
+            source.ok_or(CreateRealmError::SourceNotProvided)?;
         let name = name.ok_or(CreateRealmError::NameNotProvided)?;
         let mut child = ChildOptions::new();
         if eager.unwrap_or(false) {
@@ -1063,7 +1064,7 @@ mod tests {
 
     fn counter_component() -> fnetemul::ChildDef {
         fnetemul::ChildDef {
-            url: Some(COUNTER_URL.to_string()),
+            source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
             name: Some(COUNTER_COMPONENT_NAME.to_string()),
             exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
             uses: Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(
@@ -1500,7 +1501,7 @@ mod tests {
             fnetemul::RealmOptions {
                 children: Some(vec![
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         name: Some("counter-with-network-context".to_string()),
                         exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
@@ -1556,9 +1557,9 @@ mod tests {
         }
         let cases = [
             TestCase {
-                name: "no url provided",
+                name: "no source provided",
                 children: vec![fnetemul::ChildDef {
-                    url: None,
+                    source: None,
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
                     ..fnetemul::ChildDef::EMPTY
                 }],
@@ -1567,7 +1568,7 @@ mod tests {
             TestCase {
                 name: "no name provided",
                 children: vec![fnetemul::ChildDef {
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     name: None,
                     ..fnetemul::ChildDef::EMPTY
                 }],
@@ -1577,7 +1578,7 @@ mod tests {
                 name: "name not specified for child dependency",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                             name: None,
@@ -1595,7 +1596,7 @@ mod tests {
                 name: "capability not specified for child dependency",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                             name: Some("component".to_string()),
@@ -1611,7 +1612,7 @@ mod tests {
                 name: "duplicate capability used by child",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -1624,7 +1625,7 @@ mod tests {
                 name: "child manually depends on a duplicate of a netemul-provided capability",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::LogSink(fnetemul::Empty {}),
                         fnetemul::Capability::ChildDep(fnetemul::ChildDep {
@@ -1645,7 +1646,7 @@ mod tests {
                     counter_component(),
                     fnetemul::ChildDef {
                         name: Some("counter-b".to_string()),
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 // counter-a does not exist.
@@ -1665,7 +1666,7 @@ mod tests {
                 name: "child depends on storage without variant",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::StorageDep(fnetemul::StorageDep {
                             variant: None,
@@ -1681,7 +1682,7 @@ mod tests {
                 name: "child depends on storage without path",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::StorageDep(fnetemul::StorageDep {
                             variant: Some(fnetemul::StorageVariant::Data),
@@ -1698,12 +1699,12 @@ mod tests {
                 children: vec![
                     fnetemul::ChildDef {
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         ..fnetemul::ChildDef::EMPTY
                     },
                     fnetemul::ChildDef {
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         ..fnetemul::ChildDef::EMPTY
                     },
                 ],
@@ -1713,7 +1714,7 @@ mod tests {
                 name: "storage capabilities use duplicate paths",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::StorageDep(fnetemul::StorageDep {
                             variant: Some(fnetemul::StorageVariant::Data),
@@ -1734,7 +1735,7 @@ mod tests {
                 name: "devfs capability name not provided",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
                             name: None,
@@ -1749,7 +1750,7 @@ mod tests {
                 name: "invalid subdirectory of devfs requested",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![
                         fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
                             name: Some(DEVFS.to_string()),
@@ -1766,7 +1767,7 @@ mod tests {
                 children: vec![
                     fnetemul::ChildDef {
                         name: Some("counter-a".to_string()),
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 name: Some("counter-b".to_string()),
@@ -1780,7 +1781,7 @@ mod tests {
                     },
                     fnetemul::ChildDef {
                         name: Some("counter-b".to_string()),
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 name: Some("counter-a".to_string()),
@@ -1799,7 +1800,9 @@ mod tests {
                 name: "overriden program args for component without program",
                 children: vec![fnetemul::ChildDef {
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    url: Some(COUNTER_WITHOUT_PROGRAM_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(
+                        COUNTER_WITHOUT_PROGRAM_URL.to_string(),
+                    )),
                     program_args: Some(vec![]),
                     ..fnetemul::ChildDef::EMPTY
                 }],
@@ -1842,7 +1845,7 @@ mod tests {
             fnetemul::RealmOptions {
                 children: Some(vec![
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         name: Some("counter-a".to_string()),
                         exposes: Some(vec![COUNTER_A_PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
@@ -1858,7 +1861,7 @@ mod tests {
                         ..fnetemul::ChildDef::EMPTY
                     },
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         name: Some("counter-b".to_string()),
                         exposes: Some(vec![COUNTER_B_PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
@@ -2141,7 +2144,7 @@ mod tests {
             fnetemul::RealmOptions {
                 children: Some(vec![
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         name: Some("counter-with-devfs".to_string()),
                         exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
@@ -2232,7 +2235,7 @@ mod tests {
             RealmOptions {
                 children: Some(vec![
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         name: Some(COUNTER_WITH_STORAGE.to_string()),
                         exposes: Some(vec![COUNTER_A_PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
@@ -2251,7 +2254,7 @@ mod tests {
                         ..fnetemul::ChildDef::EMPTY
                     },
                     fnetemul::ChildDef {
-                        url: Some(COUNTER_URL.to_string()),
+                        source: Some(fnetemul::ChildSource::Component(COUNTER_URL.to_string())),
                         name: Some(COUNTER_WITHOUT_STORAGE.to_string()),
                         exposes: Some(vec![COUNTER_B_PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
@@ -2454,7 +2457,9 @@ mod tests {
             &sandbox,
             fnetemul::RealmOptions {
                 children: Some(vec![fnetemul::ChildDef {
-                    url: Some(DEVFS_SUBDIR_USER_URL.to_string()),
+                    source: Some(fnetemul::ChildSource::Component(
+                        DEVFS_SUBDIR_USER_URL.to_string(),
+                    )),
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
                     exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                     uses: Some(fnetemul::ChildUses::Capabilities(vec![

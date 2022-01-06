@@ -213,7 +213,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
         match s {
             KnownServiceProvider::Netstack(version) => fnetemul::ChildDef {
                 name: Some(constants::netstack::COMPONENT_NAME.to_string()),
-                url: Some(version.get_url().to_string()),
+                source: Some(fnetemul::ChildSource::Component(version.get_url().to_string())),
                 exposes: Some(
                     version.get_services().iter().map(|service| service.to_string()).collect(),
                 ),
@@ -228,7 +228,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::Manager(management_agent) => fnetemul::ChildDef {
                 name: Some(management_agent.get_component_name().to_string()),
-                url: Some(management_agent.get_url().to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    management_agent.get_url().to_string(),
+                )),
                 program_args: Some(
                     management_agent.get_program_args().iter().cloned().map(Into::into).collect(),
                 ),
@@ -295,7 +297,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::SecureStash => fnetemul::ChildDef {
                 name: Some(constants::secure_stash::COMPONENT_NAME.to_string()),
-                url: Some(constants::secure_stash::COMPONENT_URL.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::secure_stash::COMPONENT_URL.to_string(),
+                )),
                 exposes: Some(vec![fstash::SecureStoreMarker::PROTOCOL_NAME.to_string()]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -309,7 +313,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::DhcpServer { persistent } => fnetemul::ChildDef {
                 name: Some(constants::dhcp_server::COMPONENT_NAME.to_string()),
-                url: Some(constants::dhcp_server::COMPONENT_URL.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::dhcp_server::COMPONENT_URL.to_string(),
+                )),
                 exposes: Some(vec![fnet_dhcp::Server_Marker::PROTOCOL_NAME.to_string()]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -339,7 +345,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::Dhcpv6Client => fnetemul::ChildDef {
                 name: Some(constants::dhcpv6_client::COMPONENT_NAME.to_string()),
-                url: Some(constants::dhcpv6_client::COMPONENT_URL.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::dhcpv6_client::COMPONENT_URL.to_string(),
+                )),
                 exposes: Some(vec![fnet_dhcpv6::ClientProviderMarker::PROTOCOL_NAME.to_string()]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -351,7 +359,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::DnsResolver => fnetemul::ChildDef {
                 name: Some(constants::dns_resolver::COMPONENT_NAME.to_string()),
-                url: Some(constants::dns_resolver::COMPONENT_URL.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::dns_resolver::COMPONENT_URL.to_string(),
+                )),
                 exposes: Some(vec![
                     fnet_name::LookupAdminMarker::PROTOCOL_NAME.to_string(),
                     fnet_name::LookupMarker::PROTOCOL_NAME.to_string(),
@@ -369,7 +379,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::Reachability => fnetemul::ChildDef {
                 name: Some(constants::reachability::COMPONENT_NAME.to_string()),
-                url: Some(constants::reachability::COMPONENT_URL.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::reachability::COMPONENT_URL.to_string(),
+                )),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
                     fnetemul::Capability::ChildDep(protocol_dep::<fnet_interfaces::StateMarker>(
@@ -387,7 +399,9 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             },
             KnownServiceProvider::NetworkTestRealm => fnetemul::ChildDef {
                 name: Some(constants::network_test_realm::COMPONENT_NAME.to_string()),
-                url: Some(constants::network_test_realm::COMPONENT_URL.to_string()),
+                source: Some(fnetemul::ChildSource::Component(
+                    constants::network_test_realm::COMPONENT_URL.to_string(),
+                )),
                 exposes: Some(vec![
                     fntr::ControllerMarker::PROTOCOL_NAME.to_string(),
                     fcomponent::RealmMarker::PROTOCOL_NAME.to_string(),
