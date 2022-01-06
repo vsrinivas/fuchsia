@@ -20,15 +20,15 @@ class WmmStatusTest : public SimTest {
   bool on_wmm_status_resp_called_ = false;
 
   // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
+  static wlan_fullmac_impl_ifc_protocol_ops_t sme_ops_;
+  wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
   // Event handlers
   void OnWmmStatusResp(zx_status_t status, const wlan_wmm_params_t* resp);
 };
 
 // Since we're acting as wlanif, we need handlers for any protocol calls we may receive
-wlanif_impl_ifc_protocol_ops_t WmmStatusTest::sme_ops_ = {
+wlan_fullmac_impl_ifc_protocol_ops_t WmmStatusTest::sme_ops_ = {
     .on_wmm_status_resp =
         [](void* ctx, zx_status_t status, const wlan_wmm_params_t* resp) {
           static_cast<WmmStatusTest*>(ctx)->OnWmmStatusResp(status, resp);

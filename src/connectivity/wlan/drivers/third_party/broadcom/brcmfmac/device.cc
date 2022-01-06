@@ -29,9 +29,9 @@ namespace wlan {
 namespace brcmfmac {
 namespace {
 
-constexpr char kClientInterfaceName[] = "brcmfmac-wlanif-client";
+constexpr char kClientInterfaceName[] = "brcmfmac-wlan-fullmac-client";
 constexpr uint16_t kClientInterfaceId = 0;
-constexpr char kApInterfaceName[] = "brcmfmac-wlanif-ap";
+constexpr char kApInterfaceName[] = "brcmfmac-wlan-fullmac-ap";
 constexpr uint16_t kApInterfaceId = 1;
 
 }  // namespace

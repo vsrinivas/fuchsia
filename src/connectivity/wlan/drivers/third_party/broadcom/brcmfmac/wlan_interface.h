@@ -54,35 +54,35 @@ class WlanInterface {
   static zx_status_t GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_country);
   static zx_status_t ClearCountry(brcmf_pub* drvr);
 
-  // ZX_PROTOCOL_WLANIF_IMPL operations.
-  zx_status_t Start(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
+  // ZX_PROTOCOL_WLAN_FULLMAC_IMPL operations.
+  zx_status_t Start(const wlan_fullmac_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
   void Stop();
-  void Query(wlanif_query_info_t* info);
-  void StartScan(const wlanif_scan_req_t* req);
-  void JoinReq(const wlanif_join_req_t* req);
-  void AuthReq(const wlanif_auth_req_t* req);
-  void AuthResp(const wlanif_auth_resp_t* resp);
-  void DeauthReq(const wlanif_deauth_req_t* req);
-  void AssocReq(const wlanif_assoc_req_t* req);
-  void AssocResp(const wlanif_assoc_resp_t* resp);
-  void DisassocReq(const wlanif_disassoc_req_t* req);
-  void ResetReq(const wlanif_reset_req_t* req);
-  void StartReq(const wlanif_start_req_t* req);
-  void StopReq(const wlanif_stop_req_t* req);
-  void SetKeysReq(const wlanif_set_keys_req_t* req, wlanif_set_keys_resp_t* resp);
-  void DelKeysReq(const wlanif_del_keys_req_t* req);
-  void EapolReq(const wlanif_eapol_req_t* req);
+  void Query(wlan_fullmac_query_info_t* info);
+  void StartScan(const wlan_fullmac_scan_req_t* req);
+  void JoinReq(const wlan_fullmac_join_req_t* req);
+  void AuthReq(const wlan_fullmac_auth_req_t* req);
+  void AuthResp(const wlan_fullmac_auth_resp_t* resp);
+  void DeauthReq(const wlan_fullmac_deauth_req_t* req);
+  void AssocReq(const wlan_fullmac_assoc_req_t* req);
+  void AssocResp(const wlan_fullmac_assoc_resp_t* resp);
+  void DisassocReq(const wlan_fullmac_disassoc_req_t* req);
+  void ResetReq(const wlan_fullmac_reset_req_t* req);
+  void StartReq(const wlan_fullmac_start_req_t* req);
+  void StopReq(const wlan_fullmac_stop_req_t* req);
+  void SetKeysReq(const wlan_fullmac_set_keys_req_t* req, wlan_fullmac_set_keys_resp_t* resp);
+  void DelKeysReq(const wlan_fullmac_del_keys_req_t* req);
+  void EapolReq(const wlan_fullmac_eapol_req_t* req);
   void StatsQueryReq();
-  zx_status_t GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats);
-  zx_status_t GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats);
-  void StartCaptureFrames(const wlanif_start_capture_frames_req_t* req,
-                          wlanif_start_capture_frames_resp_t* resp);
+  zx_status_t GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats);
+  zx_status_t GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats);
+  void StartCaptureFrames(const wlan_fullmac_start_capture_frames_req_t* req,
+                          wlan_fullmac_start_capture_frames_resp_t* resp);
   void StopCaptureFrames();
   zx_status_t SetMulticastPromisc(bool enable);
   void DataQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                    ethernet_impl_queue_tx_callback completion_cb, void* cookie);
-  void SaeHandshakeResp(const wlanif_sae_handshake_resp_t* resp);
-  void SaeFrameTx(const wlanif_sae_frame_t* frame);
+  void SaeHandshakeResp(const wlan_fullmac_sae_handshake_resp_t* resp);
+  void SaeFrameTx(const wlan_fullmac_sae_frame_t* frame);
   void WmmStatusReq();
 
  private:

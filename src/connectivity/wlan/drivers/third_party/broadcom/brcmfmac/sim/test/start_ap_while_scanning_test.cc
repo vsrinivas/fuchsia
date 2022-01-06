@@ -21,8 +21,8 @@ class ScanAndApStartTest;
 
 class ScanTestIfc : public SimInterface {
  public:
-  void OnScanEnd(const wlanif_scan_end_t* end) override;
-  void OnStartConf(const wlanif_start_confirm_t* resp) override;
+  void OnScanEnd(const wlan_fullmac_scan_end_t* end) override;
+  void OnStartConf(const wlan_fullmac_start_confirm_t* resp) override;
 
   ScanAndApStartTest* test_;
 };
@@ -35,8 +35,8 @@ class ScanAndApStartTest : public SimTest {
   void StartAp();
 
   // Event handlers, invoked by events received on interfaces.
-  void OnScanEnd(const wlanif_scan_end_t* end);
-  void OnStartConf(const wlanif_start_confirm_t* resp);
+  void OnScanEnd(const wlan_fullmac_scan_end_t* end);
+  void OnStartConf(const wlan_fullmac_start_confirm_t* resp);
 
   std::unique_ptr<simulation::FakeAp> ap_;
 
@@ -49,7 +49,7 @@ class ScanAndApStartTest : public SimTest {
   enum { NOT_STARTED, STARTED, DONE } ap_start_progress_ = NOT_STARTED;
 };
 
-void ScanTestIfc::OnScanEnd(const wlanif_scan_end_t* end) {
+void ScanTestIfc::OnScanEnd(const wlan_fullmac_scan_end_t* end) {
   // Notify test interface framework
   SimInterface::OnScanEnd(end);
 
@@ -58,7 +58,7 @@ void ScanTestIfc::OnScanEnd(const wlanif_scan_end_t* end) {
 }
 
 // When we receive confirmation that the AP start operation has completed, let the test know
-void ScanTestIfc::OnStartConf(const wlanif_start_confirm_t* resp) {
+void ScanTestIfc::OnStartConf(const wlan_fullmac_start_confirm_t* resp) {
   // Notify test interface framework
   SimInterface::OnStartConf(resp);
 
@@ -80,7 +80,7 @@ void ScanAndApStartTest::Init() {
   StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_);
 }
 
-void ScanAndApStartTest::OnScanEnd(const wlanif_scan_end_t* end) {
+void ScanAndApStartTest::OnScanEnd(const wlan_fullmac_scan_end_t* end) {
   brcmf_simdev* simdev = device_->GetSim();
 
   // Verify that Start AP has been called
@@ -90,7 +90,7 @@ void ScanAndApStartTest::OnScanEnd(const wlanif_scan_end_t* end) {
   EXPECT_EQ(ap_start_progress_ == STARTED, brcmf_is_ap_start_pending(simdev->drvr->config));
 }
 
-void ScanAndApStartTest::OnStartConf(const wlanif_start_confirm_t* resp) {
+void ScanAndApStartTest::OnStartConf(const wlan_fullmac_start_confirm_t* resp) {
   ap_start_progress_ = DONE;
 }
 

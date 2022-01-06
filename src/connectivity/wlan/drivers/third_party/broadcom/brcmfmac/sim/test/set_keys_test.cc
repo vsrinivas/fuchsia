@@ -24,8 +24,8 @@ class SetKeysTest : public SimTest {
   SimInterface client_ifc_;
 };
 
-wlanif_set_keys_req FakeSetKeysRequest(const uint8_t keys[][WLAN_MAX_KEY_LEN], size_t n) {
-  wlanif_set_keys_req set_keys_req{.num_keys = n};
+wlan_fullmac_set_keys_req FakeSetKeysRequest(const uint8_t keys[][WLAN_MAX_KEY_LEN], size_t n) {
+  wlan_fullmac_set_keys_req set_keys_req{.num_keys = n};
 
   for (size_t i = 0; i < n; i++) {
     set_keys_req.keylist[i] = {
@@ -40,8 +40,8 @@ wlanif_set_keys_req FakeSetKeysRequest(const uint8_t keys[][WLAN_MAX_KEY_LEN], s
 
 TEST_F(SetKeysTest, MultipleKeys) {
   const uint8_t keys[WLAN_MAX_KEYLIST_SIZE][WLAN_MAX_KEY_LEN] = {"One", "Two", "Three", "Four"};
-  wlanif_set_keys_req set_keys_req = FakeSetKeysRequest(keys, WLAN_MAX_KEYLIST_SIZE);
-  wlanif_set_keys_resp set_keys_resp;
+  wlan_fullmac_set_keys_req set_keys_req = FakeSetKeysRequest(keys, WLAN_MAX_KEYLIST_SIZE);
+  wlan_fullmac_set_keys_resp set_keys_resp;
   client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req, &set_keys_resp);
 
   std::vector<brcmf_wsec_key_le> firmware_keys =
@@ -61,7 +61,7 @@ TEST_F(SetKeysTest, MultipleKeys) {
 TEST_F(SetKeysTest, SetGroupKey) {
   const uint8_t group_key[WLAN_MAX_KEY_LEN] = "Group Key";
   const uint8_t ucast_key[WLAN_MAX_KEY_LEN] = "My Key";
-  wlanif_set_keys_req key_req = {
+  wlan_fullmac_set_keys_req key_req = {
       .num_keys = 2,
       .keylist =
           {
@@ -81,7 +81,7 @@ TEST_F(SetKeysTest, SetGroupKey) {
               },
           },
   };
-  wlanif_set_keys_resp set_keys_resp;
+  wlan_fullmac_set_keys_resp set_keys_resp;
   client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &key_req, &set_keys_resp);
   ASSERT_EQ(set_keys_resp.num_keys, 2ul);
   ASSERT_EQ(set_keys_resp.statuslist[0], ZX_OK);

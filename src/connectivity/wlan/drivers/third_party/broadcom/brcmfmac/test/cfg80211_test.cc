@@ -100,7 +100,7 @@ TEST(Cfg80211, SetAssocConfWmmParam) {
   cfg.conn_info.resp_ie = ie;
   cfg.conn_info.resp_ie_len = sizeof(ie);
 
-  wlanif_assoc_confirm_t confirm;
+  wlan_fullmac_assoc_confirm_t confirm;
   set_assoc_conf_wmm_param(&cfg, &confirm);
   EXPECT_TRUE(confirm.wmm_param_present);
   EXPECT_EQ(memcmp(confirm.wmm_param, expected_wmm_param, sizeof(expected_wmm_param)), 0);
@@ -115,7 +115,7 @@ TEST(Cfg80211, SetAssocConfWmmParam_WmmParamNotPresent) {
   cfg.conn_info.resp_ie = ie;
   cfg.conn_info.resp_ie_len = sizeof(ie);
 
-  wlanif_assoc_confirm_t confirm;
+  wlan_fullmac_assoc_confirm_t confirm;
   set_assoc_conf_wmm_param(&cfg, &confirm);
   EXPECT_FALSE(confirm.wmm_param_present);
 }

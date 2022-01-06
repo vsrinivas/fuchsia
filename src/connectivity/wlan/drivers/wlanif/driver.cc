@@ -12,37 +12,37 @@
 #include "device.h"
 #include "src/connectivity/wlan/drivers/wlanif/wlanif-bind.h"
 
-zx_status_t wlanif_bind(void* ctx, zx_device_t* device) {
+zx_status_t wlan_fullmac_bind(void* ctx, zx_device_t* device) {
   wlan::drivers::Log::SetFilter(kFiltSetting);
   ltrace_fn();
 
-  wlanif_impl_protocol_t wlanif_impl_proto;
+  wlan_fullmac_impl_protocol_t wlan_fullmac_impl_proto;
   zx_status_t status;
-  status =
-      device_get_protocol(device, ZX_PROTOCOL_WLANIF_IMPL, static_cast<void*>(&wlanif_impl_proto));
+  status = device_get_protocol(device, ZX_PROTOCOL_WLAN_FULLMAC_IMPL,
+                               static_cast<void*>(&wlan_fullmac_impl_proto));
   if (status != ZX_OK) {
-    lerror("bind: no wlanif_impl protocol (%s)", zx_status_get_string(status));
+    lerror("bind: no wlan_fullmac_impl protocol (%s)", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
 
-  auto wlanif_dev = std::make_unique<wlanif::Device>(device, wlanif_impl_proto);
+  auto wlan_fullmac_dev = std::make_unique<wlanif::Device>(device, wlan_fullmac_impl_proto);
 
-  status = wlanif_dev->Bind();
+  status = wlan_fullmac_dev->Bind();
   if (status != ZX_OK) {
     lerror("could not bind: %s", zx_status_get_string(status));
   } else {
     // devhost is now responsible for the memory used by wlandev. It will be
     // cleaned up in the Device::Release() method.
-    wlanif_dev.release();
+    wlan_fullmac_dev.release();
   }
   return status;
 }
 
-static constexpr zx_driver_ops_t wlanif_driver_ops = []() {
+static constexpr zx_driver_ops_t wlan_fullmac_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = wlanif_bind;
+  ops.bind = wlan_fullmac_bind;
   return ops;
 }();
 
-ZIRCON_DRIVER(wlan, wlanif_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(wlan, wlan_fullmac_driver_ops, "zircon", "0.1");

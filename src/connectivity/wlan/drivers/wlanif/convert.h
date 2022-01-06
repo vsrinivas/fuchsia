@@ -17,21 +17,21 @@ namespace wlanif {
 void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid);
 uint8_t ConvertScanType(::fuchsia::wlan::mlme::ScanTypes scan_type);
 uint8_t ConvertCBW(::fuchsia::wlan::common::ChannelBandwidth cbw);
-void ConvertWlanChan(wlan_channel_t* wlanif_channel,
+void ConvertWlanChan(wlan_channel_t* wlan_fullmac_channel,
                      const ::fuchsia::wlan::common::WlanChannel& fidl_channel);
 void ConvertWlanChan(::fuchsia::wlan::common::WlanChannel* fidl_channel,
-                     const wlan_channel_t& wlanif_channel);
+                     const wlan_channel_t& wlan_fullmac_channel);
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
 void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_ie, uint8_t* out_vendor_ie,
                           size_t* out_vendor_ie_len);
-void ConvertBssDescription(bss_description_t* wlanif_bss_desc,
+void ConvertBssDescription(bss_description_t* wlan_fullmac_bss_desc,
                            const ::fuchsia::wlan::internal::BssDescription& fidl_bss_desc);
 void ConvertBssDescription(::fuchsia::wlan::internal::BssDescription* fidl_bss_desc,
-                           const bss_description_t& wlanif_bss_desc);
+                           const bss_description_t& wlan_fullmac_bss_desc);
 void ConvertAssocInd(::fuchsia::wlan::mlme::AssociateIndication* fidl_ind,
-                     const wlanif_assoc_ind_t& assoc_ind);
+                     const wlan_fullmac_assoc_ind_t& assoc_ind);
 void ConvertEapolConf(::fuchsia::wlan::mlme::EapolConfirm* fidl_resp,
-                      const wlanif_eapol_confirm_t& eapol_conf);
+                      const wlan_fullmac_eapol_confirm_t& eapol_conf);
 uint8_t ConvertAuthType(::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
 uint8_t ConvertKeyType(::fuchsia::wlan::mlme::KeyType key_type);
 void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
@@ -52,34 +52,35 @@ uint8_t ConvertAssocResultCode(::fuchsia::wlan::mlme::AssociateResultCode code);
 ::fuchsia::wlan::mlme::EapolResultCode ConvertEapolResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::MacRole ConvertMacRole(wlan_info_mac_role_t role);
 void ConvertBandCapabilities(::fuchsia::wlan::mlme::BandCapabilities* fidl_band,
-                             const wlanif_band_capabilities_t& band);
+                             const wlan_fullmac_band_capabilities_t& band);
 // Convert a Banjo noise floor histogram into FIDL.
 void ConvertNoiseFloorHistogram(::fuchsia::wlan::stats::NoiseFloorHistogram* fidl_stats,
-                                const wlanif_noise_floor_histogram_t& stats);
+                                const wlan_fullmac_noise_floor_histogram_t& stats);
 // Convert a Banjo received rate index histogram into FIDL.
 void ConvertRxRateIndexHistogram(::fuchsia::wlan::stats::RxRateIndexHistogram* fidl_stats,
-                                 const wlanif_rx_rate_index_histogram_t& stats);
+                                 const wlan_fullmac_rx_rate_index_histogram_t& stats);
 // Convert a Banjo received signal strength indicator (RSSI) histogram into FIDL.
 void ConvertRssiHistogram(::fuchsia::wlan::stats::RssiHistogram* fidl_stats,
-                          const wlanif_rssi_histogram_t& stats);
+                          const wlan_fullmac_rssi_histogram_t& stats);
 // Convert a Banjo signal to noise ratio (SNR) histogram into FIDL.
 void ConvertSnrHistogram(::fuchsia::wlan::stats::SnrHistogram* fidl_stats,
-                         const wlanif_snr_histogram_t& stats);
-void ConvertPmkInfo(::fuchsia::wlan::mlme::PmkInfo* fidl_ind, const wlanif_pmk_info_t& ind);
+                         const wlan_fullmac_snr_histogram_t& stats);
+void ConvertPmkInfo(::fuchsia::wlan::mlme::PmkInfo* fidl_ind, const wlan_fullmac_pmk_info_t& ind);
 
-void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats);
+void ConvertIfaceStats(::fuchsia::wlan::stats::IfaceStats* fidl_stats,
+                       const wlan_fullmac_stats_t& stats);
 void ConvertIfaceCounterStats(::fuchsia::wlan::stats::IfaceCounterStats* fidl_stats,
-                              const wlanif_iface_counter_stats_t& stats);
+                              const wlan_fullmac_iface_counter_stats_t& stats);
 void ConvertIfaceHistogramStats(::fuchsia::wlan::stats::IfaceHistogramStats* fidl_stats,
-                                const wlanif_iface_histogram_stats_t& stats);
+                                const wlan_fullmac_iface_histogram_stats_t& stats);
 uint32_t ConvertMgmtCaptureFlags(::fuchsia::wlan::mlme::MgmtFrameCaptureFlags fidl_flags);
 ::fuchsia::wlan::mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags);
 void ConvertRates(::std::vector<uint8_t>* rates, const bss_description_t& banjo_desc);
 
 void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
-                         wlanif_sae_frame_t* frame_out);
+                         wlan_fullmac_sae_frame_t* frame_out);
 
-void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
+void ConvertSaeAuthFrame(const wlan_fullmac_sae_frame_t* frame_in,
                          ::fuchsia::wlan::mlme::SaeFrame& frame_out);
 void ConvertWmmStatus(const wlan_wmm_params_t* params_in,
                       ::fuchsia::wlan::internal::WmmStatusResponse* resp);

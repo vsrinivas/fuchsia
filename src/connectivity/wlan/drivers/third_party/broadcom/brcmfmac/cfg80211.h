@@ -304,7 +304,7 @@ struct escan_info {
   uint32_t escan_state;
   struct brcmf_if* ifp;
   zx_status_t (*run)(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
-                     const wlanif_scan_req_t* request, uint16_t* sync_id_out);
+                     const wlan_fullmac_scan_req_t* request, uint16_t* sync_id_out);
 };
 
 /**
@@ -540,38 +540,40 @@ zx_status_t brcmf_netdev_open(struct net_device* ndev);
 
 // Protocol ops implementations.
 
-zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* ifc,
+zx_status_t brcmf_if_start(net_device* ndev, const wlan_fullmac_impl_ifc_protocol_t* ifc,
                            zx_handle_t* out_mlme_channel);
 void brcmf_if_stop(net_device* ndev);
-void brcmf_if_query(net_device* ndev, wlanif_query_info_t* info);
-void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req);
-void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req);
-void brcmf_if_auth_req(net_device* ndev, const wlanif_auth_req_t* req);
-void brcmf_if_auth_resp(net_device* ndev, const wlanif_auth_resp_t* ind);
-void brcmf_if_deauth_req(net_device* ndev, const wlanif_deauth_req_t* req);
-void brcmf_if_assoc_req(net_device* ndev, const wlanif_assoc_req_t* req);
-void brcmf_if_assoc_resp(net_device* ndev, const wlanif_assoc_resp_t* ind);
-void brcmf_if_disassoc_req(net_device* ndev, const wlanif_disassoc_req_t* req);
-void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req);
-void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req);
-void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req);
-void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req,
-                           wlanif_set_keys_resp_t* resp);
-void brcmf_if_del_keys_req(net_device* ndev, const wlanif_del_keys_req_t* req);
-void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req);
+void brcmf_if_query(net_device* ndev, wlan_fullmac_query_info_t* info);
+void brcmf_if_start_scan(net_device* ndev, const wlan_fullmac_scan_req_t* req);
+void brcmf_if_join_req(net_device* ndev, const wlan_fullmac_join_req_t* req);
+void brcmf_if_auth_req(net_device* ndev, const wlan_fullmac_auth_req_t* req);
+void brcmf_if_auth_resp(net_device* ndev, const wlan_fullmac_auth_resp_t* ind);
+void brcmf_if_deauth_req(net_device* ndev, const wlan_fullmac_deauth_req_t* req);
+void brcmf_if_assoc_req(net_device* ndev, const wlan_fullmac_assoc_req_t* req);
+void brcmf_if_assoc_resp(net_device* ndev, const wlan_fullmac_assoc_resp_t* ind);
+void brcmf_if_disassoc_req(net_device* ndev, const wlan_fullmac_disassoc_req_t* req);
+void brcmf_if_reset_req(net_device* ndev, const wlan_fullmac_reset_req_t* req);
+void brcmf_if_start_req(net_device* ndev, const wlan_fullmac_start_req_t* req);
+void brcmf_if_stop_req(net_device* ndev, const wlan_fullmac_stop_req_t* req);
+void brcmf_if_set_keys_req(net_device* ndev, const wlan_fullmac_set_keys_req_t* req,
+                           wlan_fullmac_set_keys_resp_t* resp);
+void brcmf_if_del_keys_req(net_device* ndev, const wlan_fullmac_del_keys_req_t* req);
+void brcmf_if_eapol_req(net_device* ndev, const wlan_fullmac_eapol_req_t* req);
 void brcmf_if_stats_query_req(net_device* ndev);
 zx_status_t brcmf_if_get_iface_counter_stats(net_device* ndev,
-                                             wlanif_iface_counter_stats_t* out_stats);
+                                             wlan_fullmac_iface_counter_stats_t* out_stats);
 zx_status_t brcmf_if_get_iface_histogram_stats(net_device* ndev,
-                                               wlanif_iface_histogram_stats_t* out_stats);
-void brcmf_if_start_capture_frames(net_device* ndev, const wlanif_start_capture_frames_req_t* req,
-                                   wlanif_start_capture_frames_resp_t* resp);
+                                               wlan_fullmac_iface_histogram_stats_t* out_stats);
+void brcmf_if_start_capture_frames(net_device* ndev,
+                                   const wlan_fullmac_start_capture_frames_req_t* req,
+                                   wlan_fullmac_start_capture_frames_resp_t* resp);
 void brcmf_if_stop_capture_frames(net_device* ndev);
 zx_status_t brcmf_if_set_multicast_promisc(net_device* ndev, bool enable);
 void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie);
-zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_handshake_resp_t* resp);
-zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlanif_sae_frame_t* frame);
+zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev,
+                                        const wlan_fullmac_sae_handshake_resp_t* resp);
+zx_status_t brcmf_if_sae_frame_tx(net_device* ndev, const wlan_fullmac_sae_frame_t* frame);
 void brcmf_if_wmm_status_req(net_device* ndev);
 
 // Given IE, return a vector with the SSID bytes if the SSID is present.
@@ -581,6 +583,7 @@ std::vector<uint8_t> brcmf_find_ssid_in_ies(const uint8_t* ie, size_t ie_len);
 
 // If the WMM parameter IE (used for QoS) is available from the association response, set its
 // body into the Association Confirm message.
-void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg, wlanif_assoc_confirm_t* confirm);
+void set_assoc_conf_wmm_param(const brcmf_cfg80211_info* cfg,
+                              wlan_fullmac_assoc_confirm_t* confirm);
 void brcmf_cfg80211_handle_eapol_frame(struct brcmf_if* ifp, const void* data, size_t size);
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_CFG80211_H_

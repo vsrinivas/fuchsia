@@ -6,9 +6,9 @@
 
 #include <gtest/gtest.h>
 
-TEST(WlanifImplUnittest, WlanifMlmeStats) {
-  // Verify that union members of wlanif_mlme_stats do not overwrite each other.
-  wlanif_mlme_stats_t stats = {};
+TEST(WlanifImplUnittest, WlanFullmacMlmeStats) {
+  // Verify that union members of wlan_fullmac_mlme_stats do not overwrite each other.
+  wlan_fullmac_mlme_stats_t stats = {};
   stats.tag = 0x1;
   memset(&stats.stats.client_mlme_stats, 0x2, sizeof(stats.stats.client_mlme_stats));
   EXPECT_EQ(stats.tag, 0x1);

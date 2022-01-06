@@ -72,7 +72,7 @@ TEST_F(ScanTest, PassiveDwellTime) {
     EXPECT_EQ(*scan_result_code, WLAN_SCAN_RESULT_SUCCESS);
     auto scan_result_list = client_ifc_.ScanResultList(scan_attempt);
     EXPECT_GT(scan_result_list->size(), 0U);
-    for (const wlanif_scan_result_t& scan_result : *scan_result_list) {
+    for (const wlan_fullmac_scan_result_t& scan_result : *scan_result_list) {
       auto& bss = scan_result.bss;
       EXPECT_EQ(kDefaultBssid, common::MacAddr(bss.bssid));
       auto ssid = brcmf_find_ssid_in_ies(bss.ies_list, bss.ies_count);

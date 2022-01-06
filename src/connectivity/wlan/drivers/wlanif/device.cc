@@ -29,8 +29,8 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
-Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
-    : parent_(device), wlanif_impl_(wlanif_impl_proto) {
+Device::Device(zx_device_t* device, wlan_fullmac_impl_protocol_t wlan_fullmac_impl_proto)
+    : parent_(device), wlan_fullmac_impl_(wlan_fullmac_impl_proto) {
   ltrace_fn();
 }
 
@@ -43,70 +43,77 @@ static zx_protocol_device_t device_ops = {
     .release = [](void* ctx) { DEV(ctx)->Release(); },
 };
 
-static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
+static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
     // MLME operations
-    .on_scan_result = [](void* cookie,
-                         const wlanif_scan_result_t* result) { DEV(cookie)->OnScanResult(result); },
-    .on_scan_end = [](void* cookie, const wlanif_scan_end_t* end) { DEV(cookie)->OnScanEnd(end); },
+    .on_scan_result =
+        [](void* cookie, const wlan_fullmac_scan_result_t* result) {
+          DEV(cookie)->OnScanResult(result);
+        },
+    .on_scan_end = [](void* cookie,
+                      const wlan_fullmac_scan_end_t* end) { DEV(cookie)->OnScanEnd(end); },
     .join_conf = [](void* cookie,
-                    const wlanif_join_confirm_t* resp) { DEV(cookie)->JoinConf(resp); },
-    .auth_conf = [](void* cookie,
-                    const wlanif_auth_confirm_t* resp) { DEV(cookie)->AuthenticateConf(resp); },
+                    const wlan_fullmac_join_confirm_t* resp) { DEV(cookie)->JoinConf(resp); },
+    .auth_conf =
+        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
+          DEV(cookie)->AuthenticateConf(resp);
+        },
     .auth_ind = [](void* cookie,
-                   const wlanif_auth_ind_t* ind) { DEV(cookie)->AuthenticateInd(ind); },
+                   const wlan_fullmac_auth_ind_t* ind) { DEV(cookie)->AuthenticateInd(ind); },
     .deauth_conf =
-        [](void* cookie, const wlanif_deauth_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_deauth_confirm_t* resp) {
           DEV(cookie)->DeauthenticateConf(resp);
         },
     .deauth_ind =
-        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           DEV(cookie)->DeauthenticateInd(ind);
         },
-    .assoc_conf = [](void* cookie,
-                     const wlanif_assoc_confirm_t* resp) { DEV(cookie)->AssociateConf(resp); },
+    .assoc_conf =
+        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
+          DEV(cookie)->AssociateConf(resp);
+        },
     .assoc_ind = [](void* cookie,
-                    const wlanif_assoc_ind_t* ind) { DEV(cookie)->AssociateInd(ind); },
+                    const wlan_fullmac_assoc_ind_t* ind) { DEV(cookie)->AssociateInd(ind); },
     .disassoc_conf =
-        [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_disassoc_confirm_t* resp) {
           DEV(cookie)->DisassociateConf(resp);
         },
     .disassoc_ind =
-        [](void* cookie, const wlanif_disassoc_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_disassoc_indication_t* ind) {
           DEV(cookie)->DisassociateInd(ind);
         },
     .start_conf = [](void* cookie,
-                     const wlanif_start_confirm_t* resp) { DEV(cookie)->StartConf(resp); },
+                     const wlan_fullmac_start_confirm_t* resp) { DEV(cookie)->StartConf(resp); },
     .stop_conf = [](void* cookie,
-                    const wlanif_stop_confirm_t* resp) { DEV(cookie)->StopConf(resp); },
+                    const wlan_fullmac_stop_confirm_t* resp) { DEV(cookie)->StopConf(resp); },
     .eapol_conf = [](void* cookie,
-                     const wlanif_eapol_confirm_t* resp) { DEV(cookie)->EapolConf(resp); },
+                     const wlan_fullmac_eapol_confirm_t* resp) { DEV(cookie)->EapolConf(resp); },
     .on_channel_switch =
-        [](void* cookie, const wlanif_channel_switch_info_t* ind) {
+        [](void* cookie, const wlan_fullmac_channel_switch_info_t* ind) {
           DEV(cookie)->OnChannelSwitched(ind);
         },
     // MLME extension operations
     .signal_report =
-        [](void* cookie, const wlanif_signal_report_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_signal_report_indication_t* ind) {
           DEV(cookie)->SignalReport(ind);
         },
     .eapol_ind = [](void* cookie,
-                    const wlanif_eapol_indication_t* ind) { DEV(cookie)->EapolInd(ind); },
+                    const wlan_fullmac_eapol_indication_t* ind) { DEV(cookie)->EapolInd(ind); },
     .stats_query_resp =
-        [](void* cookie, const wlanif_stats_query_response_t* resp) {
+        [](void* cookie, const wlan_fullmac_stats_query_response_t* resp) {
           DEV(cookie)->StatsQueryResp(resp);
         },
     .relay_captured_frame =
-        [](void* cookie, const wlanif_captured_frame_result_t* result) {
+        [](void* cookie, const wlan_fullmac_captured_frame_result_t* result) {
           DEV(cookie)->RelayCapturedFrame(result);
         },
-    .on_pmk_available = [](void* cookie,
-                           const wlanif_pmk_info_t* ind) { DEV(cookie)->OnPmkAvailable(ind); },
+    .on_pmk_available =
+        [](void* cookie, const wlan_fullmac_pmk_info_t* ind) { DEV(cookie)->OnPmkAvailable(ind); },
     .sae_handshake_ind =
-        [](void* cookie, const wlanif_sae_handshake_ind_t* ind) {
+        [](void* cookie, const wlan_fullmac_sae_handshake_ind_t* ind) {
           DEV(cookie)->SaeHandshakeInd(ind);
         },
     .sae_frame_rx = [](void* cookie,
-                       const wlanif_sae_frame_t* ind) { DEV(cookie)->SaeFrameRx(ind); },
+                       const wlan_fullmac_sae_frame_t* ind) { DEV(cookie)->SaeFrameRx(ind); },
     .on_wmm_status_resp =
         [](void* cookie, const zx_status_t status, const wlan_wmm_params_t* params) {
           DEV(cookie)->OnWmmStatusResp(status, params);
@@ -150,7 +157,7 @@ zx_status_t Device::AddDevice() {
 
 #define VERIFY_PROTO_OP(fn)                                   \
   do {                                                        \
-    if (wlanif_impl_.ops->fn == nullptr) {                    \
+    if (wlan_fullmac_impl_.ops->fn == nullptr) {              \
       lerror("required protocol function %s missing\n", #fn); \
       return ZX_ERR_INVALID_ARGS;                             \
     }                                                         \
@@ -159,9 +166,9 @@ zx_status_t Device::AddDevice() {
 zx_status_t Device::Bind() {
   ltrace_fn();
 
-  // Assert minimum required functionality from the wlanif_impl driver
-  if (wlanif_impl_.ops == nullptr) {
-    lerror("no wlanif_impl protocol ops provided\n");
+  // Assert minimum required functionality from the wlan_fullmac_impl driver
+  if (wlan_fullmac_impl_.ops == nullptr) {
+    lerror("no wlan_fullmac_impl protocol ops provided\n");
     return ZX_ERR_INVALID_ARGS;
   }
   VERIFY_PROTO_OP(start);
@@ -181,19 +188,20 @@ zx_status_t Device::Bind() {
   VERIFY_PROTO_OP(del_keys_req);
   VERIFY_PROTO_OP(eapol_req);
 
-  // The MLME interface has no start/stop commands, so we will start the wlanif_impl
+  // The MLME interface has no start/stop commands, so we will start the wlan_fullmac_impl
   // device immediately
   zx_handle_t mlme_channel = ZX_HANDLE_INVALID;
-  zx_status_t status = wlanif_impl_start(&wlanif_impl_, this, &wlanif_impl_ifc_ops, &mlme_channel);
+  zx_status_t status =
+      wlan_fullmac_impl_start(&wlan_fullmac_impl_, this, &wlan_fullmac_impl_ifc_ops, &mlme_channel);
   ZX_DEBUG_ASSERT(mlme_channel != ZX_HANDLE_INVALID);
   if (status != ZX_OK) {
-    lerror("call to wlanif-impl start() failed: %s\n", zx_status_get_string(status));
+    lerror("call to wlan_fullmac-impl start() failed: %s\n", zx_status_get_string(status));
     return status;
   }
 
   // Query the device.
-  wlanif_impl_query(&wlanif_impl_, &query_info_);
-  if (wlanif_impl_.ops->data_queue_tx &&
+  wlan_fullmac_impl_query(&wlan_fullmac_impl_, &query_info_);
+  if (wlan_fullmac_impl_.ops->data_queue_tx &&
       (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE) != 0) {
     lwarn(
         "driver implements data_queue_tx while indicating a separate data plane, data_queue_tx "
@@ -264,7 +272,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   std::unique_ptr<uint8_t[]> channels_list_begin;
   std::unique_ptr<cssid_t[]> cssids_list_begin;
 
-  wlanif_scan_req_t impl_req = {
+  wlan_fullmac_scan_req_t impl_req = {
       .txn_id = req.txn_id,
       .scan_type = ConvertScanType(req.scan_type),
       .channels_count = req.channel_list.size(),
@@ -313,13 +321,13 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
     impl_req.ssids_list = cssids_list_begin.get();
   }
 
-  wlanif_impl_start_scan(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_start_scan(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::JoinReq(wlan_mlme::JoinRequest req) {
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
-  wlanif_join_req_t impl_req = {};
+  wlan_fullmac_join_req_t impl_req = {};
 
   // selected_bss
   ConvertBssDescription(&impl_req.selected_bss, req.selected_bss);
@@ -340,13 +348,13 @@ void Device::JoinReq(wlan_mlme::JoinRequest req) {
   }
   std::memcpy(impl_req.op_rates, req.op_rates.data(), impl_req.num_op_rates);
 
-  wlanif_impl_join_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_join_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
-  wlanif_auth_req_t impl_req = {};
+  wlan_fullmac_auth_req_t impl_req = {};
 
   // peer_sta_address
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
@@ -363,11 +371,11 @@ void Device::AuthenticateReq(wlan_mlme::AuthenticateRequest req) {
     impl_req.sae_password_list = &(*req.sae_password)[0];
   }
 
-  wlanif_impl_auth_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_auth_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
-  wlanif_auth_resp_t impl_resp = {};
+  wlan_fullmac_auth_resp_t impl_resp = {};
 
   // peer_sta_address
   std::memcpy(impl_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
@@ -375,13 +383,13 @@ void Device::AuthenticateResp(wlan_mlme::AuthenticateResponse resp) {
   // result_code
   impl_resp.result_code = ConvertAuthResultCode(resp.result_code);
 
-  wlanif_impl_auth_resp(&wlanif_impl_, &impl_resp);
+  wlan_fullmac_impl_auth_resp(&wlan_fullmac_impl_, &impl_resp);
 }
 
 void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
-  wlanif_deauth_req_t impl_req = {};
+  wlan_fullmac_deauth_req_t impl_req = {};
 
   // peer_sta_address
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
@@ -389,11 +397,11 @@ void Device::DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) {
   // reason_code
   impl_req.reason_code = wlan::common::ConvertReasonCode(req.reason_code);
 
-  wlanif_impl_deauth_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_deauth_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
-  wlanif_assoc_req_t impl_req = {};
+  wlan_fullmac_assoc_req_t impl_req = {};
 
   // peer_sta_address
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
@@ -415,11 +423,11 @@ void Device::AssociateReq(wlan_mlme::AssociateRequest req) {
     }
   }
 
-  wlanif_impl_assoc_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_assoc_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
-  wlanif_assoc_resp_t impl_resp = {};
+  wlan_fullmac_assoc_resp_t impl_resp = {};
 
   // peer_sta_address
   std::memcpy(impl_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
@@ -430,13 +438,13 @@ void Device::AssociateResp(wlan_mlme::AssociateResponse resp) {
   // association_id
   impl_resp.association_id = resp.association_id;
 
-  wlanif_impl_assoc_resp(&wlanif_impl_, &impl_resp);
+  wlan_fullmac_impl_assoc_resp(&wlan_fullmac_impl_, &impl_resp);
 }
 
 void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
-  wlanif_disassoc_req_t impl_req = {};
+  wlan_fullmac_disassoc_req_t impl_req = {};
 
   // peer_sta_address
   std::memcpy(impl_req.peer_sta_address, req.peer_sta_address.data(), ETH_ALEN);
@@ -444,13 +452,13 @@ void Device::DisassociateReq(wlan_mlme::DisassociateRequest req) {
   // reason_code
   impl_req.reason_code = static_cast<uint16_t>(req.reason_code);
 
-  wlanif_impl_disassoc_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_disassoc_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::ResetReq(wlan_mlme::ResetRequest req) {
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
-  wlanif_reset_req_t impl_req = {};
+  wlan_fullmac_reset_req_t impl_req = {};
 
   // sta_address
   std::memcpy(impl_req.sta_address, req.sta_address.data(), ETH_ALEN);
@@ -458,7 +466,7 @@ void Device::ResetReq(wlan_mlme::ResetRequest req) {
   // set_default_mib
   impl_req.set_default_mib = req.set_default_mib;
 
-  wlanif_impl_reset_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_reset_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::StartReq(wlan_mlme::StartRequest req) {
@@ -470,7 +478,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
     }
   }
 
-  wlanif_start_req_t impl_req = {};
+  wlan_fullmac_start_req_t impl_req = {};
 
   // ssid
   CloneIntoCSsid(req.ssid, impl_req.ssid);
@@ -490,16 +498,16 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   // rsne
   CopyRSNE(req.rsne.value_or(std::vector<uint8_t>{}), impl_req.rsne, &impl_req.rsne_len);
 
-  wlanif_impl_start_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_start_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::StopReq(wlan_mlme::StopRequest req) {
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
-  wlanif_stop_req_t impl_req = {};
+  wlan_fullmac_stop_req_t impl_req = {};
   CloneIntoCSsid(req.ssid, impl_req.ssid);
 
-  wlanif_impl_stop_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_stop_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
@@ -508,8 +516,8 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
     return;
   }
 
-  wlanif_set_keys_req_t impl_req = {};
-  wlanif_set_keys_resp_t impl_resp = {};
+  wlan_fullmac_set_keys_req_t impl_req = {};
+  wlan_fullmac_set_keys_resp_t impl_resp = {};
 
   // Abort if too many keys sent.
   size_t num_keys = req.keylist.size();
@@ -532,7 +540,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
     ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
   }
 
-  wlanif_impl_set_keys_req(&wlanif_impl_, &impl_req, &impl_resp);
+  wlan_fullmac_impl_set_keys_req(&wlan_fullmac_impl_, &impl_req, &impl_resp);
 
   auto num_results = impl_resp.num_keys;
   if (num_keys != num_results) {
@@ -553,7 +561,7 @@ void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
 }
 
 void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
-  wlanif_del_keys_req_t impl_req = {};
+  wlan_fullmac_del_keys_req_t impl_req = {};
 
   // keylist
   size_t num_keys = req.keylist.size();
@@ -567,11 +575,11 @@ void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {
     ConvertDeleteKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
   }
 
-  wlanif_impl_del_keys_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_del_keys_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::EapolReq(wlan_mlme::EapolRequest req) {
-  wlanif_eapol_req_t impl_req = {};
+  wlan_fullmac_eapol_req_t impl_req = {};
 
   // src_addr
   std::memcpy(impl_req.src_addr, req.src_addr.data(), ETH_ALEN);
@@ -583,7 +591,7 @@ void Device::EapolReq(wlan_mlme::EapolRequest req) {
   impl_req.data_count = req.data.size();
   impl_req.data_list = req.data.data();
 
-  wlanif_impl_eapol_req(&wlanif_impl_, &impl_req);
+  wlan_fullmac_impl_eapol_req(&wlan_fullmac_impl_, &impl_req);
 }
 
 void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
@@ -635,16 +643,16 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
 }
 
 void Device::StatsQueryReq() {
-  if (wlanif_impl_.ops->stats_query_req != nullptr) {
-    wlanif_impl_stats_query_req(&wlanif_impl_);
+  if (wlan_fullmac_impl_.ops->stats_query_req != nullptr) {
+    wlan_fullmac_impl_stats_query_req(&wlan_fullmac_impl_);
   }
 }
 
 void Device::GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) {
   auto status = ZX_ERR_BAD_STATE;
-  wlanif_iface_counter_stats_t out_stats = {};
-  if (wlanif_impl_.ops->get_iface_counter_stats != nullptr) {
-    status = wlanif_impl_get_iface_counter_stats(&wlanif_impl_, &out_stats);
+  wlan_fullmac_iface_counter_stats_t out_stats = {};
+  if (wlan_fullmac_impl_.ops->get_iface_counter_stats != nullptr) {
+    status = wlan_fullmac_impl_get_iface_counter_stats(&wlan_fullmac_impl_, &out_stats);
   }
 
   wlan_mlme::GetIfaceCounterStatsResponse fidl_resp;
@@ -663,9 +671,9 @@ void Device::GetIfaceHistogramStats(GetIfaceHistogramStatsCallback cb) {
   std::lock_guard<std::mutex> lock(get_iface_histogram_stats_lock_);
 
   auto status = ZX_ERR_BAD_STATE;
-  wlanif_iface_histogram_stats_t out_stats = {};
-  if (wlanif_impl_.ops->get_iface_histogram_stats != nullptr) {
-    status = wlanif_impl_get_iface_histogram_stats(&wlanif_impl_, &out_stats);
+  wlan_fullmac_iface_histogram_stats_t out_stats = {};
+  if (wlan_fullmac_impl_.ops->get_iface_histogram_stats != nullptr) {
+    status = wlan_fullmac_impl_get_iface_histogram_stats(&wlan_fullmac_impl_, &out_stats);
   }
 
   wlan_mlme::GetIfaceHistogramStatsResponse fidl_resp;
@@ -724,23 +732,23 @@ void Device::GetMeshPathTableReq(::fuchsia::wlan::mlme::GetMeshPathTableRequest 
 void Device::SetControlledPort(wlan_mlme::SetControlledPortRequest req) {
   switch (req.state) {
     case wlan_mlme::ControlledPortState::OPEN:
-      eth_device_.SetEthernetStatus(&wlanif_impl_, true);
+      eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, true);
       break;
     case wlan_mlme::ControlledPortState::CLOSED:
-      eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+      eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
       break;
   }
 }
 
 void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest req,
                                 StartCaptureFramesCallback cb) {
-  wlanif_start_capture_frames_req_t impl_req = {};
+  wlan_fullmac_start_capture_frames_req_t impl_req = {};
   impl_req.mgmt_frame_flags = ConvertMgmtCaptureFlags(req.mgmt_frame_flags);
 
-  wlanif_start_capture_frames_resp_t impl_resp = {};
+  wlan_fullmac_start_capture_frames_resp_t impl_resp = {};
 
   // forward request to driver
-  wlanif_impl_start_capture_frames(&wlanif_impl_, &impl_req, &impl_resp);
+  wlan_fullmac_impl_start_capture_frames(&wlan_fullmac_impl_, &impl_req, &impl_resp);
 
   wlan_mlme::StartCaptureFramesResponse resp;
   resp.status = impl_resp.status;
@@ -748,25 +756,25 @@ void Device::StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest
   cb(resp);
 }
 
-void Device::StopCaptureFrames() { wlanif_impl_stop_capture_frames(&wlanif_impl_); }
+void Device::StopCaptureFrames() { wlan_fullmac_impl_stop_capture_frames(&wlan_fullmac_impl_); }
 
 void Device::SaeHandshakeResp(::fuchsia::wlan::mlme::SaeHandshakeResponse resp) {
-  wlanif_sae_handshake_resp_t handshake_resp = {};
+  wlan_fullmac_sae_handshake_resp_t handshake_resp = {};
 
   memcpy(handshake_resp.peer_sta_address, resp.peer_sta_address.data(), ETH_ALEN);
   handshake_resp.status_code = wlan::common::ConvertStatusCode(resp.status_code);
-  wlanif_impl_sae_handshake_resp(&wlanif_impl_, &handshake_resp);
+  wlan_fullmac_impl_sae_handshake_resp(&wlan_fullmac_impl_, &handshake_resp);
 }
 
 void Device::SaeFrameTx(::fuchsia::wlan::mlme::SaeFrame frame) {
-  wlanif_sae_frame_t sae_frame = {};
+  wlan_fullmac_sae_frame_t sae_frame = {};
   ConvertSaeAuthFrame(frame, &sae_frame);
-  wlanif_impl_sae_frame_tx(&wlanif_impl_, &sae_frame);
+  wlan_fullmac_impl_sae_frame_tx(&wlan_fullmac_impl_, &sae_frame);
 }
 
-void Device::WmmStatusReq() { wlanif_impl_wmm_status_req(&wlanif_impl_); }
+void Device::WmmStatusReq() { wlan_fullmac_impl_wmm_status_req(&wlan_fullmac_impl_); }
 
-void Device::OnScanResult(const wlanif_scan_result_t* result) {
+void Device::OnScanResult(const wlan_fullmac_scan_result_t* result) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -786,7 +794,7 @@ void Device::OnScanResult(const wlanif_scan_result_t* result) {
   binding_->events().OnScanResult(std::move(fidl_result));
 }
 
-void Device::OnScanEnd(const wlanif_scan_end_t* end) {
+void Device::OnScanEnd(const wlan_fullmac_scan_end_t* end) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -811,10 +819,10 @@ void Device::SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) {
   SendScanEndLockedBindingChecked(std::move(scan_end));
 }
 
-void Device::JoinConf(const wlanif_join_confirm_t* resp) {
+void Device::JoinConf(const wlan_fullmac_join_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
   if (binding_ == nullptr) {
     return;
@@ -828,10 +836,10 @@ void Device::JoinConf(const wlanif_join_confirm_t* resp) {
   binding_->events().JoinConf(std::move(fidl_resp));
 }
 
-void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
+void Device::AuthenticateConf(const wlan_fullmac_auth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
-  eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+  eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
 
   if (binding_ == nullptr) {
     return;
@@ -851,7 +859,7 @@ void Device::AuthenticateConf(const wlanif_auth_confirm_t* resp) {
   binding_->events().AuthenticateConf(std::move(fidl_resp));
 }
 
-void Device::AuthenticateInd(const wlanif_auth_ind_t* ind) {
+void Device::AuthenticateInd(const wlan_fullmac_auth_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (binding_ == nullptr) {
@@ -869,11 +877,11 @@ void Device::AuthenticateInd(const wlanif_auth_ind_t* ind) {
   binding_->events().AuthenticateInd(std::move(fidl_ind));
 }
 
-void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
+void Device::DeauthenticateConf(const wlan_fullmac_deauth_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -888,11 +896,11 @@ void Device::DeauthenticateConf(const wlanif_deauth_confirm_t* resp) {
   binding_->events().DeauthenticateConf(std::move(fidl_resp));
 }
 
-void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
+void Device::DeauthenticateInd(const wlan_fullmac_deauth_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -913,13 +921,13 @@ void Device::DeauthenticateInd(const wlanif_deauth_indication_t* ind) {
   binding_->events().DeauthenticateInd(std::move(fidl_ind));
 }
 
-void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
+void Device::AssociateConf(const wlan_fullmac_assoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   // For unprotected network, set data state to online immediately. For protected network, do
   // nothing. Later on upper layer would send message to open controlled port.
   if (resp->result_code == WLAN_ASSOC_RESULT_SUCCESS && !protected_bss_) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, true);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, true);
   }
 
   if (binding_ == nullptr) {
@@ -945,7 +953,7 @@ void Device::AssociateConf(const wlanif_assoc_confirm_t* resp) {
   binding_->events().AssociateConf(std::move(fidl_resp));
 }
 
-void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
+void Device::AssociateInd(const wlan_fullmac_assoc_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -957,11 +965,11 @@ void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
   binding_->events().AssociateInd(std::move(fidl_ind));
 }
 
-void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
+void Device::DisassociateConf(const wlan_fullmac_disassoc_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -976,11 +984,11 @@ void Device::DisassociateConf(const wlanif_disassoc_confirm_t* resp) {
   binding_->events().DisassociateConf(std::move(fidl_resp));
 }
 
-void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
+void Device::DisassociateInd(const wlan_fullmac_disassoc_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (query_info_.role == WLAN_INFO_MAC_ROLE_CLIENT) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -1001,21 +1009,21 @@ void Device::DisassociateInd(const wlanif_disassoc_indication_t* ind) {
   binding_->events().DisassociateInd(std::move(fidl_ind));
 }
 
-void Device::StartConf(const wlanif_start_confirm_t* resp) {
+void Device::StartConf(const wlan_fullmac_start_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (resp->result_code == WLAN_START_RESULT_SUCCESS) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, true);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, true);
   }
 
   SendStartConfLocked(resp->result_code);
 }
 
-void Device::StopConf(const wlanif_stop_confirm_t* resp) {
+void Device::StopConf(const wlan_fullmac_stop_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
 
   if (resp->result_code == WLAN_STOP_RESULT_SUCCESS) {
-    eth_device_.SetEthernetStatus(&wlanif_impl_, false);
+    eth_device_.SetEthernetStatus(&wlan_fullmac_impl_, false);
   }
 
   if (binding_ == nullptr) {
@@ -1028,7 +1036,7 @@ void Device::StopConf(const wlanif_stop_confirm_t* resp) {
   binding_->events().StopConf(fidl_resp);
 }
 
-void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
+void Device::EapolConf(const wlan_fullmac_eapol_confirm_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1041,7 +1049,7 @@ void Device::EapolConf(const wlanif_eapol_confirm_t* resp) {
   binding_->events().EapolConf(std::move(fidl_resp));
 }
 
-void Device::OnChannelSwitched(const wlanif_channel_switch_info_t* info) {
+void Device::OnChannelSwitched(const wlan_fullmac_channel_switch_info_t* info) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1053,7 +1061,7 @@ void Device::OnChannelSwitched(const wlanif_channel_switch_info_t* info) {
   binding_->events().OnChannelSwitched(fidl_info);
 }
 
-void Device::SaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
+void Device::SaeHandshakeInd(const wlan_fullmac_sae_handshake_ind_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1065,7 +1073,7 @@ void Device::SaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
   binding_->events().OnSaeHandshakeInd(fidl_ind);
 }
 
-void Device::SaeFrameRx(const wlanif_sae_frame_t* frame) {
+void Device::SaeFrameRx(const wlan_fullmac_sae_frame_t* frame) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1087,7 +1095,7 @@ void Device::OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* 
   binding_->events().OnWmmStatusResp(status, std::move(resp));
 }
 
-void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
+void Device::SignalReport(const wlan_fullmac_signal_report_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1101,7 +1109,7 @@ void Device::SignalReport(const wlanif_signal_report_indication_t* ind) {
   binding_->events().SignalReport(std::move(fidl_ind));
 }
 
-void Device::EapolInd(const wlanif_eapol_indication_t* ind) {
+void Device::EapolInd(const wlan_fullmac_eapol_indication_t* ind) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1122,7 +1130,7 @@ void Device::EapolInd(const wlanif_eapol_indication_t* ind) {
   binding_->events().EapolInd(std::move(fidl_ind));
 }
 
-void Device::StatsQueryResp(const wlanif_stats_query_response_t* resp) {
+void Device::StatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1133,7 +1141,7 @@ void Device::StatsQueryResp(const wlanif_stats_query_response_t* resp) {
   binding_->events().StatsQueryResp(std::move(fidl_resp));
 }
 
-void Device::RelayCapturedFrame(const wlanif_captured_frame_result* result) {
+void Device::RelayCapturedFrame(const wlan_fullmac_captured_frame_result* result) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1146,7 +1154,7 @@ void Device::RelayCapturedFrame(const wlanif_captured_frame_result* result) {
   binding_->events().RelayCapturedFrame(std::move(fidl_result));
 }
 
-void Device::OnPmkAvailable(const wlanif_pmk_info_t* info) {
+void Device::OnPmkAvailable(const wlan_fullmac_pmk_info_t* info) {
   std::lock_guard<std::mutex> lock(lock_);
   if (binding_ == nullptr) {
     return;
@@ -1170,10 +1178,10 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
 
   // features
   info->features = ETHERNET_FEATURE_WLAN;
-  if (query_info_.features & WLANIF_FEATURE_DMA) {
+  if (query_info_.features & WLAN_FULLMAC_FEATURE_DMA) {
     info->features |= ETHERNET_FEATURE_DMA;
   }
-  if (query_info_.features & WLANIF_FEATURE_SYNTH) {
+  if (query_info_.features & WLAN_FULLMAC_FEATURE_SYNTH) {
     info->features |= ETHERNET_FEATURE_SYNTH;
   }
 
@@ -1189,11 +1197,11 @@ zx_status_t Device::EthQuery(uint32_t options, ethernet_info_t* info) {
 
 void Device::EthQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                         ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-  eth_device_.EthQueueTx(&wlanif_impl_, options, netbuf, completion_cb, cookie);
+  eth_device_.EthQueueTx(&wlan_fullmac_impl_, options, netbuf, completion_cb, cookie);
 }
 
 zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size) {
-  return eth_device_.EthSetParam(&wlanif_impl_, param, value, data, data_size);
+  return eth_device_.EthSetParam(&wlan_fullmac_impl_, param, value, data, data_size);
 }
 
 void Device::EthRecv(const uint8_t* data, size_t length, uint32_t flags) {
@@ -1221,18 +1229,20 @@ void EthDevice::EthStop() {
   ethernet_ifc_ = {};
 }
 
-void EthDevice::EthQueueTx(wlanif_impl_protocol_t* wlanif_impl_proto, uint32_t options,
+void EthDevice::EthQueueTx(wlan_fullmac_impl_protocol_t* wlan_fullmac_impl_proto, uint32_t options,
                            ethernet_netbuf_t* netbuf, ethernet_impl_queue_tx_callback completion_cb,
                            void* cookie) {
-  if (wlanif_impl_proto->ops->data_queue_tx != nullptr) {
-    wlanif_impl_data_queue_tx(wlanif_impl_proto, options, netbuf, completion_cb, cookie);
+  if (wlan_fullmac_impl_proto->ops->data_queue_tx != nullptr) {
+    wlan_fullmac_impl_data_queue_tx(wlan_fullmac_impl_proto, options, netbuf, completion_cb,
+                                    cookie);
   } else {
     completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, netbuf);
   }
 }
 
-zx_status_t EthDevice::EthSetParam(wlanif_impl_protocol_t* wlanif_impl_proto, uint32_t param,
-                                   int32_t value, const void* data, size_t data_size) {
+zx_status_t EthDevice::EthSetParam(wlan_fullmac_impl_protocol_t* wlan_fullmac_impl_proto,
+                                   uint32_t param, int32_t value, const void* data,
+                                   size_t data_size) {
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
 
   switch (param) {
@@ -1247,8 +1257,8 @@ zx_status_t EthDevice::EthSetParam(wlanif_impl_protocol_t* wlanif_impl_proto, ui
       status = ZX_OK;
       break;
     case ETHERNET_SETPARAM_MULTICAST_PROMISC:
-      if (wlanif_impl_proto->ops->set_multicast_promisc != nullptr) {
-        return wlanif_impl_set_multicast_promisc(wlanif_impl_proto, !!value);
+      if (wlan_fullmac_impl_proto->ops->set_multicast_promisc != nullptr) {
+        return wlan_fullmac_impl_set_multicast_promisc(wlan_fullmac_impl_proto, !!value);
       } else {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -1258,7 +1268,8 @@ zx_status_t EthDevice::EthSetParam(wlanif_impl_protocol_t* wlanif_impl_proto, ui
   return status;
 }
 
-void EthDevice::SetEthernetStatus(wlanif_impl_protocol_t* wlanif_impl_proto, bool online) {
+void EthDevice::SetEthernetStatus(wlan_fullmac_impl_protocol_t* wlan_fullmac_impl_proto,
+                                  bool online) {
   std::lock_guard<std::mutex> lock(lock_);
 
   // TODO(fxbug.dev/51009): Let SME handle these changes.
@@ -1267,8 +1278,8 @@ void EthDevice::SetEthernetStatus(wlanif_impl_protocol_t* wlanif_impl_proto, boo
     if (eth_started_) {
       ethernet_ifc_status(&ethernet_ifc_, online ? ETHERNET_STATUS_ONLINE : 0);
     }
-    if (wlanif_impl_proto->ops->on_link_state_changed) {
-      wlanif_impl_on_link_state_changed(wlanif_impl_proto, online);
+    if (wlan_fullmac_impl_proto->ops->on_link_state_changed) {
+      wlan_fullmac_impl_on_link_state_changed(wlan_fullmac_impl_proto, online);
     }
   }
 }

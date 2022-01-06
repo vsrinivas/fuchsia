@@ -272,7 +272,7 @@ struct net_device {
   uint32_t scan_num_results;
   std::mutex scan_sync_id_mutex;  // Used to ensure that sync_id is stored before processing results
   std::shared_mutex if_proto_lock;  // Used as RW-lock for if_proto.
-  wlanif_impl_ifc_protocol_t if_proto;
+  wlan_fullmac_impl_ifc_protocol_t if_proto;
   uint8_t dev_addr[ETH_ALEN];
   char name[NET_DEVICE_NAME_MAX_LEN];
   void* priv;
@@ -302,15 +302,15 @@ struct net_device {
 
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
-    wlanif_mlme_stats_t mlme_stats;
-    std::vector<wlanif_noise_floor_histogram_t> noise_floor_histograms;
-    std::vector<wlanif_hist_bucket_t> noise_floor_samples;
-    std::vector<wlanif_rssi_histogram_t> rssi_histograms;
-    std::vector<wlanif_hist_bucket_t> rssi_samples;
-    std::vector<wlanif_rx_rate_index_histogram_t> rx_rate_index_histograms;
-    std::vector<wlanif_hist_bucket_t> rx_rate_index_samples;
-    std::vector<wlanif_snr_histogram_t> snr_histograms;
-    std::vector<wlanif_hist_bucket_t> snr_samples;
+    wlan_fullmac_mlme_stats_t mlme_stats;
+    std::vector<wlan_fullmac_noise_floor_histogram_t> noise_floor_histograms;
+    std::vector<wlan_fullmac_hist_bucket_t> noise_floor_samples;
+    std::vector<wlan_fullmac_rssi_histogram_t> rssi_histograms;
+    std::vector<wlan_fullmac_hist_bucket_t> rssi_samples;
+    std::vector<wlan_fullmac_rx_rate_index_histogram_t> rx_rate_index_histograms;
+    std::vector<wlan_fullmac_hist_bucket_t> rx_rate_index_samples;
+    std::vector<wlan_fullmac_snr_histogram_t> snr_histograms;
+    std::vector<wlan_fullmac_hist_bucket_t> snr_samples;
     brcmf_pktcnt_le fw_pktcnt;
   } stats;
   zx::channel mlme_channel;

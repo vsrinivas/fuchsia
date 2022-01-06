@@ -18,82 +18,82 @@ const std::vector<uint8_t> SimInterface::kDefaultScanChannels = {
     64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165};
 
 // static
-wlanif_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
+wlan_fullmac_impl_ifc_protocol_ops_t SimInterface::default_sme_dispatch_tbl_ = {
     // SME operations
     .on_scan_result =
-        [](void* ctx, const wlanif_scan_result_t* result) {
+        [](void* ctx, const wlan_fullmac_scan_result_t* result) {
           static_cast<SimInterface*>(ctx)->OnScanResult(result);
         },
     .on_scan_end =
-        [](void* ctx, const wlanif_scan_end_t* end) {
+        [](void* ctx, const wlan_fullmac_scan_end_t* end) {
           static_cast<SimInterface*>(ctx)->OnScanEnd(end);
         },
     .join_conf =
-        [](void* ctx, const wlanif_join_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_join_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnJoinConf(resp);
         },
     .auth_conf =
-        [](void* ctx, const wlanif_auth_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_auth_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnAuthConf(resp);
         },
     .auth_ind =
-        [](void* ctx, const wlanif_auth_ind_t* resp) {
+        [](void* ctx, const wlan_fullmac_auth_ind_t* resp) {
           static_cast<SimInterface*>(ctx)->OnAuthInd(resp);
         },
     .deauth_conf =
-        [](void* ctx, const wlanif_deauth_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_deauth_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnDeauthConf(resp);
         },
     .deauth_ind =
-        [](void* ctx, const wlanif_deauth_indication_t* ind) {
+        [](void* ctx, const wlan_fullmac_deauth_indication_t* ind) {
           static_cast<SimInterface*>(ctx)->OnDeauthInd(ind);
         },
     .assoc_conf =
-        [](void* ctx, const wlanif_assoc_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_assoc_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnAssocConf(resp);
         },
     .assoc_ind =
-        [](void* ctx, const wlanif_assoc_ind_t* ind) {
+        [](void* ctx, const wlan_fullmac_assoc_ind_t* ind) {
           static_cast<SimInterface*>(ctx)->OnAssocInd(ind);
         },
     .disassoc_conf =
-        [](void* ctx, const wlanif_disassoc_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_disassoc_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnDisassocConf(resp);
         },
     .disassoc_ind =
-        [](void* ctx, const wlanif_disassoc_indication_t* ind) {
+        [](void* ctx, const wlan_fullmac_disassoc_indication_t* ind) {
           static_cast<SimInterface*>(ctx)->OnDisassocInd(ind);
         },
     .start_conf =
-        [](void* ctx, const wlanif_start_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_start_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnStartConf(resp);
         },
     .stop_conf =
-        [](void* ctx, const wlanif_stop_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_stop_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnStopConf(resp);
         },
     .eapol_conf =
-        [](void* ctx, const wlanif_eapol_confirm_t* resp) {
+        [](void* ctx, const wlan_fullmac_eapol_confirm_t* resp) {
           static_cast<SimInterface*>(ctx)->OnEapolConf(resp);
         },
     .on_channel_switch =
-        [](void* ctx, const wlanif_channel_switch_info_t* ind) {
+        [](void* ctx, const wlan_fullmac_channel_switch_info_t* ind) {
           static_cast<SimInterface*>(ctx)->OnChannelSwitch(ind);
         },
     .signal_report =
-        [](void* ctx, const wlanif_signal_report_indication_t* ind) {
+        [](void* ctx, const wlan_fullmac_signal_report_indication_t* ind) {
           static_cast<SimInterface*>(ctx)->OnSignalReport(ind);
         },
     .eapol_ind =
-        [](void* ctx, const wlanif_eapol_indication_t* ind) {
+        [](void* ctx, const wlan_fullmac_eapol_indication_t* ind) {
           static_cast<SimInterface*>(ctx)->OnEapolInd(ind);
         },
     .stats_query_resp =
-        [](void* ctx, const wlanif_stats_query_response_t* resp) {
+        [](void* ctx, const wlan_fullmac_stats_query_response_t* resp) {
           static_cast<SimInterface*>(ctx)->OnStatsQueryResp(resp);
         },
     .relay_captured_frame =
-        [](void* ctx, const wlanif_captured_frame_result_t* result) {
+        [](void* ctx, const wlan_fullmac_captured_frame_result_t* result) {
           static_cast<SimInterface*>(ctx)->OnRelayCapturedFrame(result);
         },
     .data_recv =
@@ -112,7 +112,7 @@ zx_status_t SimInterface::Init(std::shared_ptr<simulation::Environment> env,
   return result;
 }
 
-void SimInterface::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
+void SimInterface::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kAssociating);
 
   stats_.assoc_results.push_back(*resp);
@@ -125,17 +125,17 @@ void SimInterface::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   }
 }
 
-void SimInterface::OnAssocInd(const wlanif_assoc_ind_t* ind) {
+void SimInterface::OnAssocInd(const wlan_fullmac_assoc_ind_t* ind) {
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
   stats_.assoc_indications.push_back(*ind);
 }
 
-void SimInterface::OnAuthInd(const wlanif_auth_ind_t* resp) {
+void SimInterface::OnAuthInd(const wlan_fullmac_auth_ind_t* resp) {
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
   stats_.auth_indications.push_back(*resp);
 }
 
-void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+void SimInterface::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
   ZX_ASSERT(if_impl_ops_);
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kAuthenticating);
   ZX_ASSERT(!memcmp(assoc_ctx_.bssid.byte, resp->peer_sta_address, ETH_ALEN));
@@ -153,28 +153,28 @@ void SimInterface::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   assoc_ctx_.state = AssocContext::kAssociating;
 
   //  Send assoc request
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, assoc_ctx_.bssid.byte, ETH_ALEN);
   if_impl_ops_->assoc_req(if_impl_ctx_, &assoc_req);
 }
 
-void SimInterface::OnChannelSwitch(const wlanif_channel_switch_info_t* ind) {
+void SimInterface::OnChannelSwitch(const wlan_fullmac_channel_switch_info_t* ind) {
   stats_.csa_indications.push_back(*ind);
 }
 
-void SimInterface::OnDeauthConf(const wlanif_deauth_confirm_t* resp) {
+void SimInterface::OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {
   stats_.deauth_results.push_back(*resp);
 }
 
-void SimInterface::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+void SimInterface::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   stats_.deauth_indications.push_back(*ind);
 }
 
-void SimInterface::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
+void SimInterface::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
   stats_.disassoc_indications.push_back(*ind);
 }
 
-void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
+void SimInterface::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
   ZX_ASSERT(if_impl_ops_);
   ZX_ASSERT(assoc_ctx_.state == AssocContext::kJoining);
 
@@ -188,14 +188,14 @@ void SimInterface::OnJoinConf(const wlanif_join_confirm_t* resp) {
   assoc_ctx_.state = AssocContext::kAuthenticating;
 
   // Send auth request
-  wlanif_auth_req_t auth_req;
+  wlan_fullmac_auth_req_t auth_req;
   std::memcpy(auth_req.peer_sta_address, assoc_ctx_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
   if_impl_ops_->auth_req(if_impl_ctx_, &auth_req);
 }
 
-void SimInterface::OnScanEnd(const wlanif_scan_end_t* end) {
+void SimInterface::OnScanEnd(const wlan_fullmac_scan_end_t* end) {
   auto results = scan_results_.find(end->txn_id);
 
   // Verify that we started a scan on this interface
@@ -207,9 +207,9 @@ void SimInterface::OnScanEnd(const wlanif_scan_end_t* end) {
   results->second.result_code = end->code;
 }
 
-void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
+void SimInterface::OnScanResult(const wlan_fullmac_scan_result_t* result) {
   // Reassign to remove the const qualifier so we can change the BSS's IEs pointer later
-  wlanif_scan_result_t copy = *result;
+  wlan_fullmac_scan_result_t copy = *result;
   auto results = scan_results_.find(copy.txn_id);
 
   // Verify that we started a scan on this interface
@@ -225,23 +225,23 @@ void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
   results->second.result_list.push_back(copy);
 }
 
-void SimInterface::OnStartConf(const wlanif_start_confirm_t* resp) {
+void SimInterface::OnStartConf(const wlan_fullmac_start_confirm_t* resp) {
   stats_.start_confirmations.push_back(*resp);
 }
 
-void SimInterface::OnStopConf(const wlanif_stop_confirm_t* resp) {
+void SimInterface::OnStopConf(const wlan_fullmac_stop_confirm_t* resp) {
   stats_.stop_confirmations.push_back(*resp);
 }
 
 void SimInterface::StopInterface() { if_impl_ops_->stop(if_impl_ctx_); }
 
-void SimInterface::Query(wlanif_query_info_t* out_info) {
+void SimInterface::Query(wlan_fullmac_query_info_t* out_info) {
   ZX_ASSERT(if_impl_ops_);
   if_impl_ops_->query(if_impl_ctx_, out_info);
 }
 
 void SimInterface::GetMacAddr(common::MacAddr* out_macaddr) {
-  wlanif_query_info_t info;
+  wlan_fullmac_query_info_t info;
   Query(&info);
   memcpy(out_macaddr->byte, info.sta_addr, ETH_ALEN);
 }
@@ -265,7 +265,7 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const cssid_t& ssid,
   assoc_ctx_.channel = channel;
 
   // Send join request
-  wlanif_join_req join_req = {};
+  wlan_fullmac_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, bssid.byte, ETH_ALEN);
   join_req.selected_bss.ies_list = assoc_ctx_.ies.data();
   join_req.selected_bss.ies_count = assoc_ctx_.ies.size();
@@ -295,7 +295,7 @@ void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, reason_code_
   // This should only be performed on a Client interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_CLIENT);
 
-  wlanif_deauth_req_t deauth_req = {.reason_code = reason};
+  wlan_fullmac_deauth_req_t deauth_req = {.reason_code = reason};
   memcpy(deauth_req.peer_sta_address, bssid.byte, ETH_ALEN);
 
   if_impl_ops_->deauth_req(if_impl_ctx_, &deauth_req);
@@ -309,7 +309,7 @@ void SimInterface::StartScan(uint64_t txn_id, bool active,
   const std::vector<uint8_t> channels =
       channels_arg.has_value() ? channels_arg.value() : kDefaultScanChannels;
 
-  wlanif_scan_req_t req = {
+  wlan_fullmac_scan_req_t req = {
       .txn_id = txn_id,
       .scan_type = scan_type,
       .channels_list = channels.data(),
@@ -337,7 +337,7 @@ std::optional<wlan_scan_result_t> SimInterface::ScanResultCode(uint64_t txn_id) 
   return results->second.result_code;
 }
 
-const std::list<wlanif_scan_result_t>* SimInterface::ScanResultList(uint64_t txn_id) {
+const std::list<wlan_fullmac_scan_result_t>* SimInterface::ScanResultList(uint64_t txn_id) {
   auto results = scan_results_.find(txn_id);
 
   // Verify that we started a scan on this interface
@@ -352,7 +352,7 @@ void SimInterface::StartSoftAp(const cssid_t& ssid, const wlan_channel_t& channe
   // This should only be performed on an AP interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
 
-  wlanif_start_req_t start_req = {
+  wlan_fullmac_start_req_t start_req = {
       .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .beacon_period = beacon_period,
       .dtim_period = dtim_period,
@@ -380,7 +380,7 @@ void SimInterface::StopSoftAp() {
   // This should only be performed on an AP interface
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
 
-  wlanif_stop_req_t stop_req;
+  wlan_fullmac_stop_req_t stop_req;
 
   ZX_ASSERT(sizeof(stop_req.ssid.data) == wlan_ieee80211::MAX_SSID_BYTE_LEN);
   // Use the ssid from the last call to StartSoftAp
@@ -441,9 +441,10 @@ zx_status_t SimTest::Init() {
   return status;
 }
 
-zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim_ifc,
-                                    std::optional<const wlanif_impl_ifc_protocol*> sme_protocol,
-                                    std::optional<common::MacAddr> mac_addr) {
+zx_status_t SimTest::StartInterface(
+    wlan_info_mac_role_t role, SimInterface* sim_ifc,
+    std::optional<const wlan_fullmac_impl_ifc_protocol*> sme_protocol,
+    std::optional<common::MacAddr> mac_addr) {
   zx_status_t status;
   if ((status = sim_ifc->Init(env_, role)) != ZX_OK) {
     return status;
@@ -466,14 +467,15 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  // This should have created a WLANIF_IMPL device
-  auto device = dev_mgr_->FindLatestByProtocolId(ZX_PROTOCOL_WLANIF_IMPL);
+  // This should have created a WLAN_FULLMAC_IMPL device
+  auto device = dev_mgr_->FindLatestByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL);
   if (device == nullptr) {
     return ZX_ERR_INTERNAL;
   }
 
   sim_ifc->if_impl_ctx_ = device->DevArgs().ctx;
-  sim_ifc->if_impl_ops_ = static_cast<wlanif_impl_protocol_ops_t*>(device->DevArgs().proto_ops);
+  sim_ifc->if_impl_ops_ =
+      static_cast<wlan_fullmac_impl_protocol_ops_t*>(device->DevArgs().proto_ops);
 
   zx_handle_t sme_ch;
   if (!sme_protocol) {

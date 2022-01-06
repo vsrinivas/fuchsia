@@ -38,94 +38,94 @@ constexpr zx_protocol_device_t kWlanInterfaceDeviceOps = {
     .release = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->DdkRelease(); },
 };
 
-wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
+wlan_fullmac_impl_protocol_ops_t wlan_interface_proto_ops = {
     .start =
-        [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
+        [](void* ctx, const wlan_fullmac_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
           return static_cast<WlanInterface*>(ctx)->Start(ifc, out_mlme_channel);
         },
     .stop = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->Stop(); },
     .query =
-        [](void* ctx, wlanif_query_info_t* info) {
+        [](void* ctx, wlan_fullmac_query_info_t* info) {
           return static_cast<WlanInterface*>(ctx)->Query(info);
         },
     .start_scan =
-        [](void* ctx, const wlanif_scan_req_t* req) {
+        [](void* ctx, const wlan_fullmac_scan_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->StartScan(req);
         },
     .join_req =
-        [](void* ctx, const wlanif_join_req_t* req) {
+        [](void* ctx, const wlan_fullmac_join_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->JoinReq(req);
         },
     .auth_req =
-        [](void* ctx, const wlanif_auth_req_t* req) {
+        [](void* ctx, const wlan_fullmac_auth_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->AuthReq(req);
         },
     .auth_resp =
-        [](void* ctx, const wlanif_auth_resp_t* resp) {
+        [](void* ctx, const wlan_fullmac_auth_resp_t* resp) {
           return static_cast<WlanInterface*>(ctx)->AuthResp(resp);
         },
     .deauth_req =
-        [](void* ctx, const wlanif_deauth_req_t* req) {
+        [](void* ctx, const wlan_fullmac_deauth_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->DeauthReq(req);
         },
     .assoc_req =
-        [](void* ctx, const wlanif_assoc_req_t* req) {
+        [](void* ctx, const wlan_fullmac_assoc_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->AssocReq(req);
         },
     .assoc_resp =
-        [](void* ctx, const wlanif_assoc_resp_t* resp) {
+        [](void* ctx, const wlan_fullmac_assoc_resp_t* resp) {
           return static_cast<WlanInterface*>(ctx)->AssocResp(resp);
         },
     .disassoc_req =
-        [](void* ctx, const wlanif_disassoc_req_t* req) {
+        [](void* ctx, const wlan_fullmac_disassoc_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->DisassocReq(req);
         },
     .reset_req =
-        [](void* ctx, const wlanif_reset_req_t* req) {
+        [](void* ctx, const wlan_fullmac_reset_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->ResetReq(req);
         },
     .start_req =
-        [](void* ctx, const wlanif_start_req_t* req) {
+        [](void* ctx, const wlan_fullmac_start_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->StartReq(req);
         },
     .stop_req =
-        [](void* ctx, const wlanif_stop_req_t* req) {
+        [](void* ctx, const wlan_fullmac_stop_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->StopReq(req);
         },
     .set_keys_req =
-        [](void* ctx, const wlanif_set_keys_req* req, wlanif_set_keys_resp* resp) {
+        [](void* ctx, const wlan_fullmac_set_keys_req* req, wlan_fullmac_set_keys_resp* resp) {
           return static_cast<WlanInterface*>(ctx)->SetKeysReq(req, resp);
         },
     .del_keys_req =
-        [](void* ctx, const wlanif_del_keys_req* req) {
+        [](void* ctx, const wlan_fullmac_del_keys_req* req) {
           return static_cast<WlanInterface*>(ctx)->DelKeysReq(req);
         },
     .eapol_req =
-        [](void* ctx, const wlanif_eapol_req_t* req) {
+        [](void* ctx, const wlan_fullmac_eapol_req_t* req) {
           return static_cast<WlanInterface*>(ctx)->EapolReq(req);
         },
     .stats_query_req = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->StatsQueryReq(); },
     .get_iface_counter_stats =
-        [](void* ctx, wlanif_iface_counter_stats_t* out_stats) {
+        [](void* ctx, wlan_fullmac_iface_counter_stats_t* out_stats) {
           return static_cast<WlanInterface*>(ctx)->GetIfaceCounterStats(out_stats);
         },
     .get_iface_histogram_stats =
-        [](void* ctx, wlanif_iface_histogram_stats_t* out_stats) {
+        [](void* ctx, wlan_fullmac_iface_histogram_stats_t* out_stats) {
           return static_cast<WlanInterface*>(ctx)->GetIfaceHistogramStats(out_stats);
         },
     .start_capture_frames =
-        [](void* ctx, const wlanif_start_capture_frames_req_t* req,
-           wlanif_start_capture_frames_resp_t* resp) {
+        [](void* ctx, const wlan_fullmac_start_capture_frames_req_t* req,
+           wlan_fullmac_start_capture_frames_resp_t* resp) {
           return static_cast<WlanInterface*>(ctx)->StartCaptureFrames(req, resp);
         },
     .stop_capture_frames =
         [](void* ctx) { return static_cast<WlanInterface*>(ctx)->StopCaptureFrames(); },
     .sae_handshake_resp =
-        [](void* ctx, const wlanif_sae_handshake_resp_t* resp) {
+        [](void* ctx, const wlan_fullmac_sae_handshake_resp_t* resp) {
           return static_cast<WlanInterface*>(ctx)->SaeHandshakeResp(resp);
         },
     .sae_frame_tx =
-        [](void* ctx, const wlanif_sae_frame_t* frame) {
+        [](void* ctx, const wlan_fullmac_sae_frame_t* frame) {
           return static_cast<WlanInterface*>(ctx)->SaeFrameTx(frame);
         },
     .wmm_status_req = [](void* ctx) { return static_cast<WlanInterface*>(ctx)->WmmStatusReq(); },
@@ -163,7 +163,7 @@ zx_status_t WlanInterface::Create(Device* device, const char* name, wireless_dev
       .name = name,
       .ctx = interface.get(),
       .ops = &kWlanInterfaceDeviceOps,
-      .proto_id = ZX_PROTOCOL_WLANIF_IMPL,
+      .proto_id = ZX_PROTOCOL_WLAN_FULLMAC_IMPL,
       .proto_ops = &wlan_interface_proto_ops,
   };
   if (device->DeviceAdd(&device_args, &interface->zx_device_) != ZX_OK) {
@@ -243,7 +243,7 @@ zx_status_t WlanInterface::GetCountry(brcmf_pub* drvr, wlanphy_country_t* out_co
 
 zx_status_t WlanInterface::ClearCountry(brcmf_pub* drvr) { return brcmf_clear_country(drvr); }
 
-zx_status_t WlanInterface::Start(const wlanif_impl_ifc_protocol_t* ifc,
+zx_status_t WlanInterface::Start(const wlan_fullmac_impl_ifc_protocol_t* ifc,
                                  zx_handle_t* out_mlme_channel) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ == nullptr) {
@@ -259,105 +259,106 @@ void WlanInterface::Stop() {
   }
 }
 
-void WlanInterface::Query(wlanif_query_info_t* info) {
+void WlanInterface::Query(wlan_fullmac_query_info_t* info) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_query(wdev_->netdev, info);
   }
 }
 
-void WlanInterface::StartScan(const wlanif_scan_req_t* req) {
+void WlanInterface::StartScan(const wlan_fullmac_scan_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_start_scan(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::JoinReq(const wlanif_join_req_t* req) {
+void WlanInterface::JoinReq(const wlan_fullmac_join_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_join_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::AuthReq(const wlanif_auth_req_t* req) {
+void WlanInterface::AuthReq(const wlan_fullmac_auth_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_auth_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::AuthResp(const wlanif_auth_resp_t* resp) {
+void WlanInterface::AuthResp(const wlan_fullmac_auth_resp_t* resp) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_auth_resp(wdev_->netdev, resp);
   }
 }
 
-void WlanInterface::DeauthReq(const wlanif_deauth_req_t* req) {
+void WlanInterface::DeauthReq(const wlan_fullmac_deauth_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_deauth_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::AssocReq(const wlanif_assoc_req_t* req) {
+void WlanInterface::AssocReq(const wlan_fullmac_assoc_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_assoc_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::AssocResp(const wlanif_assoc_resp_t* resp) {
+void WlanInterface::AssocResp(const wlan_fullmac_assoc_resp_t* resp) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_assoc_resp(wdev_->netdev, resp);
   }
 }
 
-void WlanInterface::DisassocReq(const wlanif_disassoc_req_t* req) {
+void WlanInterface::DisassocReq(const wlan_fullmac_disassoc_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_disassoc_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::ResetReq(const wlanif_reset_req_t* req) {
+void WlanInterface::ResetReq(const wlan_fullmac_reset_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_reset_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::StartReq(const wlanif_start_req_t* req) {
+void WlanInterface::StartReq(const wlan_fullmac_start_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_start_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::StopReq(const wlanif_stop_req_t* req) {
+void WlanInterface::StopReq(const wlan_fullmac_stop_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_stop_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::SetKeysReq(const wlanif_set_keys_req_t* req, wlanif_set_keys_resp_t* resp) {
+void WlanInterface::SetKeysReq(const wlan_fullmac_set_keys_req_t* req,
+                               wlan_fullmac_set_keys_resp_t* resp) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_set_keys_req(wdev_->netdev, req, resp);
   }
 }
 
-void WlanInterface::DelKeysReq(const wlanif_del_keys_req_t* req) {
+void WlanInterface::DelKeysReq(const wlan_fullmac_del_keys_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_del_keys_req(wdev_->netdev, req);
   }
 }
 
-void WlanInterface::EapolReq(const wlanif_eapol_req_t* req) {
+void WlanInterface::EapolReq(const wlan_fullmac_eapol_req_t* req) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_eapol_req(wdev_->netdev, req);
@@ -371,7 +372,7 @@ void WlanInterface::StatsQueryReq() {
   }
 }
 
-zx_status_t WlanInterface::GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats) {
+zx_status_t WlanInterface::GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ == nullptr) {
     return ZX_ERR_BAD_STATE;
@@ -379,7 +380,7 @@ zx_status_t WlanInterface::GetIfaceCounterStats(wlanif_iface_counter_stats_t* ou
   return brcmf_if_get_iface_counter_stats(wdev_->netdev, out_stats);
 }
 
-zx_status_t WlanInterface::GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats) {
+zx_status_t WlanInterface::GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ == nullptr) {
     return ZX_ERR_BAD_STATE;
@@ -387,8 +388,8 @@ zx_status_t WlanInterface::GetIfaceHistogramStats(wlanif_iface_histogram_stats_t
   return brcmf_if_get_iface_histogram_stats(wdev_->netdev, out_stats);
 }
 
-void WlanInterface::StartCaptureFrames(const wlanif_start_capture_frames_req_t* req,
-                                       wlanif_start_capture_frames_resp_t* resp) {
+void WlanInterface::StartCaptureFrames(const wlan_fullmac_start_capture_frames_req_t* req,
+                                       wlan_fullmac_start_capture_frames_resp_t* resp) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
     brcmf_if_start_capture_frames(wdev_->netdev, req, resp);
@@ -421,11 +422,11 @@ void WlanInterface::DataQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
   }
 }
 
-void WlanInterface::SaeHandshakeResp(const wlanif_sae_handshake_resp_t* resp) {
+void WlanInterface::SaeHandshakeResp(const wlan_fullmac_sae_handshake_resp_t* resp) {
   brcmf_if_sae_handshake_resp(wdev_->netdev, resp);
 }
 
-void WlanInterface::SaeFrameTx(const wlanif_sae_frame_t* frame) {
+void WlanInterface::SaeFrameTx(const wlan_fullmac_sae_frame_t* frame) {
   brcmf_if_sae_frame_tx(wdev_->netdev, frame);
 }
 

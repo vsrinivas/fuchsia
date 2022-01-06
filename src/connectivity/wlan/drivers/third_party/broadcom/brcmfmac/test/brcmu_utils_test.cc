@@ -54,7 +54,7 @@ TEST(BrcmuUtils, SetRxRateHistogram) {
          {186, 187, 188, 189, 190, 191, 192, 193, 194, 195}}}};
 
   // The above data rates flattened into a single histogram.
-  uint32_t expected_rx_rate[WLANIF_MAX_RX_RATE_INDEX_SAMPLES] = {
+  uint32_t expected_rx_rate[WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES] = {
       // 802.11b
       0, 1, 2, 3,
       // 802.11g
@@ -94,7 +94,7 @@ TEST(BrcmuUtils, SetRxRateHistogram) {
       // 802.11ac 80Mhz, SGI, 2SS
       186, 187, 188, 189, 190, 191, 192, 193, 194, 195};
 
-  uint32_t rx_rate[WLANIF_MAX_RX_RATE_INDEX_SAMPLES] = {0};
+  uint32_t rx_rate[WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES] = {0};
 
   brcmu_set_rx_rate_index_hist_rx11b(rx11b, rx_rate);
   brcmu_set_rx_rate_index_hist_rx11g(rx11g, rx_rate);

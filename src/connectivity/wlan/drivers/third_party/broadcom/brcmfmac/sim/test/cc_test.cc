@@ -68,7 +68,7 @@ TEST_F(CountryCodeTest, SetDefault) {
   Init();
   CreateInterface();
   DeleteInterface();
-  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
 }
 
 TEST_F(CountryCodeTest, SetCCode) {
@@ -80,7 +80,7 @@ TEST_F(CountryCodeTest, SetCCode) {
 
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
 
   // Get the country code and verify that it is set to WW.
   GetCountryCodeFromFirmware(&country_code);
@@ -135,7 +135,7 @@ TEST_F(CountryCodeTest, ClearCCode) {
 
   Init();
   CreateInterface();
-  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
   status = ClearCountryCode();
   ASSERT_EQ(status, ZX_OK);
   GetCountryCodeFromFirmware(&country_code);

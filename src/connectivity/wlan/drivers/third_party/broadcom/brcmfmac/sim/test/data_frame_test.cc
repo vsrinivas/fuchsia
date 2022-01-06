@@ -200,66 +200,66 @@ class DataFrameTest : public SimTest {
           std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
+  static wlan_fullmac_impl_ifc_protocol_ops_t sme_ops_;
+  wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
   // Event handlers
-  void OnJoinConf(const wlanif_join_confirm_t* resp);
-  void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  void OnDeauthInd(const wlanif_deauth_indication_t* ind);
-  void OnAssocConf(const wlanif_assoc_confirm_t* resp);
-  void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
-  void OnEapolConf(const wlanif_eapol_confirm_t* resp);
-  void OnSignalReport(const wlanif_signal_report_indication* ind);
-  void OnEapolInd(const wlanif_eapol_indication_t* ind);
+  void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
+  void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
+  void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
+  void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
+  void OnEapolConf(const wlan_fullmac_eapol_confirm_t* resp);
+  void OnSignalReport(const wlan_fullmac_signal_report_indication* ind);
+  void OnEapolInd(const wlan_fullmac_eapol_indication_t* ind);
   void OnDataRecv(const void* data_buffer, size_t data_size);
   static void TxComplete(void* ctx, zx_status_t status, ethernet_netbuf_t* netbuf);
 };
 
-// Since we're acting as wlanif, we need handlers for any protocol calls we may receive
-wlanif_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
+// Since we're acting as wlan_fullmac, we need handlers for any protocol calls we may receive
+wlan_fullmac_impl_ifc_protocol_ops_t DataFrameTest::sme_ops_ = {
     .on_scan_result =
-        [](void* cookie, const wlanif_scan_result_t* result) {
+        [](void* cookie, const wlan_fullmac_scan_result_t* result) {
           // Ignore
         },
     .on_scan_end =
-        [](void* cookie, const wlanif_scan_end_t* end) {
+        [](void* cookie, const wlan_fullmac_scan_end_t* end) {
           // Ignore
         },
     .join_conf =
-        [](void* cookie, const wlanif_join_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
           static_cast<DataFrameTest*>(cookie)->OnJoinConf(resp);
         },
     .auth_conf =
-        [](void* cookie, const wlanif_auth_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
           static_cast<DataFrameTest*>(cookie)->OnAuthConf(resp);
         },
     .deauth_ind =
-        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           static_cast<DataFrameTest*>(cookie)->OnDeauthInd(ind);
         },
     .assoc_conf =
-        [](void* cookie, const wlanif_assoc_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
           static_cast<DataFrameTest*>(cookie)->OnAssocConf(resp);
         },
     .disassoc_conf =
-        [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_disassoc_confirm_t* resp) {
           // Ignore
         },
     .disassoc_ind =
-        [](void* cookie, const wlanif_disassoc_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_disassoc_indication_t* ind) {
           static_cast<DataFrameTest*>(cookie)->OnDisassocInd(ind);
         },
     .eapol_conf =
-        [](void* cookie, const wlanif_eapol_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_eapol_confirm_t* resp) {
           static_cast<DataFrameTest*>(cookie)->OnEapolConf(resp);
         },
     .signal_report =
-        [](void* cookie, const wlanif_signal_report_indication* ind) {
+        [](void* cookie, const wlan_fullmac_signal_report_indication* ind) {
           static_cast<DataFrameTest*>(cookie)->OnSignalReport(ind);
         },
     .eapol_ind =
-        [](void* cookie, const wlanif_eapol_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_eapol_indication_t* ind) {
           static_cast<DataFrameTest*>(cookie)->OnEapolInd(ind);
         },
     .data_recv =
@@ -308,23 +308,23 @@ std::vector<uint8_t> DataFrameTest::CreateEthernetFrame(common::MacAddr dstAddr,
   return ethFrame;
 }
 
-void DataFrameTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
+void DataFrameTest::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
   // Send auth request
-  wlanif_auth_req_t auth_req;
+  wlan_fullmac_auth_req_t auth_req;
   std::memcpy(auth_req.peer_sta_address, assoc_context_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
   client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
-void DataFrameTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+void DataFrameTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
   // Send assoc request
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, assoc_context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
-void DataFrameTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+void DataFrameTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   if (!testing_rx_freeze_deauth_) {
     // This function is only used for rx freeze deauth testing now.
     return;
@@ -335,17 +335,17 @@ void DataFrameTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   env_->ScheduleNotification(std::bind(&DataFrameTest::StartAssoc, this), zx::msec(200));
 }
 
-void DataFrameTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
+void DataFrameTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
   assoc_context_.assoc_resp_count++;
   EXPECT_EQ(resp->result_code, assoc_context_.expected_results.front());
   assoc_context_.expected_results.pop_front();
 }
 
-void DataFrameTest::OnEapolConf(const wlanif_eapol_confirm_t* resp) {
+void DataFrameTest::OnEapolConf(const wlan_fullmac_eapol_confirm_t* resp) {
   data_context_.tx_eapol_conf_codes.push_back(resp->result_code);
 }
 
-void DataFrameTest::OnEapolInd(const wlanif_eapol_indication_t* ind) {
+void DataFrameTest::OnEapolInd(const wlan_fullmac_eapol_indication_t* ind) {
   std::vector<uint8_t> resp;
   resp.resize(ind->data_count);
   std::memcpy(resp.data(), ind->data_list, ind->data_count);
@@ -357,7 +357,7 @@ void DataFrameTest::OnEapolInd(const wlanif_eapol_indication_t* ind) {
   eapol_ind_count++;
 }
 
-void DataFrameTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
+void DataFrameTest::OnSignalReport(const wlan_fullmac_signal_report_indication* ind) {
   if (!testing_rx_freeze_deauth_) {
     // This function is only used for rx freeze deauth testing now.
     return;
@@ -367,7 +367,7 @@ void DataFrameTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
   env_->ScheduleNotification(std::bind(&DataFrameTest::Tx, this, frame), zx::msec(200));
 }
 
-void DataFrameTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {}
+void DataFrameTest::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {}
 
 void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
   std::vector<uint8_t> resp;
@@ -379,7 +379,7 @@ void DataFrameTest::OnDataRecv(const void* data_buffer, size_t data_size) {
 
 void DataFrameTest::StartAssoc() {
   // Send join request
-  wlanif_join_req join_req = {};
+  wlan_fullmac_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, assoc_context_.bssid.byte, ETH_ALEN);
   join_req.selected_bss.ies_list = assoc_context_.ies.data();
   join_req.selected_bss.ies_count = assoc_context_.ies.size();
@@ -418,7 +418,7 @@ void DataFrameTest::Tx(std::vector<uint8_t>& ethFrame) {
 
 void DataFrameTest::TxEapolRequest(common::MacAddr dstAddr, common::MacAddr srcAddr,
                                    const std::vector<uint8_t>& eapol) {
-  wlanif_eapol_req eapol_req = {};
+  wlan_fullmac_eapol_req eapol_req = {};
   memcpy(eapol_req.dst_addr, dstAddr.byte, ETH_ALEN);
   memcpy(eapol_req.src_addr, srcAddr.byte, ETH_ALEN);
   eapol_req.data_list = eapol.data();

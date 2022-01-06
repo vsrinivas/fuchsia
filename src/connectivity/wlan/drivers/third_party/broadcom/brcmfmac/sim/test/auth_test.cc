@@ -118,7 +118,7 @@ class AuthTest : public SimTest {
   struct brcmf_wsec_key_le wsec_key_;
   SecurityType sec_type_;
   SaeAuthState sae_auth_state_ = COMMIT;
-  wlanif_sae_frame_t* sae_commit_frame = nullptr;
+  wlan_fullmac_sae_frame_t* sae_commit_frame = nullptr;
   bool sae_ignore_confirm = false;
 
   size_t auth_frame_count_ = 0;
@@ -137,18 +137,18 @@ class AuthTest : public SimTest {
           std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
+  static wlan_fullmac_impl_ifc_protocol_ops_t sme_ops_;
+  wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
-  wlanif_set_keys_req CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN], const size_t key_count,
-                                   const uint32_t cipher_suite);
+  wlan_fullmac_set_keys_req CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
+                                         const size_t key_count, const uint32_t cipher_suite);
   // Event handlers
-  void OnScanResult(const wlanif_scan_result_t* result);
-  void OnJoinConf(const wlanif_join_confirm_t* resp);
-  void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  void OnAssocConf(const wlanif_assoc_confirm_t* resp);
-  void OnSaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind);
-  void OnSaeFrameRx(const wlanif_sae_frame_t* frame);
+  void OnScanResult(const wlan_fullmac_scan_result_t* result);
+  void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
+  void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
+  void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  void OnSaeHandshakeInd(const wlan_fullmac_sae_handshake_ind_t* ind);
+  void OnSaeFrameRx(const wlan_fullmac_sae_frame_t* frame);
 };
 
 void AuthTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
@@ -164,42 +164,42 @@ void AuthTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
   rx_auth_frames_.emplace_back(auth_frame->seq_num_, auth_frame->auth_type_, auth_frame->status_);
 }
 
-wlanif_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
+wlan_fullmac_impl_ifc_protocol_ops_t AuthTest::sme_ops_ = {
     .on_scan_result =
-        [](void* cookie, const wlanif_scan_result_t* result) {
+        [](void* cookie, const wlan_fullmac_scan_result_t* result) {
           static_cast<AuthTest*>(cookie)->OnScanResult(result);
         },
     .on_scan_end =
-        [](void* cookie, const wlanif_scan_end_t* end) {
+        [](void* cookie, const wlan_fullmac_scan_end_t* end) {
           // Ignore
         },
     .join_conf =
-        [](void* cookie, const wlanif_join_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnJoinConf(resp);
         },
     .auth_conf =
-        [](void* cookie, const wlanif_auth_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnAuthConf(resp);
         },
     .deauth_ind =
-        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           // Ignore
         },
     .assoc_conf =
-        [](void* cookie, const wlanif_assoc_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
           static_cast<AuthTest*>(cookie)->OnAssocConf(resp);
         },
     .disassoc_conf =
-        [](void* cookie, const wlanif_disassoc_confirm_t* ind) {
+        [](void* cookie, const wlan_fullmac_disassoc_confirm_t* ind) {
           // Ignore
         },
-    .signal_report = [](void* cookie, const wlanif_signal_report_indication* ind) {},
+    .signal_report = [](void* cookie, const wlan_fullmac_signal_report_indication* ind) {},
     .sae_handshake_ind =
-        [](void* cookie, const wlanif_sae_handshake_ind_t* ind) {
+        [](void* cookie, const wlan_fullmac_sae_handshake_ind_t* ind) {
           static_cast<AuthTest*>(cookie)->OnSaeHandshakeInd(ind);
         },
     .sae_frame_rx =
-        [](void* cookie, const wlanif_sae_frame_t* frame) {
+        [](void* cookie, const wlan_fullmac_sae_frame_t* frame) {
           static_cast<AuthTest*>(cookie)->OnSaeFrameRx(frame);
         },
 };
@@ -231,22 +231,23 @@ void AuthTest::SecErrorInject() {
   sim->sim_fw->err_inj_.AddErrInjIovar("wsec", ZX_ERR_IO, BCME_OK, client_ifc_.iface_id_);
 }
 
-wlanif_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
-                                           const size_t key_count, const uint32_t cipher_suite) {
+wlan_fullmac_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
+                                                 const size_t key_count,
+                                                 const uint32_t cipher_suite) {
   set_key_descriptor key_des = {.key_list = key};
   key_des.key_count = key_count;
   key_des.key_id = kDefaultKeyIndex;
   memcpy(key_des.address, kDefaultBssid.byte, ETH_ALEN);
   key_des.cipher_suite_type = cipher_suite;
 
-  wlanif_set_keys_req set_keys_req = {};
+  wlan_fullmac_set_keys_req set_keys_req = {};
   set_keys_req.num_keys = 1;
   set_keys_req.keylist[0] = key_des;
   return set_keys_req;
 }
 
 void AuthTest::StartAuth() {
-  wlanif_join_req join_req = {};
+  wlan_fullmac_join_req join_req = {};
   memcpy(join_req.selected_bss.bssid, kDefaultBssid.byte, ETH_ALEN);
   join_req.selected_bss.ies_list = kIes;
   join_req.selected_bss.ies_count = sizeof(kIes);
@@ -254,11 +255,11 @@ void AuthTest::StartAuth() {
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
-void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
+void AuthTest::OnScanResult(const wlan_fullmac_scan_result_t* result) {
   EXPECT_EQ(result->bss.capability_info, (uint16_t)32);
 }
 
-void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
+void AuthTest::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
   join_status_ = resp->result_code;
   if (join_status_ != STATUS_CODE_SUCCESS) {
     return;
@@ -277,15 +278,15 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   EXPECT_EQ(wpa_auth_, (uint32_t)0);
 
   // Prepare auth request
-  wlanif_auth_req_t auth_req;
+  wlan_fullmac_auth_req_t auth_req;
   std::memcpy(auth_req.peer_sta_address, kDefaultBssid.byte, ETH_ALEN);
   auth_req.auth_failure_timeout = 1000;
 
   switch (sec_type_) {
     case SEC_TYPE_WEP_SHARED104: {
-      wlanif_set_keys_req set_keys_req =
+      wlan_fullmac_set_keys_req set_keys_req =
           CreateKeyReq(&test_key13[0], kWEP104KeyLen, WPA_CIPHER_WEP_104);
-      wlanif_set_keys_resp set_keys_resp;
+      wlan_fullmac_set_keys_resp set_keys_resp;
       client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
                                              &set_keys_resp);
       EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
@@ -294,9 +295,9 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     }
 
     case SEC_TYPE_WEP_SHARED40: {
-      wlanif_set_keys_req set_keys_req =
+      wlan_fullmac_set_keys_req set_keys_req =
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      wlanif_set_keys_resp set_keys_resp;
+      wlan_fullmac_set_keys_resp set_keys_resp;
       client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
                                              &set_keys_resp);
       EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
@@ -305,9 +306,9 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     }
 
     case SEC_TYPE_WEP_OPEN: {
-      wlanif_set_keys_req set_keys_req =
+      wlan_fullmac_set_keys_req set_keys_req =
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      wlanif_set_keys_resp set_keys_resp;
+      wlan_fullmac_set_keys_resp set_keys_resp;
       client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
                                              &set_keys_resp);
       EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
@@ -331,7 +332,7 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
   client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
-void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+void AuthTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
   auth_status_ = resp->result_code;
   if (auth_status_ != STATUS_CODE_SUCCESS) {
     return;
@@ -397,13 +398,13 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
     default:;
   }
 
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0};
+  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0};
 
   if (sec_type_ == SEC_TYPE_WEP_SHARED104 || sec_type_ == SEC_TYPE_WEP_SHARED40 ||
       sec_type_ == SEC_TYPE_WEP_OPEN) {
     assoc_req.vendor_ie_len = 0;
   } else if (sec_type_ == SEC_TYPE_WPA1) {
-    // construct a fake vendor ie in wlanif_assoc_req.
+    // construct a fake vendor ie in wlan_fullmac_assoc_req.
     uint16_t offset = 0;
     uint8_t* ie = (uint8_t*)assoc_req.vendor_ie;
 
@@ -441,7 +442,7 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
     assoc_req.vendor_ie_len = offset;
     ASSERT_EQ(assoc_req.vendor_ie_len, (const uint32_t)(ie[TLV_LEN_OFF] + TLV_HDR_LEN));
   } else if (sec_type_ == SEC_TYPE_WPA2) {
-    // construct a fake rsne ie in wlanif_assoc_req.
+    // construct a fake rsne ie in wlan_fullmac_assoc_req.
     uint16_t offset = 0;
     uint8_t* ie = (uint8_t*)assoc_req.rsne;
 
@@ -521,7 +522,7 @@ void AuthTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
   client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
-void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
+void AuthTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
   assoc_status_ = resp->result_code;
   if (assoc_status_ != STATUS_CODE_SUCCESS) {
     return;
@@ -554,7 +555,7 @@ void AuthTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   }
 }
 
-void AuthTest::OnSaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
+void AuthTest::OnSaeHandshakeInd(const wlan_fullmac_sae_handshake_ind_t* ind) {
   common::MacAddr peer_sta_addr(ind->peer_sta_address);
   ASSERT_EQ(peer_sta_addr, kDefaultBssid);
 
@@ -564,7 +565,7 @@ void AuthTest::OnSaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
     return;
   }
 
-  wlanif_sae_frame_t frame = {
+  wlan_fullmac_sae_frame_t frame = {
       .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS),
       .seq_num = 1,
       .sae_fields_list = kCommitSaeFields,
@@ -575,7 +576,7 @@ void AuthTest::OnSaeHandshakeInd(const wlanif_sae_handshake_ind_t* ind) {
   client_ifc_.if_impl_ops_->sae_frame_tx(client_ifc_.if_impl_ctx_, &frame);
 }
 
-void AuthTest::OnSaeFrameRx(const wlanif_sae_frame_t* frame) {
+void AuthTest::OnSaeFrameRx(const wlan_fullmac_sae_frame_t* frame) {
   common::MacAddr peer_sta_addr(frame->peer_sta_address);
   ASSERT_EQ(peer_sta_addr, kDefaultBssid);
 
@@ -584,7 +585,7 @@ void AuthTest::OnSaeFrameRx(const wlanif_sae_frame_t* frame) {
     EXPECT_EQ(frame->status_code, static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS));
     EXPECT_EQ(frame->sae_fields_count, kCommitSaeFieldsLen);
     EXPECT_EQ(memcmp(frame->sae_fields_list, kCommitSaeFields, kCommitSaeFieldsLen), 0);
-    wlanif_sae_frame_t next_frame = {
+    wlan_fullmac_sae_frame_t next_frame = {
         .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS),
         .seq_num = 2,
         .sae_fields_list = kConfirmSaeFields,
@@ -603,7 +604,7 @@ void AuthTest::OnSaeFrameRx(const wlanif_sae_frame_t* frame) {
     if (sae_ignore_confirm)
       return;
 
-    wlanif_sae_handshake_resp_t resp = {
+    wlan_fullmac_sae_handshake_resp_t resp = {
         .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS)};
     kDefaultBssid.CopyTo(resp.peer_sta_address);
     client_ifc_.if_impl_ops_->sae_handshake_resp(client_ifc_.if_impl_ctx_, &resp);
@@ -909,7 +910,7 @@ TEST_F(AuthTest, WPA3FailStatusCode) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  wlanif_sae_frame_t frame = {
+  wlan_fullmac_sae_frame_t frame = {
       .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED),
       .seq_num = 1,
       .sae_fields_list = kCommitSaeFields,
@@ -938,7 +939,7 @@ TEST_F(AuthTest, WPA3WrongBssid) {
                    .sec_type = simulation::SEC_PROTO_TYPE_WPA3});
   ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
 
-  wlanif_sae_frame_t frame = {
+  wlan_fullmac_sae_frame_t frame = {
       .status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS),
       .seq_num = 1,
       .sae_fields_list = kCommitSaeFields,

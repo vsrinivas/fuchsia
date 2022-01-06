@@ -41,10 +41,10 @@ const ether_arp kSampleArpReq = {.ea_hdr = {.ar_hrd = htons(ETH_P_802_3),
 const std::vector<uint8_t> kDummyData = {0, 1, 2, 3, 4};
 
 struct GenericIfc : public SimInterface {
-  void OnAssocInd(const wlanif_assoc_ind_t* ind) override;
+  void OnAssocInd(const wlan_fullmac_assoc_ind_t* ind) override;
   void OnDataRecv(const void* frame, size_t frame_size, uint32_t flags) override;
-  void OnStartConf(const wlanif_start_confirm_t* resp) override;
-  void OnStopConf(const wlanif_stop_confirm_t* resp) override;
+  void OnStartConf(const wlan_fullmac_start_confirm_t* resp) override;
+  void OnStopConf(const wlan_fullmac_stop_confirm_t* resp) override;
 
   unsigned int arp_frames_received_ = 0;
   unsigned int non_arp_frames_received_ = 0;
@@ -83,7 +83,7 @@ class ArpTest : public SimTest {
   GenericIfc sim_ifc_;
 };
 
-void GenericIfc::OnAssocInd(const wlanif_assoc_ind_t* ind) {
+void GenericIfc::OnAssocInd(const wlan_fullmac_assoc_ind_t* ind) {
   ASSERT_EQ(std::memcmp(ind->peer_sta_address, kTheirMac.byte, ETH_ALEN), 0);
   assoc_ind_recv_ = true;
 }
@@ -110,11 +110,11 @@ void GenericIfc::OnDataRecv(const void* frame, size_t size, uint32_t flags) {
   EXPECT_EQ(memcmp(arp_hdr, &kSampleArpReq, sizeof(ether_arp)), 0);
 }
 
-void GenericIfc::OnStartConf(const wlanif_start_confirm_t* resp) {
+void GenericIfc::OnStartConf(const wlan_fullmac_start_confirm_t* resp) {
   ASSERT_EQ(resp->result_code, WLAN_START_RESULT_SUCCESS);
 }
 
-void GenericIfc::OnStopConf(const wlanif_stop_confirm_t* resp) {
+void GenericIfc::OnStopConf(const wlan_fullmac_stop_confirm_t* resp) {
   ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
 }
 
@@ -136,7 +136,7 @@ std::vector<uint8_t> ArpTest::CreateEthernetFrame(common::MacAddr dstAddr, commo
 }
 
 zx_status_t ArpTest::SetMulticastPromisc(bool enable) {
-  wlanif_impl_protocol_ops_t* ops = sim_ifc_.if_impl_ops_;
+  wlan_fullmac_impl_protocol_ops_t* ops = sim_ifc_.if_impl_ops_;
   void* ctx = sim_ifc_.if_impl_ctx_;
   return ops->set_multicast_promisc(ctx, enable);
 }

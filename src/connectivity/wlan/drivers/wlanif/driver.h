@@ -8,9 +8,9 @@
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 
-// Callbacks for wlanif_driver_ops
+// Callbacks for wlan_fullmac_driver_ops
 __BEGIN_CDECLS
-zx_status_t wlanif_bind(void* ctx, zx_device_t* device);
+zx_status_t wlan_fullmac_bind(void* ctx, zx_device_t* device);
 __END_CDECLS
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DRIVER_H_

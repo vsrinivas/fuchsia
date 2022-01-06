@@ -67,15 +67,16 @@ uint8_t ConvertCBW(wlan_common::ChannelBandwidth cbw) {
   ZX_ASSERT(0);
 }
 
-void ConvertWlanChan(wlan_channel_t* wlanif_channel, const wlan_common::WlanChannel& fidl_channel) {
+void ConvertWlanChan(wlan_channel_t* wlan_fullmac_channel,
+                     const wlan_common::WlanChannel& fidl_channel) {
   // primary
-  wlanif_channel->primary = fidl_channel.primary;
+  wlan_fullmac_channel->primary = fidl_channel.primary;
 
   // CBW
-  wlanif_channel->cbw = ConvertCBW(fidl_channel.cbw);
+  wlan_fullmac_channel->cbw = ConvertCBW(fidl_channel.cbw);
 
   // secondary80
-  wlanif_channel->secondary80 = fidl_channel.secondary80;
+  wlan_fullmac_channel->secondary80 = fidl_channel.secondary80;
 }
 
 void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
@@ -173,15 +174,16 @@ wlan_common::ChannelBandwidth ConvertCBW(channel_bandwidth_t cbw) {
   }
 }
 
-void ConvertWlanChan(wlan_common::WlanChannel* fidl_channel, const wlan_channel_t& wlanif_channel) {
+void ConvertWlanChan(wlan_common::WlanChannel* fidl_channel,
+                     const wlan_channel_t& wlan_fullmac_channel) {
   // primary
-  fidl_channel->primary = wlanif_channel.primary;
+  fidl_channel->primary = wlan_fullmac_channel.primary;
 
   // CBW
-  fidl_channel->cbw = ConvertCBW(wlanif_channel.cbw);
+  fidl_channel->cbw = ConvertCBW(wlan_fullmac_channel.cbw);
 
   // secondary80
-  fidl_channel->secondary80 = wlanif_channel.secondary80;
+  fidl_channel->secondary80 = wlan_fullmac_channel.secondary80;
 }
 
 void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
@@ -215,7 +217,7 @@ void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
 }
 
 void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,
-                     const wlanif_assoc_ind_t& assoc_ind) {
+                     const wlan_fullmac_assoc_ind_t& assoc_ind) {
   *fidl_ind = {};
   // peer_sta_address
   std::memcpy(fidl_ind->peer_sta_address.data(), assoc_ind.peer_sta_address, ETH_ALEN);
@@ -236,7 +238,7 @@ void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,
 }
 
 void ConvertEapolConf(::fuchsia::wlan::mlme::EapolConfirm* fidl_resp,
-                      const wlanif_eapol_confirm_t& eapol_conf) {
+                      const wlan_fullmac_eapol_confirm_t& eapol_conf) {
   // result_code
   fidl_resp->result_code = ConvertEapolResultCode(eapol_conf.result_code);
 
@@ -501,7 +503,7 @@ wlan_mlme::MacRole ConvertMacRole(wlan_info_mac_role_t role) {
 }
 
 void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
-                             const wlanif_band_capabilities_t& band) {
+                             const wlan_fullmac_band_capabilities_t& band) {
   fidl_band->band_id = ::wlan::common::BandToFidl(band.band_id);
 
   // basic_rates
@@ -526,7 +528,7 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
   }
 }
 
-void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlanif_counter_t& counter) {
+void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlan_fullmac_counter_t& counter) {
   fidl_counter->count = counter.count;
   if (counter.name != nullptr) {
     fidl_counter->name = counter.name;
@@ -536,7 +538,7 @@ void ConvertCounter(wlan_stats::Counter* fidl_counter, const wlanif_counter_t& c
 }
 
 void ConvertPacketCounter(wlan_stats::PacketCounter* fidl_counter,
-                          const wlanif_packet_counter_t& counter) {
+                          const wlan_fullmac_packet_counter_t& counter) {
   ConvertCounter(&fidl_counter->in, counter.in);
   ConvertCounter(&fidl_counter->out, counter.out);
   ConvertCounter(&fidl_counter->drop, counter.drop);
@@ -546,14 +548,14 @@ void ConvertPacketCounter(wlan_stats::PacketCounter* fidl_counter,
 }
 
 void ConvertDispatcherStats(wlan_stats::DispatcherStats* fidl_stats,
-                            const wlanif_dispatcher_stats_t& stats) {
+                            const wlan_fullmac_dispatcher_stats_t& stats) {
   ConvertPacketCounter(&fidl_stats->any_packet, stats.any_packet);
   ConvertPacketCounter(&fidl_stats->mgmt_frame, stats.mgmt_frame);
   ConvertPacketCounter(&fidl_stats->ctrl_frame, stats.ctrl_frame);
   ConvertPacketCounter(&fidl_stats->data_frame, stats.data_frame);
 }
 
-void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlanif_rssi_stats& stats) {
+void ConvertRssiStats(wlan_stats::RssiStats* fidl_stats, const wlan_fullmac_rssi_stats& stats) {
   fidl_stats->hist.assign(stats.hist_list, stats.hist_list + stats.hist_count);
 }
 
@@ -561,9 +563,9 @@ namespace {
 
 // Convert a Banjo antenna ID to a FIDL antenna ID (in a unique_ptr).
 std::unique_ptr<wlan_stats::AntennaId> ConvertAntennaId(
-    const wlanif_antenna_id_t& impl_antenna_id) {
+    const wlan_fullmac_antenna_id_t& impl_antenna_id) {
   auto fidl_antenna_id = std::make_unique<wlan_stats::AntennaId>();
-  if (impl_antenna_id.freq == WLANIF_ANTENNA_FREQ_ANTENNA_5_G) {
+  if (impl_antenna_id.freq == WLAN_FULLMAC_ANTENNA_FREQ_ANTENNA_5_G) {
     fidl_antenna_id->freq = wlan_stats::AntennaFreq::ANTENNA_5_G;
   } else {
     fidl_antenna_id->freq = wlan_stats::AntennaFreq::ANTENNA_2_G;
@@ -575,8 +577,8 @@ std::unique_ptr<wlan_stats::AntennaId> ConvertAntennaId(
 }  // namespace
 
 void ConvertNoiseFloorHistogram(wlan_stats::NoiseFloorHistogram* fidl_stats,
-                                const wlanif_noise_floor_histogram_t& stats) {
-  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+                                const wlan_fullmac_noise_floor_histogram_t& stats) {
+  if (stats.hist_scope == WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA) {
     fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
     fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
   } else {
@@ -597,8 +599,8 @@ void ConvertNoiseFloorHistogram(wlan_stats::NoiseFloorHistogram* fidl_stats,
 }
 
 void ConvertRxRateIndexHistogram(wlan_stats::RxRateIndexHistogram* fidl_stats,
-                                 const wlanif_rx_rate_index_histogram_t& stats) {
-  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+                                 const wlan_fullmac_rx_rate_index_histogram_t& stats) {
+  if (stats.hist_scope == WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA) {
     fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
     fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
   } else {
@@ -618,8 +620,8 @@ void ConvertRxRateIndexHistogram(wlan_stats::RxRateIndexHistogram* fidl_stats,
 }
 
 void ConvertRssiHistogram(wlan_stats::RssiHistogram* fidl_stats,
-                          const wlanif_rssi_histogram_t& stats) {
-  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+                          const wlan_fullmac_rssi_histogram_t& stats) {
+  if (stats.hist_scope == WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA) {
     fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
     fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
   } else {
@@ -639,8 +641,8 @@ void ConvertRssiHistogram(wlan_stats::RssiHistogram* fidl_stats,
 }
 
 void ConvertSnrHistogram(wlan_stats::SnrHistogram* fidl_stats,
-                         const wlanif_snr_histogram_t& stats) {
-  if (stats.hist_scope == WLANIF_HIST_SCOPE_PER_ANTENNA) {
+                         const wlan_fullmac_snr_histogram_t& stats) {
+  if (stats.hist_scope == WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA) {
     fidl_stats->hist_scope = wlan_stats::HistScope::PER_ANTENNA;
     fidl_stats->antenna_id = ConvertAntennaId(stats.antenna_id);
   } else {
@@ -659,14 +661,15 @@ void ConvertSnrHistogram(wlan_stats::SnrHistogram* fidl_stats,
   fidl_stats->invalid_samples = stats.invalid_samples;
 }
 
-void ConvertPmkInfo(wlan_mlme::PmkInfo* fidl_info, const wlanif_pmk_info_t& info) {
+void ConvertPmkInfo(wlan_mlme::PmkInfo* fidl_info, const wlan_fullmac_pmk_info_t& info) {
   fidl_info->pmk.resize(info.pmk_count);
   fidl_info->pmk.assign(info.pmk_list, info.pmk_list + info.pmk_count);
   fidl_info->pmkid.resize(info.pmkid_count);
   fidl_info->pmkid.assign(info.pmkid_list, info.pmkid_list + info.pmkid_count);
 }
 
-wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_t& client_stats) {
+wlan_stats::ClientMlmeStats BuildClientMlmeStats(
+    const wlan_fullmac_client_mlme_stats_t& client_stats) {
   wlan_stats::ClientMlmeStats fidl_client_stats;
 
   ConvertPacketCounter(&fidl_client_stats.svc_msg, client_stats.svc_msg);
@@ -701,7 +704,7 @@ wlan_stats::ClientMlmeStats BuildClientMlmeStats(const wlanif_client_mlme_stats_
   return fidl_client_stats;
 }
 
-wlan_stats::ApMlmeStats BuildApMlmeStats(const wlanif_ap_mlme_stats_t& ap_stats) {
+wlan_stats::ApMlmeStats BuildApMlmeStats(const wlan_fullmac_ap_mlme_stats_t& ap_stats) {
   wlan_stats::ApMlmeStats fidl_ap_stats;
 
   ConvertPacketCounter(&fidl_ap_stats.not_used, ap_stats.not_used);
@@ -709,12 +712,12 @@ wlan_stats::ApMlmeStats BuildApMlmeStats(const wlanif_ap_mlme_stats_t& ap_stats)
   return fidl_ap_stats;
 }
 
-void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlanif_mlme_stats_t& stats) {
+void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlan_fullmac_mlme_stats_t& stats) {
   switch (stats.tag) {
-    case WLANIF_MLME_STATS_TYPE_CLIENT:
+    case WLAN_FULLMAC_MLME_STATS_TYPE_CLIENT:
       fidl_stats->set_client_mlme_stats(BuildClientMlmeStats(stats.stats.client_mlme_stats));
       break;
-    case WLANIF_MLME_STATS_TYPE_AP:
+    case WLAN_FULLMAC_MLME_STATS_TYPE_AP:
       fidl_stats->set_ap_mlme_stats(BuildApMlmeStats(stats.stats.ap_mlme_stats));
       break;
     default:
@@ -722,7 +725,7 @@ void ConvertMlmeStats(wlan_stats::MlmeStats* fidl_stats, const wlanif_mlme_stats
   }
 }
 
-void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlanif_stats_t& stats) {
+void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlan_fullmac_stats_t& stats) {
   ConvertDispatcherStats(&fidl_stats->dispatcher_stats, stats.dispatcher_stats);
   if (stats.mlme_stats_list != nullptr) {
     fidl_stats->mlme_stats = ::std::make_unique<wlan_stats::MlmeStats>();
@@ -731,7 +734,7 @@ void ConvertIfaceStats(wlan_stats::IfaceStats* fidl_stats, const wlanif_stats_t&
 }
 
 void ConvertIfaceCounterStats(wlan_stats::IfaceCounterStats* fidl_stats,
-                              const wlanif_iface_counter_stats_t& stats) {
+                              const wlan_fullmac_iface_counter_stats_t& stats) {
   fidl_stats->rx_unicast_total = stats.rx_unicast_total;
   fidl_stats->rx_unicast_drop = stats.rx_unicast_drop;
   fidl_stats->rx_multicast = stats.rx_multicast;
@@ -740,7 +743,7 @@ void ConvertIfaceCounterStats(wlan_stats::IfaceCounterStats* fidl_stats,
 }
 
 void ConvertIfaceHistogramStats(wlan_stats::IfaceHistogramStats* fidl_stats,
-                                const wlanif_iface_histogram_stats_t& stats) {
+                                const wlan_fullmac_iface_histogram_stats_t& stats) {
   fidl_stats->noise_floor_histograms.resize(stats.noise_floor_histograms_count);
   for (size_t i = 0; i < stats.noise_floor_histograms_count; ++i) {
     ConvertNoiseFloorHistogram(&fidl_stats->noise_floor_histograms[i],
@@ -857,7 +860,7 @@ wlan_mlme::MgmtFrameCaptureFlags ConvertMgmtCaptureFlags(uint32_t ddk_flags) {
 }
 
 void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
-                         wlanif_sae_frame_t* frame_out) {
+                         wlan_fullmac_sae_frame_t* frame_out) {
   memcpy(frame_out->peer_sta_address, frame_in.peer_sta_address.data(), ETH_ALEN);
   frame_out->status_code = wlan::common::ConvertStatusCode(frame_in.status_code);
   frame_out->seq_num = frame_in.seq_num;
@@ -866,7 +869,7 @@ void ConvertSaeAuthFrame(const ::fuchsia::wlan::mlme::SaeFrame& frame_in,
   frame_out->sae_fields_list = frame_in.sae_fields.data();
 }
 
-void ConvertSaeAuthFrame(const wlanif_sae_frame_t* frame_in,
+void ConvertSaeAuthFrame(const wlan_fullmac_sae_frame_t* frame_in,
                          ::fuchsia::wlan::mlme::SaeFrame& frame_out) {
   memcpy(frame_out.peer_sta_address.data(), frame_in->peer_sta_address, ETH_ALEN);
   frame_out.status_code = wlan::common::ConvertStatusCode(frame_in->status_code);

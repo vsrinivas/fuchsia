@@ -17,7 +17,7 @@
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/channel.h"
 #include "src/connectivity/wlan/lib/mlme/cpp/include/wlan/mlme/mac_frame.h"
 
-namespace wlanif_test {
+namespace wlan_fullmac_test {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
@@ -108,4 +108,4 @@ wlan_mlme::DisassociateRequest CreateDisassociateReq() {
   return req;
 }
 
-}  // namespace wlanif_test
+}  // namespace wlan_fullmac_test

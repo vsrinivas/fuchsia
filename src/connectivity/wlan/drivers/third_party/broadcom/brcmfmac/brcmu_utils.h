@@ -208,14 +208,14 @@ char* brcmu_dotrev_str(uint32_t dotrev, char* buf);
 /*
  * Convert the buckets of a wstats_counter `rx11b[WSTATS_RATE_RANGE_11B]` histogram
  * into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
- * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ * array of size `WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES`.
  */
 void brcmu_set_rx_rate_index_hist_rx11b(const uint32_t (&rx11b)[WSTATS_RATE_RANGE_11B],
                                         uint32_t* out_rx_rate);
 /*
  * Convert the buckets of a wstats_counter `rx11g[WSTATS_RATE_RANGE_11G]` histogram
  * into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
- * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ * array of size `WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES`.
  */
 void brcmu_set_rx_rate_index_hist_rx11g(const uint32_t (&rx11g)[WSTATS_RATE_RANGE_11G],
                                         uint32_t* out_rx_rate);
@@ -223,16 +223,16 @@ void brcmu_set_rx_rate_index_hist_rx11g(const uint32_t (&rx11g)[WSTATS_RATE_RANG
  * Convert the buckets of a wstats_counter
  * `rx11n[WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11N][WSTATS_MCS_RANGE_11N]` histogram
  * into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
- * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ * array of size `WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES`.
  */
 void brcmu_set_rx_rate_index_hist_rx11n(
     const uint32_t (&rx11n)[WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11N][WSTATS_MCS_RANGE_11N],
-    uint32_t out_rx_rate[WLANIF_MAX_RX_RATE_INDEX_SAMPLES]);
+    uint32_t out_rx_rate[WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES]);
 /*
  * Convert the buckets of a wstats_counter
  * `rx11ac[WSTATS_NSS_RANGE][WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11AC][WSTATS_MCS_RANGE_11AC]`
  * histogram into a wlanif RxRateIndex histogram. The `out_rx_rate` is expected to be an
- * array of size `WLANIF_MAX_RX_RATE_INDEX_SAMPLES`.
+ * array of size `WLAN_FULLMAC_MAX_RX_RATE_INDEX_SAMPLES`.
  */
 void brcmu_set_rx_rate_index_hist_rx11ac(
     const uint32_t (

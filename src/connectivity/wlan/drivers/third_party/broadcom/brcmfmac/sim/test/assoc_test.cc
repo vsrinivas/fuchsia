@@ -126,8 +126,8 @@ class AssocTest : public SimTest {
   void AssocErrorEventInject(brcmf_fweh_event_status_t ret_status, status_code_t ret_reason);
 
   void SendStatsQuery();
-  void GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats);
-  void GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats);
+  void GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats);
+  void GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats);
   void DetailedHistogramErrorInject();
 
  protected:
@@ -217,65 +217,65 @@ class AssocTest : public SimTest {
           std::shared_ptr<const simulation::WlanRxInfo> info) override;
 
   // SME callbacks
-  static wlanif_impl_ifc_protocol_ops_t sme_ops_;
-  wlanif_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
+  static wlan_fullmac_impl_ifc_protocol_ops_t sme_ops_;
+  wlan_fullmac_impl_ifc_protocol sme_protocol_ = {.ops = &sme_ops_, .ctx = this};
 
   // Event handlers
-  void OnJoinConf(const wlanif_join_confirm_t* resp);
-  void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  void OnAssocConf(const wlanif_assoc_confirm_t* resp);
-  void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
-  void OnDisassocConf(const wlanif_disassoc_confirm_t* resp);
-  void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
-  void OnDeauthInd(const wlanif_deauth_indication_t* ind);
-  void OnSignalReport(const wlanif_signal_report_indication* ind);
-  void OnStatsQueryResp(const wlanif_stats_query_response_t* resp);
+  void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
+  void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
+  void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
+  void OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp);
+  void OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp);
+  void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
+  void OnSignalReport(const wlan_fullmac_signal_report_indication* ind);
+  void OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp);
 };
 
-// Since we're acting as wlanif, we need handlers for any protocol calls we may receive
-wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
+// Since we're acting as wlan_fullmac, we need handlers for any protocol calls we may receive
+wlan_fullmac_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
     .on_scan_result =
-        [](void* cookie, const wlanif_scan_result_t* result) {
+        [](void* cookie, const wlan_fullmac_scan_result_t* result) {
           // Ignore
         },
     .on_scan_end =
-        [](void* cookie, const wlanif_scan_end_t* end) {
+        [](void* cookie, const wlan_fullmac_scan_end_t* end) {
           // Ignore
         },
     .join_conf =
-        [](void* cookie, const wlanif_join_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_join_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnJoinConf(resp);
         },
     .auth_conf =
-        [](void* cookie, const wlanif_auth_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_auth_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnAuthConf(resp);
         },
     .deauth_conf =
-        [](void* cookie, const wlanif_deauth_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_deauth_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnDeauthConf(resp);
         },
     .deauth_ind =
-        [](void* cookie, const wlanif_deauth_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_deauth_indication_t* ind) {
           static_cast<AssocTest*>(cookie)->OnDeauthInd(ind);
         },
     .assoc_conf =
-        [](void* cookie, const wlanif_assoc_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_assoc_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnAssocConf(resp);
         },
     .disassoc_conf =
-        [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
+        [](void* cookie, const wlan_fullmac_disassoc_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnDisassocConf(resp);
         },
     .disassoc_ind =
-        [](void* cookie, const wlanif_disassoc_indication_t* ind) {
+        [](void* cookie, const wlan_fullmac_disassoc_indication_t* ind) {
           static_cast<AssocTest*>(cookie)->OnDisassocInd(ind);
         },
     .signal_report =
-        [](void* cookie, const wlanif_signal_report_indication* ind) {
+        [](void* cookie, const wlan_fullmac_signal_report_indication* ind) {
           static_cast<AssocTest*>(cookie)->OnSignalReport(ind);
         },
     .stats_query_resp =
-        [](void* cookie, const wlanif_stats_query_response_t* resp) {
+        [](void* cookie, const wlan_fullmac_stats_query_response_t* resp) {
           static_cast<AssocTest*>(cookie)->OnStatsQueryResp(resp);
         },
 };
@@ -353,18 +353,18 @@ void AssocTest::DisassocFromAp() {
   }
 }
 
-void AssocTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
+void AssocTest::OnJoinConf(const wlan_fullmac_join_confirm_t* resp) {
   // Send auth request
-  wlanif_auth_req_t auth_req;
+  wlan_fullmac_auth_req_t auth_req;
   std::memcpy(auth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   auth_req.auth_failure_timeout = 1000;  // ~1s (although value is ignored for now)
   client_ifc_.if_impl_ops_->auth_req(client_ifc_.if_impl_ctx_, &auth_req);
 }
 
-void AssocTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
+void AssocTest::OnAuthConf(const wlan_fullmac_auth_confirm_t* resp) {
   // Send assoc request
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
@@ -372,12 +372,12 @@ void AssocTest::OnAuthConf(const wlanif_auth_confirm_t* resp) {
 void AssocTest::ReAssoc(void) {
   // Start directly with assoc request (skipping join -> auth).
   // This is what SME does on a disassoc ind.
-  wlanif_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
+  wlan_fullmac_assoc_req_t assoc_req = {.rsne_len = 0, .vendor_ie_len = 0};
   memcpy(assoc_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->assoc_req(client_ifc_.if_impl_ctx_, &assoc_req);
 }
 
-void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
+void AssocTest::OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp) {
   context_.assoc_resp_count++;
   EXPECT_EQ(resp->result_code, context_.expected_results.front());
   EXPECT_EQ(resp->wmm_param_present, !context_.expected_wmm_param.empty());
@@ -394,15 +394,17 @@ void AssocTest::OnAssocConf(const wlanif_assoc_confirm_t* resp) {
   }
 }
 
-void AssocTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
+void AssocTest::OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {
   if (resp->status == ZX_OK) {
     context_.disassoc_conf_count++;
   }
 }
 
-void AssocTest::OnDeauthConf(const wlanif_deauth_confirm_t* resp) { context_.deauth_conf_count++; }
+void AssocTest::OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp) {
+  context_.deauth_conf_count++;
+}
 
-void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
+void AssocTest::OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind) {
   context_.deauth_ind_count++;
   if (ind->locally_initiated) {
     context_.ind_locally_initiated_count++;
@@ -410,7 +412,7 @@ void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) {
   client_ifc_.stats_.deauth_indications.push_back(*ind);
 }
 
-void AssocTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
+void AssocTest::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
   context_.disassoc_ind_count++;
   if (ind->locally_initiated) {
     context_.ind_locally_initiated_count++;
@@ -418,19 +420,19 @@ void AssocTest::OnDisassocInd(const wlanif_disassoc_indication_t* ind) {
   client_ifc_.stats_.disassoc_indications.push_back(*ind);
 }
 
-void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
+void AssocTest::OnSignalReport(const wlan_fullmac_signal_report_indication* ind) {
   context_.signal_ind_count++;
   context_.signal_ind_rssi = ind->rssi_dbm;
   context_.signal_ind_snr = ind->snr_db;
 }
 
-void AssocTest::OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {
+void AssocTest::OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {
   wlanif::ConvertIfaceStats(&context_.iface_stats, resp->stats);
 }
 
 void AssocTest::StartAssoc() {
   // Send join request
-  wlanif_join_req join_req = {};
+  wlan_fullmac_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, context_.bssid.byte, ETH_ALEN);
   join_req.selected_bss.ies_list = context_.ies.data();
   join_req.selected_bss.ies_count = context_.ies.size();
@@ -465,11 +467,11 @@ void AssocTest::SendStatsQuery() {
   client_ifc_.if_impl_ops_->stats_query_req(client_ifc_.if_impl_ctx_);
 }
 
-void AssocTest::GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats) {
+void AssocTest::GetIfaceCounterStats(wlan_fullmac_iface_counter_stats_t* out_stats) {
   client_ifc_.if_impl_ops_->get_iface_counter_stats(client_ifc_.if_impl_ctx_, out_stats);
 }
 
-void AssocTest::GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats) {
+void AssocTest::GetIfaceHistogramStats(wlan_fullmac_iface_histogram_stats_t* out_stats) {
   client_ifc_.if_impl_ops_->get_iface_histogram_stats(client_ifc_.if_impl_ctx_, out_stats);
 }
 
@@ -593,7 +595,7 @@ TEST_F(AssocTest, GetIfaceCounterStatsTest) {
   ap.EnableBeacon(zx::msec(100));
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  wlanif_iface_counter_stats_t stats = {};
+  wlan_fullmac_iface_counter_stats_t stats = {};
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceCounterStats, this, &stats),
@@ -623,7 +625,7 @@ TEST_F(AssocTest, GetIfaceHistogramStatsTest) {
   ap.EnableBeacon(zx::msec(100));
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  wlanif_iface_histogram_stats_t banjo_stats = {};
+  wlan_fullmac_iface_histogram_stats_t banjo_stats = {};
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&AssocTest::GetIfaceHistogramStats, this, &banjo_stats),
@@ -682,7 +684,7 @@ TEST_F(AssocTest, GetIfaceHistogramStatsNotSupportedTest) {
   ap.EnableBeacon(zx::msec(100));
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  wlanif_iface_histogram_stats_t banjo_stats = {};
+  wlan_fullmac_iface_histogram_stats_t banjo_stats = {};
 
   DetailedHistogramErrorInject();
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
@@ -736,15 +738,15 @@ void AssocTest::StartDeauth() {
 }
 
 void AssocTest::DisassocClient(const common::MacAddr& mac_addr) {
-  wlanif_disassoc_req disassoc_req = {};
+  wlan_fullmac_disassoc_req disassoc_req = {};
 
   std::memcpy(disassoc_req.peer_sta_address, mac_addr.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->disassoc_req(client_ifc_.if_impl_ctx_, &disassoc_req);
 }
 
 void AssocTest::DeauthClient() {
-  wlanif_deauth_req_t deauth_req = {.reason_code =
-                                        static_cast<reason_code_t>(kDefaultClientDeauthReason)};
+  wlan_fullmac_deauth_req_t deauth_req = {
+      .reason_code = static_cast<reason_code_t>(kDefaultClientDeauthReason)};
 
   std::memcpy(deauth_req.peer_sta_address, context_.bssid.byte, ETH_ALEN);
   client_ifc_.if_impl_ops_->deauth_req(client_ifc_.if_impl_ctx_, &deauth_req);
@@ -1139,7 +1141,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
   const uint8_t channels_list[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-  wlanif_scan_req_t scan_req = {
+  wlan_fullmac_scan_req_t scan_req = {
       .txn_id = 42,
       .scan_type = WLAN_SCAN_TYPE_PASSIVE,
       .channels_list = channels_list,
@@ -1271,7 +1273,7 @@ TEST_F(AssocTest, DisassocFromAPTest) {
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 
   EXPECT_EQ(client_ifc_.stats_.disassoc_indications.size(), 1U);
-  const wlanif_disassoc_indication_t& disassoc_ind =
+  const wlan_fullmac_disassoc_indication_t& disassoc_ind =
       client_ifc_.stats_.disassoc_indications.front();
   EXPECT_EQ(disassoc_ind.locally_initiated, false);
 }

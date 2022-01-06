@@ -50,20 +50,20 @@ class PassiveScanTestInterface : public SimInterface {
   // Add a functor that can be run on each scan result by the VerifyScanResult method.
   // This allows scan results to be inspected (e.g. with EXPECT_EQ) as they come in, rather than
   // storing scan results for analysis after the sim env run has completed.
-  void AddVerifierFunction(std::function<void(const wlanif_scan_result_t&)>);
+  void AddVerifierFunction(std::function<void(const wlan_fullmac_scan_result_t&)>);
 
   // Remove any verifier functions from the object.
   void ClearVerifierFunction();
 
   // Run the verifier method (if one was added) on the given scan result.
-  void VerifyScanResult(wlanif_scan_result_t result);
+  void VerifyScanResult(wlan_fullmac_scan_result_t result);
 
-  void OnScanResult(const wlanif_scan_result_t* result) override;
+  void OnScanResult(const wlan_fullmac_scan_result_t* result) override;
 
   PassiveScanTest* test_ = nullptr;
 
  private:
-  std::function<void(const wlanif_scan_result_t&)> verifier_fn_;
+  std::function<void(const wlan_fullmac_scan_result_t&)> verifier_fn_;
 };
 
 class PassiveScanTest : public SimTest {
@@ -118,20 +118,20 @@ void PassiveScanTest::StartFakeApWithErrInjBeacon(
 }
 
 void PassiveScanTestInterface::AddVerifierFunction(
-    std::function<void(const wlanif_scan_result_t&)> verifier_fn) {
+    std::function<void(const wlan_fullmac_scan_result_t&)> verifier_fn) {
   verifier_fn_ = std::move(verifier_fn);
 }
 
 void PassiveScanTestInterface::ClearVerifierFunction() { verifier_fn_ = nullptr; }
 
-void PassiveScanTestInterface::VerifyScanResult(wlanif_scan_result_t result) {
+void PassiveScanTestInterface::VerifyScanResult(wlan_fullmac_scan_result_t result) {
   if (verifier_fn_ != nullptr) {
     verifier_fn_(result);
   }
 }
 
 // Verify that each incoming scan result is as expected, using VerifyScanResult.
-void PassiveScanTestInterface::OnScanResult(const wlanif_scan_result_t* result) {
+void PassiveScanTestInterface::OnScanResult(const wlan_fullmac_scan_result_t* result) {
   SimInterface::OnScanResult(result);
   ASSERT_THAT(result, NotNull());
   VerifyScanResult(*result);
@@ -161,7 +161,7 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
 
   // The lambda arg will be run on each result, inside PassiveScanTestInterface::VerifyScanResults.
   client_ifc_.AddVerifierFunction(
-      [&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
+      [&test_start_timestamp_nanos](const wlan_fullmac_scan_result_t& result) {
         // Verify timestamp is after test start
         ASSERT_GT(result.timestamp_nanos, test_start_timestamp_nanos);
 
@@ -206,7 +206,7 @@ TEST_F(PassiveScanTest, EmptyChannelList) {
                              kScanStartTime);
 
   // The driver should exit early and return no scan results.
-  client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) { FAIL(); });
+  client_ifc_.AddVerifierFunction([](const wlan_fullmac_scan_result_t& result) { FAIL(); });
 
   env_->Run(kDefaultTestDuration);
 
@@ -240,7 +240,7 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
                              kScanStartTime);
 
   client_ifc_.AddVerifierFunction(
-      [&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
+      [&test_start_timestamp_nanos](const wlan_fullmac_scan_result_t& result) {
         // Verify timestamp is after test start
         ASSERT_GT(result.timestamp_nanos, test_start_timestamp_nanos);
 

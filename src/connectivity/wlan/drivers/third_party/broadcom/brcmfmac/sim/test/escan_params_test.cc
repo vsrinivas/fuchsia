@@ -19,7 +19,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 constexpr uint64_t kScanTxnId = 0x4a65616e6e65;
 const uint8_t kDefaultChannelsList[11] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-const wlanif_scan_req kDefaultScanReq = {
+const wlan_fullmac_scan_req kDefaultScanReq = {
     .txn_id = kScanTxnId,
     .scan_type = WLAN_SCAN_TYPE_ACTIVE,
     .channels_list = kDefaultChannelsList,
@@ -33,8 +33,8 @@ const wlanif_scan_req kDefaultScanReq = {
 // For this test, we don't want to use the default scan handlers provided by SimInterface
 class EscanArgsIfc : public SimInterface {
  public:
-  void OnScanResult(const wlanif_scan_result_t* result) override {}
-  void OnScanEnd(const wlanif_scan_end_t* end) override;
+  void OnScanResult(const wlan_fullmac_scan_result_t* result) override {}
+  void OnScanEnd(const wlan_fullmac_scan_end_t* end) override;
   bool ScanCompleted() { return scan_completed_; }
   wlan_scan_result_t ScanResult() { return scan_result_; }
 
@@ -43,7 +43,7 @@ class EscanArgsIfc : public SimInterface {
   wlan_scan_result_t scan_result_;
 };
 
-void EscanArgsIfc::OnScanEnd(const wlanif_scan_end_t* end) {
+void EscanArgsIfc::OnScanEnd(const wlan_fullmac_scan_end_t* end) {
   EXPECT_EQ(end->txn_id, kScanTxnId);
   scan_completed_ = true;
   scan_result_ = end->code;
@@ -52,7 +52,7 @@ void EscanArgsIfc::OnScanEnd(const wlanif_scan_end_t* end) {
 class EscanArgsTest : public SimTest {
  public:
   void Init();
-  void RunScanTest(const wlanif_scan_req& req);
+  void RunScanTest(const wlan_fullmac_scan_req& req);
 
  protected:
   EscanArgsIfc client_ifc_;
@@ -63,7 +63,7 @@ void EscanArgsTest::Init() {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc_), ZX_OK);
 }
 
-void EscanArgsTest::RunScanTest(const wlanif_scan_req& req) {
+void EscanArgsTest::RunScanTest(const wlan_fullmac_scan_req& req) {
   client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, &req);
   env_->Run(kSimulatedClockDuration);
   ASSERT_TRUE(client_ifc_.ScanCompleted());
@@ -72,7 +72,7 @@ void EscanArgsTest::RunScanTest(const wlanif_scan_req& req) {
 // Verify that invalid scan params result in a failed scan result
 TEST_F(EscanArgsTest, BadScanArgs) {
   Init();
-  wlanif_scan_req req;
+  wlan_fullmac_scan_req req;
 
   // Dwell time of zero
   req = kDefaultScanReq;
@@ -90,7 +90,7 @@ TEST_F(EscanArgsTest, BadScanArgs) {
 
 TEST_F(EscanArgsTest, EmptyChannelList) {
   Init();
-  wlanif_scan_req req;
+  wlan_fullmac_scan_req req;
   req = kDefaultScanReq;
   req.channels_count = 0;
   RunScanTest(req);

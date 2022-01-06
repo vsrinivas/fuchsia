@@ -80,7 +80,7 @@ void CrashRecoveryTest::VerifyScanResult(const uint64_t scan_id, size_t min_resu
                                          wlan_scan_result_t expect_code) {
   EXPECT_GE(client_ifc_.ScanResultList(scan_id)->size(), min_result_num);
 
-  wlanif_scan_result_t back_scan_result = client_ifc_.ScanResultList(scan_id)->back();
+  wlan_fullmac_scan_result_t back_scan_result = client_ifc_.ScanResultList(scan_id)->back();
   auto ssid = brcmf_find_ssid_in_ies(back_scan_result.bss.ies_list, back_scan_result.bss.ies_count);
   common::MacAddr bssid(back_scan_result.bss.bssid);
 

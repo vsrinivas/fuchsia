@@ -41,8 +41,8 @@ struct ApInfo {
 };
 
 struct ClientIfc : public SimInterface {
-  void OnScanResult(const wlanif_scan_result_t* result) override;
-  void OnScanEnd(const wlanif_scan_end_t* end) override;
+  void OnScanResult(const wlan_fullmac_scan_result_t* result) override;
+  void OnScanEnd(const wlan_fullmac_scan_end_t* end) override;
 
   // Txn ID for the current scan
   uint64_t scan_txn_id_ = 0;
@@ -50,7 +50,7 @@ struct ClientIfc : public SimInterface {
   // Result of the previous scan
   wlan_scan_result_t scan_result_code_ = ZX_OK;
 
-  std::list<wlanif_scan_result> scan_results_;
+  std::list<wlan_fullmac_scan_result> scan_results_;
   // BSS's IEs are raw pointers. Store the IEs here so we don't have dangling pointers
   std::vector<std::vector<uint8_t>> seen_ies_;
 };
@@ -65,7 +65,7 @@ class ActiveScanTest : public SimTest {
   void StartFakeAp(const common::MacAddr& bssid, const cssid_t& ssid, const wlan_channel_t& channel,
                    zx::duration beacon_interval = kBeaconInterval);
 
-  void StartScan(const wlanif_scan_req_t* req);
+  void StartScan(const wlan_fullmac_scan_req_t* req);
   // TODO(fxbug.dev/https://fxbug.dev/83861): Align the way active_scan_test and passive_scan_test
   // verify scan results.
   void VerifyScanResults();
@@ -83,7 +83,7 @@ class ActiveScanTest : public SimTest {
 
   // The default active scan request
   const uint8_t default_channels_list_[5] = {1, 2, 3, 4, 5};
-  wlanif_scan_req_t default_scan_req_ = {
+  wlan_fullmac_scan_req_t default_scan_req_ = {
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = default_channels_list_,
       .channels_count = 5,
@@ -108,11 +108,11 @@ class ActiveScanTest : public SimTest {
   uint32_t num_probe_reqs_seen = 0;
 };
 
-void ClientIfc::OnScanResult(const wlanif_scan_result_t* result) {
+void ClientIfc::OnScanResult(const wlan_fullmac_scan_result_t* result) {
   ASSERT_NE(result, nullptr);
   EXPECT_EQ(scan_txn_id_, result->txn_id);
 
-  wlanif_scan_result_t copy = *result;
+  wlan_fullmac_scan_result_t copy = *result;
   // Copy the IES data over since the original location may change data by the time we verify.
   std::vector<uint8_t> ies(copy.bss.ies_list, copy.bss.ies_list + copy.bss.ies_count);
   seen_ies_.push_back(ies);
@@ -120,7 +120,7 @@ void ClientIfc::OnScanResult(const wlanif_scan_result_t* result) {
   scan_results_.emplace_back(copy);
 }
 
-void ClientIfc::OnScanEnd(const wlanif_scan_end_t* end) { scan_result_code_ = end->code; }
+void ClientIfc::OnScanEnd(const wlan_fullmac_scan_end_t* end) { scan_result_code_ = end->code; }
 
 void ActiveScanTest::Init() {
   ASSERT_EQ(SimTest::Init(), ZX_OK);
@@ -139,7 +139,7 @@ void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const cssid_t& ss
 }
 
 // Tell the DUT to run a scan
-void ActiveScanTest::StartScan(const wlanif_scan_req_t* req) {
+void ActiveScanTest::StartScan(const wlan_fullmac_scan_req_t* req) {
   client_ifc_.if_impl_ops_->start_scan(client_ifc_.if_impl_ctx_, req);
 }
 
@@ -327,7 +327,7 @@ TEST_F(ActiveScanTest, EmptyChannelList) {
   StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
 
   // Case contains empty channels_list.
-  wlanif_scan_req_t req_empty_channels_list = {
+  wlan_fullmac_scan_req_t req_empty_channels_list = {
       .txn_id = ++client_ifc_.scan_txn_id_,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = nullptr,
@@ -372,7 +372,7 @@ TEST_F(ActiveScanTest, SsidTooLong) {
   // Case contains over-size ssid in ssids_list in request.
   const uint8_t channels_list[] = {1, 2, 3, 4, 5};
   const cssid_t ssids_list[] = {valid_scan_ssid, invalid_scan_ssid};
-  wlanif_scan_req_t req_break_ssids_list = {
+  wlan_fullmac_scan_req_t req_break_ssids_list = {
       .txn_id = ++client_ifc_.scan_txn_id_,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = channels_list,

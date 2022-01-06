@@ -49,16 +49,16 @@ class SimInterface {
     size_t assoc_attempts = 0;
     size_t assoc_successes = 0;
     std::list<wlan_join_result_t> join_results;
-    std::list<wlanif_auth_confirm_t> auth_results;
-    std::list<wlanif_assoc_confirm_t> assoc_results;
-    std::list<wlanif_assoc_ind_t> assoc_indications;
-    std::list<wlanif_auth_ind_t> auth_indications;
-    std::list<wlanif_deauth_confirm_t> deauth_results;
-    std::list<wlanif_deauth_indication_t> deauth_indications;
-    std::list<wlanif_disassoc_indication_t> disassoc_indications;
-    std::list<wlanif_channel_switch_info_t> csa_indications;
-    std::list<wlanif_start_confirm_t> start_confirmations;
-    std::list<wlanif_stop_confirm_t> stop_confirmations;
+    std::list<wlan_fullmac_auth_confirm_t> auth_results;
+    std::list<wlan_fullmac_assoc_confirm_t> assoc_results;
+    std::list<wlan_fullmac_assoc_ind_t> assoc_indications;
+    std::list<wlan_fullmac_auth_ind_t> auth_indications;
+    std::list<wlan_fullmac_deauth_confirm_t> deauth_results;
+    std::list<wlan_fullmac_deauth_indication_t> deauth_indications;
+    std::list<wlan_fullmac_disassoc_indication_t> disassoc_indications;
+    std::list<wlan_fullmac_channel_switch_info_t> csa_indications;
+    std::list<wlan_fullmac_start_confirm_t> start_confirmations;
+    std::list<wlan_fullmac_stop_confirm_t> stop_confirmations;
   };
 
   // Default scan options
@@ -90,30 +90,30 @@ class SimInterface {
   }
 
   // Default SME Callbacks
-  virtual void OnScanResult(const wlanif_scan_result_t* result);
-  virtual void OnScanEnd(const wlanif_scan_end_t* end);
-  virtual void OnJoinConf(const wlanif_join_confirm_t* resp);
-  virtual void OnAuthConf(const wlanif_auth_confirm_t* resp);
-  virtual void OnAuthInd(const wlanif_auth_ind_t* resp);
-  virtual void OnDeauthConf(const wlanif_deauth_confirm_t* resp);
-  virtual void OnDeauthInd(const wlanif_deauth_indication_t* ind);
-  virtual void OnAssocConf(const wlanif_assoc_confirm_t* resp);
-  virtual void OnAssocInd(const wlanif_assoc_ind_t* ind);
-  virtual void OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {}
-  virtual void OnDisassocInd(const wlanif_disassoc_indication_t* ind);
-  virtual void OnStartConf(const wlanif_start_confirm_t* resp);
-  virtual void OnStopConf(const wlanif_stop_confirm_t* resp);
-  virtual void OnEapolConf(const wlanif_eapol_confirm_t* resp) {}
-  virtual void OnChannelSwitch(const wlanif_channel_switch_info_t* ind);
-  virtual void OnSignalReport(const wlanif_signal_report_indication_t* ind) {}
-  virtual void OnEapolInd(const wlanif_eapol_indication_t* ind) {}
-  virtual void OnStatsQueryResp(const wlanif_stats_query_response_t* resp) {}
+  virtual void OnScanResult(const wlan_fullmac_scan_result_t* result);
+  virtual void OnScanEnd(const wlan_fullmac_scan_end_t* end);
+  virtual void OnJoinConf(const wlan_fullmac_join_confirm_t* resp);
+  virtual void OnAuthConf(const wlan_fullmac_auth_confirm_t* resp);
+  virtual void OnAuthInd(const wlan_fullmac_auth_ind_t* resp);
+  virtual void OnDeauthConf(const wlan_fullmac_deauth_confirm_t* resp);
+  virtual void OnDeauthInd(const wlan_fullmac_deauth_indication_t* ind);
+  virtual void OnAssocConf(const wlan_fullmac_assoc_confirm_t* resp);
+  virtual void OnAssocInd(const wlan_fullmac_assoc_ind_t* ind);
+  virtual void OnDisassocConf(const wlan_fullmac_disassoc_confirm_t* resp) {}
+  virtual void OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind);
+  virtual void OnStartConf(const wlan_fullmac_start_confirm_t* resp);
+  virtual void OnStopConf(const wlan_fullmac_stop_confirm_t* resp);
+  virtual void OnEapolConf(const wlan_fullmac_eapol_confirm_t* resp) {}
+  virtual void OnChannelSwitch(const wlan_fullmac_channel_switch_info_t* ind);
+  virtual void OnSignalReport(const wlan_fullmac_signal_report_indication_t* ind) {}
+  virtual void OnEapolInd(const wlan_fullmac_eapol_indication_t* ind) {}
+  virtual void OnStatsQueryResp(const wlan_fullmac_stats_query_response_t* resp) {}
   virtual void OnWmmStatusResp(const zx_status_t status, const wlan_wmm_params_t* resp) {}
-  virtual void OnRelayCapturedFrame(const wlanif_captured_frame_result_t* result) {}
+  virtual void OnRelayCapturedFrame(const wlan_fullmac_captured_frame_result_t* result) {}
   virtual void OnDataRecv(const void* data, size_t data_size, uint32_t flags) {}
 
   // Query an interface
-  void Query(wlanif_query_info_t* out_info);
+  void Query(wlan_fullmac_query_info_t* out_info);
 
   // Stop an interface
   void StopInterface();
@@ -135,7 +135,7 @@ class SimInterface {
                  std::optional<const std::vector<uint8_t>> channels =
                      std::optional<const std::vector<uint8_t>>{});
   std::optional<wlan_scan_result_t> ScanResultCode(uint64_t txn_id);
-  const std::list<wlanif_scan_result_t>* ScanResultList(uint64_t txn_id);
+  const std::list<wlan_fullmac_scan_result_t>* ScanResultList(uint64_t txn_id);
 
   // SoftAP operation
   void StartSoftAp(const cssid_t& ssid = kDefaultSoftApSsid,
@@ -148,12 +148,12 @@ class SimInterface {
 
   std::shared_ptr<simulation::Environment> env_;
 
-  static wlanif_impl_ifc_protocol_ops_t default_sme_dispatch_tbl_;
-  wlanif_impl_ifc_protocol default_ifc_ = {.ops = &default_sme_dispatch_tbl_, .ctx = this};
+  static wlan_fullmac_impl_ifc_protocol_ops_t default_sme_dispatch_tbl_;
+  wlan_fullmac_impl_ifc_protocol default_ifc_ = {.ops = &default_sme_dispatch_tbl_, .ctx = this};
 
   // This provides our DDK (wlanif-impl) API into the interface
   void* if_impl_ctx_ = nullptr;
-  wlanif_impl_protocol_ops_t* if_impl_ops_ = nullptr;
+  wlan_fullmac_impl_protocol_ops_t* if_impl_ops_ = nullptr;
 
   // Unique identifier provided by the driver
   uint16_t iface_id_;
@@ -179,7 +179,7 @@ class SimInterface {
   struct ScanStatus {
     // If not present, indicates that the scan has not completed yet
     std::optional<wlan_scan_result_t> result_code = std::nullopt;
-    std::list<wlanif_scan_result_t> result_list;
+    std::list<wlan_fullmac_scan_result_t> result_list;
   };
   // One entry per scan started
   std::map<uint64_t, ScanStatus> scan_results_;
@@ -212,7 +212,7 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
   // callbacks
   zx_status_t StartInterface(
       wlan_info_mac_role_t role, SimInterface* sim_ifc,
-      std::optional<const wlanif_impl_ifc_protocol*> sme_protocol = std::nullopt,
+      std::optional<const wlan_fullmac_impl_ifc_protocol*> sme_protocol = std::nullopt,
       std::optional<common::MacAddr> mac_addr = std::nullopt);
 
   // Stop and delete a SimInterface

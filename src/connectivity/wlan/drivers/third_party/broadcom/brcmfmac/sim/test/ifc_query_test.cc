@@ -28,7 +28,7 @@ TEST_F(SimTest, ClientIfcQuery) {
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc, std::nullopt, kDefaultMac),
             ZX_OK);
 
-  wlanif_query_info_t ifc_query_result;
+  wlan_fullmac_query_info_t ifc_query_result;
   env_->ScheduleNotification(std::bind(&SimInterface::Query, &client_ifc, &ifc_query_result),
                              zx::sec(1));
   env_->Run(kSimulatedClockDuration);
@@ -44,7 +44,7 @@ TEST_F(SimTest, ClientIfcQuery) {
   ASSERT_LE(ifc_query_result.num_bands, (size_t)WLAN_INFO_MAX_BANDS);
 
   for (size_t band = 0; band < ifc_query_result.num_bands; band++) {
-    wlanif_band_capabilities* band_info = &ifc_query_result.bands[band];
+    wlan_fullmac_band_capabilities* band_info = &ifc_query_result.bands[band];
 
     // Band id should be in valid range
     EXPECT_LE(band_info->band_id, WLAN_INFO_BAND_COUNT);
@@ -72,7 +72,7 @@ TEST_F(SimTest, BadNchainIovar) {
   sim->sim_fw->err_inj_.AddErrInjIovar("rxstreams_cap", ZX_OK, BCME_OK, client_ifc.iface_id_,
                                        &alt_rxchain_data);
 
-  wlanif_query_info_t ifc_query_result;
+  wlan_fullmac_query_info_t ifc_query_result;
   env_->ScheduleNotification(std::bind(&SimInterface::Query, &client_ifc, &ifc_query_result),
                              zx::sec(1));
   env_->Run(kSimulatedClockDuration);

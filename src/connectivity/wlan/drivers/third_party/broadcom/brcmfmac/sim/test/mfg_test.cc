@@ -80,7 +80,7 @@ TEST_F(MfgTest, BasicTest) {
 
   // Now delete the Client IF and SoftAP creation should pass
   EXPECT_EQ(DeleteInterface(&client_ifc_), ZX_OK);
-  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
   ASSERT_EQ(StartInterface(WLAN_INFO_MAC_ROLE_AP, &softap_ifc_, std::nullopt, kDefaultBssid),
             ZX_OK);
   // Now that SoftAP IF is created, Client IF creation should fail

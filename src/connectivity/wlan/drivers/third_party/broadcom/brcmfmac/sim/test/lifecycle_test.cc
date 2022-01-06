@@ -70,15 +70,15 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   uint16_t iface_id;
   status = device->WlanphyImplCreateIface(&create_iface_req, &iface_id);
   ASSERT_EQ(status, ZX_OK);
-  EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 1u);
+  EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
 
   // Simulate start call from Fuchsia's generic wlanif-impl driver.
-  auto iface = dev_mgr->FindLatestByProtocolId(ZX_PROTOCOL_WLANIF_IMPL);
+  auto iface = dev_mgr->FindLatestByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL);
   ASSERT_NE(iface, nullptr);
   void* ctx = iface->DevArgs().ctx;
-  auto* iface_ops = static_cast<wlanif_impl_protocol_ops_t*>(iface->DevArgs().proto_ops);
+  auto* iface_ops = static_cast<wlan_fullmac_impl_protocol_ops_t*>(iface->DevArgs().proto_ops);
   zx_handle_t mlme_channel = ZX_HANDLE_INVALID;
-  wlanif_impl_ifc_protocol_t ifc_ops{};
+  wlan_fullmac_impl_ifc_protocol_t ifc_ops{};
   status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_EQ(mlme_channel, local.get());
@@ -89,7 +89,7 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(mlme_channel, ZX_HANDLE_INVALID);
   ASSERT_EQ(device->WlanphyImplDestroyIface(iface_id), ZX_OK);
-  EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLANIF_IMPL), 0u);
+  EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 0u);
 }
 
 }  // namespace

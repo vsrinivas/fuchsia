@@ -104,7 +104,7 @@ TEST(ConvertTest, ToFidlCSsid) {
 
 TEST(ConvertTest, ToFidlAssocInd) {
   wlan_mlme::AssociateIndication fidl_ind = {};
-  wlanif_assoc_ind_t assoc_ind = {
+  wlan_fullmac_assoc_ind_t assoc_ind = {
       .rsne_len = 64,
   };
   // Check if rsne gets copied over
@@ -125,7 +125,7 @@ TEST(ConvertTest, ToFidlAssocInd) {
 
 TEST(ConvertTest, ToFidlEapolConf) {
   wlan_mlme::EapolConfirm fidl_resp = {};
-  wlanif_eapol_confirm_t eapol_resp = {
+  wlan_fullmac_eapol_confirm_t eapol_resp = {
       .result_code = WLAN_EAPOL_RESULT_SUCCESS,
       .dst_addr = {1, 2, 3, 4, 5, 6},
   };
@@ -139,8 +139,8 @@ TEST(ConvertTest, ToFidlEapolConf) {
 // scope.
 TEST(ConvertTest, ToFidlNoiseFloorHistogramSmokeTest) {
   wlan_stats::NoiseFloorHistogram fidl_hist;
-  const wlanif_noise_floor_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_STATION,
+  const wlan_fullmac_noise_floor_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_STATION,
   };
 
   ConvertNoiseFloorHistogram(&fidl_hist, hist_input);
@@ -154,8 +154,8 @@ TEST(ConvertTest, ToFidlNoiseFloorHistogramSmokeTest) {
 
 TEST(ConvertTest, ToFidlRssiHistogramSmokeTest) {
   wlan_stats::RssiHistogram fidl_hist;
-  const wlanif_rssi_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_STATION,
+  const wlan_fullmac_rssi_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_STATION,
   };
 
   ConvertRssiHistogram(&fidl_hist, hist_input);
@@ -169,8 +169,8 @@ TEST(ConvertTest, ToFidlRssiHistogramSmokeTest) {
 
 TEST(ConvertTest, ToFidlRxRateIndexHistogramSmokeTest) {
   wlan_stats::RxRateIndexHistogram fidl_hist;
-  const wlanif_rx_rate_index_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_STATION,
+  const wlan_fullmac_rx_rate_index_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_STATION,
   };
 
   ConvertRxRateIndexHistogram(&fidl_hist, hist_input);
@@ -184,8 +184,8 @@ TEST(ConvertTest, ToFidlRxRateIndexHistogramSmokeTest) {
 
 TEST(ConvertTest, ToFidlSnrHistogramSmokeTest) {
   wlan_stats::SnrHistogram fidl_hist;
-  const wlanif_snr_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_STATION,
+  const wlan_fullmac_snr_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_STATION,
   };
 
   ConvertSnrHistogram(&fidl_hist, hist_input);
@@ -219,7 +219,7 @@ TEST_P(ConvertNoiseFloorHistogramTest, ToFidlHistogram) {
   const uint64_t expected_invalid_samples = 15;
 
   // This will hold the Banjo buckets that will be input into the conversion.
-  std::vector<wlanif_hist_bucket_t> samples_input;
+  std::vector<wlan_fullmac_hist_bucket_t> samples_input;
 
   // To compare the FIDL buckets to the Banjo buckets, we will need a vector of Gmock matchers, one
   // for each expected FIDL bucket.
@@ -235,11 +235,11 @@ TEST_P(ConvertNoiseFloorHistogramTest, ToFidlHistogram) {
     }
   }
 
-  const wlanif_noise_floor_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA,
+  const wlan_fullmac_noise_floor_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA,
       .antenna_id =
           {
-              .freq = WLANIF_ANTENNA_FREQ_ANTENNA_5_G,
+              .freq = WLAN_FULLMAC_ANTENNA_FREQ_ANTENNA_5_G,
               .index = expected_antenna_index,
           },
       .noise_floor_samples_list = samples_input.data(),
@@ -290,7 +290,7 @@ TEST_P(ConvertRssiHistogramTest, ToFidlHistogram) {
   const uint64_t expected_invalid_samples = 1;
 
   // This will hold the Banjo buckets that will be input into the conversion.
-  std::vector<wlanif_hist_bucket_t> samples_input;
+  std::vector<wlan_fullmac_hist_bucket_t> samples_input;
 
   // To compare the FIDL buckets to the Banjo buckets, we will need a vector of Gmock matchers, one
   // for each expected FIDL bucket.
@@ -306,11 +306,11 @@ TEST_P(ConvertRssiHistogramTest, ToFidlHistogram) {
     }
   }
 
-  const wlanif_rssi_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA,
+  const wlan_fullmac_rssi_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA,
       .antenna_id =
           {
-              .freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G,
+              .freq = WLAN_FULLMAC_ANTENNA_FREQ_ANTENNA_2_G,
               .index = expected_antenna_index,
           },
       .rssi_samples_list = samples_input.data(),
@@ -360,7 +360,7 @@ TEST_P(ConvertRxRateIndexHistogramTest, ToFidlHistogram) {
   const uint64_t expected_invalid_samples = 2;
 
   // This will hold the Banjo buckets that will be input into the conversion.
-  std::vector<wlanif_hist_bucket_t> samples_input;
+  std::vector<wlan_fullmac_hist_bucket_t> samples_input;
 
   // To compare the FIDL buckets to the Banjo buckets, we will need a vector of Gmock matchers, one
   // for each expected FIDL bucket.
@@ -376,11 +376,11 @@ TEST_P(ConvertRxRateIndexHistogramTest, ToFidlHistogram) {
     }
   }
 
-  const wlanif_rx_rate_index_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA,
+  const wlan_fullmac_rx_rate_index_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA,
       .antenna_id =
           {
-              .freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G,
+              .freq = WLAN_FULLMAC_ANTENNA_FREQ_ANTENNA_2_G,
               .index = expected_antenna_index,
           },
       .rx_rate_index_samples_list = samples_input.data(),
@@ -431,7 +431,7 @@ TEST_P(ConvertSnrHistogramTest, ToFidlHistogram) {
   const uint64_t expected_invalid_samples = 2890967;
 
   // This will hold the Banjo buckets that will be input into the conversion.
-  std::vector<wlanif_hist_bucket_t> samples_input;
+  std::vector<wlan_fullmac_hist_bucket_t> samples_input;
 
   // To compare the FIDL buckets to the Banjo buckets, we will need a vector of Gmock matchers, one
   // for each expected FIDL bucket.
@@ -447,11 +447,11 @@ TEST_P(ConvertSnrHistogramTest, ToFidlHistogram) {
     }
   }
 
-  const wlanif_snr_histogram_t hist_input = {
-      .hist_scope = WLANIF_HIST_SCOPE_PER_ANTENNA,
+  const wlan_fullmac_snr_histogram_t hist_input = {
+      .hist_scope = WLAN_FULLMAC_HIST_SCOPE_PER_ANTENNA,
       .antenna_id =
           {
-              .freq = WLANIF_ANTENNA_FREQ_ANTENNA_2_G,
+              .freq = WLAN_FULLMAC_ANTENNA_FREQ_ANTENNA_2_G,
               .index = expected_antenna_index,
           },
       .snr_samples_list = samples_input.data(),
@@ -492,7 +492,7 @@ INSTANTIATE_TEST_SUITE_P(SnrHistogram, ConvertSnrHistogramTest,
 TEST(ConvertTest, ToFidlPmkInfo) {
   std::vector<uint8_t> pmk = {1, 2, 3, 4, 5, 6, 7, 8};
   std::vector<uint8_t> pmkid = {1, 1, 2, 2, 3, 3, 4, 4};
-  wlanif_pmk_info_t info{
+  wlan_fullmac_pmk_info_t info{
       .pmk_list = pmk.data(),
       .pmk_count = pmk.size(),
       .pmkid_list = pmkid.data(),
@@ -548,7 +548,7 @@ TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {
       .sae_fields = sae_fields,
   };
 
-  wlanif_sae_frame_t frame = {};
+  wlan_fullmac_sae_frame_t frame = {};
 
   ConvertSaeAuthFrame(fidl_frame, &frame);
 

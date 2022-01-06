@@ -13,7 +13,7 @@
 #include <gtest/gtest.h>
 #include <wlan/common/macaddr.h>
 
-namespace wlanif_test {
+namespace wlan_fullmac_test {
 
 static constexpr uint8_t kBssid1[6] = {0xB7, 0xCD, 0x3F, 0xB0, 0x93, 0x01};
 static constexpr uint32_t kJoinTimeout = 200;  // Beacon Periods
@@ -91,6 +91,6 @@ static constexpr uint8_t kRates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12,
 ::fuchsia::wlan::mlme::AssociateRequest CreateAssociateReq();
 ::fuchsia::wlan::mlme::DisassociateRequest CreateDisassociateReq();
 
-}  // namespace wlanif_test
+}  // namespace wlan_fullmac_test
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_TEST_TEST_BSS_H_
