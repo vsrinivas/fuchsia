@@ -111,7 +111,7 @@ class Console {
   fdio_t* tty_ = nullptr;
   fsl::FDWaiter interrupt_waiter_;
 
-  line_input::ModalLineInputStdout line_input_;
+  line_input::ModalLineInput line_input_;
 
   bool should_read_ = false;
 

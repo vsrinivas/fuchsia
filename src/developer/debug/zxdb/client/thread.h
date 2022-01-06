@@ -85,6 +85,8 @@ class Thread : public ClientObject {
   // call if the controller was ready synchronously.
   //
   // On failure the ThreadController will be removed and the thread will not be continued.
+  //
+  // See also CancelAllThreadControllers() for aborting the controller.
   virtual void ContinueWith(std::unique_ptr<ThreadController> controller,
                             fit::callback<void(const Err&)> on_continue) = 0;
 
@@ -113,6 +115,11 @@ class Thread : public ClientObject {
   // automatically issue when the work returns.
   using PostStopTask = fit::callback<void(fit::deferred_callback task_completion_signaler)>;
   virtual void AddPostStopTask(PostStopTask task) = 0;
+
+  // Stops all thread controllers which may be doing automatic stepping. The thread will be in the
+  // state it was in last, which might be running if it was currently running, or it might be
+  // stopped if a step operation was in place.
+  virtual void CancelAllThreadControllers() = 0;
 
   // Sets the thread's IP to the given location. This requires that the thread be stopped. It will
   // not resume the thread.

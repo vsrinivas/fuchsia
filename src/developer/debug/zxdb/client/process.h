@@ -127,6 +127,10 @@ class Process : public ClientObject {
   virtual void ContinueUntil(std::vector<InputLocation> locations,
                              fit::callback<void(const Err&)> cb) = 0;
 
+  // Stops all thread controllers which may be doing automatic stepping for all threads in the
+  // process. See Thread::CancelAllThreadControllers() for more.
+  virtual void CancelAllThreadControllers() = 0;
+
   // Returns the SymbolDataProvider that can be used to evaluate symbols in the context of this
   // process. This will not have any frame information so the available operations will be limited.
   //

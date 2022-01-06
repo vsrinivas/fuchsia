@@ -59,7 +59,7 @@ void OnEof() {
 }
 
 int main(int argc, char** argv) {
-  line_input::ModalLineInputStdout input;
+  line_input::ModalLineInput input;
   input.Init(&OnAccept, "C:\\> ");
   input.SetEofCallback(&OnEof);
   g_line_input = &input;

@@ -132,6 +132,10 @@ class System : public ClientObject,
   // Applies to all threads of all debugged processes.
   void Continue(bool forward);
 
+  // Stops all thread controllers which may be doing automatic stepping for all threads in all
+  // processes. See Thread::CancelAllThreadControllers() for more.
+  void CancelAllThreadControllers();
+
   // Whether there's a download pending for the given build ID.
   bool HasDownload(const std::string& build_id);
 

@@ -152,7 +152,7 @@ std::unique_ptr<disk_inspector::CommandHandler> GetHandler(const char* path, con
   return handler;
 }
 
-void OnLineTyped(line_input::ModalLineInputStdout& input, disk_inspector::CommandHandler* handler,
+void OnLineTyped(line_input::ModalLineInput& input, disk_inspector::CommandHandler* handler,
                  const std::string& line) {
   if (line.find_first_not_of(' ') == std::string::npos)
     return;
@@ -210,7 +210,7 @@ int main(int argc, char** argv) {
             << " inspector. Type \"help\" to get available commands.\n";
   std::cout << "Type \"exit\" or \"quit\" to quit the application.\n";
 
-  line_input::ModalLineInputStdout input;
+  line_input::ModalLineInput input;
   input.Init(
       [&input, &handler](const std::string& line) { OnLineTyped(input, handler.get(), line); },
       "[disk-inspect] ");

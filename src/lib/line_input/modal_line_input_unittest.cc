@@ -14,17 +14,11 @@ namespace line_input {
 
 namespace {
 
-class TestModalLineInput : public ModalLineInput {
- public:
-  TestModalLineInput() : ModalLineInput() {}
-  ~TestModalLineInput() override {}
-
- protected:
-  std::unique_ptr<LineInput> MakeLineInput(AcceptCallback accept_cb,
-                                           const std::string& prompt) override {
-    return std::make_unique<TestLineInput>(prompt, std::move(accept_cb));
-  }
-};
+// Factory function for the ModalLineInput's underlying input object.
+std::unique_ptr<LineInput> MakeTestLineInput(LineInput::AcceptCallback accept_cb,
+                                             const std::string& prompt) {
+  return std::make_unique<TestLineInput>(prompt, std::move(accept_cb));
+}
 
 }  // namespace
 
@@ -32,7 +26,7 @@ class TestModalLineInput : public ModalLineInput {
 TEST(ModalLineInputTest, Nested) {
   std::optional<std::string> accept_line;
 
-  TestModalLineInput input;
+  ModalLineInput input(&MakeTestLineInput);
   input.Init([&accept_line](const std::string& line) { accept_line = line; }, "Prompt ");
   input.Show();
 
@@ -84,7 +78,7 @@ TEST(ModalLineInputTest, Nested) {
 }
 
 TEST(ModalLineInputTest, ModalGetOption) {
-  TestModalLineInput input;
+  ModalLineInput input(&MakeTestLineInput);
   std::optional<std::string> read_line;  // Last non-modal result.
   input.Init([&read_line](const std::string& line) { read_line = line; }, "Prompt ");
   input.Show();
@@ -162,6 +156,42 @@ TEST(ModalLineInputTest, ModalGetOption) {
   input.ModalGetOption(options, ">", [&result](const std::string& line) { result = line; });
   input.OnInput(SpecialCharacters::kKeyControlC);
   EXPECT_EQ("n", result);
+}
+
+TEST(ModalLineInputTest, SetCurrentInput) {
+  ModalLineInput input(&MakeTestLineInput);
+  std::optional<std::string> read_line;  // Last non-modal result.
+  input.Init([&read_line](const std::string& line) { read_line = line; }, "Prompt ");
+  input.Show();
+
+  input.OnInput('a');
+  EXPECT_FALSE(read_line);  // Shouldn't have issued any callbacks.
+  EXPECT_EQ("a", input.GetLine());
+
+  // Replace the contents.
+  input.SetCurrentInput("foo");
+  EXPECT_FALSE(read_line);  // Shouldn't have issued any callbacks.
+  EXPECT_EQ("foo", input.GetLine());
+
+  // The cursor should be at the end of the line for additional input.
+  input.OnInput('m');
+  EXPECT_EQ("foom", input.GetLine());
+
+  input.OnInput(SpecialCharacters::kKeyEnter);
+  EXPECT_TRUE(read_line);
+  EXPECT_EQ("foom", *read_line);
+
+  // Add some history.
+  input.AddToHistory("history");
+
+  // Go up, the current line should be the history value.
+  input.OnInput(SpecialCharacters::kKeyControlP);
+  EXPECT_EQ("history", input.GetLine());
+
+  // Set the input to empty and go up again. The history item should still be there.
+  input.SetCurrentInput(std::string());
+  input.OnInput(SpecialCharacters::kKeyControlP);
+  EXPECT_EQ("history", input.GetLine());
 }
 
 }  // namespace line_input

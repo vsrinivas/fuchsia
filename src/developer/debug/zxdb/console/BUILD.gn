@@ -244,6 +244,7 @@ source_set("tests") {
     "commands/verb_up_unittest.cc",
     "commands/verb_watch_unittest.cc",
     "console_context_unittest.cc",
+    "console_impl_unittest.cc",
     "console_test.cc",
     "console_test.h",
     "format_context_unittest.cc",

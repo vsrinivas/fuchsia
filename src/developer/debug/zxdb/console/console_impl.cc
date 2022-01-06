@@ -83,7 +83,8 @@ void PreserveStdoutTermios() {}
 
 }  // namespace
 
-ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory_(this) {
+ConsoleImpl::ConsoleImpl(Session* session, line_input::ModalLineInput::Factory line_input_factory)
+    : Console(session), line_input_(std::move(line_input_factory)), impl_weak_factory_(this) {
   line_input_.Init([this](std::string s) { ProcessInputLine(s); }, "[zxdb] ");
 
   // Set the line input completion callback that can know about our context. OK to bind |this| since
@@ -94,6 +95,19 @@ ConsoleImpl::ConsoleImpl(Session* session) : Console(session), impl_weak_factory
   line_input_.SetAutocompleteCallback([fill_command_context = std::move(fill_command_context)](
                                           std::string prefix) -> std::vector<std::string> {
     return GetCommandCompletions(prefix, fill_command_context);
+  });
+
+  // Cancel (ctrl-c) handling.
+  line_input_.SetCancelCallback([this]() {
+    if (line_input_.GetLine().empty()) {
+      // Stop program execution. Do this by visibly typing the stop command so the user knows
+      // what is happening.
+      line_input_.SetCurrentInput("pause --clear-state");
+      line_input_.OnInput(line_input::SpecialCharacters::kKeyEnter);
+    } else {
+      // Control-C with typing on the line just clears the current state.
+      line_input_.SetCurrentInput(std::string());
+    }
   });
 
   // EOF (ctrl-d) should exit gracefully.

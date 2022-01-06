@@ -31,8 +31,8 @@ struct SpecialCharacters {
   static constexpr char kKeyControlK = 11;
   static constexpr char kKeyFormFeed = 12;
   static constexpr char kKeyEnter = 13;
-  static constexpr char kKeyControlN = 14;
-  static constexpr char kKeyControlP = 16;
+  static constexpr char kKeyControlN = 14;  // Down
+  static constexpr char kKeyControlP = 16;  // Up
   static constexpr char kKeyControlR = 18;
   static constexpr char kKeyControlT = 20;
   static constexpr char kKeyControlU = 21;
@@ -141,6 +141,13 @@ class LineInput {
   // callback is complete only to be rehidden on exit (which will cause flickering).
   virtual void Hide() = 0;
   virtual void Show() = 0;
+
+  // Replaces the contents of the current line with the given contents. The cursor will be placed
+  // at the end of the text. Any changes in editing history will be reset.
+  //
+  // This bypasses handling of any special characters and input and any such
+  // characters will be included as literals on the line. This will issue any changed callbacks.
+  virtual void SetCurrentInput(const std::string& input) = 0;
 };
 
 // Implementation of LineInput that implements the editing state. Output is still abstract to
@@ -162,6 +169,7 @@ class LineInputEditor : public LineInput {
   void AddToHistory(const std::string& line) override;
   void Hide() override;
   void Show() override;
+  void SetCurrentInput(const std::string& input) override;
 
   size_t pos() const { return pos_; }
 

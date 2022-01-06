@@ -21,6 +21,8 @@ namespace zxdb {
 
 namespace {
 
+constexpr int kClearSwitch = 1;
+
 const char kPauseShortHelp[] = "pause / pa: Pause a thread or process.";
 const char kPauseHelp[] =
     R"(pause / pa
@@ -45,8 +47,18 @@ const char kPauseHelp[] =
     paused. Other threads in that process and other processes currently
     running will remain so.
 
-  TODO(brettw) it might be nice to have a --other flag that would pause
-  all threads other than the specified one.
+Options
+
+  --clear-state | -c
+      Additionally clears all stepping state. Without this flag, any previous
+      step operations that have not completed will be resumed when the thread
+      is continued.
+
+      Examples of stepping state are the "finish" or "until" commands that may
+      take some time to complete. If you run "pause" without "-c" and then
+      "continue", the uncompleted "finish" or "until" commands will still be
+      active and will automatically stop execution when their condition has been
+      fulfilled. The "-c" option will cancel these pending step operations.
 
 Examples
 
@@ -68,12 +80,14 @@ Examples
       if no index is specified).
 )";
 
-Err PauseThread(ConsoleContext* context, Thread* thread) {
+Err PauseThread(ConsoleContext* context, Thread* thread, bool clear_state) {
   // Only save the thread (for printing source info) if it's the current thread.
   Target* target = thread->GetProcess()->GetTarget();
   bool show_source =
       context->GetActiveTarget() == target && context->GetActiveThreadForTarget(target) == thread;
 
+  if (clear_state)
+    thread->CancelAllThreadControllers();
   thread->Pause([weak_thread = thread->GetWeakPtr(), show_source]() {
     if (!weak_thread)
       return;
@@ -96,7 +110,7 @@ Err PauseThread(ConsoleContext* context, Thread* thread) {
 
 // Source information on this thread will be printed out on completion. The current thread may be
 // null.
-Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread) {
+Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread, bool clear_state) {
   Process* process = target->GetProcess();
   if (!process)
     return Err("Process not running, can't pause.");
@@ -107,6 +121,8 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
       context->GetActiveThreadForTarget(target) == current_thread)
     weak_thread = current_thread->GetWeakPtr();
 
+  if (clear_state)
+    process->CancelAllThreadControllers();
   process->Pause([weak_process = process->GetWeakPtr(), weak_thread]() {
     if (!weak_process)
       return;
@@ -124,10 +140,12 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
 }
 
 // Source information on this thread will be printed out on completion.
-Err PauseSystem(System* system) {
+Err PauseSystem(System* system, bool clear_state) {
   if (Err err = VerifySystemHasRunningProcess(system); err.has_error())
     return err;
 
+  if (clear_state)
+    system->CancelAllThreadControllers();
   system->Pause([weak_system = system->GetWeakPtr()]() {
     // Provide messaging about the system pause.
     if (!weak_system)
@@ -172,18 +190,22 @@ Err RunVerbPause(ConsoleContext* context, const Command& cmd) {
   if (Err err = cmd.ValidateNouns({Noun::kGlobal, Noun::kProcess, Noun::kThread}); err.has_error())
     return err;
 
+  bool clear_state = cmd.HasSwitch(kClearSwitch);
+
   if (cmd.HasNoun(Noun::kThread))
-    return PauseThread(context, cmd.thread());
+    return PauseThread(context, cmd.thread(), clear_state);
   if (cmd.HasNoun(Noun::kProcess))
-    return PauseTarget(context, cmd.target(), cmd.thread());
-  return PauseSystem(&context->session()->system());
+    return PauseTarget(context, cmd.target(), cmd.thread(), clear_state);
+  return PauseSystem(&context->session()->system(), clear_state);
 }
 
 }  // namespace
 
 VerbRecord GetPauseVerbRecord() {
-  return VerbRecord(&RunVerbPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
-                    CommandGroup::kProcess);
+  VerbRecord pause(&RunVerbPause, {"pause", "pa"}, kPauseShortHelp, kPauseHelp,
+                   CommandGroup::kProcess);
+  pause.switches.push_back(SwitchRecord(kClearSwitch, false, "clear-state", 'c'));
+  return pause;
 }
 
 }  // namespace zxdb

@@ -38,6 +38,7 @@ class MockProcess : public Process {
   void Continue(bool forward_exceptions) override;
   void ContinueUntil(std::vector<InputLocation> location,
                      fit::callback<void(const Err&)> cb) override;
+  void CancelAllThreadControllers() override {}
   fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   void GetTLSHelpers(GetTLSHelpersCallback cb) override;
   void ReadMemory(uint64_t address, uint32_t size,

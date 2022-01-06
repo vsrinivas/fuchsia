@@ -73,6 +73,15 @@ class ModalOptionState {
 
 }  // namespace
 
+ModalLineInput::ModalLineInput(Factory factory) : factory_(std::move(factory)) {
+  if (!factory_) {
+    // Make a "stdout" line input factory when not explicitly specified.
+    factory_ = [](AcceptCallback accept_cb, const std::string& prompt) {
+      return std::make_unique<LineInputStdout>(std::move(accept_cb), prompt);
+    };
+  }
+}
+
 void ModalLineInput::Init(AcceptCallback accept_cb, const std::string& prompt) {
   FX_DCHECK(!normal_input_) << "Calling Init() twice.";
 
@@ -135,6 +144,10 @@ void ModalLineInput::Hide() {
 void ModalLineInput::Show() {
   hidden_ = false;
   current_input_->Show();
+}
+
+void ModalLineInput::SetCurrentInput(const std::string& input) {
+  current_input_->SetCurrentInput(input);
 }
 
 void ModalLineInput::ModalGetOption(const ModalPromptOptions& options, const std::string& prompt,
@@ -214,7 +227,7 @@ void ModalLineInput::ShowNextModal() {
 
 std::unique_ptr<LineInput> ModalLineInput::MakeAndSetupLineInput(AcceptCallback accept_cb,
                                                                  const std::string& prompt) {
-  auto input = MakeLineInput(std::move(accept_cb), prompt);
+  auto input = factory_(std::move(accept_cb), prompt);
 
   if (max_cols_)
     input->SetMaxCols(max_cols_);

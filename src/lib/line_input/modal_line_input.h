@@ -37,6 +37,9 @@ struct ModalPromptOptions {
 // implementations for different I/O schemes.
 class ModalLineInput : public LineInput {
  public:
+  using Factory = std::function<std::unique_ptr<LineInput>(AcceptCallback accept_cb,
+                                                           const std::string& prompt)>;
+
   // In response to this callback, the implementation should call EndModal() if modal input is
   // complete.
   using ModalCompletionCallback = fit::function<void(const std::string&)>;
@@ -49,8 +52,13 @@ class ModalLineInput : public LineInput {
   // prompt.
   using WillShowModalCallback = fit::callback<void()>;
 
+  // The constructor takes a factory function for the underlying LineInput types. These are used
+  // to actually get input for the normal case and the modal input case. By default (null factory
+  // function), a "stdout" line input will be used which is the expected behavior. Replacing the
+  // line input implementation allows tests to use this class without using stdout.
+  //
   // Must call Init() before using any functions.
-  explicit ModalLineInput() = default;
+  explicit ModalLineInput(Factory factory = Factory());
   virtual ~ModalLineInput() = default;
 
   // This can't be in the constructor because it needs to call virtual functions.
@@ -68,6 +76,7 @@ class ModalLineInput : public LineInput {
   void AddToHistory(const std::string& line) override;
   void Hide() override;
   void Show() override;
+  void SetCurrentInput(const std::string& input) override;
 
   // Higher-level version of BeginModal() and EndModal() that takes a list of possible options and
   // will call the callback only when the user enters a match for one of the options. The completion
@@ -98,11 +107,6 @@ class ModalLineInput : public LineInput {
   void EndModal();
 
  private:
-  // Factory function for the LineInput variant used by this class.
-  virtual std::unique_ptr<LineInput> MakeLineInput(AcceptCallback accept_cb,
-                                                   const std::string& prompt) = 0;
-
- private:
   // Called when there is a modal dialog to show at the front of modal_callbacks_.
   //
   // The normal input should be hidden before this call.
@@ -110,6 +114,9 @@ class ModalLineInput : public LineInput {
 
   std::unique_ptr<LineInput> MakeAndSetupLineInput(AcceptCallback accept_cb,
                                                    const std::string& prompt);
+
+  // Guaranteed non-null.
+  Factory factory_;
 
   std::unique_ptr<LineInput> normal_input_;
   std::unique_ptr<LineInput> modal_input_;
@@ -135,18 +142,6 @@ class ModalLineInput : public LineInput {
     WillShowModalCallback will_show;
   };
   std::deque<ModalRecord> modal_callbacks_;
-};
-
-class ModalLineInputStdout : public ModalLineInput {
- public:
-  ModalLineInputStdout() : ModalLineInput() {}
-  ~ModalLineInputStdout() override {}
-
- protected:
-  std::unique_ptr<LineInput> MakeLineInput(AcceptCallback accept_cb,
-                                           const std::string& prompt) override {
-    return std::make_unique<LineInputStdout>(std::move(accept_cb), prompt);
-  }
 };
 
 }  // namespace line_input

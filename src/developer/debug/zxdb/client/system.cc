@@ -749,6 +749,13 @@ void System::Continue(bool forward) {
   }
 }
 
+void System::CancelAllThreadControllers() {
+  for (const auto& target : targets_) {
+    if (Process* process = target->GetProcess())
+      process->CancelAllThreadControllers();
+  }
+}
+
 bool System::HasDownload(const std::string& build_id) {
   auto download = downloads_.find({build_id, DebugSymbolFileType::kDebugInfo});
 

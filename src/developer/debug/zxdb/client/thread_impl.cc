@@ -152,6 +152,8 @@ void ThreadImpl::AddPostStopTask(PostStopTask task) {
   post_stop_tasks_.push_back(std::move(task));
 }
 
+void ThreadImpl::CancelAllThreadControllers() { controllers_.clear(); }
+
 void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) {
   // The register to set.
   debug_ipc::WriteRegistersRequest request;

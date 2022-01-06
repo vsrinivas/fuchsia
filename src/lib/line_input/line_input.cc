@@ -188,6 +188,17 @@ void LineInputEditor::Show() {
   RepaintLine();
 }
 
+void LineInputEditor::SetCurrentInput(const std::string& input) {
+  editing_history_.clear();
+  history_index_ = 0;
+
+  mutable_cur_line() = input;
+  pos_ = input.size();
+  completion_mode_ = false;
+
+  LineChanged();
+}
+
 void LineInputEditor::HandleEscapedInput(char c) {
   // Escape sequences are two bytes, buffer until we have both.
   escape_sequence_.push_back(c);

@@ -148,6 +148,11 @@ void ProcessImpl::ContinueUntil(std::vector<InputLocation> locations,
   cb(Err("Process-wide 'until' is not implemented."));
 }
 
+void ProcessImpl::CancelAllThreadControllers() {
+  for (const auto& [koid, thread] : threads_)
+    thread->CancelAllThreadControllers();
+}
+
 fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
   if (!symbol_data_provider_) {
     symbol_data_provider_ = fxl::MakeRefCounted<ProcessSymbolDataProvider>(

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_IMPL_H_
 
+#include <gtest/gtest_prod.h>
+
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -20,7 +22,10 @@ class Session;
 // The console has some virtual functions for ease of mocking the interface for tests.
 class ConsoleImpl : public Console {
  public:
-  explicit ConsoleImpl(Session* session);
+  // The line input factory is used to provide a factory for line input implementations that
+  // don't interact with the actual stdout for testing purposes. If null, stdout will be used.
+  explicit ConsoleImpl(Session* session, line_input::ModalLineInput::Factory line_input_factory =
+                                             line_input::ModalLineInput::Factory());
   virtual ~ConsoleImpl();
 
   fxl::WeakPtr<ConsoleImpl> GetImplWeakPtr();
@@ -36,6 +41,8 @@ class ConsoleImpl : public Console {
   void ProcessInputLine(const std::string& line, CommandCallback callback = nullptr) override;
 
  private:
+  FRIEND_TEST(ConsoleImplTest, ControlC);
+
   void DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
 
   // Searches for history at $HOME/.zxdb_history and loads it if found.
@@ -44,7 +51,7 @@ class ConsoleImpl : public Console {
 
   debug::MessageLoop::WatchHandle stdio_watch_;
 
-  line_input::ModalLineInputStdout line_input_;
+  line_input::ModalLineInput line_input_;
 
   // Saves the last nonempty input line for re-running when the user just presses "Enter" with no
   // parameters. This must be re-parsed each time because the context can be different.
