@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
-#include <lib/fdio/inotify.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/memfs/memfs.h>

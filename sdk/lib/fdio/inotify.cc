@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <lib/fdio/inotify.h>
 #include <lib/fdio/private.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <poll.h>
+#include <sys/inotify.h>
 
 #include <map>
 #include <vector>

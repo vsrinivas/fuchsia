@@ -4,6 +4,10 @@
 
 #include "inotify_test_base.h"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 namespace fs {
 
 void InotifyTest::SetUp() {

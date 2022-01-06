@@ -7,16 +7,13 @@
 
 #include <fcntl.h>
 #include <limits.h>
+#include <sys/inotify.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
 #include <optional>
 #include <string>
 #include <vector>
-
-#if defined(__linux__)
-#include <sys/inotify.h>
-#endif
 
 #if defined(__Fuchsia__)
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
@@ -25,7 +22,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/inotify.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl-async/cpp/bind.h>
 #endif  // __Fuchsia__

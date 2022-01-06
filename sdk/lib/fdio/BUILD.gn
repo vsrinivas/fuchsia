@@ -57,7 +57,6 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "lib/fdio/fd.h",
       "lib/fdio/fdio.h",
       "lib/fdio/io.h",
-      "lib/fdio/inotify.h",
       "lib/fdio/limits.h",
       "lib/fdio/namespace.h",
       "lib/fdio/private.h",
