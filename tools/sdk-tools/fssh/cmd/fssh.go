@@ -51,7 +51,9 @@ func main() {
 
 	flag.Parse()
 
-	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "fssh ")
+	// Write all logs to stderr. Other tools parse the output of fssh which will break if logs
+	// are written to stdout.
+	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stderr, os.Stderr, "fssh ")
 	log.SetFlags(logFlags)
 
 	if *helpFlag {
