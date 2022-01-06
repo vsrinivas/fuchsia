@@ -5,10 +5,13 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::{
-        create_request_stream, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd,
+        create_request_stream, ClientEnd, DiscoverableProtocolMarker, MemberOpener, Proxy,
+        ServerEnd, ServiceMarker, ServiceProxy,
     },
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_component::DEFAULT_SERVICE_INSTANCE,
+    fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, select, FutureExt, TryStreamExt},
     io_util,
     runner::get_value as get_dictionary_value,
@@ -21,6 +24,16 @@ use {
 };
 
 const LOCAL_COMPONENT_NAME_KEY: &'static str = "LOCAL_COMPONENT_NAME";
+
+struct DirectoryProtocolImpl(fio::DirectoryProxy);
+
+impl MemberOpener for DirectoryProtocolImpl {
+    fn open_member(&self, member: &str, server_end: zx::Channel) -> Result<(), fidl::Error> {
+        let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+        self.0.open(flags, fio::MODE_TYPE_SERVICE, member, ServerEnd::new(server_end))?;
+        Ok(())
+    }
+}
 
 /// The handles from the framework over which the local component should interact with other
 /// components.
@@ -52,12 +65,12 @@ impl LocalComponentHandles {
     }
 
     /// Connects to a FIDL protocol and returns a proxy to that protocol.
-    pub fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
-        self.connect_to_named_service::<P>(P::PROTOCOL_NAME)
+    pub fn connect_to_protocol<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
+        self.connect_to_named_protocol::<P>(P::PROTOCOL_NAME)
     }
 
     /// Connects to a FIDL protocol with the given name and returns a proxy to that protocol.
-    pub fn connect_to_named_service<P: DiscoverableProtocolMarker>(
+    pub fn connect_to_named_protocol<P: DiscoverableProtocolMarker>(
         &self,
         name: &str,
     ) -> Result<P::Proxy, Error> {
@@ -76,6 +89,58 @@ impl LocalComponentHandles {
                 .into_channel()
                 .map_err(|_| format_err!("failed to convert proxy to handle"))?,
         ))
+    }
+
+    /// Opens a FIDL service as a directory, which holds instances of the service.
+    pub fn open_service<S: ServiceMarker>(&self) -> Result<fio::DirectoryProxy, Error> {
+        self.open_named_service(S::SERVICE_NAME)
+    }
+
+    /// Opens a FIDL service with the given name as a directory, which holds instances of the
+    /// service.
+    pub fn open_named_service(&self, name: &str) -> Result<fio::DirectoryProxy, Error> {
+        let svc_dir_proxy = self
+            .namespace
+            .get(&"/svc".to_string())
+            .ok_or(format_err!("the component's namespace doesn't have a /svc directory"))?;
+        io_util::open_directory(
+            &svc_dir_proxy,
+            &Path::new(name),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )
+    }
+
+    /// Connect to the "default" instance of a FIDL service in the `/svc` directory of
+    /// the local component's root namespace.
+    pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
+        self.connect_to_service_instance::<S>(DEFAULT_SERVICE_INSTANCE)
+    }
+
+    /// Connect to an instance of a FIDL service in the `/svc` directory of
+    /// the local components's root namespace.
+    /// `instance` is a path of one or more components.
+    pub fn connect_to_service_instance<S: ServiceMarker>(
+        &self,
+        instance_name: &str,
+    ) -> Result<S::Proxy, Error> {
+        self.connect_to_named_service_instance::<S>(S::SERVICE_NAME, instance_name)
+    }
+
+    /// Connect to an instance of a FIDL service with the given name in the `/svc` directory of
+    /// the local components's root namespace.
+    /// `instance` is a path of one or more components.
+    pub fn connect_to_named_service_instance<S: ServiceMarker>(
+        &self,
+        service_name: &str,
+        instance_name: &str,
+    ) -> Result<S::Proxy, Error> {
+        let service_dir = self.open_named_service(service_name)?;
+        let directory_proxy = io_util::open_directory(
+            &service_dir,
+            &Path::new(instance_name),
+            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+        )?;
+        Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
     }
 
     /// Clones a directory from the local component's namespace.

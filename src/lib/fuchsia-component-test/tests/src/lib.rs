@@ -7,13 +7,16 @@ use {
     cm_rust, cm_types,
     fidl_fidl_examples_routing_echo::{self as fecho, EchoMarker as EchoClientStatsMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
-    fidl_fuchsia_data as fdata, fuchsia_async as fasync,
+    fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata,
+    fidl_fuchsia_examples_services as fex_services, fidl_fuchsia_io as fio,
+    fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
         error::Error as RealmBuilderError,
         new::{Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route},
     },
-    futures::{channel::mpsc, FutureExt, SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
+    io_util,
     std::convert::TryInto,
 };
 
@@ -378,9 +381,8 @@ async fn get_and_replace_realm_decl() -> Result<(), Error> {
 #[fuchsia::test]
 async fn get_and_replace_component_decl() -> Result<(), Error> {
     let builder = RealmBuilder::new().await?;
-    let child = builder
-        .add_local_child("child", |_| futures::future::pending().boxed(), ChildOptions::new())
-        .await?;
+    let child =
+        builder.add_local_child("child", |_| pending().boxed(), ChildOptions::new()).await?;
     let mut child_decl = builder.get_component_decl(&child).await?;
     child_decl.children.push(cm_rust::ChildDecl {
         name: "example-grand-child".to_string(),
@@ -622,7 +624,7 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
                 let collection_name_for_mock = collection_name_for_mock.clone();
                 let mut send_echo_client_results = send_echo_client_results.clone();
                 async move {
-                    let realm_proxy = handles.connect_to_service::<fcomponent::RealmMarker>()?;
+                    let realm_proxy = handles.connect_to_protocol::<fcomponent::RealmMarker>()?;
                     realm_proxy
                         .create_child(
                             &mut fcdecl::CollectionRef { name: collection_name_for_mock.clone() },
@@ -1047,6 +1049,230 @@ async fn echo_servers() -> Result<(), Error> {
     Ok(())
 }
 
+#[fuchsia::test]
+async fn route_required_fields_for_local_component() {
+    // This test confirms that certain fields are required when routing capabilities to or from a
+    // local component
+
+    // Given a source, a target, and a flag signifying if either the source or a target are a local
+    // component, checks if the server will return an error for various scenarios in which a flag
+    // required when interfacing with local components is omitted.
+    async fn check_required_status(from: Ref, to: Ref, extra_fields_are_required: bool) {
+        let builder = RealmBuilder::new().await.unwrap();
+        builder.add_child("non_local", "test://a", ChildOptions::new()).await.unwrap();
+        builder
+            .add_local_child("local_1", |_| pending().boxed(), ChildOptions::new())
+            .await
+            .unwrap();
+        builder
+            .add_local_child("local_2", |_| pending().boxed(), ChildOptions::new())
+            .await
+            .unwrap();
+
+        // Confirms that the result returned by the server matches our expectations
+        let assert_add_route_results = |results| match (extra_fields_are_required, results) {
+            (
+                true,
+                Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::CapabilityInvalid)),
+            ) => (),
+            (false, Ok(())) => (),
+            (true, Ok(())) => {
+                panic!("the server didn't return an error when a required field was missing")
+            }
+            (false, Err(e)) => {
+                panic!("the server returned an error when it should have succeeded: {:?}", e)
+            }
+            (true, Err(e)) => panic!("we were expecting an error, but not this one: {:?}", e),
+        };
+
+        // Routing a directory without the path specified
+        let res = builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::directory("2").rights(fio2::RX_STAR_DIR))
+                    .from(from.clone())
+                    .to(to.clone()),
+            )
+            .await;
+        assert_add_route_results(res);
+
+        // Routing a directory without the rights specified
+        let res = builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::directory("2").path("/2"))
+                    .from(from.clone())
+                    .to(to.clone()),
+            )
+            .await;
+        assert_add_route_results(res);
+
+        // Routing storage without the path specified
+        if to != Ref::parent() {
+            // Storage capabilities cannot be exposed
+            let res = builder
+                .add_route(
+                    Route::new()
+                        .capability(Capability::storage("data"))
+                        .from(from.clone())
+                        .to(to.clone()),
+                )
+                .await;
+            assert_add_route_results(res);
+        }
+    }
+
+    let non_local_ref = Ref::child("non_local");
+    let local_1_ref = Ref::child("local_1");
+    let local_2_ref = Ref::child("local_2");
+
+    // These (from,to) tuples are scenarios where the additional, local-component-specific fields
+    // are _not_ required.
+    let fields_not_required_combinations =
+        vec![(non_local_ref.clone(), Ref::parent()), (Ref::parent(), non_local_ref.clone())];
+    // These (from,to) tuples are scenarios where the additional, local-component-specific fields
+    // _are_ required.
+    let fields_required_combinations = vec![
+        (Ref::parent(), local_1_ref.clone()),
+        (local_1_ref.clone(), non_local_ref.clone()),
+        (non_local_ref.clone(), local_1_ref.clone()),
+        (local_1_ref.clone(), local_2_ref.clone()),
+        (local_2_ref.clone(), Ref::parent()),
+    ];
+
+    for (from, to) in fields_not_required_combinations {
+        check_required_status(from, to, false).await;
+    }
+    for (from, to) in fields_required_combinations {
+        check_required_status(from, to, true).await;
+    }
+}
+
+#[fuchsia::test]
+async fn route_storage() -> Result<(), Error> {
+    let builder = RealmBuilder::new().await?;
+    let (send_storage_used, mut receive_storage_used) = mpsc::channel(1);
+    let storage_user = builder
+        .add_local_child(
+            "storage_user",
+            move |handles| {
+                let mut send_storage_used = send_storage_used.clone();
+                async move {
+                    let data_dir = handles.clone_from_namespace("data")?;
+                    let example_file = io_util::directory::open_file(
+                        &data_dir,
+                        "example_file",
+                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_CREATE,
+                    )
+                    .await
+                    .expect("failed to open example_file");
+                    let example_data = "example data";
+                    io_util::write_file(&example_file, example_data).await?;
+                    let (_, _) = example_file.seek(0, fio::SeekOrigin::Start).await?;
+                    let file_contents = io_util::read_file(&example_file).await?;
+                    assert_eq!(example_data, file_contents.as_str());
+                    send_storage_used.send(()).await.expect("failed to send results");
+                    Ok(())
+                }
+                .boxed()
+            },
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::storage("data").path("/data"))
+                .from(Ref::parent())
+                .to(&storage_user),
+        )
+        .await?;
+    let _realm_instance = builder.build().await?;
+    assert!(
+        receive_storage_used.next().await.is_some(),
+        "failed to observe the local component report a successful usage of its storage"
+    );
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn route_service() -> Result<(), Error> {
+    let builder = RealmBuilder::new().await?;
+    let service_provider = builder
+        .add_local_child(
+            "service_provider",
+            move |handles| {
+                async move {
+                    let mut fs = fserver::ServiceFs::new();
+                    fs.dir("svc").add_unified_service(|req: fex_services::BankAccountRequest| req);
+                    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+                    fs.for_each_concurrent(None, move |request| async move {
+                        match request {
+                            fex_services::BankAccountRequest::ReadOnly(mut stream) => {
+                                while let Some(request) = stream
+                                    .try_next()
+                                    .await
+                                    .expect("failed to get next read-only request")
+                                {
+                                    match request {
+                                        fex_services::ReadOnlyAccountRequest::GetOwner {
+                                            responder,
+                                        } => {
+                                            responder
+                                                .send("hippos")
+                                                .expect("failed to send service response");
+                                        }
+                                        _ => panic!("unexpected request"),
+                                    }
+                                }
+                            }
+                            _ => panic!("unexpected request"),
+                        }
+                    })
+                    .await;
+                    Err(format_err!("should not have exited on its own"))
+                }
+                .boxed()
+            },
+            ChildOptions::new(),
+        )
+        .await?;
+    let (send_service_used, mut receive_service_used) = mpsc::channel(1);
+    let service_user = builder
+        .add_local_child(
+            "service_user",
+            move |handles| {
+                let mut send_service_used = send_service_used.clone();
+                async move {
+                    let read_only_account = handles
+                        .connect_to_service::<fex_services::BankAccountMarker>()?
+                        .read_only()?;
+                    let owner = read_only_account.get_owner().await?;
+                    assert_eq!("hippos", owner.as_str());
+                    send_service_used.send(()).await.expect("failed to send results");
+                    Ok(())
+                }
+                .boxed()
+            },
+            ChildOptions::new().eager(),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::service::<fex_services::BankAccountMarker>())
+                .from(&service_provider)
+                .to(&service_user),
+        )
+        .await?;
+    let _realm_instance = builder.build().await?;
+    assert!(
+        receive_service_used.next().await.is_some(),
+        "failed to observe the local component report a successful usage of its service"
+    );
+    Ok(())
+}
+
 // [START echo_server_mock]
 // A mock echo server implementation, that will crash if it doesn't receive anything other than the
 // contents of `expected_echo_str`. It takes and sends a message over `send_echo_server_called`
@@ -1089,7 +1315,7 @@ async fn echo_client_mock(
     mut send_echo_client_results: mpsc::Sender<()>,
     handles: LocalComponentHandles,
 ) -> Result<(), Error> {
-    let echo = handles.connect_to_service::<fecho::EchoMarker>()?;
+    let echo = handles.connect_to_protocol::<fecho::EchoMarker>()?;
     let out = echo.echo_string(Some(DEFAULT_ECHO_STR)).await?;
     if Some(DEFAULT_ECHO_STR.to_string()) != out {
         return Err(format_err!("unexpected echo result: {:?}", out));

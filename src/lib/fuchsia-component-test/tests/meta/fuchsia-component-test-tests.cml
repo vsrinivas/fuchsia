@@ -7,4 +7,11 @@
     program: {
         binary: "bin/fuchsia_component_test_tests_bin",
     },
+    offer: [
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#realm_builder" ],
+        },
+    ],
 }

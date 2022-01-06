@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{ProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fuchsia_component::server as fserver,
     fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -749,7 +749,7 @@ impl RealmNode2 {
             .get(child_name)
             .cloned()
             .map(|(_, r)| r)
-            .ok_or(RealmBuilderError::NoSuchChild(child_name.clone()))
+            .ok_or_else(|| RealmBuilderError::NoSuchChild(child_name.clone()))
     }
 
     async fn route_capabilities(
@@ -778,7 +778,8 @@ impl RealmNode2 {
                 }
 
                 if is_parent_ref(&target) {
-                    let decl = create_expose_decl(capability.clone(), from.clone())?;
+                    let decl =
+                        create_expose_decl(capability.clone(), from.clone(), ExposingIn::Realm)?;
                     push_if_not_present(&mut state_guard.decl.exposes, decl);
                 } else {
                     let decl = create_offer_decl(capability.clone(), from.clone(), target.clone())?;
@@ -882,7 +883,11 @@ async fn add_expose_decl_if_needed(
             );
             push_if_not_present(
                 &mut decl.exposes,
-                create_expose_decl(capability, fcdecl::Ref::Self_(fcdecl::SelfRef {}))?,
+                create_expose_decl(
+                    capability,
+                    fcdecl::Ref::Self_(fcdecl::SelfRef {}),
+                    ExposingIn::Child,
+                )?,
             );
             let () = child.replace_decl(decl).await?;
         }
@@ -891,39 +896,116 @@ async fn add_expose_decl_if_needed(
     Ok(())
 }
 
+fn into_dependency_type(type_: &Option<fcdecl::DependencyType>) -> cm_rust::DependencyType {
+    type_
+        .as_ref()
+        .cloned()
+        .map(FidlIntoNative::fidl_into_native)
+        .unwrap_or(cm_rust::DependencyType::Strong)
+}
+
+/// Attempts to produce the target name from the set of "name" and "as" fields from a capability.
+fn try_into_source_name(
+    name: &Option<String>,
+) -> Result<cm_rust::CapabilityName, RealmBuilderError> {
+    Ok(name
+        .as_ref()
+        .ok_or_else(|| {
+            RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "capability `name` received was empty"
+            ))
+        })?
+        .as_str()
+        .into())
+}
+
+/// Attempts to produce the target name from the set of "name" and "as" fields from a capability.
+fn try_into_target_name(
+    name: &Option<String>,
+    as_: &Option<String>,
+) -> Result<cm_rust::CapabilityName, RealmBuilderError> {
+    let name = name.as_ref().ok_or_else(|| {
+        RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+            "capability `name` received was empty"
+        ))
+    })?;
+    Ok(as_.as_ref().unwrap_or(name).clone().into())
+}
+
+/// Attempts to produce a valid CapabilityPath from the "path" field from a capability
+fn try_into_capability_path(
+    input: &Option<String>,
+) -> Result<cm_rust::CapabilityPath, RealmBuilderError> {
+    input
+        .as_ref()
+        .ok_or_else(|| {
+            RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "`path` field is required on capability when routing to or from a local component",
+            ))
+        })?
+        .as_str()
+        .try_into()
+        .map_err(|e| {
+            RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "`path` field in capability is invalid: {:?}",
+                e
+            ))
+        })
+}
+
+/// Attempts to produce a valid CapabilityPath from the "path" field from a capability, and if that
+/// fails then attempts to produce a valid CapabilityPath from the "name" field following
+/// "/svc/{name}"
+fn try_into_service_path(
+    name: &Option<String>,
+    path: &Option<String>,
+) -> Result<cm_rust::CapabilityPath, RealmBuilderError> {
+    let name = name.as_ref().ok_or_else(|| {
+        RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+            "capability `name` received was empty"
+        ))
+    })?;
+    let path = path.as_ref().cloned().unwrap_or_else(|| format!("/svc/{}", name));
+    path.as_str().try_into().map_err(|e| {
+        RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+            "unable to create service path: {:?}",
+            e
+        ))
+    })
+}
+
 fn create_capability_decl(
     capability: ftest::Capability2,
 ) -> Result<cm_rust::CapabilityDecl, RealmBuilderError> {
     Ok(match capability {
         ftest::Capability2::Protocol(protocol) => {
-            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
-            ))?;
-            cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
-                name: cm_rust::CapabilityName(name.clone()),
-                source_path: Some(to_capability_path(protocol.as_, "/svc", name.clone())?),
-            })
+            let name = try_into_source_name(&protocol.name)?;
+            let source_path = Some(try_into_service_path(&protocol.name, &protocol.path)?);
+            cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl { name, source_path })
         }
         ftest::Capability2::Directory(directory) => {
-            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+            let name = try_into_source_name(&directory.name)?;
+            let source_path = Some(try_into_capability_path(&directory.path)?);
+            let rights = directory.rights.ok_or_else(|| RealmBuilderError::CapabilityInvalid(
                 anyhow::format_err!(
-                    "capability `name` received was empty: {:?}",
-                    directory.clone()
+                    "`rights` field is required on directory capabilities when routing to or from a local component",
                 ),
             ))?;
-            cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
-                name: cm_rust::CapabilityName(name.clone()),
-                source_path: Some(to_capability_path(directory.as_, "/", name.clone())?),
-                rights: directory.rights.unwrap_or(fio2::RW_STAR_DIR),
-            })
+            cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl { name, source_path, rights })
+        }
+        ftest::Capability2::Storage(_) => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "declaring storage capabilities with add_route is unsupported"
+            )))?;
+        }
+        ftest::Capability2::Service(service) => {
+            let name = try_into_source_name(&service.name)?;
+            let source_path = Some(try_into_service_path(&service.name, &service.path)?);
+            cm_rust::CapabilityDecl::Service(cm_rust::ServiceDecl { name, source_path })
         }
         ftest::Capability2::Event(event) => {
-            let name = event.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", event.clone()),
-            ))?;
-            cm_rust::CapabilityDecl::Event(cm_rust::EventDecl {
-                name: cm_rust::CapabilityName(name.clone()),
-            })
+            let name = try_into_source_name(&event.name)?;
+            cm_rust::CapabilityDecl::Event(cm_rust::EventDecl { name })
         }
         _ => {
             return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
@@ -944,50 +1026,73 @@ fn create_offer_decl(
 
     Ok(match capability {
         ftest::Capability2::Protocol(protocol) => {
-            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
-            ))?;
+            let source_name = try_into_source_name(&protocol.name)?;
+            let target_name = try_into_target_name(&protocol.name, &protocol.as_)?;
+            let dependency_type = into_dependency_type(&protocol.type_);
             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source,
-                source_name: cm_rust::CapabilityName(name.clone()),
+                source_name,
                 target,
-                target_name: cm_rust::CapabilityName(protocol.as_.unwrap_or(name.clone())),
-                dependency_type: cm_rust::DependencyType::Strong,
+                target_name,
+                dependency_type,
             })
         }
         ftest::Capability2::Directory(directory) => {
-            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!(
-                    "capability `name` received was empty: {:?}",
-                    directory.clone()
-                ),
-            ))?;
+            let source_name = try_into_source_name(&directory.name)?;
+            let target_name = try_into_target_name(&directory.name, &directory.as_)?;
+            let dependency_type = into_dependency_type(&directory.type_);
             cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                 source,
-                source_name: cm_rust::CapabilityName(name.clone()),
+                source_name,
                 target,
-                target_name: cm_rust::CapabilityName(directory.as_.unwrap_or(name.clone())),
+                target_name,
                 rights: directory.rights,
                 subdir: directory.subdir.map(PathBuf::from),
-                dependency_type: cm_rust::DependencyType::Strong,
+                dependency_type,
+            })
+        }
+        ftest::Capability2::Storage(storage) => {
+            let source_name = try_into_source_name(&storage.name)?;
+            let target_name = try_into_target_name(&storage.name, &storage.as_)?;
+            cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                source,
+                source_name,
+                target,
+                target_name,
+            })
+        }
+        ftest::Capability2::Service(service) => {
+            let source_name = try_into_source_name(&service.name)?;
+            let target_name = try_into_target_name(&service.name, &service.as_)?;
+            cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                source,
+                source_name,
+                target,
+                target_name,
             })
         }
         ftest::Capability2::Event(event) => {
-            let name = event.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", event.clone()),
-            ))?;
-            let as_ = event.as_.as_ref().unwrap_or(name);
-            let mode = event.mode.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `mode` received was empty: {:?}", event.clone()),
-            ))?;
+            let source_name = try_into_source_name(&event.name)?;
+            let target_name = try_into_target_name(&event.name, &event.as_)?;
+            let mode = event
+                .mode
+                .as_ref()
+                .ok_or_else(|| {
+                    RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                        "capability `mode` received was empty: {:?}",
+                        event.clone()
+                    ))
+                })?
+                .clone()
+                .fidl_into_native();
             let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
             cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
                 source,
-                source_name: name.as_str().into(),
+                source_name,
                 target,
-                target_name: as_.as_str().into(),
+                target_name,
                 filter,
-                mode: mode.clone().fidl_into_native(),
+                mode,
             })
         }
         _ => {
@@ -999,38 +1104,76 @@ fn create_offer_decl(
     })
 }
 
+// We only want to apply the rename for a capability once. If we're handling a route from a local
+// component child to the parent, we want to use the source name in the child for the source and
+// target names, and apply the rename (where the source_name and target_name fields don't match) in
+// the parent. This field is used to track when an expose declaration is being generated for a
+// child versus the parent realm.
+enum ExposingIn {
+    Realm,
+    Child,
+}
+
 fn create_expose_decl(
     capability: ftest::Capability2,
     source: fcdecl::Ref,
+    exposing_in: ExposingIn,
 ) -> Result<cm_rust::ExposeDecl, RealmBuilderError> {
     let source: cm_rust::ExposeSource = source.fidl_into_native();
 
     Ok(match capability {
         ftest::Capability2::Protocol(protocol) => {
-            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
-            ))?;
+            let source_name = try_into_source_name(&protocol.name)?;
+            let target_name = match exposing_in {
+                ExposingIn::Child => try_into_source_name(&protocol.name)?,
+                ExposingIn::Realm => try_into_target_name(&protocol.name, &protocol.as_)?,
+            };
             cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                 source: source.clone(),
-                source_name: cm_rust::CapabilityName(name.clone()),
+                source_name,
                 target: cm_rust::ExposeTarget::Parent,
-                target_name: cm_rust::CapabilityName(protocol.as_.unwrap_or(name.clone())),
+                target_name,
             })
         }
         ftest::Capability2::Directory(directory) => {
-            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!(
-                    "capability `name` received was empty: {:?}",
-                    directory.clone()
-                ),
-            ))?;
+            let source_name = try_into_source_name(&directory.name)?;
+            let target_name = match exposing_in {
+                ExposingIn::Child => try_into_source_name(&directory.name)?,
+                ExposingIn::Realm => try_into_target_name(&directory.name, &directory.as_)?,
+            };
+            // Much like capability renames, we want to only apply the subdir field once. Use the
+            // exposing_in field to ensure that we apply the subdir field in the parent, and not in
+            // a local child's manifest.
+            let subdir = match exposing_in {
+                ExposingIn::Child => None,
+                ExposingIn::Realm => directory.subdir.map(PathBuf::from),
+            };
             cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-                source: source.clone(),
-                source_name: cm_rust::CapabilityName(name.clone()),
+                source,
+                source_name,
                 target: cm_rust::ExposeTarget::Parent,
-                target_name: cm_rust::CapabilityName(directory.as_.unwrap_or(name.clone())),
+                target_name,
                 rights: directory.rights,
-                subdir: directory.subdir.map(PathBuf::from),
+                subdir,
+            })
+        }
+        ftest::Capability2::Storage(_) => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "storage capabilities cannot be exposed: {:?}",
+                capability.clone()
+            )));
+        }
+        ftest::Capability2::Service(service) => {
+            let source_name = try_into_source_name(&service.name)?;
+            let target_name = match exposing_in {
+                ExposingIn::Child => try_into_source_name(&service.name)?,
+                ExposingIn::Realm => try_into_target_name(&service.name, &service.as_)?,
+            };
+            cm_rust::ExposeDecl::Service(cm_rust::ExposeServiceDecl {
+                source,
+                source_name,
+                target: cm_rust::ExposeTarget::Parent,
+                target_name,
             })
         }
         ftest::Capability2::Event(_) => {
@@ -1051,45 +1194,87 @@ fn create_expose_decl(
 fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, RealmBuilderError> {
     Ok(match capability {
         ftest::Capability2::Protocol(protocol) => {
-            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
-            ))?;
+            // If the capability was renamed in the parent's offer declaration, we want to use the
+            // post-rename version of it here.
+            let source_name = try_into_target_name(&protocol.name, &protocol.as_)?;
+            let target_path = try_into_service_path(
+                &Some(source_name.clone().native_into_fidl()),
+                &protocol.path,
+            )?;
+            let dependency_type = protocol
+                .type_
+                .map(FidlIntoNative::fidl_into_native)
+                .unwrap_or(cm_rust::DependencyType::Strong);
             cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
                 source: cm_rust::UseSource::Parent,
-                source_name: cm_rust::CapabilityName(name.clone()),
-                target_path: to_capability_path(protocol.as_, "/svc", name.clone())?,
-                dependency_type: cm_rust::DependencyType::Strong,
+                source_name,
+                target_path,
+                dependency_type,
             })
         }
         ftest::Capability2::Directory(directory) => {
-            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+            // If the capability was renamed in the parent's offer declaration, we want to use the
+            // post-rename version of it here.
+            let source_name = try_into_target_name(&directory.name, &directory.as_)?;
+            let target_path = try_into_capability_path(&directory.path)?;
+            let rights = directory.rights.ok_or_else(|| RealmBuilderError::CapabilityInvalid(
                 anyhow::format_err!(
-                    "capability `name` received was empty: {:?}",
-                    directory.clone()
+                    "`rights` field is required on directory capabilities when routing to or from a local component",
                 ),
             ))?;
+            let dependency_type = directory
+                .type_
+                .map(FidlIntoNative::fidl_into_native)
+                .unwrap_or(cm_rust::DependencyType::Strong);
             cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
                 source: cm_rust::UseSource::Parent,
-                source_name: cm_rust::CapabilityName(name.clone()),
-                target_path: to_capability_path(directory.as_, "/", name.clone())?,
-                rights: directory.rights.unwrap_or(fio2::RW_STAR_DIR),
-                subdir: directory.subdir.map(PathBuf::from),
+                source_name,
+                target_path,
+                rights,
+                // We only want to set the sub-directory field once, and if we're generating a use
+                // declaration then we've already generated an offer declaration in the parent and
+                // we'll set the sub-directory field there.
+                subdir: None,
+                dependency_type,
+            })
+        }
+        ftest::Capability2::Storage(storage) => {
+            // If the capability was renamed in the parent's offer declaration, we want to use the
+            // post-rename version of it here.
+            let source_name = try_into_target_name(&storage.name, &storage.as_)?;
+            let target_path = try_into_capability_path(&storage.path)?;
+            cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl { source_name, target_path })
+        }
+        ftest::Capability2::Service(service) => {
+            // If the capability was renamed in the parent's offer declaration, we want to use the
+            // post-rename version of it here.
+            let source_name = try_into_target_name(&service.name, &service.as_)?;
+            let target_path = try_into_service_path(
+                &Some(source_name.clone().native_into_fidl()),
+                &service.path,
+            )?;
+            cm_rust::UseDecl::Service(cm_rust::UseServiceDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name,
+                target_path,
                 dependency_type: cm_rust::DependencyType::Strong,
             })
         }
         ftest::Capability2::Event(event) => {
-            let name = event.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `name` received was empty: {:?}", event.clone()),
-            ))?;
-            let as_ = event.as_.as_ref().unwrap_or(name);
-            let mode = event.mode.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
-                anyhow::format_err!("capability `mode` received was empty: {:?}", event.clone()),
-            ))?;
+            // If the capability was renamed in the parent's offer declaration, we want to use the
+            // post-rename version of it here.
+            let source_name = try_into_target_name(&event.name, &event.as_)?;
+            let mode = event.mode.as_ref().ok_or_else(|| {
+                RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                    "capability `mode` received was empty: {:?}",
+                    event.clone()
+                ))
+            })?;
             let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
             cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
                 source: cm_rust::UseSource::Parent,
-                source_name: as_.as_str().into(),
-                target_name: as_.as_str().into(),
+                source_name: source_name.clone(),
+                target_name: source_name,
                 filter,
                 mode: mode.clone().fidl_into_native(),
                 dependency_type: cm_rust::DependencyType::Strong,
@@ -1131,17 +1316,6 @@ fn push_if_not_present<T: PartialEq>(container: &mut Vec<T>, value: T) {
     if !container.contains(&value) {
         container.push(value);
     }
-}
-
-fn to_capability_path(
-    as_: Option<String>,
-    dirname: &str,
-    default: String,
-) -> Result<cm_rust::CapabilityPath, RealmBuilderError> {
-    let path = format!("{}/{}", dirname, as_.unwrap_or(default));
-    path.as_str().try_into().map_err(|e| {
-        RealmBuilderError::CapabilityInvalid(anyhow::format_err!("invalid_path: {:?}", e))
-    })
 }
 
 async fn handle_realm_builder_stream(
@@ -1457,7 +1631,9 @@ enum GetBehavior {
 
 impl RealmNode {
     fn child<'a>(&'a mut self, child_name: &String) -> Result<&'a mut Self, Error> {
-        self.mutable_children.get_mut(child_name).ok_or(Error::NoSuchChild(child_name.clone()))
+        self.mutable_children
+            .get_mut(child_name)
+            .ok_or_else(|| Error::NoSuchChild(child_name.clone()))
     }
 
     fn child_create_if_missing<'a>(&'a mut self, child_name: &String) -> &'a mut Self {
@@ -1574,7 +1750,7 @@ impl RealmNode {
                         .load_decl_from_pkg(
                             moniker,
                             url,
-                            test_pkg_dir.as_ref().cloned().ok_or(Error::PkgDirNotSet)?,
+                            test_pkg_dir.as_ref().cloned().ok_or_else(|| Error::PkgDirNotSet)?,
                         )
                         .await;
                 }
@@ -1778,9 +1954,9 @@ impl RealmNode {
     /// returned some of the components in the route may have been updated while
     /// others were not.
     fn route_capability(&mut self, route: ftest::CapabilityRoute) -> Result<(), Error> {
-        let capability = route.capability.ok_or(Error::MissingField("capability"))?;
-        let source = route.source.ok_or(Error::MissingField("source"))?;
-        let targets = route.targets.ok_or(Error::MissingField("targets"))?;
+        let capability = route.capability.ok_or_else(|| Error::MissingField("capability"))?;
+        let source = route.source.ok_or_else(|| Error::MissingField("source"))?;
+        let targets = route.targets.ok_or_else(|| Error::MissingField("targets"))?;
         if targets.is_empty() {
             return Err(Error::RouteTargetsEmpty);
         }
@@ -3681,6 +3857,16 @@ mod tests {
                         subdir: Some("component".to_owned()),
                         ..ftest::Directory::EMPTY
                     }),
+                    ftest::Capability2::Storage(ftest::Storage {
+                        name: Some("temp".to_string()),
+                        as_: Some("data".to_string()),
+                        ..ftest::Storage::EMPTY
+                    }),
+                    ftest::Capability2::Service(ftest::Service {
+                        name: Some("fuchsia.examples.Whale".to_string()),
+                        as_: Some("fuchsia.examples.Orca".to_string()),
+                        ..ftest::Service::EMPTY
+                    }),
                 ],
                 fcdecl::Ref::Parent(fcdecl::ParentRef {}),
                 vec![fcdecl::Ref::Child(fcdecl::ChildRef {
@@ -3740,47 +3926,45 @@ mod tests {
                 offers: vec![
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                         source: cm_rust::OfferSource::Parent,
-                        source_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
-                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                            name: "a".to_owned(),
-                            collection: None,
-                        }),
-                        target_name: cm_rust::CapabilityName(
-                            "fuchsia.examples.Elephant".to_owned(),
-                        ),
+                        source_name: "fuchsia.examples.Hippo".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "fuchsia.examples.Elephant".into(),
                         dependency_type: cm_rust::DependencyType::Strong,
                     }),
                     cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                         source: cm_rust::OfferSource::Parent,
-                        source_name: cm_rust::CapabilityName("config-data".to_owned()),
-                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                            name: "a".to_owned(),
-                            collection: None,
-                        }),
-                        target_name: cm_rust::CapabilityName("config-data".to_owned()),
+                        source_name: "config-data".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "config-data".into(),
                         dependency_type: cm_rust::DependencyType::Strong,
                         rights: Some(fio2::RW_STAR_DIR),
                         subdir: Some(PathBuf::from("component")),
                     }),
+                    cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "temp".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "data".into(),
+                    }),
+                    cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Whale".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "fuchsia.examples.Orca".into(),
+                    }),
                     cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
-                        source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
-                            name: "a".to_owned(),
-                            collection: None,
-                        }),
-                        source_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
-                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
-                            name: "b".to_owned(),
-                            collection: None,
-                        }),
-                        target_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                        source: cm_rust::OfferSource::static_child("a".to_string()),
+                        source_name: "fuchsia.examples.Echo".into(),
+                        target: cm_rust::OfferTarget::static_child("b".to_string()),
+                        target_name: "fuchsia.examples.Echo".into(),
                         dependency_type: cm_rust::DependencyType::Strong,
                     }),
                 ],
                 exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                     source: cm_rust::ExposeSource::Child("a".to_owned()),
-                    source_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                    source_name: "fuchsia.examples.Echo".into(),
                     target: cm_rust::ExposeTarget::Parent,
-                    target_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                    target_name: "fuchsia.examples.Echo".into(),
                 })],
                 ..cm_rust::ComponentDecl::default()
             },

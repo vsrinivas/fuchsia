@@ -6,7 +6,9 @@ use {
     crate::{error::*, local_component_runner::LocalComponentRunnerBuilder, Event, ScopedInstance},
     anyhow::format_err,
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
-    fidl::endpoints::{self, create_proxy, ClientEnd, DiscoverableProtocolMarker, Proxy},
+    fidl::endpoints::{
+        self, create_proxy, ClientEnd, DiscoverableProtocolMarker, Proxy, ServiceMarker,
+    },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_test as ftest, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
@@ -238,6 +240,21 @@ impl Capability {
         }
     }
 
+    /// Creates a new storage capability.
+    pub fn storage(name: impl Into<String>) -> StorageCapability {
+        StorageCapability { name: name.into(), as_: None, path: None }
+    }
+
+    /// Creates a new service capability, whose name is derived from a protocol marker.
+    pub fn service<S: ServiceMarker>() -> ServiceCapability {
+        Self::service_by_name(S::SERVICE_NAME.to_string())
+    }
+
+    /// Creates a new service capability.
+    pub fn service_by_name(name: impl Into<String>) -> ServiceCapability {
+        ServiceCapability { name: name.into(), as_: None, path: None }
+    }
+
     /// Creates a new event capability.
     pub fn event(event: Event, mode: cm_rust::EventMode) -> EventCapability {
         EventCapability { event, mode }
@@ -283,6 +300,7 @@ impl Into<ftest::Capability2> for ProtocolCapability {
             name: Some(self.name),
             as_: self.as_,
             type_: Some(self.type_),
+            path: self.path,
             ..ftest::Protocol::EMPTY
         })
     }
@@ -327,8 +345,7 @@ impl DirectoryCapability {
     }
 
     /// The path at which this directory will be provided or used. Only relevant if the route's
-    /// source or target is a legacy or local component, as these are the only components that
-    /// realm builder will generate a modern component manifest for.
+    /// source or target is a local component.
     pub fn path(mut self, path: impl Into<String>) -> Self {
         self.path = Some(path.into());
         self
@@ -343,7 +360,79 @@ impl Into<ftest::Capability2> for DirectoryCapability {
             type_: Some(self.type_),
             rights: self.rights,
             subdir: self.subdir,
+            path: self.path,
             ..ftest::Directory::EMPTY
+        })
+    }
+}
+
+/// A storage capability, which may be routed between components. Created by
+/// `Capability::storage`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct StorageCapability {
+    name: String,
+    as_: Option<String>,
+    path: Option<String>,
+}
+
+impl StorageCapability {
+    /// The name the targets will see the storage capability as.
+    pub fn as_(mut self, as_: impl Into<String>) -> Self {
+        self.as_ = Some(as_.into());
+        self
+    }
+
+    /// The path at which this storage will be used. Only relevant if the route's target is a local
+    /// component.
+    pub fn path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into());
+        self
+    }
+}
+
+impl Into<ftest::Capability2> for StorageCapability {
+    fn into(self) -> ftest::Capability2 {
+        ftest::Capability2::Storage(ftest::Storage {
+            name: Some(self.name),
+            as_: self.as_,
+            path: self.path,
+            ..ftest::Storage::EMPTY
+        })
+    }
+}
+
+/// A service capability, which may be routed between components. Created by
+/// `Capability::service`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ServiceCapability {
+    name: String,
+    as_: Option<String>,
+    path: Option<String>,
+}
+
+impl ServiceCapability {
+    /// The name the targets will see the directory capability as.
+    pub fn as_(mut self, as_: impl Into<String>) -> Self {
+        self.as_ = Some(as_.into());
+        self
+    }
+
+    /// The path at which this service capability will be provided or used. Only relevant if the
+    /// route's source or target is a local component, as these are the only components that realm
+    /// builder will generate a modern component manifest for.
+    pub fn path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into());
+        self
+    }
+}
+
+impl Into<ftest::Capability2> for ServiceCapability {
+    fn into(self) -> ftest::Capability2 {
+        ftest::Capability2::Service(ftest::Service {
+            name: Some(self.name),
+            as_: self.as_,
+            path: self.path,
+            ..ftest::Service::EMPTY
         })
     }
 }
@@ -1182,6 +1271,54 @@ mod tests {
                 rights: None,
                 subdir: None,
                 path: Some("/test2".to_string()),
+            },
+        );
+    }
+
+    #[fuchsia::test]
+    async fn storage_capability_construction() {
+        assert_eq!(
+            Capability::storage("test"),
+            StorageCapability { name: "test".to_string(), as_: None, path: None },
+        );
+        assert_eq!(
+            Capability::storage("test").as_("test2"),
+            StorageCapability {
+                name: "test".to_string(),
+                as_: Some("test2".to_string()),
+                path: None,
+            },
+        );
+        assert_eq!(
+            Capability::storage("test").path("/test2"),
+            StorageCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: Some("/test2".to_string()),
+            },
+        );
+    }
+
+    #[fuchsia::test]
+    async fn service_capability_construction() {
+        assert_eq!(
+            Capability::service_by_name("test"),
+            ServiceCapability { name: "test".to_string(), as_: None, path: None },
+        );
+        assert_eq!(
+            Capability::service_by_name("test").as_("test2"),
+            ServiceCapability {
+                name: "test".to_string(),
+                as_: Some("test2".to_string()),
+                path: None,
+            },
+        );
+        assert_eq!(
+            Capability::service_by_name("test").path("/svc/test2"),
+            ServiceCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: Some("/svc/test2".to_string()),
             },
         );
     }
