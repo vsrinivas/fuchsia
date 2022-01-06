@@ -38,7 +38,7 @@ use {
         grid::Scroll,
         term::{color::Rgb, SizeInfo, TermMode},
     },
-    terminal::{cell_size_from_cell_height, FontSet},
+    terminal::{cell_size_from_cell_height, get_scale_factor, FontSet},
 };
 
 fn is_control_only(modifiers: &input::Modifiers) -> bool {
@@ -62,19 +62,6 @@ fn get_input_sequence_for_key_event(
         }
         _ => None,
     }
-}
-
-/// Returns a scale factor given a set of DPI buckets and an actual DPI value.
-/// First bucket gets scale factor 1.0, second gets 2.0, third gets 3.0, etc.
-fn get_scale_factor(dpi: &BTreeSet<u32>, actual_dpi: f32) -> f32 {
-    let mut scale_factor = 1.0;
-    for value in dpi.iter() {
-        if *value as f32 > actual_dpi {
-            break;
-        }
-        scale_factor += 1.0;
-    }
-    scale_factor
 }
 
 pub enum ViewMessages {

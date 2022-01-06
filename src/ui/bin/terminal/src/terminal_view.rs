@@ -20,6 +20,7 @@ use {
         },
         AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
     },
+    euclid::size2,
     fidl_fuchsia_hardware_pty::WindowSize,
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
@@ -38,7 +39,7 @@ use {
         term::{SizeInfo, TermMode},
         Term,
     },
-    terminal::{cell_size_from_cell_height, FontSet},
+    terminal::{cell_size_from_cell_height, get_scale_factor, FontSet},
 };
 
 // Font files.
@@ -60,7 +61,11 @@ const MAX_FONT_SIZE: f32 = 160.0;
 // Maximum terminal size in cells. We support up to 4 layers per cell.
 const MAX_CELLS: u32 = SceneOrder::MAX.as_u32() / 4;
 
+// Terminal background color.
 const BACKGROUND_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
+
+// DPI buckets used to determine the scale factor.
+const DPI: &[u32] = &[160, 240, 320, 480];
 
 #[cfg(test)]
 use cstr::cstr;
@@ -278,7 +283,22 @@ impl TerminalViewAssistant {
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
             let floored_size = new_size.floor();
             let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
-            let cell_size = cell_size_from_cell_height(&self.font_set, self.font_size);
+
+            // TODO(fxbug.dev/91053): Use physical size relative to largest display that
+            // terminal is visible on determine DPI.
+            //
+            // const MM_PER_INCH: f32 = 25.4;
+            // let dpi = context.size.height * MM_PER_INCH / vertical_size_mm as f32;
+            //
+            // We assume 160 DPI for now. This is a good assumption for a 1080p laptop.
+            const TEMPORARY_DPI_HACK: f32 = 160.0;
+            let dpi = TEMPORARY_DPI_HACK;
+
+            // Get scale factor given our set of DPI buckets.
+            let scale_factor = get_scale_factor(&DPI.iter().cloned().collect(), dpi);
+
+            let cell_height = self.font_size * scale_factor;
+            let cell_size = cell_size_from_cell_height(&self.font_set, cell_height);
             let grid_size =
                 Size::new(term_size.width / cell_size.width, term_size.height / cell_size.height)
                     .floor();
@@ -581,7 +601,8 @@ impl ViewAssistant for TerminalViewAssistant {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
             let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
 
-            let cell_size = cell_size_from_cell_height(&self.font_set, self.font_size);
+            let cell_size =
+                size2(self.last_known_size_info.cell_width, self.last_known_size_info.cell_height);
             let terminal = builder.facet(Box::new(TerminalFacet::new(
                 self.font_set.clone(),
                 &cell_size,
@@ -757,7 +778,7 @@ mod tests {
         // we want to make sure that the values are floored and that they
         // match what the scene will render the terminal as.
         assert_eq!(size_info.width, 80.0);
-        assert_eq!(size_info.height, 96.0);
+        assert_eq!(size_info.height, 100.0);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -813,8 +834,8 @@ mod tests {
             .expect("call to resize failed");
 
         let event = receiver.next().await.expect("failed to receive pty event");
-        assert_eq!(event.window_size.width, 98);
-        assert_eq!(event.window_size.height, 100);
+        assert_eq!(event.window_size.width, 78);
+        assert_eq!(event.window_size.height, 80);
 
         Ok(())
     }

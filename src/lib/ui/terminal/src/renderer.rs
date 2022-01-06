@@ -15,13 +15,35 @@ use {
     },
     euclid::{point2, Rect},
     rustc_hash::{FxHashMap, FxHashSet},
-    std::{collections::hash_map::Entry, convert::TryFrom, mem},
+    std::{
+        collections::{hash_map::Entry, BTreeSet},
+        convert::TryFrom,
+        mem,
+    },
     term_model::{
         ansi::{CursorStyle, TermInfo},
         config::Config,
         term::{cell::Flags, color::Rgb, RenderableCell, RenderableCellContent, Term},
     },
 };
+
+// Supported scale factors.
+//
+// These values are hard-coded in order to ensure that we use a grid size
+// that is efficient and aligns with physical pixels.
+const SCALE_FACTORS: &[f32] = &[1.0, 1.25, 2.0, 3.0, 4.0];
+
+/// Returns a scale factor given a set of DPI buckets and an actual DPI value.
+pub fn get_scale_factor(dpi: &BTreeSet<u32>, actual_dpi: f32) -> f32 {
+    let mut scale_factor = 0;
+    for value in dpi.iter() {
+        if *value as f32 > actual_dpi {
+            break;
+        }
+        scale_factor += 1;
+    }
+    *SCALE_FACTORS.get(scale_factor).unwrap_or(SCALE_FACTORS.last().unwrap())
+}
 
 /// Returns the cell size given a cell height.
 pub fn cell_size_from_cell_height(font_set: &FontSet, height: f32) -> Size {
@@ -462,6 +484,16 @@ mod tests {
         fn remove(&mut self, order: SceneOrder) {
             self.0.remove(&order);
         }
+    }
+
+    #[test]
+    fn check_scale_factors() {
+        let dpi = BTreeSet::from([160, 240, 320]);
+        assert_eq!(get_scale_factor(&dpi, 100.0), 1.0);
+        assert_eq!(get_scale_factor(&dpi, 180.0), 1.25);
+        assert_eq!(get_scale_factor(&dpi, 240.0), 2.0);
+        assert_eq!(get_scale_factor(&dpi, 319.0), 2.0);
+        assert_eq!(get_scale_factor(&dpi, 400.0), 3.0);
     }
 
     #[test]
