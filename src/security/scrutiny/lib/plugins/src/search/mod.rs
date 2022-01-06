@@ -8,7 +8,6 @@ use {
     crate::search::controller::{
         components::ComponentSearchController, manifests::ManifestSearchController,
         package_list::PackageListController, packages::PackageSearchController,
-        routes::RouteSearchController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -23,7 +22,6 @@ plugin!(
             "/search/manifests" => ManifestSearchController::default(),
             "/search/packages" => PackageSearchController::default(),
             "/search/package/list" => PackageListController::default(),
-            "/search/routes" => RouteSearchController::default(),
         }
     ),
     vec![PluginDescriptor::new("CorePlugin")]
@@ -35,11 +33,11 @@ mod tests {
         super::*,
         crate::core::collection::{
             testing::fake_component_src_pkg, Component, Components, Manifest, ManifestData,
-            Manifests, Package, Packages, Route, Routes,
+            Manifests, Package, Packages,
         },
         crate::search::controller::{
             components::ComponentSearchRequest, manifests::ManifestSearchRequest,
-            packages::PackageSearchRequest, routes::RouteSearchRequest,
+            packages::PackageSearchRequest,
         },
         scrutiny_testing::fake::*,
         serde_json::json,
@@ -117,31 +115,6 @@ mod tests {
             serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap())
                 .unwrap();
         let response_two: Vec<Package> =
-            serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap())
-                .unwrap();
-        assert_eq!(response_one.len(), 1);
-        assert_eq!(response_two.len(), 0);
-    }
-
-    #[test]
-    fn test_route_search() {
-        let model = data_model();
-        let search = RouteSearchController::default();
-        model
-            .set(Routes::new(vec![Route {
-                id: 0,
-                src_id: 1,
-                dst_id: 2,
-                service_name: "foo".to_string(),
-                protocol_id: 0,
-            }]))
-            .unwrap();
-        let request_one = RouteSearchRequest { service_name: "foo".to_string() };
-        let request_two = RouteSearchRequest { service_name: "bar".to_string() };
-        let response_one: Vec<Route> =
-            serde_json::from_value(search.query(model.clone(), json!(request_one)).unwrap())
-                .unwrap();
-        let response_two: Vec<Route> =
             serde_json::from_value(search.query(model.clone(), json!(request_two)).unwrap())
                 .unwrap();
         assert_eq!(response_one.len(), 1);

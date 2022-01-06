@@ -6,4 +6,3 @@ pub mod components;
 pub mod manifests;
 pub mod package_list;
 pub mod packages;
-pub mod routes;
