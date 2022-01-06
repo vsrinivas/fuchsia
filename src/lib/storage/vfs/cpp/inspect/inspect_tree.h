@@ -8,8 +8,8 @@
 // data (see `NodeCallbacks`). `CreateTree` creates and returns ownership of inspect nodes which map
 // the data from these callbacks to inspect properties.
 //
-// See README.md for a high level usage example, or `FakeInspectTree` in inspect_tree_tests.cc for
-// a more comprehensive implementation.
+// See README.md for more details. For an example, see the Blobfs implementation in
+// `src/storage/blobfs/blobfs_inspect_tree.h`.
 //
 
 #ifndef SRC_LIB_STORAGE_VFS_CPP_INSPECT_INSPECT_TREE_H_

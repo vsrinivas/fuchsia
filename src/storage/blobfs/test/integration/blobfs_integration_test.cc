@@ -21,6 +21,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
+#include <lib/inspect/testing/cpp/inspect.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -1457,6 +1458,64 @@ TEST_F(BlobfsMetricIntegrationTest, CreateAndRead) {
 
   ASSERT_NO_FATAL_FAILURE(GetReadBytes(&read_bytes));
   ASSERT_EQ(read_bytes, fbl::round_up(info->size_data, kBlobfsBlockSize));
+}
+
+TEST_F(BlobfsMetricIntegrationTest, BlobfsInspectTree) {
+  using namespace inspect::testing;
+  using namespace ::testing;
+
+  fpromise::result<inspect::Hierarchy> hierarchy_or_error = TakeSnapshot();
+  ASSERT_TRUE(hierarchy_or_error.is_ok());
+
+  const inspect::Hierarchy* blobfs_root = hierarchy_or_error.value().GetByPath({"blobfs"});
+  ASSERT_NE(blobfs_root, nullptr);
+
+  // Ensure that all nodes we expect exist.
+  for (const char* name :
+       {fs_inspect::kInfoNodeName, fs_inspect::kUsageNodeName, fs_inspect::kVolumeNodeName}) {
+    ASSERT_NE(blobfs_root->GetByPath({name}), nullptr)
+        << "Could not find expected node in Blobfs inspect hierarchy: " << name;
+  }
+
+  // Test known values specific to Blobfs.
+  const inspect::Hierarchy* info_node = blobfs_root->GetByPath({fs_inspect::kInfoNodeName});
+  ASSERT_NE(info_node, nullptr);
+  EXPECT_THAT(
+      *info_node,
+      NodeMatches(AllOf(
+          NameMatches(fs_inspect::kInfoNodeName),
+          PropertyList(IsSupersetOf({StringIs(fs_inspect::InfoData::kPropName, "blobfs"),
+                                     UintIs(fs_inspect::InfoData::kPropMaxFilenameLength, 64)})))));
+
+  const inspect::Hierarchy* usage_node = blobfs_root->GetByPath({fs_inspect::kUsageNodeName});
+  ASSERT_NE(usage_node, nullptr);
+  EXPECT_THAT(*usage_node,
+              NodeMatches(AllOf(
+                  NameMatches(fs_inspect::kUsageNodeName),
+                  PropertyList(IsSupersetOf({UintIs(fs_inspect::UsageData::kPropUsedNodes, 0)})))));
+
+  // Create a file to increase the used inode count.
+  {
+    std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 10);
+    fbl::unique_fd fd(openat(root_fd(), info->path, O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd.is_valid());
+    ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
+    ASSERT_EQ(StreamAll(write, fd.get(), info->data.get(), info->size_data), 0)
+        << "Failed to write Data";
+  }
+
+  // Take a new snapshot of the tree and check that the used node count went up.
+  hierarchy_or_error = TakeSnapshot();
+  ASSERT_TRUE(hierarchy_or_error.is_ok());
+  blobfs_root = hierarchy_or_error.value().GetByPath({"blobfs"});
+  ASSERT_NE(blobfs_root, nullptr);
+
+  usage_node = blobfs_root->GetByPath({fs_inspect::kUsageNodeName});
+  ASSERT_NE(usage_node, nullptr);
+  EXPECT_THAT(*usage_node,
+              NodeMatches(AllOf(
+                  NameMatches(fs_inspect::kUsageNodeName),
+                  PropertyList(IsSupersetOf({UintIs(fs_inspect::UsageData::kPropUsedNodes, 1)})))));
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobfsIntegrationTest,

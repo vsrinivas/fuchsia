@@ -45,6 +45,7 @@
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/blob_cache.h"
 #include "src/storage/blobfs/blob_loader.h"
+#include "src/storage/blobfs/blobfs_inspect_tree.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/blobfs/directory.h"
@@ -323,10 +324,13 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // an event because it's returned by the fs.Query interface.
   zx::event fs_id_;
 
-  // Inspector used for Blobfs.
-  inspect::Inspector inspector_;
+  BlobfsInspectTree inspect_tree_;
 
   std::shared_ptr<BlobfsMetrics> metrics_;  // Guaranteed non-null.
+
+  // Initialize all inspect properties in `inspect_tree_`. Should only be called after the
+  // filesystem has been initialized successfully.
+  void InitializeInspectTree();
 
   std::unique_ptr<PageLoader> page_loader_;  // Guaranteed non-null after Create() succeeds.
   std::optional<CachePolicy> pager_backed_cache_policy_;

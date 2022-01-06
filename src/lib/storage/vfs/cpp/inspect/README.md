@@ -18,6 +18,10 @@ In addition to providing a common set of properties, filesystems are free to att
 information specific to their implementation.  This is done by implementing a callback to populate
 a lazy Inspect node, which will be attached under `fs.detail`.
 
+For a reference implementation that is fully thread-safe, see `BlobfsInspectTree` in
+`src/storage/blobfs/blobfs_inspect_tree.h`.
+
+
 TODO(fxbug.dev/85419): Support for tracking performance/latency and failure rates is in progress.
 
 ## Usage
@@ -78,4 +82,5 @@ Once `CreateTree` is called, the callbacks provided will be invoked each time th
 queried.  The callbacks will only stop being invoked when the nodes go out of scope, thus detaching
 them from the tree (e.g. by setting `inspect_nodes_ = {}` or when its destructor is called).
 
-See `FakeInspectTree` in `inspect_tree_tests.cc` for a more comprehensive example.
+For a more detailed non-trivial implementation that is fully thread-safe, see `BlobfsInspectTree` in
+`src/storage/blobfs/blobfs_inspect_tree.h`.

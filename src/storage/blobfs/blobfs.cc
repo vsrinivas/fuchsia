@@ -60,7 +60,6 @@
 #include "src/storage/blobfs/transaction.h"
 #include "src/storage/blobfs/transfer_buffer.h"
 #include "src/storage/fvm/client.h"
-
 namespace blobfs {
 namespace {
 
@@ -103,21 +102,6 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
   }
 
   return CheckSuperblock(superblock, blocks, /*quiet=*/false);
-}
-
-inspect::Inspector CreateInspector() {
-  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this inspect VMO
-  // need more than 128KiB. This gives the VMO enough space to grow if we add more data in the
-  // future. When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
-  //
-  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
-  // VMO.
-#ifdef BLOBFS_ENABLE_LARGE_INSPECT_VMO
-  constexpr size_t kSize = 2ul * 1024ul * 1024ul;
-#else
-  constexpr size_t kSize = 128ul * 1024ul;
-#endif
-  return inspect::Inspector(inspect::InspectSettings{.maximum_size = kSize});
 }
 
 }  // namespace
@@ -364,6 +348,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
   }
 
   fs->UpdateFragmentationMetrics();
+  fs->InitializeInspectTree();
 
   // Here we deliberately use a '/' separator rather than '.' to avoid looking like a conventional
   // version number, since they are not --- format version and revision can increment independently.
@@ -372,6 +357,33 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
       std::to_string(fs->Info().oldest_minor_version));
 
   return zx::ok(std::move(fs));
+}
+
+void Blobfs::InitializeInspectTree() {
+  fs_inspect::InfoData info{
+      .version_major = kBlobfsCurrentMajorVersion,
+      .version_minor = kBlobfsCurrentMinorVersion,
+      .oldest_minor_version = Info().oldest_minor_version,
+  };
+
+  zx::status<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};
+  if (fs_info.is_error()) {
+    FX_LOGS(ERROR) << "Failed to get filesystem info while initializing inspect tree: "
+                   << fs_info.status_string();
+  } else {
+    info.id = fs_info->fs_id;
+    info.type = fs_info->fs_type;
+    info.name = fs_info->name;
+    info.block_size = fs_info->block_size;
+    info.max_filename_length = fs_info->max_filename_size;
+  }
+
+  inspect_tree_.SetInfo(info);
+  inspect_tree_.UpdateSuperblock(Info());
+  block_client::BlockDevice* device = Device();
+  if (device) {
+    inspect_tree_.UpdateVolumeData(*device);
+  }
 }
 
 // Writeback enabled, journaling enabled.
@@ -506,6 +518,8 @@ zx_status_t Blobfs::FreeInode(uint32_t node_index, BlobTransaction& transaction)
 void Blobfs::PersistNode(uint32_t node_index, BlobTransaction& transaction) {
   TRACE_DURATION("blobfs", "Blobfs::PersistNode");
   info_.alloc_inode_count++;
+  // Update inspect data to reflect new used inode count.
+  inspect_tree_.UpdateSuperblock(Info());
   WriteNode(node_index, transaction);
   WriteInfo(transaction);
 }
@@ -556,6 +570,8 @@ void Blobfs::WriteInfo(BlobTransaction& transaction, bool write_backup) {
     operation.op.dev_offset = kFVMBackupSuperblockOffset;
     transaction.AddOperation(operation);
   }
+  // Update inspect data to reflect new data block/node counts.
+  inspect_tree_.UpdateSuperblock(Info());
 }
 
 void Blobfs::DeleteExtent(uint64_t start_block, uint64_t num_blocks,
@@ -634,7 +650,9 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
   uint64_t offset = (kFVMNodeMapStart / blocks_per_slice) + info_.ino_slices;
   uint64_t length = 1;
   zx_status_t status = Device()->VolumeExtend(offset, length);
-  if (status != ZX_OK) {
+  bool failed_to_extend = (status != ZX_OK);
+  inspect_tree_.UpdateVolumeData(*Device(), failed_to_extend);
+  if (failed_to_extend) {
     FX_LOGS(ERROR) << ":AddInodes fvm_extend failure: " << zx_status_get_string(status);
     return status;
   }
@@ -711,7 +729,9 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   }
 
   zx_status_t status = Device()->VolumeExtend(offset, length);
-  if (status != ZX_OK) {
+  bool failed_to_extend = (status != ZX_OK);
+  inspect_tree_.UpdateVolumeData(*Device(), failed_to_extend);
+  if (failed_to_extend) {
     FX_LOGS(ERROR) << ":AddBlocks FVM Extend failure: " << zx_status_get_string(status);
     return status;
   }
@@ -745,11 +765,12 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
     transaction.AddOperation(operation);
   }
   transaction.Commit(*journal_);
+
   return ZX_OK;
 }
 
 zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
-  fs::FilesystemInfo info;
+  fs::FilesystemInfo info{};
 
   info.block_size = kBlobfsBlockSize;
   info.max_filename_size = digest::kSha256HexLength;
@@ -762,6 +783,13 @@ zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
   info.used_nodes = Info().alloc_inode_count;
   info.SetFsId(fs_id_);
   info.name = "blobfs";
+
+  if (Device()) {
+    auto result = fs_inspect::VolumeData::GetSizeInfoFromDevice(*Device());
+    if (result.is_ok()) {
+      info.free_shared_pool_bytes = result->available_space_bytes;
+    }
+  }
 
   return zx::ok(info);
 }
@@ -819,8 +847,9 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       writability_(writable),
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
-      inspector_(CreateInspector()),
-      metrics_(CreateMetrics(inspector_, std::move(collector_factory), metrics_flush_time)),
+      inspect_tree_(),
+      metrics_(CreateMetrics(inspect_tree_.Inspector(), std::move(collector_factory),
+                             metrics_flush_time)),
       pager_backed_cache_policy_(pager_backed_cache_policy) {
   ZX_ASSERT(vfs_);
 

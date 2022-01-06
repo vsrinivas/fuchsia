@@ -94,6 +94,7 @@ test("blobfs_integration") {
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/block_client/cpp:fake_device",
