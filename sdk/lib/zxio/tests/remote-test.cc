@@ -138,4 +138,117 @@ TEST_F(Remote, Borrow) {
   EXPECT_NE(handle, ZX_HANDLE_INVALID);
 }
 
+class TestCloneServer : public TestServerBase {
+ public:
+  using CloneFunc = fit::function<void(CloneRequestView request, CloneCompleter::Sync& completer)>;
+
+  void set_clone_func(CloneFunc clone_func) { clone_func_ = std::move(clone_func); }
+
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
+    clone_func_(request, completer);
+  }
+
+ private:
+  CloneFunc clone_func_;
+};
+
+class CloneTest : public zxtest::Test {
+ public:
+  CloneTest() : server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
+  void SetUp() final {
+    zx::status node_ends = fidl::CreateEndpoints<fio::Node>();
+    ASSERT_OK(node_ends.status_value());
+    node_client_end_ = std::move(node_ends->client);
+
+    node_server_.set_clone_func(
+        [this](TestCloneServer::CloneRequestView request,
+               TestCloneServer::CloneCompleter::Sync& completer) { Clone(request, completer); });
+
+    fidl::BindServer(server_loop_.dispatcher(), std::move(node_ends->server), &node_server_);
+
+    ASSERT_OK(server_loop_.StartThread("fake-filesystem"));
+  }
+
+  void TearDown() final { server_loop_.Shutdown(); }
+
+  fidl::ClientEnd<fio::Node> TakeClientEnd() { return std::move(node_client_end_); }
+
+ private:
+  void Clone(TestCloneServer::CloneRequestView request,
+             TestCloneServer::CloneCompleter::Sync& completer) {
+    auto server = std::make_unique<TestServerBase>();
+    auto binding_ref =
+        fidl::BindServer(server_loop_.dispatcher(), std::move(request->object), server.get());
+    cloned_servers_.push_back(std::move(server));
+
+    if (request->flags & fio::wire::kOpenFlagDescribe) {
+      fio::wire::FileObject file_object;
+      binding_ref->OnOpen(ZX_OK,
+                          fio::wire::NodeInfo::WithFile(
+                              fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+    }
+  }
+
+  TestCloneServer node_server_;
+  fidl::ClientEnd<fio::Node> node_client_end_;
+  async::Loop server_loop_;
+  std::vector<std::unique_ptr<TestServerBase>> cloned_servers_;
+};
+
+TEST_F(CloneTest, Clone) {
+  zxio_storage_t node_storage;
+  ASSERT_OK(zxio_create(TakeClientEnd().TakeChannel().release(), &node_storage));
+  zxio_t* node = &node_storage.io;
+
+  zx::channel clone;
+  EXPECT_OK(zxio_clone(node, clone.reset_and_get_address()));
+
+  fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
+
+  auto describe_response = fidl::WireCall(clone_client)->Describe();
+  ASSERT_EQ(ZX_OK, describe_response.status());
+
+  EXPECT_TRUE(describe_response.value().info.is_file());
+}
+
+TEST_F(CloneTest, Reopen) {
+  zxio_storage_t node_storage;
+  ASSERT_OK(zxio_create(TakeClientEnd().TakeChannel().release(), &node_storage));
+  zxio_t* node = &node_storage.io;
+
+  zx::channel clone;
+  EXPECT_OK(zxio_reopen(node, ZXIO_REOPEN_DESCRIBE, clone.reset_and_get_address()));
+
+  fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
+
+  class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
+   public:
+    EventHandler(fidl::ClientEnd<fio::Node> client_end, bool& on_open_received)
+        : client_end_(std::move(client_end)), on_open_received_(on_open_received) {}
+
+    const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
+
+    void OnOpen(fidl::WireResponse<fio::Node::OnOpen>* event) final {
+      EXPECT_EQ(event->s, ZX_OK);
+      EXPECT_TRUE(event->info.is_file());
+      on_open_received_ = true;
+    }
+
+    zx_status_t Unknown() final {
+      ADD_FAILURE("Unexpected event received.");
+      return ZX_ERR_IO;
+    }
+
+   private:
+    fidl::ClientEnd<fio::Node> client_end_;
+    bool& on_open_received_;
+  };
+
+  bool on_open_received = false;
+  EventHandler event_handler(std::move(clone_client), on_open_received);
+  EXPECT_OK(event_handler.HandleOneEvent(event_handler.client_end()).status());
+  EXPECT_TRUE(on_open_received);
+}
+
 }  // namespace

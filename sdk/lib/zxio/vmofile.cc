@@ -69,13 +69,18 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmofile_clone(zxio_t* io, zx_handle_t* out_handle) {
+static zx_status_t zxio_vmofile_reopen(zxio_t* io, zxio_reopen_flags_t zxio_flags,
+                                       zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
   auto ends = fidl::CreateEndpoints<fio::Node>();
   if (!ends.is_ok()) {
     return ends.status_value();
   }
-  auto result = file->control->Clone(fio::wire::kCloneFlagSameRights, std::move(ends->server));
+  uint32_t flags = fio::wire::kCloneFlagSameRights;
+  if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
+    flags |= fio::wire::kOpenFlagDescribe;
+  }
+  auto result = file->control->Clone(flags, std::move(ends->server));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -250,7 +255,7 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_vmofile_close;
   ops.release = zxio_vmofile_release;
-  ops.clone = zxio_vmofile_clone;
+  ops.reopen = zxio_vmofile_reopen;
   ops.attr_get = zxio_vmofile_attr_get;
   ops.readv = zxio_vmofile_readv;
   ops.readv_at = zxio_vmofile_readv_at;

@@ -39,7 +39,10 @@ static zx_status_t zxio_vmo_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmo_clone(zxio_t* io, zx_handle_t* out_handle) {
+static zx_status_t zxio_vmo_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
+  if (flags != zxio_reopen_flags_t{0}) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
   zx::vmo vmo;
   zx_status_t status = file->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
@@ -136,7 +139,7 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_vmo_close;
   ops.release = zxio_vmo_release;
-  ops.clone = zxio_vmo_clone;
+  ops.reopen = zxio_vmo_reopen;
   ops.attr_get = zxio_vmo_attr_get;
   ops.readv = zxio_vmo_readv;
   ops.readv_at = zxio_vmo_readv_at;

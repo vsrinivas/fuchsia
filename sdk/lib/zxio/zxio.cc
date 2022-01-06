@@ -106,11 +106,19 @@ zx_status_t zxio_borrow(zxio_t* io, zx_handle_t* out_handle) {
 }
 
 zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle) {
+  return zxio_reopen(io, zxio_reopen_flags_t{0}, out_handle);
+}
+
+zx_status_t zxio_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
+  constexpr zxio_reopen_flags_t kAllFlags = ZXIO_REOPEN_DESCRIBE;
+  if ((flags & ~kAllFlags) != 0 || out_handle == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->clone(io, out_handle);
+  return zio->ops->reopen(io, flags, out_handle);
 }
 
 zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals, zx_time_t deadline,

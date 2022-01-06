@@ -19,6 +19,9 @@ TEST(NullTest, Default) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone(&io, &handle));
   ASSERT_EQ(ZX_HANDLE_INVALID, handle);
 
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_reopen(&io, 0, &handle));
+  ASSERT_EQ(ZX_HANDLE_INVALID, handle);
+
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(&io));
 
   zxio_node_attributes_t attr = {};
@@ -72,6 +75,9 @@ TEST(NullTest, Null) {
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone(&io, &handle));
+  ASSERT_EQ(ZX_HANDLE_INVALID, handle);
+
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_reopen(&io, 0, &handle));
   ASSERT_EQ(ZX_HANDLE_INVALID, handle);
 
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_sync(&io));

@@ -104,14 +104,18 @@ zx_status_t zxio_remote_v2_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_v2_clone(zxio_t* io, zx_handle_t* out_handle) {
+zx_status_t zxio_remote_v2_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
   RemoteV2 rio(io);
   auto ends = fidl::CreateEndpoints<fio2::Node>();
   if (!ends.is_ok()) {
     return ends.status_value();
   }
+  fio2::wire::ConnectionOptions options;
+  if (flags & ZXIO_REOPEN_DESCRIBE) {
+    options.flags() |= fio2::wire::ConnectionFlags::kGetConnectionInfo;
+  }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))
-                    ->Reopen(fio2::wire::ConnectionOptions(), ends->server.TakeChannel());
+                    ->Reopen(options, ends->server.TakeChannel());
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -243,7 +247,7 @@ static constexpr zxio_ops_t zxio_remote_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
-  ops.clone = zxio_remote_v2_clone;
+  ops.reopen = zxio_remote_v2_reopen;
   ops.wait_begin = zxio_remote_v2_wait_begin;
   ops.wait_end = zxio_remote_v2_wait_end;
   ops.sync = zxio_remote_sync;
@@ -266,7 +270,7 @@ static constexpr zxio_ops_t zxio_dir_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
-  ops.clone = zxio_remote_v2_clone;
+  ops.reopen = zxio_remote_v2_reopen;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_v2_attr_get;
   ops.attr_set = zxio_remote_v2_attr_set;
@@ -514,7 +518,7 @@ static constexpr zxio_ops_t zxio_file_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
-  ops.clone = zxio_remote_v2_clone;
+  ops.reopen = zxio_remote_v2_reopen;
   ops.wait_begin = zxio_file_v2_wait_begin;
   ops.wait_end = zxio_file_v2_wait_end;
   ops.sync = zxio_remote_sync;

@@ -15,11 +15,17 @@
 
 __BEGIN_CDECLS
 
-// Flags -----------------------------------------------------------------------
+// Flags for read and write operations -----------------------------------------
 
 typedef uint32_t zxio_flags_t;
 
 #define ZXIO_PEEK ((zxio_flags_t)1u << 0)
+
+// Flags for reopen operations -------------------------------------------------
+typedef uint32_t zxio_reopen_flags_t;
+
+// Request that the object provide a description of itself on the new object.
+#define ZXIO_REOPEN_DESCRIBE ((zxio_reopen_flags_t)1u << 0)
 
 // Signals ---------------------------------------------------------------------
 

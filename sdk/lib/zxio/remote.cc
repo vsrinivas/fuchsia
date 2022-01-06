@@ -407,9 +407,9 @@ zx_status_t zxio_remote_borrow(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
+zx_status_t zxio_remote_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
   Remote rio(io);
-  return zxio_raw_remote_clone(rio.control(), out_handle);
+  return zxio_raw_remote_reopen(rio.control(), flags, out_handle);
 }
 
 void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
@@ -964,7 +964,7 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.borrow = zxio_remote_borrow;
-  ops.clone = zxio_remote_clone;
+  ops.reopen = zxio_remote_reopen;
   ops.wait_begin = zxio_remote_wait_begin;
   ops.wait_end = zxio_remote_wait_end;
   ops.sync = zxio_remote_sync;
@@ -1132,7 +1132,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.borrow = zxio_remote_borrow;
-  ops.clone = zxio_remote_clone;
+  ops.reopen = zxio_remote_reopen;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_dir_attr_get;
   ops.attr_set = zxio_dir_attr_set;
@@ -1210,7 +1210,7 @@ static constexpr zxio_ops_t zxio_file_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.borrow = zxio_remote_borrow;
-  ops.clone = zxio_remote_clone;
+  ops.reopen = zxio_remote_reopen;
   ops.wait_begin = zxio_file_wait_begin;
   ops.wait_end = zxio_file_wait_end;
   ops.sync = zxio_remote_sync;
@@ -1262,12 +1262,16 @@ zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
   return result->result.is_err() ? result->result.err() : ZX_OK;
 }
 
-zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle) {
+zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags_t zxio_flags,
+                                   zx_handle_t* out_handle) {
   auto ends = fidl::CreateEndpoints<fio::Node>();
   if (!ends.is_ok()) {
     return ends.status_value();
   }
   uint32_t flags = fio::wire::kCloneFlagSameRights;
+  if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
+    flags |= fio::wire::kOpenFlagDescribe;
+  }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
                     ->Clone(flags, std::move(ends->server));
   if (result.status() != ZX_OK) {

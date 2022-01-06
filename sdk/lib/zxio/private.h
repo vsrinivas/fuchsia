@@ -219,7 +219,8 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
 // Send a |fuchsia.io/Node.Close| message on |control|. Note: does not close the channel.
 zx_status_t zxio_raw_remote_close(zx::unowned_channel control);
 
-zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle);
+zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags_t flags,
+                                   zx_handle_t* out_handle);
 
 zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attributes_t* out_attr);
 
