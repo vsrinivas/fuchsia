@@ -4,9 +4,6 @@
         {
             protocol: [
                 "fuchsia.media.AudioCore",
-
-                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
-                "fuchsia.sys.Environment",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.shortcut.Registry",
             ],
