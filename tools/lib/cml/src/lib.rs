@@ -847,11 +847,19 @@ pub struct Document {
     ///
     /// In the example given above, the component manifest is including contents from a
     /// manifest shard provided by the `syslog` library, thus ensuring that the
-    /// component functions correctly at runtime if it attempts to write to syslog. By
+    /// component functions correctly at runtime if it attempts to write to `syslog`. By
     /// convention such files are called "manifest shards" and end with `.shard.cml`.
     ///
-    /// If working in fuchsia.git, include paths are relative to the source root of the
-    /// Fuchsia tree.
+    /// Include paths prepended with `//` are relative to the source root of the Fuchsia
+    /// checkout. However, include paths not prepended with `//`, as in the example
+    /// above, are resolved from Fuchsia SDK libraries (`//sdk/lib`) that export
+    /// component manifest shards.
+    ///
+    /// For reference, inside the Fuchsia checkout these two include paths are
+    /// equivalent:
+    ///
+    /// * `syslog/client.shard.cml`
+    /// * `//sdk/lib/syslog/client.shard.cml`
     ///
     /// You can review the outcome of merging any and all includes into a component
     /// manifest file by invoking the following command:
@@ -859,6 +867,9 @@ pub struct Document {
     /// ```sh
     /// fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includeroot $FUCHSIA_DIR --includepath $FUCHSIA_DIR/sdk/lib
     /// ```
+    ///
+    /// Note: The `fx` command below is for developers working in a Fuchsia source
+    /// checkout environment.
     ///
     /// Includes can be recursive, meaning that shards can have their own includes.
     pub include: Option<Vec<String>>,
@@ -1405,15 +1416,16 @@ macro_rules! merge_from_field {
 macro_rules! flatten_on_capability_type {
     ($input_clause:ident, $type:ident) => {
         match &$input_clause.$type {
-            Some(OneOrMany::Many(ref clause_vec)) => {
-                clause_vec.iter().map(|c| {
+            Some(OneOrMany::Many(ref clause_vec)) => clause_vec
+                .iter()
+                .map(|c| {
                     let mut clause_clone = $input_clause.clone();
                     clause_clone.$type = Some(OneOrMany::One(c.clone()));
                     clause_clone
-                }).collect::<Vec<_>>()
-            }
+                })
+                .collect::<Vec<_>>(),
             Some(OneOrMany::One(_)) => vec![$input_clause.clone()],
-            _ => unreachable!("unable to flatten empty capability type")
+            _ => unreachable!("unable to flatten empty capability type"),
         }
     };
 }

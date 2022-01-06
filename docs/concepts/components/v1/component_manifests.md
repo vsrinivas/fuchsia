@@ -13,7 +13,7 @@ Here's a simple example of a cmx for an ELF binary component:
 ```
 {
     "include": [
-        "//src/lib/syslog/client.shard.cmx"
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/example_app",
@@ -47,11 +47,19 @@ files (or shards) to be merged into this component manifest.
 
 In the example given above, the component manifest is including contents from a
 file provided by the `syslog` library, thus ensuring that the component
-functions correctly at runtime if it attempts to write to syslog. By convention
+functions correctly at runtime if it attempts to write to `syslog`. By convention
 such files end with `.shard.cmx`.
 
-If working in fuchsia.git, include paths are relative to the source root of the
-Fuchsia tree.
+Include paths prepended with `//` are relative to the source root of the Fuchsia
+checkout. However, include paths not prepended with `//`, as in the example
+above, are resolved from Fuchsia SDK libraries (`//sdk/lib`) that export
+component manifest shards.
+
+For reference, inside the Fuchsia checkout these two include paths are
+equivalent:
+
+* `syslog/client.shard.cmx`
+* `//sdk/lib/syslog/client.shard.cmx`
 
 You can review the outcome of merging any and all includes into a component
 manifest file by invoking the following command:
@@ -59,6 +67,9 @@ manifest file by invoking the following command:
 ```sh
 fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includeroot $FUCHSIA_DIR --includepath $FUCHSIA_DIR/sdk/lib
 ```
+
+Note: the `fx` command below is for developers working in a fuchsia source
+checkout environment.
 
 Includes can be recursive, meaning that shards can have their own includes.
 
