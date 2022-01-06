@@ -768,6 +768,7 @@ void VmAspace::MarkAsLatencySensitive() {
       }
     };
     Enumerator enumerator;
+    AssertHeld(root_vmar_->lock_ref());
     root_vmar_->EnumerateChildrenLocked(&enumerator);
   }
 }

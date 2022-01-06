@@ -477,8 +477,6 @@ template <typename ON_VMAR, typename ON_MAPPING>
 bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t max_addr,
                                                       ON_VMAR on_vmar, ON_MAPPING on_mapping) {
   canary_.Assert();
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
 
   constexpr uint kStartDepth = 1;
   uint depth = kStartDepth;
@@ -543,8 +541,6 @@ bool VmAddressRegion::EnumerateChildrenInternalLocked(vaddr_t min_addr, vaddr_t 
 bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve) {
   canary_.Assert();
   DEBUG_ASSERT(ve != nullptr);
-  // TODO: Add annotations to remove this.
-  AssertHeld(lock_ref());
 
   return EnumerateChildrenInternalLocked(
       0, UINT64_MAX,
@@ -677,7 +673,8 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
   // Helper that wraps EnumerateChildren and will automatically fail if a gap is found in the range.
   // Also determines the potential subset of the mapping that our range is for and passes it to the
   // callback.
-  auto process_range = [base, last_addr, this](auto mapping_callback) -> zx_status_t {
+  auto process_range = [base, last_addr, this](auto mapping_callback)
+                           TA_REQ(lock()) -> zx_status_t {
     vaddr_t expected = base;
     zx_status_t result = ZX_OK;
     EnumerateChildrenInternalLocked(
