@@ -1,0 +1,67 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+
+# test.driverhandle
+
+
+
+## **PROTOCOLS**
+
+## DriverProtocol {#DriverProtocol}
+*Defined in [test.driverhandle/driver_handle.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_handle.test.fidl;l=8)*
+
+
+
+
+
+## **STRUCTS**
+
+### ClientEndWrapper [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#ClientEndWrapper data-text="ClientEndWrapper"}
+*Defined in [test.driverhandle/driver_handle.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_handle.test.fidl;l=11)*
+
+
+
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ClientEndWrapper.value">
+            <td><code>value</code></td>
+            <td>
+                <code><a class='link' href='#DriverProtocol'>DriverProtocol</a></code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+### ServerEndWrapper [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#ServerEndWrapper data-text="ServerEndWrapper"}
+*Defined in [test.driverhandle/driver_handle.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_handle.test.fidl;l=16)*
+
+
+
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ServerEndWrapper.value">
+            <td><code>value</code></td>
+            <td>
+                <code>request&lt;<a class='link' href='#DriverProtocol'>DriverProtocol</a>&gt;</code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+

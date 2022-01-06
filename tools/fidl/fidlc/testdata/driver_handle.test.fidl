@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.driverhandle;
+
+@transport("Driver")
+protocol DriverProtocol {};
+
+@bindings_denylist("rust, cpp, llcpp, hlcpp, dart")
+type ClientEndWrapper = resource struct {
+    value client_end:DriverProtocol;
+};
+
+@bindings_denylist("rust, cpp, llcpp, hlcpp, dart")
+type ServerEndWrapper = resource struct {
+    value server_end:DriverProtocol;
+};

@@ -22,6 +22,9 @@ consts_test_base.h.golden
 doc_comments.cc.golden
 doc_comments.h.golden
 doc_comments_test_base.h.golden
+driver_handle.cc.golden
+driver_handle.h.golden
+driver_handle_test_base.h.golden
 driver_one_way.cc.golden
 driver_one_way.h.golden
 driver_one_way_test_base.h.golden

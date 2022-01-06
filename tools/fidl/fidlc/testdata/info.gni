@@ -163,6 +163,10 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "driver_handle"
+    target = "//tools/fidl/fidlc/testdata:test.driverhandle"
+  },
+  {
     name = "driver_one_way"
     target = "//tools/fidl/fidlc/testdata:test.driveroneway"
   },

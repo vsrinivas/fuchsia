@@ -1,0 +1,286 @@
+{
+  "version": "0.0.1",
+  "name": "test.driverhandle",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.driverhandle/DriverProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "line": 8,
+        "column": 10,
+        "length": 14
+      },
+      "maybe_attributes": [
+        {
+          "name": "transport",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "Driver",
+                "expression": "\"Driver\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "Driver",
+                  "expression": "\"Driver\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+                "line": 7,
+                "column": 12,
+                "length": 8
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "line": 7,
+            "column": 1,
+            "length": 20
+          }
+        }
+      ],
+      "composed_protocols": [],
+      "methods": []
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "test.driverhandle/ClientEndWrapper",
+      "naming_context": [
+        "ClientEndWrapper"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "line": 11,
+        "column": 6,
+        "length": 16
+      },
+      "is_request_or_response": false,
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "rust, cpp, llcpp, hlcpp, dart",
+                "expression": "\"rust, cpp, llcpp, hlcpp, dart\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "rust, cpp, llcpp, hlcpp, dart",
+                  "expression": "\"rust, cpp, llcpp, hlcpp, dart\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+                "line": 10,
+                "column": 20,
+                "length": 31
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "line": 10,
+            "column": 1,
+            "length": 51
+          }
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.driverhandle/DriverProtocol",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "value",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "line": 12,
+            "column": 5,
+            "length": 5
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    },
+    {
+      "name": "test.driverhandle/ServerEndWrapper",
+      "naming_context": [
+        "ServerEndWrapper"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "line": 16,
+        "column": 6,
+        "length": 16
+      },
+      "is_request_or_response": false,
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "rust, cpp, llcpp, hlcpp, dart",
+                "expression": "\"rust, cpp, llcpp, hlcpp, dart\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "rust, cpp, llcpp, hlcpp, dart",
+                  "expression": "\"rust, cpp, llcpp, hlcpp, dart\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+                "line": 15,
+                "column": 20,
+                "length": 31
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "line": 15,
+            "column": 1,
+            "length": 51
+          }
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "test.driverhandle/DriverProtocol",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "value",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "line": 17,
+            "column": 5,
+            "length": 5
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": true,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    }
+  ],
+  "external_struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "test.driverhandle/ServerEndWrapper",
+    "test.driverhandle/DriverProtocol",
+    "test.driverhandle/ClientEndWrapper"
+  ],
+  "declarations": {
+    "test.driverhandle/DriverProtocol": "interface",
+    "test.driverhandle/ClientEndWrapper": "struct",
+    "test.driverhandle/ServerEndWrapper": "struct"
+  }
+}

@@ -78,6 +78,16 @@ doc_comments_wire_messaging.cc.golden
 doc_comments_wire_messaging.h.golden
 doc_comments_wire_types.cc.golden
 doc_comments_wire_types.h.golden
+driver_handle.h.golden
+driver_handle_driver.h.golden
+driver_handle_driver_wire_messaging.cc.golden
+driver_handle_driver_wire_messaging.h.golden
+driver_handle_markers.h.golden
+driver_handle_test_base.h.golden
+driver_handle_wire_messaging.cc.golden
+driver_handle_wire_messaging.h.golden
+driver_handle_wire_types.cc.golden
+driver_handle_wire_types.h.golden
 driver_one_way.h.golden
 driver_one_way_driver.h.golden
 driver_one_way_driver_wire_messaging.cc.golden

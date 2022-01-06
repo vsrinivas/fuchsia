@@ -14,6 +14,10 @@ doc_comments.cc.golden
 doc_comments.h.golden
 doc_comments_decode_encode.cc.golden
 doc_comments_decode_encode.h.golden
+driver_handle.cc.golden
+driver_handle.h.golden
+driver_handle_decode_encode.cc.golden
+driver_handle_decode_encode.h.golden
 driver_one_way.cc.golden
 driver_one_way.h.golden
 driver_one_way_decode_encode.cc.golden

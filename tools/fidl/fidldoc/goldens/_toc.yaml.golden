@@ -21,6 +21,8 @@ toc:
     path: /test.consts
   - title: test.doccomments
     path: /test.doccomments
+  - title: test.driverhandle
+    path: /test.driverhandle
   - title: test.driveroneway
     path: /test.driveroneway
   - title: test.drivertwoway
