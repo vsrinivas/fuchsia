@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{error::*, local_component_runner::LocalComponentRunnerBuilder, Event, ScopedInstance},
+    crate::{error::*, local_component_runner::LocalComponentRunnerBuilder, ScopedInstance},
     anyhow::format_err,
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
     fidl::endpoints::{
@@ -22,6 +22,7 @@ use {
 
 pub use crate::local_component_runner::LocalComponentHandles;
 pub use crate::ChildOptions;
+pub use crate::Event;
 
 /// The default name of the child component collection that contains built topologies.
 pub const DEFAULT_COLLECTION_NAME: &'static str = "realm_builder";

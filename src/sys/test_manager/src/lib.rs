@@ -10,10 +10,11 @@ use {
     fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl::prelude::*,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
-    fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
-    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys as fv1sys,
-    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component_test::Capability2 as RBCapability,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_debugdata as fdebugdata,
+    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
     fsys::ComponentResolverProxy,
     ftest::Invocation,
@@ -26,8 +27,11 @@ use {
     fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        error::Error as RealmBuilderError, mock::MockHandles, ChildOptions, Event, RealmBuilder,
-        RealmInstance, RouteBuilder, RouteEndpoint,
+        error::Error as RealmBuilderError,
+        new::{
+            Capability, ChildOptions, Event, LocalComponentHandles, RealmBuilder, RealmInstance,
+            Ref, Route, SubRealmBuilder,
+        },
     },
     fuchsia_zircon as zx,
     futures::{
@@ -41,10 +45,9 @@ use {
     lazy_static::lazy_static,
     moniker::RelativeMonikerBase,
     regex::Regex,
-    routing::rights::READ_RIGHTS,
     std::{
         collections::{HashMap, HashSet},
-        convert::TryFrom,
+        convert::{TryFrom, TryInto},
         sync::{
             atomic::{AtomicU32, AtomicU64, Ordering},
             Arc, Mutex, Weak,
@@ -57,8 +60,11 @@ mod diagnostics;
 mod error;
 
 pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
-const WRAPPER_ROOT_REALM_PATH: &'static str = "test_wrapper/test_root";
-const ARCHIVIST_REALM_PATH: &'static str = "test_wrapper/archivist";
+const WRAPPER_REALM_NAME: &'static str = "test_wrapper";
+const ARCHIVIST_REALM_NAME: &'static str = "archivist";
+const MOCKS_SERVER_REALM_NAME: &'static str = "mocks-server";
+const ENCLOSING_ENV_REALM_NAME: &'static str = "enclosing_env";
+
 const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/test_manager#meta/archivist-for-embedding.cm";
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
@@ -78,8 +84,6 @@ lazy_static! {
     .collect();
 }
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
-
-const ENCLOSING_ENV: &'static str = "test_wrapper/enclosing_env";
 
 struct TestMapValue {
     test_url: String,
@@ -1120,7 +1124,7 @@ impl RunningSuite {
                 .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
         let archive_accessor_arc = Arc::new(archive_accessor);
-        let mut builder = get_realm(
+        let builder = get_realm(
             Arc::downgrade(&archive_accessor_arc),
             test_url,
             test_collection,
@@ -1128,7 +1132,6 @@ impl RunningSuite {
         )
         .await
         .map_err(LaunchTestError::InitializeTestRealm)?;
-        builder.set_collection_name(test_collection);
         let instance = builder.build().await.map_err(LaunchTestError::CreateTestRealm)?;
         let test_name = instance.root.child_name().to_string();
         test_map.insert(test_name.clone(), test_url.to_string());
@@ -1419,135 +1422,178 @@ async fn get_realm(
     collection: &str,
     above_root_capabilities_for_test: Arc<AboveRootCapabilitiesForTest>,
 ) -> Result<RealmBuilder, RealmBuilderError> {
-    let builder = RealmBuilder::new().await?;
-    builder
-        .add_child(WRAPPER_ROOT_REALM_PATH, test_url, ChildOptions::new().eager())
-        .await?
-        .add_mock_child(
-            "mocks-server",
-            move |mock_handles| Box::pin(serve_mocks(archive_accessor.clone(), mock_handles)),
+    let builder = RealmBuilder::new_with_collection(collection.to_string()).await?;
+
+    let mocks_server = builder
+        .add_local_child(
+            MOCKS_SERVER_REALM_NAME,
+            move |handles| Box::pin(serve_mocks(archive_accessor.clone(), handles)),
             ChildOptions::new(),
-        )
-        .await?
-        .add_mock_child(
-            ENCLOSING_ENV,
-            move |mock_handles: MockHandles| Box::pin(gen_enclosing_env(mock_handles)),
-            ChildOptions::new(),
-        )
-        .await?
-        .add_child(ARCHIVIST_REALM_PATH, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fsys::EventSourceMarker>()
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::AboveRoot)
-                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.LogSink")
-                .source(RouteEndpoint::component(ARCHIVIST_REALM_PATH))
-                .targets(vec![
-                    RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH),
-                    RouteEndpoint::component(ENCLOSING_ENV),
-                ]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol("fuchsia.logger.Log")
-                .source(RouteEndpoint::component(ARCHIVIST_REALM_PATH))
-                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fdiagnostics::ArchiveAccessorMarker>()
-                .source(RouteEndpoint::component("mocks-server"))
-                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fdiagnostics::ArchiveAccessorMarker>()
-                .source(RouteEndpoint::component(ARCHIVIST_REALM_PATH))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<ftest::SuiteMarker>()
-                .source(RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH))
-                .targets(vec![RouteEndpoint::AboveRoot]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fv1sys::EnvironmentMarker>()
-                .source(RouteEndpoint::component(ENCLOSING_ENV))
-                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fv1sys::LauncherMarker>()
-                .source(RouteEndpoint::component(ENCLOSING_ENV))
-                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fv1sys::LoaderMarker>()
-                .source(RouteEndpoint::component(ENCLOSING_ENV))
-                .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::protocol_marker::<fdebugdata::DebugDataMarker>()
-                .source(RouteEndpoint::Debug)
-                .targets(vec![RouteEndpoint::component(ENCLOSING_ENV)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::Started, cm_rust::EventMode::Async)
-                .source(RouteEndpoint::component("test_wrapper"))
-                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::Stopped, cm_rust::EventMode::Async)
-                .source(RouteEndpoint::component("test_wrapper"))
-                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::Running, cm_rust::EventMode::Async)
-                .source(RouteEndpoint::component("test_wrapper"))
-                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(Event::directory_ready("diagnostics"), cm_rust::EventMode::Async)
-                .source(RouteEndpoint::component("test_wrapper"))
-                .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
-        )
-        .await?
-        .add_route(
-            RouteBuilder::event(
-                Event::capability_requested("fuchsia.logger.LogSink"),
-                cm_rust::EventMode::Async,
-            )
-            .source(RouteEndpoint::component("test_wrapper"))
-            .targets(vec![RouteEndpoint::component(ARCHIVIST_REALM_PATH)]),
         )
         .await?;
 
-    above_root_capabilities_for_test.apply(collection, &builder).await?;
+    let wrapper_realm =
+        builder.add_child_realm(WRAPPER_REALM_NAME, ChildOptions::new().eager()).await?;
+    let test_root = wrapper_realm
+        .add_child(TEST_ROOT_REALM_NAME, test_url, ChildOptions::new().eager())
+        .await?;
+    let archivist = wrapper_realm
+        .add_child(ARCHIVIST_REALM_NAME, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
+        .await?;
+    let enclosing_env = wrapper_realm
+        .add_local_child(
+            ENCLOSING_ENV_REALM_NAME,
+            move |handles| Box::pin(gen_enclosing_env(handles)),
+            ChildOptions::new(),
+        )
+        .await?;
+
+    // Parent to archivist
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fsys::EventSourceMarker>())
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&wrapper_realm),
+        )
+        .await?;
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fsys::EventSourceMarker>())
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&archivist),
+        )
+        .await?;
+
+    // archivist to test root and enclosing env
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(&archivist)
+                .to(&test_root)
+                .to(&enclosing_env),
+        )
+        .await?;
+
+    // archivist to test root
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.Log"))
+                .from(&archivist)
+                .to(&test_root),
+        )
+        .await?;
+
+    // Mocks server to test root
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
+                .from(&mocks_server)
+                .to(&wrapper_realm),
+        )
+        .await?;
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
+                .from(Ref::parent())
+                .to(&test_root),
+        )
+        .await?;
+
+    // archivist to parent
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
+                .from(&archivist)
+                .to(Ref::parent()),
+        )
+        .await?;
+
+    // test root to parent
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<ftest::SuiteMarker>())
+                .from(&test_root)
+                .to(Ref::parent()),
+        )
+        .await?;
+
+    // enclosing env to test root
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fv1sys::EnvironmentMarker>())
+                .capability(Capability::protocol::<fv1sys::LauncherMarker>())
+                .capability(Capability::protocol::<fv1sys::LoaderMarker>())
+                .from(&enclosing_env)
+                .to(&test_root),
+        )
+        .await?;
+
+    // debug to enclosing env
+    // This must be done manually, as there is currently no way to add a "use from debug"
+    // declaration using `add_route`.
+    let mut enclosing_env_decl = wrapper_realm.get_component_decl(&enclosing_env).await?;
+    enclosing_env_decl.uses.push(cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+        source: cm_rust::UseSource::Debug,
+        source_name: fdebugdata::DebugDataMarker::PROTOCOL_NAME.into(),
+        target_path: format!("/svc/{}", fdebugdata::DebugDataMarker::PROTOCOL_NAME)
+            .as_str()
+            .try_into()
+            .unwrap(),
+        dependency_type: cm_rust::DependencyType::Strong,
+    }));
+    wrapper_realm.replace_component_decl(&enclosing_env, enclosing_env_decl).await?;
+
+    // wrapper realm to archivist
+    wrapper_realm
+        .add_route(
+            Route::new()
+                .capability(Capability::event(Event::Started, cm_rust::EventMode::Async))
+                .capability(Capability::event(Event::Stopped, cm_rust::EventMode::Async))
+                .capability(Capability::event(Event::Running, cm_rust::EventMode::Async))
+                .capability(Capability::event(
+                    Event::directory_ready("diagnostics"),
+                    cm_rust::EventMode::Async,
+                ))
+                .capability(Capability::event(
+                    Event::capability_requested("fuchsia.logger.LogSink"),
+                    cm_rust::EventMode::Async,
+                ))
+                .from(Ref::framework())
+                .to(&archivist),
+        )
+        .await?;
+
+    builder
+        .add_route(
+            Route::new()
+                // from archivist
+                .capability(Capability::protocol::<fdiagnostics::ArchiveAccessorMarker>())
+                // from test root
+                .capability(Capability::protocol::<ftest::SuiteMarker>())
+                .from(&wrapper_realm)
+                .to(Ref::parent()),
+        )
+        .await?;
+
+    above_root_capabilities_for_test.apply(collection, &builder, &wrapper_realm).await?;
 
     Ok(builder)
 }
 
 async fn serve_mocks(
     archive_accessor: Weak<fdiagnostics::ArchiveAccessorProxy>,
-    mock_handles: MockHandles,
+    handles: LocalComponentHandles,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |stream| {
@@ -1561,7 +1607,7 @@ async fn serve_mocks(
         })
         .detach()
     });
-    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
     fs.collect::<()>().await;
     Ok(())
 }
@@ -1585,7 +1631,7 @@ fn map_suite_error_epitaph(suite: ftest::SuiteProxy, default_value: LaunchError)
 }
 
 pub struct AboveRootCapabilitiesForTest {
-    capabilities: HashMap<&'static str, Vec<RouteBuilder>>,
+    capabilities: HashMap<&'static str, Vec<RBCapability>>,
 }
 
 impl AboveRootCapabilitiesForTest {
@@ -1601,15 +1647,24 @@ impl AboveRootCapabilitiesForTest {
         &self,
         collection: &str,
         builder: &RealmBuilder,
+        wrapper_realm: &SubRealmBuilder,
     ) -> Result<(), RealmBuilderError> {
         if self.capabilities.contains_key(collection) {
-            for route_builder in &self.capabilities[collection] {
+            for capability in &self.capabilities[collection] {
                 builder
                     .add_route(
-                        route_builder
-                            .clone()
-                            .source(RouteEndpoint::AboveRoot)
-                            .targets(vec![RouteEndpoint::component(WRAPPER_ROOT_REALM_PATH)]),
+                        Route::new()
+                            .capability(capability.clone())
+                            .from(Ref::parent())
+                            .to(wrapper_realm),
+                    )
+                    .await?;
+                wrapper_realm
+                    .add_route(
+                        Route::new()
+                            .capability(capability.clone())
+                            .from(Ref::parent())
+                            .to(Ref::child(TEST_ROOT_REALM_NAME)),
                     )
                     .await?;
             }
@@ -1617,7 +1672,7 @@ impl AboveRootCapabilitiesForTest {
         Ok(())
     }
 
-    fn load(decl: fdecl::Component) -> HashMap<&'static str, Vec<RouteBuilder>> {
+    fn load(decl: fdecl::Component) -> HashMap<&'static str, Vec<RBCapability>> {
         let mut capabilities: HashMap<_, _> =
             TEST_TYPE_REALM_MAP.values().map(|v| (*v, vec![])).collect();
         for offer_decl in decl.offers.unwrap_or(vec![]) {
@@ -1632,19 +1687,17 @@ impl AboveRootCapabilitiesForTest {
                     capabilities
                         .get_mut(name.as_str())
                         .unwrap()
-                        .push(RouteBuilder::protocol(target_name));
+                        .push(Capability::protocol_by_name(target_name).into());
                 }
                 fdecl::Offer::Directory(fdecl::OfferDirectory {
                     target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
-                    rights,
                     target_name: Some(target_name),
                     ..
                 }) if capabilities.contains_key(name.as_str()) => {
-                    capabilities.get_mut(name.as_str()).unwrap().push(RouteBuilder::directory(
-                        target_name,
-                        "",
-                        rights.unwrap_or(*READ_RIGHTS),
-                    ));
+                    capabilities
+                        .get_mut(name.as_str())
+                        .unwrap()
+                        .push(Capability::directory(target_name).into());
                 }
                 fdecl::Offer::Storage(fdecl::OfferStorage {
                     target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
@@ -1655,7 +1708,7 @@ impl AboveRootCapabilitiesForTest {
                     capabilities
                         .get_mut(name.as_str())
                         .unwrap()
-                        .push(RouteBuilder::storage(target_name, use_path));
+                        .push(Capability::storage(target_name).path(use_path).into());
                 }
                 fdecl::Offer::Service(fdecl::OfferService {
                     target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
@@ -1871,7 +1924,7 @@ impl EnclosingEnvironment {
 
 /// Create a new and single enclosing env for every test. Each test only gets a single enclosing env
 /// no matter how many times it connects to Environment service.
-async fn gen_enclosing_env(handles: MockHandles) -> Result<(), Error> {
+async fn gen_enclosing_env(handles: LocalComponentHandles) -> Result<(), Error> {
     // This function should only be called when test tries to connect to Environment or Launcher.
     let mut fs = ServiceFs::new();
     let incoming_svc = handles.clone_from_namespace("svc")?;
