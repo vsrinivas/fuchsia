@@ -52,6 +52,9 @@ use crate::setup::SetupEvent;
 mod storage;
 
 mod fdr;
+mod proxy_view_assistant;
+
+use crate::proxy_view_assistant::ProxyViewAssistant;
 use fdr::{FactoryResetState, ResetEvent};
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
@@ -139,14 +142,16 @@ impl AppAssistant for RecoveryAppAssistant {
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
         let body = get_recovery_body(self.fdr_restriction.is_initially_enabled());
         let file = load_rive(LOGO_IMAGE_PATH).ok();
-        Ok(Box::new(RecoveryViewAssistant::new(
+        let view_assistant_ptr = Box::new(RecoveryViewAssistant::new(
             &self.app_context,
             view_key,
             file,
             RECOVERY_MODE_HEADLINE,
             body.map(Into::into),
             self.fdr_restriction,
-        )?))
+        )?);
+        let proxy_ptr = Box::new(ProxyViewAssistant::new(view_assistant_ptr)?);
+        Ok(proxy_ptr)
     }
 
     fn filter_config(&mut self, config: &mut Config) {

@@ -15,7 +15,7 @@ use euclid::size2;
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::View;
 use fuchsia_zircon::{Event, Time};
-use futures::channel::mpsc::UnboundedSender;
+use futures::channel::mpsc::{unbounded, UnboundedSender};
 
 pub(crate) mod strategies;
 
@@ -71,6 +71,24 @@ pub struct ViewAssistantContext {
 }
 
 impl ViewAssistantContext {
+    /// Returns an empty ViewAssistantContext to enable testing with mocks
+    pub fn new_for_testing() -> Self {
+        let (unbounded_sender, _) = unbounded::<MessageInternal>();
+        Self {
+            key: Default::default(),
+            size: Default::default(),
+            metrics: Default::default(),
+            presentation_time: Default::default(),
+            buffer_count: Default::default(),
+            image_id: Default::default(),
+            image_index: Default::default(),
+            mouse_cursor_position: Default::default(),
+            display_info: Default::default(),
+            messages: Default::default(),
+            app_sender: unbounded_sender,
+        }
+    }
+
     /// Queue up a message for delivery
     pub fn queue_message(&mut self, message: Message) {
         self.messages.push(message);
