@@ -5,7 +5,6 @@
 // TODO(fxb/68069): Add module documentation describing Setting Proxy's role in
 // setting handling.
 use crate::base::{SettingInfo, SettingType};
-use crate::event;
 use crate::handler::base::{
     Error as HandlerError, Payload as HandlerPayload, Request as HandlerRequest,
     SettingHandlerFactory,
@@ -19,7 +18,7 @@ use crate::handler::setting_handler::{
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{Audience, MessageEvent, MessengerType, Status};
 use crate::trace::TracingNonce;
-use crate::{service, trace, trace_guard};
+use crate::{clock, event, service, trace, trace_guard};
 use anyhow::Error;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
@@ -178,9 +177,16 @@ pub(crate) struct SettingProxy {
     request_timeout: Option<Duration>,
     retry_on_timeout: bool,
     teardown_cancellation: Option<futures::channel::oneshot::Sender<()>>,
-    node: fuchsia_inspect::Node,
-    node_errors: VecDeque<fuchsia_inspect::StringProperty>,
+    _node: fuchsia_inspect::Node,
+    error_node: fuchsia_inspect::Node,
+    node_errors: VecDeque<NodeError>,
     error_count: usize,
+}
+
+struct NodeError {
+    _node: fuchsia_inspect::Node,
+    _timestamp: fuchsia_inspect::StringProperty,
+    _value: fuchsia_inspect::StringProperty,
 }
 
 /// Publishes an event to the event_publisher.
@@ -223,6 +229,8 @@ impl SettingProxy {
         let (proxy_request_sender, proxy_request_receiver) =
             futures::channel::mpsc::unbounded::<ProxyRequest>();
 
+        let error_node = node.create_child("errors");
+
         // We must create handle here rather than return back the value as we
         // reference the proxy in the async tasks below.
         let mut proxy = Self {
@@ -243,7 +251,8 @@ impl SettingProxy {
             request_timeout,
             retry_on_timeout,
             teardown_cancellation: None,
-            node,
+            _node: node,
+            error_node,
             node_errors: VecDeque::new(),
             error_count: 0,
         };
@@ -400,10 +409,14 @@ impl SettingProxy {
             {
                 Ok(signature) => Some(signature),
                 Err(e) => {
-                    self.node_errors.push_back(
-                        self.node
-                            .create_string(format!("{:020}", self.error_count), format!("{:?}", e)),
-                    );
+                    let node = self.error_node.create_child(format!("{:020}", self.error_count));
+                    let timestamp = node.create_string("timestamp", clock::inspect_format_now());
+                    let value = node.create_string("value", format!("{:?}", e));
+                    self.node_errors.push_back(NodeError {
+                        _node: node,
+                        _timestamp: timestamp,
+                        _value: value,
+                    });
                     self.error_count += 1;
                     if self.node_errors.len() > MAX_NODE_ERRORS {
                         let _ = self.node_errors.pop_front();
