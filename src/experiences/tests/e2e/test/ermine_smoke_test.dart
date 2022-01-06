@@ -59,6 +59,7 @@ void main() {
       test('Text input, pointer input and keyboard shortcut', () async {
         print('Launching terminal...');
         final terminalFinder = find.text('Terminal');
+        await ermine.driver.waitUntilNoTransientCallbacks();
         final appResult = await ermine.driver.getText(terminalFinder);
         expect(appResult, 'Terminal');
 
