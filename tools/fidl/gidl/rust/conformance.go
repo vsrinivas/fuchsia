@@ -11,6 +11,7 @@ import (
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidllibrust "go.fuchsia.dev/fuchsia/tools/fidl/gidl/librust"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -236,7 +237,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 				Context:    encodingContext(encoding.WireFormat),
 				HandleDefs: buildHandleDefs(encodeSuccess.HandleDefs),
 				Value:      value,
-				Bytes:      buildBytes(encoding.Bytes),
+				Bytes:      gidllibrust.BuildBytes(encoding.Bytes),
 				Handles:    buildHandles(gidlir.GetHandlesFromHandleDispositions(encoding.HandleDispositions)),
 			})
 		}
@@ -266,7 +267,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 				HandleDefs:    buildHandleDefs(decodeSuccess.HandleDefs),
 				ValueType:     valueType,
 				Value:         value,
-				Bytes:         buildBytes(encoding.Bytes),
+				Bytes:         gidllibrust.BuildBytes(encoding.Bytes),
 				Handles:       buildHandles(encoding.Handles),
 				ForgetHandles: forgetHandles,
 			})
@@ -322,7 +323,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 				Context:    encodingContext(encoding.WireFormat),
 				HandleDefs: buildHandleDefs(decodeFailure.HandleDefs),
 				ValueType:  valueType,
-				Bytes:      buildBytes(encoding.Bytes),
+				Bytes:      gidllibrust.BuildBytes(encoding.Bytes),
 				Handles:    buildHandles(encoding.Handles),
 				ErrorCode:  errorCode,
 			})

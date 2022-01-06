@@ -5,13 +5,12 @@
 package rust
 
 import (
-	"bytes"
-	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
+	gidllibrust "go.fuchsia.dev/fuchsia/tools/fidl/gidl/librust"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -31,19 +30,6 @@ HandleDef{
 	rights: Rights::from_bits(%d).unwrap(),
 },
 `, i, handleTypeName(d.Subtype), d.Rights))
-	}
-	builder.WriteString("]")
-	return builder.String()
-}
-
-func buildBytes(bytes []byte) string {
-	var builder strings.Builder
-	builder.WriteString("[\n")
-	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x,", b))
-		if i%8 == 7 {
-			builder.WriteString("\n")
-		}
 	}
 	builder.WriteString("]")
 	return builder.String()
@@ -74,28 +60,12 @@ func buildHandleValues(handles []gidlir.Handle) string {
 
 func buildUnknownData(data gidlir.UnknownData, isResource bool) string {
 	if !isResource {
-		return fmt.Sprintf("vec!%s", buildBytes(data.Bytes))
+		return fmt.Sprintf("vec!%s", gidllibrust.BuildBytes(data.Bytes))
 	}
 	return fmt.Sprintf(
 		"UnknownData { bytes: vec!%s, handles: %s }",
-		buildBytes(data.Bytes),
+		gidllibrust.BuildBytes(data.Bytes),
 		buildHandleValues(data.Handles))
-}
-
-func escapeStr(value string) string {
-	var (
-		buf    bytes.Buffer
-		src    = []byte(value)
-		dstLen = hex.EncodedLen(len(src))
-		dst    = make([]byte, dstLen)
-	)
-	hex.Encode(dst, src)
-	for i := 0; i < dstLen; i += 2 {
-		buf.WriteString("\\x")
-		buf.WriteByte(dst[i])
-		buf.WriteByte(dst[i+1])
-	}
-	return buf.String()
 }
 
 func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
@@ -136,7 +106,7 @@ func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 		if fidlgen.PrintableASCII(value) {
 			expr = fmt.Sprintf("String::from(%q)", value)
 		} else {
-			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", escapeStr(value))
+			expr = fmt.Sprintf("std::str::from_utf8(b\"%s\").unwrap().to_string()", gidllibrust.EscapeStr(value))
 		}
 		return wrapNullable(decl, expr)
 	case gidlir.HandleWithRights:

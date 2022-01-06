@@ -41,6 +41,7 @@ if (is_host) {
       "ir/test_case.go",
       "ir/util.go",
       "ir/value.go",
+      "librust/common.go",
       "llcpp/benchmarks.go",
       "llcpp/conformance.go",
       "llcpp/lib/allocator_builder.go",
