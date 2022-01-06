@@ -152,12 +152,6 @@ protocol Pci {
     }) -> (struct {
         s zx.status;
     });
-    ConfigureIrqMode(struct {
-        requested_irq_count uint32;
-    }) -> (struct {
-        s zx.status;
-        mode PciIrqMode;
-    });
     GetDeviceInfo() -> (struct {
         s zx.status;
         info fuchsia.hardware.syscalls.pci.PcieDeviceInfo;

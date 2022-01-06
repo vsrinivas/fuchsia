@@ -240,20 +240,6 @@ zx_status_t Device::PciGetNextExtendedCapability(uint16_t cap_id, uint16_t offse
   return LOG_STATUS(DEBUG, status, "%#x, %#x", cap_id, offset);
 }
 
-zx_status_t Device::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {
-  std::array<pci_irq_mode_t, 3> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI, PCI_IRQ_MODE_LEGACY};
-  for (auto& mode : modes) {
-    if (auto result = QueryIrqMode(mode); result.is_ok() && result.value() >= requested_irq_count) {
-      zx_status_t st = SetIrqMode(mode, requested_irq_count);
-      if (st == ZX_OK && out_mode) {
-        *out_mode = mode;
-      }
-      return LOG_STATUS(DEBUG, st, "%#x", requested_irq_count);
-    }
-  }
-  return LOG_STATUS(DEBUG, ZX_ERR_NOT_SUPPORTED, "%#x", requested_irq_count);
-}
-
 zx_status_t Device::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   auto result = QueryIrqMode(mode);
   if (result.is_ok()) {

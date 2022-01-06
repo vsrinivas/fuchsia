@@ -486,12 +486,6 @@ TEST_F(PciProtocolTests, QueryAndSetIrqMode) {
   // Setting the same mode twice should work if no IRQs have been allocated off of this one.
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_MSI, max_irqs));
   ASSERT_OK(pci().SetIrqMode(PCI_IRQ_MODE_DISABLED, 0));
-
-#ifdef ENABLE_MSIX
-  pci_irq_mode_t mode = {};
-  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
-  ASSERT_EQ(mode, PCI_IRQ_MODE_MSI_X);
-#endif
 }
 
 // TODO(fxbug.dev/61631): Without USERSPACE_PCI defined in proxy it presently

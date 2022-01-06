@@ -186,29 +186,6 @@ zx_status_t KernelPci::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_ha
   return zx_pci_map_interrupt(device_.handle, which_irq, out_handle->reset_and_get_address());
 }
 
-zx_status_t KernelPci::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_mode) {
-  // Walk the available IRQ modes from best to worst (from a system
-  // perspective): MSI -> Legacy. Enable the mode that can provide the number of
-  // interrupts requested. This enables drivers that don't care about how they
-  // get their interrupt to call one method rather than doing the
-  // QueryIrqMode/SetIrqMode dance. TODO(fxbug.dev/32978): This method only
-  // covers MSI/Legacy because the transition to MSI-X requires the userspace
-  // driver. When that happens, this code will go away.
-  zx_pci_irq_mode_t mode = ZX_PCIE_IRQ_MODE_MSI;
-  zx_status_t st = zx_pci_set_irq_mode(device_.handle, mode, requested_irq_count);
-  if (st != ZX_OK) {
-    mode = ZX_PCIE_IRQ_MODE_LEGACY;
-    st = zx_pci_set_irq_mode(device_.handle, mode, requested_irq_count);
-  }
-
-  if (st == ZX_OK) {
-    *out_mode = mode;
-    return st;
-  }
-
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t KernelPci::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   return zx_pci_query_irq_mode(device_.handle, mode, out_max_irqs);
 }

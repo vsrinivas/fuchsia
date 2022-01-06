@@ -89,11 +89,6 @@ zx_status_t RpcSetIrqMode(const ddk::PciProtocolClient& pci, const PciRpcRequest
   return pci.SetIrqMode(req->irq.mode, req->irq.requested_irqs);
 }
 
-zx_status_t RpcConfigureIrqMode(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
-                                PciRpcResponse* resp) {
-  return pci.ConfigureIrqMode(req->irq.requested_irqs, &resp->irq.mode);
-}
-
 zx_status_t RpcGetNextCapability(const ddk::PciProtocolClient& pci, const PciRpcRequest* req,
                                  PciRpcResponse* resp) {
   auto* offset_cast = reinterpret_cast<uint8_t*>(&resp->cap.offset);
@@ -147,9 +142,6 @@ zx_status_t Fragment::RpcPci(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       break;
     case pci::PCI_OP_CONFIG_WRITE:
       status = RpcConfigWrite(pci_client_.proto_client(), request, response);
-      break;
-    case pci::PCI_OP_CONFIGURE_IRQ_MODE:
-      status = RpcConfigureIrqMode(pci_client_.proto_client(), request, response);
       break;
     case pci::PCI_OP_ENABLE_BUS_MASTER:
       status = RpcEnableBusMaster(pci_client_.proto_client(), request, response);

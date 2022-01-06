@@ -139,22 +139,6 @@ zx_status_t FragmentProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* ou
   return st;
 }
 
-zx_status_t FragmentProxy::PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* mode) {
-  PciRpcRequest req{};
-  PciRpcResponse resp{};
-
-  req.irq.requested_irqs = requested_irq_count;
-  zx_status_t st = PciRpc(pci::PCI_OP_CONFIGURE_IRQ_MODE, /*rd_handle=*/nullptr,
-                          /*wr_handle=*/nullptr, &req, &resp);
-  if (st == ZX_OK) {
-    if (mode != nullptr) {
-      *mode = resp.irq.mode;
-    }
-  }
-
-  return st;
-}
-
 zx_status_t FragmentProxy::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   PciRpcRequest req{};
   PciRpcResponse resp{};

@@ -71,40 +71,6 @@ zx_status_t FakePciProtocolInternal::PciMapInterrupt(uint32_t which_irq,
   return ZX_ERR_BAD_STATE;
 }
 
-zx_status_t FakePciProtocolInternal::PciConfigureIrqMode(uint32_t requested_irq_count,
-                                                         pci_irq_mode_t* out_irq_mode) {
-  ZX_ASSERT(requested_irq_count);
-  zx_status_t status;
-  if (msix_interrupts_.size() >= requested_irq_count) {
-    if ((status = PciSetIrqMode(PCI_IRQ_MODE_MSI_X, requested_irq_count)) == ZX_OK) {
-      if (out_irq_mode) {
-        *out_irq_mode = PCI_IRQ_MODE_MSI_X;
-      }
-      return ZX_OK;
-    }
-  }
-
-  if (msi_interrupts_.size() >= requested_irq_count) {
-    if ((status = PciSetIrqMode(PCI_IRQ_MODE_MSI, requested_irq_count)) == ZX_OK) {
-      if (out_irq_mode) {
-        *out_irq_mode = PCI_IRQ_MODE_MSI;
-      }
-      return ZX_OK;
-    }
-  }
-
-  if (legacy_interrupt_ && requested_irq_count == 1) {
-    if ((status = PciSetIrqMode(PCI_IRQ_MODE_LEGACY, requested_irq_count)) == ZX_OK) {
-      if (out_irq_mode) {
-        *out_irq_mode = PCI_IRQ_MODE_LEGACY;
-      }
-      return ZX_OK;
-    }
-  }
-
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t FakePciProtocolInternal::PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
   ZX_ASSERT(out_max_irqs);
   ZX_ASSERT(mode < PCI_IRQ_MODE_COUNT);

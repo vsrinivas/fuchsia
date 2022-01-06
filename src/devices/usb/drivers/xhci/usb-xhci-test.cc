@@ -964,8 +964,3 @@ zx_status_t ddk::PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio,
   mmio->emplace(src->mmio());
   return ZX_OK;
 }
-
-zx_status_t ddk::Pci::MapMmio(uint32_t index, uint32_t cache_policy,
-                              std::optional<MmioBuffer>* mmio) {
-  return ZX_OK;
-}

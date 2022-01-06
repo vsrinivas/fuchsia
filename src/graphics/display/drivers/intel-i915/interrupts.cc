@@ -4,6 +4,7 @@
 
 #include "src/graphics/display/drivers/intel-i915/interrupts.h"
 
+#include <lib/device-protocol/pci.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
@@ -161,7 +162,7 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
   interrupt_ctrl.set_enable_mask(0);
   interrupt_ctrl.WriteTo(mmio_space);
 
-  ddk::PciProtocolClient pci(pci_proto);
+  ddk::Pci pci(*pci_proto);
 
   // Assume that PCI will enable bus mastering as required for MSI interrupts.
   zx_status_t status = pci.ConfigureIrqMode(1, &irq_mode_);

@@ -183,55 +183,6 @@ TEST_F(FakePciProtocolTests, SetIrqMode) {
   ASSERT_EQ(mode, fake_pci().GetIrqMode());
 }
 
-TEST_F(FakePciProtocolTests, ConfigureIrqMode) {
-  // The intent is to check that the IRQ modes are always favored in order of
-  // MSI-X > MSI > Legacy, but also choosing based on how many interrupts each
-  // mode is configured to provide.
-  pci_irq_mode_t mode;
-  fake_pci().AddLegacyInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
-  ASSERT_EQ(1, fake_pci().GetIrqCount());
-  ASSERT_EQ(PCI_IRQ_MODE_LEGACY, mode);
-  ASSERT_EQ(PCI_IRQ_MODE_LEGACY, fake_pci().GetIrqMode());
-  ASSERT_OK(pci().AckInterrupt());
-
-  mode = PCI_IRQ_MODE_LEGACY_NOACK;
-  ASSERT_OK(pci().SetIrqMode(mode, 1));
-  ASSERT_EQ(1, fake_pci().GetIrqCount());
-  ASSERT_EQ(PCI_IRQ_MODE_LEGACY_NOACK, mode);
-  ASSERT_EQ(PCI_IRQ_MODE_LEGACY_NOACK, fake_pci().GetIrqMode());
-  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
-
-  fake_pci().AddMsiInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
-  ASSERT_EQ(1, fake_pci().GetIrqCount());
-  ASSERT_EQ(PCI_IRQ_MODE_MSI, mode);
-  ASSERT_EQ(PCI_IRQ_MODE_MSI, fake_pci().GetIrqMode());
-  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
-
-  fake_pci().AddMsixInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
-  ASSERT_EQ(1, fake_pci().GetIrqCount());
-  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, mode);
-  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, fake_pci().GetIrqMode());
-  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
-
-  // Ensure it will find the mode that supports the number necessary.
-  fake_pci().AddMsiInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(2, &mode));
-  ASSERT_EQ(2, fake_pci().GetIrqCount());
-  ASSERT_EQ(PCI_IRQ_MODE_MSI, mode);
-  ASSERT_EQ(PCI_IRQ_MODE_MSI, fake_pci().GetIrqMode());
-  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
-
-  fake_pci().AddMsixInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(2, &mode));
-  ASSERT_EQ(2, fake_pci().GetIrqCount());
-  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, mode);
-  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, fake_pci().GetIrqMode());
-  ASSERT_STATUS(ZX_ERR_BAD_STATE, pci().AckInterrupt());
-}
-
 namespace {
 // When interrupts are added to the fake a borrowed copy of the interrupt is
 // returned for comparison by tests later. Its koid should match the koid of the
