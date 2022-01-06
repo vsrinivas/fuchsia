@@ -10,9 +10,9 @@
 #include <zircon/device/vfs.h>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/admin.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fshost_integration_test.h"

@@ -7,9 +7,8 @@
 
 #include <fidl/fuchsia.storage.metrics/cpp/wire.h>
 
-#include <fs-management/mount.h>
-
 #include "block-device-utils.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/minfs/format.h"
 
 namespace minfs_micro_benchmark {

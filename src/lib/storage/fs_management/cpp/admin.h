@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
-#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_
 
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include <fs-management/format.h>
-#include <fs-management/launch.h>
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/launch.h"
 
 namespace fs_management {
 
@@ -123,4 +123,4 @@ zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> FsRootHandle(
 
 }  // namespace fs_management
 
-#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_ADMIN_H_

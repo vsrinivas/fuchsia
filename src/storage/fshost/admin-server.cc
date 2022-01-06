@@ -9,8 +9,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/syslog/cpp/macros.h>
 
-#include <fs-management/mount.h>
-
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 

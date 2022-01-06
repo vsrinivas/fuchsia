@@ -20,9 +20,9 @@
 
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs-management/mount.h>
 
-#include "path.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/path.h"
 
 namespace fs_management {
 namespace {

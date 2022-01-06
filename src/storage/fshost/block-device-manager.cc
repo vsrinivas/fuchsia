@@ -13,8 +13,7 @@
 
 #include <set>
 
-#include <fs-management/format.h>
-
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/storage/fshost/constants.h"
 
 namespace fshost {

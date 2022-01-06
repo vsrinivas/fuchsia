@@ -28,13 +28,13 @@
 #include <fbl/array.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
 #include <safemath/safe_math.h>
 
 #include "pave-logging.h"
 #include "src/lib/storage/block_client/cpp/client.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/fshost/constants.h"

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -21,7 +23,6 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/mount.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>

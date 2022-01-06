@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/fs_management/cpp/format.h"
+
 #include <lib/zx/vmo.h>
 
-#include <fs-management/format.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/testing/ram_disk.h"

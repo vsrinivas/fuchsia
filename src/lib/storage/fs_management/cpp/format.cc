@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/storage/fs_management/cpp/include/fs-management/format.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
 
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>

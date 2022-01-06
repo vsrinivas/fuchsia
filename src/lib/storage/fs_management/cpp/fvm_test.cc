@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire_test_base.h>
@@ -13,6 +13,7 @@
 
 #include "lib/zx/channel.h"
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/storage/fs_management/cpp/fvm_internal.h"
 
 namespace fs_management {
 namespace {

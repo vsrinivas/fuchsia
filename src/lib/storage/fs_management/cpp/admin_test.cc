@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/fs_management/cpp/admin.h"
+
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
@@ -9,12 +11,11 @@
 
 #include <vector>
 
-#include <fs-management/admin.h>
-#include <fs-management/format.h>
-#include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace fs_management {

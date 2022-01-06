@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -34,6 +34,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
+#include "src/lib/storage/fs_management/cpp/fvm_internal.h"
 #include "src/storage/fvm/fvm.h"
 
 namespace fs_management {

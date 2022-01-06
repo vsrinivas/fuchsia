@@ -22,11 +22,11 @@
 #include <string_view>
 
 #include <fbl/algorithm.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+#include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/client.h"
 

@@ -13,9 +13,8 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 
-#include <fs-management/admin.h>
-#include <fs-management/mount.h>
-
+#include "src/lib/storage/fs_management/cpp/admin.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/blobfs/mkfs.h"
 
 namespace blobfs {

@@ -30,9 +30,9 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 
+#include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/lib/paver/fvm.h"

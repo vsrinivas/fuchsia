@@ -11,7 +11,8 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/format.h>
+
+#include "src/lib/storage/fs_management/cpp/format.h"
 
 namespace fshost {
 

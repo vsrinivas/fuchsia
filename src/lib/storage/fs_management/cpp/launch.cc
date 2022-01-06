@@ -22,7 +22,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
-#include <fs-management/mount.h>
+#include "src/lib/storage/fs_management/cpp/mount.h"
 
 namespace {
 

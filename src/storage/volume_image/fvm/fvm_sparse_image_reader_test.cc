@@ -11,11 +11,11 @@
 #include <zircon/hw/gpt.h>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/admin.h>
-#include <fs-management/fvm.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/testing/fvm.h"

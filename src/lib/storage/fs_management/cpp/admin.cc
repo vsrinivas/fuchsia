@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/fs_management/cpp/admin.h"
+
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
@@ -14,10 +16,9 @@
 #include <vector>
 
 #include <fbl/vector.h>
-#include <fs-management/admin.h>
-#include <fs-management/mount.h>
 
-#include "path.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/path.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
 namespace fs_management {

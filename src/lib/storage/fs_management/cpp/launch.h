@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_LAUNCH_H_
-#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_LAUNCH_H_
+#ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_LAUNCH_H_
+#define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_LAUNCH_H_
 
 #include <zircon/types.h>
 
@@ -32,4 +32,4 @@ zx_status_t launch_logs_async(int argc, const char** argv, zx_handle_t* handles,
 
 __END_CDECLS
 
-#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_LAUNCH_H_
+#endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_LAUNCH_H_

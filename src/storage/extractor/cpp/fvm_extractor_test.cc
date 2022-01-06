@@ -23,9 +23,9 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/extractor/c/extractor.h"
 #include "src/storage/extractor/cpp/extractor.h"
 #include "src/storage/fvm/format.h"

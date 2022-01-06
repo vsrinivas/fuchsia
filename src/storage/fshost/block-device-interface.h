@@ -14,7 +14,7 @@
 #include <memory>
 #include <string_view>
 
-#include <fs-management/mount.h>
+#include "src/lib/storage/fs_management/cpp/mount.h"
 
 namespace fshost {
 

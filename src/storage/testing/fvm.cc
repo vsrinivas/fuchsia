@@ -11,8 +11,9 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
 #include <ramdevice-client/ramdisk.h>
+
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 
 namespace storage {
 

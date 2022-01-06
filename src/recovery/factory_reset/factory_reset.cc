@@ -24,8 +24,8 @@
 #include <string_view>
 
 #include <fbl/string_buffer.h>
-#include <fs-management/mount.h>
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/client.h"
 

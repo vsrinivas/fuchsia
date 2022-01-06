@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
@@ -35,12 +37,11 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
 #include "src/lib/fxl/test/test_settings.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"

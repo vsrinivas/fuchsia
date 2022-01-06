@@ -21,10 +21,10 @@
 #include <cstring>
 #include <string>
 
-#include <fs-management/fvm.h>
 #include <zxtest/zxtest.h>
 
 #include "sdk/lib/device-watcher/cpp/device-watcher.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 
 namespace fvm {
 namespace {

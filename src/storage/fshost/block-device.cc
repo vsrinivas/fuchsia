@@ -41,8 +41,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/format.h>
-#include <fs-management/mount.h>
 #include <gpt/gpt.h>
 
 #include "block-watcher.h"
@@ -50,6 +48,8 @@
 #include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/copier.h"

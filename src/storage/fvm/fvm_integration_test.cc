@@ -54,12 +54,12 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs-management/fvm.h>
-#include <fs-management/mount.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/block_client/cpp/client.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_check.h"

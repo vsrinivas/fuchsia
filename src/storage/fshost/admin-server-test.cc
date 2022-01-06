@@ -5,10 +5,10 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <fs-management/mount.h>
 #include <gtest/gtest.h>
 
 #include "sdk/lib/fdio/include/lib/fdio/spawn.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/fshost_integration_test.h"
 #include "src/storage/testing/ram_disk.h"
 

@@ -15,8 +15,8 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
-#include <fs-management/mount.h>
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/filesystem-mounter.h"

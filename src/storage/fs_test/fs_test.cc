@@ -30,14 +30,14 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/admin.h>
-#include <fs-management/format.h>
-#include <fs-management/fvm.h>
-#include <fs-management/launch.h>
-#include <fs-management/mount.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"
 #include "src/lib/json_parser/json_parser.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
+#include "src/lib/storage/fs_management/cpp/launch.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/compression_settings.h"

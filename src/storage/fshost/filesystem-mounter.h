@@ -13,8 +13,8 @@
 #include <memory>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/mount.h>
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/config.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"

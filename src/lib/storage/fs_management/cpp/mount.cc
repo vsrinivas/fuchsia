@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/lib/storage/fs_management/cpp/mount.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
@@ -30,7 +32,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <fs-management/mount.h>
 #include <pretty/hexdump.h>
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"

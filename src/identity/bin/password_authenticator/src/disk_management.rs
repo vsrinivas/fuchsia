@@ -80,7 +80,7 @@ const OPEN_RW: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 
 // This is the 16-byte magic byte string found at the start of a valid zxcrypt partition.
 // It is also defined in `//src/security/zxcrypt/volume.h` and
-// `//src/lib/storage/fs_management/cpp/include/fs-management/format.h`.
+// `//src/lib/storage/fs_management/cpp/format.h`.
 const ZXCRYPT_MAGIC: [u8; 16] = [
     0x5f, 0xe8, 0xf8, 0x00, 0xb3, 0x6d, 0x11, 0xe7, 0x80, 0x7a, 0x78, 0x63, 0x72, 0x79, 0x70, 0x74,
 ];

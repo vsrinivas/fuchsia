@@ -6,19 +6,14 @@ import("//build/components.gni")
 import("//build/test.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 
-config("headers_config") {
-  include_dirs = [ "include" ]
-}
-
 if (is_fuchsia) {
   shared_library("fs-management") {
-    public_configs = [ ":headers_config" ]
     public = [
-      "include/fs-management/admin.h",
-      "include/fs-management/format.h",
-      "include/fs-management/fvm.h",
-      "include/fs-management/launch.h",
-      "include/fs-management/mount.h",
+      "admin.h",
+      "format.h",
+      "fvm.h",
+      "launch.h",
+      "mount.h",
     ]
     configs += [ "//build/config:all_source" ]
     sources = [
@@ -26,6 +21,7 @@ if (is_fuchsia) {
       "format.cc",
       "fsck.cc",
       "fvm.cc",
+      "fvm_internal.h",
       "launch.cc",
       "mkfs.cc",
       "mount.cc",
@@ -66,12 +62,10 @@ if (is_fuchsia) {
 } else {
   source_set("fs-management") {
     public = [
-      "include/fs-management/format.h",
-      "include/fs-management/fvm.h",
-      "include/fs-management/launch.h",
+      "format.h",
+      "fvm.h",
+      "launch.h",
     ]
-
-    public_configs = [ ":headers_config" ]
   }
 }
 

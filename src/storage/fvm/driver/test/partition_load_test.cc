@@ -14,9 +14,9 @@
 #include <utility>
 
 #include <fbl/string_buffer.h>
-#include <fs-management/fvm.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/test_support.h"
 

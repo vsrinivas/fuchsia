@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "flash_stress.h"
+#include "garnet/bin/hwstress/flash_stress.h"
 
 #include <fcntl.h>
 #include <fuchsia/hardware/block/cpp/fidl.h>
@@ -22,11 +22,11 @@
 #include <utility>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
 #include <src/lib/uuid/uuid.h>
 
-#include "status.h"
-#include "util.h"
+#include "garnet/bin/hwstress/status.h"
+#include "garnet/bin/hwstress/util.h"
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 
 namespace hwstress {
 

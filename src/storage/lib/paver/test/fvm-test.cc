@@ -6,9 +6,9 @@
 
 #include <lib/driver-integration-test/fixture.h>
 
-#include <fs-management/fvm.h>
 #include <zxtest/zxtest.h>
 
+#include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/lib/paver/test/test-utils.h"
