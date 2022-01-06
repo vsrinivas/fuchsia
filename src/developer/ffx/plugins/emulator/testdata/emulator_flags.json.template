@@ -14,15 +14,42 @@
     serialized value of the parameter. }}
 {
     "args": [
+        "-kernel",
+        "{{guest.kernel_image}}",
+        "-initrd",
+        "{{guest.zbi_image}}",
+        "-m",
+        "{{device.memory.quantity}}{{ua device.memory.units}}",
         "-smp",
         {{! These should probably be predicated on the host CPU. }}
-        "4,threads=2",
+            "4,threads=2",
+        {{! FVM image goes here. }}
+        "-serial",
+        {{#if (eq runtime.console "monitor")}}
+            "monitor",
+        {{else}}
+            {{#if (eq runtime.console "none")}}
+                "none",
+            {{else}}
+                "stdio",
+            {{/if}}
+        {{/if}}
         "-machine",
-        "q35",
+        {{#if (eq host.architecture "arm64")}}
+            "virt",
+        {{else}} {{! architecture == x64 }}
+            "q35",
+            "-device",
+            "isa-debug-exit,iobase=0xf4,iosize=0x04",
+        {{/if}}
         {{#if (eq host.acceleration "none")}}
             "-cpu",
-            "Haswell,+smap,-check,-fsgsbase",
-        {{else}}
+            {{#if (eq runtime.architecture "arm64")}}
+                "cortex-a53",
+            {{else}}
+                "Haswell,+smap,-check,-fsgsbase",
+            {{/if}}
+        {{else}} {{! acceleration == "hyper" }}
             {{#if (eq host.os "linux")}}
                 "-enable-kvm",
                 "-cpu",
@@ -43,8 +70,17 @@
             "-device",
             "virtio_input_multi_touch_pci_1",
         {{/if}}
-        "-m",
-        "{{device.memory.quantity}}{{ua device.memory.units}}",
+        {{#if (eq device.audio.model "none")}}
+        {{else}}
+            "-soundhw",
+            "{{device.audio.model}}",
+        {{/if}}
+        {{! Networking goes here }}
+        {{#if (eq host.networking "none")}}
+           "-nic",
+            "none",
+            "-nodefaults",
+        {{/if}}
         {{! TODO(fxbug.dev/90005): These last few items were hard-coded into
             device_launcher, but need to be reevaluated as part of the template
             here. }}
@@ -54,6 +90,9 @@
         "virtio-keyboard-pci"
     ],
     "features": [
+        {{! We don't bother checking for "auto" here because the Rust code
+            will resolve "auto" to an actual value before it resolves the
+            template. }}
         {{#if (eq host.acceleration "hyper")}}
             {{#if (eq host.os "linux")}}
                 "KVM",
@@ -89,6 +128,13 @@
     ],
     "options": [
         "-metrics-collection",
+        {{#unless runtime.hidpi_scaling}}
+            "-no-hidpi-scaling",
+        {{/unless}}
+        "-gpu",
+        "{{host.gpu}}",
+        "-window-size",
+        "{{device.screen.width}}x{{device.screen.height}}",
         "-no-location-ui"
     ]
 }

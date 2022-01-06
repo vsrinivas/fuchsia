@@ -5,8 +5,11 @@
 //! The femu module encapsulates the interactions with the emulator instance
 //! started via the Fuchsia emulator, Femu.
 
-use crate::{qemu::qemu_base::QemuBasedEngine, serialization::SerializingEngine};
-use anyhow::{bail, Result};
+use crate::{
+    arg_templates::process_flag_template, qemu::qemu_base::QemuBasedEngine,
+    serialization::SerializingEngine,
+};
+use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{
@@ -62,6 +65,14 @@ impl EmulatorEngine for FemuEngine {
         if !aemu.exists() || !aemu.is_file() {
             bail!("Giving up finding aemu binary. Tried {:?}", aemu)
         }
+
+        let template_text = std::fs::read_to_string(&self.emulator_configuration.runtime.template)
+            .context(format!(
+                "couldn't locate template file from path {:?}",
+                &self.emulator_configuration.runtime.template
+            ))?;
+        self.emulator_configuration.flags =
+            process_flag_template(&template_text, &mut self.emulator_configuration).await?;
 
         let mut emulator_cmd = self.build_emulator_cmd(&aemu)?;
 

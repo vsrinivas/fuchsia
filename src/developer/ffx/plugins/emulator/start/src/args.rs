@@ -51,8 +51,8 @@ pub struct StartCommand {
     #[argh(switch, short = 'H')]
     pub headless: bool,
 
-    /// enable pixel scaling on HiDPI devices (MacOS).
-    #[argh(switch)]
+    /// enable pixel scaling on HiDPI devices. Defaults to true for MacOS, false otherwise.
+    #[argh(option, default = "std::env::consts::OS == \"macos\"")]
     pub hidpi_scaling: bool,
 
     /// file path to store emulator log.
