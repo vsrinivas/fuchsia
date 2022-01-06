@@ -8,7 +8,7 @@ use std::task::Poll;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{assert_data_tree, Inspector};
-use fuchsia_zircon::{Duration, DurationNum};
+use fuchsia_zircon::{Duration, DurationNum, Time};
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::channel::oneshot;
 use futures::lock::Mutex;
@@ -30,7 +30,7 @@ use crate::handler::setting_proxy::{SettingProxy, MAX_NODE_ERRORS};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::message::MessageHubUtil;
 use crate::service::{self, message, TryFromWithClient};
-use crate::{event, Payload};
+use crate::{clock, event, Payload};
 
 const TEARDOWN_TIMEOUT: Duration = Duration::from_seconds(5);
 const SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
@@ -487,6 +487,9 @@ impl SettingHandlerFactory for ErrorFactory {
 
 #[fasync::run_until_stalled(test)]
 async fn inspect_catches_errors() {
+    // Set the clock so that timestamps will always be 0.
+    clock::mock::set(Time::from_nanos(0));
+
     const SETTING_TYPE: SettingType = SettingType::Unknown;
 
     let delegate = service::MessageHub::create_hub();
@@ -523,13 +526,20 @@ async fn inspect_catches_errors() {
 
     assert_data_tree!(inspector, root: {
         test: {
-            "00000000000000000000": "HandlerStartupError(Unknown, \"test error\")"
+            errors: {
+                "00000000000000000000": {
+                    timestamp: "0.000000000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                }
+            }
         }
     });
 }
 
 #[fasync::run_until_stalled(test)]
 async fn inspect_errors_roll_after_limit() {
+    // Set the clock so that timestamps will always be 0.
+    clock::mock::set(Time::from_nanos(0));
     const SETTING_TYPE: SettingType = SettingType::Unknown;
 
     let delegate = service::MessageHub::create_hub();
@@ -549,7 +559,8 @@ async fn inspect_errors_roll_after_limit() {
     .await
     .expect("proxy creation should succeed");
 
-    for _ in 0..(MAX_NODE_ERRORS + 1) {
+    for i in 0..(MAX_NODE_ERRORS + 1) {
+        clock::mock::set(Time::from_nanos(i as i64 * 1000));
         let mut receptor = service_client
             .message(
                 HandlerPayload::Request(Request::Get).into(),
@@ -568,16 +579,48 @@ async fn inspect_errors_roll_after_limit() {
 
     assert_data_tree!(inspector, root: {
         test: {
-            "00000000000000000001": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000002": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000003": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000004": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000005": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000006": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000007": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000008": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000009": "HandlerStartupError(Unknown, \"test error\")",
-            "00000000000000000010": "HandlerStartupError(Unknown, \"test error\")",
+            errors: {
+                "00000000000000000001": {
+                    timestamp: "0.000001000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000002": {
+                    timestamp: "0.000002000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000003": {
+                    timestamp: "0.000003000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000004": {
+                    timestamp: "0.000004000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000005": {
+                    timestamp: "0.000005000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000006": {
+                    timestamp: "0.000006000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000007": {
+                    timestamp: "0.000007000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000008": {
+                    timestamp: "0.000008000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000009": {
+                    timestamp: "0.000009000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+                "00000000000000000010": {
+                    timestamp: "0.000010000",
+                    value: "HandlerStartupError(Unknown, \"test error\")"
+                },
+            }
         }
     });
 }
