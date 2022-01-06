@@ -37,6 +37,7 @@ rustc_library("netstack3-core") {
   ]
 
   test_deps = [
+    "proptest-support",
     "teststd",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:test-case",

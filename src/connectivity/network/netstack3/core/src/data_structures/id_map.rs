@@ -1208,6 +1208,12 @@ mod tests {
     }
 
     proptest::proptest! {
+        #![proptest_config(proptest::test_runner::Config {
+            // Add all failed seeds here.
+            failure_persistence: proptest_support::failed_seeds!(),
+            ..proptest::test_runner::Config::default()
+        })]
+
         #[test]
         fn test_arbitrary_operations(operations in proptest::collection::vec(operation_strategy(), 10)) {
             let mut map = IdMap::new();
