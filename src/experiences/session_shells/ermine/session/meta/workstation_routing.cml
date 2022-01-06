@@ -87,9 +87,6 @@
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
-
-                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
-                "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",

@@ -45,9 +45,6 @@
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
-
-                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
-                "fuchsia.sys.Environment",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.update.channelcontrol.ChannelControl",
             ],
@@ -85,9 +82,6 @@
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
-
-                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
-                "fuchsia.sys.Environment",
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.ui.activity.Tracker",
                 "fuchsia.ui.brightness.Control",
