@@ -433,7 +433,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
 #endif  // NEEDS_PORTING
   } else {
     rx_info.phy =
-        phy_flags & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_CCK : WLAN_INFO_PHY_TYPE_OFDM;
+        phy_flags & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_HR : WLAN_INFO_PHY_TYPE_OFDM;
 
     int mac80211_idx;
     zx_status_t status = iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, band, &mac80211_idx);

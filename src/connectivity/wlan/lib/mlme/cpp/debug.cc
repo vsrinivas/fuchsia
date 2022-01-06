@@ -149,7 +149,7 @@ std::string Describe(const DataFrameHeader& hdr) {
 
 std::string Describe(const wlan_info_phy_type_t& phy) {
   switch (phy) {
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
       return "CCK";
     case WLAN_INFO_PHY_TYPE_DSSS:
       return "DSSS";

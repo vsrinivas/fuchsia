@@ -200,7 +200,7 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlan_softmac_info_t* info) {
   info->mac_role = mvmvif->mac_role;
   // TODO(43517): Better handling of driver features bits/flags
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SCAN_OFFLOAD;
-  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR |
                          WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
   info->caps = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE |
                WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |

@@ -283,14 +283,28 @@ std::string GetPhyStr(wlan_info_phy_type_t phy) {
   switch (phy) {
     case WLAN_INFO_PHY_TYPE_DSSS:
       return "802.11 DSSS";
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
       return "802.11b CCK/DSSS";
-    case WLAN_INFO_PHY_TYPE_OFDM:  // and WLAN_INFO_PHY_TYPE_ERP
+    case WLAN_INFO_PHY_TYPE_OFDM:
       return "802.11a/g OFDM";
+    case WLAN_INFO_PHY_TYPE_ERP:
+      return "802.11g ERP";
     case WLAN_INFO_PHY_TYPE_HT:
       return "802.11n HT";
+    case WLAN_INFO_PHY_TYPE_DMG:
+      return "802.11ad DMG";
     case WLAN_INFO_PHY_TYPE_VHT:
       return "802.11ac VHT";
+    case WLAN_INFO_PHY_TYPE_TVHT:
+      return "802.11af TVHT";
+    case WLAN_INFO_PHY_TYPE_S1G:
+      return "802.11ah S1G";
+    case WLAN_INFO_PHY_TYPE_CDMG:
+      return "802.11aj CDMG";
+    case WLAN_INFO_PHY_TYPE_CMMG:
+      return "802.11aj CMMG";
+    case WLAN_INFO_PHY_TYPE_HE:
+      return "802.11ax HE";
     default:
       return "UNKNOWN_PHY";
   }
@@ -300,7 +314,7 @@ wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy) {
   // TODO(fxbug.dev/29293): Streamline the enum values
   switch (phy) {
     case wlan_common::PHY::HR:
-      return WLAN_INFO_PHY_TYPE_CCK;
+      return WLAN_INFO_PHY_TYPE_HR;
     case wlan_common::PHY::ERP:
       return WLAN_INFO_PHY_TYPE_OFDM;
     case wlan_common::PHY::HT:
@@ -308,18 +322,18 @@ wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy) {
     case wlan_common::PHY::VHT:
       return WLAN_INFO_PHY_TYPE_VHT;
     case wlan_common::PHY::HEW:
-      return WLAN_INFO_PHY_TYPE_HEW;
+      return WLAN_INFO_PHY_TYPE_HE;
     default:
       errorf("Unknown phy value: %d\n", phy);
       ZX_DEBUG_ASSERT(false);
-      return WLAN_INFO_PHY_TYPE_HEW;
+      return WLAN_INFO_PHY_TYPE_DSSS;
   }
 }
 
 ::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy) {
   // TODO(fxbug.dev/29293): Streamline the enum values
   switch (phy) {
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
       return wlan_common::PHY::HR;
     case WLAN_INFO_PHY_TYPE_OFDM:
       return wlan_common::PHY::ERP;
@@ -327,12 +341,12 @@ wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy) {
       return wlan_common::PHY::HT;
     case WLAN_INFO_PHY_TYPE_VHT:
       return wlan_common::PHY::VHT;
-    case WLAN_INFO_PHY_TYPE_HEW:
+    case WLAN_INFO_PHY_TYPE_HE:
       return wlan_common::PHY::HEW;
     default:
       errorf("Unknown phy value: %d\n", phy);
       ZX_DEBUG_ASSERT(false);
-      return wlan_common::PHY::HEW;
+      return wlan_common::PHY::HR;
   }
 }
 

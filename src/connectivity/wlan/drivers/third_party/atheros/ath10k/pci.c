@@ -3137,7 +3137,7 @@ void ath10k_pci_fill_wlan_softmac_info(struct ath10k* ar, wlan_softmac_info_t* m
 
   // supported_phys
   mac_info->supported_phys =
-      WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK | WLAN_INFO_PHY_TYPE_OFDM;
+      WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR | WLAN_INFO_PHY_TYPE_OFDM;
   if (ar->ht_cap_info & WMI_HT_CAP_ENABLED) {
     mac_info->supported_phys |= WLAN_INFO_PHY_TYPE_HT;
   }

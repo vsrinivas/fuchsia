@@ -52,11 +52,11 @@ zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector*
       mcs_idx = 1;
       break;
     case 11:
-      phy = WLAN_INFO_PHY_TYPE_CCK;
+      phy = WLAN_INFO_PHY_TYPE_HR;
       mcs_idx = 2;
       break;
     case 22:
-      phy = WLAN_INFO_PHY_TYPE_CCK;
+      phy = WLAN_INFO_PHY_TYPE_HR;
       mcs_idx = 3;
       break;
     case 12:
@@ -118,7 +118,7 @@ wlan_info_phy_type_t TxVecIdxToPhy(tx_vec_idx_t idx) {
   } else if (idx < kErpStartIdx + kErpNumTxVector) {
     return WLAN_INFO_PHY_TYPE_ERP;
   } else if (idx < kDsssCckStartIdx + kDsssCckNumTxVector) {
-    return idx - kDsssCckStartIdx < 2 ? WLAN_INFO_PHY_TYPE_DSSS : WLAN_INFO_PHY_TYPE_CCK;
+    return idx - kDsssCckStartIdx < 2 ? WLAN_INFO_PHY_TYPE_DSSS : WLAN_INFO_PHY_TYPE_HR;
   }
   // caller will always call IsTxVecIdxValie() so that this is never reached.
   ZX_DEBUG_ASSERT(false);
@@ -164,7 +164,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
       };
       break;
     case WLAN_INFO_PHY_TYPE_DSSS:
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
       *tx_vec = TxVector{
           .phy = phy,
           .gi = WLAN_GI__800NS,
@@ -182,14 +182,14 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
 }
 
 bool TxVector::IsValid() const {
-  if (!(phy == WLAN_INFO_PHY_TYPE_CCK || phy == WLAN_INFO_PHY_TYPE_DSSS ||
+  if (!(phy == WLAN_INFO_PHY_TYPE_HR || phy == WLAN_INFO_PHY_TYPE_DSSS ||
         phy == WLAN_INFO_PHY_TYPE_ERP || phy == WLAN_INFO_PHY_TYPE_HT)) {
     return false;
   }
   switch (phy) {
     case WLAN_INFO_PHY_TYPE_DSSS:
       return mcs_idx == 0 || mcs_idx == 1;
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
       return mcs_idx == 2 || mcs_idx == 3;
     case WLAN_INFO_PHY_TYPE_HT:
       if (!(gi == WLAN_GI__800NS || gi == WLAN_GI__400NS)) {
@@ -231,7 +231,7 @@ zx_status_t TxVector::ToIdx(tx_vec_idx_t* idx) const {
     case WLAN_INFO_PHY_TYPE_ERP:
       *idx = kErpStartIdx + mcs_idx;
       break;
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
     case WLAN_INFO_PHY_TYPE_DSSS:
       *idx = kDsssCckStartIdx + mcs_idx;
       break;
@@ -252,7 +252,7 @@ bool operator==(const TxVector& lhs, const TxVector& rhs) {
     case WLAN_INFO_PHY_TYPE_HT:
       return lhs.gi == rhs.gi && lhs.cbw == rhs.cbw;
     case WLAN_INFO_PHY_TYPE_ERP:
-    case WLAN_INFO_PHY_TYPE_CCK:
+    case WLAN_INFO_PHY_TYPE_HR:
     case WLAN_INFO_PHY_TYPE_DSSS:
       return true;
     default:

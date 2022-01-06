@@ -86,7 +86,7 @@ impl TxVector {
     ) -> Result<Self, Error> {
         let supported_mcs = match phy {
             hw_wlan_phyinfo::WlanInfoPhyType::DSSS => mcs_idx == 0 || mcs_idx == 1,
-            hw_wlan_phyinfo::WlanInfoPhyType::CCK => mcs_idx == 2 || mcs_idx == 3,
+            hw_wlan_phyinfo::WlanInfoPhyType::HR => mcs_idx == 2 || mcs_idx == 3,
             hw_wlan_phyinfo::WlanInfoPhyType::HT => {
                 match gi {
                     hw_wlan_associnfo::WlanGi::G_800NS | hw_wlan_associnfo::WlanGi::G_400NS => (),
@@ -123,8 +123,8 @@ impl TxVector {
         let (phy, mcs_idx) = match erp_rate.rate() {
             2 => (hw_wlan_phyinfo::WlanInfoPhyType::DSSS, 0),
             4 => (hw_wlan_phyinfo::WlanInfoPhyType::DSSS, 1),
-            11 => (hw_wlan_phyinfo::WlanInfoPhyType::CCK, 2),
-            22 => (hw_wlan_phyinfo::WlanInfoPhyType::CCK, 3),
+            11 => (hw_wlan_phyinfo::WlanInfoPhyType::HR, 2),
+            22 => (hw_wlan_phyinfo::WlanInfoPhyType::HR, 3),
             12 => (hw_wlan_phyinfo::WlanInfoPhyType::ERP, 0),
             18 => (hw_wlan_phyinfo::WlanInfoPhyType::ERP, 1),
             24 => (hw_wlan_phyinfo::WlanInfoPhyType::ERP, 2),
@@ -171,7 +171,7 @@ impl TxVector {
                 (*idx - ERP_START_IDX) as u8,
             )
             .unwrap(),
-            hw_wlan_phyinfo::WlanInfoPhyType::DSSS | hw_wlan_phyinfo::WlanInfoPhyType::CCK => {
+            hw_wlan_phyinfo::WlanInfoPhyType::DSSS | hw_wlan_phyinfo::WlanInfoPhyType::HR => {
                 Self::new(
                     phy,
                     hw_wlan_associnfo::WlanGi::G_800NS,
@@ -201,7 +201,7 @@ impl TxVector {
             hw_wlan_phyinfo::WlanInfoPhyType::ERP => {
                 TxVecIdx::new(ERP_START_IDX + self.mcs_idx as u16).unwrap()
             }
-            hw_wlan_phyinfo::WlanInfoPhyType::CCK | hw_wlan_phyinfo::WlanInfoPhyType::DSSS => {
+            hw_wlan_phyinfo::WlanInfoPhyType::HR | hw_wlan_phyinfo::WlanInfoPhyType::DSSS => {
                 TxVecIdx::new(DSSS_CCK_START_IDX + self.mcs_idx as u16).unwrap()
             }
             _ => unreachable!(),
@@ -267,7 +267,7 @@ impl TxVecIdx {
             }
             idx if idx < DSSS_CCK_START_IDX + 2 => hw_wlan_phyinfo::WlanInfoPhyType::DSSS,
             idx if idx < DSSS_CCK_START_IDX + DSSS_CCK_NUM_TX_VECTOR as u16 => {
-                hw_wlan_phyinfo::WlanInfoPhyType::CCK
+                hw_wlan_phyinfo::WlanInfoPhyType::HR
             }
             // This panic is unreachable for any TxVecIdx constructed with TxVecIdx::new.
             // Verified by exhaustive test cases.
@@ -354,7 +354,7 @@ mod tests {
             } else {
                 assert!(
                     idx.to_phy() == hw_wlan_phyinfo::WlanInfoPhyType::DSSS
-                        || idx.to_phy() == hw_wlan_phyinfo::WlanInfoPhyType::CCK
+                        || idx.to_phy() == hw_wlan_phyinfo::WlanInfoPhyType::HR
                 );
             }
         }

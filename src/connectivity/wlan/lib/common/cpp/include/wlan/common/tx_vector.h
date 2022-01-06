@@ -50,7 +50,7 @@ static constexpr tx_vec_idx_t kMaxValidIdx = kDsssCckStartIdx + kDsssCckNumTxVec
 // 5: 16-QAM, 3/4 -> Data rate 36 Mbps
 // 6: 64-QAM, 2/3 -> Data rate 48 Mbps
 // 7: 64-QAM, 3/4 -> Data rate 54 Mbps
-// DSSS, HR/DSSS, and ERP-DSSS/CCK, reprsented by WLAN_INFO_PHY_TYPE_DSSS and WLAN_INFO_PHY_TYPE_CCK
+// DSSS, HR/DSSS, and ERP-DSSS/CCK, represented by WLAN_INFO_PHY_TYPE_DSSS and WLAN_INFO_PHY_TYPE_HR
 // 0:  2 -> 1   Mbps DSSS
 // 1:  4 -> 2   Mbps DSSS
 // 2: 11 -> 5.5 Mbps CCK

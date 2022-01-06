@@ -92,7 +92,7 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlan_softmac_info_t* info) {
   std::memcpy(info->sta_addr, mac, fuchsia_wlan_ieee80211_MAC_ADDR_LEN);
 
   // Fill out a minimal set of wlan device capabilities
-  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_CCK |
+  info->supported_phys = WLAN_INFO_PHY_TYPE_DSSS | WLAN_INFO_PHY_TYPE_HR |
                          WLAN_INFO_PHY_TYPE_OFDM | WLAN_INFO_PHY_TYPE_HT;
   info->driver_features = WLAN_INFO_DRIVER_FEATURE_SYNTH;
   info->mac_role = role_;

@@ -1530,7 +1530,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
     // rx_status->rate_idx = rate;
     rx_status.rx_info.phy =
-        phy_info & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_CCK : WLAN_INFO_PHY_TYPE_OFDM;
+        phy_info & RX_RES_PHY_FLAGS_MOD_CCK ? WLAN_INFO_PHY_TYPE_HR : WLAN_INFO_PHY_TYPE_OFDM;
   }
   rx_status.rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
 

@@ -29,7 +29,7 @@ uint16_t ConvertSupportedPhys(const ::std::vector<wlan_device::SupportedPhy>& ph
         ret |= WLAN_INFO_PHY_TYPE_DSSS;
         break;
       case wlan_device::SupportedPhy::CCK:
-        ret |= WLAN_INFO_PHY_TYPE_CCK;
+        ret |= WLAN_INFO_PHY_TYPE_HR;
         break;
       case wlan_device::SupportedPhy::OFDM:
         ret |= WLAN_INFO_PHY_TYPE_OFDM;

@@ -39,7 +39,7 @@ TEST(TxVectorIndexTest, TxVectorMapping) {
         {{WLAN_INFO_PHY_TYPE_ERP,  WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20, 1, 0}, 129,},
         {{WLAN_INFO_PHY_TYPE_ERP,  WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20, 1, 7}, 136,},
         {{WLAN_INFO_PHY_TYPE_DSSS, WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20, 1, 0}, 137,},
-        {{WLAN_INFO_PHY_TYPE_CCK,  WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20, 1, 3}, 140,},
+        {{WLAN_INFO_PHY_TYPE_HR,  WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20, 1, 3}, 140,},
       // clang-format on
   };
 
@@ -95,15 +95,15 @@ TEST(TxVectorIndexTest, NotUsedParam) {
         {{WLAN_INFO_PHY_TYPE_ERP, WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW160, 9, 7}, 136,},
 
         {{WLAN_INFO_PHY_TYPE_DSSS, WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20,  1, 0}, 137,},
-        {{WLAN_INFO_PHY_TYPE_CCK,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW40,  2, 3}, 140,},
+        {{WLAN_INFO_PHY_TYPE_HR,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW40,  2, 3}, 140,},
         {{WLAN_INFO_PHY_TYPE_DSSS, WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW80,  3, 0}, 137,},
-        {{WLAN_INFO_PHY_TYPE_CCK,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW160, 4, 3}, 140,},
+        {{WLAN_INFO_PHY_TYPE_HR,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW160, 4, 3}, 140,},
         {{WLAN_INFO_PHY_TYPE_DSSS, WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW80,  3, 0}, 137,},
-        {{WLAN_INFO_PHY_TYPE_CCK,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW40,  2, 3}, 140,},
+        {{WLAN_INFO_PHY_TYPE_HR,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW40,  2, 3}, 140,},
         {{WLAN_INFO_PHY_TYPE_DSSS, WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW20,  1, 0}, 137,},
-        {{WLAN_INFO_PHY_TYPE_CCK,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW40,  0, 3}, 140,},
+        {{WLAN_INFO_PHY_TYPE_HR,  WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW40,  0, 3}, 140,},
         {{WLAN_INFO_PHY_TYPE_DSSS, WLAN_GI__400NS, CHANNEL_BANDWIDTH_CBW80,  8, 0}, 137,},
-        {{WLAN_INFO_PHY_TYPE_CCK,  WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW160, 9, 3}, 140,},
+        {{WLAN_INFO_PHY_TYPE_HR,  WLAN_GI__800NS, CHANNEL_BANDWIDTH_CBW160, 9, 3}, 140,},
       // clang-format on
   };
 
@@ -143,8 +143,8 @@ TEST(ErpRateTest, ErpRateToTxVector) {
       // clang-format off
         {SupportedRate(  2), {.phy = WLAN_INFO_PHY_TYPE_DSSS, .mcs_idx = 0},},
         {SupportedRate(  4), {.phy = WLAN_INFO_PHY_TYPE_DSSS, .mcs_idx = 1},},
-        {SupportedRate( 11), {.phy = WLAN_INFO_PHY_TYPE_CCK,  .mcs_idx = 2},},
-        {SupportedRate( 22), {.phy = WLAN_INFO_PHY_TYPE_CCK,  .mcs_idx = 3},},
+        {SupportedRate( 11), {.phy = WLAN_INFO_PHY_TYPE_HR,  .mcs_idx = 2},},
+        {SupportedRate( 22), {.phy = WLAN_INFO_PHY_TYPE_HR,  .mcs_idx = 3},},
         {SupportedRate( 12), {.phy = WLAN_INFO_PHY_TYPE_ERP,  .mcs_idx = 0},},
         {SupportedRate( 18), {.phy = WLAN_INFO_PHY_TYPE_ERP,  .mcs_idx = 1},},
         {SupportedRate( 24), {.phy = WLAN_INFO_PHY_TYPE_ERP,  .mcs_idx = 2},},
@@ -156,8 +156,8 @@ TEST(ErpRateTest, ErpRateToTxVector) {
 
         {SupportedRate::basic(  2), {.phy = WLAN_INFO_PHY_TYPE_DSSS, .mcs_idx = 0},},
         {SupportedRate::basic(  4), {.phy = WLAN_INFO_PHY_TYPE_DSSS, .mcs_idx = 1},},
-        {SupportedRate::basic( 11), {.phy = WLAN_INFO_PHY_TYPE_CCK,  .mcs_idx = 2},},
-        {SupportedRate::basic( 22), {.phy = WLAN_INFO_PHY_TYPE_CCK,  .mcs_idx = 3},},
+        {SupportedRate::basic( 11), {.phy = WLAN_INFO_PHY_TYPE_HR,  .mcs_idx = 2},},
+        {SupportedRate::basic( 22), {.phy = WLAN_INFO_PHY_TYPE_HR,  .mcs_idx = 3},},
         {SupportedRate::basic( 12), {.phy = WLAN_INFO_PHY_TYPE_ERP,  .mcs_idx = 0},},
         {SupportedRate::basic( 18), {.phy = WLAN_INFO_PHY_TYPE_ERP,  .mcs_idx = 1},},
         {SupportedRate::basic( 24), {.phy = WLAN_INFO_PHY_TYPE_ERP,  .mcs_idx = 2},},
