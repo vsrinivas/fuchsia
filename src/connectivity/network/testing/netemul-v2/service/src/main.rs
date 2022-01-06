@@ -150,6 +150,7 @@ impl std::fmt::Display for StorageVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let v = match self {
             Self(fnetemul::StorageVariant::Data) => "data",
+            Self(fnetemul::StorageVariant::Cache) => "cache",
         };
         write!(f, "{}", v)
     }
@@ -1058,6 +1059,7 @@ mod tests {
     const COUNTER_A_PROTOCOL_NAME: &str = "fuchsia.netemul.test.CounterA";
     const COUNTER_B_PROTOCOL_NAME: &str = "fuchsia.netemul.test.CounterB";
     const DATA_PATH: &str = "/data";
+    const CACHE_PATH: &str = "/cache";
 
     fn counter_component() -> fnetemul::ChildDef {
         fnetemul::ChildDef {
@@ -2240,6 +2242,11 @@ mod tests {
                                 path: Some(String::from(DATA_PATH)),
                                 ..fnetemul::StorageDep::EMPTY
                             }),
+                            fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                                variant: Some(fnetemul::StorageVariant::Cache),
+                                path: Some(String::from(CACHE_PATH)),
+                                ..fnetemul::StorageDep::EMPTY
+                            }),
                         ])),
                         ..fnetemul::ChildDef::EMPTY
                     },
@@ -2258,18 +2265,25 @@ mod tests {
         );
         let counter_storage = connect_to_counter(&realm, COUNTER_A_PROTOCOL_NAME);
         let counter_without_storage = connect_to_counter(&realm, COUNTER_B_PROTOCOL_NAME);
-        let () = counter_storage
-            .try_open_directory(DATA_PATH)
-            .await
-            .expect("calling open storage at")
-            .expect("failed to open storage");
-        let err = counter_without_storage
-            .try_open_directory(DATA_PATH)
-            .await
-            .expect("calling open storage at")
-            .map_err(zx::Status::from_raw)
-            .expect_err("open storage on counter without storage should fail");
-        assert_eq!(err, zx::Status::NOT_FOUND);
+
+        for dir in [CACHE_PATH, DATA_PATH] {
+            let () = counter_storage
+                .try_open_directory(dir)
+                .await
+                .unwrap_or_else(|e| panic!("calling open {}: {:?}", dir, e))
+                .map_err(zx::Status::from_raw)
+                .unwrap_or_else(|e| panic!("failed to open {}: {:?}", dir, e));
+            let err = counter_without_storage
+                .try_open_directory(dir)
+                .await
+                .unwrap_or_else(|e| panic!("calling open {}: {:?}", dir, e))
+                .map_err(zx::Status::from_raw)
+                .map_or_else(
+                    |e| e,
+                    |()| panic!("open {} on counter without capability should fail", dir),
+                );
+            assert_eq!(err, zx::Status::NOT_FOUND, "opening {}", dir);
+        }
     }
 
     #[fixture(with_sandbox)]

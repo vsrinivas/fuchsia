@@ -40,7 +40,10 @@
             to: "#netemul",
         },
         {
-            storage: "data",
+            storage: [
+                "cache",
+                "data",
+            ],
             from: "parent",
             to: "#netemul",
         },

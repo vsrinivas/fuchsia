@@ -27,6 +27,10 @@
             path: "/data",
         },
         {
+            storage: "cache",
+            path: "/cache",
+        },
+        {
             directory: "dev",
 
             // TODO(https://fxbug.dev/77059): remove write permissions once they

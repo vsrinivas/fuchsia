@@ -124,6 +124,8 @@ protocol Sandbox {
                             1: variant @generated_name("StorageVariant") strict enum : uint8 {
                                 /// The `data` storage capability variant.
                                 DATA = 0;
+                                /// The `cache` storage capability variant.
+                                CACHE = 1;
                             };
 
                             /// The path at which the storage capability will be
