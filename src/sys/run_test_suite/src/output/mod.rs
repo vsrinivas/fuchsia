@@ -31,6 +31,10 @@ type ArtifactWrapperFn = dyn Fn(&ArtifactType, Box<DynArtifact>) -> Box<DynArtif
 /// and create child `SuiteReporter`s and `CaseReporter`s beneath it to report results and
 /// artifacts scoped to suites and cases. When the run is finished, the user should call
 /// `record` to ensure the results are persisted.
+///
+/// `RunReporter`, `SuiteReporter`, and `CaseReporter` are wrappers around `Reporter`
+/// implementations that statically ensure that some assumptions made by `Reporter` implemtnations
+/// are upheld (for example, that an entity marked finished at most once).
 pub struct RunReporter {
     /// Inner `Reporter` implementation used to record results.
     reporter: Box<DynReporter>,
@@ -56,8 +60,8 @@ pub struct CaseReporter<'a> {
 }
 
 impl RunReporter {
-    /// Create a `RunReporter` that saves artifacts and results to the given directory.
-    /// Any stdout artifacts are filtered for ANSI escape sequences before saving.
+    /// Create a `RunReporter`, where stdout, stderr, syslog, and restricted log artifact types
+    /// are sanitized for ANSI escape sequences before being passed along to |reporter|.
     pub fn new_ansi_filtered<R: 'static + Reporter + Send + Sync>(reporter: R) -> Self {
         let reporter = Box::new(reporter);
         let artifact_wrapper =
@@ -76,7 +80,7 @@ impl RunReporter {
         Self { reporter, artifact_wrapper }
     }
 
-    /// Create a `RunReporter` that saves artifacts and results to the given directory.
+    /// Create a `RunReporter`.
     pub fn new<R: 'static + Reporter + Send + Sync>(reporter: R) -> Self {
         let reporter = Box::new(reporter);
         let artifact_wrapper =
@@ -354,6 +358,10 @@ pub enum EntityId {
 
 /// A trait for structs that report test results.
 /// Implementations of `Reporter` serve as the backend powering `RunReporter`.
+///
+/// As with `std::io::Write`, `Reporter` implementations are intended to be composable.
+/// An implementation of `Reporter` may contain other `Reporter` implementors and delegate
+/// calls to them.
 #[async_trait]
 pub trait Reporter: Send + Sync {
     /// Record a new test suite or test case. This should be called once per entity.
@@ -372,6 +380,8 @@ pub trait Reporter: Send + Sync {
 
     /// Record that a test run, suite, or case has stopped. After this method is called for
     /// an entity, no additional events or artifacts may be added to the entity.
+    /// Implementations of `Reporter` may assume that `entity_finished` will be called no more
+    /// than once for any entity.
     async fn entity_finished(&self, entity: &EntityId) -> Result<(), Error>;
 
     /// Create a new artifact scoped to the referenced entity.
@@ -390,7 +400,10 @@ pub trait Reporter: Send + Sync {
     ) -> Result<Box<DynDirectoryArtifact>, Error>;
 }
 
+/// A trait for writing artifacts that consist of multiple files organized in a directory.
 pub trait DirectoryWrite {
+    /// Create a new file within the directory. `path` must be a relative path with no parent
+    /// segments.
     fn new_file(&self, path: &Path) -> Result<Box<DynArtifact>, Error>;
 }
 

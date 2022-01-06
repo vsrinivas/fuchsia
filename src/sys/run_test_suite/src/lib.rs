@@ -96,10 +96,7 @@ impl fmt::Display for Outcome {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct SuiteRunResult {
-    /// URL of the executed test suite.
-    pub url: String,
-
+struct SuiteRunResult {
     /// Test outcome.
     pub outcome: Outcome,
 }
@@ -545,7 +542,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
 
     suite_reporter.stopped(&outcome.clone().into(), suite_finish_timestamp).await?;
 
-    Ok(SuiteRunResult { url: running_suite.url().to_string(), outcome })
+    Ok(SuiteRunResult { outcome })
 }
 
 type SuiteEventStream = std::pin::Pin<
@@ -632,8 +629,8 @@ impl RunningSuite {
     }
 }
 
-/// Runs the tests in `test_params`, and writes logs to writer.
-async fn run_test<'a, F: 'a + Future<Output = ()>>(
+/// Schedule and run the tests specified in |test_params|, and collect the results.
+async fn run_tests<'a, F: 'a + Future<Output = ()>>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
     run_params: RunParams,
@@ -751,9 +748,18 @@ async fn run_test<'a, F: 'a + Future<Output = ()>>(
         .await
 }
 
-/// Runs the test and reports results to the reporter.
-/// |count|: Number of times to run this test.
-/// |filter_ansi|: Whether or not to filter out ANSI escape sequences from stdout.
+/// Runs tests specified in |test_params| and reports the results to
+/// |run_reporter|.
+///
+/// Options specifying how the test run is executed are passed in via |run_params|.
+/// Options specific to how a single suite is run are passed in via the entry for
+/// the suite in |test_params|.
+/// |cancel_fut| is used to gracefully stop execution of tests. Tests are
+/// terminated and recorded when the future resolves. The caller can control when the
+/// future resolves by passing in the receiver end of a `future::channel::oneshot`
+/// channel.
+/// |min_severity_logs| specifies the minimum log severity to report. As it is an
+/// option for output, it will likely soon be moved to a reporter.
 pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
@@ -762,7 +768,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     mut run_reporter: RunReporter,
     cancel_fut: F,
 ) -> Outcome {
-    let test_outcome = match run_test(
+    let test_outcome = match run_tests(
         builder_proxy,
         test_params,
         run_params,
