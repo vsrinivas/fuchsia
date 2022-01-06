@@ -53,6 +53,10 @@
             "minItems": 1,
             "type": "array"
         },
+        "root": {
+            "description": "Path to the root of the SDK, relative to this manifest",
+            "type": "string"
+        },
         "schema_version": {
             "description": "An opaque identifier for metadata schemas in the SDK",
             "type": "string"
@@ -62,6 +66,7 @@
         "arch",
         "id",
         "parts",
+        "root",
         "schema_version"
     ],
     "type": "object"

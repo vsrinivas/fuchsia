@@ -37,6 +37,7 @@ pub struct Manifest {
     pub schema_version: String,
     pub id: String,
     pub parts: Vec<Part>,
+    pub root: String,
 }
 
 impl JsonObject for Manifest {
@@ -67,6 +68,7 @@ mod tests {
                 }
             ],
             "id": "foobarblah",
+            "root": "..",
             "schema_version": "314"
         }
         "#,
@@ -86,6 +88,7 @@ mod tests {
             },
             "parts": [],
             "id": "foobarblah",
+            "root": "..",
             "schema_version": "314"
         }
         "#,

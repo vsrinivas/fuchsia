@@ -106,6 +106,14 @@ fn merge_manifests(base: &Manifest, complement: &Manifest) -> Result<Manifest> {
     // Parts.
     result.parts = merge_lists(&base.parts, &complement.parts);
 
+    // Root.
+    result.root = if base.root == complement.root {
+        base.root.clone()
+    } else {
+        let error = format!("Root mismatch: {} vs. {}", &base.root, &complement.root);
+        return Err(Error::CannotMerge { error })?;
+    };
+
     // Schema version.
     if base.schema_version != complement.schema_version {
         let error = format!(
@@ -278,6 +286,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -293,6 +302,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -302,6 +312,7 @@ mod tests {
                 & (manifest.id == "bleh")
                 & (manifest.schema_version == "1")
                 & (manifest.parts.len() == 4)
+                & (manifest.root == "foo")
         },
     );
 
@@ -316,6 +327,7 @@ mod tests {
               }
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -327,6 +339,7 @@ mod tests {
               }
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "2",
         }),
         success = false,
@@ -343,6 +356,7 @@ mod tests {
               }
           ],
           "id": "whoops",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -354,6 +368,36 @@ mod tests {
               }
           ],
           "id": "bleh",
+          "root": "foo",
+          "schema_version": "1",
+        }),
+        success = false,
+    );
+
+    test_merge!(
+        name = test_different_roots,
+        base = json!({
+          "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
+          "id": "whoops",
+          "root": "foo",
+          "schema_version": "1",
+        }),
+        complement = json!({
+          "arch": { "host": "x86_64-linux-gnu", "target": ["x64"] },
+          "parts": [
+              {
+                  "meta": "pkg/foo/meta.json",
+                  "type": "cc_source_library"
+              }
+          ],
+          "id": "bleh",
+          "root": "bar",
           "schema_version": "1",
         }),
         success = false,
@@ -370,6 +414,7 @@ mod tests {
               }
           ],
           "id": "whoops",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -381,6 +426,7 @@ mod tests {
               }
           ],
           "id": "",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -398,6 +444,7 @@ mod tests {
               }
           ],
           "id": "",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -409,6 +456,7 @@ mod tests {
               }
           ],
           "id": "",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -426,6 +474,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -437,6 +486,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = false,
@@ -453,6 +503,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -464,6 +515,7 @@ mod tests {
               },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -481,6 +533,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -492,6 +545,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -513,6 +567,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -528,6 +583,7 @@ mod tests {
             },
           ],
           "id": "bleh",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -545,6 +601,7 @@ mod tests {
               }
           ],
           "id": "whoops",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -556,6 +613,7 @@ mod tests {
               }
           ],
           "id": "whoops",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,
@@ -573,6 +631,7 @@ mod tests {
               }
           ],
           "id": "whoops",
+          "root": "foo",
           "schema_version": "1",
         }),
         complement = json!({
@@ -584,6 +643,7 @@ mod tests {
               }
           ],
           "id": "whoops",
+          "root": "foo",
           "schema_version": "1",
         }),
         success = true,

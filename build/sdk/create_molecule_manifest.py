@@ -33,6 +33,7 @@ def main():
     manifest = {
         'ids': [],
         'atoms': [a.json for a in sorted(list(atoms))],
+        'root': '..',
     }
     with open(os.path.abspath(args.out), 'w') as out:
         json.dump(

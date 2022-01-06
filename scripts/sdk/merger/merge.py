@@ -291,6 +291,12 @@ def _write_manifest(source_dir_one, source_dir_two, dest_dir):
         return False
     manifest['id'] = manifest_one['id']
 
+    # Root.
+    if manifest_one['root'] != manifest_two['root']:
+        print('Error: mismatching root')
+        return False
+    manifest['root'] = manifest_one['root']
+
     # Target architectures.
     manifest['arch']['target'] = sorted(
         set(manifest_one['arch']['target']) |

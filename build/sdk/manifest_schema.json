@@ -15,11 +15,16 @@
             "items": {
                 "$ref": "#/definitions/atomId"
             }
+        },
+        "root": {
+            "description": "Path to the root of the SDK, relative to this manifest",
+            "type": "string"
         }
     },
     "required": [
         "atoms",
-        "ids"
+        "ids",
+        "root"
     ],
     "additionalProperties": false,
     "definitions": {

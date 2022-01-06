@@ -54,6 +54,7 @@ def main():
         },
         'id': args.id,
         'parts': sort_atoms(atoms),
+        'root': manifest['root'],
         'schema_version': args.schema_version,
     }
 
