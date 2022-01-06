@@ -89,7 +89,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0036_update_struct_declarations.md
 - title: "RFC-0037: Transactional message header v3"
   path: /docs/contribute/governance/rfcs/0037_transactional_message_header_v3.md
-- title: "RFC-0038: Seperating layour from constraints"
+- title: "RFC-0038: Separating layout from constraints"
   path: /docs/contribute/governance/rfcs/0038_seperating_layout_from_constraints.md
 - title: "RFC-0039: Types come second"
   path: /docs/contribute/governance/rfcs/0039_types_come_second.md
