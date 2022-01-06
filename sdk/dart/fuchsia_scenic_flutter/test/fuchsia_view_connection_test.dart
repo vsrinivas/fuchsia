@@ -50,6 +50,8 @@ void main() {
       expect(call.arguments, methodArgs);
       if (handler != null) {
         return handler.call();
+      } else {
+        return null;
       }
     });
   }
