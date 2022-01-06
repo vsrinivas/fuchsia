@@ -589,6 +589,7 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         payload.set_array_flags(format.to_u8().unwrap());
         payload.set_array_slots_count(slots.to_u8().unwrap());
         self.write_payload(payload);
+        self.array_clear(0)?;
         Ok(())
     }
 
@@ -1641,6 +1642,55 @@ mod tests {
                 [(i as u8 + 4), 0x00, 0x00, 0x00]
             );
         }
+    }
+
+    #[fuchsia::test]
+    fn become_array() {
+        // primarily these tests are making sure that arrays clear their payload space
+
+        let mut container = [0u8; 128];
+
+        container[16..].fill(1u8);
+        let block = Block::new_free(&container[..], 0, 7, 0).unwrap();
+        block.become_reserved().unwrap();
+        block.become_array_value(14, ArrayFormat::Default, BlockType::IntValue, 0, 0).unwrap();
+        container[16..]
+            .iter()
+            .enumerate()
+            .for_each(|(index, i)| assert_eq!(*i, 0, "failed: byte = {} at index {}", *i, index));
+
+        container[16..].fill(1u8);
+        let block = Block::new_free(&container[..], 0, 7, 0).unwrap();
+        block.become_reserved().unwrap();
+        block
+            .become_array_value(14, ArrayFormat::LinearHistogram, BlockType::IntValue, 0, 0)
+            .unwrap();
+        container[16..]
+            .iter()
+            .enumerate()
+            .for_each(|(index, i)| assert_eq!(*i, 0, "failed: byte = {} at index {}", *i, index));
+
+        container[16..].fill(1u8);
+        let block = Block::new_free(&container[..], 0, 7, 0).unwrap();
+        block.become_reserved().unwrap();
+        block
+            .become_array_value(14, ArrayFormat::ExponentialHistogram, BlockType::IntValue, 0, 0)
+            .unwrap();
+        container[16..]
+            .iter()
+            .enumerate()
+            .for_each(|(index, i)| assert_eq!(*i, 0, "failed: byte = {} at index {}", *i, index));
+
+        container[16..].fill(1u8);
+        let block = Block::new_free(&container[..], 0, 7, 0).unwrap();
+        block.become_reserved().unwrap();
+        block
+            .become_array_value(28, ArrayFormat::Default, BlockType::StringReference, 0, 0)
+            .unwrap();
+        container[16..]
+            .iter()
+            .enumerate()
+            .for_each(|(index, i)| assert_eq!(*i, 0, "failed: byte = {} at index {}", *i, index));
     }
 
     #[fuchsia::test]
