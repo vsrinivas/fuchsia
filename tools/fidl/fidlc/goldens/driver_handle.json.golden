@@ -105,6 +105,7 @@
             "kind": "identifier",
             "identifier": "test.driverhandle/DriverProtocol",
             "nullable": false,
+            "protocol_transport": "Driver",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -212,6 +213,7 @@
             "kind": "request",
             "subtype": "test.driverhandle/DriverProtocol",
             "nullable": false,
+            "protocol_transport": "Driver",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

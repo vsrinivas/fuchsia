@@ -674,6 +674,10 @@
                     "description": "Flag indicating nullability of identifier type",
                     "type": "boolean"
                 },
+                "protocol_transport": {
+                    "description": "Transport used by the request protocol",
+                    "type": "string"
+                },
                 "type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
@@ -1078,6 +1082,10 @@
                     "$ref": "#/definitions/compound-identifier",
                     "description": "Protocol name of request type"
                 },
+                "protocol_transport": {
+                    "description": "Transport used by the request protocol",
+                    "type": "string"
+                },
                 "type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
                     "description": "Type shape of this declaration"
@@ -1091,6 +1099,7 @@
                 "kind",
                 "subtype",
                 "nullable",
+                "protocol_transport",
                 "type_shape_v1",
                 "type_shape_v2"
             ],

@@ -2122,6 +2122,7 @@
             "kind": "identifier",
             "identifier": "test.handles/SomeProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -2162,6 +2163,7 @@
             "kind": "request",
             "subtype": "test.handles/SomeProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

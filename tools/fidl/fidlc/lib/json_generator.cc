@@ -202,6 +202,7 @@ void JSONGenerator::Generate(const flat::Type* value) {
         assert(type->end == flat::TransportSide::kClient);
         GenerateObjectMember("identifier", type->protocol_decl->name);
         GenerateObjectMember("nullable", type->nullability);
+        GenerateObjectMember("protocol_transport", type->protocol_transport);
         break;
       }
       case flat::Type::Kind::kArray:
@@ -500,6 +501,7 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
         // from a type alias: in the new syntax, protocols aren't types, and therefore
         // `alias Foo = MyProtocol;` is not allowed.
         GenerateObjectMember("nullable", server_end->nullability);
+        GenerateObjectMember("protocol_transport", server_end->protocol_transport);
         break;
       }
       case flat::Type::Kind::kIdentifier:

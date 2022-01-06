@@ -962,6 +962,7 @@
             "kind": "identifier",
             "identifier": "test.doccomments/Interface",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

@@ -22,7 +22,7 @@ const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
   return nullptr;
 }
 
-AttributeArg* Attribute::GetStandaloneAnonymousArg() {
+AttributeArg* Attribute::GetStandaloneAnonymousArg() const {
   assert(!compiled &&
          "if calling after attribute compilation, use GetArg(...) with the resolved name instead");
   if (args.size() == 1 && !args[0]->name.has_value()) {

@@ -178,17 +178,20 @@ class HandleTypeTemplate final : public TypeTemplate {
 
 class TransportSideTypeTemplate final : public TypeTemplate {
  public:
-  TransportSideTypeTemplate(Typespace* typespace, Reporter* reporter, TransportSide end)
+  TransportSideTypeTemplate(Typespace* typespace, Reporter* reporter, TransportSide end,
+                            std::string_view protocol_transport)
       : TypeTemplate(end == TransportSide::kClient ? Name::CreateIntrinsic("client_end")
                                                    : Name::CreateIntrinsic("server_end"),
                      typespace, reporter),
-        end_(end) {}
+        end_(end),
+        protocol_transport_(protocol_transport) {}
 
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override;
 
  private:
   TransportSide end_;
+  std::string_view protocol_transport_;
 };
 
 class TypeDeclTypeTemplate final : public TypeTemplate {

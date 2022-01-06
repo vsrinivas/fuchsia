@@ -48,7 +48,7 @@ struct Attribute final {
 
   // Returns the lone argument if there is exactly 1 and it is not named. For
   // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
-  AttributeArg* GetStandaloneAnonymousArg();
+  AttributeArg* GetStandaloneAnonymousArg() const;
 
   // Span of just the attribute name not including the "@", e.g. "foo".
   const SourceSpan name;

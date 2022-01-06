@@ -85,6 +85,7 @@
             "kind": "identifier",
             "identifier": "test.service/FirstProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -128,6 +129,7 @@
             "kind": "identifier",
             "identifier": "test.service/FirstProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -160,6 +162,7 @@
             "kind": "identifier",
             "identifier": "test.service/SecondProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -203,6 +206,7 @@
             "kind": "identifier",
             "identifier": "test.service/FirstProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -235,6 +239,7 @@
             "kind": "identifier",
             "identifier": "test.service/FirstProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

@@ -8,6 +8,8 @@
 
 namespace fidl::flat {
 
+constexpr std::string_view kChannelTransport = "Channel";
+
 using namespace diagnostics;
 
 bool Typespace::Create(const LibraryMediator& lib, const flat::Name& name,
@@ -110,10 +112,10 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   add_template(std::make_unique<ArrayTypeTemplate>(&root_typespace, reporter));
   add_template(std::make_unique<VectorTypeTemplate>(&root_typespace, reporter));
   add_template(std::make_unique<StringTypeTemplate>(&root_typespace, reporter));
-  add_template(std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
-                                                           TransportSide::kServer));
-  add_template(std::make_unique<TransportSideTypeTemplate>(&root_typespace, reporter,
-                                                           TransportSide::kClient));
+  add_template(std::make_unique<TransportSideTypeTemplate>(
+      &root_typespace, reporter, TransportSide::kServer, kChannelTransport));
+  add_template(std::make_unique<TransportSideTypeTemplate>(
+      &root_typespace, reporter, TransportSide::kClient, kChannelTransport));
   add_template(std::make_unique<BoxTypeTemplate>(&root_typespace, reporter));
   return root_typespace;
 }
@@ -260,7 +262,7 @@ bool TransportSideTypeTemplate::Create(const LibraryMediator& lib,
                 num_params);
   }
 
-  TransportSideType type(name_, end_);
+  TransportSideType type(name_, end_, protocol_transport_);
   return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
 }
 

@@ -4496,6 +4496,7 @@
             "kind": "identifier",
             "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -4572,6 +4573,7 @@
             "kind": "identifier",
             "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": true,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -4648,6 +4650,7 @@
             "kind": "request",
             "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": true,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -4724,6 +4727,7 @@
             "kind": "request",
             "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -5647,6 +5651,7 @@
             "kind": "identifier",
             "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -5687,6 +5692,7 @@
             "kind": "request",
             "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": false,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -5727,6 +5733,7 @@
             "kind": "identifier",
             "identifier": "test.protocols/DiscoverableProtocol",
             "nullable": true,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -5767,6 +5774,7 @@
             "kind": "request",
             "subtype": "test.protocols/DiscoverableProtocol",
             "nullable": true,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

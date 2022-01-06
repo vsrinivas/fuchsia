@@ -285,14 +285,20 @@ enum class TransportSide {
 
 // TODO(fxbug.dev/43803) Add required and optional rights.
 struct TransportSideType final : public Type {
-  TransportSideType(const Name& name, TransportSide end)
-      : TransportSideType(name, nullptr, types::Nullability::kNonnullable, end) {}
+  TransportSideType(const Name& name, TransportSide end, std::string_view protocol_transport)
+      : TransportSideType(name, nullptr, types::Nullability::kNonnullable, end,
+                          std::move(protocol_transport)) {}
   TransportSideType(const Name& name, const Decl* protocol_decl, types::Nullability nullability,
-                    TransportSide end)
-      : Type(name, Kind::kTransportSide, nullability), protocol_decl(protocol_decl), end(end) {}
+                    TransportSide end, std::string_view protocol_transport)
+      : Type(name, Kind::kTransportSide, nullability),
+        protocol_decl(protocol_decl),
+        end(end),
+        protocol_transport(std::move(protocol_transport)) {}
 
   const Decl* protocol_decl;
   const TransportSide end;
+  // TODO(fxbug.dev/56727): Eventually, this will need to point to a transport declaration.
+  const std::string_view protocol_transport;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 

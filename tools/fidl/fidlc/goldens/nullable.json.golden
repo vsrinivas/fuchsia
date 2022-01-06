@@ -614,6 +614,7 @@
             "kind": "identifier",
             "identifier": "test.nullable/SimpleProtocol",
             "nullable": true,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -688,6 +689,7 @@
             "kind": "request",
             "subtype": "test.nullable/SimpleProtocol",
             "nullable": true,
+            "protocol_transport": "Channel",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

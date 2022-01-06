@@ -283,6 +283,19 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
   if (out_params->protocol_decl)
     merged_protocol = out_params->protocol_decl;
 
+  const Attribute* transport_attribute =
+      static_cast<const Protocol*>(merged_protocol)->attributes->Get("transport");
+  std::string_view transport("Channel");
+  if (transport_attribute) {
+    auto arg = (transport_attribute->compiled)
+                   ? transport_attribute->GetArg(flat::AttributeArg::kDefaultAnonymousName)
+                   : transport_attribute->GetStandaloneAnonymousArg();
+    std::string_view quoted_transport =
+        static_cast<const flat::LiteralConstant*>(arg->value.get())->literal->span().data();
+    // Remove quotes around the transport.
+    transport = quoted_transport.substr(1, quoted_transport.size() - 2);
+  }
+
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
     return lib.Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(), layout);
@@ -291,7 +304,8 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
           ? types::Nullability::kNullable
           : types::Nullability::kNonnullable;
 
-  *out_type = std::make_unique<TransportSideType>(name, merged_protocol, merged_nullability, end);
+  *out_type = std::make_unique<TransportSideType>(name, merged_protocol, merged_nullability, end,
+                                                  transport);
   return true;
 }
 
