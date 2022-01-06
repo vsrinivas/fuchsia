@@ -1021,6 +1021,12 @@ macro_rules! unsupported {
     }
 }
 
+macro_rules! unsupported2 {
+    ($responder:ident $($args:tt)*) => {
+        $responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))
+    };
+}
+
 // Can't be a single function because DirectoryRequestStream,
 // FileRequestStream, and NodeRequestStream don't have matching types, even though their
 // function signatures are identical.
@@ -1280,6 +1286,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             DirectoryRequest::SetAttr { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Sync { responder } => unsupported!(responder)?,
+            DirectoryRequest::Sync2 { responder } => unsupported2!(responder)?,
             DirectoryRequest::Unlink { responder, .. } => {
                 responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
@@ -1327,6 +1334,74 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         Ok((None, ConnectionState::Open))
     }
 
+    fn handle_read_request(
+        &self,
+        connection: &mut FileConnectionData,
+        count: u64,
+    ) -> Result<Vec<u8>, zx::Status> {
+        match &self.nodes[connection.position] {
+            ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
+                panic!("read on non-file node")
+            }
+            ServiceFsNode::VmoFile { vmo, length, offset } => {
+                let actual_count = min(count, length.saturating_sub(connection.seek_offset));
+                let mut data = vec![0; actual_count as usize];
+                vmo.read(&mut data, offset.saturating_add(connection.seek_offset))?;
+                connection.seek_offset += actual_count;
+                Ok(data)
+            }
+        }
+    }
+
+    fn handle_read_at_request(
+        &self,
+        connection: &mut FileConnectionData,
+        count: u64,
+        read_offset: u64,
+    ) -> Result<Vec<u8>, zx::Status> {
+        match &self.nodes[connection.position] {
+            ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
+                panic!("read-at on non-file node")
+            }
+            ServiceFsNode::VmoFile { vmo, length, offset } => {
+                let length = *length;
+                let offset = *offset;
+                let actual_offset = min(offset.saturating_add(read_offset), length);
+                let actual_count = min(count, length.saturating_sub(actual_offset));
+                let mut data = vec![0; actual_count as usize];
+                vmo.read(&mut data, actual_offset)?;
+                Ok(data)
+            }
+        }
+    }
+
+    fn handle_seek_request(
+        &self,
+        connection: &mut FileConnectionData,
+        origin: SeekOrigin,
+        offset: i64,
+    ) -> u64 {
+        let start = match origin {
+            SeekOrigin::Start => 0,
+            SeekOrigin::Current => connection.seek_offset,
+            SeekOrigin::End => match &self.nodes[connection.position] {
+                ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
+                    panic!("seek on non-file node")
+                }
+                ServiceFsNode::VmoFile { length, .. } => *length,
+            },
+        };
+        let new_offset: u64 = if offset.is_positive() {
+            start.saturating_add(offset as u64)
+        } else if offset == i64::min_value() {
+            0
+        } else {
+            start.saturating_sub(offset.abs() as u64)
+        };
+        connection.seek_offset = new_offset;
+        new_offset
+    }
+
     fn handle_file_request(
         &mut self,
         request: FileRequest,
@@ -1352,75 +1427,59 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(&mut info)?;
             }
             FileRequest::Sync { responder } => unsupported!(responder)?,
+            FileRequest::Sync2 { responder } => unsupported2!(responder)?,
             FileRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
             }
             FileRequest::SetAttr { responder, .. } => unsupported!(responder)?,
             // FIXME(cramertj) enforce READ rights
-            FileRequest::Read { count, responder } => match &self.nodes[connection.position] {
-                ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                    panic!("read on non-file node")
-                }
-                ServiceFsNode::VmoFile { vmo, length, offset } => {
-                    let actual_count = min(count, length.saturating_sub(connection.seek_offset));
-                    let mut data = vec![0; actual_count as usize];
-                    let status = vmo.read(&mut data, offset.saturating_add(connection.seek_offset));
-                    match status {
-                        Ok(()) => {
-                            responder.send(zx::sys::ZX_OK, &data)?;
-                            connection.seek_offset += actual_count;
-                        }
-                        Err(s) => responder.send(s.into_raw(), &[])?,
+            FileRequest::Read { count, responder } => {
+                let result = self.handle_read_request(connection, count);
+                match result {
+                    Ok(data) => {
+                        responder.send(zx::sys::ZX_OK, &data)?;
                     }
+                    Err(s) => responder.send(s.into_raw(), &[])?,
                 }
-            },
-            FileRequest::ReadAt { count, offset: read_offset, responder } => {
-                match &self.nodes[connection.position] {
-                    ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                        panic!("read-at on non-file node")
-                    }
-                    ServiceFsNode::VmoFile { vmo, length, offset } => {
-                        let length = *length;
-                        let offset = *offset;
-                        let actual_offset = min(offset.saturating_add(read_offset), length);
-                        let actual_count = min(count, length.saturating_sub(actual_offset));
-                        let mut data = vec![0; actual_count as usize];
-                        let status = vmo.read(&mut data, actual_offset);
-                        match status {
-                            Ok(()) => responder.send(zx::sys::ZX_OK, &data)?,
-                            Err(s) => responder.send(s.into_raw(), &[])?,
-                        }
-                    }
+            }
+            FileRequest::Read2 { count, responder } => {
+                responder.send(
+                    &mut self.handle_read_request(connection, count).map_err(zx::Status::into_raw),
+                )?;
+            }
+            FileRequest::ReadAt { count, offset, responder } => {
+                let result = self.handle_read_at_request(connection, count, offset);
+                match result {
+                    Ok(data) => responder.send(zx::sys::ZX_OK, &data)?,
+                    Err(s) => responder.send(s.into_raw(), &[])?,
                 }
+            }
+            FileRequest::ReadAt2 { count, offset, responder } => {
+                responder.send(
+                    &mut self
+                        .handle_read_at_request(connection, count, offset)
+                        .map_err(zx::Status::into_raw),
+                )?;
             }
             FileRequest::Write { responder, .. } => unsupported!(responder, 0)?,
+            FileRequest::Write2 { responder, .. } => unsupported2!(responder)?,
             FileRequest::WriteAt { responder, .. } => unsupported!(responder, 0)?,
+            FileRequest::WriteAt2 { responder, .. } => unsupported2!(responder)?,
             FileRequest::Seek { offset, start, responder } => {
-                let start = match start {
-                    SeekOrigin::Start => 0,
-                    SeekOrigin::Current => connection.seek_offset,
-                    SeekOrigin::End => match &self.nodes[connection.position] {
-                        ServiceFsNode::Directory { .. } | ServiceFsNode::Service(_) => {
-                            panic!("seek on non-file node")
-                        }
-                        ServiceFsNode::VmoFile { length, .. } => *length,
-                    },
-                };
-                let new_offset: u64 = if offset.is_positive() {
-                    start.saturating_add(offset as u64)
-                } else if offset == i64::min_value() {
-                    0
-                } else {
-                    start.saturating_sub(offset.abs() as u64)
-                };
-                connection.seek_offset = new_offset;
+                let new_offset = self.handle_seek_request(connection, start, offset);
                 responder.send(zx::sys::ZX_OK, new_offset)?;
             }
+            FileRequest::Seek2 { origin, offset, responder } => {
+                let new_offset = self.handle_seek_request(connection, origin, offset);
+                responder.send(&mut Ok(new_offset))?;
+            }
             FileRequest::Truncate { responder, .. } => unsupported!(responder)?,
+            FileRequest::Resize { responder, .. } => unsupported2!(responder)?,
             FileRequest::GetFlags { responder, .. } => unsupported!(responder, 0)?,
             FileRequest::SetFlags { responder, .. } => unsupported!(responder)?,
             FileRequest::GetBuffer { responder, .. } => unsupported!(responder, None)?,
+            FileRequest::GetBackingMemory { responder, .. } => unsupported2!(responder)?,
             FileRequest::NodeGetFlags { responder } => unsupported!(responder, 0)?,
             FileRequest::NodeSetFlags { flags: _, responder } => unsupported!(responder)?,
             FileRequest::AdvisoryLock { request: _, responder } => {
@@ -1462,6 +1521,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(&mut info)?;
             }
             NodeRequest::Sync { responder } => unsupported!(responder)?,
+            NodeRequest::Sync2 { responder } => unsupported2!(responder)?,
             NodeRequest::GetAttr { responder } => {
                 let mut attrs = self.node_attrs(connection.position);
                 responder.send(zx::sys::ZX_OK, &mut attrs)?
