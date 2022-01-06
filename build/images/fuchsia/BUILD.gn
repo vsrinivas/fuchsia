@@ -55,6 +55,7 @@ fuchsia_base = {
   cache_packages = [ "//:additional_cache_packages" ]
   system_image_deps = [ "//build/input:system_image" ]
   universe_packages = [ "//:additional_universe_packages" ]
+  bootfs_labels = [ "//build/input:bootfs" ]
 
   if (!bootfs_only) {
     # minfs arguments
@@ -178,7 +179,6 @@ group("fuchsia") {
 assemble_system("fuchsia_assembly") {
   forward_variables_from(fuchsia_base, "*")
   image_name = "fuchsia"
-  bootfs_labels = [ "//build/input:bootfs" ]
 
   if (fuchsia_zbi_kernel_cmdline_goldens != []) {
     cmdline_goldens = fuchsia_zbi_kernel_cmdline_goldens
@@ -445,7 +445,6 @@ fuchsia_package("dummy") {
 
 assemble_system("fuchsia_prime_assembly") {
   forward_variables_from(fuchsia_base, "*")
-  bootfs_labels = [ "//build/input:bootfs" ]
   system_image_deps += [ ":dummy" ]
   base_package_name = "system_image_prime"
 }
@@ -488,7 +487,6 @@ update_package("fuchsia_prime") {
 # sees that RAM disk just as if it were a real disk on the device.
 assemble_system("netboot") {
   forward_variables_from(fuchsia_base, "*")
-  bootfs_labels = []
   ramdisk_fvm_in_zbi = true
 
   metadata = {
