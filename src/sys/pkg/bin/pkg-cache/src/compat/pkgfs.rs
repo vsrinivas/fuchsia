@@ -90,7 +90,11 @@ async fn read_dirents<'a>(
     Ok((TraversalPosition::End, sink.seal()))
 }
 
-/// Serve the pkgfs compatibility directories, "system" and "packages".
+/// Serve the pkgfs compatibility directory:
+///   ${fs}/
+///     system/
+///     packages/
+///     versions/
 /// The "system" directory will only be added and served if `system_image.is_some()`.
 pub fn serve(
     mut fs: fuchsia_component::server::ServiceFsDir<
@@ -99,7 +103,8 @@ pub fn serve(
     >,
     base_packages: Arc<crate::BasePackages>,
     package_index: Arc<futures::lock::Mutex<crate::PackageIndex>>,
-    non_static_allow_list: system_image::NonStaticAllowList,
+    non_static_allow_list: Arc<system_image::NonStaticAllowList>,
+    executability_restrictions: system_image::ExecutabilityRestrictions,
     blobfs: blobfs::Client,
     system_image: Option<system_image::SystemImage>,
     scope: vfs::execution_scope::ExecutionScope,
@@ -121,7 +126,7 @@ pub fn serve(
     Arc::new(packages::PkgfsPackages::new(
         Arc::clone(&base_packages),
         Arc::clone(&package_index),
-        non_static_allow_list,
+        Arc::clone(&non_static_allow_list),
         blobfs.clone(),
     ))
     .open(
@@ -132,6 +137,26 @@ pub fn serve(
         packages_server.into_channel().into(),
     );
     fs.add_remote("packages", packages_proxy);
+
+    let (versions_proxy, versions_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
+            .context("create pkgfs/versions endpoints")?;
+    Arc::new(versions::PkgfsVersions::new(
+        Arc::clone(&base_packages),
+        Arc::clone(&package_index),
+        Arc::clone(&non_static_allow_list),
+        executability_restrictions,
+        blobfs.clone(),
+    ))
+    .open(
+        scope.clone(),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        0,
+        vfs::path::Path::dot(),
+        versions_server.into_channel().into(),
+    );
+    fs.add_remote("versions", versions_proxy);
+
     Ok(())
 }
 

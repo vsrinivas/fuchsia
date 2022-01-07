@@ -25,6 +25,11 @@
             rights: [ "rx*" ],
             path: "/pkgfs/packages",
         },
+        {
+            directory: "pkgfs-versions",
+            rights: [ "rx*" ],
+            path: "/pkgfs/versions",
+        },
     ],
     use: [
         {
@@ -63,6 +68,10 @@
         },
         {
             directory: "pkgfs-packages",
+            from: "self",
+        },
+        {
+            directory: "pkgfs-versions",
             from: "self",
         },
     ],

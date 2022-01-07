@@ -43,7 +43,7 @@ use variants::PkgfsPackagesVariants;
 pub struct PkgfsPackages {
     base_packages: Arc<BasePackages>,
     non_base_packages: Arc<Mutex<PackageIndex>>,
-    non_static_allow_list: NonStaticAllowList,
+    non_static_allow_list: Arc<NonStaticAllowList>,
     blobfs: blobfs::Client,
 }
 
@@ -51,7 +51,7 @@ impl PkgfsPackages {
     pub fn new(
         base_packages: Arc<BasePackages>,
         non_base_packages: Arc<Mutex<PackageIndex>>,
-        non_static_allow_list: NonStaticAllowList,
+        non_static_allow_list: Arc<NonStaticAllowList>,
         blobfs: blobfs::Client,
     ) -> Self {
         Self { base_packages, non_base_packages, non_static_allow_list, blobfs }
@@ -219,7 +219,7 @@ mod tests {
                         base_packages,
                     )),
                     Arc::clone(&index),
-                    non_static_allow_list,
+                    Arc::new(non_static_allow_list),
                     blobfs,
                 )),
                 index,
@@ -480,7 +480,7 @@ mod tests {
         let pkgfs_packages = Arc::new(PkgfsPackages::new(
             Arc::new(BasePackages::new_test_only(HashSet::new(), vec![])),
             Arc::clone(&package_index),
-            non_static_allow_list(&["dynamic"]),
+            Arc::new(non_static_allow_list(&["dynamic"])),
             blobfs_client,
         ));
 

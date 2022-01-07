@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::index::PackageIndex,
+    crate::{base_packages::BasePackages, index::PackageIndex},
     anyhow::anyhow,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
@@ -32,10 +32,10 @@ use {
 };
 
 #[derive(Debug)]
-struct PkgfsVersions {
-    static_packages: system_image::StaticPackages,
-    non_static_packages: Arc<Mutex<PackageIndex>>,
-    non_static_allow_list: NonStaticAllowList,
+pub struct PkgfsVersions {
+    base_packages: Arc<BasePackages>,
+    non_base_packages: Arc<Mutex<PackageIndex>>,
+    non_static_allow_list: Arc<NonStaticAllowList>,
     executability_restrictions: ExecutabilityRestrictions,
     blobfs: blobfs::Client,
 }
@@ -47,30 +47,28 @@ enum PackageValidationStatus {
 }
 
 impl PkgfsVersions {
-    // TODO(fxbug.dev/88868) use this
-    #[allow(dead_code)]
     pub fn new(
-        static_packages: system_image::StaticPackages,
-        non_static_packages: Arc<Mutex<PackageIndex>>,
-        non_static_allow_list: NonStaticAllowList,
+        base_packages: Arc<BasePackages>,
+        non_base_packages: Arc<Mutex<PackageIndex>>,
+        non_static_allow_list: Arc<NonStaticAllowList>,
         executability_restrictions: ExecutabilityRestrictions,
         blobfs: blobfs::Client,
     ) -> Self {
         Self {
-            static_packages,
-            non_static_packages,
+            base_packages,
+            non_base_packages,
             non_static_allow_list,
             executability_restrictions,
             blobfs,
         }
     }
 
-    fn is_package_static(&self, hash: &Hash) -> bool {
-        self.static_packages.contents().any(|(_path, static_hash)| hash == static_hash)
+    fn is_package_base(&self, hash: &Hash) -> bool {
+        self.base_packages.paths_to_hashes().any(|(_path, base_hash)| hash == base_hash)
     }
 
     async fn is_active_and_allowlisted(&self, hash: &Hash) -> (bool, bool) {
-        if let Some(name) = self.non_static_packages.lock().await.get_name_if_active(&hash) {
+        if let Some(name) = self.non_base_packages.lock().await.get_name_if_active(&hash) {
             (true, self.non_static_allow_list.allows(name))
         } else {
             (false, false)
@@ -78,9 +76,9 @@ impl PkgfsVersions {
     }
 
     async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
-        let active_packages = self.non_static_packages.lock().await.active_packages();
-        self.static_packages
-            .contents()
+        let active_packages = self.non_base_packages.lock().await.active_packages();
+        self.base_packages
+            .paths_to_hashes()
             .map(|(_path, hash)| hash.to_string())
             .chain(active_packages.into_iter().map(|(_path, hash)| hash.to_string()))
             .map(|hash| (hash, super::DirentType::Directory))
@@ -88,8 +86,8 @@ impl PkgfsVersions {
     }
 
     async fn validate_package(&self, hash: &Hash, flags: u32) -> PackageValidationStatus {
-        if self.is_package_static(&hash) {
-            // Static packages are not a subject to executability enforcement.
+        if self.is_package_base(&hash) {
+            // Base packages are always allowed to be opened executable.
             PackageValidationStatus::Ok
         } else {
             let needs_executability_enforcement = flags & OPEN_RIGHT_EXECUTABLE != 0
@@ -97,13 +95,13 @@ impl PkgfsVersions {
 
             let (is_active, is_allowlisted) = self.is_active_and_allowlisted(&hash).await;
             if !is_active {
-                // Non-static package isn't active.
+                // Non-base package isn't active.
                 PackageValidationStatus::NotFound
             } else if needs_executability_enforcement && !is_allowlisted {
-                // Non-static package isn't allowlisted and executability is enforced.
+                // Non-base package isn't allowlisted and executability is enforced.
                 PackageValidationStatus::AccessDenied
             } else {
-                // Non-static package is allowlisted or executability is not enforced.
+                // Non-base package is allowlisted or executability is not enforced.
                 PackageValidationStatus::Ok
             }
         }
@@ -236,12 +234,13 @@ mod tests {
         fuchsia_pkg::{PackagePath, PackageVariant},
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         matches::assert_matches,
+        std::collections::HashSet,
         vfs::directory::{entry::EntryInfo, entry_container::Directory},
     };
 
     impl PkgfsVersions {
         pub fn new_test(
-            static_packages: system_image::StaticPackages,
+            base_packages: Vec<(PackagePath, Hash)>,
             non_static_allow_list: NonStaticAllowList,
             executability_restrictions: ExecutabilityRestrictions,
         ) -> (Arc<Self>, Arc<Mutex<PackageIndex>>) {
@@ -250,9 +249,11 @@ mod tests {
 
             (
                 Arc::new(PkgfsVersions::new(
-                    static_packages,
+                    // PkgfsVersions only uses the path-hash mapping, so tests do not need to
+                    // populate the blob hashes.
+                    Arc::new(BasePackages::new_test_only(HashSet::new(), base_packages)),
                     Arc::clone(&index),
-                    non_static_allow_list,
+                    Arc::new(non_static_allow_list),
                     executability_restrictions,
                     blobfs,
                 )),
@@ -291,12 +292,9 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_entries_unions_static_and_dynamic() {
+    async fn directory_entries_unions_base_and_dynamic() {
         let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![(
-                default_package_path("static_package"),
-                hash(0),
-            )]),
+            vec![(default_package_path("base_package"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
         );
@@ -316,7 +314,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_empty() {
         let (pkgfs_versions, _package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
+            vec![],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
         );
@@ -340,11 +338,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_enumerates_all_entries() {
         let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![
+            vec![
                 (default_package_path("allowed"), hash(0)),
-                (default_package_path("static"), hash(1)),
+                (default_package_path("base"), hash(1)),
                 (default_package_path("same-hash"), hash(2)),
-            ]),
+            ],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
         );
@@ -378,7 +376,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn executable_open_access_denied_not_allowlisted() {
         let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
+            vec![],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
         );
@@ -397,10 +395,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn executable_open_not_found() {
         let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![(
-                default_package_path("static"),
-                hash(0),
-            )]),
+            vec![(default_package_path("base"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::Enforce,
         );
@@ -419,10 +414,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn executable_open_not_found_no_enforcement() {
         let (pkgfs_versions, package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![(
-                default_package_path("static"),
-                hash(0),
-            )]),
+            vec![(default_package_path("base"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::DoNotEnforce,
         );
@@ -447,10 +439,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn directory_entry_open_self() {
         let (pkgfs_versions, _package_index) = PkgfsVersions::new_test(
-            system_image::StaticPackages::from_entries(vec![(
-                default_package_path("static"),
-                hash(0),
-            )]),
+            vec![(default_package_path("base"), hash(0))],
             non_static_allow_list(&[]),
             ExecutabilityRestrictions::DoNotEnforce,
         );
@@ -492,9 +481,9 @@ mod tests {
 
         let package_index = Arc::new(Mutex::new(PackageIndex::new_test()));
         let pkgfs_versions = Arc::new(PkgfsVersions::new(
-            system_image::StaticPackages::from_entries(vec![]),
+            Arc::new(BasePackages::new_test_only(HashSet::new(), vec![])),
             Arc::clone(&package_index),
-            non_static_allow_list(&["dynamic"]),
+            Arc::new(non_static_allow_list(&["dynamic"])),
             ExecutabilityRestrictions::Enforce,
             blobfs_client,
         ));

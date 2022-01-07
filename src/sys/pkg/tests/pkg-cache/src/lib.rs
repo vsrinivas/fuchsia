@@ -483,6 +483,10 @@ where
             .add_route(RouteBuilder::directory("pkgfs-packages", "pkgfs-packages", fidl_fuchsia_io2::RX_STAR_DIR)
                 .source(RouteEndpoint::component("pkg_cache"))
                 .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("pkgfs-versions", "pkgfs-versions", fidl_fuchsia_io2::RX_STAR_DIR)
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
             ).await.unwrap();
 
         let realm_instance = builder.build().await.unwrap();
@@ -512,6 +516,14 @@ where
                 OPEN_RIGHT_READABLE,
             )
             .expect("open pkgfs-packages"),
+            pkgfs_versions: io_util::directory::open_directory_no_describe(
+                realm_instance.root.get_exposed_dir(),
+                "pkgfs-versions",
+                // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead
+                // of ServiceFs to serve its out dir.
+                OPEN_RIGHT_READABLE,
+            )
+            .expect("open pkgfs-versions"),
         };
 
         TestEnv {
@@ -533,6 +545,7 @@ struct Proxies {
     package_cache: PackageCacheProxy,
     retained_packages: RetainedPackagesProxy,
     pkgfs_packages: DirectoryProxy,
+    pkgfs_versions: DirectoryProxy,
 }
 
 pub struct Mocks {

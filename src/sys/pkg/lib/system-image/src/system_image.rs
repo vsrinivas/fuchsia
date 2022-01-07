@@ -20,7 +20,7 @@ static DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_
 static NON_STATIC_ALLOW_LIST_FILE_PATH: &str =
     "data/pkgfs_packages_non_static_packages_allowlist.txt";
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ExecutabilityRestrictions {
     Enforce,
     DoNotEnforce,
