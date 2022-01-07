@@ -17,6 +17,7 @@ use {
     },
     futures::{channel::mpsc, future::pending, FutureExt, SinkExt, StreamExt, TryStreamExt},
     io_util,
+    matches::assert_matches,
     std::convert::TryInto,
 };
 
@@ -1270,6 +1271,76 @@ async fn route_service() -> Result<(), Error> {
         receive_service_used.next().await.is_some(),
         "failed to observe the local component report a successful usage of its service"
     );
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn fail_to_set_invalid_decls() -> Result<(), Error> {
+    let builder = RealmBuilder::new().await?;
+
+    let child_a = builder.add_child("a", "test://a", ChildOptions::new()).await?;
+    let child_b = builder.add_local_child("b", |_| pending().boxed(), ChildOptions::new()).await?;
+
+    // We cannot replace the decl for a child added with an absolute URL
+    assert_matches!(
+        builder.replace_component_decl(&child_a, cm_rust::ComponentDecl::default()).await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ChildDeclNotVisible))
+    );
+
+    // We cannot replace the decl for a local component with one missing the realm-builder
+    // specifics in the program section
+    assert_matches!(
+        builder.replace_component_decl(&child_b, cm_rust::ComponentDecl::default()).await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::ImmutableProgram))
+    );
+
+    // We cannot replace the decl for a component with an invalid decl (references a non-existent
+    // child)
+    assert_matches!(
+        builder
+            .replace_component_decl(
+                &child_b,
+                cm_rust::ComponentDecl {
+                    exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                        source: cm_rust::ExposeSource::Child("does-not-exist".to_string()),
+                        source_name: "fuchsia.examples.Echo".into(),
+                        target: cm_rust::ExposeTarget::Parent,
+                        target_name: "fuchsia.examples.Echo".into(),
+                    })],
+                    ..cm_rust::ComponentDecl::default()
+                }
+            )
+            .await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::InvalidComponentDecl))
+    );
+
+    // We cannot replace the realm's decl with an invalid decl (references a non-existent child)
+    assert_matches!(
+        builder
+            .replace_realm_decl(cm_rust::ComponentDecl {
+                exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                    source: cm_rust::ExposeSource::Child("does-not-exist".to_string()),
+                    source_name: "fuchsia.examples.Echo".into(),
+                    target: cm_rust::ExposeTarget::Parent,
+                    target_name: "fuchsia.examples.Echo".into(),
+                })],
+                ..cm_rust::ComponentDecl::default()
+            })
+            .await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError2::InvalidComponentDecl))
+    );
+
+    // We _can_ replace the realm's decl with a decl that references children added with the
+    // 'add_child' calls, and thus don't yet have a valid ChildDecl in the manifest.
+    let mut realm_decl = builder.get_realm_decl().await?;
+    realm_decl.exposes.push(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+        source: cm_rust::ExposeSource::Child("b".to_string()),
+        source_name: "fuchsia.examples.Echo".into(),
+        target: cm_rust::ExposeTarget::Parent,
+        target_name: "fuchsia.examples.Echo".into(),
+    }));
+    assert_matches!(builder.replace_realm_decl(realm_decl).await, Ok(()));
+
     Ok(())
 }
 

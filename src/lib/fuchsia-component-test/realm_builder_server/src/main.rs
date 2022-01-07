@@ -408,7 +408,7 @@ impl Realm {
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         if let Err(e) = cm_fidl_validator::validate(&component_decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(name, e));
+            return Err(RealmBuilderError::InvalidComponentDecl(e));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), true);
         self.realm_node.add_child(name, options, child_realm_node).await
@@ -495,11 +495,8 @@ impl Realm {
         name: String,
         component_decl: fcdecl::Component,
     ) -> Result<(), RealmBuilderError> {
-        if let Err(e) = cm_fidl_validator::validate(&component_decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(name, e));
-        }
         let child_node = self.realm_node.get_sub_realm(&name).await?;
-        child_node.replace_decl(component_decl.fidl_into_native()).await
+        child_node.replace_decl_with_untrusted(component_decl).await
     }
 
     async fn get_realm_decl(&self) -> fcdecl::Component {
@@ -510,13 +507,7 @@ impl Realm {
         &self,
         component_decl: fcdecl::Component,
     ) -> Result<(), RealmBuilderError> {
-        if let Err(e) = cm_fidl_validator::validate(&component_decl) {
-            return Err(RealmBuilderError::InvalidComponentDecl(
-                self.realm_path.join("/").to_string(),
-                e,
-            ));
-        }
-        self.realm_node.replace_decl(component_decl.fidl_into_native()).await
+        self.realm_node.replace_decl_with_untrusted(component_decl).await
     }
 }
 
@@ -594,6 +585,29 @@ impl RealmNodeState {
             .filter(|(_k, c)| c.update_decl_in_add_route)
             .collect::<HashMap<_, _>>()
     }
+
+    // Whenever this realm node is going to get a new decl we'd like to validate the new
+    // hypothetical decl, but the decl likely references children within `self.mutable_children`.
+    // Since these children do not (yet) exist in `decl.children`, the decl will fail validation.
+    // To get around this, generate hypothetical `fcdecl::Child` structs and add them to
+    // `decl.children`, and then run validation.
+    fn validate_with_hypothetical_children(
+        &self,
+        mut decl: fcdecl::Component,
+    ) -> Result<(), RealmBuilderError> {
+        let child_decls =
+            self.mutable_children.iter().map(|(name, _options_and_node)| fcdecl::Child {
+                name: Some(name.clone()),
+                url: Some("invalid://url".to_string()),
+                startup: Some(fcdecl::StartupMode::Lazy),
+                ..fcdecl::Child::EMPTY
+            });
+        decl.children.get_or_insert(vec![]).extend(child_decls);
+        if let Err(e) = cm_fidl_validator::validate(&decl) {
+            return Err(RealmBuilderError::InvalidComponentDecl(e));
+        }
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -630,16 +644,15 @@ impl RealmNode2 {
         self.state.lock().await.decl.clone()
     }
 
-    async fn replace_decl(
+    // Validates `new_decl`, confirms that `new_decl` isn't overwriting anything necessary for the
+    // realm builder runner to work, and then replaces this realm's decl with `new_decl`.
+    async fn replace_decl_with_untrusted(
         &self,
-        new_decl: cm_rust::ComponentDecl,
+        new_decl: fcdecl::Component,
     ) -> Result<(), RealmBuilderError> {
         let mut state_guard = self.state.lock().await;
-        for child in &new_decl.children {
-            if state_guard.mutable_children.contains_key(&child.name) {
-                return Err(RealmBuilderError::ChildAlreadyExists(child.name.clone()));
-            }
-        }
+        state_guard.validate_with_hypothetical_children(new_decl.clone())?;
+        let new_decl = new_decl.fidl_into_native();
         if state_guard.decl.program.as_ref().and_then(|p| p.runner.as_ref())
             == Some(&runner::RUNNER_NAME.into())
         {
@@ -648,6 +661,15 @@ impl RealmNode2 {
             }
         }
         state_guard.decl = new_decl;
+        Ok(())
+    }
+
+    // Replaces the decl for this realm with `new_decl`.
+    async fn replace_decl(
+        &self,
+        new_decl: cm_rust::ComponentDecl,
+    ) -> Result<(), RealmBuilderError> {
+        self.state.lock().await.decl = new_decl;
         Ok(())
     }
 
@@ -703,7 +725,7 @@ impl RealmNode2 {
                 .await
                 .map_err(|e| RealmBuilderError::DeclReadError(relative_url.clone(), e))?;
             cm_fidl_validator::validate(&fidl_decl)
-                .map_err(|e| RealmBuilderError::InvalidComponentDecl(relative_url, e))?;
+                .map_err(|e| RealmBuilderError::InvalidComponentDeclWithName(relative_url, e))?;
 
             let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native(), false);
             self_.component_loaded_from_pkg = true;
@@ -845,7 +867,7 @@ impl RealmNode2 {
                         "manifest validation failed during build step for component {:?}: {:?}",
                         walked_path, e
                     );
-                    Err(RealmBuilderError::InvalidComponentDecl(walked_path.join("/"), e))
+                    Err(RealmBuilderError::InvalidComponentDeclWithName(walked_path.join("/"), e))
                 }
             }
         }
@@ -1424,8 +1446,12 @@ enum RealmBuilderError {
     InvalidManifestExtension,
 
     /// A component declaration failed validation.
+    #[error("a component manifest failed validation: {0:?}")]
+    InvalidComponentDecl(cm_fidl_validator::error::ErrorList),
+
+    /// A component declaration failed validation.
     #[error("the manifest for component {0:?} failed validation: {1:?}")]
-    InvalidComponentDecl(String, cm_fidl_validator::error::ErrorList),
+    InvalidComponentDeclWithName(String, cm_fidl_validator::error::ErrorList),
 
     /// The referenced child does not exist.
     #[error("there is no component named {0:?} in this realm")]
@@ -1491,7 +1517,8 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
         match err {
             RealmBuilderError::ChildAlreadyExists(_) => Self::ChildAlreadyExists,
             RealmBuilderError::InvalidManifestExtension => Self::InvalidManifestExtension,
-            RealmBuilderError::InvalidComponentDecl(_, _) => Self::InvalidComponentDecl,
+            RealmBuilderError::InvalidComponentDecl(_) => Self::InvalidComponentDecl,
+            RealmBuilderError::InvalidComponentDeclWithName(_, _) => Self::InvalidComponentDecl,
             RealmBuilderError::NoSuchChild(_) => Self::NoSuchChild,
             RealmBuilderError::ChildDeclNotVisible(_) => Self::ChildDeclNotVisible,
             RealmBuilderError::NoSuchSource(_) => Self::NoSuchSource,
