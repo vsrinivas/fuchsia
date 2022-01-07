@@ -139,7 +139,7 @@ void fidl::internal::
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end) {
+    ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 std::optional<::fidl::UnbindInfo>

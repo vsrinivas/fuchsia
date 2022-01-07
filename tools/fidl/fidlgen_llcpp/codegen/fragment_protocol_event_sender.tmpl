@@ -15,12 +15,12 @@ class {{ .WireEventSender }} {
   // Constructs an event sender with an invalid channel.
   WireEventSender() = default;
 
-  explicit WireEventSender(::fidl::ServerEnd<{{ . }}> server_end)
+  explicit WireEventSender(::{{ .Transport.Namespace }}::ServerEnd<{{ . }}> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<{{ . }}>& server_end() const { return server_end_; }
-  ::fidl::ServerEnd<{{ . }}>& server_end() { return server_end_; }
+  const ::{{ .Transport.Namespace }}::ServerEnd<{{ . }}>& server_end() const { return server_end_; }
+  ::{{ .Transport.Namespace }}::ServerEnd<{{ . }}>& server_end() { return server_end_; }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -41,7 +41,7 @@ class {{ .WireEventSender }} {
 {{ "" }}
   {{- end }}
  private:
-  ::fidl::ServerEnd<{{ . }}> server_end_;
+  ::{{ .Transport.Namespace }}::ServerEnd<{{ . }}> server_end_;
 };
 
 template<>

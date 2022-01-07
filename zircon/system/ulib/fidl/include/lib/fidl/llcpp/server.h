@@ -170,8 +170,8 @@ namespace fidl {
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
-    OnUnbound&& on_unbound = nullptr) {
+    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
+    ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
   return internal::BindServerImpl<ServerImpl>(
       dispatcher, std::move(server_end), impl,
       internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
@@ -183,7 +183,7 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
     std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
   ServerImpl* impl_raw = impl.get();
   return internal::BindServerImpl<ServerImpl>(
@@ -197,7 +197,7 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
     std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
   ServerImpl* impl_raw = impl.get();
   return internal::BindServerImpl<ServerImpl>(
@@ -231,7 +231,7 @@ class ServerBindingRefImpl {
   // This is so that only |BindServerTypeErased| will be able to construct a
   // new instance of |ServerBindingRef|.
   friend ServerBindingRef<Protocol> internal::BindServerTypeErased<Protocol>(
-      async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
+      async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
       internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRefImpl(std::weak_ptr<internal::AsyncServerBinding>) {}
@@ -285,7 +285,7 @@ class ServerBindingRefImpl<Protocol, fidl::internal::ChannelTransport> {
   // This is so that only |BindServerTypeErased| will be able to construct a
   // new instance of |ServerBindingRef|.
   friend ServerBindingRef<Protocol> internal::BindServerTypeErased<Protocol>(
-      async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
+      async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
       internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRefImpl(std::weak_ptr<internal::AsyncServerBinding> internal_binding)

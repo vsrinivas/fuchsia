@@ -14,6 +14,15 @@
 #include <zircon/syscalls.h>
 
 namespace fidl {
+namespace socket {
+template <typename Protocol>
+class ClientEnd;
+template <typename Protocol>
+class UnownedClientEnd;
+template <typename Protocol>
+class ServerEnd;
+}  // namespace socket
+
 namespace internal {
 
 struct SocketHandleMetadata {};
@@ -24,6 +33,12 @@ struct SocketTransport {
   using HandleMetadata = SocketHandleMetadata;
   using IncomingTransportContextType = struct {};
   using OutgoingTransportContextType = struct {};
+  template <typename Protocol>
+  using ClientEnd = fidl::socket::ClientEnd<Protocol>;
+  template <typename Protocol>
+  using UnownedClientEnd = fidl::socket::UnownedClientEnd<Protocol>;
+  template <typename Protocol>
+  using ServerEnd = fidl::socket::ServerEnd<Protocol>;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
@@ -77,34 +92,36 @@ class SocketWaiter : private async_wait_t, public TransportWaiter {
   TransportWaitFailureHandler failure_handler_;
 };
 
+}  // namespace internal
+
+namespace socket {
 template <typename Protocol>
-class ServerEndImpl<Protocol, internal::SocketTransport>
-    : public internal::ServerEndBase<Protocol, internal::SocketTransport> {
+class ClientEnd final : public internal::ClientEndBase<Protocol, internal::SocketTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, internal::SocketTransport>);
+
+ public:
+  using internal::ClientEndBase<Protocol, internal::SocketTransport>::ClientEndImpl;
+};
+
+template <typename Protocol>
+class UnownedClientEnd final
+    : public internal::UnownedClientEndBase<Protocol, internal::SocketTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, internal::SocketTransport>);
+
+ public:
+  using internal::UnownedClientEndBase<Protocol, internal::SocketTransport>::UnownedClientEndBase;
+};
+
+template <typename Protocol>
+class ServerEnd final : public internal::ServerEndBase<Protocol, internal::SocketTransport> {
+  static_assert(cpp17::is_same_v<typename Protocol::Transport, fidl::internal::SocketTransport>);
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::SocketTransport>;
 
  public:
   using ServerEndBase::ServerEndBase;
 };
+}  // namespace socket
 
-template <typename Protocol>
-class ClientEndImpl<Protocol, internal::SocketTransport> final
-    : public internal::ClientEndBase<Protocol, internal::SocketTransport> {
-  using ClientEndBase = internal::ClientEndBase<Protocol, internal::SocketTransport>;
-
- public:
-  using ClientEndBase::ClientEndBase;
-};
-
-template <typename Protocol>
-class UnownedClientEndImpl<Protocol, internal::SocketTransport> final
-    : public internal::UnownedClientEndBase<Protocol, internal::SocketTransport> {
-  using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, internal::SocketTransport>;
-
- public:
-  using UnownedClientEndBase::UnownedClientEndBase;
-};
-
-}  // namespace internal
 }  // namespace fidl
 
 #endif  // SRC_LIB_FIDL_LLCPP_TESTS_TRANSPORT_TRANSPORT_SOCKET_H_

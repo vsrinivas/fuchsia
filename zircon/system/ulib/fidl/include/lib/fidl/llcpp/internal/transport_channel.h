@@ -16,12 +16,27 @@
 #include <zircon/syscalls.h>
 #endif
 
-namespace fidl::internal {
+namespace fidl {
+
+template <typename Protocol>
+class ClientEnd;
+template <typename Protocol>
+class UnownedClientEnd;
+template <typename Protocol>
+class ServerEnd;
+
+namespace internal {
 
 struct ChannelTransport {
 #ifdef __Fuchsia__
   using OwnedType = zx::channel;
   using UnownedType = zx::unowned_channel;
+  template <typename Protocol>
+  using ClientEnd = fidl::ClientEnd<Protocol>;
+  template <typename Protocol>
+  using UnownedClientEnd = fidl::UnownedClientEnd<Protocol>;
+  template <typename Protocol>
+  using ServerEnd = fidl::ServerEnd<Protocol>;
 #endif
   using HandleMetadata = fidl_channel_handle_metadata_t;
   using IncomingTransportContextType = struct {};
@@ -84,9 +99,22 @@ class ChannelWaiter : private async_wait_t, public TransportWaiter {
   TransportWaitFailureHandler failure_handler_;
 };
 
+#endif
+
+}  // namespace internal
+
+#ifdef __Fuchsia__
+// The client endpoint of a FIDL channel.
+//
+// The remote (server) counterpart of the channel expects this end of the
+// channel to speak the protocol represented by |Protocol|. This type is the
+// dual of |ServerEnd|.
+//
+// |ClientEnd| is thread-compatible: it may be transferred to another thread
+// or another process.
 template <typename Protocol>
-class ClientEndImpl<Protocol, internal::ChannelTransport>
-    : public internal::ClientEndBase<Protocol, internal::ChannelTransport> {
+class ClientEnd final : public internal::ClientEndBase<Protocol, internal::ChannelTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, internal::ChannelTransport>);
   using ClientEndBase = internal::ClientEndBase<Protocol, internal::ChannelTransport>;
 
  public:
@@ -100,9 +128,41 @@ class ClientEndImpl<Protocol, internal::ChannelTransport>
   zx::channel TakeChannel() { return std::move(ClientEndBase::handle_); }
 };
 
+// A typed client endpoint that does not claim ownership. It is typically
+// created from an owning |fidl::ClientEnd<Protocol>|.
+// These types are used by generated FIDL APIs that do not take ownership.
+//
+// The remote (server) counterpart of the channel expects this end of the
+// channel to speak the protocol represented by |Protocol|.
+//
+// Compared to a |const fidl::ClientEnd<Protocol>&|,
+// |fidl::UnownedClientEnd<Protocol>| has the additional flexibility of being
+// able to be stored in a member variable or field, while still remembering
+// the associated FIDL protocol.
 template <typename Protocol>
-class ServerEndImpl<Protocol, internal::ChannelTransport>
-    : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
+class UnownedClientEnd final
+    : public internal::UnownedClientEndBase<Protocol, internal::ChannelTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, internal::ChannelTransport>);
+  using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, internal::ChannelTransport>;
+
+ public:
+  using UnownedClientEndBase::UnownedClientEndBase;
+
+  zx::unowned_channel channel() const { return zx::unowned_channel(UnownedClientEndBase::handle_); }
+};
+
+// The server endpoint of a FIDL handle.
+//
+// The remote (client) counterpart of the handle expects this end of the
+// handle to serve the protocol represented by |Protocol|. This type is the
+// dual of |ClientEnd|.
+//
+// |ServerEnd| is thread-compatible: the caller should not use the underlying
+// handle (e.g. sending an event) while the server-end object is being mutated
+// in a different thread.
+template <typename Protocol>
+class ServerEnd : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
+  static_assert(cpp17::is_same_v<typename Protocol::Transport, internal::ChannelTransport>);
   using ServerEndBase = internal::ServerEndBase<Protocol, internal::ChannelTransport>;
 
  public:
@@ -131,6 +191,6 @@ class ServerEndImpl<Protocol, internal::ChannelTransport>
 };
 #endif
 
-}  // namespace fidl::internal
+}  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_CHANNEL_H_

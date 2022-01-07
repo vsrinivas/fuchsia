@@ -227,7 +227,7 @@ class ::fidl::WireSyncEventHandler<::test_drivertwoway::TwoWay>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end);
+      ::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end);
 };
 
 template <>
@@ -274,8 +274,8 @@ struct ::fidl::internal::WireMethodTypes<::test_drivertwoway::TwoWay::Add> {
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
+// and |fdf::ServerEnd<SomeProtocol>|).
 template <>
 class ::fidl::WireServer<::test_drivertwoway::TwoWay>
     : public ::fidl::internal::IncomingMessageDispatcher {

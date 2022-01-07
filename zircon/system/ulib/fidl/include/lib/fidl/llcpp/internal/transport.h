@@ -420,8 +420,19 @@ AnyUnownedTransport MakeAnyUnownedTransport(const T& transport) {
 struct DriverTransport;
 struct ChannelTransport;
 
-}  // namespace internal
+// The ClientEnd type for a given protocol, e.g. fidl::ClientEnd or fdf::ClientEnd.
+template <typename Protocol>
+using ClientEndType = typename Protocol::Transport::template ClientEnd<Protocol>;
 
+// The UnownedClientEnd type for a given protocol, e.g. fidl::UnownedClientEnd.
+template <typename Protocol>
+using UnownedClientEndType = typename Protocol::Transport::template UnownedClientEnd<Protocol>;
+
+// The ServerEnd type for a given protocol, e.g. fidl::ServerEnd or fdf::ServerEnd.
+template <typename Protocol>
+using ServerEndType = typename Protocol::Transport::template ServerEnd<Protocol>;
+
+}  // namespace internal
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_INTERNAL_TRANSPORT_H_

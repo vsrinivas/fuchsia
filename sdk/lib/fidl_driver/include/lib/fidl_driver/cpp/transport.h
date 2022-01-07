@@ -12,6 +12,15 @@
 #include <lib/fidl/llcpp/internal/transport.h>
 #include <lib/fidl/llcpp/server_end.h>
 
+namespace fdf {
+template <typename Protocol>
+class ClientEnd;
+template <typename Protocol>
+class UnownedClientEnd;
+template <typename Protocol>
+class ServerEnd;
+}  // namespace fdf
+
 namespace fidl {
 namespace internal {
 
@@ -23,6 +32,12 @@ struct DriverTransport {
   using HandleMetadata = DriverHandleMetadata;
   using IncomingTransportContextType = fdf_arena_t;
   using OutgoingTransportContextType = fdf_arena_t;
+  template <typename Protocol>
+  using ClientEnd = fdf::ClientEnd<Protocol>;
+  template <typename Protocol>
+  using UnownedClientEnd = fdf::UnownedClientEnd<Protocol>;
+  template <typename Protocol>
+  using ServerEnd = fdf::ServerEnd<Protocol>;
 
   static const TransportVTable VTable;
   static const CodingConfig EncodingConfiguration;
@@ -68,34 +83,37 @@ class DriverWaiter : public TransportWaiter {
   std::shared_ptr<State> state_;
 };
 
-template <typename Protocol>
-class ServerEndImpl<Protocol, internal::DriverTransport>
-    : public internal::ServerEndBase<Protocol, internal::DriverTransport> {
-  using ServerEndBase = internal::ServerEndBase<Protocol, internal::DriverTransport>;
-
- public:
-  using ServerEndBase::ServerEndBase;
-};
-
-template <typename Protocol>
-class ClientEndImpl<Protocol, internal::DriverTransport>
-    : public internal::ClientEndBase<Protocol, internal::DriverTransport> {
-  using ClientEndBase = internal::ClientEndBase<Protocol, internal::DriverTransport>;
-
- public:
-  using ClientEndBase::ClientEndBase;
-};
-
-template <typename Protocol>
-class UnownedClientEndImpl<Protocol, internal::DriverTransport>
-    : public internal::UnownedClientEndBase<Protocol, internal::DriverTransport> {
-  using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, internal::DriverTransport>;
-
- public:
-  using UnownedClientEndBase::UnownedClientEndBase;
-};
-
 }  // namespace internal
 }  // namespace fidl
+
+namespace fdf {
+template <typename Protocol>
+class ClientEnd final
+    : public fidl::internal::ClientEndBase<Protocol, fidl::internal::DriverTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, fidl::internal::DriverTransport>);
+
+ public:
+  using fidl::internal::ClientEndBase<Protocol, fidl::internal::DriverTransport>::ClientEndBase;
+};
+
+template <typename Protocol>
+class UnownedClientEnd final
+    : public fidl::internal::UnownedClientEndBase<Protocol, fidl::internal::DriverTransport> {
+  static_assert(std::is_same_v<typename Protocol::Transport, fidl::internal::DriverTransport>);
+
+ public:
+  using fidl::internal::UnownedClientEndBase<Protocol,
+                                             fidl::internal::DriverTransport>::UnownedClientEndBase;
+};
+
+template <typename Protocol>
+class ServerEnd final
+    : public fidl::internal::ServerEndBase<Protocol, fidl::internal::DriverTransport> {
+  static_assert(cpp17::is_same_v<typename Protocol::Transport, fidl::internal::DriverTransport>);
+
+ public:
+  using fidl::internal::ServerEndBase<Protocol, fidl::internal::DriverTransport>::ServerEndBase;
+};
+}  // namespace fdf
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_TRANSPORT_H_

@@ -203,6 +203,7 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 
 type Transport struct {
 	Name          string
+	Namespace     string
 	Type          string
 	HasEvents     bool
 	HasSyncClient bool
@@ -210,6 +211,7 @@ type Transport struct {
 
 var channelTransport = Transport{
 	Name:          "Channel",
+	Namespace:     "fidl",
 	Type:          "::fidl::internal::ChannelTransport",
 	HasEvents:     true,
 	HasSyncClient: true,
@@ -217,6 +219,7 @@ var channelTransport = Transport{
 
 var driverTransport = Transport{
 	Name:          "Driver",
+	Namespace:     "fdf",
 	Type:          "::fidl::internal::DriverTransport",
 	HasEvents:     false,
 	HasSyncClient: false,

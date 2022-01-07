@@ -85,7 +85,7 @@ class ::fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol>
   // Blocks to consume exactly one message from the channel, then call the
   // corresponding virtual method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end);
+      ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end);
 };
 
 template <>
@@ -106,8 +106,8 @@ class ::fidl::internal::WireEventDispatcher<::test_driverhandle::DriverProtocol>
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
+// and |fdf::ServerEnd<SomeProtocol>|).
 template <>
 class ::fidl::WireServer<::test_driverhandle::DriverProtocol>
     : public ::fidl::internal::IncomingMessageDispatcher {

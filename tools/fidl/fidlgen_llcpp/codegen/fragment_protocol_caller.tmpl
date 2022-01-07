@@ -8,7 +8,7 @@
 {{- EnsureNamespace "" }}
 
 // Methods to make a sync FIDL call directly on an unowned channel or a
-// const reference to a |fidl::ClientEnd<{{ .WireType }}>|,
+// const reference to a |{{ .Transport.Namespace }}::ClientEnd<{{ .WireType }}>|,
 // avoiding setting up a client.
 template<>
 class {{ .WireSyncClientImpl }} final :
@@ -26,8 +26,8 @@ class {{ .WireSyncClientImpl }} final :
   {{- end }}
 
  private:
-  ::fidl::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::fidl::UnownedClientEnd<{{ . }}>(_channel());
+  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
+    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(_channel());
   }
 };
 
@@ -47,8 +47,8 @@ class {{ .WireSyncBufferClientImpl }} final :
   {{- end }}
 
  private:
-  ::fidl::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::fidl::UnownedClientEnd<{{ . }}>(_channel());
+  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
+    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(_channel());
   }
 };
 {{- end }}

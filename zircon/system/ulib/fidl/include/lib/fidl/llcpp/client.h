@@ -118,7 +118,7 @@ class WireClient {
   // |event_handler->on_fidl_error| handler will be invoked asynchronously with
   // the reason, if specified.
   template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
-  WireClient(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+  WireClient(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
              AsyncEventHandler* event_handler = nullptr) {
     Bind(std::move(client_end), dispatcher, event_handler);
   }
@@ -164,7 +164,7 @@ class WireClient {
   // It is not allowed to call |Bind| on an initialized client. To rebind a
   // |WireClient| to a different endpoint, simply replace the |WireClient|
   // variable with a new instance.
-  void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+  void Bind(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
     controller_.Bind(std::make_shared<ClientImpl>(),
                      internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
@@ -361,7 +361,8 @@ class WireSharedClient final {
   //
   // |event_handler| will be destroyed when teardown completes.
   template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
-  WireSharedClient(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+  WireSharedClient(fidl::internal::ClientEndType<Protocol> client_end,
+                   async_dispatcher_t* dispatcher,
                    std::unique_ptr<AsyncEventHandler> event_handler) {
     Bind(std::move(client_end), dispatcher, std::move(event_handler));
   }
@@ -379,7 +380,7 @@ class WireSharedClient final {
   // See |WireSharedClient| above for other behavior aspects of the constructor.
   template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   WireSharedClient(
-      fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+      fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
       AsyncEventHandler* event_handler,
       fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     Bind(std::move(client_end), dispatcher, event_handler, std::move(teardown_observer));
@@ -391,7 +392,7 @@ class WireSharedClient final {
   // See |WireSharedClient| above for other behavior aspects of the constructor.
   template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   WireSharedClient(
-      fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+      fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
       fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     Bind(std::move(client_end), dispatcher, nullptr, std::move(teardown_observer));
   }
@@ -441,7 +442,7 @@ class WireSharedClient final {
   // handler will be asynchronously invoked with the reason, if specified.
   //
   // |event_handler| will be destroyed when teardown completes.
-  void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+  void Bind(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
             std::unique_ptr<fidl::WireAsyncEventHandler<Protocol>> event_handler) {
     auto event_handler_raw = event_handler.get();
     Bind(std::move(client_end), dispatcher, event_handler_raw,
@@ -459,7 +460,7 @@ class WireSharedClient final {
   // managed independently of the client lifetime.
   //
   // See |Bind| above for other behavior aspects of the function.
-  void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+  void Bind(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::WireAsyncEventHandler<Protocol>* event_handler,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     controller_.Bind(std::make_shared<ClientImpl>(),
@@ -472,7 +473,7 @@ class WireSharedClient final {
   // workaround C++ limitations on default arguments.
   //
   // See |Bind| above for other behavior aspects of the constructor.
-  void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
+  void Bind(fidl::internal::ClientEndType<Protocol> client_end, async_dispatcher_t* dispatcher,
             fidl::AnyTeardownObserver teardown_observer = fidl::AnyTeardownObserver::Noop()) {
     Bind(std::move(client_end), dispatcher, nullptr, std::move(teardown_observer));
   }

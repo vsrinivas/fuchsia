@@ -49,7 +49,7 @@
     auto _allocator = ::fidl::internal::MakeAnyBufferAllocator(_buffer_span);
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
       {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      {{- $args := (printf "::fidl::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Protocol) }}
+      {{- $args := (printf "::%s::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Transport.Namespace .Protocol) }}
       {{- $args = (List $args "_allocator" "&_request") }}
       return {{ .WireUnownedResult }}({{ RenderForwardParams $args }});
     });
@@ -68,7 +68,7 @@
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync({{ RenderParams .RequestArgs }}) {
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
       {{ .WireRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
-      {{- $args := (printf "::fidl::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Protocol) }}
+      {{- $args := (printf "::%s::UnownedClientEnd<%s>(_transport->get<fidl::internal::ChannelTransport>())" .Transport.Namespace .Protocol) }}
       {{- $args = (List $args "&_request") }}
       return {{ .WireResult }}({{- RenderForwardParams $args }});
     });

@@ -25,8 +25,8 @@ class ServerBindingRef;
 // It is not required to wrap the callback lambda in this type; |BindServer|
 // accepts a lambda function directly.
 template <typename ServerImpl>
-using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo,
-                                       fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>)>;
+using OnUnboundFn = fit::callback<void(
+    ServerImpl*, UnbindInfo, internal::ServerEndType<typename ServerImpl::_EnclosingProtocol>)>;
 
 namespace internal {
 
@@ -126,7 +126,7 @@ class WeakEventSenderInner {
 // user-provided on-unbound handler.
 template <typename Protocol>
 ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
-                                                fidl::ServerEnd<Protocol> server_end,
+                                                fidl::internal::ServerEndType<Protocol> server_end,
                                                 IncomingMessageDispatcher* interface,
                                                 internal::AnyOnUnboundFn on_unbound) {
   std::shared_ptr<AsyncServerBinding> internal_binding =
@@ -151,8 +151,8 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
 template <typename ServerImpl, typename OnUnbound>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
-    OnUnbound&& on_unbound) {
+    fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
+    ServerImpl* impl, OnUnbound&& on_unbound) {
   using ProtocolType = typename ServerImpl::_EnclosingProtocol;
   using Transport = typename ProtocolType::Transport;
   return BindServerTypeErased<ProtocolType>(
@@ -164,7 +164,7 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
         // implements classes with virtual tables.
         auto* impl = static_cast<ServerImpl*>(any_interface);
         std::invoke(on_unbound, impl, info,
-                    fidl::ServerEnd<ProtocolType>(channel.release<Transport>()));
+                    fidl::internal::ServerEndType<ProtocolType>(channel.release<Transport>()));
       });
 }
 
@@ -180,8 +180,9 @@ template <typename Derived, typename OnUnbound>
 struct UnboundThunkCallOperator<Derived, OnUnbound,
                                 std::enable_if_t<!OnUnboundIsNull<OnUnbound>::value>> {
   template <typename ServerImpl>
-  void operator()(ServerImpl* impl_ptr, UnbindInfo info,
-                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>&& server_end) {
+  void operator()(
+      ServerImpl* impl_ptr, UnbindInfo info,
+      fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol>&& server_end) {
     static_assert(std::is_convertible_v<OnUnbound, OnUnboundFn<ServerImpl>>,
                   "|on_unbound| must have the same signature as fidl::OnUnboundFn<ServerImpl>.");
     auto* self = static_cast<Derived*>(this);
@@ -193,8 +194,9 @@ template <typename Derived, typename OnUnbound>
 struct UnboundThunkCallOperator<Derived, OnUnbound,
                                 std::enable_if_t<OnUnboundIsNull<OnUnbound>::value>> {
   template <typename ServerImpl>
-  void operator()(ServerImpl* impl_ptr, UnbindInfo info,
-                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>&& server_end) {
+  void operator()(
+      ServerImpl* impl_ptr, UnbindInfo info,
+      fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol>&& server_end) {
     // |fn_| is a nullptr, meaning the user did not provide an |on_unbound| callback.
     static_assert(std::is_same_v<OnUnbound, std::nullptr_t>, "|on_unbound| is no-op here");
   }

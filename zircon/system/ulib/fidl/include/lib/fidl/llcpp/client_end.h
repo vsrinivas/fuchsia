@@ -19,49 +19,6 @@ namespace fidl {
 namespace internal {
 
 template <typename Protocol, typename Transport>
-class ClientEndImpl;
-
-template <typename Protocol, typename Transport>
-class UnownedClientEndImpl;
-
-}  // namespace internal
-
-// The client endpoint of a FIDL channel.
-//
-// The remote (server) counterpart of the channel expects this end of the
-// channel to speak the protocol represented by |Protocol|. This type is the
-// dual of |ServerEnd|.
-//
-// |ClientEnd| is thread-compatible: it may be transferred to another thread
-// or another process.
-template <typename Protocol>
-class ClientEnd final : public internal::ClientEndImpl<Protocol, typename Protocol::Transport> {
- public:
-  using internal::ClientEndImpl<Protocol, typename Protocol::Transport>::ClientEndImpl;
-};
-
-// A typed client endpoint that does not claim ownership. It is typically
-// created from an owning |fidl::ClientEnd<Protocol>|.
-// These types are used by generated FIDL APIs that do not take ownership.
-//
-// The remote (server) counterpart of the channel expects this end of the
-// channel to speak the protocol represented by |Protocol|.
-//
-// Compared to a |const fidl::ClientEnd<Protocol>&|,
-// |fidl::UnownedClientEnd<Protocol>| has the additional flexibility of being
-// able to be stored in a member variable or field, while still remembering
-// the associated FIDL protocol.
-template <typename Protocol>
-class UnownedClientEnd final
-    : public internal::UnownedClientEndImpl<Protocol, typename Protocol::Transport> {
- public:
-  using internal::UnownedClientEndImpl<Protocol,
-                                       typename Protocol::Transport>::UnownedClientEndImpl;
-};
-
-namespace internal {
-
-template <typename Protocol, typename Transport>
 class ClientEndBase : public TransportEnd<Protocol, Transport> {
   using TransportEnd = TransportEnd<Protocol, Transport>;
 
@@ -92,82 +49,71 @@ class UnownedClientEndBase : public UnownedTransportEnd<Protocol, Transport> {
       : UnownedClientEndBase(owner.handle()->get()) {}
 };
 
-template <typename Protocol, typename Transport>
-class UnownedClientEndImpl : public internal::UnownedClientEndBase<Protocol, Transport> {
-  using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, Transport>;
-
- public:
-  using UnownedClientEndBase::UnownedClientEndBase;
-
-  zx::unowned_channel channel() const { return zx::unowned_channel(UnownedClientEndBase::handle_); }
-};
-
-}  // namespace internal
-
 // Comparison operators between client-end objects.
 // For the channel transport, these comparisons have the same semantics
 // as the comparison operators on the wrapped |zx::channel|s.
 
-template <typename T>
-bool operator==(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator==(const ClientEndBase<T, U>& a, const ClientEndBase<T, U>& b) {
   return a.handle() == b.handle();
 }
 
-template <typename T>
-bool operator!=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator!=(const ClientEndBase<T, U>& a, const ClientEndBase<T, U>& b) {
   return !(a == b);
 }
 
-template <typename T>
-bool operator<(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator<(const ClientEndBase<T, U>& a, const ClientEndBase<T, U>& b) {
   return a.handle() < b.handle();
 }
 
-template <typename T>
-bool operator>(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator>(const ClientEndBase<T, U>& a, const ClientEndBase<T, U>& b) {
   return a.handle() > b.handle();
 }
 
-template <typename T>
-bool operator<=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator<=(const ClientEndBase<T, U>& a, const ClientEndBase<T, U>& b) {
   return a.handle() <= b.handle();
 }
 
-template <typename T>
-bool operator>=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator>=(const ClientEndBase<T, U>& a, const ClientEndBase<T, U>& b) {
   return a.handle() >= b.handle();
 }
 
-template <typename T>
-bool operator==(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator==(const UnownedClientEndBase<T, U>& a, const UnownedClientEndBase<T, U>& b) {
   return a.handle() == b.handle();
 }
 
-template <typename T>
-bool operator!=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator!=(const UnownedClientEndBase<T, U>& a, const UnownedClientEndBase<T, U>& b) {
   return !(a == b);
 }
 
-template <typename T>
-bool operator<(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator<(const UnownedClientEndBase<T, U>& a, const UnownedClientEndBase<T, U>& b) {
   return a.handle() < b.handle();
 }
 
-template <typename T>
-bool operator>(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator>(const UnownedClientEndBase<T, U>& a, const UnownedClientEndBase<T, U>& b) {
   return a.handle() > b.handle();
 }
 
-template <typename T>
-bool operator<=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator<=(const UnownedClientEndBase<T, U>& a, const UnownedClientEndBase<T, U>& b) {
   return a.handle() <= b.handle();
 }
 
-template <typename T>
-bool operator>=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator>=(const UnownedClientEndBase<T, U>& a, const UnownedClientEndBase<T, U>& b) {
   return a.handle() >= b.handle();
 }
 
+}  // namespace internal
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_CLIENT_END_H_

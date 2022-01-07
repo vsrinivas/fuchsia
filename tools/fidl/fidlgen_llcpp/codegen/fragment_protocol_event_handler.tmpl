@@ -38,7 +38,7 @@ public:
   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
   // method.
   ::fidl::Result HandleOneEvent(
-      ::fidl::UnownedClientEnd<{{ . }}> client_end);
+      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
 };
 
 template <>
@@ -63,7 +63,7 @@ class {{ .WireEventDispatcher }} final :
 {{- IfdefFuchsia }}
 {{ if .Transport.HasEvents }}
 ::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
-    ::fidl::UnownedClientEnd<{{ . }}> client_end) {
+    ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
   zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
                                                       ::zx::time::infinite(),
                                                       nullptr);
@@ -128,7 +128,7 @@ std::optional<::fidl::UnbindInfo>
 
 {{- else }}{{/* not .Transport.HasEvents */}}
 ::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
-    ::fidl::UnownedClientEnd<{{ . }}> client_end) {
+    ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
       ZX_PANIC("events not supported for transport '{{ .Transport.Name }}'");
 }
 std::optional<::fidl::UnbindInfo>

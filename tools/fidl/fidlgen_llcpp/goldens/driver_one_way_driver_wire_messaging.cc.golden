@@ -74,7 +74,7 @@ fidl::internal::WireClientImpl<::test_driveroneway::OneWay>::Send(
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::test_driveroneway::OneWay>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_driveroneway::OneWay> client_end) {
+    ::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 std::optional<::fidl::UnbindInfo>

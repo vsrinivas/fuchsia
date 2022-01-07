@@ -35,8 +35,8 @@ TEST(DriverTransport, DISABLED_TwoWayAsync) {
   auto channels = fdf::ChannelPair::Create(0);
   ASSERT_OK(channels.status_value());
 
-  fidl::ServerEnd<test_transport::TransportTest> server_end(std::move(channels->end0));
-  fidl::ClientEnd<test_transport::TransportTest> client_end(std::move(channels->end1));
+  fdf::ServerEnd<test_transport::TransportTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::TransportTest> client_end(std::move(channels->end1));
 
   auto server = std::make_shared<TestServer>();
   fidl::BindServer(dispatcher->async_dispatcher(), std::move(server_end), server);

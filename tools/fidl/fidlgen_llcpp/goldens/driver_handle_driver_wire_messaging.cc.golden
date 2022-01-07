@@ -12,7 +12,7 @@
 
 ::fidl::Result
 fidl::WireSyncEventHandler<::test_driverhandle::DriverProtocol>::HandleOneEvent(
-    ::fidl::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end) {
+    ::fdf::UnownedClientEnd<::test_driverhandle::DriverProtocol> client_end) {
   ZX_PANIC("events not supported for transport 'Driver'");
 }
 std::optional<::fidl::UnbindInfo> fidl::internal::
