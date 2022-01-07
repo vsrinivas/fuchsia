@@ -1106,7 +1106,7 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
 
     vkCmdDispatchIndirect(cb,
                           info->indirect->buffer,
-                          offsetof(struct rs_indirect_info, dispatch.pad));
+                          info->indirect->offset + offsetof(struct rs_indirect_info, dispatch.pad));
   }
 
   //
@@ -1131,9 +1131,11 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
 
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, rs->pipelines.named.fill);
 
+    // clang-format off
     vkCmdDispatchIndirect(cb,
                           info->indirect->buffer,
-                          offsetof(struct rs_indirect_info, dispatch.zero));
+                          info->indirect->offset + offsetof(struct rs_indirect_info, dispatch.zero));
+    // clang-format on
   }
 
 #ifdef RS_VK_ENABLE_EXTENSIONS
@@ -1162,9 +1164,11 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
 
     vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, rs->pipelines.named.histogram);
 
+    // clang-format off
     vkCmdDispatchIndirect(cb,
                           info->indirect->buffer,
-                          offsetof(struct rs_indirect_info, dispatch.histogram));
+                          info->indirect->offset + offsetof(struct rs_indirect_info, dispatch.histogram));
+    // clang-format on
   }
 
 #ifdef RS_VK_ENABLE_EXTENSIONS
@@ -1238,9 +1242,11 @@ radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
 
     while (true)
       {
+        // clang-format off
         vkCmdDispatchIndirect(cb,
                               info->indirect->buffer,
-                              offsetof(struct rs_indirect_info, dispatch.scatter));
+                              info->indirect->offset + offsetof(struct rs_indirect_info, dispatch.scatter));
+        // clang-format on
 
         //
         // Continue?
