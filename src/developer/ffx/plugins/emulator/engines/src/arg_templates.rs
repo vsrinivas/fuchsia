@@ -110,6 +110,56 @@ impl HelperDef for UnitAbbreviationHelper {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct EnvironmentHelper {}
+
+/// This Handlebars helper is used for substitution of an environment variable.
+/// Rather than pulling the value from a data structure, it will call
+/// std::env::var(value), where value is the parameter to the helper. If the
+/// specified environment variable is unset, the resulting output will be empty.
+///
+/// Example:
+///
+///     $ export KEY=value
+///
+///   Template:
+///
+///     "key = {{env "KEY"}}."  {{! output: "key = value" }}
+///
+/// It also works if you provide the name of a variable that contains the key:
+///
+///     struct Data {
+///         variable: String,
+///     }
+///
+///     let data = Data { variable: "KEY" };
+///
+///   Template:
+///
+///     "key = {{env variable}}"  {{! output: "key = value" }}
+///
+impl HelperDef for EnvironmentHelper {
+    fn call<'reg: 'rc, 'rc>(
+        &self,
+        h: &Helper<'reg, 'rc>,
+        _: &'reg Handlebars<'reg>,
+        _: &'rc Context,
+        _: &mut RenderContext<'reg, 'rc>,
+        out: &mut dyn Output,
+    ) -> HelperResult {
+        // Get the key specified in param(0) and retrieve the value from std::env.
+        let param =
+            h.param(0).ok_or(RenderError::new(format!("Parameter 0 is missing in {:?}", h)))?;
+        if let Some(key) = param.value().as_str() {
+            match std::env::var(key) {
+                Ok(val) => out.write(&val)?,
+                Err(_) => (), // An Err means the variable isn't set or the key is invalid.
+            }
+        }
+        Ok(())
+    }
+}
+
 pub async fn process_flag_template(
     template: &str,
     emu_config: &mut EmulatorConfiguration,
@@ -117,6 +167,7 @@ pub async fn process_flag_template(
     // This performs all the variable substitution and condition resolution.
     let mut handlebars = Handlebars::new();
     handlebars.set_strict_mode(true);
+    handlebars.register_helper("env", Box::new(EnvironmentHelper {}));
     handlebars.register_helper("eq", Box::new(EqHelper {}));
     handlebars.register_helper("ua", Box::new(UnitAbbreviationHelper {}));
     let json = handlebars.render_template(&template, &emu_config)?;
@@ -140,6 +191,27 @@ mod tests {
     #[derive(Serialize)]
     struct UnitsStruct {
         pub units: DataUnits,
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_env_helper() {
+        std::env::set_var("MY_VARIABLE", "my_value");
+
+        let var_template = "{{env units}}";
+        let literal_template = r#"{{env "MY_VARIABLE"}}"#;
+        let string_struct = StringStruct { units: "MY_VARIABLE".to_string() };
+
+        let mut handlebars = Handlebars::new();
+        handlebars.set_strict_mode(true);
+        handlebars.register_helper("env", Box::new(EnvironmentHelper {}));
+
+        let json = handlebars.render_template(&var_template, &string_struct);
+        assert!(json.is_ok());
+        assert_eq!(json.unwrap(), "my_value");
+
+        let json = handlebars.render_template(&literal_template, &string_struct);
+        assert!(json.is_ok());
+        assert_eq!(json.unwrap(), "my_value");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -208,6 +280,7 @@ mod tests {
         let empty_vectors_template = r#"
         {
             "args": [],
+            "envs": {},
             "features": [],
             "kernel_args": [],
             "options": []
@@ -217,6 +290,7 @@ mod tests {
         let flags = process_flag_template(empty_vectors_template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 0);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);
@@ -230,6 +304,7 @@ mod tests {
         let invalid_template = r#"
         {
             "args": [],
+            "envs": {},
             "features": [],
             "kernel_args": []
             {{! It's missing the options field }}
@@ -244,10 +319,11 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_ok_template() -> Result<()> {
-        // Succeeds with a single string "value" in the options field.
+        // Succeeds with a single string "value" in the options field, and one in the envs map.
         let ok_template = r#"
         {
             "args": [],
+            "envs": {"key": "value"},
             "features": [],
             "kernel_args": [],
             "options": ["value"]
@@ -257,9 +333,12 @@ mod tests {
         let flags = process_flag_template(ok_template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 1);
         assert_eq!(flags.as_ref().unwrap().features.len(), 0);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().options.len(), 1);
+        assert!(flags.as_ref().unwrap().envs.contains_key(&"key".to_string()));
+        assert_eq!(flags.as_ref().unwrap().envs.get("key").unwrap(), &"value".to_string());
         assert!(flags.as_ref().unwrap().options.contains(&"value".to_string()));
 
         Ok(())
@@ -271,6 +350,7 @@ mod tests {
         let substitution_template = r#"
         {
             "args": ["{{device.audio.model}}"],
+            "envs": {},
             "features": [],
             "kernel_args": [],
             "options": []
@@ -280,6 +360,7 @@ mod tests {
         let flags = process_flag_template(substitution_template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 0);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);
@@ -290,6 +371,7 @@ mod tests {
         let flags = process_flag_template(substitution_template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 1);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 0);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);
@@ -305,6 +387,7 @@ mod tests {
         let conditional_template = r#"
         {
             "args": [],
+            "envs": {},
             "features": [{{#if runtime.headless}}"ok"{{else}}"none"{{/if}}],
             "kernel_args": [],
             "options": []
@@ -316,6 +399,7 @@ mod tests {
         let flags = process_flag_template(conditional_template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 1);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);
@@ -326,6 +410,7 @@ mod tests {
         let flags = process_flag_template(conditional_template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 1);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 0);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);
@@ -342,6 +427,7 @@ mod tests {
         let template = r#"
         {
             "args": [],
+            "envs": {},
             "features": [],
             "kernel_args": ["{{ua device.storage.units}}"],
             "options": []
@@ -352,6 +438,7 @@ mod tests {
         let flags = process_flag_template(template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 0);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 1);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);
@@ -362,6 +449,7 @@ mod tests {
         let flags = process_flag_template(template, &mut emu_config).await;
         assert!(flags.is_ok(), "{:?}", flags);
         assert_eq!(flags.as_ref().unwrap().args.len(), 0);
+        assert_eq!(flags.as_ref().unwrap().envs.len(), 0);
         assert_eq!(flags.as_ref().unwrap().features.len(), 0);
         assert_eq!(flags.as_ref().unwrap().kernel_args.len(), 1);
         assert_eq!(flags.as_ref().unwrap().options.len(), 0);

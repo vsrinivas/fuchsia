@@ -75,6 +75,7 @@
             "virtio_input_multi_touch_pci_1",
         {{/if}}
         {{#if (eq device.audio.model "none")}}
+            "-no-audio",
         {{else}}
             "-soundhw",
             "{{device.audio.model}}",
@@ -137,8 +138,18 @@
         {{/unless}}
         "-gpu",
         "{{host.gpu}}",
-        "-window-size",
-        "{{device.screen.width}}x{{device.screen.height}}",
+        {{#if runtime.headless}}
+            "-no-window",
+        {{else}}
+            "-window-size",
+            "{{device.screen.width}}x{{device.screen.height}}",
+        {{/if}}
         "-no-location-ui"
-    ]
+    ],
+    "envs": {
+        {{#unless runtime.headless}}
+            "DISPLAY": "{{env "DISPLAY"}}",
+        {{/unless}}
+        "QEMU_AUDIO_DRV": "none"
+    }
 }

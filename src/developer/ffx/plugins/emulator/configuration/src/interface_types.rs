@@ -72,6 +72,10 @@ pub struct FlagData {
     /// Femu, but are passed through to Qemu.
     pub args: Vec<String>,
 
+    /// Environment Variables. These are not passed on the command line, but are set in the
+    /// process's environment before execution.
+    pub envs: HashMap<String, String>,
+
     /// Features. A Femu-only field. Features are the first set of command line flags passed to the
     /// Femu binary. These are single words, capitalized, comma-separated, and immediately follow
     /// the flag "-feature".
@@ -160,10 +164,6 @@ pub struct RuntimeConfig {
     /// Set up the emulation command, print it to the screen, then terminate without
     /// running the emulator. Useful for debugging configuration problems.
     pub dry_run: bool,
-
-    /// Environment variables to set up for the emulation process. Must be of the form
-    /// "key=value", or the emulator will reject them.
-    pub environment: HashMap<String, String>,
 
     /// Run the emulator without a GUI. Graphics drivers will still be loaded.
     pub headless: bool,

@@ -4,7 +4,7 @@
 
 //! Utilities for Product Bundle Metadata (PBM).
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use ffx_emulator_common::config::{FfxConfigWrapper, SDK_ROOT};
 use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
@@ -88,17 +88,13 @@ fn apply_command_line_options(
     }
     config.runtime.debugger = cmd.debugger;
     config.runtime.dry_run = cmd.dry_run;
-    for env_var in &cmd.envs {
-        if let Some((key, value)) = env_var.split_once("=") {
-            config.runtime.environment.insert(key.to_string(), value.to_string());
-        } else {
-            return Err(anyhow!(
-                "Problem parsing environment string: {} doesn't match the 'key=value' pattern",
-                env_var
-            ));
-        }
-    }
     config.runtime.headless = cmd.headless;
+    if !cmd.headless && std::env::var("DISPLAY").is_err() {
+        println!(
+            "No DISPLAY set in the local environment, try running with --headless if you \
+            encounter failures related to display or Qt.",
+        );
+    }
     config.runtime.hidpi_scaling = cmd.hidpi_scaling;
     config.runtime.log_level = if cmd.verbose { LogLevel::Verbose } else { LogLevel::Info };
     config.runtime.name = cmd.name.clone();
@@ -127,7 +123,6 @@ mod tests {
             debugger: true,
             dry_run: true,
             engine: EngineType::Qemu,
-            envs: vec!["foo=1".to_string(), "bar=2".to_string(), "baz=3".to_string()],
             gpu: GpuType::Host,
             headless: true,
             hidpi_scaling: true,
@@ -148,7 +143,6 @@ mod tests {
         assert_eq!(config.runtime.console, ConsoleType::None);
         assert_eq!(config.runtime.debugger, false);
         assert_eq!(config.runtime.dry_run, false);
-        assert_eq!(config.runtime.environment.len(), 0);
         assert_eq!(config.runtime.headless, false);
         assert_eq!(config.runtime.hidpi_scaling, false);
         assert_eq!(config.runtime.log_level, LogLevel::Info);
@@ -163,10 +157,6 @@ mod tests {
         assert_eq!(opts.runtime.console, ConsoleType::Console);
         assert_eq!(opts.runtime.debugger, true);
         assert_eq!(opts.runtime.dry_run, true);
-        assert_eq!(opts.runtime.environment.len(), 3);
-        assert_eq!(opts.runtime.environment.get("foo"), Some(&"1".to_string()));
-        assert_eq!(opts.runtime.environment.get("bar"), Some(&"2".to_string()));
-        assert_eq!(opts.runtime.environment.get("baz"), Some(&"3".to_string()));
         assert_eq!(opts.runtime.headless, true);
         assert_eq!(opts.runtime.hidpi_scaling, true);
         assert_eq!(opts.runtime.log_level, LogLevel::Verbose);

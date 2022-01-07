@@ -84,6 +84,7 @@ impl EmulatorEngine for FemuEngine {
             || self.emulator_configuration.runtime.dry_run
         {
             println!("[aemu emulator] Running emulator cmd: {:?}\n", emulator_cmd);
+            println!("[aemu emulator] Running with ENV: {:?}\n", emulator_cmd.get_envs());
             if self.emulator_configuration.runtime.dry_run {
                 return Ok(0);
             }
@@ -188,10 +189,8 @@ impl FemuEngine {
         if extra_args.len() > 0 {
             cmd.args(["-append", &extra_args]);
         }
-        // Environment key-value pairs are expected to be command line friendly.
-        // (no leading/trailing whitespace, etc.)
-        for (k, v) in &self.emulator_configuration.runtime.environment {
-            cmd.arg("--env").arg(format!("{}={}", k, v));
+        if self.emulator_configuration.flags.envs.len() > 0 {
+            cmd.envs(&self.emulator_configuration.flags.envs);
         }
         Ok(cmd)
     }
