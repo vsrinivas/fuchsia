@@ -417,19 +417,21 @@ class UnbindInfo : private Result {
   // unable to take a string or output stream.
   using Result::lossy_description;
 
-  // Returns true iff the unbinding was part of normal operation:
-  // - The user called Unbind/Close on the server side.
-  // - A client observed the peer endpoint was closed with a `ZX_OK` epitaph.
-  [[nodiscard]] bool ok() const {
+  // Returns true if the unbinding was initiated by the user, that is, the user
+  // called Unbind/Close on the server side to proactively teardown the
+  // connection.
+  //
+  // This case is only observable from the server side. Note that the client
+  // side `on_fidl_error` method on the event handler is never called with an
+  // |UnbindInfo| that is user initiated - `on_fidl_error` is meant to handle
+  // errors.
+  [[nodiscard]] bool is_user_initiated() const {
     switch (reason()) {
       case internal::kUninitializedReason:
         return false;
       case Reason::kUnbind:
       case Reason::kClose:
         return true;
-      case Reason::kPeerClosed:
-        // |ZX_OK| epitaph is considered an expectecd protocol termination.
-        return status() == ZX_OK;
       default:
         return false;
     }

@@ -25,10 +25,8 @@ class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
   explicit FileEventHandler(std::string url) : url_(std::move(url)) {}
 
   void on_fidl_error(fidl::UnbindInfo info) override {
-    if (!info.ok()) {
-      LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url_.data(),
-           info.FormatDescription().data());
-    }
+    LOGF(ERROR, "Failed to start driver '%s', could not open library: %s", url_.data(),
+         info.FormatDescription().data());
   }
 
  private:
@@ -237,7 +235,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
       LOGF(INFO, "Started '%s'", driver->url().data());
 
       auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info, auto) {
-        if (!info.ok() && info.reason() != fidl::Reason::kPeerClosed) {
+        if (!info.is_user_initiated() && !info.is_peer_closed()) {
           LOGF(WARNING, "Unexpected stop of driver '%s': %s", driver->url().data(),
                info.FormatDescription().data());
         }

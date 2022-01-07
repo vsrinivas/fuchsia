@@ -1508,7 +1508,7 @@ Client::Init(zx::channel server_channel) {
     sync_completion_signal(client->fidl_unbound());
     // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we
     // should TearDown() so that no further tasks are scheduled on the controller loop.
-    if (!info.ok()) {
+    if (!info.is_user_initiated()) {
       client->TearDown();
     }
   };

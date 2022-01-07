@@ -1868,7 +1868,7 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
         dispatcher_, std::move(request), this,
         [](fidl::WireServer<fdd::DriverDevelopment>* self, fidl::UnbindInfo info,
            fidl::ServerEnd<fdd::DriverDevelopment> server_end) {
-          if (info.ok()) {
+          if (info.is_user_initiated()) {
             return;
           }
           if (info.reason() == fidl::Reason::kPeerClosed) {

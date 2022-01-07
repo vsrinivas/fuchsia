@@ -64,7 +64,7 @@ void OnHeapServerClose(fidl::UnbindInfo info, zx::channel channel) {
 
   if (info.reason() == fidl::Reason::kPeerClosed) {
     zxlogf(INFO, "Client closed heap connection: epitaph: %d", info.status());
-  } else if (!info.ok()) {
+  } else if (!info.is_user_initiated()) {
     zxlogf(ERROR, "Channel internal error: status: %d", info.status());
   }
 }

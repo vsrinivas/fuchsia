@@ -24,7 +24,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
     fidl::OnUnboundFn<EchoImpl> unbound_handler =
         [self = std::move(self)](EchoImpl* impl, fidl::UnbindInfo info,
                                  fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
-          if (info.ok()) {
+          if (info.is_user_initiated()) {
             return;
           }
           if (info.is_peer_closed()) {
