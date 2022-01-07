@@ -76,6 +76,8 @@ rustc_library("netstack3-core") {
     "src/socket.rs",
     "src/testutil.rs",
     "src/transport/mod.rs",
+    "src/transport/tcp/mod.rs",
+    "src/transport/tcp/seqnum.rs",
     "src/transport/udp.rs",
   ]
 
