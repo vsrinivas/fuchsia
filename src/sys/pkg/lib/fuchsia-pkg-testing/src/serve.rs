@@ -47,6 +47,7 @@ pub struct ServedRepositoryBuilder {
     response_overriders: Vec<Arc<dyn HttpResponder>>,
     use_https: bool,
     bind_addr: IpAddr,
+    bind_port: u16,
 }
 
 /// Override how a `ServedRepository` responds to requests.
@@ -67,6 +68,7 @@ impl ServedRepositoryBuilder {
             response_overriders: vec![],
             use_https: false,
             bind_addr: Ipv6Addr::UNSPECIFIED.into(),
+            bind_port: 0,
         }
     }
 
@@ -93,10 +95,17 @@ impl ServedRepositoryBuilder {
         self
     }
 
+    /// Bind the tcp listener to the provided port. Binds to 0 (allowing system to select a port) by
+    /// default.
+    pub fn bind_to_port(mut self, port: u16) -> Self {
+        self.bind_port = port;
+        self
+    }
+
     /// Spawn the server on the current executor, returning a handle to manage the server.
     pub fn start(self) -> Result<ServedRepository, Error> {
         let (listener, addr) = {
-            let addr = SocketAddr::new(self.bind_addr, 0);
+            let addr = SocketAddr::new(self.bind_addr, self.bind_port);
             let listener = TcpListener::bind(&addr).context("bind")?;
             let local_addr = listener.local_addr().context("local_addr")?;
             (listener, local_addr)
