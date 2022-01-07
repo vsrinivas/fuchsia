@@ -20,7 +20,7 @@ import("tls.gni")
 
 # net is split into a separate target from util so that client code does
 # not have to depend on it.
-crashpad_static_library("net") {
+crashpad_static_library("net_transition") {
   sources = [
     "http_body.cc",
     "http_body.h",
