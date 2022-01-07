@@ -308,70 +308,82 @@ impl DeviceStorage {
         self.debounce_writes = debounce;
     }
 
-    /// Write `new_value` to storage. The write will be persisted to disk at a set interval.
-    pub(crate) async fn write<T>(&self, new_value: &T) -> Result<UpdateState, Error>
-    where
-        T: DeviceStorageCompatible,
-    {
+    async fn inner_write(
+        &self,
+        key: &'static str,
+        new_value: String,
+        data_as_any: Box<dyn Any + Send + Sync>,
+        mapping_fn: Box<dyn FnOnce(&(dyn Any + Send + Sync)) -> String + Send>,
+    ) -> Result<UpdateState, Error> {
         let typed_storage = self
             .typed_storage_map
-            .get(T::KEY)
-            .ok_or_else(|| format_err!("Invalid data keyed by {}", T::KEY))?;
+            .get(key)
+            .ok_or_else(|| format_err!("Invalid data keyed by {}", key))?;
         let mut cached_storage = typed_storage.cached_storage.lock().await;
-        let maybe_init;
+        let mut maybe_init;
         let cached_value = {
-            let mut cached_value = cached_storage
+            maybe_init = cached_storage
                 .current_data
-                .as_ref()
+                .as_deref()
                 // Get the data as a shared reference so we don't move out of the option.
-                .map(|any| {
-                    // Attempt to downcast the `dyn Any` to its original type. If `T` was not its
-                    // original type, then we want to panic because there's a compile-time issue
-                    // with overlapping keys.
-                    any.downcast_ref::<T>().expect(
-                        "Type mismatch even though keys match. Two different\
-                                                types have the same key value",
-                    )
-                });
-            if cached_value.is_none() {
-                let stash_key = prefixed(T::KEY);
+                .map(mapping_fn);
+            if maybe_init.is_none() {
+                let stash_key = prefixed(key);
                 if let Some(stash_value) =
                     cached_storage.stash_proxy.get_value(&stash_key).await.unwrap_or_else(|_| {
                         panic!("failed to get value from stash for {:?}", stash_key)
                     })
                 {
                     if let Value::Stringval(string_value) = &*stash_value {
-                        maybe_init = Some(T::deserialize_from(&string_value));
-                        cached_value = maybe_init.as_ref();
+                        maybe_init = Some(string_value.clone());
                     } else {
                         panic!("Unexpected type for key found in stash");
                     }
                 }
             }
-            cached_value
+            maybe_init.as_ref()
         };
 
-        Ok(if cached_value != Some(new_value) {
-            let mut serialized = Value::Stringval(new_value.serialize_to());
-            let key = prefixed(T::KEY);
+        Ok(if cached_value != Some(&new_value) {
+            let mut serialized = Value::Stringval(new_value);
+            let key = prefixed(key);
             cached_storage.stash_proxy.set_value(&key, &mut serialized)?;
             if !self.debounce_writes {
                 // Not debouncing writes for testing, just flush immediately.
                 cached_storage.stash_flush(key).await;
             } else {
                 typed_storage.flush_sender.unbounded_send(()).with_context(|| {
-                    format!(
-                        "flush_sender failed to send flush message, associated key is {}",
-                        T::KEY
-                    )
+                    format!("flush_sender failed to send flush message, associated key is {}", key)
                 })?;
             }
-            cached_storage.current_data =
-                Some(Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>);
+            cached_storage.current_data = Some(data_as_any);
             UpdateState::Updated
         } else {
             UpdateState::Unchanged
         })
+    }
+
+    /// Write `new_value` to storage. The write will be persisted to disk at a set interval.
+    pub(crate) async fn write<T>(&self, new_value: &T) -> Result<UpdateState, Error>
+    where
+        T: DeviceStorageCompatible,
+    {
+        self.inner_write(
+            T::KEY,
+            new_value.serialize_to(),
+            Box::new(new_value.clone()) as Box<dyn Any + Send + Sync>,
+            Box::new(|any: &(dyn Any + Send + Sync)| {
+                // Attempt to downcast the `dyn Any` to its original type. If `T` was not its
+                // original type, then we want to panic because there's a compile-time issue
+                // with overlapping keys.
+                let value = any.downcast_ref::<T>().expect(
+                    "Type mismatch even though keys match. Two different\
+                                        types have the same key value",
+                );
+                value.serialize_to()
+            }),
+        )
+        .await
     }
 
     #[cfg(test)]
@@ -393,12 +405,12 @@ impl DeviceStorage {
     where
         T: DeviceStorageCompatible,
     {
-        let typed_storgae = self
+        let typed_storage = self
             .typed_storage_map
             .get(T::KEY)
             // TODO(fxbug.dev/67371) Replace this with an error result.
             .unwrap_or_else(|| panic!("Invalid data keyed by {}", T::KEY));
-        let mut cached_storage = typed_storgae.cached_storage.lock().await;
+        let mut cached_storage = typed_storage.cached_storage.lock().await;
         if cached_storage.current_data.is_none() || !self.caching_enabled {
             let stash_key = prefixed(T::KEY);
             if let Some(stash_value) =
