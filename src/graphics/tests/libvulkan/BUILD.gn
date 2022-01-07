@@ -69,31 +69,13 @@ shared_library("libvulkan_fake") {
   ]
 }
 
-fuchsia_component("libvulkan_test_driver") {
-  testonly = true
-  component_name = "libvulkan_test_driver"
-  deps = [
-    ":libvulkan_test_bin",
-    "//src/lib/vulkan/validation_layers",
-  ]
-
-  manifest = "meta/libvulkan_test_driver.cml"
-}
-
-fuchsia_component("libvulkan_test_hermetic_driver") {
-  testonly = true
-  component_name = "libvulkan_test_hermetic_driver"
-  deps = [
-    ":libvulkan_test_bin",
-    "//src/lib/vulkan/validation_layers",
-  ]
-
-  manifest = "meta/libvulkan_test_hermetic_driver.cml"
-}
-
 fuchsia_component("libvulkan_test_cmp") {
   testonly = true
   component_name = "libvulkan_test"
+  deps = [
+    ":libvulkan_test_bin",
+    "//src/lib/vulkan/validation_layers",
+  ]
 
   manifest = "meta/libvulkan_test.cml"
 }
@@ -102,6 +84,10 @@ fuchsia_component("libvulkan_test_cmp") {
 fuchsia_component("libvulkan_test_hermetic_cmp") {
   testonly = true
   component_name = "libvulkan_test_hermetic"
+  deps = [
+    ":libvulkan_test_bin",
+    "//src/lib/vulkan/validation_layers",
+  ]
 
   manifest = "meta/libvulkan_test_hermetic.cml"
 }
@@ -123,8 +109,6 @@ fuchsia_test_package("libvulkan-test") {
   deps = [
     ":fake_vulkan_loader",
     ":libvulkan_fake",
-    ":libvulkan_test_driver",
-    ":libvulkan_test_hermetic_driver",
   ]
 }
 

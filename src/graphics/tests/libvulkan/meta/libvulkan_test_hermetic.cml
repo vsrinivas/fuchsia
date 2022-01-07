@@ -1,26 +1,18 @@
 {
-    children: [
-        {
-            name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/libvulkan_test#meta/libvulkan_test_hermetic_driver.cm",
-        },
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
 
-        // No fake vulkan loader, since this test shouldn't have access to it.
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.Log",
-                "fuchsia.logger.LogSink",
-            ],
-            from: "parent",
-            to: [ "#test_driver" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#test_driver",
-        },
-    ],
+    // No fake vulkan loader, since this test shouldn't have access to it.
+    program: {
+        binary: "bin/libvulkan_test",
+        environ: [
+            "VK_ICD_FILENAMES=/pkg/data/manifest/libvulkan_fake.json",
+            "VK_LOADER_DEBUG=all",
+
+            // A hermetic ICD shouldn't try to access to anything from the loader service.
+            "HERMETIC_ICD=yes",
+        ],
+    },
 }

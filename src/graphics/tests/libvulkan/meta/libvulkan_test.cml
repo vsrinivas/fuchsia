@@ -1,12 +1,21 @@
 {
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/libvulkan_test",
+    },
     children: [
-        {
-            name: "test_driver",
-            url: "fuchsia-pkg://fuchsia.com/libvulkan_test#meta/libvulkan_test_driver.cm",
-        },
         {
             name: "fake_vulkan_loader",
             url: "fuchsia-pkg://fuchsia.com/libvulkan_test#meta/fake_vulkan_loader.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#fake_vulkan_loader",
         },
     ],
     offer: [
@@ -16,21 +25,7 @@
                 "fuchsia.logger.LogSink",
             ],
             from: "parent",
-            to: [
-                "#fake_vulkan_loader",
-                "#test_driver",
-            ],
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            from: "#fake_vulkan_loader",
-            to: [ "#test_driver" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#test_driver",
+            to: [ "#fake_vulkan_loader" ],
         },
     ],
 }
