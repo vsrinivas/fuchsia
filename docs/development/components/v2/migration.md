@@ -1531,7 +1531,7 @@ this section to migrate storage access:
 :                               : persistent  :                    :          :
 :                               : storage     :                    :          :
 :                               : directory   :                    :          :
-| `isolated-temp`               | Managed     | `temp`             | `/tmp`   |
+| `isolated-temp`               | Managed     | `tmp`              | `/tmp`   |
 :                               : in-memory   :                    :          :
 :                               : storage     :                    :          :
 :                               : directory   :                    :          :
