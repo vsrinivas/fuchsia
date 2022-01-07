@@ -3,10 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Context as _,
     fidl_fuchsia_io::{DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN},
     fuchsia_zircon as zx,
-    std::collections::BTreeMap,
-    vfs::directory::{dirents_sink, entry::EntryInfo, traversal_position::TraversalPosition},
+    std::{collections::BTreeMap, sync::Arc},
+    vfs::directory::{
+        dirents_sink,
+        entry::{DirectoryEntry as _, EntryInfo},
+        traversal_position::TraversalPosition,
+    },
 };
 
 mod packages;
@@ -83,6 +88,51 @@ async fn read_dirents<'a>(
     }
 
     Ok((TraversalPosition::End, sink.seal()))
+}
+
+/// Serve the pkgfs compatibility directories, "system" and "packages".
+/// The "system" directory will only be added and served if `system_image.is_some()`.
+pub fn serve(
+    mut fs: fuchsia_component::server::ServiceFsDir<
+        '_,
+        impl fuchsia_component::server::ServiceObjTrait,
+    >,
+    base_packages: Arc<crate::BasePackages>,
+    package_index: Arc<futures::lock::Mutex<crate::PackageIndex>>,
+    non_static_allow_list: system_image::NonStaticAllowList,
+    blobfs: blobfs::Client,
+    system_image: Option<system_image::SystemImage>,
+    scope: vfs::execution_scope::ExecutionScope,
+) -> Result<(), anyhow::Error> {
+    if let Some(system_image) = system_image {
+        let (system_proxy, system_server) =
+            fidl::endpoints::create_proxy().context("create pkgfs/system endpoints")?;
+        system_image.serve(
+            scope.clone(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+            system_server,
+        );
+        fs.add_remote("system", system_proxy);
+    }
+
+    let (packages_proxy, packages_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
+            .context("create pkgfs/packages endpoints")?;
+    Arc::new(packages::PkgfsPackages::new(
+        Arc::clone(&base_packages),
+        Arc::clone(&package_index),
+        non_static_allow_list,
+        blobfs.clone(),
+    ))
+    .open(
+        scope.clone(),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+        0,
+        vfs::path::Path::dot(),
+        packages_server.into_channel().into(),
+    );
+    fs.add_remote("packages", packages_proxy);
+    Ok(())
 }
 
 #[cfg(test)]

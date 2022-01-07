@@ -73,6 +73,16 @@ impl BasePackages {
         }
     }
 
+    /// Create an empty `BasePackages`, i.e. a `BasePackages` that does not have any packages (and
+    /// therefore does not have any blobs). Useful for when there is no system_image package.
+    pub fn empty(node: finspect::Node) -> Self {
+        Self {
+            base_blobs: BaseBlobs::new(HashSet::new(), node.create_child("base-blobs")),
+            paths_to_hashes: vec![],
+            node,
+        }
+    }
+
     pub fn list_blobs(&self) -> &HashSet<Hash> {
         &self.base_blobs.blobs
     }
@@ -123,12 +133,12 @@ impl BasePackages {
     pub(crate) fn new_test_only(
         blobs: HashSet<Hash>,
         paths_to_hashes: Vec<(PackagePath, Hash)>,
-        node: finspect::Node,
     ) -> Self {
+        let inspector = finspect::Inspector::new();
         Self {
-            base_blobs: BaseBlobs::new(blobs, node.create_child("base-blobs")),
+            base_blobs: BaseBlobs::new(blobs, inspector.root().clone_weak()),
             paths_to_hashes,
-            node,
+            node: inspector.root().clone_weak(),
         }
     }
 }
@@ -301,5 +311,19 @@ mod tests {
 
         assert!(base_packages_res.is_err());
         assert_data_tree!(inspector, root: {});
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn empty_inspect() {
+        let inspector = finspect::Inspector::new();
+        let _base_packages = BasePackages::empty(inspector.root().create_child("base-packages"));
+
+        assert_data_tree!(inspector, root: {
+            "base-packages": {
+                "base-blobs": {
+                    "count": 0u64,
+                }
+            }
+        });
     }
 }

@@ -72,15 +72,22 @@ async fn main_inner() -> Result<(), Error> {
 
     let mut package_index = PackageIndex::new(index_node);
 
-    // TODO(fxbug.dev/88871) Use VFS to serve the out dir because ServiceFs does not support
-    // OPEN_RIGHT_EXECUTABLE and pkgfs/{packages|versions|system} require it.
-    let mut fs = ServiceFs::new();
-    let scope = package_directory::ExecutionScope::new();
-
-    let (executability_restrictions, base_packages, cache_packages) = if ignore_system_image {
+    let (
+        system_image,
+        executability_restrictions,
+        non_static_allow_list,
+        base_packages,
+        cache_packages,
+    ) = if ignore_system_image {
         fx_log_info!("not loading system_image due to process arguments");
         inspector.root().record_string("system_image", "ignored");
-        (system_image::ExecutabilityRestrictions::Enforce, None, None)
+        (
+            None,
+            system_image::ExecutabilityRestrictions::Enforce,
+            system_image::NonStaticAllowList::empty(),
+            BasePackages::empty(inspector.root().create_child("base-packages")),
+            None,
+        )
     } else {
         let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
             .context("error connecting to fuchsia.boot/Arguments")?;
@@ -89,60 +96,60 @@ async fn main_inner() -> Result<(), Error> {
         let system_image = system_image::SystemImage::new(blobfs.clone(), &boot_args)
             .await
             .context("Accessing contents of system_image package")?;
-
         inspector.root().record_string("system_image", system_image.hash().to_string());
 
-        let base_packages_fut = BasePackages::new(
-            &blobfs,
-            &system_image,
-            inspector.root().create_child("base-packages"),
+        let (base_packages_res, cache_packages_res, non_static_allow_list) = join!(
+            BasePackages::new(
+                &blobfs,
+                &system_image,
+                inspector.root().create_child("base-packages"),
+            ),
+            async {
+                let cache_packages =
+                    system_image.cache_packages().await.context("reading cache_packages")?;
+                index::load_cache_packages(&mut package_index, &cache_packages, &blobfs).await;
+                Ok(cache_packages)
+            },
+            system_image.non_static_allow_list(),
         );
-
-        let load_cache_packages_fut = async {
-            let cache_packages =
-                system_image.cache_packages().await.context("reading cache_packages")?;
-            index::load_cache_packages(&mut package_index, &cache_packages, &blobfs).await;
-            Ok(Some(cache_packages))
-        };
-
-        let (cache_packages_res, base_packages_res) =
-            join!(load_cache_packages_fut, base_packages_fut);
-        let cache_packages = cache_packages_res.unwrap_or_else(|e: anyhow::Error| {
-            fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e));
-            None
-        });
+        let base_packages = base_packages_res.context("loading base packages")?;
+        let cache_packages = cache_packages_res.map_or_else(
+            |e: anyhow::Error| {
+                fx_log_err!("Failed to load cache packages: {e:#}");
+                None
+            },
+            Some,
+        );
 
         let executability_restrictions = system_image.load_executability_restrictions();
 
-        let (system_client, system_server) =
-            fidl::endpoints::create_proxy().context("create pkgfs/system endpoints")?;
-        system_image.serve(
-            scope.clone(),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
-            system_server,
-        );
-        fs.dir("pkgfs").add_remote("system", system_client);
-
         (
+            Some(system_image),
             executability_restrictions,
-            Some(base_packages_res.context("loading base packages")?),
+            non_static_allow_list,
+            base_packages,
             cache_packages,
         )
     };
 
+    let base_packages = Arc::new(base_packages);
+    let package_index = Arc::new(Mutex::new(package_index));
     inspector
         .root()
         .record_string("executability-restrictions", format!("{:?}", executability_restrictions));
-
-    let commit_status_provider =
-        fuchsia_component::client::connect_to_protocol::<CommitStatusProviderMarker>()
-            .context("while connecting to commit status provider")?;
+    inspector
+        .root()
+        .record_child("non_static_allow_list", |n| non_static_allow_list.record_inspect(n));
 
     enum IncomingService {
         PackageCache(fidl_fuchsia_pkg::PackageCacheRequestStream),
         RetainedPackages(fidl_fuchsia_pkg::RetainedPackagesRequestStream),
         SpaceManager(fidl_fuchsia_space::ManagerRequestStream),
     }
+
+    // TODO(fxbug.dev/88871) Use VFS to serve the out dir because ServiceFs does not support
+    // OPEN_RIGHT_EXECUTABLE and pkgfs/{packages|versions|system} require it.
+    let mut fs = ServiceFs::new();
 
     inspect_runtime::serve(&inspector, &mut fs)?;
 
@@ -151,11 +158,25 @@ async fn main_inner() -> Result<(), Error> {
         .add_fidl_service(IncomingService::RetainedPackages)
         .add_fidl_service(IncomingService::SpaceManager);
 
-    let package_index = Arc::new(Mutex::new(package_index));
+    // TODO(fxbug.dev/88871) Use a blobfs client with RX rights (instead of RW) to serve pkgfs.
+    let () = crate::compat::pkgfs::serve(
+        fs.dir("pkgfs"),
+        Arc::clone(&base_packages),
+        Arc::clone(&package_index),
+        non_static_allow_list,
+        blobfs.clone(),
+        system_image,
+        vfs::execution_scope::ExecutionScope::new(),
+    )
+    .context("serve pkgfs compat directories")?;
+
+    let commit_status_provider =
+        fuchsia_component::client::connect_to_protocol::<CommitStatusProviderMarker>()
+            .context("while connecting to commit status provider")?;
+
     let cache_inspect_id = Arc::new(AtomicU32::new(0));
     let cache_inspect_node = inspector.root().create_child("fuchsia.pkg.PackageCache");
     let cache_get_node = Arc::new(cache_inspect_node.create_child("get"));
-    let base_packages = Arc::new(base_packages);
     let cache_packages = Arc::new(cache_packages);
 
     fs.take_and_serve_directory_handle().context("while serving directory handle")?;
@@ -169,7 +190,7 @@ async fn main_inner() -> Result<(), Error> {
                         pkgfs_needs.clone(),
                         Arc::clone(&package_index),
                         blobfs.clone(),
-                        Arc::clone(&base_packages),
+                        base_packages.clone(),
                         Arc::clone(&cache_packages),
                         stream,
                         cobalt_sender.clone(),
@@ -189,7 +210,7 @@ async fn main_inner() -> Result<(), Error> {
                 IncomingService::SpaceManager(stream) => Task::spawn(
                     gc_service::serve(
                         blobfs.clone(),
-                        Arc::clone(&base_packages),
+                        base_packages.clone(),
                         Arc::clone(&package_index),
                         commit_status_provider.clone(),
                         stream,

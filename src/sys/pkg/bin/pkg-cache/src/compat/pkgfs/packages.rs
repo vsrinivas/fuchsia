@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::index::PackageIndex,
+    crate::{base_packages::BasePackages, index::PackageIndex},
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
@@ -41,52 +41,35 @@ use variants::PkgfsPackagesVariants;
 
 #[derive(Debug)]
 pub struct PkgfsPackages {
-    static_packages: system_image::StaticPackages,
-    non_static_packages: Arc<Mutex<PackageIndex>>,
+    base_packages: Arc<BasePackages>,
+    non_base_packages: Arc<Mutex<PackageIndex>>,
     non_static_allow_list: NonStaticAllowList,
     blobfs: blobfs::Client,
 }
 
 impl PkgfsPackages {
-    // TODO(fxbug.dev/88868) use this
-    #[allow(dead_code)]
     pub fn new(
-        static_packages: system_image::StaticPackages,
-        non_static_packages: Arc<Mutex<PackageIndex>>,
+        base_packages: Arc<BasePackages>,
+        non_base_packages: Arc<Mutex<PackageIndex>>,
         non_static_allow_list: NonStaticAllowList,
         blobfs: blobfs::Client,
     ) -> Self {
-        Self { static_packages, non_static_packages, non_static_allow_list, blobfs }
-    }
-
-    #[cfg(test)]
-    fn proxy(self: &Arc<Self>) -> fidl_fuchsia_io::DirectoryProxy {
-        let (proxy, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
-
-        let () = ImmutableConnection::create_connection(
-            ExecutionScope::new(),
-            OpenDirectory::new(Arc::clone(self) as Arc<dyn ImmutableConnectionClient>),
-            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-            server_end.into_channel().into(),
-        );
-
-        proxy
+        Self { base_packages, non_base_packages, non_static_allow_list, blobfs }
     }
 
     async fn packages(&self) -> HashMap<PackageName, HashMap<PackageVariant, Hash>> {
         let mut res: HashMap<PackageName, HashMap<PackageVariant, Hash>> = HashMap::new();
 
-        // First populate with static packages.
-        for (path, hash) in self.static_packages.contents() {
+        // First populate with base packages.
+        for (path, hash) in self.base_packages.paths_to_hashes() {
             let name = path.name().to_owned();
             let variant = path.variant().to_owned();
 
             res.entry(name).or_default().insert(variant, *hash);
         }
 
-        // Then fill in allowed dynamic packages, which may override existing static packages.
-        let active_packages = self.non_static_packages.lock().await.active_packages();
+        // Then fill in allowed dynamic packages, which may override existing base packages.
+        let active_packages = self.non_base_packages.lock().await.active_packages();
         for (path, hash) in active_packages {
             if !self.non_static_allow_list.allows(path.name()) {
                 continue;
@@ -216,11 +199,12 @@ mod tests {
         fuchsia_pkg_testing::{blobfs::Fake as FakeBlobfs, PackageBuilder},
         maplit::{convert_args, hashmap},
         matches::assert_matches,
+        std::collections::HashSet,
     };
 
     impl PkgfsPackages {
         pub fn new_test(
-            static_packages: system_image::StaticPackages,
+            base_packages: Vec<(PackagePath, Hash)>,
             non_static_allow_list: NonStaticAllowList,
         ) -> (Arc<Self>, Arc<Mutex<PackageIndex>>) {
             let (blobfs, _) = blobfs::Client::new_mock();
@@ -228,13 +212,32 @@ mod tests {
 
             (
                 Arc::new(PkgfsPackages::new(
-                    static_packages,
+                    Arc::new(BasePackages::new_test_only(
+                        // PkgfsPackages only uses the path-hash mapping, so tests do not need to
+                        // populate the blob hashes.
+                        HashSet::new(),
+                        base_packages,
+                    )),
                     Arc::clone(&index),
                     non_static_allow_list,
                     blobfs,
                 )),
                 index,
             )
+        }
+
+        fn proxy(self: &Arc<Self>) -> fidl_fuchsia_io::DirectoryProxy {
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+
+            let () = ImmutableConnection::create_connection(
+                ExecutionScope::new(),
+                OpenDirectory::new(Arc::clone(self) as Arc<dyn ImmutableConnectionClient>),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                server_end.into_channel().into(),
+            );
+
+            proxy
         }
     }
 
@@ -270,10 +273,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn minimal_lifecycle() {
-        let (pkgfs_packages, _package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
-            non_static_allow_list(&[]),
-        );
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
 
         drop(pkgfs_packages);
     }
@@ -281,7 +282,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packages_listing_unions_indices() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![(path("static", "0"), hash(0))]),
+            vec![(path("static", "0"), hash(0))],
             non_static_allow_list(&["dynamic"]),
         );
 
@@ -305,10 +306,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packages_listing_dynamic_overrides_static() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![
-                (path("replaceme", "0"), hash(0)),
-                (path("replaceme", "butnotme"), hash(1)),
-            ]),
+            vec![(path("replaceme", "0"), hash(0)), (path("replaceme", "butnotme"), hash(1))],
             non_static_allow_list(&["replaceme"]),
         );
 
@@ -328,10 +326,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn packages_listing_ignores_disallowed_dynamic_packages() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![
-                (path("allowed", "0"), hash(0)),
-                (path("static", "0"), hash(1)),
-            ]),
+            vec![(path("allowed", "0"), hash(0)), (path("static", "0"), hash(1))],
             non_static_allow_list(&["allowed"]),
         );
 
@@ -354,10 +349,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_empty() {
-        let (pkgfs_packages, _package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
-            non_static_allow_list(&[]),
-        );
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
 
         // Given adequate buffer space, the only entry is itself (".").
         let (pos, sealed) = Directory::read_dirents(
@@ -378,12 +371,12 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn readdir_enumerates_all_allowed_entries() {
         let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![
+            vec![
                 (path("allowed", "0"), hash(0)),
                 (path("static", "0"), hash(1)),
                 (path("static", "1"), hash(2)),
                 (path("still", "static"), hash(3)),
-            ]),
+            ],
             non_static_allow_list(&["allowed", "dynonly", "missing"]),
         );
 
@@ -416,10 +409,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_rejects_invalid_name() {
-        let (pkgfs_packages, _package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
-            non_static_allow_list(&[]),
-        );
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
 
         let proxy = pkgfs_packages.proxy();
 
@@ -436,10 +427,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_rejects_missing_package() {
-        let (pkgfs_packages, _package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
-            non_static_allow_list(&[]),
-        );
+        let (pkgfs_packages, _package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&[]));
 
         let proxy = pkgfs_packages.proxy();
 
@@ -452,7 +441,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_opens_static_package_variants() {
         let (pkgfs_packages, _package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![(path("static", "0"), hash(0))]),
+            vec![(path("static", "0"), hash(0))],
             non_static_allow_list(&[]),
         );
 
@@ -466,10 +455,8 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn open_opens_allowed_dynamic_variants() {
-        let (pkgfs_packages, package_index) = PkgfsPackages::new_test(
-            system_image::StaticPackages::from_entries(vec![]),
-            non_static_allow_list(&["dynamic"]),
-        );
+        let (pkgfs_packages, package_index) =
+            PkgfsPackages::new_test(vec![], non_static_allow_list(&["dynamic"]));
 
         let proxy = pkgfs_packages.proxy();
 
@@ -491,7 +478,7 @@ mod tests {
         let package_index = Arc::new(Mutex::new(PackageIndex::new_test()));
         let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
         let pkgfs_packages = Arc::new(PkgfsPackages::new(
-            system_image::StaticPackages::from_entries(vec![]),
+            Arc::new(BasePackages::new_test_only(HashSet::new(), vec![])),
             Arc::clone(&package_index),
             non_static_allow_list(&["dynamic"]),
             blobfs_client,

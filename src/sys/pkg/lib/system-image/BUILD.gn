@@ -13,6 +13,7 @@ rustc_library("system-image") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
     "//src/lib/storage/vfs/rust:vfs",

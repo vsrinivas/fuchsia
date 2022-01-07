@@ -63,6 +63,36 @@ async fn system_image_hash_ignored() {
     env.stop().await;
 }
 
+#[fasync::run_singlethreaded(test)]
+async fn non_static_allow_list() {
+    let blobfs = BlobfsRamdisk::start().unwrap();
+    let system_image_package = SystemImageBuilder::new()
+        .pkgfs_non_static_packages_allowlist(&["a-package-name", "another-name"])
+        .build()
+        .await;
+    system_image_package.write_to_blobfs_dir(&blobfs.root_dir().unwrap());
+    let pkgfs = PkgfsRamdisk::builder()
+        .blobfs(blobfs)
+        .system_image_merkle(system_image_package.meta_far_merkle_root())
+        .start()
+        .unwrap();
+
+    let env = TestEnv::builder().pkgfs(pkgfs).build().await;
+    env.block_until_started().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        "root": contains {
+            "non_static_allow_list": {
+                "a-package-name": "",
+                "another-name": "",
+            },
+        }
+    );
+    env.stop().await;
+}
+
 async fn assert_base_blob_count(
     static_packages: &[&Package],
     cache_packages: Option<&[&Package]>,

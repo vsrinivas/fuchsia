@@ -42,7 +42,7 @@ pub async fn serve(
     pkgfs_needs: pkgfs::needs::Client,
     package_index: Arc<Mutex<PackageIndex>>,
     blobfs: blobfs::Client,
-    base_packages: Arc<Option<BasePackages>>,
+    base_packages: Arc<BasePackages>,
     cache_packages: Arc<Option<system_image::CachePackages>>,
     stream: PackageCacheRequestStream,
     cobalt_sender: CobaltSender,
@@ -102,7 +102,7 @@ pub async fn serve(
                 }
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
-                    serve_base_package_index(Arc::clone(&base_packages), stream).await;
+                    serve_base_package_index(base_packages.clone(), stream).await;
                 }
                 PackageCacheRequest::CachePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
@@ -936,21 +936,16 @@ async fn serve_write_blob(
 /// Serves the `PackageIndexIteratorRequestStream` with as many base package index entries per
 /// request as will fit in a fidl message.
 async fn serve_base_package_index(
-    base_packages: Arc<Option<BasePackages>>,
+    base_packages: Arc<BasePackages>,
     stream: PackageIndexIteratorRequestStream,
 ) {
-    let package_entries = match &*base_packages {
-        Some(base_packages) => base_packages
-            .paths_to_hashes()
-            .map(|(path, hash)| PackageIndexEntry {
-                package_url: PackageUrl {
-                    url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
-                },
-                meta_far_blob_id: BlobId::from(hash.clone()).into(),
-            })
-            .collect::<Vec<PackageIndexEntry>>(),
-        None => vec![],
-    };
+    let package_entries = base_packages
+        .paths_to_hashes()
+        .map(|(path, hash)| PackageIndexEntry {
+            package_url: PackageUrl { url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()) },
+            meta_far_blob_id: BlobId::from(hash.clone()).into(),
+        })
+        .collect::<Vec<PackageIndexEntry>>();
     serve_fidl_iterator(package_entries, stream).await.unwrap_or_else(|e| {
         fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
@@ -2899,15 +2894,11 @@ mod serve_base_package_index_tests {
             ),
         ];
 
-        let base_packages = BasePackages::new_test_only(
-            HashSet::new(),
-            base_package_hashes,
-            finspect::Inspector::new().root().create_child("test"),
-        );
+        let base_packages = BasePackages::new_test_only(HashSet::new(), base_package_hashes);
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PackageIndexIteratorMarker>().unwrap();
-        let task = Task::local(serve_base_package_index(Arc::new(Some(base_packages)), stream));
+        let task = Task::local(serve_base_package_index(Arc::new(base_packages), stream));
 
         let entries = proxy.next().await.unwrap();
         assert_eq!(

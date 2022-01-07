@@ -30,13 +30,20 @@ impl NonStaticAllowList {
     }
 
     /// Create an empty allow _list.
-    pub(crate) fn empty() -> Self {
+    pub fn empty() -> Self {
         Self { contents: HashSet::new() }
     }
 
     /// Determines if this allowlist allows the given package.
     pub fn allows(&self, name: &PackageName) -> bool {
         self.contents.contains(name)
+    }
+
+    /// Record the contents of the allow list in the provided `node`.
+    pub fn record_inspect(&self, node: &fuchsia_inspect::Node) {
+        for name in &self.contents {
+            node.record_string(name.as_ref(), "");
+        }
     }
 }
 
@@ -111,5 +118,18 @@ mod tests {
         // Invalid utf8 sequence.
         let contents = [0x80];
         assert_matches!(NonStaticAllowList::parse(&contents), Err(AllowListError::Encoding(_)));
+    }
+
+    #[test]
+    fn record_inspect() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let allow_list = NonStaticAllowList::parse(b"some-name\nother-name").unwrap();
+
+        allow_list.record_inspect(inspector.root());
+
+        fuchsia_inspect::assert_data_tree!(inspector, root: {
+            "some-name": "",
+            "other-name": ""
+        });
     }
 }

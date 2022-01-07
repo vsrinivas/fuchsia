@@ -19,7 +19,7 @@ use {
 
 pub async fn serve(
     blobfs: blobfs::Client,
-    base_packages: Arc<Option<BasePackages>>,
+    base_packages: Arc<BasePackages>,
     package_index: Arc<Mutex<PackageIndex>>,
     commit_status_provider: CommitStatusProviderProxy,
     mut stream: SpaceManagerRequestStream,
@@ -31,14 +31,15 @@ pub async fn serve(
 
     while let Some(event) = stream.try_next().await? {
         let SpaceManagerRequest::Gc { responder } = event;
-        responder.send(&mut gc(&blobfs, &base_packages, &package_index, &event_pair).await)?;
+        responder
+            .send(&mut gc(&blobfs, base_packages.as_ref(), &package_index, &event_pair).await)?;
     }
     Ok(())
 }
 
 async fn gc(
     blobfs: &blobfs::Client,
-    base_packages: &Arc<Option<BasePackages>>,
+    base_packages: &BasePackages,
     package_index: &Arc<Mutex<PackageIndex>>,
     event_pair: &zx::EventPair,
 ) -> Result<(), SpaceErrorCode> {
@@ -71,11 +72,9 @@ async fn gc(
         });
 
         // Blobs in base are immutable and ineligible for collection.
-        if let Some(base_packages) = &**base_packages {
-            base_packages.list_blobs().iter().for_each(|blob| {
-                eligible_blobs.remove(blob);
-            });
-        }
+        base_packages.list_blobs().iter().for_each(|blob| {
+            eligible_blobs.remove(blob);
+        });
 
         // Evict all eligible blobs from blobfs.
         fx_log_info!("Garbage collecting {} blobs...", eligible_blobs.len());
