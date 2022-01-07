@@ -93,6 +93,7 @@ rustc_binary("bin") {
   ]
   features = [ "http_setup_server" ]
   sources = [
+    "src/button.rs",
     "src/fdr.rs",
     "src/keyboard.rs",
     "src/keys.rs",
@@ -151,6 +152,7 @@ rustc_binary("bin_fdr") {
     "//third_party/rust_crates:thiserror",
   ]
   sources = [
+    "src/button.rs",
     "src/fdr.rs",
     "src/keyboard.rs",
     "src/keys.rs",

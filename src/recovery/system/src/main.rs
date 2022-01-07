@@ -39,6 +39,10 @@ const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
 const COUNTDOWN_COLOR: Color = Color { r: 0x42, g: 0x85, b: 0xf4, a: 0xff };
 
+const WIFI_SSID: &'static str = "WiFi SSID";
+const WIFI_PASSWORD: &'static str = "WiFi Password";
+const WIFI_CONNECT: &'static str = "WiFi Connect";
+
 #[cfg(feature = "http_setup_server")]
 mod setup;
 
@@ -51,6 +55,7 @@ use crate::setup::SetupEvent;
 #[cfg(feature = "http_setup_server")]
 mod storage;
 
+mod button;
 mod fdr;
 mod keyboard;
 mod keys;
@@ -58,6 +63,7 @@ mod proxy_view_assistant;
 
 use fdr::{FactoryResetState, ResetEvent};
 
+use crate::button::Button;
 use crate::proxy_view_assistant::ProxyViewAssistant;
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
@@ -131,7 +137,7 @@ impl RecoveryAppAssistant {
 
         Self {
             app_context: app_context.clone(),
-            display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg0),
+            display_rotation: args.rotation.unwrap_or(DisplayRotation::Deg90),
             fdr_restriction,
         }
     }
@@ -164,6 +170,7 @@ impl AppAssistant for RecoveryAppAssistant {
 
 struct RenderResources {
     scene: Scene,
+    buttons: Vec<Button>,
 }
 
 impl RenderResources {
@@ -174,6 +181,7 @@ impl RenderResources {
         heading: &str,
         body: Option<&str>,
         countdown_ticks: u8,
+        focus_connect_button: bool,
         face: &FontFace,
         is_counting_down: bool,
     ) -> Self {
@@ -183,7 +191,9 @@ impl RenderResources {
         let top_margin = 0.255;
 
         let body_text_size = min_dimension / 18.0;
+        let button_text_size = min_dimension / 14.0;
         let countdown_text_size = min_dimension / 6.0;
+        let buttons_y = min_dimension - button_text_size * 2.0;
 
         let mut builder = SceneBuilder::new().background_color(BG_COLOR).round_scene_corners(true);
 
@@ -194,6 +204,7 @@ impl RenderResources {
             let y = top_margin * target_size.height - logo_edge / 2.0;
             point2(x, y)
         };
+        let mut buttons: Vec<Button> = Vec::new();
 
         if is_counting_down {
             let countdown_position = logo_position + vec2(logo_edge / 2.0, logo_edge / 2.0);
@@ -231,6 +242,16 @@ impl RenderResources {
                     logo_position,
                 );
             }
+            buttons.push(
+                Button::new(WIFI_SSID, button_text_size, 7.0, &mut builder).expect(WIFI_SSID),
+            );
+            buttons.push(
+                Button::new(WIFI_PASSWORD, button_text_size, 7.0, &mut builder)
+                    .expect(WIFI_PASSWORD),
+            );
+            buttons.push(
+                Button::new(WIFI_CONNECT, button_text_size, 7.0, &mut builder).expect(WIFI_CONNECT),
+            );
         }
 
         let heading_text_location =
@@ -265,7 +286,18 @@ impl RenderResources {
             );
         }
 
-        Self { scene: builder.build() }
+        let mut scene = builder.build();
+        let mut x = 40.0;
+        for i in 0..buttons.len() {
+            buttons[i].set_location(&mut scene, point2(x, buttons_y));
+            // Set all buttons focus to true apart from button 2
+            buttons[i].set_focused(&mut scene, true);
+            if i == 2 {
+                buttons[i].set_focused(&mut scene, focus_connect_button);
+            }
+            x += buttons[i].get_size(&mut scene).width + 50.0;
+        }
+        Self { scene, buttons }
     }
 }
 
@@ -281,6 +313,8 @@ struct RecoveryViewAssistant {
     countdown_task: Option<Task<()>>,
     countdown_ticks: u8,
     render_resources: Option<RenderResources>,
+    wifi_ssid: Option<String>,
+    wifi_password: Option<String>,
 }
 
 impl RecoveryViewAssistant {
@@ -308,6 +342,8 @@ impl RecoveryViewAssistant {
             countdown_task: None,
             countdown_ticks: FACTORY_RESET_TIMER_IN_SECONDS,
             render_resources: None,
+            wifi_ssid: None,
+            wifi_password: None,
         })
     }
 
@@ -433,6 +469,7 @@ impl ViewAssistant for RecoveryViewAssistant {
                 self.heading,
                 self.body.as_ref().map(Borrow::borrow),
                 self.countdown_ticks,
+                self.wifi_ssid.is_some() && self.wifi_password.is_some(),
                 &self.face,
                 self.reset_state_machine.is_counting_down(),
             ));
@@ -603,6 +640,22 @@ impl ViewAssistant for RecoveryViewAssistant {
             }
             _ => {}
         }
+        Ok(())
+    }
+
+    fn handle_pointer_event(
+        &mut self,
+        context: &mut ViewAssistantContext,
+        _event: &input::Event,
+        pointer_event: &input::pointer::Event,
+    ) -> Result<(), Error> {
+        //println!("Main: handle_pointer_event");
+        if let Some(render_resources) = self.render_resources.as_mut() {
+            for button in &mut render_resources.buttons {
+                button.handle_pointer_event(&mut render_resources.scene, context, &pointer_event);
+            }
+        }
+        context.request_render();
         Ok(())
     }
 
