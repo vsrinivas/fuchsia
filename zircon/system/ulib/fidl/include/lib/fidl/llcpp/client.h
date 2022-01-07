@@ -7,7 +7,7 @@
 
 #include <lib/fidl/llcpp/client_base.h>
 #include <lib/fidl/llcpp/client_end.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 namespace fidl {
 

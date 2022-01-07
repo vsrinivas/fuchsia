@@ -9,7 +9,7 @@
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 
 #include <cstddef>
 #include <cstdint>

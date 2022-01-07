@@ -8,7 +8,7 @@
 #include <lib/fidl/llcpp/async_binding.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/server_end.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 

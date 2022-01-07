@@ -378,8 +378,7 @@ void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 
         // If required, send the epitaph.
         if (info.reason() == Reason::kClose) {
-          info = UnbindInfo::Close(fidl_epitaph_write(
-              server_end.get<fidl::internal::ChannelTransport>()->get(), info.status()));
+          info = UnbindInfo::Close(fidl_epitaph_write(server_end.handle(), info.status()));
         }
 
         // Execute the unbound hook if specified.

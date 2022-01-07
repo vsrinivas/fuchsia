@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
 #include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
 
 #ifdef __Fuchsia__
@@ -14,156 +15,19 @@
 #include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <zircon/fidl.h>
-
 #endif  // __Fuchsia__
 
 // # Wire messaging layer
 //
-// This header contains forward definitions that support sending and receiving
-// wire domain objects over Zircon channels for IPC. The code generator should
-// populate the implementation by generating template specializations for each
-// class over FIDL method/protocol markers.
-//
-// Note: a recurring pattern below is a pair of struct/using declaration:
-//
-//     template <typename T> struct FooTraits;
-//     template <typename T> using Foo = typename FooTraits<T>::Foo;
-//
-// The extra |FooTraits| type is a workaround for C++ not having type alias
-// partial specialization. The code generator would specialize |FooTraits|,
-// and the using-declarations are helpers to pull out items from the struct.
+// This header is the top-level #include for the zircon channel wire messaging layer.
+
 namespace fidl {
-
-template <typename FidlMethod>
-struct WireRequest;
-
-template <typename FidlMethod>
-struct WireResponse;
-
 #ifdef __Fuchsia__
-// WireSyncEventHandler is used by synchronous clients to handle events for the
-// given protocol.
-template <typename FidlProtocol>
-class WireSyncEventHandler;
-
-// WireAsyncEventHandler is used by asynchronous clients and adds a callback
-// for unbind completion on top of WireEventHandlerInterface.
-template <typename FidlProtocol>
-class WireAsyncEventHandler;
-
-// WireServer is a pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
-template <typename FidlProtocol>
-class WireServer;
-
-// WireEventSender owns a server endpoint and exposes methods for sending
-// events.
-template <typename FidlProtocol>
-class WireEventSender;
-
-template <typename FidlMethod>
-class WireResponseContext;
-
-template <typename FidlMethod>
-class WireResult;
-
-template <typename FidlMethod>
-class WireUnownedResult;
 
 template <typename FidlMethod>
 using WireClientCallback = ::fit::callback<void(::fidl::WireUnownedResult<FidlMethod>&)>;
 
-#endif  // __Fuchsia__
-
 namespace internal {
-
-template <typename FidlMethod>
-struct WireOrdinal;
-
-#ifdef __Fuchsia__
-
-// WireWeakEventSender borrows the server endpoint from a binding object and
-// exposes methods for sending events.
-template <typename FidlProtocol>
-class WireWeakEventSender;
-
-// WireClientImpl implements both synchronous and asynchronous FIDL calls,
-// working together with the |::fidl::internal::ClientBase| class to safely
-// borrow transport ownership from the binding object.
-//
-// TODO(fxbug.dev/85688): This class should be decomposed into
-// |WireWeakAsyncClientImpl| and |WireWeakAsyncBufferClientImpl|, then removed.
-template <typename FidlProtocol>
-class WireClientImpl;
-
-// |WireWeakAsyncClientImpl| implements one-way FIDL calls with managed buffers.
-// It borrows the transport through a weak reference when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
-template <typename FidlProtocol>
-class WireWeakOnewayClientImpl;
-
-// |WireWeakAsyncClientImpl| implements asynchronous FIDL calls with managed
-// buffers. It borrows the transport through a weak reference when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
-template <typename FidlProtocol>
-class WireWeakAsyncClientImpl;
-
-// |WireWeakOnewayBufferClientImpl| implements one-way FIDL calls with
-// caller-provided buffers. It borrows the transport through a weak reference
-// when making calls.
-template <typename FidlProtocol>
-class WireWeakOnewayBufferClientImpl;
-
-// |WireWeakAsyncBufferClientImpl| implements asynchronous FIDL calls with
-// caller-provided buffers. It borrows the transport through a weak reference
-// when making calls.
-template <typename FidlProtocol>
-class WireWeakAsyncBufferClientImpl;
-
-// |WireSyncClientImpl| implements synchronous FIDL calls with managed buffers.
-// It contains an unowned transport handle.
-//
-// TODO(fxbug.dev/78906): Consider merging this implementation with
-// |WireWeakSyncClientImpl| to support thread-safe teardown of
-// |fidl::WireSyncClient|s.
-template <typename FidlProtocol>
-class WireSyncClientImpl;
-
-// |WireWeakSyncClientImpl| implements synchronous FIDL calls with managed
-// buffers. It borrows the transport through a weak reference when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
-template <typename FidlProtocol>
-class WireWeakSyncClientImpl;
-
-// |WireSyncBufferClientImpl| implements synchronous FIDL calls with
-// caller-provided buffers. It contains an unowned transport handle.
-//
-// TODO(fxbug.dev/78906): Consider merging this implementation with
-// |WireWeakSyncBufferClientImpl| to support thread-safe teardown of
-// |fidl::WireSyncClient|s.
-template <typename FidlProtocol>
-class WireSyncBufferClientImpl;
-
-// |WireWeakSyncBufferClientImpl| implements synchronous FIDL calls with
-// caller-provided buffers. It borrows the transport through a weak reference
-// when making calls.
-//
-// TODO(fxbug.dev/85688): Generate this class.
-template <typename FidlProtocol>
-class WireWeakSyncBufferClientImpl;
-
-template <typename FidlProtocol>
-class WireEventHandlerInterface;
-
-template <typename FidlProtocol>
-class WireEventDispatcher;
-
-template <typename FidlProtocol>
-struct WireServerDispatcher;
 
 template <typename FidlMethod>
 class WireRequestView {
@@ -176,21 +40,13 @@ class WireRequestView {
 };
 
 template <typename FidlMethod>
-class WireCompleterBase;
-
-template <typename FidlMethod>
 struct WireMethodTypes {
   using Completer = fidl::Completer<>;
 };
 
 template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
-
-#endif  // __Fuchsia__
-
 }  // namespace internal
-
-#ifdef __Fuchsia__
 
 enum class DispatchResult;
 

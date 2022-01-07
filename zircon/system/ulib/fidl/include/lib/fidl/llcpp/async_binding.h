@@ -16,7 +16,7 @@
 #include <lib/fidl/llcpp/result.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
+#include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/variant.h>
 #include <lib/sync/completion.h>
