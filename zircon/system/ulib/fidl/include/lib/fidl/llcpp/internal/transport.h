@@ -114,6 +114,8 @@ struct WriteOptions {
 // Options passed from the user-facing read API to transport read().
 struct ReadOptions {
   bool discardable = false;
+  // Transport specific context populated by read.
+  internal::IncomingTransportContext* out_incoming_transport_context;
 };
 
 // Options passed from the user-facing call API to transport call().
@@ -191,13 +193,6 @@ using TransportWaitSuccessHandler =
 // Function receiving notification of failing waits on a TransportWaiter.
 using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;
 
-// Function providing results of read().
-// Data pointed to by function arguments is borrowed and it is the callback's responsibility
-// to either copy the data or otherwise fininish using it before the callback completes.
-using TransportReadCallback = fit::inline_function<void(
-    Result result, void* data, uint32_t data_count, fidl_handle_t* handles, void* handle_metadata,
-    uint32_t handles_count, internal::IncomingTransportContext incoming_transport_context)>;
-
 // An instance of TransportVTable contains function definitions to implement transport-specific
 // functionality.
 struct TransportVTable {
@@ -212,10 +207,12 @@ struct TransportVTable {
                        const void* handle_metadata, uint32_t handles_count);
 
   // Read from the transport.
-  // |callback| is called with the results of the read. The reason for using a callback is to
-  // provide a scope within which the buffer is valid. The callback must complete synchronously
-  // before read() is completed.
-  void (*read)(fidl_handle_t handle, ReadOptions options, TransportReadCallback callback);
+  // This populates |handle_metadata|, which contains transport-specific metadata and will be
+  // passed to EncodingConfiguration::decode_process_handle.
+  zx_status_t (*read)(fidl_handle_t handle, const ReadOptions& options, void* data,
+                      uint32_t data_capacity, fidl_handle_t* handles, void* handle_metadata,
+                      uint32_t handles_capacity, uint32_t* out_data_actual_count,
+                      uint32_t* out_handles_actual_count);
 
   // Perform a call on the transport.
   // The arguments are formatted in |cargs|, with the write direction args corresponding to
@@ -278,8 +275,11 @@ class AnyUnownedTransport {
                           handles_count);
   }
 
-  void read(ReadOptions options, TransportReadCallback callback) const {
-    return vtable_->read(handle_, options, std::move(callback));
+  zx_status_t read(const ReadOptions& options, void* data, uint32_t data_capacity,
+                   fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
+                   uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
+    return vtable_->read(handle_, options, data, data_capacity, handles, handle_metadata,
+                         handles_capacity, out_data_actual_count, out_handles_actual_count);
   }
 
   zx_status_t call(CallOptions options, const CallMethodArgs& cargs,
@@ -366,8 +366,11 @@ class AnyTransport {
                           handles_count);
   }
 
-  void read(ReadOptions options, TransportReadCallback callback) const {
-    return vtable_->read(handle_, options, std::move(callback));
+  zx_status_t read(const ReadOptions& options, void* data, uint32_t data_capacity,
+                   fidl_handle_t* handles, void* handle_metadata, uint32_t handles_capacity,
+                   uint32_t* out_data_actual_count, uint32_t* out_handles_actual_count) const {
+    return vtable_->read(handle_, options, data, data_capacity, handles, handle_metadata,
+                         handles_capacity, out_data_actual_count, out_handles_actual_count);
   }
 
   zx_status_t call(CallOptions options, const CallMethodArgs& cargs,

@@ -47,24 +47,23 @@ void SimpleBinding::MessageHandler(async_dispatcher_t* dispatcher, async_wait_t*
   }
 
   if (signal->observed & ZX_CHANNEL_READABLE) {
+    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
     for (uint64_t i = 0; i < signal->count; i++) {
-      zx_status_t status;
-      fidl::MessageRead(
-          zx::unowned_channel(wait->object),
-          [&status, &binding](fidl::IncomingMessage msg,
-                              fidl::internal::IncomingTransportContext incoming_transport_context) {
-            status = msg.status();
-            if (!msg.ok())
-              return;
-
-            auto* hdr = msg.header();
-            ChannelTransaction txn(hdr->txid, std::move(binding));
-            txn.Dispatch(msg);
-            binding = txn.TakeBinding();
-          });
-      if (status != ZX_OK) {
+      fidl_trace(WillLLCPPAsyncChannelRead);
+      fidl::IncomingMessage msg = fidl::MessageRead(
+          zx::unowned_channel(wait->object), fidl::BufferSpan(bytes, std::size(bytes)), handles,
+          handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+      if (!msg.ok())
         return;
-      }
+      fidl_trace(DidLLCPPAsyncChannelRead, nullptr /* type */, bytes, msg.byte_actual(),
+                 msg.handle_actual());
+
+      auto* hdr = msg.header();
+      ChannelTransaction txn(hdr->txid, std::move(binding));
+      txn.Dispatch(msg);
+      binding = txn.TakeBinding();
       if (!binding) {
         return;
       }

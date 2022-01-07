@@ -92,14 +92,16 @@ class ClientFixture : public zxtest::Test {
 
   fidl::Endpoints<TestProtocol>& endpoints() { return endpoints_; }
 
-  template <typename T>
-  zx_status_t ReadFromServer(T callback) {
-    return fidl::MessageRead(endpoints_.server.channel(), callback);
+  fidl::IncomingMessage ReadFromServer() {
+    return fidl::MessageRead(endpoints_.server.channel(),
+                             fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()), nullptr,
+                             nullptr, 0);
   }
 
  private:
   async::Loop loop_;
   fidl::Endpoints<TestProtocol> endpoints_;
+  FIDL_ALIGNDECL std::array<uint8_t, ZX_CHANNEL_MAX_MSG_BYTES> read_buffer_;
 };
 
 class Client : public ClientFixture {};
@@ -165,45 +167,29 @@ TEST_F(SharedClient, Clone) {
 TEST_F(Client, WireCall) {
   fidl::Client client(std::move(endpoints().client), loop().dispatcher());
   client.wire()->SomeWireMethod();
-  zx_status_t status =
-      ReadFromServer([&](fidl::IncomingMessage msg,
-                         fidl::internal::IncomingTransportContext incoming_transport_context) {
-        return msg.status();
-      });
-  EXPECT_OK(status);
+  auto msg = ReadFromServer();
+  EXPECT_OK(msg.status());
 }
 
 TEST_F(SharedClient, WireCall) {
   fidl::SharedClient client(std::move(endpoints().client), loop().dispatcher());
   client.wire()->SomeWireMethod();
-  zx_status_t status =
-      ReadFromServer([&](fidl::IncomingMessage msg,
-                         fidl::internal::IncomingTransportContext incoming_transport_context) {
-        return msg.status();
-      });
-  EXPECT_OK(status);
+  auto msg = ReadFromServer();
+  EXPECT_OK(msg.status());
 }
 
 TEST_F(Client, NaturalCall) {
   fidl::Client client(std::move(endpoints().client), loop().dispatcher());
   client->SomeNaturalMethod();
-  zx_status_t status =
-      ReadFromServer([&](fidl::IncomingMessage msg,
-                         fidl::internal::IncomingTransportContext incoming_transport_context) {
-        return msg.status();
-      });
-  EXPECT_OK(status);
+  auto msg = ReadFromServer();
+  EXPECT_OK(msg.status());
 }
 
 TEST_F(SharedClient, NaturalCall) {
   fidl::SharedClient client(std::move(endpoints().client), loop().dispatcher());
   client->SomeNaturalMethod();
-  zx_status_t status =
-      ReadFromServer([&](fidl::IncomingMessage msg,
-                         fidl::internal::IncomingTransportContext incoming_transport_context) {
-        return msg.status();
-      });
-  EXPECT_OK(status);
+  auto msg = ReadFromServer();
+  EXPECT_OK(msg.status());
 }
 
 }  // namespace

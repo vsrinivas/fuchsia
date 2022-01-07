@@ -88,21 +88,22 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(
     const char* expected_driver,
     fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
     fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server) {
-  fidl::MessageRead(devhost_controller.channel(),
-                    [&](fidl::IncomingMessage msg,
-                        fidl::internal::IncomingTransportContext incoming_transport_context) {
-                      ASSERT_TRUE(msg.ok());
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::MessageRead(devhost_controller.channel(), fidl::BufferSpan(bytes, std::size(bytes)),
+                        handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+  ASSERT_TRUE(msg.ok());
 
-                      auto* header = msg.header();
-                      FidlTransaction txn(header->txid, zx::unowned(devhost_controller.channel()));
+  auto* header = msg.header();
+  FidlTransaction txn(header->txid, zx::unowned(devhost_controller.channel()));
 
-                      FakeDriverHost fake(expected_driver, device_coordinator_client,
-                                          device_controller_server);
-                      fidl::WireDispatch(&fake, std::move(msg), &txn);
-                      ASSERT_FALSE(txn.detected_error());
-                      ASSERT_TRUE(device_coordinator_client->is_valid());
-                      ASSERT_TRUE(device_controller_server->is_valid());
-                    });
+  FakeDriverHost fake(expected_driver, device_coordinator_client, device_controller_server);
+  fidl::WireDispatch(&fake, std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
+  ASSERT_TRUE(device_coordinator_client->is_valid());
+  ASSERT_TRUE(device_controller_server->is_valid());
 }
 
 bool DeviceState::HasPendingMessages() {
@@ -110,17 +111,19 @@ bool DeviceState::HasPendingMessages() {
 }
 
 void DeviceState::Dispatch() {
-  fidl::MessageRead(controller_server.channel(),
-                    [&](fidl::IncomingMessage msg,
-                        fidl::internal::IncomingTransportContext incoming_transport_context) {
-                      ASSERT_TRUE(msg.ok());
+  uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
+  fidl::IncomingMessage msg =
+      fidl::MessageRead(controller_server.channel(), fidl::BufferSpan(bytes, std::size(bytes)),
+                        handles, handle_metadata, ZX_CHANNEL_MAX_MSG_HANDLES);
+  ASSERT_TRUE(msg.ok());
 
-                      auto* header = msg.header();
-                      FidlTransaction txn(header->txid, zx::unowned(controller_server.channel()));
+  auto* header = msg.header();
+  FidlTransaction txn(header->txid, zx::unowned(controller_server.channel()));
 
-                      fidl::WireDispatch<fdm::DeviceController>(this, std::move(msg), &txn);
-                      ASSERT_FALSE(txn.detected_error());
-                    });
+  fidl::WireDispatch<fdm::DeviceController>(this, std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
 }
 
 void DeviceState::CheckBindDriverReceivedAndReply(std::string_view expected_driver_name) {
