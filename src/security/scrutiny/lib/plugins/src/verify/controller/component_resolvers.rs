@@ -88,7 +88,14 @@ impl ComponentResolversVisitor {
                         }
                     }
                 }
-                Err(err) => return Err(anyhow!(err).context("failed to route to a resolver")),
+                Err(err) => {
+                    eprintln!(
+                        "Ignoring invalid resolver configuration for {}: {:#}",
+                        instance.abs_moniker(),
+                        anyhow!(err).context("failed to route to a resolver")
+                    );
+                    return Ok(());
+                }
             };
 
             let moniker = moniker::PartialAbsoluteMoniker::parse_string_without_instances(

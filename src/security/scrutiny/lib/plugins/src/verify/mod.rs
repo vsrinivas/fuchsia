@@ -769,6 +769,197 @@ mod tests {
     }
 
     #[test]
+    fn test_component_resolvers_ignores_invalid_resolver_registration() -> Result<()> {
+        let model = cmls_to_model(vec![
+            (
+                "fuchsia-boot:///#meta/root.cm",
+                json!({
+                    "children": [
+                        {
+                            "name": "bootstrap",
+                            "url": "fuchsia-boot:///#meta/bootstrap.cm",
+                            "startup": "eager",
+                        },
+                        {
+                            "name": "core",
+                            "url": "fuchsia-pkg://fuchsia.com/core#meta/core.cm",
+                            "environment": "#core-env",
+                        },
+                    ],
+                    "offer": [
+                        {
+                            "protocol": [
+                                "fuchsia.sys2.ComponentResolver",
+                            ],
+                            "from" : "#bootstrap",
+                            "to": "#core"
+                        },
+                    ],
+                    "environments" : [
+                        {
+                            "name": "core-env",
+                            "extends": "realm",
+                            "resolvers" : [ {
+                                "resolver" : "base_resolver",
+                                "from" : "#bootstrap",
+                                "scheme": "fuchsia-pkg",
+                            },
+                            ],
+                        },
+                    ]
+                }),
+            ),
+            (
+                "fuchsia-boot:///#meta/bootstrap.cm",
+                json!({
+                    "children": [
+                        {
+                            "name": "base_resolver",
+                            // A declared but undefined child component, so its capabilities cannot
+                            // be analyzed.
+                            "url": "fuchsia-boot:///#meta/base-resolver.cm",
+                        },
+                    ],
+                    "expose": [
+                        {
+                            "protocol": "fuchsia.sys2.ComponentResolver",
+                            "from": "#base_resolver",
+                        },
+                        {
+                            "resolver": "base_resolver",
+                            "from": "#base_resolver",
+                        },
+                    ],
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/core#meta/core.cm",
+                json!({
+                    "children": [
+                        {
+                            "name": "resolved-from-realm",
+                            "url": "fuchsia-pkg://fuchsia.com/resolve-me#meta/resolve-me.cm",
+                        },
+                        {
+                            "name": "resolved-from-custom",
+                            "url": "fuchsia-pkg://fuchsia.com/resolve-me#meta/resolve-me.cm",
+                            "environment": "#custom-resolver-env",
+                        },
+                        {
+                            "name": "custom-resolver",
+                            "url": "fuchsia-pkg://fuchsia.com/custom-resolver#meta/custom-resolver.cm",
+                        },
+
+                    ],
+                    "expose": [
+                        {
+                            "protocol": "fuchsia.sys2.ComponentResolver",
+                            "from": "#base_resolver",
+                        },
+                        {
+                            "resolver": "base_resolver",
+                            "from": "#base_resolver",
+                        },
+                    ],
+                    "capabilities": [
+                        {
+                            "protocol": "fuchsia.test.SpecialProtocol",
+                            "path": "/fake-for-test",
+                        },
+                    ],
+                    "offer": [
+                        {
+                            "protocol": [
+                                "fuchsia.test.SpecialProtocol",
+                            ],
+                            "from" : "#self",
+                            "to": "#custom-resolver"
+                        },
+                    ],
+                    "environments" : [
+                        {
+                            "name": "custom-resolver-env",
+                            "extends": "realm",
+                            "resolvers" : [ {
+                                "resolver" : "custom-resolver",
+                                "from" : "#custom-resolver",
+                                "scheme": "fuchsia-pkg",
+                            },
+                            ],
+                        },
+                    ]
+                }),
+            ),
+            // Don't provide a definition of the base-resolver component
+            // to ensure the walker ignores invalid resolver configurations
+            /*
+            (
+                "fuchsia-boot:///#meta/base-resolver.cm",
+                json!({
+                    "program" : {
+                        "runner" : "elf",
+                        "binary" : "bin/foo",
+                    },
+                }),
+            ),
+            */
+            (
+                "fuchsia-pkg://fuchsia.com/resolve-me#meta/resolve-me.cm",
+                json!({
+                    "program" : {
+                        "runner" : "elf",
+                        "binary" : "bin/app",
+                    },
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/custom-resolver#meta/custom-resolver.cm",
+                json!({
+                    "program": {
+                        "runner": "elf",
+                        "binary": "bin/custom_resolver",
+                    },
+                    "capabilities": [
+                        {
+                            "resolver": "custom-resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        },
+                        { "protocol": "fuchsia.sys2.ComponentResolver" },
+                    ],
+                    "use": [
+                        {
+                            "protocol": [
+                                "fuchsia.test.SpecialProtocol",
+                            ],
+                        },
+                    ],
+                    "expose": [
+                        {
+                            "resolver": "custom-resolver",
+                            "from": "self",
+                        },
+                        {
+                            "protocol": "fuchsia.sys2.ComponentResolver",
+                            "from": "self",
+                        },
+                    ],
+                }),
+            ),
+        ])?;
+
+        let controller = ComponentResolversController::default();
+
+        // Even with an invalid component resolver, ensure queries for other component resolvers
+        // find the expected instances.
+        let response = controller.query(
+            model.clone(),
+            json!({ "scheme": "fuchsia-pkg", "moniker": "/core/custom-resolver", "protocol": "fuchsia.test.SpecialProtocol"}),
+        )?;
+        assert_eq!(response, json!(["/core/resolved-from-custom"]));
+        Ok(())
+    }
+
+    #[test]
     fn test_map_tree_single_node_default_url() -> Result<()> {
         let model = single_v2_component_model(None, None, component_id_index::Index::default())?;
         V2ComponentModelDataCollector::new().collect(model.clone())?;
