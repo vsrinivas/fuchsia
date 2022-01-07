@@ -26,22 +26,22 @@ Note: For complete details on component manifest attributes and syntax, see the
 A [component manifest source][glossary.component manifest source] is a file that
 encodes part of a component manifest. Component manifest sources are written in
 component manifest language (CML), which is the developer-facing source format
-for component manifests. CML files are JSON5 files that end with a `.cml`
-extension.
+for component manifests. CML files are [JSON5][json5-external]{.external}
+files that end with a `.cml` extension.
 
 The [`cmc`][src-cmc] tool compiles component manifest sources to
 [component manifests](#component-manifest) as a part of the build process.
 
 ## Component manifest {#component-manifest}
 
-A [component manifest][glossary.component manifest] is a file that encodes a
-[component declaration](#component-declaration), usually distributed as part of
-a [package][glossary.package]. The binary format is a persisted FIDL file
-mapping one-to-one onto the component declaration, typically ending in a `.cm`
-extension.
+A [component manifest][glossary.component manifest] is a binary file that
+encodes the [component declaration](#component-declaration), usually distributed
+as part of a [package][glossary.package]. The binary format is the
+[persistent encoded form][fidl-wire-encoded] of the component declaration FIDL
+object.
 
 A [component URL][doc-component-url] identifies a component in a package by its
-component manifest resource path.
+component manifest resource path, typically ending in a `.cm` extension.
 
 ## Component declaration {#component-declaration}
 
@@ -61,10 +61,12 @@ component declaration from a component URL.
 [doc-component-url]: /docs/concepts/components/component_urls.md
 [doc-environments]: /docs/concepts/components/v2/environments.md
 [fidl-component-decl]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Component
+[fidl-wire-encoded]: /docs/reference/fidl/language/wire-format/README.md#dual-forms
 [glossary.component declaration]: /docs/glossary/README.md#component-declaration
 [glossary.component manifest]: /docs/glossary/README.md#component-manifest
 [glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
 [glossary.package]: /docs/glossary/README.md#package
+[json5-external]: https://json5.org/
 [manifest-program]: https://fuchsia.dev/reference/cml#program
 [manifest-facet]: https://fuchsia.dev/reference/cml#facets
 [src-cmc]: /tools/cmc

@@ -12,15 +12,15 @@ runtime.](images/component-manifest.png){: width="836"}
 You declare components using component manifest language (CML) files. At build
 time, the Component Manifest Compiler (`cmc`) tool validates and compiles the
 manifest source into a binary format (`.cm`) and stores it in the component's
-package. At runtime, component resolvers load the manifest into a
+package. At runtime, component resolvers load the binary manifest into a
 [ComponentDecl](https://fuchsia.dev/reference/fidl/fuchsia.sys2#ComponentDecl)
 FIDL structure for [Component Manager](/docs/glossary/README.md#Component-Manager).
 
 ## Component manifests
 
-CML files are JSON5 files that end with a `.cml` extension. Below is an example
-CML manifest file for a simple component running an ELF binary that prints a
-"Hello, World" message to the system log:
+CML files are [JSON5](https://json5.org/){.external} files that end with a
+`.cml` extension. Below is an example CML manifest file for a simple component
+running an ELF binary that prints a "Hello, World" message to the system log:
 
 ```json5
 {

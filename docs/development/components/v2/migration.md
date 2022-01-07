@@ -46,8 +46,8 @@ You should familiarize yourself with the following topics:
 Create a minimal CML [CML file][glossary.component-manifest] and configure it
 with GN so that it gets compiled and installed in your package.
 
-Note: Unlike CMX, CML is JSON5, which allows comments and trailing commas. Take
-advantage of this when writing your CML file!
+Note: Unlike CMX, CML is [JSON5][json5-external]{.external}, which allows
+comments and trailing commas. Take advantage of this when writing your CML file!
 
 1.  Determine where your CMX file is located in the source tree (for example,
     [`fonts.cmx`][example-fonts]). Create a file in the same directory that has
@@ -2068,6 +2068,7 @@ described in the [Vulkan documentation][vulkan].
 [fshost-lifecycle]: /src/storage/fshost/main.cc
 [integration-test]: /docs/development/testing/components/integration_testing.md
 [integration-test-monikers]: /docs/development/testing/components/integration_testing.md#test-component-moniker
+[json5-external]: https://json5.org/
 [realm-builder-monikers]: /docs/development/components/v2/realm_builder.md#test-component-moniker
 [trf-intro]: /docs/development/testing/components/test_runner_framework.md
 [trf-provided-test-runners]: /src/sys/test_runners
