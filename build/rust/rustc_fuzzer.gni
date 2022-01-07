@@ -29,6 +29,7 @@ import("//build/toolchain/rbe.gni")
 #
 #   version
 #   edition
+#   configs
 #   data_deps
 #   deps
 #   source_root
@@ -84,6 +85,8 @@ template("rustc_fuzzer") {
                            ])
     visibility = [ ":*" ]
     testonly = true
+    configs = []
+    configs += invoker.configs
     configs += [ ":$fuzzer_cfg" ]
     deps = [
       "//src/lib/fuzzing/rust:fuzz",
@@ -119,8 +122,13 @@ template("rustc_fuzzer") {
                              "sources",
                              "inputs",
                              "features",
+                             "configs",
                            ])
     deps = [ ":$fuzzer_lib" ]
     deps += non_rust_deps
   }
+}
+
+set_defaults("rustc_fuzzer") {
+  configs = default_common_binary_configs + default_rust_configs
 }
