@@ -8,9 +8,19 @@
     program: {
         binary: "test/netsvc-test",
     },
+    children: [
+        {
+            name: "device-name-provider",
+            url: "#meta/device-name-provider.cm",
+        },
+    ],
     use: [
         {
             protocol: [ "fuchsia.process.Launcher" ],
+        },
+        {
+            protocol: "fuchsia.device.NameProvider",
+            from: "#device-name-provider",
         },
     ],
 }

@@ -132,7 +132,10 @@ int main(int argc, char** argv) {
 
   printf("netsvc: running in %s mode\n", g_all_features ? "full" : "limited");
 
-  gethostname(g_nodename, sizeof(g_nodename));
+  if (gethostname(g_nodename, sizeof(g_nodename)) != 0) {
+    printf("netsvc: gethostname failed: %s\n", strerror(errno));
+    return -1;
+  }
 
   printf("netsvc: nodename='%s'\n", g_nodename);
 

@@ -55,6 +55,7 @@ executable("device-name-provider") {
 
 # This component only exists to be included in the integration tests.
 fuchsia_component("device-name-provider-component") {
+  component_name = "device-name-provider"
   testonly = true
   manifest = "meta/device-name-provider.cml"
   deps = [ ":device-name-provider" ]

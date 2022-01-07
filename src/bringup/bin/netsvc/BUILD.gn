@@ -173,6 +173,7 @@ fuchsia_test_component("netsvc-test-component") {
   manifest = "meta/netsvc-test.cml"
   deps = [
     ":netsvc-test",
+    "//src/bringup/bin/device-name-provider:device-name-provider-component",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk",

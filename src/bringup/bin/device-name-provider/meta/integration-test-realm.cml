@@ -2,7 +2,7 @@
     children: [
         {
             name: "device-name-provider",
-            url: "fuchsia-pkg://fuchsia.com/device-name-provider-tests#meta/device-name-provider-component.cm",
+            url: "fuchsia-pkg://fuchsia.com/device-name-provider-tests#meta/device-name-provider.cm",
         },
         {
             name: "integration-test",
