@@ -1093,7 +1093,10 @@ where
                         fposix_socket::DatagramSocketRequest::NodeGetFlags { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), 0);
                         }
-                        fposix_socket::DatagramSocketRequest::NodeSetFlags { flags: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::NodeSetFlags {
+                            flags: _,
+                            responder,
+                        } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
                         fposix_socket::DatagramSocketRequest::GetInfo { responder } => {
@@ -1102,7 +1105,10 @@ where
                         fposix_socket::DatagramSocketRequest::GetTimestamp { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetTimestamp { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetTimestamp {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetError { responder } => {
@@ -1126,13 +1132,19 @@ where
                         fposix_socket::DatagramSocketRequest::GetReceiveBuffer { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetReuseAddress { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetReuseAddress {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetReuseAddress { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetReusePort { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetReusePort {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetReusePort { responder } => {
@@ -1141,19 +1153,28 @@ where
                         fposix_socket::DatagramSocketRequest::GetAcceptConn { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetBindToDevice { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetBindToDevice {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetBindToDevice { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetBroadcast { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetBroadcast {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetBroadcast { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetKeepAlive { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetKeepAlive {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetKeepAlive { responder } => {
@@ -1178,13 +1199,19 @@ where
                         fposix_socket::DatagramSocketRequest::GetOutOfBandInline { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetNoCheck { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetNoCheck {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetNoCheck { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpv6Only { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetIpv6Only {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetIpv6Only { responder } => {
@@ -1205,7 +1232,9 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastInterface { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastInterface {
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::SetIpv6MulticastHops {
@@ -1214,7 +1243,9 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastHops { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastHops {
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::SetIpv6MulticastLoopback {
@@ -1223,7 +1254,9 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastLoopback { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetIpv6MulticastLoopback {
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::SetIpTtl { value: _, responder } => {
@@ -1248,7 +1281,9 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpMulticastInterface { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetIpMulticastInterface {
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::SetIpMulticastLoopback {
@@ -1257,7 +1292,9 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpMulticastLoopback { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetIpMulticastLoopback {
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::SetIpTypeOfService {
@@ -1310,206 +1347,18 @@ where
                         } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::GetIpReceiveTypeOfService { responder } => {
+                        fposix_socket::DatagramSocketRequest::GetIpReceiveTypeOfService {
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
-                        fposix_socket::DatagramSocketRequest::SetIpPacketInfo { value: _, responder } => {
+                        fposix_socket::DatagramSocketRequest::SetIpPacketInfo {
+                            value: _,
+                            responder,
+                        } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::DatagramSocketRequest::GetIpPacketInfo { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-
-                        fposix_socket::DatagramSocketRequest::BaseSocketConnect { addr, responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.connect(addr)
-                            );
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketDisconnect { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eafnosupport));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketBind { addr, responder } => {
-                            responder_send!(responder, &mut self.make_handler().await.bind(addr));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetSockName { responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.get_sock_name()
-                            );
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetPeerName { responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.get_peer_name()
-                            );
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketShutdown { mode, responder } => {
-                            responder_send!(
-                                responder,
-                                &mut self.make_handler().await.shutdown(mode)
-                            )
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpv6Only {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpv6Only { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpv6TrafficClass {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpv6TrafficClass {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpv6MulticastInterface {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpv6MulticastInterface {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpv6MulticastHops {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpv6MulticastHops {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpv6MulticastLoopback {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpv6MulticastLoopback {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpTtl {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpTtl { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpMulticastTtl {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpMulticastTtl {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpMulticastInterface {
-                            iface: _,
-                            address: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpMulticastInterface {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpMulticastLoopback {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpMulticastLoopback {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpTypeOfService {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpTypeOfService {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketAddIpMembership {
-                            membership: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketDropIpMembership {
-                            membership: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketAddIpv6Membership {
-                            membership: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketDropIpv6Membership {
-                            membership: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpv6ReceiveTrafficClass {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpv6ReceiveTrafficClass {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpReceiveTypeOfService {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpReceiveTypeOfService {
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketSetIpPacketInfo {
-                            value: _,
-                            responder,
-                        } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
-                        }
-                        fposix_socket::DatagramSocketRequest::BaseSocketGetIpPacketInfo { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         // TODO(https://fxbug.dev/77623): Remove when the io1 -> io2 transition is complete.
