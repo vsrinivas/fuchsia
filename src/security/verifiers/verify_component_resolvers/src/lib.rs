@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     serde::{Deserialize, Serialize},
@@ -62,11 +62,13 @@ impl ScrutinyQueryComponentResolvers {
 
 impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
     fn query(&self, scheme: String, moniker: NodePath, protocol: String) -> Result<Vec<NodePath>> {
+        let request = ComponentResolversRequest { scheme, moniker, protocol };
+
         let mut config = Config::run_command_with_plugins(
             CommandBuilder::new("verify.component_resolvers")
-                .param("scheme", &scheme)
-                .param("moniker", &moniker.to_string())
-                .param("protocol", &protocol)
+                .param("scheme", &request.scheme)
+                .param("moniker", request.moniker.to_string())
+                .param("protocol", &request.protocol)
                 .build(),
             vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
         );
@@ -75,6 +77,10 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
         config.runtime.logging.silent_mode = true;
 
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+        if results.starts_with("Error: ") {
+            return Err(anyhow!(results))
+                .with_context(|| format!("Failed to query scrutiny with {:?}", request));
+        }
         Ok(serde_json5::from_str(&results).context(format!(
             "Failed to deserialize verify component resolvers results: {:?}",
             results

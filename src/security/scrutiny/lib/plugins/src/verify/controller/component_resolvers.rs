@@ -59,10 +59,8 @@ impl ComponentResolversVisitor {
     fn get_monikers(&self) -> Vec<String> {
         self.monikers.clone()
     }
-}
 
-impl ComponentInstanceVisitor for ComponentResolversVisitor {
-    fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
+    fn check_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
         if let Ok(Some((
             ExtendedInstanceInterface::Component(resolver_register_instance),
             resolver,
@@ -90,7 +88,7 @@ impl ComponentInstanceVisitor for ComponentResolversVisitor {
                         }
                     }
                 }
-                Err(err) => return Err(anyhow!("failed to route to a resolver: {:?} ", err)),
+                Err(err) => return Err(anyhow!(err).context("failed to route to a resolver")),
             };
 
             let moniker = moniker::PartialAbsoluteMoniker::parse_string_without_instances(
@@ -109,6 +107,13 @@ impl ComponentInstanceVisitor for ComponentResolversVisitor {
         }
 
         Ok(())
+    }
+}
+
+impl ComponentInstanceVisitor for ComponentResolversVisitor {
+    fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
+        self.check_instance(instance)
+            .with_context(|| format!("while visiting {}", instance.abs_moniker()))
     }
 }
 
