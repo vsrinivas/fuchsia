@@ -1903,3 +1903,17 @@
   consulted: ['aaronwood@google.com', 'yifeit@google.com', 'surajmalhotra@google.com', 'shayba@google.com']
   submitted: '2021-10-18'
   reviewed: '2021-12-22'
+
+- name: 'RFC-0147'
+  title: 'View System'
+  short_description: 'Describes the windowing system for the Fuchsia platform and ratifies its role in the platform.'
+  authors: ['dworsham@google.com', 'jaeheon@google.com', 'neelsa@google.com']
+  file: '0147_view_system.md'
+  area: ['Graphics, HCI']
+  issue: ['83310']
+  gerrit_change_id: ['602783']
+  status: 'Accepted'
+  reviewers: ['reveman@google.com', 'jjosh@google.com', 'emircan@google.com', 'quiche@google.com', 'ypomortsev@google.com', 'kostyak@google.com', 'wez@google.com']
+  consulted: ['sanjayc@google.com', 'hjfreyer@google.com', 'lindkvist@google.com', 'jsankey@google.com']
+  submitted: '2021-11-03'
+  reviewed: '2022-01-05'
