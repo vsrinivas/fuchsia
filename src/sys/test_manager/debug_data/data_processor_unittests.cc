@@ -13,6 +13,7 @@
 #include <src/lib/fxl/strings/string_printf.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
+#include "abstract_data_processor.h"
 #include "data_processor.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -47,9 +48,10 @@ const std::string kSummaryFile = "summary.json";
 }
 
 TEST_F(WriteSummaryFileTest, EmptyInput) {
-  processor()->WriteSummaryFile(TestDebugDataMap());
-  std::string result;
   auto fd = GetTempDirFd();
+  processor()->WriteSummaryFile(fd, TestDebugDataMap());
+  std::string result;
+
   files::ReadFileToStringAt(fd.get(), kSummaryFile, &result);
   ASSERT_EQ(result, "{\"tests\":[]}");
 }
@@ -104,8 +106,9 @@ TEST_F(WriteSummaryFileTest, OneTestWithMultipleDataSinks) {
 
   map["simple_test.cmx"] = TestDebugDataMapValue{true, std::move(data_sink_map)};
 
-  processor()->WriteSummaryFile(map);
-  AssertSummaryJson(map, GetTempDirFd());
+  auto fd = GetTempDirFd();
+  processor()->WriteSummaryFile(fd, map);
+  AssertSummaryJson(map, std::move(fd));
   ASSERT_FALSE(testing::Test::HasFailure());
 }
 
@@ -139,8 +142,9 @@ TEST_F(WriteSummaryFileTest, MultipleTestWithMultipleDataSinks) {
 
   map["test_url4.cmx"] = TestDebugDataMapValue{false, std::move(data_sink_map)};
 
-  processor()->WriteSummaryFile(map);
-  AssertSummaryJson(map, GetTempDirFd());
+  auto fd = GetTempDirFd();
+  processor()->WriteSummaryFile(fd, map);
+  AssertSummaryJson(map, std::move(fd));
   ASSERT_FALSE(testing::Test::HasFailure());
 }
 
@@ -168,7 +172,8 @@ TEST_F(WriteSummaryFileTest, MultipleWriteSummaryFileCalls) {
 
   map[""] = TestDebugDataMapValue{true, std::move(data_sink_map)};
 
-  processor()->WriteSummaryFile(map);
+  auto fd = GetTempDirFd();
+  processor()->WriteSummaryFile(fd, map);
 
   TestDebugDataMap new_map;
   data_sink_map["sink1"] = {{"path/path1", "path1"}, {"path/path1_2", "path1_2"}};  // add new sink
@@ -186,14 +191,14 @@ TEST_F(WriteSummaryFileTest, MultipleWriteSummaryFileCalls) {
   data_sink_map["sink3"] = {{"path/path3", "path3"}};
 
   new_map["test_url3.cmx"] = TestDebugDataMapValue{true, std::move(data_sink_map)};
-  processor()->WriteSummaryFile(new_map);
+  processor()->WriteSummaryFile(fd, new_map);
 
   auto expected_map = std::move(map);
   expected_map["test_url1.cmx"].data_sink_map["sink1"]["path/path1_2"] = "path1_2";
   expected_map["test_url1.cmx"].data_sink_map["sink4"] = {{"path/path4", "path4"}};
   expected_map["test_url3.cmx"] = new_map["test_url3.cmx"];
 
-  AssertSummaryJson(expected_map, GetTempDirFd());
+  AssertSummaryJson(expected_map, std::move(fd));
   ASSERT_FALSE(testing::Test::HasFailure());
 }
 
@@ -271,6 +276,11 @@ TEST_F(ProcessDataTest, ProcessData) {
 
   expected_map["test_url2"] = std::move(sink_data_map);
   RunLoopUntilIdle();
+
+  // Idle signal should be asserted after loop is idle.
+  zx_signals_t asserted_signals;
+  processor()->GetIdleEvent()->wait_one(IDLE_SIGNAL, zx::time(0), &asserted_signals);
+  ASSERT_EQ(asserted_signals & IDLE_SIGNAL, IDLE_SIGNAL);
 
   AssertStorage(expected_map, GetTempDirFd());
   ASSERT_FALSE(testing::Test::HasFailure());

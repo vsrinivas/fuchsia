@@ -6,9 +6,12 @@
 #define SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/zx/event.h>
 
 #include <map>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -16,6 +19,7 @@
 
 #include "abstract_data_processor.h"
 #include "common.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 // represent debugdata::DumpFile as a map
 using DumpFileMap = std::map<std::string, std::string>;
@@ -39,7 +43,10 @@ using SinkVMOMap = std::unordered_map<std::string, std::vector<zx::vmo>>;
 // key = test_url
 using TestSinkMap = std::map<std::string, SinkVMOMap>;
 
-/// This class is not thread safe.
+// Signal indicating more data is ready to be processed.
+const uint32_t PENDING_DATA_SIGNAL = ZX_USER_SIGNAL_1;
+static_assert(IDLE_SIGNAL != PENDING_DATA_SIGNAL);
+
 class DataProcessor : public AbstractDataProcessor {
  public:
   /// dir_fd: directory to write processed debug data to.
@@ -48,6 +55,8 @@ class DataProcessor : public AbstractDataProcessor {
 
   /// Process data on internal dispacther.
   void ProcessData(std::string test_url, DataSinkDump data_sink) override;
+
+  zx::unowned_event GetIdleEvent() override;
 
   /// Loads current summary.json if available, merges it with the passed map and writes the map back
   /// to summary.json.
@@ -82,18 +91,35 @@ class DataProcessor : public AbstractDataProcessor {
   ///     ...
   ///   ]//
   /// }
-  void WriteSummaryFile(TestDebugDataMap debug_data_map);
+  static void WriteSummaryFile(fbl::unique_fd& fd, TestDebugDataMap debug_data_map);
 
  private:
-  /// Add to `data_sink_map_` and schedule a call to `ProcessDataInner`
-  void Add(std::string test_url, DataSinkDump data_sink_vec);
+  /// Container for information shared across threads.
+  class DataProcessorInner {
+   public:
+    explicit DataProcessorInner(fbl::unique_fd dir_fd);
+
+    TestSinkMap TakeMapContents();
+    void AddData(std::string test_url, DataSinkDump data_sink_dump);
+    void SignalIdleIfEmpty();
+    zx::unowned_event GetEvent();
+    fbl::unique_fd& GetFd();
+
+   private:
+    std::mutex mutex_;
+    TestSinkMap data_sink_map_ FXL_GUARDED_BY(mutex_);
+    zx::event idle_signal_event_;
+    fbl::unique_fd dir_fd_;
+  };
 
   /// Process data present in `data_sink_map_`.
-  void ProcessDataInner();
+  static void ProcessDataInner(std::shared_ptr<DataProcessorInner> inner);
 
-  TestSinkMap data_sink_map_;
-  fbl::unique_fd dir_fd_;
+  std::shared_ptr<DataProcessorInner> inner_;
   async_dispatcher_t* dispatcher_;
+  // This Wait is used to schedule work in the thread for dispatcher_ and should
+  // only be accessed from that thread.
+  std::shared_ptr<async::Wait> processor_wait_;
 };
 
 #endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_DATA_PROCESSOR_H_

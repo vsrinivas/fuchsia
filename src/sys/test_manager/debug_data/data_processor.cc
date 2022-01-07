@@ -25,40 +25,99 @@ const std::string kSummaryFile = "summary.json";
 }
 
 DataProcessor::DataProcessor(fbl::unique_fd dir_fd, async_dispatcher_t* dispatcher)
-    : dir_fd_(std::move(dir_fd)), dispatcher_(dispatcher) {
+    : dispatcher_(dispatcher) {
   FX_CHECK(dispatcher_ != nullptr);
-}
+  inner_ = std::make_shared<DataProcessorInner>(std::move(dir_fd));
+  std::weak_ptr<DataProcessorInner> weak_inner = inner_;
+  auto idle_event = inner_->GetEvent();
 
-DataProcessor::~DataProcessor() = default;
+  processor_wait_ = std::make_shared<async::Wait>(
+      idle_event->get(), PENDING_DATA_SIGNAL, 0,
+      [weak_inner = std::move(weak_inner)](async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                           zx_status_t status, const zx_packet_signal_t* signal) {
+        // Terminate if the wait was cancelled.
+        if (status != ZX_OK) {
+          return;
+        }
+        auto owned = weak_inner.lock();
+        // Terminate if the processor no longer exists.
+        if (!owned) {
+          return;
+        }
+        ProcessDataInner(owned);
+        wait->Begin(dispatcher);
+      });
 
-void DataProcessor::ProcessData(std::string test_url, DataSinkDump data_sink_dump) {
-  // we want to run below task on local loop.
-
-  async::PostTask(dispatcher_, [this, test_url = std::move(test_url),
-                                data_sink_dump = std::move(data_sink_dump)]() mutable {
-    Add(std::move(test_url), std::move(data_sink_dump));
+  // async::Wait is not threadsafe, so to ensure only the processor thread accesses it,
+  // we post a task to the processor thread, which in turn beings the wait.
+  async::PostTask(dispatcher_, [processor_wait = processor_wait_, dispatcher = dispatcher_]() {
+    FX_CHECK(processor_wait->Begin(dispatcher) == ZX_OK);
   });
 }
 
-void DataProcessor::Add(std::string test_url, DataSinkDump data_sink_dump) {
-  auto schedule_processor = data_sink_map_.empty();
-  auto& map = data_sink_map_[std::move(test_url)];
-  map[std::move(data_sink_dump.data_sink)].push_back(std::move(data_sink_dump.vmo));
-
-  if (schedule_processor) {
-    async::PostTask(dispatcher_, [this]() { ProcessDataInner(); });
-  }
+DataProcessor::~DataProcessor() {
+  // async::Wait is not threadsafe. Since we delegate processing to the processor
+  // thread, post a task to handle it's destruction there.
+  async::PostTask(dispatcher_,
+                  [processor_wait = std::move(processor_wait_)] { processor_wait->Cancel(); });
 }
 
-void DataProcessor::ProcessDataInner() {
-  auto data_sink_map = std::move(data_sink_map_);
+void DataProcessor::ProcessData(std::string test_url, DataSinkDump data_sink_dump) {
+  inner_->AddData(std::move(test_url), std::move(data_sink_dump));
+}
+
+zx::unowned_event DataProcessor::GetIdleEvent() { return inner_->GetEvent(); }
+
+DataProcessor::DataProcessorInner::DataProcessorInner(fbl::unique_fd dir_fd)
+    : dir_fd_(std::move(dir_fd)) {
+  FX_CHECK(zx::event::create(0, &idle_signal_event_) == ZX_OK);
+}
+
+TestSinkMap DataProcessor::DataProcessorInner::TakeMapContents() {
+  mutex_.lock();
+  auto result = std::move(data_sink_map_);
   data_sink_map_ = TestSinkMap();
+  // Once we take data, we're not idle anymore and there's no pending data.
+  idle_signal_event_.signal(IDLE_SIGNAL | PENDING_DATA_SIGNAL, 0);
+  mutex_.unlock();
+  return result;
+}
+
+void DataProcessor::DataProcessorInner::AddData(std::string test_url, DataSinkDump data_sink_dump) {
+  mutex_.lock();
+  auto& map = data_sink_map_[std::move(test_url)];
+  map[std::move(data_sink_dump.data_sink)].push_back(std::move(data_sink_dump.vmo));
+  // Now we've inserted data, the processor is no longer idle and we set pending_data.
+  idle_signal_event_.signal(IDLE_SIGNAL, PENDING_DATA_SIGNAL);
+  mutex_.unlock();
+}
+
+void DataProcessor::DataProcessorInner::SignalIdleIfEmpty() {
+  mutex_.lock();
+  bool pending_work = !data_sink_map_.empty();
+  uint32_t signal_flags = pending_work ? 0 : IDLE_SIGNAL;
+  idle_signal_event_.signal(IDLE_SIGNAL, signal_flags);
+  mutex_.unlock();
+}
+
+zx::unowned_event DataProcessor::DataProcessorInner::GetEvent() {
+  return idle_signal_event_.borrow();
+}
+
+fbl::unique_fd& DataProcessor::DataProcessorInner::GetFd() { return dir_fd_; }
+
+void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner) {
+  auto data_sink_map = inner->TakeMapContents();
+  if (data_sink_map.empty()) {
+    inner->SignalIdleIfEmpty();
+    return;
+  }
   TestDebugDataMap debug_data_map;
   for (auto& [test_url, sink_vmo_map] : data_sink_map) {
     auto url = test_url;
     bool got_error = false;
     auto sinks_map = debugdata::ProcessDebugData(
-        dir_fd_, std::move(sink_vmo_map),
+        inner->GetFd(), std::move(sink_vmo_map),
         [&](const std::string& error) {
           FX_LOGS(ERROR) << "ProcessDebugData: " << error;
           got_error = true;
@@ -74,7 +133,8 @@ void DataProcessor::ProcessDataInner() {
       }
     }
   }
-  WriteSummaryFile(std::move(debug_data_map));
+  WriteSummaryFile(inner->GetFd(), std::move(debug_data_map));
+  inner->SignalIdleIfEmpty();
 }
 
 namespace {
@@ -89,10 +149,10 @@ const std::string kSummaryResultPass = "PASS";
 
 }  // namespace
 
-void DataProcessor::WriteSummaryFile(TestDebugDataMap debug_data_map) {
+void DataProcessor::WriteSummaryFile(fbl::unique_fd& fd, TestDebugDataMap debug_data_map) {
   // load current summary.json file and load it into our map.
   if (std::string current_summary;
-      files::ReadFileToStringAt(dir_fd_.get(), kSummaryFile, &current_summary)) {
+      files::ReadFileToStringAt(fd.get(), kSummaryFile, &current_summary)) {
     json_parser::JSONParser parser;
     auto doc = parser.ParseFromString(current_summary, kSummaryFile);
     FX_CHECK(!parser.HasError()) << "can't parse summary.json: " << parser.error_str().c_str();
@@ -162,6 +222,6 @@ void DataProcessor::WriteSummaryFile(TestDebugDataMap debug_data_map) {
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   doc.Accept(writer);
 
-  FX_CHECK(files::WriteFileAt(dir_fd_.get(), kSummaryFile, buffer.GetString(), buffer.GetSize()))
+  FX_CHECK(files::WriteFileAt(fd.get(), kSummaryFile, buffer.GetString(), buffer.GetSize()))
       << strerror(errno);
 }

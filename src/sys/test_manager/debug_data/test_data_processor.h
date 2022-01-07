@@ -5,6 +5,8 @@
 #ifndef SRC_SYS_TEST_MANAGER_DEBUG_DATA_TEST_DATA_PROCESSOR_H_
 #define SRC_SYS_TEST_MANAGER_DEBUG_DATA_TEST_DATA_PROCESSOR_H_
 
+#include <lib/zx/event.h>
+
 #include <map>
 #include <string>
 
@@ -14,7 +16,13 @@
 class TestDataProcessor : public AbstractDataProcessor {
  public:
   using UrlDataMap = std::map<std::string, std::vector<DataSinkDump>>;
-  explicit TestDataProcessor(std::shared_ptr<UrlDataMap> map) : map_(std::move(map)) {}
+  explicit TestDataProcessor(std::shared_ptr<UrlDataMap> map) : map_(std::move(map)) {
+    zx::event::create(0, &idle_signal_event_);
+    // Since we don't actually process anything, it's okay to leave this always idle.
+    // This works so long as there's only one thread calling ProcessData and checking for
+    // idle.
+    idle_signal_event_.signal(0, IDLE_SIGNAL);
+  }
 
   void ProcessData(std::string test_url, DataSinkDump data_sink) override {
     if (map_->find(test_url) == map_->end()) {
@@ -24,7 +32,10 @@ class TestDataProcessor : public AbstractDataProcessor {
     map_->at(test_url).push_back(std::move(data_sink));
   }
 
+  zx::unowned_event GetIdleEvent() override { return idle_signal_event_.borrow(); }
+
   std::shared_ptr<UrlDataMap> map_;
+  zx::event idle_signal_event_;
 };
 
 #endif  // SRC_SYS_TEST_MANAGER_DEBUG_DATA_TEST_DATA_PROCESSOR_H_
