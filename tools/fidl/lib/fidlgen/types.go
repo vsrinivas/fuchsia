@@ -405,18 +405,19 @@ const (
 )
 
 type Type struct {
-	Kind             TypeKind
-	ElementType      *Type
-	ElementCount     *int
-	HandleSubtype    HandleSubtype
-	HandleRights     HandleRights
-	RequestSubtype   EncodedCompoundIdentifier
-	PrimitiveSubtype PrimitiveSubtype
-	Identifier       EncodedCompoundIdentifier
-	Nullable         bool
-	ObjType          uint32
-	TypeShapeV1      TypeShape
-	TypeShapeV2      TypeShape
+	Kind              TypeKind
+	ElementType       *Type
+	ElementCount      *int
+	HandleSubtype     HandleSubtype
+	HandleRights      HandleRights
+	RequestSubtype    EncodedCompoundIdentifier
+	PrimitiveSubtype  PrimitiveSubtype
+	Identifier        EncodedCompoundIdentifier
+	Nullable          bool
+	ProtocolTransport string
+	ObjType           uint32
+	TypeShapeV1       TypeShape
+	TypeShapeV2       TypeShape
 }
 
 // UnmarshalJSON customizes the JSON unmarshalling for Type.
@@ -504,6 +505,10 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		if err != nil {
 			return err
 		}
+		err = json.Unmarshal(*obj["protocol_transport"], &t.ProtocolTransport)
+		if err != nil {
+			return err
+		}
 	case PrimitiveType:
 		err = json.Unmarshal(*obj["subtype"], &t.PrimitiveSubtype)
 		if err != nil {
@@ -517,6 +522,12 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 		err = json.Unmarshal(*obj["nullable"], &t.Nullable)
 		if err != nil {
 			return err
+		}
+		if protocolTransport, ok := obj["protocol_transport"]; ok {
+			err = json.Unmarshal(*protocolTransport, &t.ProtocolTransport)
+			if err != nil {
+				return err
+			}
 		}
 	default:
 		return fmt.Errorf("Unknown type kind: %s", t.Kind)

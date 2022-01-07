@@ -52,6 +52,11 @@ foreach(filename, standalone_libraries) {
 
     # To ensure quality of generated Dart bindings.
     dart_analysis = true
+
+    if (is_fuchsia) {
+      # Some test files use the driver transport.
+      contains_drivers = true
+    }
   }
 }
 

@@ -207,10 +207,11 @@ type Member interface {
 }
 
 type Root struct {
-	HandleTypes  []string
-	Library      fidlgen.LibraryIdentifier
-	Decls        []Kinded
-	Dependencies []fidlgen.LibraryIdentifier
+	HandleTypes              []string
+	Library                  fidlgen.LibraryIdentifier
+	Decls                    []Kinded
+	Dependencies             []fidlgen.LibraryIdentifier
+	ContainsDriverReferences bool
 }
 
 func (r *Root) declsOfKind(kind declKind) []Kinded {
@@ -392,7 +393,8 @@ type compiler struct {
 	// the anonymous layouts defined directly within that layout. We opt to flatten
 	// the naming context and use a map rather than a trie like structure for
 	// simplicity.
-	anonymousChildren map[namingContextKey][]ScopedLayout
+	anonymousChildren        map[namingContextKey][]ScopedLayout
+	containsDriverReferences bool
 }
 
 func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
@@ -491,10 +493,17 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.IsResource = true
 	case fidlgen.RequestType:
 		p := c.compileNameVariants(val.RequestSubtype)
+		if val.ProtocolTransport == "Driver" {
+			c.containsDriverReferences = true
+		}
+		t, ok := transports[val.ProtocolTransport]
+		if !ok {
+			panic(fmt.Sprintf("unknown transport %q", val.ProtocolTransport))
+		}
 		r.nameVariants = nameVariants{
 			HLCPP:   makeName("fidl::InterfaceRequest").template(p.HLCPP),
 			Unified: makeName("fidl::InterfaceRequest").template(p.Unified),
-			Wire:    makeName("fidl::ServerEnd").template(p.Wire),
+			Wire:    makeName(t.Namespace + "::ServerEnd").template(p.Wire),
 		}
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
@@ -512,10 +521,17 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		}
 		declType := declInfo.Type
 		if declType == fidlgen.ProtocolDeclType {
+			if val.ProtocolTransport == "Driver" {
+				c.containsDriverReferences = true
+			}
+			t, ok := transports[val.ProtocolTransport]
+			if !ok {
+				panic(fmt.Sprintf("unknown transport %q", val.ProtocolTransport))
+			}
 			r.nameVariants = nameVariants{
 				HLCPP:   makeName("fidl::InterfaceHandle").template(name.HLCPP),
 				Unified: makeName("fidl::InterfaceHandle").template(name.Unified),
-				Wire:    makeName("fidl::ClientEnd").template(name.Wire),
+				Wire:    makeName(t.Namespace + "::ClientEnd").template(name.Wire),
 			}
 			r.WireFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
@@ -733,6 +749,8 @@ func compile(r fidlgen.Root) *Root {
 	}
 	sort.Sort(sort.StringSlice(handleTypes))
 	root.HandleTypes = handleTypes
+
+	root.ContainsDriverReferences = c.containsDriverReferences
 
 	return &root
 }

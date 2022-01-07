@@ -84,6 +84,10 @@ import("//build/rust/toolchain.gni")
 #     generated Dart bindings is wasteful. This parameter allows us to only run
 #     analysis on goldens, and skip for other generated bindings. See fxb/82975
 #     for details.
+#
+#   contains_drivers (optional, boolean, default false)
+#     Indicates if any of the FIDL files contain the driver transport or
+#     references to the driver transport.
 
 template("fidl") {
   if (defined(invoker.sdk_category)) {
@@ -112,6 +116,9 @@ template("fidl") {
   }
   if (defined(invoker.dart_analysis)) {
     not_needed(invoker, [ "dart_analysis" ])
+  }
+  if (defined(invoker.contains_drivers)) {
+    not_needed(invoker, [ "contains_drivers" ])
   }
 
   # Allow generated targets visibility to their dependant generated targets

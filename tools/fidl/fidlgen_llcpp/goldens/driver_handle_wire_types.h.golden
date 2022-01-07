@@ -15,10 +15,105 @@
 
 #include <cinttypes>
 #ifdef __Fuchsia__
+#include <lib/fidl_driver/cpp/wire_types.h>
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
 
 #include <fidl/test.driverhandle/cpp/markers.h>
 
-namespace fidl {}  // namespace fidl
+namespace test_driverhandle {
+namespace wire {
+struct ServerEndWrapper;
+
+struct ClientEndWrapper;
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_ServerEndWrapperTable;
+
+struct ServerEndWrapper {
+  static constexpr const fidl_type_t* Type =
+      &test_driverhandle_ServerEndWrapperTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 4;
+  static constexpr uint32_t PrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasPointer = false;
+
+  ::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value = {};
+
+  void _CloseHandles();
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+extern "C" const fidl_type_t test_driverhandle_ClientEndWrapperTable;
+
+struct ClientEndWrapper {
+  static constexpr const fidl_type_t* Type =
+      &test_driverhandle_ClientEndWrapperTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 4;
+  static constexpr uint32_t PrimarySizeV1 = 4;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t MaxOutOfLineV1 = 0;
+  static constexpr bool HasPointer = false;
+
+  ::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value = {};
+
+  void _CloseHandles();
+
+  class UnownedEncodedMessage;
+  class OwnedEncodedMessage;
+  class DecodedMessage;
+};
+#endif  // __Fuchsia__
+
+}  // namespace wire
+}  // namespace test_driverhandle
+namespace fidl {
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_driverhandle::wire::ServerEndWrapper>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_driverhandle::wire::ServerEndWrapper>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_driverhandle::wire::ServerEndWrapper>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_driverhandle::wire::ServerEndWrapper>);
+static_assert(offsetof(::test_driverhandle::wire::ServerEndWrapper, value) ==
+              0);
+static_assert(sizeof(::test_driverhandle::wire::ServerEndWrapper) ==
+              ::test_driverhandle::wire::ServerEndWrapper::PrimarySize);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+template <>
+struct IsResource<::test_driverhandle::wire::ClientEndWrapper>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::test_driverhandle::wire::ClientEndWrapper>
+    : public std::true_type {};
+template <>
+struct IsStruct<::test_driverhandle::wire::ClientEndWrapper>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::test_driverhandle::wire::ClientEndWrapper>);
+static_assert(offsetof(::test_driverhandle::wire::ClientEndWrapper, value) ==
+              0);
+static_assert(sizeof(::test_driverhandle::wire::ClientEndWrapper) ==
+              ::test_driverhandle::wire::ClientEndWrapper::PrimarySize);
+#endif  // __Fuchsia__
+
+}  // namespace fidl

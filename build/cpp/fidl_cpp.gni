@@ -465,6 +465,9 @@ template("fidl_cpp_family") {
       forward_variables_from(common_options, "*")
       forward_variables_from(wire_types_options, "*")
       additional_public_deps = llcpp_public_deps
+      if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
+        additional_public_deps += [ "//sdk/lib/fidl_driver" ]
+      }
     }
 
     wire_channel_messaging_headers = [

@@ -10,6 +10,7 @@ source_set("fidl_driver") {
   sources = [
     "include/lib/fidl_driver/cpp/transport.h",
     "include/lib/fidl_driver/cpp/wire_messaging.h",
+    "include/lib/fidl_driver/cpp/wire_types.h",
     "transport.cc",
   ]
   public_configs = [ ":include" ]

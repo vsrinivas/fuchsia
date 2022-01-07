@@ -7,12 +7,12 @@ library test.driverhandle;
 @transport("Driver")
 protocol DriverProtocol {};
 
-@bindings_denylist("rust, cpp, llcpp, hlcpp, dart")
+@bindings_denylist("rust, cpp, hlcpp, dart")
 type ClientEndWrapper = resource struct {
     value client_end:DriverProtocol;
 };
 
-@bindings_denylist("rust, cpp, llcpp, hlcpp, dart")
+@bindings_denylist("rust, cpp, hlcpp, dart")
 type ServerEndWrapper = resource struct {
     value server_end:DriverProtocol;
 };
