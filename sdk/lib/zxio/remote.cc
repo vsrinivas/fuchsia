@@ -862,8 +862,8 @@ zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst
                                const char* dst_path) {
   Remote rio(io);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    ->Rename2(fidl::StringView::FromExternal(src_path), zx::event(dst_token),
-                              fidl::StringView::FromExternal(dst_path));
+                    ->Rename(fidl::StringView::FromExternal(src_path), zx::event(dst_token),
+                             fidl::StringView::FromExternal(dst_path));
   if (!result.ok()) {
     return result.status();
   }

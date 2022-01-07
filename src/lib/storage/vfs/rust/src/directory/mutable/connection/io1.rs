@@ -167,7 +167,7 @@ impl MutableConnection {
             DirectoryAdminRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
             }
-            DirectoryAdminRequest::Rename2 { src, dst_parent_token, dst, responder } => {
+            DirectoryAdminRequest::Rename { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))
                 })
@@ -590,7 +590,7 @@ mod tests {
         let (status, token) = proxy2.get_token().await.unwrap();
         assert_eq!(Status::from_raw(status), Status::OK);
 
-        let status = proxy.rename2("src", Event::from(token.unwrap()), "dest").await.unwrap();
+        let status = proxy.rename("src", Event::from(token.unwrap()), "dest").await.unwrap();
         assert!(status.is_ok());
 
         let events = events.0.lock().unwrap();

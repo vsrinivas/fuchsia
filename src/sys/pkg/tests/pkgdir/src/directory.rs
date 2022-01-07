@@ -1474,7 +1474,7 @@ async fn assert_unsupported_directory_calls(
         zx::Event::from(token.unwrap())
     };
     assert_eq!(
-        parent.rename2(child_base_path, token, "renamed").await.unwrap(),
+        parent.rename(child_base_path, token, "renamed").await.unwrap(),
         Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
     );
 

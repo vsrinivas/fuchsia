@@ -581,8 +581,8 @@ async fn serve_failing_blobfs(
             DirectoryAdminRequest::GetToken { responder } => {
                 responder.send(zx::Status::IO.into_raw(), None).context("failing gettoken")?
             }
-            DirectoryAdminRequest::Rename2 { responder, .. } => {
-                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing rename2")?
+            DirectoryAdminRequest::Rename { responder, .. } => {
+                responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing rename")?
             }
             DirectoryAdminRequest::Link { responder, .. } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing link")?

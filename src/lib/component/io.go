@@ -343,12 +343,8 @@ func (*directoryState) GetToken(fidl.Context) (int32, zx.Handle, error) {
 	return int32(zx.ErrNotSupported), zx.HandleInvalid, nil
 }
 
-func (*directoryState) Rename(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {
-	return int32(zx.ErrNotSupported), nil
-}
-
-func (*directoryState) Rename2(_ fidl.Context, src string, dstParentToken zx.Event, dst string) (fidlio.DirectoryRename2Result, error) {
-	return fidlio.DirectoryRename2ResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*directoryState) Rename(_ fidl.Context, src string, dstParentToken zx.Event, dst string) (fidlio.DirectoryRenameResult, error) {
+	return fidlio.DirectoryRenameResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*directoryState) Link(_ fidl.Context, src string, dstParentToken zx.Handle, dst string) (int32, error) {

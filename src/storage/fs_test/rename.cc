@@ -374,8 +374,8 @@ TEST_P(RenameTest, Raw) {
   constexpr char dst[] = "bravo/delta";
   auto rename_result =
       fidl::WireCall<fio::Directory>(caller.channel())
-          ->Rename2(fidl::StringView(src), zx::event(token_result.Unwrap()->token.get()),
-                    fidl::StringView(dst));
+          ->Rename(fidl::StringView(src), zx::event(token_result.Unwrap()->token.get()),
+                   fidl::StringView(dst));
   ASSERT_TRUE(rename_result.ok());
   ASSERT_TRUE(rename_result.value().result.is_err());
   ASSERT_EQ(rename_result.value().result.err(), ZX_ERR_INVALID_ARGS);

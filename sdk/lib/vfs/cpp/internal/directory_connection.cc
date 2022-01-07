@@ -98,8 +98,8 @@ void DirectoryConnection::GetToken(GetTokenCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, zx::handle());
 }
 
-void DirectoryConnection::Rename2(std::string src, zx::event dst_parent_token, std::string dst,
-                                  Rename2Callback callback) {
+void DirectoryConnection::Rename(std::string src, zx::event dst_parent_token, std::string dst,
+                                 RenameCallback callback) {
   callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }
 

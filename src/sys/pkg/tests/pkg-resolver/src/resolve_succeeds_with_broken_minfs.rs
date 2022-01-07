@@ -425,7 +425,7 @@ impl OpenRequestHandler for RenameFailOrTempFs {
                         let (status, handle) = tempdir_proxy.get_token().await.unwrap();
                         responder.send(status, handle).unwrap();
                     }
-                    DirectoryRequest::Rename2 { src, dst, responder, .. } => {
+                    DirectoryRequest::Rename { src, dst, responder, .. } => {
                         if !files_to_fail_renames.contains(&src) {
                             panic!("unsupported rename from {} to {}", src, dst);
                         }

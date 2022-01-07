@@ -526,14 +526,14 @@ TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   }
   {
     zx::event e;
-    fuchsia_io::wire::DirectoryRename2Result x;
+    fuchsia_io::wire::DirectoryRenameResult x;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &e));
-    client->Rename2("", std::move(e), "",
-                    [](fidl::WireUnownedResult<fuchsia_io_admin::DirectoryAdmin::Rename2>& ret) {
-                      ASSERT_OK(ret.status());
-                      ASSERT_TRUE(ret->result.is_err());
-                      ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
-                    });
+    client->Rename("", std::move(e), "",
+                   [](fidl::WireUnownedResult<fuchsia_io_admin::DirectoryAdmin::Rename>& ret) {
+                     ASSERT_OK(ret.status());
+                     ASSERT_TRUE(ret->result.is_err());
+                     ASSERT_EQ(ret->result.err(), ZX_ERR_NOT_SUPPORTED);
+                   });
   }
   client->GetToken(UnsupportedErrorMatcher());
   {

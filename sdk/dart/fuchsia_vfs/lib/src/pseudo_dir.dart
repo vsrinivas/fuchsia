@@ -508,7 +508,7 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<void> rename2(String src, Handle dstParentToken, String dst) async {
+  Future<void> rename(String src, Handle dstParentToken, String dst) async {
     throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 

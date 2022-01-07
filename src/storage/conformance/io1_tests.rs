@@ -1377,7 +1377,7 @@ async fn rename_with_sufficient_rights() {
 
         // Rename src/old.txt -> dest/new.txt.
         let status = src_dir
-            .rename2("old.txt", zx::Event::from(dest_token), "new.txt")
+            .rename("old.txt", zx::Event::from(dest_token), "new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_ok());
@@ -1412,7 +1412,7 @@ async fn rename_with_insufficient_rights() {
 
         // Try renaming src/old.txt -> dest/new.txt.
         let status = src_dir
-            .rename2("old.txt", zx::Event::from(dest_token), "new.txt")
+            .rename("old.txt", zx::Event::from(dest_token), "new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_err());
@@ -1441,13 +1441,13 @@ async fn rename_with_slash_in_path_fails() {
 
         // Including a slash in the src or dest path should fail.
         let status = test_dir
-            .rename2("src/old.txt", zx::Event::from(get_token(&dest_dir).await), "new.txt")
+            .rename("src/old.txt", zx::Event::from(get_token(&dest_dir).await), "new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_err());
         assert_eq!(status.err().unwrap(), zx::Status::INVALID_ARGS.into_raw());
         let status = src_dir
-            .rename2("old.txt", zx::Event::from(get_token(&dest_dir).await), "nested/new.txt")
+            .rename("old.txt", zx::Event::from(get_token(&dest_dir).await), "nested/new.txt")
             .await
             .expect("rename failed");
         assert!(status.is_err());

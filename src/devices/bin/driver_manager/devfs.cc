@@ -120,9 +120,9 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::handle());
   }
-  void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {
+  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) override {
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
+    completer.Reply(::fuchsia_io::wire::DirectoryRenameResult::WithErr(status));
   }
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);

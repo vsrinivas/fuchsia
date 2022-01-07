@@ -57,7 +57,7 @@ protocol/member fuchsia.io/Directory.OnOpen -> (int32 s,fuchsia.io/NodeInfo:opti
 protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory.Open2(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
-protocol/member fuchsia.io/Directory.Rename2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename2_Result result)
+protocol/member fuchsia.io/Directory.Rename(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename_Result result)
 protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.Rewind() -> (int32 s)
 protocol/member fuchsia.io/Directory.SetAttr(uint32 flags,fuchsia.io/NodeAttributes attributes) -> (int32 s)
@@ -71,10 +71,10 @@ resource table fuchsia.io/DirectoryInfo
 struct fuchsia.io/DirectoryObject
 protocol/member fuchsia.io/DirectoryWatcher.OnEvent(vector<uint8>:8192 events)
 protocol fuchsia.io/DirectoryWatcher
-struct fuchsia.io/Directory_Rename2_Response
-union/member fuchsia.io/Directory_Rename2_Result.err int32
-union/member fuchsia.io/Directory_Rename2_Result.response fuchsia.io/Directory_Rename2_Response
-strict union fuchsia.io/Directory_Rename2_Result
+struct fuchsia.io/Directory_Rename_Response
+union/member fuchsia.io/Directory_Rename_Result.err int32
+union/member fuchsia.io/Directory_Rename_Result.response fuchsia.io/Directory_Rename_Response
+strict union fuchsia.io/Directory_Rename_Result
 struct fuchsia.io/Directory_Unlink_Response
 union/member fuchsia.io/Directory_Unlink_Result.err int32
 union/member fuchsia.io/Directory_Unlink_Result.response fuchsia.io/Directory_Unlink_Response

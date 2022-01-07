@@ -391,13 +391,9 @@ func renameImpl(d *directoryWrapper, src string, token zx.Handle, dst string) (i
 	return int32(errorToZx(d.dir.Rename(dir.dir, src, dst))), nil
 }
 
-func (d *directoryWrapper) Rename(_ fidl.Context, src string, token zx.Handle, dst string) (int32, error) {
-	return renameImpl(d, src, token, dst)
-}
-
-func (d *directoryWrapper) Rename2(_ fidl.Context, src string, token zx.Event, dst string) (io.DirectoryRename2Result, error) {
+func (d *directoryWrapper) Rename(_ fidl.Context, src string, token zx.Event, dst string) (io.DirectoryRenameResult, error) {
 	result, err := renameImpl(d, src, *token.Handle(), dst)
-	return io.DirectoryRename2ResultWithErr(result), err
+	return io.DirectoryRenameResultWithErr(result), err
 }
 
 func (d *directoryWrapper) Link(_ fidl.Context, src string, token zx.Handle, dst string) (int32, error) {

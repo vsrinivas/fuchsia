@@ -280,7 +280,7 @@ where
             DirectoryAdminRequest::GetToken { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            DirectoryAdminRequest::Rename2 { src: _, dst_parent_token: _, dst: _, responder } => {
+            DirectoryAdminRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             DirectoryAdminRequest::SetAttr { responder, .. } => {

@@ -353,24 +353,24 @@ void DirectoryConnection::GetToken(GetTokenRequestView request,
   completer.Reply(status, std::move(returned_token));
 }
 
-void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) {
+void DirectoryConnection::Rename(RenameRequestView request, RenameCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
                         ", src: ", request->src.data(), ", dst: ", request->dst.data());
 
   zx_status_t status;
   if (request->src.empty() || request->dst.empty()) {
     status = ZX_ERR_INVALID_ARGS;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
+    completer.Reply(::fuchsia_io::wire::DirectoryRenameResult::WithErr(status));
     return;
   }
   if (options().flags.node_reference) {
     status = ZX_ERR_BAD_HANDLE;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
+    completer.Reply(::fuchsia_io::wire::DirectoryRenameResult::WithErr(status));
     return;
   }
   if (!options().rights.write) {
     status = ZX_ERR_BAD_HANDLE;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
+    completer.Reply(::fuchsia_io::wire::DirectoryRenameResult::WithErr(status));
     return;
   }
   status = vfs()->Rename(std::move(request->dst_parent_token), vnode(),
@@ -379,7 +379,7 @@ void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
+    completer.Reply(::fuchsia_io::wire::DirectoryRenameResult::WithErr(status));
   }
 }
 

@@ -440,7 +440,7 @@ mod tests {
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        src.rename2("a", Event::from(dst_token.unwrap()), "b")
+        src.rename("a", Event::from(dst_token.unwrap()), "b")
             .await
             .expect("FIDL call failed")
             .expect("rename failed");
@@ -481,7 +481,7 @@ mod tests {
 
         let (status, src_token) = src.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        src.rename2("a", Event::from(src_token.unwrap()), "b")
+        src.rename("a", Event::from(src_token.unwrap()), "b")
             .await
             .expect("FIDL call failed")
             .expect("rename failed");
@@ -542,7 +542,7 @@ mod tests {
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        src.rename2("a", Event::from(dst_token.unwrap()), "b")
+        src.rename("a", Event::from(dst_token.unwrap()), "b")
             .await
             .expect("FIDL call failed")
             .expect("rename failed");
@@ -601,7 +601,7 @@ mod tests {
 
         let (status, dst_token) = dst.get_token().await.expect("FIDL call failed");
         Status::ok(status).expect("get_token failed");
-        src.rename2("a", Event::from(dst_token.unwrap()), "b")
+        src.rename("a", Event::from(dst_token.unwrap()), "b")
             .await
             .expect("FIDL call failed")
             .expect("rename failed");

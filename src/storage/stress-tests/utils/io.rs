@@ -138,7 +138,7 @@ impl Directory {
                 }
             }
         }?;
-        match self.proxy.rename2(src_name, Event::from(dst_token), dst_name).await {
+        match self.proxy.rename(src_name, Event::from(dst_token), dst_name).await {
             Ok(_) => Ok(()),
             Err(e) => {
                 if e.is_closed() {

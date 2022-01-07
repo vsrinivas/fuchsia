@@ -426,7 +426,7 @@ protocol Directory {
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
     @selector("fuchsia.io/Directory.Rename")
-    Rename2(resource struct {
+    Rename(resource struct {
         src fuchsia.io2.Name;
         dst_parent_token fuchsia.io2.Token;
         dst fuchsia.io2.Name;

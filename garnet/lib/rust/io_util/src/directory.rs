@@ -261,7 +261,7 @@ pub async fn rename(dir: &DirectoryProxy, src: &str, dst: &str) -> Result<(), Re
     zx_status::Status::ok(status).map_err(RenameError::GetTokenError)?;
     let event = fidl::Event::from(dst_parent_dir_token.ok_or(RenameError::NoHandleError)?);
     src_parent
-        .rename2(src_filename, event, dst_filename)
+        .rename(src_filename, event, dst_filename)
         .await
         .map_err(RenameError::SendRenameRequest)?
         .map_err(|s| RenameError::RenameError(zx_status::Status::from_raw(s)))
