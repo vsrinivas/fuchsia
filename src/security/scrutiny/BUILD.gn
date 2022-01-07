@@ -4,10 +4,7 @@
 
 group("scrutiny") {
   testonly = true
-  public_deps = [
-    "//src/security/scrutiny/bin($host_toolchain)",
-    "//src/security/scrutiny/lib($host_toolchain)",
-  ]
+  public_deps = [ "//src/security/scrutiny/lib($host_toolchain)" ]
 }
 
 group("tests") {
