@@ -2599,8 +2599,8 @@ mod tests {
         add_ip_addr_subnet, del_ip_addr,
         ethernet::{EthernetLinkDevice, EthernetTimerId},
         get_assigned_ip_addr_subnets, get_ip_addr_state, get_ipv6_hop_limit, get_mtu,
-        is_in_ip_multicast, is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
-        DeviceLayerTimerIdInner, EthernetDeviceId,
+        is_in_ip_multicast, is_routing_enabled, set_routing_enabled, AddressEntry, DeviceId,
+        DeviceLayerTimerId, DeviceLayerTimerIdInner, EthernetDeviceId,
     };
     use crate::testutil::{
         self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
@@ -6132,6 +6132,103 @@ mod tests {
         assert_eq!(trigger_next_timer(&mut ctx), None);
     }
 
+    fn receive_prefix_update(
+        ctx: &mut Ctx<DummyEventDispatcher>,
+        device: DeviceId,
+        src_ip: Ipv6Addr,
+        dst_ip: SpecifiedAddr<Ipv6Addr>,
+        subnet: Subnet<Ipv6Addr>,
+        preferred_lifetime: u32,
+        valid_lifetime: u32,
+    ) {
+        let prefix = subnet.network();
+        let prefix_length = subnet.prefix();
+
+        let mut icmpv6_packet_buf = slaac_packet_buf(
+            src_ip,
+            dst_ip.get(),
+            prefix,
+            prefix_length,
+            false,
+            true,
+            valid_lifetime,
+            preferred_lifetime,
+        );
+        let icmpv6_packet = icmpv6_packet_buf
+            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip))
+            .unwrap();
+        ctx.receive_ndp_packet(
+            device,
+            src_ip.try_into().unwrap(),
+            dst_ip,
+            icmpv6_packet.unwrap_ndp(),
+        );
+    }
+
+    fn get_slaac_address_entry(
+        ctx: &Ctx<DummyEventDispatcher>,
+        device: DeviceId,
+        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+    ) -> Option<&AddressEntry<Ipv6Addr, DummyInstant, UnicastAddr<Ipv6Addr>>> {
+        let mut matching_addrs =
+            NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.id().into())
+                .iter_global_ipv6_addrs()
+                .filter(|entry| *entry.addr_sub() == addr_sub);
+        let entry = matching_addrs.next();
+        assert_eq!(matching_addrs.next(), None);
+        entry
+    }
+
+    fn assert_slaac_lifetimes_enforced(
+        ctx: &Ctx<DummyEventDispatcher>,
+        device: DeviceId,
+        entry: &AddressEntry<Ipv6Addr, DummyInstant, UnicastAddr<Ipv6Addr>>,
+        valid_until: DummyInstant,
+        preferred_until: DummyInstant,
+    ) {
+        assert_eq!(entry.state, AddressState::Assigned);
+        assert_eq!(entry.config_type(), AddrConfigType::Slaac);
+        assert_eq!(entry.valid_until, Some(valid_until));
+        assert_eq!(
+            ctx.dispatcher
+                .timer_events()
+                .filter_map(|(time, timer_id)| {
+                    if *timer_id
+                        == NdpTimerId::new_deprecate_slaac_address(
+                            device.id().into(),
+                            entry.addr_sub().addr(),
+                        )
+                        .into()
+                    {
+                        Some(*time)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>(),
+            vec![preferred_until]
+        );
+        assert_eq!(
+            ctx.dispatcher
+                .timer_events()
+                .filter_map(|(time, timer_id)| {
+                    if *timer_id
+                        == NdpTimerId::new_invalidate_slaac_address(
+                            device.id().into(),
+                            entry.addr_sub().addr(),
+                        )
+                        .into()
+                    {
+                        Some(*time)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>(),
+            vec![valid_until]
+        );
+    }
+
     #[test]
     fn test_host_slaac_valid_lifetime_updates() {
         // Make sure we update the valid lifetime only in certain scenarios
@@ -6149,76 +6246,23 @@ mod tests {
             valid_lifetime: u32,
             expected_valid_lifetime: u32,
         ) {
-            let prefix = subnet.network();
-            let prefix_length = subnet.prefix();
-
-            let mut icmpv6_packet_buf = slaac_packet_buf(
-                src_ip,
-                dst_ip.get(),
-                prefix,
-                prefix_length,
-                false,
-                true,
-                valid_lifetime,
-                preferred_lifetime,
-            );
-            let icmpv6_packet = icmpv6_packet_buf
-                .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip))
-                .unwrap();
-            ctx.receive_ndp_packet(
+            receive_prefix_update(
+                ctx,
                 device,
-                src_ip.try_into().unwrap(),
+                src_ip,
                 dst_ip,
-                icmpv6_packet.unwrap_ndp(),
+                subnet,
+                preferred_lifetime,
+                valid_lifetime,
             );
-
-            assert_eq!(
-                NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.id().into())
-                    .iter_global_ipv6_addrs()
-                    .count(),
-                1
-            );
+            let entry = get_slaac_address_entry(ctx, device, addr_sub).unwrap();
             let now = ctx.now();
             let valid_until =
                 now.checked_add(Duration::from_secs(expected_valid_lifetime.into())).unwrap();
-            let entry =
-                NdpContext::<EthernetLinkDevice>::get_ip_device_state(ctx, device.id().into())
-                    .iter_global_ipv6_addrs()
-                    .last()
-                    .unwrap();
-            assert_eq!(*entry.addr_sub(), addr_sub);
-            assert_eq!(entry.state, AddressState::Assigned);
-            assert_eq!(entry.config_type(), AddrConfigType::Slaac);
-            assert_eq!(entry.valid_until.unwrap(), valid_until);
-            assert_eq!(
-                ctx.dispatcher
-                    .timer_events()
-                    .filter(|x| (*x.0
-                        == now
-                            .checked_add(Duration::from_secs(preferred_lifetime.into()))
-                            .unwrap())
-                        && (*x.1
-                            == NdpTimerId::new_deprecate_slaac_address(
-                                device.id().into(),
-                                addr_sub.addr()
-                            )
-                            .into()))
-                    .count(),
-                1
-            );
-            assert_eq!(
-                ctx.dispatcher
-                    .timer_events()
-                    .filter(|x| (*x.0 == valid_until)
-                        && (*x.1
-                            == NdpTimerId::new_invalidate_slaac_address(
-                                device.id().into(),
-                                addr_sub.addr()
-                            )
-                            .into()))
-                    .count(),
-                1
-            );
+            let preferred_until =
+                now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap();
+
+            assert_slaac_lifetimes_enforced(ctx, device, entry, valid_until, preferred_until);
         }
 
         let config = Ipv6::DUMMY_CONFIG;
