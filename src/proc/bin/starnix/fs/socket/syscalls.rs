@@ -397,6 +397,8 @@ fn recvmsg_internal(
             &control_message_header.as_bytes()[..num_bytes_to_write],
         )?;
 
+        // TODO(fxb/79405): This length is not correct according to gVisor's socket_test. The
+        // expected length is calculated by a CMSG_SPACE macro, which seems to do some alignment.
         message_header.msg_controllen = num_bytes_to_write;
     } else {
         // If there is no control message, make sure to clear the length.
