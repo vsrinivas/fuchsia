@@ -7,6 +7,7 @@ use ffx_assembly_args::ConfigDataArgs;
 use ffx_assembly_args::ConfigDataChange;
 use fuchsia_archive;
 use fuchsia_pkg::CreationManifest;
+use serde_json::ser;
 use std::collections::BTreeMap;
 use std::fs::{create_dir_all, metadata, remove_dir_all, File};
 use std::io::prelude::*;
@@ -51,15 +52,21 @@ fn create_config_data_with_temp_folder(args: ConfigDataArgs, temp_dir: &PathBuf)
 
     let manifest = CreationManifest::from_external_and_far_contents(BTreeMap::new(), far_contents)?;
 
-    let mut meta_far_path = args.out_path;
-    if meta_far_path.exists() && metadata(&meta_far_path)?.is_dir() {
-        meta_far_path = meta_far_path.join("meta.far");
+    let out_dir = if args.out_path.exists() && metadata(&args.out_path)?.is_dir() {
+        args.out_path
     } else {
-        create_dir_all(meta_far_path.parent().ok_or(anyhow!("No parent for directory"))?)?;
-    }
+        let parent = args.out_path.parent().context("No parent for directory")?.to_path_buf();
+        create_dir_all(&parent)?;
+        parent
+    };
 
-    fuchsia_pkg::build(&manifest, meta_far_path, "config-data")?;
+    let meta_far_path = out_dir.join("meta.far");
+    let package_manifest_path = out_dir.join("package_manifest.json");
 
+    let package_manifest = fuchsia_pkg::build(&manifest, meta_far_path, "config-data")?;
+    let package_manifest_file = File::create(&package_manifest_path)
+        .context("Failed to create update_package_manifest.json")?;
+    ser::to_writer(package_manifest_file, &package_manifest)?;
     Ok(())
 }
 
@@ -175,6 +182,7 @@ fn add_changes(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_pkg::PackageManifest;
     use tempfile::TempDir;
 
     fn create_test_far(temp_dir: &TempDir) -> PathBuf {
@@ -337,5 +345,16 @@ mod tests {
 
         let unchanged_file = far.read_file("meta/data/setui_service/service_flags.json").unwrap();
         assert_eq!(str::from_utf8(&unchanged_file).unwrap(), "Service flag contents\n");
+
+        // Validate the package_manifest is properly populated
+        let package_manifest_path = temp_dir.path().to_path_buf().join("package_manifest.json");
+
+        assert!(package_manifest_path.exists());
+        assert!(metadata(&package_manifest_path).unwrap().is_file());
+
+        let content = std::fs::read_to_string(package_manifest_path).unwrap();
+        let package_manifest = serde_json::from_str::<PackageManifest>(&content).unwrap();
+
+        assert_eq!("config-data/0".to_owned(), package_manifest.package_path().to_string());
     }
 }
