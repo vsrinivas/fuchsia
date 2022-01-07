@@ -4,6 +4,8 @@
 
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
@@ -89,11 +91,11 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
     return nullptr;
   }
 
-  if (++it != nodes.end()) {
-    return &(it->second);
-  }
+  while (++it != nodes.end() && !filter(&(it->second)))
+    ;
 
-  return nullptr;
+  FX_DCHECK(it != nodes.end());
+  return it == nodes.end() ? nullptr : &(it->second);
 }
 
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousNode(
@@ -112,12 +114,15 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousN
   std::map<uint32_t, fuchsia::accessibility::semantics::Node>::const_iterator it =
       nodes.find(node_id);
 
-  if (it == nodes.end()) {
+  if (it == nodes.end() || it == nodes.begin()) {
     return nullptr;
   }
 
-  if (it != nodes.begin()) {
-    return &(std::prev(it)->second);
+  while (it != nodes.begin()) {
+    it = std::prev(it);
+    if (filter(&(it->second))) {
+      return &(it->second);
+    }
   }
 
   return nullptr;

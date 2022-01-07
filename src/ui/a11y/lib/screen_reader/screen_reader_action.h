@@ -71,6 +71,12 @@ class ScreenReaderAction {
   // missing data necessary to build an utterance.
   fpromise::promise<> BuildSpeechTaskForRangeValuePromise(zx_koid_t view_koid, uint32_t node_id);
 
+  // Updates the current and previous navigation contexts based on the newly focused node.
+  void UpdateNavigationContext();
+
+  // Gets the message context for the currently focused node.
+  ScreenReaderMessageGenerator::ScreenReaderMessageContext GetMessageContext();
+
   // ActionContext which is used to make calls to Semantics Manager and TTS.
   ActionContext* action_context_;
 

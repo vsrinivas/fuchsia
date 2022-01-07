@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 
 #include <memory>
+#include <optional>
 
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/speaker.h"
@@ -53,6 +54,36 @@ class ScreenReaderContext {
     kHeader,
     // User is navigating by form controls.
     kFormControl,
+  };
+
+  struct TableContext {
+    // The row/column headers, ordered by row/column index. Note that the
+    // vectors are 0-indexed, so users must access the row/column header via the
+    // row/column index - 1.
+    std::vector<std::string> row_headers;
+    std::vector<std::string> column_headers;
+
+    // Row/column indices of the currently focused node.
+    // Note that row and column indices are 1-indexed, so a value of 0
+    // indicates that no row/column information is present.
+    uint32_t row_index = 0;
+    uint32_t column_index = 0;
+  };
+
+  // TODO(fxb.dev/90733): Investigate whether we need to both a current and
+  // previous copy of all this state.
+  struct NavigationContext {
+    // Holds koid of the view for the node to which this context applies.
+    std::optional<zx_koid_t> view_ref_koid;
+
+    // The id of the container to which the currently focused node belongs (if
+    // any).
+    std::optional<uint32_t> current_container;
+
+    // If the node specified by |current_container| is a table, then
+    // |table_context| holds additional info about the navigation state within
+    // that table.
+    std::optional<TableContext> table_context;
   };
 
   // Defines the signature for a callback invoked when a node update is
@@ -108,6 +139,16 @@ class ScreenReaderContext {
   // where a change in some attribute that is spoken to the user is.
   virtual bool UpdateCacheIfDescribableA11yFocusedNodeContentChanged();
 
+  // Methods to get/set the current and previous navigation contexts.
+  void set_current_navigation_context(NavigationContext navigation_context) {
+    current_navigation_context_ = navigation_context;
+  }
+  void set_previous_navigation_context(NavigationContext navigation_context) {
+    previous_navigation_context_ = navigation_context;
+  }
+  NavigationContext current_navigation_context() { return current_navigation_context_; }
+  NavigationContext previous_navigation_context() { return previous_navigation_context_; }
+
  protected:
   // For mocks.
   ScreenReaderContext();
@@ -144,6 +185,11 @@ class ScreenReaderContext {
 
   // Copy of the last node to receive the a11y focus.
   std::optional<fuchsia::accessibility::semantics::Node> last_a11y_focused_node_;
+
+  // Holds state about the portions of the semantic tree surrounding the
+  // currently focused node.
+  NavigationContext current_navigation_context_ = {};
+  NavigationContext previous_navigation_context_ = {};
 
   // Invoked once, on the first tree update received after the callback is set.
   // The callback is cleared after it's invoked.

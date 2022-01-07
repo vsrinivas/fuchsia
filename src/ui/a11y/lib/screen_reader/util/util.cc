@@ -53,6 +53,11 @@ bool NodeHasSubsetOfActions(const fuchsia::accessibility::semantics::Node* node_
 
 }  // namespace
 
+bool IsContainer(const fuchsia::accessibility::semantics::Node* node) {
+  return node->has_role() && (node->role() == fuchsia::accessibility::semantics::Role::TABLE ||
+                              node->role() == fuchsia::accessibility::semantics::Role::LIST);
+}
+
 bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) {
   if (!node) {
     return false;
@@ -70,8 +75,27 @@ bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) {
                            node->role() == fuchsia::accessibility::semantics::Role::LINK ||
                            node->role() == fuchsia::accessibility::semantics::Role::CHECK_BOX ||
                            node->role() == fuchsia::accessibility::semantics::Role::SLIDER ||
-                           node->role() == fuchsia::accessibility::semantics::Role::IMAGE);
-  return contains_text || is_actionable;
+                           node->role() == fuchsia::accessibility::semantics::Role::IMAGE ||
+                           node->role() == fuchsia::accessibility::semantics::Role::CELL ||
+                           node->role() == fuchsia::accessibility::semantics::Role::COLUMN_HEADER ||
+                           node->role() == fuchsia::accessibility::semantics::Role::ROW_HEADER);
+
+  return (contains_text || is_actionable) && !IsContainer(node);
+}
+
+const fuchsia::accessibility::semantics::Node* GetContainerNode(zx_koid_t koid, uint32_t node_id,
+                                                                SemanticsSource* semantics_source) {
+  const auto* node = semantics_source->GetParentNode(koid, node_id);
+
+  while (node) {
+    if (IsContainer(node)) {
+      return node;
+    }
+
+    node = semantics_source->GetParentNode(koid, node->node_id());
+  }
+
+  return nullptr;
 }
 
 std::string FormatFloat(float input) {

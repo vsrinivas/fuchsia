@@ -51,8 +51,9 @@ class Speaker {
   virtual ~Speaker();
 
   // Returns a speech task that speaks the node description.
-  virtual fpromise::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
-                                               Options options);
+  virtual fpromise::promise<> SpeakNodePromise(
+      const fuchsia::accessibility::semantics::Node* node, Options options,
+      ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context = {});
 
   // Returns a speech task that speaks the provided |message|.
   virtual fpromise::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,

@@ -24,6 +24,10 @@ std::string FormatFloat(float input);
 std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
                                      SemanticsSource* semantics_source);
 
+// Get the container for the current node (if any).
+const fuchsia::accessibility::semantics::Node* GetContainerNode(zx_koid_t koid, uint32_t node_id,
+                                                                SemanticsSource* semantics_source);
+
 // Returns true if the node represents a slider.
 bool NodeIsSlider(const fuchsia::accessibility::semantics::Node& node);
 

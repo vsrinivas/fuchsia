@@ -295,5 +295,122 @@ TEST_F(ExploreActionTest, HitTestsAreSentToKeyboardViewWhenKeyboardIsVisible) {
   EXPECT_EQ(focus->view_ref_koid, second_view_koid);
 }
 
+TEST_F(ExploreActionTest, UpdatesNavigationContext) {
+  Node root_node = CreateTestNode(0u, "root");
+  root_node.set_child_ids({1u});
+
+  Node child_node = CreateTestNode(1u, "child");
+  child_node.set_child_ids({2u});
+
+  Node table_node = CreateTestNode(2u, "table");
+  table_node.set_role(fuchsia::accessibility::semantics::Role::TABLE);
+  auto* table_attributes = table_node.mutable_attributes()->mutable_table_attributes();
+  table_attributes->set_number_of_rows(3u);
+  table_attributes->set_number_of_columns(4u);
+  table_node.set_child_ids({3u});
+  EXPECT_TRUE(table_node.has_attributes());
+  EXPECT_TRUE(table_node.attributes().has_table_attributes());
+
+  Node cell_node = CreateTestNode(3u, "cell");
+  cell_node.set_role(fuchsia::accessibility::semantics::Role::CELL);
+  auto* cell_attributes = table_node.mutable_attributes()->mutable_table_cell_attributes();
+  cell_attributes->set_row_index(1u);
+  cell_attributes->set_column_index(2u);
+
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(root_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(child_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(table_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(cell_node));
+
+  a11y::ExploreAction explore_action(action_context(), mock_screen_reader_context());
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  fuchsia::accessibility::semantics::Hit hit;
+  hit.set_node_id(3u);
+  mock_semantics_source()->SetHitTestResult(mock_semantic_provider()->koid(), std::move(hit));
+
+  explore_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  const auto& navigation_context = mock_screen_reader_context()->current_navigation_context();
+  EXPECT_TRUE(navigation_context.current_container.has_value());
+  EXPECT_EQ(*navigation_context.current_container, 2u);
+}
+
+TEST_F(ExploreActionTest, UserExitsTableInSeparateView) {
+  // Create table in view 1.
+  {
+    Node root_node = CreateTestNode(0u, "root 1");
+    root_node.set_child_ids({1u});
+
+    Node child_node = CreateTestNode(1u, "child");
+    child_node.set_child_ids({2u});
+
+    Node table_node = CreateTestNode(2u, "table");
+    table_node.set_role(fuchsia::accessibility::semantics::Role::TABLE);
+    auto* table_attributes = table_node.mutable_attributes()->mutable_table_attributes();
+    table_attributes->set_number_of_rows(3u);
+    table_attributes->set_number_of_columns(4u);
+    table_node.set_child_ids({3u});
+    EXPECT_TRUE(table_node.has_attributes());
+    EXPECT_TRUE(table_node.attributes().has_table_attributes());
+
+    Node cell_node = CreateTestNode(3u, "cell");
+    cell_node.set_role(fuchsia::accessibility::semantics::Role::CELL);
+    auto* cell_attributes = table_node.mutable_attributes()->mutable_table_cell_attributes();
+    cell_attributes->set_row_index(1u);
+    cell_attributes->set_column_index(2u);
+
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                                std::move(root_node));
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                                std::move(child_node));
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                                std::move(table_node));
+    mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                                std::move(cell_node));
+  }
+
+  // Create a root node in a separate view.
+  MockSemanticProvider semantic_provider_2(nullptr, nullptr);
+  {
+    Node root_node = CreateTestNode(0u, "root 2");
+    mock_semantics_source()->CreateSemanticNode(semantic_provider_2.koid(), std::move(root_node));
+  }
+
+  // Set the current navigation context to have node 2 as its container.
+  a11y::ScreenReaderContext::NavigationContext navigation_context;
+  navigation_context.current_container = 2u;
+  navigation_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  // Set the hit result to the root of view 2.
+  fuchsia::accessibility::semantics::Hit hit;
+  hit.set_node_id(0u);
+  mock_semantics_source()->SetHitTestResult(semantic_provider_2.koid(), std::move(hit));
+
+  // Run the action using a gesture context in view 2.
+  a11y::ExploreAction explore_action(action_context(), mock_screen_reader_context());
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = semantic_provider_2.koid();
+
+  explore_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  // Verify that previous_container was NOT set in the message context.
+  ASSERT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
+  EXPECT_EQ(mock_a11y_focus_manager()->GetA11yFocus().value().node_id, 0u);
+  EXPECT_EQ(mock_a11y_focus_manager()->GetA11yFocus().value().view_ref_koid,
+            semantic_provider_2.koid());
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  EXPECT_EQ(mock_speaker()->node_ids().size(), 1u);
+  EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
+  ASSERT_FALSE(mock_speaker()->message_contexts()[0].previous_container);
+}
+
 }  // namespace
 }  // namespace accessibility_test

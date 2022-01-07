@@ -55,9 +55,11 @@ Speaker::~Speaker() {
   }
 }
 
-fpromise::promise<> Speaker::SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
-                                              Options options) {
-  auto utterances = screen_reader_message_generator_->DescribeNode(node);
+fpromise::promise<> Speaker::SpeakNodePromise(
+    const fuchsia::accessibility::semantics::Node* node, Options options,
+    ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context) {
+  auto utterances =
+      screen_reader_message_generator_->DescribeNode(node, std::move(message_context));
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 
   return PrepareTask(task, options.interrupt, options.save_utterance)

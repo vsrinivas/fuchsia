@@ -26,8 +26,10 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     ~MockSpeaker() override;
 
     // |Speaker|
-    fpromise::promise<> SpeakNodePromise(const fuchsia::accessibility::semantics::Node* node,
-                                         Options options) override;
+    fpromise::promise<> SpeakNodePromise(
+        const fuchsia::accessibility::semantics::Node* node, Options options,
+        a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext message_context = {})
+        override;
 
     // |Speaker|
     fpromise::promise<> SpeakMessagePromise(fuchsia::accessibility::tts::Utterance utterance,
@@ -59,7 +61,12 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     std::vector<uint32_t>& node_ids() { return node_ids_; }
     // Returns the vector that collects all message IDs to be spoken by |SpeakMessageByIdPromise|
     std::vector<fuchsia::intl::l10n::MessageIds>& message_ids() { return message_ids_; }
-
+    // Returns the vector that collects all message contexts sent to
+    // SpeakNodePromise().
+    std::vector<a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext>&
+    message_contexts() {
+      return message_contexts_;
+    }
     // Sets a callback that will be invoked before this object is destroyed.
     void set_on_destruction_callback(OnDestructionCallback callback);
 
@@ -70,6 +77,7 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
     std::vector<std::string> messages_;
     std::vector<uint32_t> node_ids_;
     std::vector<fuchsia::intl::l10n::MessageIds> message_ids_;
+    std::vector<a11y::ScreenReaderMessageGenerator::ScreenReaderMessageContext> message_contexts_;
     bool received_speak_ = false;
     bool received_speak_label_ = false;
     bool received_cancel_ = false;
