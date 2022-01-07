@@ -360,14 +360,16 @@ TEST(ClientBindingTestCase, ReleaseOutstandingTxnsOnPeerClosed) {
   EXPECT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 }
 
-TEST(ClientBindingTestCase, Epitaph) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
+// Test receiving different values of epitaphs.
+class ClientReceiveEpitaphTest : public fidl_testing::AsyncLoopAndEndpointsFixture {
+  void SetUp() override {
+    ASSERT_NO_FAILURES(AsyncLoopAndEndpointsFixture::SetUp());
+    ASSERT_OK(loop().StartThread());
+  }
+};
 
-  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
-
+TEST_F(ClientReceiveEpitaphTest, OkEpitpah) {
+  auto [local, remote] = std::move(endpoints());
   sync_completion_t unbound;
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
@@ -375,6 +377,37 @@ TEST(ClientBindingTestCase, Epitaph) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
+      // An epitaph value of ZX_OK is defined to indicate normal closure.
+      EXPECT_TRUE(info.is_peer_closed());
+      EXPECT_FALSE(info.is_user_initiated());
+      EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
+      EXPECT_EQ(ZX_OK, info.status());
+      sync_completion_signal(&unbound_);
+    }
+
+   private:
+    sync_completion_t& unbound_;
+  };
+
+  WireSharedClient<TestProtocol> client(std::move(local), loop().dispatcher(),
+                                        std::make_unique<EventHandler>(unbound));
+
+  // Send an epitaph and wait for on_unbound to run.
+  ASSERT_OK(fidl_epitaph_write(remote.channel().get(), ZX_OK));
+  EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+TEST_F(ClientReceiveEpitaphTest, NonOkEpitaph) {
+  auto [local, remote] = std::move(endpoints());
+  sync_completion_t unbound;
+
+  class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
+   public:
+    explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
+
+    void on_fidl_error(::fidl::UnbindInfo info) override {
+      EXPECT_TRUE(info.is_peer_closed());
+      EXPECT_FALSE(info.is_user_initiated());
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_BAD_STATE, info.status());
       sync_completion_signal(&unbound_);
@@ -384,7 +417,7 @@ TEST(ClientBindingTestCase, Epitaph) {
     sync_completion_t& unbound_;
   };
 
-  WireSharedClient<TestProtocol> client(std::move(local), loop.dispatcher(),
+  WireSharedClient<TestProtocol> client(std::move(local), loop().dispatcher(),
                                         std::make_unique<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
@@ -392,14 +425,8 @@ TEST(ClientBindingTestCase, Epitaph) {
   EXPECT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
-TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_OK(loop.StartThread());
-
-  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
-
+TEST_F(ClientReceiveEpitaphTest, PeerClosedNoEpitaph) {
+  auto [local, remote] = std::move(endpoints());
   sync_completion_t unbound;
 
   class EventHandler : public fidl::WireAsyncEventHandler<TestProtocol> {
@@ -407,6 +434,8 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
     void on_fidl_error(::fidl::UnbindInfo info) override {
+      EXPECT_TRUE(info.is_peer_closed());
+      EXPECT_FALSE(info.is_user_initiated());
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       // No epitaph is equivalent to ZX_ERR_PEER_CLOSED epitaph.
       EXPECT_EQ(ZX_ERR_PEER_CLOSED, info.status());
@@ -417,7 +446,7 @@ TEST(ClientBindingTestCase, PeerClosedNoEpitaph) {
     sync_completion_t& unbound_;
   };
 
-  WireSharedClient<TestProtocol> client(std::move(local), loop.dispatcher(),
+  WireSharedClient<TestProtocol> client(std::move(local), loop().dispatcher(),
                                         std::make_unique<EventHandler>(unbound));
 
   // Close the server end and wait for on_unbound to run.
