@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("boringssl-sys") {
+  name = "boringssl-sys"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  non_rust_deps = [
+    # only depend on libcrypto until we actually use the SSL bits
+    "//third_party/boringssl:crypto",
+  ]
+
+  source_root =
+      "//build/secondary/third_party/boringssl/rust/boringssl-sys/src/lib.rs"
+  sources = [
+    "//build/secondary/third_party/boringssl/rust/boringssl-sys/src/lib.rs",
+  ]
+
+  if (current_toolchain == host_toolchain) {
+    # Unspeakable kludge to get the all wrong and completely fragile
+    # linking semantics for non_rust_deps to squeak through for the
+    # static libcrypto from boringssl.
+    crypto_out_dir = get_label_info(non_rust_deps[0], "target_out_dir")
+    static_libcrypto = rebase_path("$crypto_out_dir/libcrypto.a")
+    shlib_out_dir = get_label_info(":any($shlib_toolchain)", "root_out_dir")
+    write_file("$shlib_out_dir/libcrypto.so", [ "INPUT($static_libcrypto)" ])
+  }
+}

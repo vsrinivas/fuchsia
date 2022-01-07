@@ -1,0 +1,6 @@
+# This should be removed by bindgen.sh, but just in case.
+bindgen.h
+# These may be used in development
+Cargo.toml
+Cargo.lock
+target

@@ -1,0 +1,29 @@
+Name: boringssl
+URL: https://boringssl.googlesource.com/boringssl
+Version: git
+License: BSDish
+License File: src/LICENSE
+Security Critical: yes
+
+Description:
+A fork of OpenSSL, as described at https://www.imperialviolet.org/2014/06/20/boringssl.html
+
+Prerequisites:
+* apt install curl git golang perl python llvm-dev libclang-dev clang
+* curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+To update:
+1. `rustup update`
+1. `cargo install bindgen` and update BINDGEN_EXPECTED_VERSION in
+   ./rust/boringssl-sys/bindgen.sh to `bindgen --version`. (If things regress,
+   revert back to pinned version with `cargo install bindgen --version
+   ${BINDGEN_EXPECTED_VERSION}` and investigate).
+1. `go run roll_boringssl.go`
+1. Test according to instructions given by the previous step.
+1. Commit, review, and submit the changes to this repository (you may need to
+   bypass the CQ).
+1. Update the BoringSSL manifest in the internal integration repository with
+   this repository's revision and the upstream revision.
+
+Upstream revision:
+https://fuchsia.googlesource.com/third_party/boringssl/+/f315a86df3d5cd51135db996c9d5747ec2641331/

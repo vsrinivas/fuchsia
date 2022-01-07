@@ -1,0 +1,12 @@
+build/
+/src/
+
+# Fuchsia doesn't use assembly these platform/OS combinations
+ios-arm/
+ios-aarch64/
+linux-arm/
+linux-ppc64le/
+linux-x86/
+mac-x86/
+win-x86/
+win-x86_64/
