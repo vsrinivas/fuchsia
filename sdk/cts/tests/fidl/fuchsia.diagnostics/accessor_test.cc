@@ -252,7 +252,7 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  static constexpr auto kInspectPublisher = Moniker{"inspect-publisher"};
+  static constexpr char kInspectPublisher[] = "inspect-publisher";
   static constexpr auto kInspectPublisherUrl = "#meta/inspect-publisher.cm";
 
   auto context = sys::ComponentContext::Create();
@@ -260,16 +260,13 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   fuchsia::diagnostics::ArchiveAccessorPtr accessor;
   ASSERT_EQ(ZX_OK, context->svc()->Connect(accessor.NewRequest()));
 
-  auto realm = Realm::Builder::Create(context->svc())
-                   .AddComponent(kInspectPublisher,
-                                 Component{
-                                     .source = ComponentUrl{kInspectPublisherUrl},
-                                     .eager = true,
-                                 })
-                   .AddRoute(CapabilityRoute{
-                       .capability = Protocol{"fuchsia.logger.LogSink"},
-                       .source = AboveRoot(),
-                       .targets = {kInspectPublisher},
+  auto realm = experimental::RealmBuilder::Create(context->svc())
+                   .AddChild(kInspectPublisher, kInspectPublisherUrl,
+                             ChildOptions{.startup_mode = StartupMode::EAGER})
+                   .AddRoute(Route{
+                       .capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                       .source = ParentRef(),
+                       .targets = {ChildRef{kInspectPublisher}},
                    })
                    .Build(loop.dispatcher());
 
