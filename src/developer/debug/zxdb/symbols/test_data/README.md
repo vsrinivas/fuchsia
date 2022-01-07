@@ -10,12 +10,12 @@ platform variations.
 
 ## To generate the binaries
 
-  * On x64 copy the generated `zxdb_symbol_test` that includes symbols to
+  * On x64 copy the generated `libzxdb_symbol_test.so` that includes symbols to
     `libsymbol_test_so.targetso`. As of this writing, the compiled file will be something
-    like: `out/x64/host_x64/test_data/zxdb/libzxdb_symbol_test.targetso`
+    like: `$FUCHSIA_OUT_DIR/arm64-shared/lib.unstripped/libzxdb_symbol_test.so`
 
-  * The Linux "strip" doesn't work on our binaries. Copy the stripped version from
-    `out/x64/x64-shared/libzxdb_symbol_test.so` to `libsymbol_test_so_stripped.targetso`
+  * Copy the stripped version from `$FUCHSIA_OUT_DIR/arm64-shared/libzxdb_symbol_test.so` to
+    `libsymbol_test_so_stripped.targetso`
 
 # Large tests
 

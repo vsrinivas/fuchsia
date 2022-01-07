@@ -144,11 +144,13 @@ EXPORT TypeForUsing GetUsing() {
 }
 
 class VirtualBase {
- virtual void DoIt() {}
+  // This function will be ICF'ed with PassRValueRef and get DW_AT_low_pc = 0.
+  virtual void DoIt() {}
 };
 
 class VirtualDerived : public virtual VirtualBase {
- virtual void DoIt() {}
+  // This function will be ICF'ed with PassRValueRef and get DW_AT_low_pc = 0.
+  virtual void DoIt() {}
 };
 
 EXPORT VirtualDerived GetVirtualDerived() {

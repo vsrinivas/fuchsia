@@ -65,7 +65,7 @@ TEST(Index, IndexDump) {
         DoStructCall: {[0x1120, 0x116c)}
         GetStruct: {[0x10a0, 0x10c5)}
         GetStructMemberPtr: {[0x10d0, 0x10e1)}
-        InlinedFunction: {[0x0, 0xf)}, {[0x12e0, 0x12e6)}
+        InlinedFunction: {}, {[0x12e0, 0x12e6)}
         NamespaceFunction: {[0x1410, 0x141b)}
         PassRValueRef: {[0x1110, 0x111a)}
       Variables:
@@ -90,11 +90,11 @@ TEST(Index, IndexDump) {
         TypedEnum: 0x107
     VirtualBase: 0x319
       Functions:
-        DoIt: {[0x0, 0xa)}
+        DoIt: {}
         VirtualBase: {[0x13e0, 0x13fc)}
     VirtualDerived: 0x2e3
       Functions:
-        DoIt: {[0x0, 0xa)}
+        DoIt: {}
         VirtualDerived: {[0x13a0, 0x13df)}
     __ARRAY_SIZE_TYPE__: 0x5df
     char: 0x2ae

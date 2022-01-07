@@ -64,7 +64,10 @@ AddressRanges GetCodeRanges(const llvm::DWARFDie& die) {
 
   code_ranges.reserve(expected_ranges->size());
   for (const llvm::DWARFAddressRange& range : *expected_ranges) {
-    if (range.valid())
+    // A zero DW_AT_low_pc means the code is removed during the linking, either due to garbage
+    // collection (of unused functions) or identical code folding. Functions inlined and not used
+    // outside their compilation units will also get removed.
+    if (range.valid() && range.LowPC)
       code_ranges.emplace_back(range.LowPC, range.HighPC);
   }
 
