@@ -17,7 +17,7 @@ toc:
   - include: /docs/reference/fidl/bindings/_toc.yaml
 - title: "Language"
   section:
-  - include: /docs/reference/fidl/bindings/_toc.yaml
+  - include: /docs/reference/fidl/language/_toc.yaml
 - heading: "Tracing"
 - title: "Fuchsia trace format"
   path: /docs/reference/tracing/trace-format.md
