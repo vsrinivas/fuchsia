@@ -9,7 +9,7 @@ source "$FUCHSIA_DIR"/tools/devshell/lib/prebuilt.sh
 set -euxo pipefail
 
 readonly REPO_DIR="$FUCHSIA_DIR/third_party/libpcap"
-LIBPCAP_TAG="libpcap-$(cat "$REPO_DIR/src/VERSION")"
+LIBPCAP_TAG="libpcap-$(cat "$REPO_DIR/src/RELEASE_VERSION")"
 readonly LIBPCAP_TAG
 
 "$FUCHSIA_DIR"/scripts/autoconf/regen.sh \
