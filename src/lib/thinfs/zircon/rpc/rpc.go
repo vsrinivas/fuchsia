@@ -192,6 +192,15 @@ func (d *directoryWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(d.dir.Sync())), nil
 }
 
+func (d *directoryWrapper) Sync2(fidl.Context) (io.NodeSync2Result, error) {
+	status := int32(errorToZx(d.dir.Sync()))
+	if status == 0 {
+		return io.NodeSync2ResultWithResponse(io.NodeSync2Response{}), nil
+	} else {
+		return io.NodeSync2ResultWithErr(status), nil
+	}
+}
+
 func (d *directoryWrapper) AdvisoryLock(fidl.Context, io2.AdvisoryLockRequest) (io2.AdvisoryLockingAdvisoryLockResult, error) {
 	return io2.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
@@ -500,6 +509,15 @@ func (f *fileWrapper) Sync(fidl.Context) (int32, error) {
 	return int32(errorToZx(f.file.Sync())), nil
 }
 
+func (f *fileWrapper) Sync2(fidl.Context) (io.NodeSync2Result, error) {
+	status := int32(errorToZx(f.file.Sync()))
+	if status == 0 {
+		return io.NodeSync2ResultWithResponse(io.NodeSync2Response{}), nil
+	} else {
+		return io.NodeSync2ResultWithErr(status), nil
+	}
+}
+
 func (f *fileWrapper) GetAttr(fidl.Context) (int32, io.NodeAttributes, error) {
 	size, _, mtime, err := f.file.Stat()
 	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
@@ -533,6 +551,15 @@ func (f *fileWrapper) Read(_ fidl.Context, count uint64) (int32, []uint8, error)
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
+func (f *fileWrapper) Read2(_ fidl.Context, count uint64) (io.FileRead2Result, error) {
+	buf := make([]byte, count)
+	r, err := f.file.Read(buf, 0, fs.WhenceFromCurrent)
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return io.FileRead2ResultWithErr(int32(zxErr)), nil
+	}
+	return io.FileRead2ResultWithResponse(io.FileRead2Response{Data: buf[:r]}), nil
+}
+
 func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uint8, error) {
 	buf := make([]byte, count)
 	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
@@ -542,9 +569,26 @@ func (f *fileWrapper) ReadAt(_ fidl.Context, count, offset uint64) (int32, []uin
 	return int32(zx.ErrOk), buf[:r], nil
 }
 
+func (f *fileWrapper) ReadAt2(_ fidl.Context, count, offset uint64) (io.FileReadAt2Result, error) {
+	buf := make([]byte, count)
+	r, err := f.file.Read(buf, int64(offset), fs.WhenceFromStart)
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return io.FileReadAt2ResultWithErr(int32(zxErr)), nil
+	}
+	return io.FileReadAt2ResultWithResponse(io.FileReadAt2Response{Data: buf[:r]}), nil
+}
+
 func (f *fileWrapper) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
 	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
 	return int32(errorToZx(err)), uint64(r), nil
+}
+
+func (f *fileWrapper) Write2(_ fidl.Context, data []uint8) (io.FileWrite2Result, error) {
+	r, err := f.file.Write(data, 0, fs.WhenceFromCurrent)
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return io.FileWrite2ResultWithErr(int32(zxErr)), nil
+	}
+	return io.FileWrite2ResultWithResponse(io.FileWrite2Response{ActualCount: uint64(r)}), nil
 }
 
 func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
@@ -552,13 +596,38 @@ func (f *fileWrapper) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int3
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
+func (f *fileWrapper) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (io.FileWriteAt2Result, error) {
+	r, err := f.file.Write(data, int64(offset), fs.WhenceFromStart)
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return io.FileWriteAt2ResultWithErr(int32(zxErr)), nil
+	}
+	return io.FileWriteAt2ResultWithResponse(io.FileWriteAt2Response{ActualCount: uint64(r)}), nil
+}
+
 func (f *fileWrapper) Seek(_ fidl.Context, offset int64, start io.SeekOrigin) (int32, uint64, error) {
 	r, err := f.file.Seek(offset, int(start))
 	return int32(errorToZx(err)), uint64(r), nil
 }
 
+func (f *fileWrapper) Seek2(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.FileSeek2Result, error) {
+	r, err := f.file.Seek(offset, int(origin))
+	if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+		return io.FileSeek2ResultWithErr(int32(zxErr)), nil
+	}
+	return io.FileSeek2ResultWithResponse(io.FileSeek2Response{OffsetFromStart: uint64(r)}), nil
+}
+
 func (f *fileWrapper) Truncate(_ fidl.Context, length uint64) (int32, error) {
 	return int32(errorToZx(f.file.Truncate(length))), nil
+}
+
+func (f *fileWrapper) Resize(_ fidl.Context, length uint64) (io.FileResizeResult, error) {
+	status := int32(errorToZx(f.file.Truncate(length)))
+	if status == 0 {
+		return io.FileResizeResultWithResponse(io.FileResizeResponse{}), nil
+	} else {
+		return io.FileResizeResultWithErr(status), nil
+	}
 }
 
 func (f *fileWrapper) getFlagsInternal(fidl.Context) (int32, uint32, error) {
@@ -598,6 +667,17 @@ func (f *fileWrapper) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffe
 		return int32(errorToZx(err)), buf, err
 	}
 	return int32(zx.ErrNotSupported), nil, nil
+}
+
+func (f *fileWrapper) GetBackingMemory(_ fidl.Context, flags io.VmoFlags) (io.FileGetBackingMemoryResult, error) {
+	if file, ok := f.file.(fs.FileWithGetBuffer); ok {
+		buf, err := file.GetBuffer(uint32(flags))
+		if zxErr := errorToZx(err); zxErr != zx.ErrOk {
+			return io.FileGetBackingMemoryResultWithErr(int32(zxErr)), nil
+		}
+		return io.FileGetBackingMemoryResultWithResponse(io.FileGetBackingMemoryResponse{Vmo: buf.Vmo}), nil
+	}
+	return io.FileGetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 // TODO(smklein): Calibrate thinfs flags with standard C library flags to make conversion smoother
