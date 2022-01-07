@@ -124,9 +124,7 @@ source_set("crash_server") {
     "//sdk/fidl/fuchsia.net.http",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-
-    # Change to //third_party/crashpad/util:net after crashpad rolls.
-    "//third_party/crashpad/util/net:net_transition",
+    "//third_party/crashpad/util:net",
     "//third_party/mini_chromium/base",
   ]
 
