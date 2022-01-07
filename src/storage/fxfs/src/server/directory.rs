@@ -13,6 +13,7 @@ use {
             ObjectStore, Timestamp,
         },
         server::{
+            device::BlockServer,
             errors::map_to_status,
             file::FxFile,
             node::{FxNode, GetResult, OpenedNode},
@@ -253,11 +254,11 @@ impl FxDirectory {
                 Some(self.clone()),
                 self.directory.create_child_dir(transaction, name).await?,
             )) as Arc<dyn FxNode>),
-            0 | MODE_TYPE_FILE => {
+            0 | MODE_TYPE_FILE | MODE_TYPE_BLOCK_DEVICE => {
                 Ok(FxFile::new(self.directory.create_child_file(transaction, name).await?)
                     as Arc<dyn FxNode>)
             }
-            MODE_TYPE_BLOCK_DEVICE | MODE_TYPE_SOCKET | MODE_TYPE_SERVICE => {
+            MODE_TYPE_SOCKET | MODE_TYPE_SERVICE => {
                 bail!(FxfsError::NotSupported)
             }
             _ => bail!(FxfsError::InvalidArgs),
@@ -461,14 +462,14 @@ impl DirectoryEntry for FxDirectory {
                         )
                         .await;
                     } else if node.is::<FxFile>() {
-                        FxFile::create_connection(
-                            node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!()),
-                            scope,
-                            flags,
-                            server_end,
-                            shutdown,
-                        )
-                        .await;
+                        let node = node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!());
+                        if mode == MODE_TYPE_BLOCK_DEVICE {
+                            let mut server = BlockServer::new(server_end.into_channel(), node);
+                            let _ = server.run().await;
+                        } else {
+                            FxFile::create_connection(node, scope, flags, server_end, shutdown)
+                                .await;
+                        }
                     } else {
                         unreachable!();
                     }

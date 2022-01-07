@@ -4,7 +4,7 @@
 use {
     crate::{
         errors::FxfsError,
-        server::{errors::map_to_status, file::FxFile},
+        server::{errors::map_to_status, file::FxFile, node::OpenedNode},
     },
     anyhow::{bail, Error},
     fidl_fuchsia_hardware_block::{self as block, BlockRequest},
@@ -12,24 +12,20 @@ use {
     fuchsia_zircon as zx,
     futures::{stream::TryStreamExt, try_join},
     remote_block_device::{BlockFifoRequest, BlockFifoResponse},
-    std::{
-        collections::BTreeMap,
-        option::Option,
-        sync::{Arc, Mutex},
-    },
+    std::{collections::BTreeMap, option::Option, sync::Mutex},
     vfs::file::File,
 };
 
 /// Implements server to handle Block requests
 pub struct BlockServer {
-    file: Arc<FxFile>,
+    file: OpenedNode<FxFile>,
     server_channel: Option<zx::Channel>,
     vmos: Mutex<BTreeMap<u16, zx::Vmo>>,
 }
 
 impl BlockServer {
     /// Creates a new BlockServer given a server channel to listen on.
-    pub fn new(server_channel: zx::Channel, file: Arc<FxFile>) -> BlockServer {
+    pub fn new(server_channel: zx::Channel, file: OpenedNode<FxFile>) -> BlockServer {
         BlockServer {
             file,
             server_channel: Some(server_channel),
@@ -200,62 +196,17 @@ impl BlockServer {
 #[cfg(test)]
 mod tests {
     use {
-        super::BlockServer,
-        crate::{
-            object_handle::ObjectHandle,
-            object_store::{
-                crypt::InsecureCrypt,
-                directory::ObjectDescriptor,
-                filesystem::FxFilesystem,
-                transaction::{Options, TransactionHandler},
-                volume::create_root_volume,
-                HandleOptions, ObjectStore,
-            },
-            server::{file::FxFile, volume::FxVolumeAndRoot, OpenFxFilesystem},
-        },
+        crate::server::testing::TestFixture,
         anyhow::Error,
+        fidl::endpoints::ServerEnd,
+        fidl_fuchsia_io::{
+            MODE_TYPE_BLOCK_DEVICE, OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        },
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::try_join,
         remote_block_device::{BlockClient, RemoteBlockClient, VmoId},
         std::collections::HashSet,
-        std::sync::Arc,
-        storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
-
-    async fn get_test_file() -> Result<(OpenFxFilesystem, Arc<FxFile>, FxVolumeAndRoot), Error> {
-        let device = DeviceHolder::new(FakeDevice::new(8192, 512));
-        let filesystem =
-            FxFilesystem::new_empty(device, Arc::new(InsecureCrypt::new())).await.unwrap();
-        let root_volume = create_root_volume(&filesystem).await.unwrap();
-        let volume = root_volume.new_volume("vol").await.unwrap();
-        let mut transaction = filesystem
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
-        let object_id = ObjectStore::create_object(
-            &volume,
-            &mut transaction,
-            HandleOptions::default(),
-            Some(0),
-        )
-        .await
-        .expect("create_object failed")
-        .object_id();
-        transaction.commit().await.expect("commit failed");
-        let vol = FxVolumeAndRoot::new(volume.clone()).await.unwrap();
-
-        let file = vol
-            .volume()
-            .get_or_load_node(object_id, ObjectDescriptor::File, None)
-            .await
-            .expect("get_or_load_node failed")
-            .into_any()
-            .downcast::<FxFile>()
-            .expect("Not a file");
-
-        Ok((filesystem, file, vol))
-    }
 
     #[fasync::run(10, test)]
     async fn test_block_server() {
@@ -267,10 +218,17 @@ mod tests {
                 Result::<_, Error>::Ok(())
             },
             async {
-                let (_filesystem, file, vol) = get_test_file().await?;
-                let mut server = BlockServer::new(server_channel, file);
-                server.run().await.expect("server fail");
-                vol.volume().terminate().await;
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
                 Ok(())
             }
         )
@@ -301,10 +259,17 @@ mod tests {
                 Result::<_, Error>::Ok(())
             },
             async {
-                let (_filesystem, file, vol) = get_test_file().await?;
-                let mut server = BlockServer::new(server_channel, file);
-                server.run().await.expect("server failed");
-                vol.volume().terminate().await;
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
                 Ok(())
             }
         )
@@ -326,10 +291,17 @@ mod tests {
                 Result::<_, Error>::Ok(())
             },
             async {
-                let (_filesystem, file, vol) = get_test_file().await?;
-                let mut server = BlockServer::new(server_channel, file);
-                server.run().await.expect("server failed");
-                vol.volume().terminate().await;
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
+
+                fixture.close().await;
                 Ok(())
             }
         )
@@ -378,12 +350,17 @@ mod tests {
                 Result::<_, Error>::Ok(())
             },
             async {
-                let (_filesystem, file, vol) = get_test_file().await?;
+                let fixture = TestFixture::new().await;
+                let root = fixture.root();
+                root.open(
+                    OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                    MODE_TYPE_BLOCK_DEVICE,
+                    "foo",
+                    ServerEnd::new(server_channel),
+                )
+                .expect("open failed");
 
-                let mut server = BlockServer::new(server_channel, file);
-                server.run().await.expect("server failed");
-
-                vol.volume().terminate().await;
+                fixture.close().await;
                 Ok(())
             }
         )
