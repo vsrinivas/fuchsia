@@ -4,19 +4,36 @@
 
 use {
     component_events::{events::*, matcher::*},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    test_utils_lib::opaque_test::*,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
 };
 
-#[fasync::run_singlethreaded(test)]
-async fn async_event_source_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/async_reporter.cm",
-    )
-    .await
-    .unwrap();
+// TODO(http://fxbug.dev/91100): Deduplicate this function. It is used in other CM integration tests
+async fn start_nested_cm_and_wait_for_clean_stop(root_url: &str, moniker_to_wait_on: &str) {
+    let builder = RealmBuilder::new().await.unwrap();
+    builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("root")]),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.sys2.EventSource")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("root")]),
+        )
+        .await
+        .unwrap();
+    let instance =
+        builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
+    let proxy =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
 
-    let event_source = test.connect_to_event_source().await.unwrap();
+    let event_source = EventSource::from_proxy(proxy);
 
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
@@ -25,226 +42,59 @@ async fn async_event_source_test() {
 
     event_source.start_component_tree().await;
 
-    // Expect the static child to stop
+    // Expect the component to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(".")
+        .moniker_regex(moniker_to_wait_on)
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn async_event_source_test() {
+    start_nested_cm_and_wait_for_clean_stop("#meta/async_reporter.cm", "./root").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn scoped_events_test() {
-    let test =
-        OpaqueTest::default("fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_realm.cm")
-            .await
-            .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./echo_reporter")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    start_nested_cm_and_wait_for_clean_stop("#meta/echo_realm.cm", "./root/echo_reporter").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn realm_offered_event_source_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_root.cm",
+    start_nested_cm_and_wait_for_clean_stop(
+        "#meta/realm_offered_root.cm",
+        "./root/nested_realm/reporter",
     )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./nested_realm/reporter")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    .await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn nested_event_source_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/nested_reporter.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(".")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
-}
-
-async fn expect_and_get_timestamp<T: Event>(
-    event_stream: &mut EventStream,
-    moniker: &str,
-) -> zx::Time {
-    let event = EventMatcher::ok().moniker_regex(moniker).expect_match::<T>(event_stream).await;
-    event.timestamp()
-}
-
-#[ignore]
-#[fasync::run_singlethreaded(test)]
-async fn event_dispatch_order_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/event_dispatch_order_root.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(
-            vec![Discovered::NAME, Resolved::NAME],
-            EventMode::Sync,
-        )])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    // "Discovered" is the first stage of a component's lifecycle so it must
-    // be dispatched before "Resolved". Also, a child is not discovered until
-    // the parent is resolved and its manifest is processed.
-    let timestamp_a = expect_and_get_timestamp::<Discovered>(&mut event_stream, ".").await;
-    let timestamp_b = expect_and_get_timestamp::<Resolved>(&mut event_stream, ".").await;
-    let timestamp_c = expect_and_get_timestamp::<Discovered>(&mut event_stream, "./child").await;
-    let timestamp_d = expect_and_get_timestamp::<Resolved>(&mut event_stream, "./child").await;
-
-    assert!(timestamp_a < timestamp_b);
-    assert!(timestamp_b < timestamp_c);
-    assert!(timestamp_c < timestamp_d);
+    start_nested_cm_and_wait_for_clean_stop("#meta/nested_reporter.cm", "./root").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn event_directory_ready() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_root.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(".")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    start_nested_cm_and_wait_for_clean_stop("#meta/directory_ready_root.cm", "./root").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn resolved_error_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/resolved_error_reporter.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(".")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    start_nested_cm_and_wait_for_clean_stop("#meta/resolved_error_reporter.cm", "./root").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn synthesis_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/synthesis_reporter.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex(".")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    start_nested_cm_and_wait_for_clean_stop("#meta/synthesis_reporter.cm", "./root").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn static_event_stream_capability_requested_test() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/trigger_realm.cm",
+    start_nested_cm_and_wait_for_clean_stop(
+        "#meta/trigger_realm.cm",
+        "./root/components/trigger_server",
     )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./components/trigger_server")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    .await;
 }
