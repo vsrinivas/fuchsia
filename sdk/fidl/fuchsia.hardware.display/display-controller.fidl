@@ -202,7 +202,7 @@ const APPLY_CONFIG_MAX_SIGNAL_FENCES uint64 = 32;
 /// Each set of configurations in ApplyConfig() call corresponds to a
 /// |ConfigStamp| value; the value will be referred in Vsync events to indicate
 /// that a configuration is fully applied.
-type ConfigStamp = resource struct {
+type ConfigStamp = struct {
     /// The value of config stamp. Valid configurations should have a stamp
     /// not equal to `INVALID_CONFIG_STAMP_VALUE`.
     value uint64;
@@ -592,7 +592,7 @@ protocol Controller {
     /// accepted; the display configuration may not have been rendered yet
     /// because of pending image availability or pending layer changes.
     /// If no configuration was applied before, returns `INVALID_CONFIG_STAMP_VALUE`.
-    GetLatestAppliedConfigStamp() -> (resource struct {
+    GetLatestAppliedConfigStamp() -> (struct {
         stamp ConfigStamp;
     });
 
