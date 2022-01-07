@@ -84,10 +84,11 @@ type Client struct {
 	sem chan struct{}
 
 	// Stubbable in test.
-	rand           *rand.Rand
-	retransTimeout func(time.Duration) <-chan time.Time
-	acquire        func(context.Context, *Client, string, *Info) (Config, error)
-	now            func() time.Time
+	rand               *rand.Rand
+	retransTimeout     func(time.Duration) <-chan time.Time
+	acquire            func(context.Context, *Client, string, *Info) (Config, error)
+	now                func() time.Time
+	contextWithTimeout func(context.Context, time.Duration) (context.Context, context.CancelFunc)
 }
 
 type PacketDiscardStats struct {
@@ -183,6 +184,7 @@ func NewClient(
 		acquire:            acquire,
 		now:                time.Now,
 		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength),
+		contextWithTimeout: time.ContextWithTimeout,
 	}
 	c.stats.PacketDiscardStats.InvalidPacketType.Init()
 	c.stats.PacketDiscardStats.InvalidTransProto.Init()
@@ -272,7 +274,7 @@ func (c *Client) Run(ctx context.Context) {
 				panic(fmt.Sprintf("unexpected state before acquire: %s", s))
 			}
 
-			ctx, cancel := time.ContextWithTimeout(ctx, acquisitionTimeout)
+			ctx, cancel := c.contextWithTimeout(ctx, acquisitionTimeout)
 			defer cancel()
 
 			cfg, err := c.acquire(ctx, c, nicName, &info)

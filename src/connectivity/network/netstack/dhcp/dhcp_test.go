@@ -566,14 +566,15 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 		name      string
 		nakNthReq uint32
 		// The time durations to advance in test when the current time is requested.
-		durations     []time.Duration
-		wantInitAcq   uint64
-		wantRenewAcq  uint64
-		wantRebindAcq uint64
-		wantNaks      uint64
-		wantAcks      uint64
-		wantDiscovers uint64
-		wantReqs      uint64
+		durations                     []time.Duration
+		initialStateTransitionTimeout bool
+		wantInitAcq                   uint64
+		wantRenewAcq                  uint64
+		wantRebindAcq                 uint64
+		wantNaks                      uint64
+		wantAcks                      uint64
+		wantDiscovers                 uint64
+		wantReqs                      uint64
 	}{
 		{
 			name: "initial acquisition",
@@ -587,11 +588,13 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// Successful acquisition.
 				0,
 			},
-			wantInitAcq:   2,
-			wantNaks:      1,
-			wantAcks:      1,
-			wantDiscovers: 2,
-			wantReqs:      2,
+			// Fires while waiting to retransmit after receiving NAK.
+			initialStateTransitionTimeout: true,
+			wantInitAcq:                   2,
+			wantNaks:                      1,
+			wantAcks:                      1,
+			wantDiscovers:                 2,
+			wantReqs:                      2,
 		},
 		{
 			name: "renew",
@@ -600,7 +603,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Trasition to renew.
+				// Transition to renew.
 				defaultRenewTime(defaultLeaseLength).Duration(),
 				// Backoff while renewing.
 				0,
@@ -611,12 +614,14 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// Second acquisition after NAK.
 				0,
 			},
-			wantInitAcq:   2,
-			wantRenewAcq:  1,
-			wantNaks:      1,
-			wantAcks:      2,
-			wantDiscovers: 2,
-			wantReqs:      3,
+			// Fires while waiting to transition to RENEW after ACK.
+			initialStateTransitionTimeout: true,
+			wantInitAcq:                   2,
+			wantRenewAcq:                  1,
+			wantNaks:                      1,
+			wantAcks:                      2,
+			wantDiscovers:                 2,
+			wantReqs:                      3,
 		},
 		{
 			name: "rebind",
@@ -625,7 +630,7 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 			durations: []time.Duration{
 				// First acquisition.
 				0,
-				// Trasition to rebind.
+				// Transition to rebind.
 				defaultRebindTime(defaultLeaseLength).Duration(),
 				// Backoff while rebinding.
 				0,
@@ -636,12 +641,14 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				// Second acquisition after NAK.
 				0,
 			},
-			wantInitAcq:   2,
-			wantRebindAcq: 1,
-			wantNaks:      1,
-			wantAcks:      2,
-			wantDiscovers: 2,
-			wantReqs:      3,
+			// Transition to REBIND occurs immediately without waiting for timeout.
+			initialStateTransitionTimeout: false,
+			wantInitAcq:                   2,
+			wantRebindAcq:                 1,
+			wantNaks:                      1,
+			wantAcks:                      2,
+			wantDiscovers:                 2,
+			wantReqs:                      3,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -652,12 +659,29 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				wg.Wait()
 			}()
 
-			clientStack, _, _, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
+			clientStack, _, clientEP, serverEP, c := setupTestEnv(ctx, t, defaultServerCfg)
 			clientTransitionsDone := make(chan struct{})
 			c.now = stubTimeNow(ctx, time.Now(), tc.durations, clientTransitionsDone)
+			// Do not allow the context to time out. A context time out in this test
+			// causes superfluous DHCP messages to be sent, leading to flakey
+			// assertions.
+			c.contextWithTimeout = func(ctx context.Context, _ time.Duration) (context.Context, context.CancelFunc) {
+				return context.WithCancel(ctx)
+			}
+			timeoutCh := make(chan time.Time)
+			c.retransTimeout = func(_ time.Duration) <-chan time.Time {
+				return timeoutCh
+			}
 
+			requestDelivered := make(chan struct{})
+			clientEP.onPacketDelivered = func() {
+				signal(ctx, requestDelivered)
+			}
+
+			unblockResponse := make(chan struct{})
 			var ackCnt uint32
 			serverEP.onWritePacket = func(pkt *stack.PacketBuffer) (*stack.PacketBuffer, bool) {
+				waitForSignal(ctx, unblockResponse)
 				if mustMsgType(t, hdr(pkt.Data().AsRange().ToOwnedView())) != dhcpACK {
 					return pkt, false
 				}
@@ -700,6 +724,26 @@ func TestAcquisitionAfterNAK(t *testing.T) {
 				ipv4Header.SetChecksum(^ipv4Header.CalculateChecksum())
 				return pkt, true
 			}
+			responseDelivered := make(chan struct{})
+			serverEP.onPacketDelivered = func() {
+				signal(ctx, responseDelivered)
+			}
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for i := uint64(0); i < tc.wantNaks+tc.wantAcks; i++ {
+					waitForSignal(ctx, requestDelivered)
+					signal(ctx, unblockResponse)
+					waitForSignal(ctx, responseDelivered)
+					waitForSignal(ctx, requestDelivered)
+					signal(ctx, unblockResponse)
+					waitForSignal(ctx, responseDelivered)
+					if tc.initialStateTransitionTimeout && i == 0 {
+						signalTimeout(ctx, timeoutCh)
+					}
+				}
+			}()
 
 			c.acquiredFunc = func(lost, acquired tcpip.AddressWithPrefix, _ Config) {
 				removeLostAddAcquired(t, clientStack, lost, acquired)
@@ -1709,6 +1753,17 @@ func TestStateTransitionAfterLeaseExpirationWithNoResponse(t *testing.T) {
 
 	clientTransitionsDone := make(chan struct{})
 	c.now = stubTimeNow(ctx, time.Time{}, durations, clientTransitionsDone)
+	// Manually signal N timeouts so the client does not race on a select between
+	// <-ctx.Done() and <-c.retransTimeout() for the N+1th timeout.
+	retransTimeoutCh := make(chan time.Time)
+	c.retransTimeout = func(_ time.Duration) <-chan time.Time {
+		return retransTimeoutCh
+	}
+	go func() {
+		for i := 0; i < wantInitCount; i++ {
+			signalTimeout(ctx, retransTimeoutCh)
+		}
+	}()
 
 	var curAddr tcpip.AddressWithPrefix
 	addrCh := make(chan tcpip.AddressWithPrefix)
