@@ -15,6 +15,8 @@
  */
 // Unittest code for the functions in mvm/utils.c
 
+#include <iterator>
+
 #include <zxtest/zxtest.h>
 
 extern "C" {

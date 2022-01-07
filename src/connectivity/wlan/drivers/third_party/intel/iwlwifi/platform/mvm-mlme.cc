@@ -59,6 +59,7 @@
 #include <zircon/status.h>
 
 #include <algorithm>
+#include <iterator>
 
 #include <wlan/common/ieee80211.h>
 
@@ -127,7 +128,7 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
     // TODO(36683): band_info->ht_caps->supported_mcs_set =
     // TODO(36684): band_info->vht_caps =
 
-    ZX_ASSERT(sband->n_bitrates <= (int)std::size(band_info->rates));
+    ZX_ASSERT(sband->n_bitrates <= static_cast<int>(std::size(band_info->rates)));
     for (int rate_idx = 0; rate_idx < sband->n_bitrates; ++rate_idx) {
       band_info->rates[rate_idx] = cfg_rates_to_80211(sband->bitrates[rate_idx]);
     }
@@ -145,7 +146,7 @@ void fill_band_infos(const struct iwl_nvm_data* nvm_data, const wlan_info_band_t
         ZX_ASSERT(0);  // Unknown band ID.
         break;
     }
-    ZX_ASSERT(sband->n_channels <= (int)std::size(ch_list->channels));
+    ZX_ASSERT(sband->n_channels <= static_cast<int>(std::size(ch_list->channels)));
     for (int ch_idx = 0; ch_idx < sband->n_channels; ++ch_idx) {
       ch_list->channels[ch_idx] = sband->channels[ch_idx].ch_num;
     }

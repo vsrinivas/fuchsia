@@ -1946,7 +1946,7 @@ static inline void iwl_mvm_vif_set_low_latency(struct iwl_mvm_vif* mvmvif, bool 
  * command queue, which can't be flushed.
  */
 static inline uint32_t iwl_mvm_flushable_queues(struct iwl_mvm* mvm) {
-  return ((BIT(mvm->cfg->base_params->num_of_queues) - 1) & ~BIT(IWL_MVM_DQA_CMD_QUEUE));
+  return ((uint32_t)(BIT(mvm->cfg->base_params->num_of_queues) - 1) & ~BIT(IWL_MVM_DQA_CMD_QUEUE));
 }
 
 static inline void iwl_mvm_stop_device(struct iwl_mvm* mvm) {

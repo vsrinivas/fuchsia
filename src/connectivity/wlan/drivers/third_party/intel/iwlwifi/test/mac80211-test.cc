@@ -7,6 +7,8 @@
 #include <lib/mock-function/mock-function.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
+
 #include <zxtest/zxtest.h>
 
 extern "C" {

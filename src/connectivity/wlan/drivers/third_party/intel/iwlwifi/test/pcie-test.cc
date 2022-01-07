@@ -479,7 +479,7 @@ TEST_F(PcieTest, IctTable) {
   EXPECT_EQ(trans_pcie_->ict_index, 4);
 
   // This should match ICT_COUNT defined in pcie/rx.c.
-  size_t ict_count = iwl_iobuf_size(trans_pcie_->ict_tbl) / sizeof(uint32_t);
+  int ict_count = static_cast<int>(iwl_iobuf_size(trans_pcie_->ict_tbl) / sizeof(uint32_t));
 
   // Guarantee that we have enough room in the table for the tests.
   ASSERT_GT(ict_count, 42);

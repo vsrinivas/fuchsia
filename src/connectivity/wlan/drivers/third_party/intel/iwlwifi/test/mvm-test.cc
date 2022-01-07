@@ -5,6 +5,7 @@
 #include <lib/mock-function/mock-function.h>
 #include <zircon/compiler.h>
 
+#include <iterator>
 #include <memory>
 
 #include <zxtest/zxtest.h>
@@ -854,7 +855,7 @@ TEST_F(TxqTest, DataTxCmd) {
   iwl_tx_cmd tx_cmd = {
       .tx_flags = TX_CMD_FLG_TSF,  // arbitary value to ensure the function would keep it.
   };
-  iwl_mvm_set_tx_cmd(mvmvif_->mvm, &pkt, &tx_cmd, sta_.sta_id);
+  iwl_mvm_set_tx_cmd(mvmvif_->mvm, &pkt, &tx_cmd, static_cast<uint8_t>(sta_.sta_id));
 
   // Currently the function doesn't consider the QoS so that those values are just fixed value.
   EXPECT_EQ(TX_CMD_FLG_TSF | TX_CMD_FLG_SEQ_CTL | TX_CMD_FLG_BT_DIS | TX_CMD_FLG_ACK,

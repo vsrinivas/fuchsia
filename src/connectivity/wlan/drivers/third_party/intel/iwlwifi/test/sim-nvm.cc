@@ -7,6 +7,7 @@
 #include <string.h>
 #include <zircon/assert.h>
 
+#include <algorithm>
 #include <vector>
 
 extern "C" {
@@ -35,17 +36,11 @@ std::vector<uint8_t> SimNvm::HandleChunkRead(uint8_t target, uint16_t type, uint
     }
 
     // Handle the boundary cases.
-    size_t size = iter.data.size();
-    if (offset > size) {
-      offset = size;
-    }
-    if (offset + length > size) {
-      length = size - offset;
-    }
-
+    const size_t read_offset = std::min<size_t>(offset, iter.data.size());
+    const size_t read_length = std::min<size_t>(length, iter.data.size() - read_offset);
     std::vector<uint8_t> ret;
-    ret.reserve(length);
-    std::copy_n(iter.data.begin() + offset, length, std::back_inserter(ret));
+    ret.reserve(read_length);
+    std::copy_n(iter.data.begin() + read_offset, read_length, std::back_inserter(ret));
     return ret;
   }
 

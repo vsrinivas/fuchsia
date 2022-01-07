@@ -11,6 +11,7 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 
+#include <iterator>
 #include <list>
 
 #include <zxtest/zxtest.h>

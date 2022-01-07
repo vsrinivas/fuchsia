@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iterator>
+
 #include <zxtest/zxtest.h>
 
 extern "C" {
@@ -41,7 +43,7 @@ TEST_F(FwTest, TestPageInit) {
       FW_PAGING_SIZE * (NUM_OF_PAGE_PER_GROUP * (NUM_OF_PAGE_BLK - 1) + NUM_OF_PAGES_IN_LAST_BLK);
   uint8_t arbitrary_data[PAGING_MEM_SIZE] = {};
   for (size_t i = 0; i < sizeof(arbitrary_data); i++) {
-    arbitrary_data[i] = i;  // fill with arbitrary data for testing.
+    arbitrary_data[i] = static_cast<uint8_t>(i);  // fill with arbitrary data for testing.
   }
 
   // About the sections, see iwl_fill_paging_mem().

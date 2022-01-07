@@ -11,6 +11,7 @@
 #include <zircon/syscalls.h>
 
 #include <cstdio>
+#include <iterator>
 #include <sstream>
 #include <string>
 

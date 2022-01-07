@@ -8,6 +8,8 @@
 // IRQ) and the user (the driver code waiting for the notification from firmware). In this file,
 // we will act as those 2 parties in a test case.
 
+#include <iterator>
+
 #include <zxtest/zxtest.h>
 
 extern "C" {
