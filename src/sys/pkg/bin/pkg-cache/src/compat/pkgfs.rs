@@ -95,6 +95,9 @@ async fn read_dirents<'a>(
 ///     system/
 ///     packages/
 ///     versions/
+///     ctl/
+///       validation/
+///         missing
 /// The "system" directory will only be added and served if `system_image.is_some()`.
 pub fn serve(
     mut fs: fuchsia_component::server::ServiceFsDir<
@@ -156,6 +159,19 @@ pub fn serve(
         versions_server.into_channel().into(),
     );
     fs.add_remote("versions", versions_proxy);
+
+    let (validation_proxy, validation_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()
+            .context("create pkgfs/ctl/validation endpoints")?;
+    Arc::new(validation::Validation::new(blobfs.clone(), base_packages.list_blobs().to_owned()))
+        .open(
+            scope.clone(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            0,
+            vfs::path::Path::dot(),
+            validation_server.into_channel().into(),
+        );
+    fs.dir("ctl").add_remote("validation", validation_proxy);
 
     Ok(())
 }

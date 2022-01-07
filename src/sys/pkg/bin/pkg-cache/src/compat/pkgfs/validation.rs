@@ -36,8 +36,6 @@ pub(crate) struct Validation {
 }
 
 impl Validation {
-    // TODO(fxbug.dev/88868) Expose this from pkg-cache.
-    #[allow(dead_code)]
     pub(crate) fn new(blobfs: blobfs::Client, base_blobs: HashSet<fuchsia_hash::Hash>) -> Self {
         Self { blobfs, base_blobs }
     }

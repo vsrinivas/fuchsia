@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::RW_STAR_DIR,
     fidl_fuchsia_pkg::{
@@ -476,6 +477,13 @@ where
                 .source(RouteEndpoint::component("pkg_cache"))
                 .targets(vec![ RouteEndpoint::AboveRoot ])
             ).await.unwrap()
+            .add_route(RouteBuilder::directory(
+                    "pkgfs", "pkgfs",
+                    fidl_fuchsia_io2::RW_STAR_DIR | fidl_fuchsia_io2::Operations::Execute
+                )
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap()
             .add_route(RouteBuilder::directory("system", "system", fidl_fuchsia_io2::RX_STAR_DIR)
                 .source(RouteEndpoint::component("pkg_cache"))
                 .targets(vec![ RouteEndpoint::AboveRoot ])
@@ -524,6 +532,14 @@ where
                 OPEN_RIGHT_READABLE,
             )
             .expect("open pkgfs-versions"),
+            pkgfs: io_util::directory::open_directory_no_describe(
+                realm_instance.root.get_exposed_dir(),
+                "pkgfs",
+                // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead
+                // of ServiceFs to serve its out dir.
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+            )
+            .expect("open pkgfs"),
         };
 
         TestEnv {
@@ -546,6 +562,7 @@ struct Proxies {
     retained_packages: RetainedPackagesProxy,
     pkgfs_packages: DirectoryProxy,
     pkgfs_versions: DirectoryProxy,
+    pkgfs: DirectoryProxy,
 }
 
 pub struct Mocks {

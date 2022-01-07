@@ -16,6 +16,14 @@
             ],
         },
         {
+            directory: "pkgfs",
+            rights: [
+                "execute",
+                "rw*",
+            ],
+            path: "/pkgfs",
+        },
+        {
             directory: "system",
             rights: [ "rx*" ],
             path: "/pkgfs/system",
@@ -60,6 +68,10 @@
                 "fuchsia.pkg.RetainedPackages",
                 "fuchsia.space.Manager",
             ],
+            from: "self",
+        },
+        {
+            directory: "pkgfs",
             from: "self",
         },
         {
