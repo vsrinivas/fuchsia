@@ -803,6 +803,27 @@ async fn serve_write_blob(
         Blob, NeedsData, NeedsTruncate, TruncateError, TruncateSuccess, WriteError, WriteSuccess,
     };
 
+    fn truncate_result_to_status(res: &Result<TruncateSuccess, TruncateError>) -> Status {
+        match res {
+            Ok(_) => Status::OK,
+            Err(TruncateError::NoSpace) => Status::NO_SPACE,
+            Err(TruncateError::Corrupt) => Status::IO_DATA_INTEGRITY,
+            Err(TruncateError::ConcurrentWrite)
+            | Err(TruncateError::Fidl(_))
+            | Err(TruncateError::UnexpectedResponse(_)) => Status::INTERNAL,
+        }
+    }
+
+    fn write_result_to_status(res: &Result<WriteSuccess, WriteError>) -> Status {
+        match res {
+            Ok(_) => Status::OK,
+            Err(WriteError::NoSpace) => Status::NO_SPACE,
+            Err(WriteError::Corrupt) => Status::IO_DATA_INTEGRITY,
+            Err(WriteError::Overwrite) => Status::IO,
+            Err(WriteError::Fidl(_)) | Err(WriteError::UnexpectedResponse(_)) => Status::INTERNAL,
+        }
+    }
+
     let closer = blob.closer();
 
     enum State {
@@ -844,17 +865,23 @@ async fn serve_write_blob(
                     let res = blob.truncate(length).await;
 
                     // Interpret responding errors as the stream closing unexpectedly.
-                    let _ = responder.send(
-                        match &res {
-                            Ok(_) => Status::OK,
-                            Err(TruncateError::NoSpace) => Status::NO_SPACE,
-                            Err(TruncateError::Corrupt) => Status::IO_DATA_INTEGRITY,
-                            Err(TruncateError::ConcurrentWrite)
-                            | Err(TruncateError::Fidl(_))
-                            | Err(TruncateError::UnexpectedResponse(_)) => Status::INTERNAL,
-                        }
-                        .into_raw(),
-                    );
+                    let _ = responder.send(truncate_result_to_status(&res).into_raw());
+
+                    // The empty blob needs no data and is complete after it is truncated.
+                    match res? {
+                        TruncateSuccess::Done(_) => State::ExpectClose,
+                        TruncateSuccess::NeedsData(blob) => State::ExpectData(blob),
+                    }
+                }
+
+                (FileRequest::Resize { length, responder }, State::ExpectTruncate(blob)) => {
+                    let res = blob.truncate(length).await;
+
+                    // Interpret responding errors as the stream closing unexpectedly.
+                    let _ = responder.send(&mut match truncate_result_to_status(&res) {
+                        Status::OK => Ok(()),
+                        error => Err(error.into_raw()),
+                    });
 
                     // The empty blob needs no data and is complete after it is truncated.
                     match res? {
@@ -866,19 +893,22 @@ async fn serve_write_blob(
                 (FileRequest::Write { data, responder }, State::ExpectData(blob)) => {
                     let res = blob.write(&data).await;
 
-                    let _ = responder.send(
-                        match &res {
-                            Ok(_) => Status::OK,
-                            Err(WriteError::NoSpace) => Status::NO_SPACE,
-                            Err(WriteError::Corrupt) => Status::IO_DATA_INTEGRITY,
-                            Err(WriteError::Overwrite) => Status::IO,
-                            Err(WriteError::Fidl(_)) | Err(WriteError::UnexpectedResponse(_)) => {
-                                Status::INTERNAL
-                            }
-                        }
-                        .into_raw(),
-                        data.len() as u64,
-                    );
+                    let _ =
+                        responder.send(write_result_to_status(&res).into_raw(), data.len() as u64);
+
+                    match res? {
+                        WriteSuccess::MoreToWrite(blob) => State::ExpectData(blob),
+                        WriteSuccess::Done(_blob) => State::ExpectClose,
+                    }
+                }
+
+                (FileRequest::Write2 { data, responder }, State::ExpectData(blob)) => {
+                    let res = blob.write(&data).await;
+
+                    let _ = responder.send(&mut match write_result_to_status(&res) {
+                        Status::OK => Ok(data.len() as u64),
+                        error => Err(error.into_raw()),
+                    });
 
                     match res? {
                         WriteSuccess::MoreToWrite(blob) => State::ExpectData(blob),
