@@ -74,17 +74,16 @@ impl SessionManager {
         SessionManager { state: Arc::new(Mutex::new(state)) }
     }
 
-    /// Launch the session specified in the session manager startup configuration, if any.
+    /// Launch the session with the component URL in `session_url`.
     ///
     /// # Errors
+    ///
     /// Returns an error if the session could not be launched.
-    pub async fn launch_startup_session(&mut self) -> Result<(), Error> {
-        if let Some(session_url) = startup::get_session_url() {
-            let mut state = self.state.lock().await;
-            state.session_exposed_dir_channel =
-                Some(startup::launch_session(&session_url, &state.realm).await?);
-            state.session_url = Some(session_url);
-        }
+    pub async fn launch_startup_session(&mut self, session_url: String) -> Result<(), Error> {
+        let mut state = self.state.lock().await;
+        state.session_exposed_dir_channel =
+            Some(startup::launch_session(&session_url, &state.realm).await?);
+        state.session_url = Some(session_url);
         Ok(())
     }
 

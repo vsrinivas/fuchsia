@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, fidl_fuchsia_component as fcomponent,
+    anyhow::Error,
+    fidl_fuchsia_component as fcomponent,
     fuchsia_component::client::connect_to_protocol,
-    session_manager_lib::session_manager::SessionManager,
+    session_manager_lib::{session_manager::SessionManager, startup},
+    tracing::info,
 };
 
 #[fuchsia::component]
@@ -14,7 +16,18 @@ async fn main() -> Result<(), Error> {
     // Start the startup session, if any, and serve services exposed by session manager.
     let mut session_manager = SessionManager::new(realm);
     // TODO(fxbug.dev/67789): Using ? here causes errors to not be logged.
-    session_manager.launch_startup_session().await.expect("failed to launch session");
+    if let Some(session_url) = startup::get_session_url() {
+        if !session_url.is_empty() {
+            session_manager
+                .launch_startup_session(session_url)
+                .await
+                .expect("failed to launch session");
+        } else {
+            info!("Received an empty startup session URL, waiting for a request.");
+        }
+    } else {
+        info!("Did not receive a startup session URL, waiting for a request.");
+    }
     session_manager.serve().await.expect("failed to serve protocols");
 
     Ok(())
