@@ -110,6 +110,10 @@ func (*Service) Sync(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
+func (*Service) Sync2(fidl.Context) (fidlio.NodeSync2Result, error) {
+	return fidlio.NodeSync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (*Service) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	return int32(zx.ErrOk), fidlio.NodeAttributes{
 		Mode:      fidlio.ModeTypeService,
@@ -228,6 +232,10 @@ func (*directoryState) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 
 func (*directoryState) Sync(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
+}
+
+func (*directoryState) Sync2(fidl.Context) (fidlio.NodeSync2Result, error) {
+	return fidlio.NodeSync2ResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*directoryState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
@@ -489,6 +497,10 @@ func (*fileState) Sync(fidl.Context) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
+func (*fileState) Sync2(fidl.Context) (fidlio.NodeSync2Result, error) {
+	return fidlio.NodeSync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (fState *fileState) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	return int32(zx.ErrOk), fidlio.NodeAttributes{
 		Mode:        fidlio.ModeTypeFile | uint32(fdio.VtypeIRUSR),
@@ -502,7 +514,7 @@ func (*fileState) SetAttr(_ fidl.Context, flags uint32, attributes fidlio.NodeAt
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (fState *fileState) Read(_ fidl.Context, count uint64) (int32, []uint8, error) {
+func (fState *fileState) read(count uint64) (int32, []uint8, error) {
 	if l := fState.size; l < count {
 		count = l
 	}
@@ -515,7 +527,21 @@ func (fState *fileState) Read(_ fidl.Context, count uint64) (int32, []uint8, err
 	return int32(zx.ErrOk), b, nil
 }
 
-func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (int32, []uint8, error) {
+func (fState *fileState) Read(_ fidl.Context, count uint64) (int32, []uint8, error) {
+	return fState.read(count)
+}
+
+func (fState *fileState) Read2(_ fidl.Context, count uint64) (fidlio.FileRead2Result, error) {
+	s, b, err := fState.read(count)
+	if s != int32(zx.ErrOk) {
+		return fidlio.FileRead2ResultWithErr(s), err
+	}
+	return fidlio.FileRead2ResultWithResponse(fidlio.FileRead2Response{
+		Data: b,
+	}), err
+}
+
+func (fState *fileState) readAt(count uint64, offset uint64) (int32, []uint8, error) {
 	if l := fState.size - offset; l < count {
 		count = l
 	}
@@ -528,12 +554,34 @@ func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (in
 	return int32(zx.ErrOk), b, nil
 }
 
+func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (int32, []uint8, error) {
+	return fState.readAt(count, offset)
+}
+
+func (fState *fileState) ReadAt2(_ fidl.Context, count uint64, offset uint64) (fidlio.FileReadAt2Result, error) {
+	s, b, err := fState.readAt(count, offset)
+	if s != int32(zx.ErrOk) {
+		return fidlio.FileReadAt2ResultWithErr(s), err
+	}
+	return fidlio.FileReadAt2ResultWithResponse(fidlio.FileReadAt2Response{
+		Data: b,
+	}), err
+}
+
 func (*fileState) Write(_ fidl.Context, data []uint8) (int32, uint64, error) {
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
+func (*fileState) Write2(_ fidl.Context, data []uint8) (fidlio.FileWrite2Result, error) {
+	return fidlio.FileWrite2ResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (*fileState) WriteAt(_ fidl.Context, data []uint8, offset uint64) (int32, uint64, error) {
 	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (*fileState) WriteAt2(_ fidl.Context, data []uint8, offset uint64) (fidlio.FileWriteAt2Result, error) {
+	return fidlio.FileWriteAt2ResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (fState *fileState) Seek(_ fidl.Context, offset int64, start fidlio.SeekOrigin) (int32, uint64, error) {
@@ -541,8 +589,20 @@ func (fState *fileState) Seek(_ fidl.Context, offset int64, start fidlio.SeekOri
 	return int32(zx.ErrOk), uint64(n), err
 }
 
+func (fState *fileState) Seek2(_ fidl.Context, origin fidlio.SeekOrigin, offset int64) (fidlio.FileSeek2Result, error) {
+	n, err := fState.reader.Seek(offset, int(origin))
+	return fidlio.FileSeek2ResultWithResponse(
+		fidlio.FileSeek2Response{
+			OffsetFromStart: uint64(n),
+		}), err
+}
+
 func (*fileState) Truncate(_ fidl.Context, length uint64) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
+}
+
+func (*fileState) Resize(_ fidl.Context, length uint64) (fidlio.FileResizeResult, error) {
+	return fidlio.FileResizeResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*fileState) GetFlags(fidl.Context) (int32, uint32, error) {
@@ -567,4 +627,8 @@ func (fState *fileState) AdvisoryLock(fidl.Context, fidlio2.AdvisoryLockRequest)
 
 func (*fileState) GetBuffer(_ fidl.Context, flags uint32) (int32, *mem.Buffer, error) {
 	return int32(zx.ErrNotSupported), nil, nil
+}
+
+func (*fileState) GetBackingMemory(_ fidl.Context, flags fidlio.VmoFlags) (fidlio.FileGetBackingMemoryResult, error) {
+	return fidlio.FileGetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }
