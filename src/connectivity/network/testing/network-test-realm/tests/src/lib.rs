@@ -656,8 +656,8 @@ async fn start_stub() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn start_stub_with_existing_stub() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm =
-        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+    let realm = create_netstack_realm("start_stub_with_existing_stub", &sandbox)
+        .expect("failed to create netstack realm");
 
     let network_test_realm = realm
         .connect_to_protocol::<fntr::ControllerMarker>()
@@ -734,8 +734,8 @@ async fn start_stub_with_existing_stub() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn start_stub_with_non_existent_component() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm =
-        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+    let realm = create_netstack_realm("start_stub_with_non_existent_component", &sandbox)
+        .expect("failed to create netstack realm");
 
     let network_test_realm = realm
         .connect_to_protocol::<fntr::ControllerMarker>()
@@ -759,8 +759,8 @@ async fn start_stub_with_non_existent_component() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn start_stub_with_malformed_component_url() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm =
-        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+    let realm = create_netstack_realm("start_stub_with_malformed_component_url", &sandbox)
+        .expect("failed to create netstack realm");
 
     let network_test_realm = realm
         .connect_to_protocol::<fntr::ControllerMarker>()
@@ -801,7 +801,7 @@ async fn start_stub_with_no_hermetic_network_realm() {
 async fn stop_stub() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let realm =
-        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+        create_netstack_realm("stop_stub", &sandbox).expect("failed to create netstack realm");
 
     let network_test_realm = realm
         .connect_to_protocol::<fntr::ControllerMarker>()
@@ -827,7 +827,7 @@ async fn stop_stub() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn stop_stub_with_no_running_stub() {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = create_netstack_realm("stop_stub_with_no_hermetic_network_realm", &sandbox)
+    let realm = create_netstack_realm("stop_stub_with_no_running_stub", &sandbox)
         .expect("failed to create netstack realm");
 
     let network_test_realm = realm
