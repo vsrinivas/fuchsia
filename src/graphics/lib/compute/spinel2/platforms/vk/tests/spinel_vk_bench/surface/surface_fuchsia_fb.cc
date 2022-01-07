@@ -71,17 +71,12 @@ class reader_ctx : public fidl::WireResponseContext<FIR::InputReportsReader::Rea
         descriptor(input_device->GetDescriptor()),  // save the result
         reader(std::move(input_reader))             // take ownership of the reader
   {
-    (void)reader->ReadInputReports(this);
+    fidl::AsyncClientBuffer<FIR::InputReportsReader::ReadInputReports> fidl_buffer;
+    reader.buffer(fidl_buffer.view())->ReadInputReports(this);
   }
 
   void
-  OnCanceled()
-  {
-    delete this;
-  }
-
-  void
-  OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputReports> & result);
+  OnResult(fidl::WireUnownedResult<FIR::InputReportsReader::ReadInputReports> & result) override;
 };
 
 //
