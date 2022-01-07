@@ -1015,6 +1015,9 @@ where
                         fposix_socket::DatagramSocketRequest::Sync { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
                         }
+                        fposix_socket::DatagramSocketRequest::Sync2 { responder } => {
+                            responder_send!(responder, &mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
+                        }
                         fposix_socket::DatagramSocketRequest::GetAttr { responder } => {
                             responder_send!(
                                 responder,

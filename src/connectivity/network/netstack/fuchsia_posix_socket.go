@@ -360,6 +360,12 @@ func (ep *endpoint) Sync(fidl.Context) (int32, error) {
 	return 0, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", ep)}
 }
 
+func (ep *endpoint) Sync2(fidl.Context) (fidlio.NodeSync2Result, error) {
+	_ = syslog.DebugTf("Sync2", "%p", ep)
+
+	return fidlio.NodeSync2ResultWithErr(int32(zx.ErrNotSupported)), nil
+}
+
 func (ep *endpoint) GetAttr(fidl.Context) (int32, fidlio.NodeAttributes, error) {
 	_ = syslog.DebugTf("GetAttr", "%p", ep)
 
