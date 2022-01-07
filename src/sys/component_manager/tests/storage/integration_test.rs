@@ -4,19 +4,43 @@
 
 use {
     component_events::{events::*, matcher::*},
-    fuchsia_async as fasync,
-    test_utils_lib::opaque_test::*,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::{
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    },
 };
 
-#[fasync::run_singlethreaded(test)]
-async fn storage() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm.cm",
-    )
-    .await
-    .unwrap();
+/// Starts a nested component manager with a given root component URL using Realm Builer.
+/// Routes some capabilities like LogSink and EventSource to the root.
+async fn start_nested_cm(cm_url: &str, root_url: &str) -> RealmInstance {
+    let builder = RealmBuilder::new().await.unwrap();
+    builder.add_child("root", root_url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.logger.LogSink")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("root")]),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            RouteBuilder::protocol("fuchsia.sys2.EventSource")
+                .source(RouteEndpoint::above_root())
+                .targets(vec![RouteEndpoint::component("root")]),
+        )
+        .await
+        .unwrap();
+    builder.build_in_nested_component_manager(cm_url).await.unwrap()
+}
 
-    let event_source = test.connect_to_event_source().await.unwrap();
+/// Connects to the EventSource protocol from the nested component manager, starts the component
+/// topology and waits for a clean stop of the specified component instance
+async fn wait_for_clean_stop(cm: RealmInstance, moniker_to_wait_on: &str) {
+    let proxy = cm.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+
+    let event_source = EventSource::from_proxy(proxy);
+
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
@@ -24,63 +48,31 @@ async fn storage() {
 
     event_source.start_component_tree().await;
 
-    // Expect the static child to stop
+    // Expect the component to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./storage_user")
+        .moniker_regex(moniker_to_wait_on)
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn storage() {
+    let cm = start_nested_cm("#meta/component_manager.cm", "#meta/storage_realm.cm").await;
+    wait_for_clean_stop(cm, "./root/storage_user").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn storage_from_collection() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm_coll.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    // Expect the root to stop
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    let cm = start_nested_cm("#meta/component_manager.cm", "#meta/storage_realm_coll.cm").await;
+    wait_for_clean_stop(cm, "./root").await;
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn storage_from_collection_with_invalid_route() {
-    let test = OpaqueTest::default(
-        "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_realm_coll_invalid_route.cm",
-    )
-    .await
-    .unwrap();
-
-    let event_source = test.connect_to_event_source().await.unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
-    event_source.start_component_tree().await;
-
-    // Expect the root to stop
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::Clean))
-        // TODO(81348): use the same value here to reference the root moniker as the values used
-        // elsewhere in this file.
-        .moniker_regex(".")
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    let cm =
+        start_nested_cm("#meta/component_manager.cm", "#meta/storage_realm_coll_invalid_route.cm")
+            .await;
+    wait_for_clean_stop(cm, "./root").await;
 }
