@@ -56,15 +56,15 @@ func getRunResult(outputDir string) (*TestRunResult, error) {
 }
 
 // GetSuiteResults returns a list of the suite summaries from a test run.
-func (r *TestRunResult) GetSuiteResults() ([]SuiteResult, error) {
-	var suiteResults []SuiteResult
+func (r *TestRunResult) GetSuiteResults() ([]*SuiteResult, error) {
+	var suiteResults []*SuiteResult
 	for _, suite := range r.Suites {
 		suiteSummaryBytes, err := os.ReadFile(filepath.Join(r.outputDir, suite.Summary))
 		if err != nil {
 			return suiteResults, err
 		}
-		var suiteResult SuiteResult
-		err = json.Unmarshal(suiteSummaryBytes, &suiteResult)
+		suiteResult := &SuiteResult{}
+		err = json.Unmarshal(suiteSummaryBytes, suiteResult)
 		if err != nil {
 			return suiteResults, err
 		}
@@ -73,13 +73,9 @@ func (r *TestRunResult) GetSuiteResults() ([]SuiteResult, error) {
 	return suiteResults, nil
 }
 
-// GetTestOutputPaths returns the absolute paths of the given paths within the test output directory.
-func (r *TestRunResult) GetTestOutputPaths(paths ...string) []string {
-	var outputs []string
-	for _, name := range paths {
-		outputs = append(outputs, filepath.Join(r.outputDir, name))
-	}
-	return outputs
+// GetTestOutputDir returns the path to the test output directory.
+func (r *TestRunResult) GetTestOutputDir() string {
+	return r.outputDir
 }
 
 // suiteEntry is an entry for a test suite in TestRunResult.
@@ -94,13 +90,14 @@ type SuiteResult struct {
 	Cases                []CaseResult                `json:"cases"`
 	StartTime            int64                       `json:"start_time"`
 	DurationMilliseconds int64                       `json:"duration_milliseconds"`
-	Artifacts            map[string]artifactMetadata `json:"artifacts"`
+	Artifacts            map[string]ArtifactMetadata `json:"artifacts"`
+	ArtifactDir          string                      `json:"artifact_dir"`
 }
 
-// artifactMetadata is metadata tied to an artifact.
-type artifactMetadata struct {
-	artifactType     string `json:"artifact_type"`
-	componentMoniker string `json:"component_moniker"`
+// ArtifactMetadata is metadata tied to an artifact.
+type ArtifactMetadata struct {
+	ArtifactType     string `json:"artifact_type"`
+	ComponentMoniker string `json:"component_moniker"`
 }
 
 // CaseResult is a JSON schema for a test case in structured results.
@@ -109,5 +106,6 @@ type CaseResult struct {
 	Name                 string                      `json:"name"`
 	StartTime            int64                       `json:"start_time"`
 	DurationMilliseconds int64                       `json:"duration_milliseconds"`
-	Artifacts            map[string]artifactMetadata `json:"artifacts"`
+	Artifacts            map[string]ArtifactMetadata `json:"artifacts"`
+	ArtifactDir          string                      `json:"artifact_dir"`
 }

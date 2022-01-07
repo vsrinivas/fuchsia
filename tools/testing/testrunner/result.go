@@ -35,6 +35,11 @@ type TestResult struct {
 	// The combined stdout and stderr from this test.
 	Stdio []byte
 
+	// The relative paths to the output files of the test.
+	OutputFiles []string
+	// The directory where the OutputFiles live.
+	OutputDir string
+
 	StartTime time.Time
 	EndTime   time.Time
 }

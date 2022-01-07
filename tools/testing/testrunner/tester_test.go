@@ -174,7 +174,7 @@ func TestSubprocessTester(t *testing.T) {
 				return runner
 			}
 			outDir := filepath.Join(tmpDir, c.test.Path)
-			ref, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
+			testResult, err := tester.Test(context.Background(), testsharder.Test{Test: c.test}, ioutil.Discard, ioutil.Discard, outDir)
 			if gotErr := (err != nil); gotErr != c.wantErr {
 				t.Errorf("tester.Test got error: %s, want error: %t", err, c.wantErr)
 			}
@@ -187,7 +187,7 @@ func TestSubprocessTester(t *testing.T) {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
 			}
 
-			sinks := ref.Sinks
+			sinks := testResult.DataSinks.Sinks
 			if !reflect.DeepEqual(sinks, c.wantDataSinks) {
 				t.Fatalf("expected: %#v;\nactual: %#v", c.wantDataSinks, sinks)
 			}
@@ -265,7 +265,7 @@ func TestFFXTester(t *testing.T) {
 			if c.wantErr {
 				outcome = ffxutil.TestFailed
 			}
-			ffx := &MockFFXTester{TestOutcome: outcome}
+			ffx := &ffxutil.MockFFXInstance{TestOutcome: outcome}
 			tester = NewFFXTester(ffx, tester, "", c.experimental)
 
 			defer func() {
@@ -282,9 +282,16 @@ func TestFFXTester(t *testing.T) {
 			if c.runV2 {
 				test.Test = build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"}
 			}
-			sinks, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
-			if c.wantErr == (err == nil) {
-				t.Errorf("tester.Test got error: %s, want err: %v", err, c.wantErr)
+			testResult, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, t.TempDir())
+			if err != nil {
+				t.Errorf("tester.Test got unexpected error: %s", err)
+			}
+			expectedResult := runtests.TestSuccess
+			if c.wantErr {
+				expectedResult = runtests.TestFailure
+			}
+			if testResult.Result != expectedResult {
+				t.Errorf("tester.Test got result: %s, want result: %s", testResult.Result, expectedResult)
 			}
 
 			if c.runV2 && c.experimental {
@@ -313,7 +320,7 @@ func TestFFXTester(t *testing.T) {
 			if c.runV2 {
 				// Call EnsureSinks() for v2 tests to set the copier.remoteDir to the data output dir for v2 tests.
 				// v1 tests will already have set the appropriate remoteDir value within Test().
-				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &TestOutputs{}); err != nil {
+				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{testResult.DataSinks}, &TestOutputs{}); err != nil {
 					t.Errorf("failed to collect sinks: %s", err)
 				}
 				expectedRemoteDir = dataOutputDirV2
@@ -423,7 +430,11 @@ func TestSSHTester(t *testing.T) {
 			if c.runV2 {
 				test.Test = build.Test{PackageURL: "fuchsia-pkg://foo#meta/bar.cm"}
 			}
-			sinks, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
+			testResult, err := tester.Test(context.Background(), test, ioutil.Discard, ioutil.Discard, "unused-out-dir")
+			expectedResult := runtests.TestSuccess
+			if c.wantErr {
+				expectedResult = runtests.TestFailure
+			}
 			if err == nil {
 				if c.wantErr {
 					t.Errorf("tester.Test got nil error, want non-nil error")
@@ -436,6 +447,9 @@ func TestSSHTester(t *testing.T) {
 					t.Errorf("got isConnErr: %t, want: %t", isConnErr, c.wantConnErr)
 				}
 			}
+			if testResult.Result != expectedResult {
+				t.Errorf("got test result: %s, want: %s", testResult.Result, expectedResult)
+			}
 
 			if c.runSnapshot {
 				p := filepath.Join(t.TempDir(), "testrunner-cmd-test")
@@ -444,7 +458,7 @@ func TestSSHTester(t *testing.T) {
 				}
 			}
 			if c.runV2 {
-				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &TestOutputs{}); err != nil {
+				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{testResult.DataSinks}, &TestOutputs{}); err != nil {
 					t.Errorf("failed to collect v2 sinks: %s", err)
 				}
 			}

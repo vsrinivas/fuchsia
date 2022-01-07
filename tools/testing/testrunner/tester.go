@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/pkg/sftp"
@@ -34,6 +35,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/constants"
 )
 
@@ -71,7 +73,7 @@ const (
 
 // Tester describes the interface for all different types of testers.
 type Tester interface {
-	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (runtests.DataSinkReference, error)
+	Test(context.Context, testsharder.Test, io.Writer, io.Writer, string) (*TestResult, error)
 	Close() error
 	EnsureSinks(context.Context, []runtests.DataSinkReference, *TestOutputs) error
 	RunSnapshot(context.Context, string) error
@@ -135,6 +137,18 @@ type serialClient interface {
 	runDiagnostics(ctx context.Context) error
 }
 
+// BaseTestResultFromTest returns a TestResult for a Tester.Test() to modify
+// and return with some pre-filled values and a starting failure result which
+// should be changed as needed within the tester's Test() method.
+func BaseTestResultFromTest(test testsharder.Test) *TestResult {
+	return &TestResult{
+		Name:      test.Name,
+		GNLabel:   test.Label,
+		Result:    runtests.TestFailure,
+		DataSinks: runtests.DataSinkReference{},
+	}
+}
+
 // SubprocessTester executes tests in local subprocesses.
 type SubprocessTester struct {
 	env               []string
@@ -170,14 +184,14 @@ func NewSubprocessTester(dir string, env []string, localOutputDir string) Tester
 	}
 }
 
-func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
-	sinkRef := runtests.DataSinkReference{}
+func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (*TestResult, error) {
+	testResult := BaseTestResultFromTest(test)
 	if test.Path == "" {
-		return sinkRef, fmt.Errorf("test %q has no `path` set", test.Name)
+		return testResult, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
 	// Some tests read TestOutDirEnvKey so ensure they get their own output dir.
 	if err := os.MkdirAll(outDir, 0o770); err != nil {
-		return sinkRef, err
+		return testResult, err
 	}
 
 	// Might as well emit any profiles directly to the output directory.
@@ -206,7 +220,9 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		defer cancel()
 	}
 	err := r.Run(ctx, []string{test.Path}, stdout, stderr)
-	if errors.Is(err, context.DeadlineExceeded) {
+	if err == nil {
+		testResult.Result = runtests.TestSuccess
+	} else if errors.Is(err, context.DeadlineExceeded) {
 		err = &TimeoutError{test.Timeout}
 	}
 
@@ -218,7 +234,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		var buildIDs []string
 		buildIDs, profileErr = t.getModuleBuildIDs(test.Path)
 		if profileErr == nil {
-			sinkRef.Sinks = runtests.DataSinkMap{
+			testResult.DataSinks.Sinks = runtests.DataSinkMap{
 				llvmProfileSinkType: []runtests.DataSink{
 					{
 						Name:     filepath.Base(profileRel),
@@ -231,7 +247,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 			logger.Warningf(ctx, "failed to read module build IDs from %q", test.Path)
 		}
 	}
-	return sinkRef, err
+	return testResult, err
 }
 
 func (t *SubprocessTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, _ *TestOutputs) error {
@@ -302,6 +318,9 @@ type FFXTester struct {
 	localOutputDir string
 	// Whether to run experimental ffx functions.
 	experimental bool
+
+	// The test output dirs from all the calls to Test().
+	testOutDirs []string
 }
 
 // NewFFXTester returns an FFXTester.
@@ -314,11 +333,11 @@ func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string, expe
 	}
 }
 
-func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*TestResult, error) {
 	// TODO(fxbug.dev/84153): Once performance is up to par with running over SSH,
 	// remove experimental condition.
 	if test.IsComponentV2() && t.experimental {
-		sinks := runtests.DataSinkReference{}
+		baseTestResult := BaseTestResultFromTest(test)
 		testDef := ffxutil.TestDef{
 			TestUrl:         test.PackageURL,
 			Timeout:         int(test.Timeout.Seconds()),
@@ -327,16 +346,98 @@ func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, std
 		}
 		t.ffx.SetStdoutStderr(stdout, stderr)
 		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
-		testResult, err := t.ffx.Test(ctx, []ffxutil.TestDef{testDef}, outDir, "--filter-ansi")
-		if err == nil && testResult.Outcome != ffxutil.TestPassed {
-			err = fmt.Errorf("test failed with status: %s", testResult.Outcome)
+		ffxTestResult, err := t.ffx.Test(ctx, []ffxutil.TestDef{testDef}, outDir, "--filter-ansi")
+		testsByURL := map[string]testsharder.Test{
+			test.PackageURL: test,
 		}
-		// TODO(ihuh): Use the artifacts from the output directory to get stdio.
-		// Remove the outDir for now since it's unused.
-		os.RemoveAll(outDir)
-		return sinks, err
+		if err != nil {
+			return baseTestResult, err
+		}
+		testResults, err := t.processTestResult(ffxTestResult, testsByURL)
+		if err != nil {
+			return baseTestResult, err
+		}
+		if len(testResults) != 1 {
+			return baseTestResult, fmt.Errorf("expected 1 test result, got %d", len(testResults))
+		}
+		return testResults[0], nil
 	}
 	return t.sshTester.Test(ctx, test, stdout, stderr, outDir)
+}
+
+func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByURL map[string]testsharder.Test) ([]*TestResult, error) {
+	var testResults []*TestResult
+	if runResult == nil {
+		return testResults, fmt.Errorf("no test result was found")
+	}
+	testOutDir := runResult.GetTestOutputDir()
+	t.testOutDirs = append(t.testOutDirs, testOutDir)
+	suiteResults, err := runResult.GetSuiteResults()
+	if err != nil {
+		return testResults, err
+	}
+
+	for _, suiteResult := range suiteResults {
+		test := testsByURL[suiteResult.Name]
+		testResult := BaseTestResultFromTest(test)
+
+		var cases []testparser.TestCaseResult
+		for _, testCase := range suiteResult.Cases {
+			var status testparser.TestCaseStatus
+			switch testCase.Outcome {
+			case ffxutil.TestPassed:
+				status = testparser.Pass
+			case ffxutil.TestSkipped:
+				status = testparser.Skip
+			default:
+				status = testparser.Fail
+			}
+
+			var artifacts []string
+			for artifact := range testCase.Artifacts {
+				artifacts = append(artifacts, artifact)
+			}
+			// TODO(ihuh): Parse out fail reason from the logs.
+			cases = append(cases, testparser.TestCaseResult{
+				DisplayName: testCase.Name,
+				CaseName:    testCase.Name,
+				Status:      status,
+				Format:      "FTF",
+				OutputFiles: artifacts,
+				OutputDir:   filepath.Join(testOutDir, testCase.ArtifactDir),
+			})
+		}
+		testResult.Cases = cases
+
+		switch suiteResult.Outcome {
+		case ffxutil.TestPassed:
+			testResult.Result = runtests.TestSuccess
+		default:
+			testResult.Result = runtests.TestFailure
+		}
+
+		var suiteArtifacts []string
+		for artifact := range suiteResult.Artifacts {
+			suiteArtifacts = append(suiteArtifacts, artifact)
+		}
+		testResult.OutputFiles = suiteArtifacts
+		testResult.OutputDir = filepath.Join(testOutDir, suiteResult.ArtifactDir)
+		testResult.StartTime = time.UnixMilli(suiteResult.StartTime)
+		testResult.EndTime = time.UnixMilli(suiteResult.StartTime + suiteResult.DurationMilliseconds)
+		testResults = append(testResults, testResult)
+	}
+	return testResults, nil
+}
+
+// RemoveAllOutputDirs removes the test output directories for all calls to Test().
+func (t *FFXTester) RemoveAllOutputDirs() error {
+	var errs []string
+	for _, outDir := range t.testOutDirs {
+		if err := os.RemoveAll(outDir); err != nil {
+			errs = append(errs, fmt.Sprintf("failed to remove %s: %s", outDir, err))
+		}
+	}
+	return fmt.Errorf(strings.Join(errs, "; "))
 }
 
 func (t *FFXTester) Close() error {
@@ -465,13 +566,16 @@ func (t *FuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 }
 
 // Test runs a test over SSH.
-func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
-	sinks := runtests.DataSinkReference{}
+func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (*TestResult, error) {
+	testResult := BaseTestResultFromTest(test)
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, test.Timeout)
 	if err != nil {
-		return sinks, err
+		return testResult, err
 	}
 	testErr := t.runSSHCommandWithRetry(ctx, command, stdout, stderr)
+	if testErr == nil {
+		testResult.Result = runtests.TestSuccess
+	}
 
 	if sshutil.IsConnectionError(testErr) {
 		if err := t.serialSocket.runDiagnostics(ctx); err != nil {
@@ -480,7 +584,7 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		// If we continue to experience a connection error after several retries
 		// then the device has likely become unresponsive and there's no use in
 		// continuing to try to run tests, so mark the error as fatal.
-		return sinks, FatalError{testErr}
+		return testResult, FatalError{testErr}
 	}
 
 	if t.isTimeoutError(test, testErr) {
@@ -494,18 +598,18 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		if sinksPerTest, sinkErr = t.copier.GetReferences(dataOutputDir); sinkErr != nil {
 			logger.Errorf(ctx, "failed to determine data sinks for test %q: %s", test.Name, sinkErr)
 		} else {
-			sinks = sinksPerTest[test.Name]
+			testResult.DataSinks = sinksPerTest[test.Name]
 		}
 		duration := clock.Now(ctx).Sub(startTime)
-		if sinks.Size() > 0 {
-			logger.Debugf(ctx, "%d data sinks found in %s", sinks.Size(), duration)
+		if testResult.DataSinks.Size() > 0 {
+			logger.Debugf(ctx, "%d data sinks found in %s", testResult.DataSinks.Size(), duration)
 		}
 	}
 
-	if testErr == nil {
-		return sinks, sinkErr
+	if testErr != nil {
+		return testResult, testErr
 	}
-	return sinks, testErr
+	return testResult, sinkErr
 }
 
 func (t *FuchsiaSSHTester) EnsureSinks(ctx context.Context, sinkRefs []runtests.DataSinkReference, outputs *TestOutputs) error {
@@ -765,12 +869,11 @@ func (r *parseOutKernelReader) lineWithoutKernelLog(line []byte, isTruncated boo
 	return line
 }
 
-func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (runtests.DataSinkReference, error) {
-	// We don't collect data sinks for serial tests. Just return an empty DataSinkReference.
-	sinks := runtests.DataSinkReference{}
+func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, stdout, _ io.Writer, _ string) (*TestResult, error) {
+	testResult := BaseTestResultFromTest(test)
 	command, err := commandForTest(&test, true, "", test.Timeout)
 	if err != nil {
-		return sinks, err
+		return testResult, err
 	}
 	logger.Debugf(ctx, "starting: %s", command)
 
@@ -784,7 +887,7 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	var readErr error
 	for i := 0; i < startSerialCommandMaxAttempts; i++ {
 		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{Cmd: command}}); err != nil {
-			return sinks, FatalError{fmt.Errorf("failed to write to serial socket: %w", err)}
+			return testResult, FatalError{fmt.Errorf("failed to write to serial socket: %w", err)}
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
 		startedStr := runtests.StartedSignature + test.Name
@@ -804,7 +907,7 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 			constants.FailedToStartSerialTestMsg, startSerialCommandMaxAttempts, readErr)
 		// In practice, repeated failure to run a test means that the device has
 		// become unresponsive and we won't have any luck running later tests.
-		return sinks, FatalError{err}
+		return testResult, FatalError{err}
 	}
 
 	t.socket.SetIOTimeout(test.Timeout + 30*time.Second)
@@ -814,11 +917,12 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 		// Writes to stdout as it reads from the above reader.
 		stdout)
 	if success, err := runtests.TestPassed(ctx, testOutputReader, test.Name); err != nil {
-		return sinks, err
+		return testResult, err
 	} else if !success {
-		return sinks, fmt.Errorf("test failed")
+		return testResult, fmt.Errorf("test failed")
 	}
-	return sinks, nil
+	testResult.Result = runtests.TestSuccess
+	return testResult, nil
 }
 
 func (t *FuchsiaSerialTester) EnsureSinks(_ context.Context, _ []runtests.DataSinkReference, _ *TestOutputs) error {

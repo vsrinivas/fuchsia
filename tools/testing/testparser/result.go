@@ -27,5 +27,8 @@ type TestCaseResult struct {
 	Format string `json:"format"`
 	// FailReason is a concise and distinctive error message captured from stdout when the test case fails.
 	// The message is used to group similar failures and shouldn't contain stacktrace or line numbers.
-	FailReason string `json:"fail_reason"`
+	FailReason  string   `json:"fail_reason"`
+	OutputFiles []string `json:"output_files,omitempty"`
+	// The directory where the OutputFiles live if given as relative paths.
+	OutputDir string
 }

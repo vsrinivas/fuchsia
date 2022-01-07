@@ -6,6 +6,7 @@ package testrunner
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"net/url"
@@ -16,12 +17,41 @@ import (
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
+
+func writeFiles(dir string, pathsToContents map[string]string) error {
+	for p, contents := range pathsToContents {
+		f, err := osmisc.CreateFile(filepath.Join(dir, p))
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		if _, err := f.Write([]byte(contents)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func TestRecordingOfOutputs(t *testing.T) {
 	start := time.Unix(0, 0)
+	testOutputDir := t.TempDir()
+	suiteOutputDir := "suite_outputs"
+	suiteOutputFile1 := filepath.Join(suiteOutputDir, "file1")
+	suiteOutputFile2 := filepath.Join(suiteOutputDir, "file2")
+	caseOutputFile := "case_outputs"
+	origOutputs := map[string]string{
+		suiteOutputFile1: "test outputs",
+		suiteOutputFile2: "test outputs 2",
+		caseOutputFile:   "testcase outputs",
+	}
+	if err := writeFiles(testOutputDir, origOutputs); err != nil {
+		t.Errorf("failed to write output files: %s", err)
+	}
 	results := []TestResult{
 		{
 			Name:      "fuchsia-pkg://foo#test_a",
@@ -43,7 +73,21 @@ func TestRecordingOfOutputs(t *testing.T) {
 					},
 				},
 			},
-			Stdio: []byte("STDOUT_A"),
+			Cases: []testparser.TestCaseResult{
+				{
+					DisplayName: "case1",
+					CaseName:    "case1",
+					Status:      testparser.Fail,
+					Format:      "FTF",
+					// Test having the OutputFile be a filename.
+					OutputFiles: []string{caseOutputFile},
+					OutputDir:   testOutputDir,
+				},
+			},
+			// Test having the OutputFile be a directory name.
+			OutputFiles: []string{suiteOutputDir},
+			OutputDir:   testOutputDir,
+			Stdio:       []byte("STDOUT_A"),
 		},
 		{
 			Name:      "test_b",
@@ -64,13 +108,27 @@ func TestRecordingOfOutputs(t *testing.T) {
 	o := CreateTestOutputs(producer, outDir)
 	defer o.Close()
 
-	outputFileA := filepath.Join(url.PathEscape("fuchsia-pkg//foo#test_a"), "0", "stdout-and-stderr.txt")
-	outputFileB := filepath.Join("test_b", "0", "stdout-and-stderr.txt")
+	outputFileA := func(filename string) string {
+		return filepath.Join(url.PathEscape("fuchsia-pkg//foo#test_a"), "0", filename)
+	}
+
+	outputFileB := func(filename string) string {
+		return filepath.Join("test_b", "0", filename)
+	}
+
+	testAStdout := outputFileA("stdout-and-stderr.txt")
+	testASuiteOutputFile1 := outputFileA(suiteOutputFile1)
+	testASuiteOutputFile2 := outputFileA(suiteOutputFile2)
+	testACaseOutputFile := outputFileA(filepath.Join("case1", caseOutputFile))
+	testBStdout := outputFileB("stdout-and-stderr.txt")
 	expectedSummary := runtests.TestSummary{
 		Tests: []runtests.TestDetails{{
-			Name:           "fuchsia-pkg://foo#test_a",
-			GNLabel:        "//a/b/c:test_a(//toolchain)",
-			OutputFiles:    []string{outputFileA},
+			Name:    "fuchsia-pkg://foo#test_a",
+			GNLabel: "//a/b/c:test_a(//toolchain)",
+			// The expected OutputFiles in TestSummary should contain only files.
+			// If any of the TestResult OutputFiles point to directories, TestOutputs.Record()
+			// should list out all the files in those directories here.
+			OutputFiles:    []string{testASuiteOutputFile1, testASuiteOutputFile2, testAStdout},
 			Result:         runtests.TestFailure,
 			StartTime:      start,
 			DurationMillis: 5,
@@ -86,10 +144,19 @@ func TestRecordingOfOutputs(t *testing.T) {
 					},
 				},
 			},
+			Cases: []testparser.TestCaseResult{
+				{
+					DisplayName: "case1",
+					CaseName:    "case1",
+					Status:      testparser.Fail,
+					Format:      "FTF",
+					OutputFiles: []string{testACaseOutputFile},
+				},
+			},
 		}, {
 			Name:           "test_b",
 			GNLabel:        "//a/b/c:test_b(//toolchain)",
-			OutputFiles:    []string{outputFileB},
+			OutputFiles:    []string{testBStdout},
 			Result:         runtests.TestSuccess,
 			StartTime:      start,
 			DurationMillis: 10,
@@ -118,9 +185,12 @@ func TestRecordingOfOutputs(t *testing.T) {
 
 	// Populate all of the expected output files.
 	expectedContents := map[string]string{
-		outputFileA:    "STDOUT_A",
-		outputFileB:    "STDERR_B",
-		"summary.json": string(summaryBytes),
+		testAStdout:           "STDOUT_A",
+		testBStdout:           "STDERR_B",
+		testASuiteOutputFile1: origOutputs[suiteOutputFile1],
+		testASuiteOutputFile2: origOutputs[suiteOutputFile2],
+		testACaseOutputFile:   origOutputs[caseOutputFile],
+		"summary.json":        string(summaryBytes),
 	}
 	for name, content := range expectedSinks {
 		// Add sinks to expectedContents.
@@ -136,7 +206,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	}
 
 	for _, result := range results {
-		if err := o.Record(result); err != nil {
+		if err := o.Record(context.Background(), result); err != nil {
 			t.Fatalf("failed to record result of %q: %v", result.Name, err)
 		}
 	}

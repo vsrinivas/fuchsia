@@ -6,10 +6,13 @@ package testrunner
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -17,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
+	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
 
 // TestOutputs manages the test runner's output drivers. Upon completion, if tar output is
@@ -34,25 +38,80 @@ func CreateTestOutputs(producer *tap.Producer, outDir string) *TestOutputs {
 	}
 }
 
+// moveOutputFiles takes the list of outputFiles and moves them to newRelDir.
+// If an `output file` refers to a directory, the files in that directory will
+// be moved to newRelDir while preserving the directory's structure, but the
+// individual files will be returned in the list of renamed outputs.
+func (o *TestOutputs) moveOutputFiles(outputFiles []string, outputDir string, newRelDir string) ([]string, error) {
+	var movedOutputs []string
+	for _, outputFilePath := range outputFiles {
+		outputFilePath = filepath.Join(outputDir, outputFilePath)
+		if err := filepath.Walk(outputFilePath, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if !info.IsDir() {
+				oldPathRel, err := filepath.Rel(outputDir, path)
+				if err != nil {
+					return fmt.Errorf("failed to get relative path of %s to %s: %w", path, outputDir, err)
+				}
+				newPathRel := filepath.Join(newRelDir, oldPathRel)
+				newPathAbs := filepath.Join(o.OutDir, newPathRel)
+				os.MkdirAll(filepath.Dir(newPathAbs), os.ModePerm)
+				if err := os.Rename(path, newPathAbs); err != nil {
+					return fmt.Errorf("failed to move %s to %s: %w", path, newPathAbs, err)
+				}
+				movedOutputs = append(movedOutputs, newPathRel)
+			}
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+	}
+	return movedOutputs, nil
+}
+
 // Record writes the test result to initialized outputs.
-func (o *TestOutputs) Record(result TestResult) error {
+func (o *TestOutputs) Record(ctx context.Context, result TestResult) error {
 	// Sponge doesn't seem to like the path if we just put Name in there.
 	nameForPath := url.PathEscape(strings.ReplaceAll(result.Name, ":", ""))
-	outputRelPath := filepath.Join(nameForPath, strconv.Itoa(result.RunIndex), runtests.TestOutputFilename)
+	outputRelPath := filepath.Join(nameForPath, strconv.Itoa(result.RunIndex))
 	// Strip any leading //.
 	outputRelPath = strings.TrimLeft(outputRelPath, "//")
 
+	stdioPath := filepath.Join(outputRelPath, runtests.TestOutputFilename)
+
 	duration := result.Duration()
-	if duration <= 0 {
-		return fmt.Errorf("test %q must have positive duration: (start, end) = (%s, %s)", result.Name, result.StartTime, result.EndTime)
+	if duration < 0 {
+		return fmt.Errorf("test %q must have non-negative duration: (start, end) = (%s, %s)", result.Name, result.StartTime, result.EndTime)
+	}
+
+	// Move outputs from test over into the relative path.
+	suiteOutputFiles, err := o.moveOutputFiles(result.OutputFiles, result.OutputDir, outputRelPath)
+	if err != nil {
+		return fmt.Errorf("error moving output files: %w", err)
+	}
+
+	var cases []testparser.TestCaseResult
+	for _, testCase := range result.Cases {
+		nameForPath := url.PathEscape(testCase.DisplayName)
+		caseRelPath := filepath.Join(outputRelPath, nameForPath)
+		caseOutputFiles, err := o.moveOutputFiles(testCase.OutputFiles, testCase.OutputDir, caseRelPath)
+		if err != nil {
+			return fmt.Errorf("error moving output files: %w", err)
+		}
+		newCase := testCase
+		newCase.OutputFiles = caseOutputFiles
+		newCase.OutputDir = ""
+		cases = append(cases, newCase)
 	}
 
 	o.Summary.Tests = append(o.Summary.Tests, runtests.TestDetails{
 		Name:           result.Name,
 		GNLabel:        result.GNLabel,
-		OutputFiles:    []string{outputRelPath},
+		OutputFiles:    append(suiteOutputFiles, stdioPath),
 		Result:         result.Result,
-		Cases:          result.Cases,
+		Cases:          cases,
 		StartTime:      result.StartTime,
 		DurationMillis: duration.Milliseconds(),
 		DataSinks:      result.DataSinks.Sinks,
@@ -62,8 +121,8 @@ func (o *TestOutputs) Record(result TestResult) error {
 	o.tap.Ok(result.Passed(), desc)
 
 	if o.OutDir != "" {
-		outputRelPath = filepath.Join(o.OutDir, outputRelPath)
-		pathWriter, err := osmisc.CreateFile(outputRelPath)
+		stdioPath = filepath.Join(o.OutDir, stdioPath)
+		pathWriter, err := osmisc.CreateFile(stdioPath)
 		if err != nil {
 			return fmt.Errorf("failed to create stdio file for test %q: %w", result.Name, err)
 		}

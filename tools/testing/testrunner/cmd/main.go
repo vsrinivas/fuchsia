@@ -299,7 +299,17 @@ func execute(
 			if err != nil {
 				return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
 			}
-			fuchsiaTester = testrunner.NewFFXTester(ffx, t, outputs.OutDir, flags.ffxExperimental)
+			ffxTester := testrunner.NewFFXTester(ffx, t, outputs.OutDir, flags.ffxExperimental)
+			defer func() {
+				// outputs.Record() moves output files to paths within the output directory
+				// specified by test name.
+				// Remove the ffx test out dirs which would now only contain empty directories
+				// and summary.jsons that don't point to real paths anymore.
+				if err := ffxTester.RemoveAllOutputDirs(); err != nil {
+					logger.Debugf(ctx, "%s", err)
+				}
+			}()
+			fuchsiaTester = ffxTester
 		}
 	}
 
@@ -451,7 +461,7 @@ func runAndOutputTests(
 			return err
 		}
 		result.RunIndex = runIndex
-		if err := outputs.Record(*result); err != nil {
+		if err := outputs.Record(ctx, *result); err != nil {
 			return err
 		}
 
@@ -513,7 +523,6 @@ func runTestOnce(
 		multistdout = io.MultiWriter(stdio, stdout)
 	}
 
-	result := runtests.TestSuccess
 	startTime := clock.Now(ctx)
 
 	// Set the outer timeout to a slightly higher value in order to give the tester
@@ -535,8 +544,8 @@ func runTestOnce(
 	// so no timeout will be enforced, which is what we want.
 
 	type testResult struct {
-		dataSinks runtests.DataSinkReference
-		err       error
+		result *testrunner.TestResult
+		err    error
 	}
 	ch := make(chan testResult, 1)
 
@@ -548,20 +557,23 @@ func runTestOnce(
 	// Run the test in a goroutine so that we don't block in case the tester fails
 	// to respect the timeout.
 	go func() {
-		dataSinks, err := t.Test(testCtx, test, multistdout, multistderr, outDir)
-		ch <- testResult{dataSinks, err}
+		result, err := t.Test(testCtx, test, multistdout, multistderr, outDir)
+		ch <- testResult{result, err}
 	}()
 
-	var dataSinks runtests.DataSinkReference
+	result := testrunner.BaseTestResultFromTest(test)
 	var err error
 	select {
 	case res := <-ch:
-		dataSinks = res.dataSinks
+		result = res.result
 		err = res.err
 	case <-timeoutCh:
 		err = &testrunner.TimeoutError{outerTestTimeout}
 		cancelTest()
 	}
+
+	// TODO(ihuh): Only return fatal errors from Test(). Log non-fatal errors
+	// based on the TestResult.Result.
 	if err != nil {
 		if ctx.Err() != nil {
 			// testrunner is shutting down, give up running tests and don't
@@ -575,7 +587,6 @@ func runTestOnce(
 			// tests.
 			return nil, err
 		}
-		result = runtests.TestFailure
 		var timeoutErr *testrunner.TimeoutError
 		if errors.As(err, &timeoutErr) {
 			// TODO(fxbug.dev/49266): Emit a different "Timeout" result if the
@@ -589,14 +600,15 @@ func runTestOnce(
 	endTime := clock.Now(ctx)
 
 	// Record the test details in the summary.
-	return &testrunner.TestResult{
-		Name:      test.Name,
-		GNLabel:   test.Label,
-		Stdio:     stdio.buf.Bytes(),
-		Result:    result,
-		Cases:     testparser.Parse(stdout.Bytes()),
-		StartTime: startTime,
-		EndTime:   endTime,
-		DataSinks: dataSinks,
-	}, nil
+	result.Stdio = stdio.buf.Bytes()
+	if len(result.Cases) == 0 {
+		result.Cases = testparser.Parse(stdout.Bytes())
+	}
+	if result.StartTime.IsZero() {
+		result.StartTime = startTime
+	}
+	if result.EndTime.IsZero() {
+		result.EndTime = endTime
+	}
+	return result, nil
 }

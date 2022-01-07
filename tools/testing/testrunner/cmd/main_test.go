@@ -24,6 +24,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner"
@@ -47,7 +48,7 @@ type fakeTester struct {
 	outDirs   map[string]bool
 }
 
-func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (*testrunner.TestResult, error) {
 	t.funcCalls = append(t.funcCalls, testFunc)
 	if t.outDirs == nil {
 		t.outDirs = make(map[string]bool)
@@ -60,7 +61,15 @@ func (t *fakeTester) Test(ctx context.Context, test testsharder.Test, stdout, st
 	if err == nil {
 		err = t.testErr
 	}
-	return runtests.DataSinkReference{}, err
+	result := runtests.TestSuccess
+	if err != nil {
+		result = runtests.TestFailure
+	}
+	return &testrunner.TestResult{
+		Name:    test.Name,
+		GNLabel: test.Label,
+		Result:  result,
+	}, err
 }
 
 func (t *fakeTester) Close() error {
@@ -885,7 +894,7 @@ func TestExecute(t *testing.T) {
 				}
 				return fuchsiaTester, nil
 			}
-			ffx := &testrunner.MockFFXTester{}
+			ffx := &ffxutil.MockFFXInstance{}
 			ffxInstance = func(_ context.Context, _, _ string, _ []string, _, _, _ string) (testrunner.FFXInstance, error) {
 				if c.useFFX {
 					return ffx, nil
