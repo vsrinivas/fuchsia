@@ -23,6 +23,7 @@ use fuchsia_zircon as zx;
 use futures::{FutureExt as _, SinkExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::{error, warn};
 use std::convert::TryFrom as _;
+use std::os::unix::io::AsRawFd as _;
 use std::path;
 
 /// URL for the realm that contains the hermetic network components with a
@@ -386,13 +387,14 @@ impl Connector for HermeticNetworkConnector {
     }
 }
 
-async fn create_icmp_socket(
+async fn create_socket(
     domain: fposix_socket::Domain,
+    protocol: fposix_socket::DatagramSocketProtocol,
     connector: &HermeticNetworkConnector,
-) -> Result<fasync::net::DatagramSocket, fntr::Error> {
+) -> Result<socket2::Socket, fntr::Error> {
     let socket_provider = connector.connect_to_protocol::<fposix_socket::ProviderMarker>()?;
     let sock = socket_provider
-        .datagram_socket(domain, fposix_socket::DatagramSocketProtocol::IcmpEcho)
+        .datagram_socket(domain, protocol)
         .await
         .map_err(|e| {
             error!("datagram_socket failed: {:?}", e);
@@ -403,11 +405,20 @@ async fn create_icmp_socket(
             fntr::Error::Internal
         })?;
 
-    let socket_fd = fdio::create_fd(sock.into()).map_err(|e| {
+    fdio::create_fd(sock.into()).map_err(|e| {
         error!("create_fd from socket failed: {:?}", e);
         fntr::Error::Internal
-    })?;
-    Ok(fasync::net::DatagramSocket::new_from_socket(socket_fd).map_err(|e| {
+    })
+}
+
+async fn create_icmp_socket(
+    domain: fposix_socket::Domain,
+    connector: &HermeticNetworkConnector,
+) -> Result<fasync::net::DatagramSocket, fntr::Error> {
+    Ok(fasync::net::DatagramSocket::new_from_socket(
+        create_socket(domain, fposix_socket::DatagramSocketProtocol::IcmpEcho, connector).await?,
+    )
+    .map_err(|e| {
         error!("new_from_socket failed: {:?}", e);
         fntr::Error::Internal
     })?)
@@ -525,6 +536,62 @@ async fn ping_once<Ip: ping::IpExt>(
     }
 }
 
+/// Creates a socket if `socket` is None. Otherwise, returns a reference to the
+/// `socket` value.
+///
+/// If a socket is created, then the value of `socket` is replaced with the
+/// newly created socket.
+async fn get_or_insert_socket<'a>(
+    socket: &'a mut Option<socket2::Socket>,
+    domain: fposix_socket::Domain,
+    connector: &'a HermeticNetworkConnector,
+) -> Result<&'a socket2::Socket, fntr::Error> {
+    match socket {
+        None => Ok(socket.insert(
+            create_socket(domain, fposix_socket::DatagramSocketProtocol::Udp, connector).await?,
+        )),
+        Some(value) => Ok(value),
+    }
+}
+
+/// Joins or leaves an Ipv4 multicast group.
+///
+/// If `join` is true, then the `interface` will be used to join the multicast
+/// group `address`. Otherwise, the group `address` will be left.
+fn set_v4_multicast_socket_option(
+    socket: &socket2::Socket,
+    address: std::net::Ipv4Addr,
+    interface: u64,
+    join: bool,
+) -> std::io::Result<()> {
+    let fd = socket.as_raw_fd();
+    let name = if join { libc::IP_ADD_MEMBERSHIP } else { libc::IP_DROP_MEMBERSHIP };
+    let multiaddr = u32::from_le_bytes(address.octets());
+    let mreqn = libc::ip_mreqn {
+        imr_multiaddr: libc::in_addr { s_addr: multiaddr },
+        imr_address: libc::in_addr { s_addr: libc::INADDR_ANY },
+        // Note that the standard `socket2::Socket` join_multicast_v4 and
+        // leave_multicast_v4 methods are not used as they do not specify the
+        // interface id.
+        imr_ifindex: interface as i32,
+    };
+    unsafe {
+        match libc::setsockopt(
+            fd,
+            libc::IPPROTO_IP,
+            name,
+            &mreqn as *const libc::ip_mreqn as *const libc::c_void,
+            std::mem::size_of::<libc::ip_mreqn>() as libc::socklen_t,
+        ) {
+            -1 => {
+                let err = std::io::Error::last_os_error();
+                Err(err)
+            }
+            _ => Ok(()),
+        }
+    }
+}
+
 /// A controller for creating and manipulating the Network Test Realm.
 ///
 /// The Network Test Realm corresponds to a hermetic network realm with a
@@ -557,11 +624,28 @@ struct Controller {
     /// Connector to access protocols within the hermetic-network realm. If the
     /// hermetic-network realm does not exist, then this will be `None`.
     hermetic_network_connector: Option<HermeticNetworkConnector>,
+
+    /// Socket for joining and leaving Ipv4 multicast groups. This field is
+    /// lazily instantiated the first time an Ipv4 multicast group is joined or
+    /// left. Note that the lifetime of Ipv4 multicast memberships (those added
+    /// via the `join_multicast_group` method) are tied to this field.
+    multicast_v4_socket: Option<socket2::Socket>,
+
+    /// Socket for joining and leaving Ipv6 multicast groups. This field is
+    /// lazily instantiated the first time an Ipv6 multicast group is joined or
+    /// left. Note that the lifetime of Ipv6 multicast memberships (those added
+    /// via the `join_multicast_group` method) are tied to this field.
+    multicast_v6_socket: Option<socket2::Socket>,
 }
 
 impl Controller {
     fn new() -> Self {
-        Self { mutated_interface_ids: Vec::<u64>::new(), hermetic_network_connector: None }
+        Self {
+            mutated_interface_ids: Vec::<u64>::new(),
+            hermetic_network_connector: None,
+            multicast_v4_socket: None,
+            multicast_v6_socket: None,
+        }
     }
 
     async fn handle_request(
@@ -602,8 +686,118 @@ impl Controller {
                     .await;
                 responder.send(&mut result)?;
             }
+            fntr::ControllerRequest::JoinMulticastGroup { address, interface_id, responder } => {
+                let mut result = self.join_multicast_group(address, interface_id).await;
+                responder.send(&mut result)?;
+            }
+            fntr::ControllerRequest::LeaveMulticastGroup { address, interface_id, responder } => {
+                let mut result = self.leave_multicast_group(address, interface_id).await;
+                responder.send(&mut result)?;
+            }
         }
         Ok(())
+    }
+
+    /// Returns the `socket2::Socket` that should be used join or leave
+    /// multicast groups for `address`.
+    ///
+    /// Creates a socket on the first invocation for the relevant IP version.
+    /// Subsequent invocations return the existing socket.
+    async fn get_or_create_multicast_socket(
+        &mut self,
+        address: std::net::IpAddr,
+    ) -> Result<&socket2::Socket, fntr::Error> {
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
+
+        match address {
+            std::net::IpAddr::V4(_) => {
+                get_or_insert_socket(
+                    &mut self.multicast_v4_socket,
+                    fposix_socket::Domain::Ipv4,
+                    hermetic_network_connector,
+                )
+                .await
+            }
+            std::net::IpAddr::V6(_) => {
+                get_or_insert_socket(
+                    &mut self.multicast_v6_socket,
+                    fposix_socket::Domain::Ipv6,
+                    hermetic_network_connector,
+                )
+                .await
+            }
+        }
+    }
+
+    /// Leaves the multicast group `address` using the provided `interface_id`.
+    async fn leave_multicast_group(
+        &mut self,
+        address: fnet::IpAddress,
+        interface_id: u64,
+    ) -> Result<(), fntr::Error> {
+        let fnet_ext::IpAddress(address) = address.into();
+        let socket = self.get_or_create_multicast_socket(address).await?;
+
+        match address {
+            std::net::IpAddr::V4(addr) => {
+                set_v4_multicast_socket_option(socket, addr, interface_id, false /* join */)
+            }
+            std::net::IpAddr::V6(addr) => socket.leave_multicast_v6(
+                &addr,
+                u32::try_from(interface_id).map_err(|e| {
+                    error!("failed to convert interface ID to u32, {:?}", e);
+                    fntr::Error::Internal
+                })?,
+            ),
+        }
+        .map_err(|e| match e.kind() {
+            // The group `address` was not previously joined.
+            std::io::ErrorKind::AddrNotAvailable => fntr::Error::AddressNotAvailable,
+            // The specified `interface_id` does not exist or the `address`
+            // does not correspond to a valid multicast address.
+            std::io::ErrorKind::InvalidInput => fntr::Error::InvalidArguments,
+            _kind => {
+                error!("leave_multicast_group failed: {:?}", e);
+                fntr::Error::Internal
+            }
+        })
+    }
+
+    /// Joins the multicast group `address` using the provided `interface_id`.
+    async fn join_multicast_group(
+        &mut self,
+        address: fnet::IpAddress,
+        interface_id: u64,
+    ) -> Result<(), fntr::Error> {
+        let fnet_ext::IpAddress(address) = address.into();
+        let socket = self.get_or_create_multicast_socket(address).await?;
+
+        match address {
+            std::net::IpAddr::V4(addr) => {
+                set_v4_multicast_socket_option(socket, addr, interface_id, true /* join */)
+            }
+            std::net::IpAddr::V6(addr) => socket.join_multicast_v6(
+                &addr,
+                u32::try_from(interface_id).map_err(|e| {
+                    error!("failed to convert interface ID to u32, {:?}", e);
+                    fntr::Error::Internal
+                })?,
+            ),
+        }
+        .map_err(|e| match e.kind() {
+            // The group `address` was already joined.
+            std::io::ErrorKind::AddrInUse => fntr::Error::AddressInUse,
+            // The specified `interface_id` does not exist or the `address`
+            // does not correspond to a valid multicast address.
+            std::io::ErrorKind::InvalidInput => fntr::Error::InvalidArguments,
+            _kind => {
+                error!("join_multicast_group failed: {:?}", e);
+                fntr::Error::Internal
+            }
+        })
     }
 
     /// Starts a test stub within the hermetic-network realm.
@@ -624,7 +818,9 @@ impl Controller {
                     error!("attempted to stop stub that was not running");
                     fntr::Error::Internal
                 }
-                fntr::Error::ComponentNotFound
+                fntr::Error::AddressInUse
+                | fntr::Error::AddressNotAvailable
+                | fntr::Error::ComponentNotFound
                 | fntr::Error::HermeticNetworkRealmNotRunning
                 | fntr::Error::Internal
                 | fntr::Error::InterfaceNotFound
@@ -796,6 +992,8 @@ impl Controller {
             })
             .await;
         self.hermetic_network_connector = None;
+        self.multicast_v4_socket = None;
+        self.multicast_v6_socket = None;
         Ok(())
     }
 
@@ -815,7 +1013,9 @@ impl Controller {
                 fntr::Error::HermeticNetworkRealmNotRunning => {
                     panic!("attempted to stop hermetic network realm that was not running")
                 }
-                fntr::Error::ComponentNotFound
+                fntr::Error::AddressInUse
+                | fntr::Error::AddressNotAvailable
+                | fntr::Error::ComponentNotFound
                 | fntr::Error::Internal
                 | fntr::Error::InterfaceNotFound
                 | fntr::Error::InvalidArguments

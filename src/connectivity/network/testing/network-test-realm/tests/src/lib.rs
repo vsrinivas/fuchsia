@@ -19,9 +19,11 @@ use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_net_test_realm as fntr;
 use fuchsia_zircon as zx;
-use net_declare::{fidl_mac, fidl_subnet};
+use futures::StreamExt as _;
+use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet};
 use netemul::Endpoint as _;
 use netstack_testing_common::realms::{KnownServiceProvider, Netstack2, TestSandboxExt as _};
+use packet::ParsablePacket as _;
 use test_case::test_case;
 
 const ETH1_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("02:03:04:05:06:07");
@@ -44,6 +46,16 @@ const MINIMUM_TIMEOUT: zx::Duration = zx::Duration::from_nanos(1);
 const NO_WAIT_TIMEOUT: zx::Duration = zx::Duration::from_nanos(0);
 const DEFAULT_PAYLOAD_LENGTH: u16 = 100;
 const NON_EXISTENT_INTERFACE_NAME: &'static str = "non_existent_interface";
+
+const DEFAULT_IPV4_MULTICAST_ADDRESS: fnet::Ipv4Address = fidl_ip_v4!("224.1.2.3");
+const DEFAULT_IPV6_MULTICAST_ADDRESS: fnet::Ipv6Address = fidl_ip_v6!("ff02::3");
+const SOLICITED_NODE_MULTICAST_ADDRESS_PREFIX: net_types::ip::Subnet<net_types::ip::Ipv6Addr> = unsafe {
+    net_types::ip::Subnet::new_unchecked(
+        net_types::ip::Ipv6Addr::new([0xff02, 0, 0, 0, 0, 0x0001, 0xff00, 0]),
+        104,
+    )
+};
+const DEFAULT_INTERFACE_ID: u64 = 77;
 
 /// Creates a `netemul::TestRealm` with a Netstack2 instance and the Network
 /// Test Realm.
@@ -103,6 +115,20 @@ async fn get_interface_id<'a>(
     network_test_realm::get_interface_id(interface_name, state_proxy)
         .await
         .expect("failed to obtain interface id")
+}
+
+/// Returns the id of the hermetic Netstack interface with `interface_name`.
+///
+/// Panics if the interface could not be found.
+async fn expect_hermetic_interface_id<'a>(
+    interface_name: &'a str,
+    realm: &netemul::TestRealm<'a>,
+) -> u64 {
+    let state_proxy =
+        connect_to_hermetic_network_realm_protocol::<fnet_interfaces::StateMarker>(realm).await;
+    get_interface_id(interface_name, &state_proxy).await.unwrap_or_else(|| {
+        panic!("failed to find hermetic Netstack interface with name {}", interface_name);
+    })
 }
 
 /// Connects to a protocol within the hermetic network realm.
@@ -261,6 +287,40 @@ async fn add_address_to_hermetic_interface(
         .await
         .expect("add_forwarding_entry failed")
         .expect("add_forwarding_entry error");
+}
+
+/// Adds an interface to the hermetic Netstack with `interface_name` and
+/// `mac_address`.
+///
+/// The added interface is assigned a static IP address based on `subnet`.
+/// Additionally, the interface joins the provided `network`.
+async fn join_network_with_hermetic_netstack<'a>(
+    realm: &'a netemul::TestRealm<'a>,
+    network: &'a netemul::TestNetwork<'a>,
+    network_test_realm: &'a fntr::ControllerProxy,
+    interface_name: &'a str,
+    mac_address: fnet::MacAddress,
+    subnet: fnet::Subnet,
+) -> netemul::TestInterface<'a> {
+    let interface = realm
+        .join_network_with(
+            &network,
+            interface_name,
+            netemul::Ethernet::make_config(netemul::DEFAULT_MTU, Some(mac_address)),
+            &netemul::InterfaceConfig::None,
+        )
+        .await
+        .expect("join_network failed");
+    add_interface_to_devfs(interface_name, interface.endpoint(), &realm).await;
+
+    network_test_realm
+        .add_interface(&mut mac_address.clone(), interface_name)
+        .await
+        .expect("add_interface failed")
+        .expect("add_interface error");
+
+    add_address_to_hermetic_interface(interface_name, subnet, realm).await;
+    interface
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1074,5 +1134,634 @@ async fn ping_with_no_added_interface() {
             .await
             .expect("ping failed"),
         Err(fntr::Error::PingFailed),
+    );
+}
+
+#[derive(Debug, PartialEq)]
+enum MulticastEvent {
+    Joined(fnet::IpAddress),
+    Left(fnet::IpAddress),
+}
+
+/// Extracts Ipv4 `MulticastEvent`s from the provided `data`.
+fn extract_v4_multicast_event(data: &[u8]) -> Option<MulticastEvent> {
+    let (mut payload, _src_ip, _dst_ip, proto, _ttl) =
+        packet_formats::testutil::parse_ip_packet::<net_types::ip::Ipv4>(&data)
+            .expect("error parsing IPv4 packet");
+
+    if proto != packet_formats::ip::Ipv4Proto::Igmp {
+        // Ignore non-IGMP packets.
+        return None;
+    }
+
+    let igmp_packet = packet_formats::igmp::messages::IgmpPacket::parse(&mut payload, ())
+        .expect("failed to parse IGMP packet");
+
+    match igmp_packet {
+        packet_formats::igmp::messages::IgmpPacket::MembershipReportV2(message) => {
+            Some(MulticastEvent::Joined(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                addr: message.group_addr().ipv4_bytes(),
+            })))
+        }
+        packet_formats::igmp::messages::IgmpPacket::LeaveGroup(message) => {
+            Some(MulticastEvent::Left(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                addr: message.group_addr().ipv4_bytes(),
+            })))
+        }
+        packet_formats::igmp::messages::IgmpPacket::MembershipReportV1(_)
+        | packet_formats::igmp::messages::IgmpPacket::MembershipReportV3(_)
+        | packet_formats::igmp::messages::IgmpPacket::MembershipQueryV2(_)
+        | packet_formats::igmp::messages::IgmpPacket::MembershipQueryV3(_) => {
+            panic!("unexpected IgmpPacket format: {:?}", igmp_packet)
+        }
+    }
+}
+
+/// Extracts Ipv6 `MulticastEvent`s from the provided `data`.
+fn extract_v6_multicast_event(data: &[u8]) -> Option<MulticastEvent> {
+    let (mut payload, src_ip, dst_ip, proto, _ttl) =
+        packet_formats::testutil::parse_ip_packet::<net_types::ip::Ipv6>(&data)
+            .expect("error parsing IPv6 packet");
+
+    if proto != packet_formats::ip::Ipv6Proto::Icmpv6 {
+        // Ignore non-ICMPv6 packets.
+        return None;
+    }
+
+    let icmp_packet = packet_formats::icmp::Icmpv6Packet::parse(
+        &mut payload,
+        packet_formats::icmp::IcmpParseArgs::new(src_ip, dst_ip),
+    )
+    .expect("error parsing ICMPv6 packet");
+
+    let mld_packet = match icmp_packet {
+        packet_formats::icmp::Icmpv6Packet::Mld(mld) => mld,
+        packet_formats::icmp::Icmpv6Packet::DestUnreachable(_)
+        | packet_formats::icmp::Icmpv6Packet::EchoReply(_)
+        | packet_formats::icmp::Icmpv6Packet::EchoRequest(_)
+        | packet_formats::icmp::Icmpv6Packet::Ndp(_)
+        | packet_formats::icmp::Icmpv6Packet::PacketTooBig(_)
+        | packet_formats::icmp::Icmpv6Packet::ParameterProblem(_)
+        | packet_formats::icmp::Icmpv6Packet::TimeExceeded(_) => return None,
+    };
+
+    match mld_packet {
+        packet_formats::icmp::mld::MldPacket::MulticastListenerReport(packet) => {
+            (!SOLICITED_NODE_MULTICAST_ADDRESS_PREFIX.contains(&packet.body().group_addr)).then(
+                || {
+                    MulticastEvent::Joined(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                        addr: packet.body().group_addr.ipv6_bytes(),
+                    }))
+                },
+            )
+        }
+        packet_formats::icmp::mld::MldPacket::MulticastListenerDone(packet) => {
+            (!SOLICITED_NODE_MULTICAST_ADDRESS_PREFIX.contains(&packet.body().group_addr)).then(
+                || {
+                    MulticastEvent::Left(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                        addr: packet.body().group_addr.ipv6_bytes(),
+                    }))
+                },
+            )
+        }
+        packet_formats::icmp::mld::MldPacket::MulticastListenerQuery(_) => None,
+    }
+}
+
+/// Verifies that the `expected_event` occurred on the `fake_endpoint`.
+async fn expect_multicast_event(
+    fake_endpoint: &netemul::TestFakeEndpoint<'_>,
+    expected_event: MulticastEvent,
+) {
+    let expected_event = &expected_event;
+    let stream = fake_endpoint
+        .frame_stream()
+        .map(|r| r.expect("error getting OnData event"))
+        .filter_map(|(data, _dropped)| async move {
+            let mut data = &data[..];
+            let eth = packet_formats::ethernet::EthernetFrame::parse(
+                &mut data,
+                // Do not check the frame length as the size of IGMP reports may
+                // be less than the minimum ethernet frame length and our
+                // virtual (netemul) interface does not pad runt ethernet frames
+                // before transmission.
+                packet_formats::ethernet::EthernetFrameLengthCheck::NoCheck,
+            )
+            .expect("failed to parse ethernet frame");
+
+            let event = match eth.ethertype().expect("ethertype missing from ethernet frame") {
+                packet_formats::ethernet::EtherType::Ipv4 => extract_v4_multicast_event(data),
+                packet_formats::ethernet::EtherType::Ipv6 => extract_v6_multicast_event(data),
+                packet_formats::ethernet::EtherType::Arp => None,
+                packet_formats::ethernet::EtherType::Other(_other) => None,
+            };
+
+            // The same event may be emitted multiple times. As a result, we
+            // must wait for the expected event.
+            event.and_then(|event| (event == *expected_event).then(|| ()))
+        });
+    futures::pin_mut!(stream);
+    stream.next().await.expect("failed to find expected multicast event");
+}
+
+#[test_case(
+    "ipv4",
+    fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    fnet::IpAddress::Ipv6(DEFAULT_IPV6_MULTICAST_ADDRESS),
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn join_multicast_group(
+    name: &str,
+    mut multicast_address: fnet::IpAddress,
+    subnet: fnet::Subnet,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm = create_netstack_realm(format!("join_multicast_group_{}", name), &sandbox)
+        .expect("failed to create netstack realm");
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    network_test_realm
+        .join_multicast_group(
+            &mut multicast_address,
+            expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await,
+        )
+        .await
+        .expect("join_multicast_group failed")
+        .expect("join_multicast_group error");
+
+    expect_multicast_event(&fake_ep, MulticastEvent::Joined(multicast_address)).await;
+}
+
+// Tests that the persisted multicast socket is cleared when the hermetic
+// network realm is stopped.
+#[test_case(
+    "ipv4",
+    fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+    fnet::IpAddress::Ipv4(fidl_ip_v4!("224.1.2.4")),
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    fnet::IpAddress::Ipv6(DEFAULT_IPV6_MULTICAST_ADDRESS),
+    fnet::IpAddress::Ipv6(fidl_ip_v6!("ff02::4")),
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn join_multicast_group_after_stop(
+    name: &str,
+    mut multicast_address: fnet::IpAddress,
+    mut second_multicast_address: fnet::IpAddress,
+    subnet: fnet::Subnet,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm =
+        create_netstack_realm(format!("join_multicast_group_after_stop_{}", name), &sandbox)
+            .expect("failed to create netstack realm");
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    network_test_realm
+        .join_multicast_group(
+            &mut multicast_address,
+            expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await,
+        )
+        .await
+        .expect("join_multicast_group failed")
+        .expect("join_multicast_group error");
+
+    network_test_realm
+        .stop_hermetic_network_realm()
+        .await
+        .expect("stop_hermetic_network_realm failed")
+        .expect("stop_hermetic_network_realm error");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH2_INTERFACE_NAME,
+        ETH2_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    network_test_realm
+        .join_multicast_group(
+            &mut second_multicast_address,
+            expect_hermetic_interface_id(ETH2_INTERFACE_NAME, &realm).await,
+        )
+        .await
+        .expect("join_multicast_group failed")
+        .expect("join_multicast_group error");
+
+    expect_multicast_event(&fake_ep, MulticastEvent::Joined(second_multicast_address)).await;
+}
+
+#[test_case(
+    "ipv4",
+    fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    fnet::IpAddress::Ipv6(DEFAULT_IPV6_MULTICAST_ADDRESS),
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn leave_multicast_group(
+    name: &str,
+    mut multicast_address: fnet::IpAddress,
+    subnet: fnet::Subnet,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm = create_netstack_realm(format!("leave_multicast_group_{}", name), &sandbox)
+        .expect("failed to create netstack realm");
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    let id = expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await;
+
+    network_test_realm
+        .join_multicast_group(&mut multicast_address, id)
+        .await
+        .expect("join_multicast_group failed")
+        .expect("join_multicast_group error");
+
+    network_test_realm
+        .leave_multicast_group(&mut multicast_address, id)
+        .await
+        .expect("leave_multicast_group failed")
+        .expect("leave_multicast_group error");
+
+    expect_multicast_event(&fake_ep, MulticastEvent::Left(multicast_address)).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn join_multicast_group_with_no_hermetic_network_realm() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("join_multicast_group_with_no_hermetic_network_realm", &sandbox)
+            .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    assert_eq!(
+        network_test_realm
+            .join_multicast_group(
+                &mut fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+                DEFAULT_INTERFACE_ID
+            )
+            .await
+            .expect("join_multicast_group failed"),
+        Err(fntr::Error::HermeticNetworkRealmNotRunning),
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn join_multicast_group_with_non_existent_interface() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = create_netstack_realm("join_multicast_group_with_non_existent_interface", &sandbox)
+        .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    assert_eq!(
+        network_test_realm
+            .join_multicast_group(
+                &mut fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+                // This interface id does not exist. As a result, an error
+                // should be returned.
+                DEFAULT_INTERFACE_ID
+            )
+            .await
+            .expect("join_multicast_group failed"),
+        Err(fntr::Error::InvalidArguments),
+    );
+}
+
+#[test_case(
+    "ipv4",
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn join_multicast_group_with_non_multicast_address(name: &str, subnet: fnet::Subnet) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm = create_netstack_realm(
+        format!("join_multicast_group_with_non_multicast_address_{}", name),
+        &sandbox,
+    )
+    .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    // `address` is not within the multicast address range. Therefore, an error
+    // should be returned.
+    let mut address = subnet.addr;
+    assert_eq!(
+        network_test_realm
+            .join_multicast_group(
+                &mut address,
+                expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await
+            )
+            .await
+            .expect("join_multicast_group failed"),
+        Err(fntr::Error::InvalidArguments),
+    );
+}
+
+#[test_case(
+    "ipv4",
+    fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    fnet::IpAddress::Ipv6(DEFAULT_IPV6_MULTICAST_ADDRESS),
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn join_same_multicast_group_multiple_times(
+    name: &str,
+    mut multicast_address: fnet::IpAddress,
+    subnet: fnet::Subnet,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm = create_netstack_realm(
+        format!("join_same_multicast_group_multiple_times_{}", name),
+        &sandbox,
+    )
+    .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    let id = expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await;
+    network_test_realm
+        .join_multicast_group(&mut multicast_address, id)
+        .await
+        .expect("join_multicast_group failed")
+        .expect("join_multicast_group error");
+
+    // Verify that the error is propagated whenever the same multicast group is
+    // joined multiple times.
+    assert_eq!(
+        network_test_realm
+            .join_multicast_group(&mut multicast_address, id)
+            .await
+            .expect("duplicate join_multicast_group failed"),
+        Err(fntr::Error::AddressInUse)
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn leave_multicast_group_with_no_hermetic_network_realm() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("leave_multicast_group_with_no_hermetic_network_realm", &sandbox)
+            .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    assert_eq!(
+        network_test_realm
+            .leave_multicast_group(
+                &mut fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+                DEFAULT_INTERFACE_ID
+            )
+            .await
+            .expect("leave_multicast_group failed"),
+        Err(fntr::Error::HermeticNetworkRealmNotRunning),
+    );
+}
+
+#[test_case(
+    "ipv4",
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn leave_multicast_group_with_non_multicast_address(name: &str, subnet: fnet::Subnet) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm = create_netstack_realm(
+        format!("leave_multicast_group_with_non_multicast_address_{}", name),
+        &sandbox,
+    )
+    .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    // `address` is not within the multicast address range. Therefore, an error
+    // should be returned.
+    let mut address = subnet.addr;
+    assert_eq!(
+        network_test_realm
+            .leave_multicast_group(
+                &mut address,
+                expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await
+            )
+            .await
+            .expect("leave_multicast_group failed"),
+        Err(fntr::Error::InvalidArguments),
+    );
+}
+
+#[test_case(
+    "ipv4",
+    fnet::IpAddress::Ipv4(DEFAULT_IPV4_MULTICAST_ADDRESS),
+    DEFAULT_IPV4_SOURCE_SUBNET;
+    "ipv4")]
+#[test_case(
+    "ipv6",
+    fnet::IpAddress::Ipv6(DEFAULT_IPV6_MULTICAST_ADDRESS),
+    DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET;
+    "ipv6")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn leave_unjoined_multicast_group(
+    name: &str,
+    mut multicast_address: fnet::IpAddress,
+    subnet: fnet::Subnet,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let realm = create_netstack_realm(format!("leave_unjoined_multicast_group_{}", name), &sandbox)
+        .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let _interface = join_network_with_hermetic_netstack(
+        &realm,
+        &network,
+        &network_test_realm,
+        ETH1_INTERFACE_NAME,
+        ETH1_MAC_ADDRESS,
+        subnet,
+    )
+    .await;
+
+    // The multicast group must be joined before it can be left.
+    assert_eq!(
+        network_test_realm
+            .leave_multicast_group(
+                &mut multicast_address,
+                expect_hermetic_interface_id(ETH1_INTERFACE_NAME, &realm).await
+            )
+            .await
+            .expect("leave_multicast_group failed"),
+        Err(fntr::Error::AddressNotAvailable)
     );
 }

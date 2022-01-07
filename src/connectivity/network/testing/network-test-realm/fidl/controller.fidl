@@ -28,6 +28,10 @@ type Error = strict enum {
     TIMEOUT_EXCEEDED = 7;
     /// A ping unexpectedly failed.
     PING_FAILED = 8;
+    /// The requested address is not available.
+    ADDRESS_NOT_AVAILABLE = 9;
+    /// The requested address is in use.
+    ADDRESS_IN_USE = 10;
 };
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -73,7 +77,7 @@ protocol Controller {
     /// error.
     ///
     /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if a hermetic network realm
-    ///     was not running.
+    ///     is not running.
     /// * error `INTERNAL` for internal errors, including failure to destroy the
     ///     realm.
     StopHermeticNetworkRealm() -> (struct {}) error Error;
@@ -155,5 +159,46 @@ protocol Controller {
         payload_length uint16;
         interface_name string:<fuchsia.net.interfaces.INTERFACE_NAME_LENGTH, optional>;
         timeout zx.duration;
+    }) -> (struct {}) error Error;
+
+    /// Joins a multicast group.
+    ///
+    /// Membership will be maintained until `LeaveMulticastGroup` or
+    /// `StopHermeticNetworkRealm` is invoked.
+    ///
+    /// + request `address` the group address to join.
+    /// + request `interface_id` the interface that should be used to join the
+    ///     group. A value of 0 indicates that any interface may be used.
+    /// * error `ADDRESS_IN_USE` if the provided `address` was previously
+    ///     joined.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `INTERNAL` for internal errors.
+    /// * error `INVALID_ARGUMENTS` if the specified `interface_id` does not
+    ///     exist or the `address` does not correspond to a valid multicast
+    ///     address.
+    JoinMulticastGroup(struct {
+        address fuchsia.net.IpAddress;
+        interface_id fuchsia.net.interface_id;
+    }) -> (struct {}) error Error;
+
+    /// Leaves a multicast group that was previously joined using the
+    /// `JoinMulticastGroup` method.
+    ///
+    /// + request `address` the group address to leave.
+    /// + request `interface_id` the interface that was previously used to join
+    ///     the multicast group.
+    /// * error `ADDRESS_NOT_AVAILABLE` if the provided `address` was not
+    ///     previously joined.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `INTERNAL` for internal errors, including failure to connect
+    ///     to hermetic network realm services.
+    /// * error `INVALID_ARGUMENTS` if the specified `interface_id` does not
+    ///     exist or the `address` does not correspond to a valid multicast
+    ///     address.
+    LeaveMulticastGroup(struct {
+        address fuchsia.net.IpAddress;
+        interface_id fuchsia.net.interface_id;
     }) -> (struct {}) error Error;
 };
