@@ -1,0 +1,43 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/session/bin/cursor/cursor_args.gni")
+
+resource("pointer") {
+  sources = [ cursor_pointer_path ]
+  outputs = [ "data/pointer.riv" ]
+}
+
+rustc_binary("bin") {
+  name = "cursor"
+  edition = "2018"
+  source_root = "src/main.rs"
+  sources = [ "src/main.rs" ]
+  deps = [
+    ":pointer",
+    "//src/graphics/lib/compute/rive-rs",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/trace/rust:trace-provider",
+    "//src/lib/ui/carnelian",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/testing/fidl:placeholders-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+fuchsia_component("cursor_cm") {
+  component_name = "cursor"
+  manifest = "meta/cursor.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("cursor") {
+  deps = [ ":cursor_cm" ]
+}

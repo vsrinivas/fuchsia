@@ -7,6 +7,12 @@
         runner: "elf",
         binary: "bin/scene_manager",
     },
+    children: [
+        {
+            name: "cursor",
+            url: "fuchsia-pkg://fuchsia.com/cursor#meta/cursor.cm",
+        },
+    ],
     capabilities: [
         {
             protocol: [
@@ -39,6 +45,24 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
+        },
+        {
+            protocol: "fuchsia.ui.app.ViewProvider",
+            from: "#cursor",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: [ "#cursor" ],
         },
     ],
     expose: [

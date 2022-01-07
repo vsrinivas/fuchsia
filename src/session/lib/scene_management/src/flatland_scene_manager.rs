@@ -15,7 +15,7 @@ use {
     async_utils::hanging_get::server as hanging_get,
     fidl,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_ui_app as ui_app,
+    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
     fidl_fuchsia_ui_views as ui_views, fuchsia_scenic as scenic, fuchsia_scenic,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
@@ -159,7 +159,7 @@ pub struct FlatlandSceneManager {
     target_view_ref: ui_views::ViewRef,
 
     // Used to sent presentation requests for |root_flatand| and |scene_flatland|, respectively.
-    _root_flatland_presentation_sender: PresentationSender,
+    root_flatland_presentation_sender: PresentationSender,
     _pointerinjector_flatland_presentation_sender: PresentationSender,
     scene_flatland_presentation_sender: PresentationSender,
 
@@ -179,6 +179,12 @@ pub struct FlatlandSceneManager {
     // Used to publish viewport changes to subscribers of |viewport_hanging_get|.
     // TODO(fxbug.dev/87517): use this to publish changes to screen resolution.
     _viewport_publisher: Arc<Mutex<InjectorViewportPublisher>>,
+
+    // Used to position the cursor.
+    cursor_transform_id: TransformId,
+
+    // Used to track cursor visibility.
+    cursor_visibility: bool,
 }
 
 #[async_trait]
@@ -285,15 +291,41 @@ impl SceneManager for FlatlandSceneManager {
         )
     }
 
-    // TODO(fxbug.dev/86554)
-    fn set_cursor_position(&mut self, _position: input_pipeline::Position) {
-        fx_log_warn!("fxbug.dev/86554: set_cursor_position() not implemented");
-        // let screen_coordinates = ScreenCoordinates::from_pixels(position.x, position.y, self.display_metrics);
+    fn set_cursor_position(&mut self, position: input_pipeline::Position) {
+        let x = position.x.round() as i32;
+        let y = position.y.round() as i32;
+        let flatland = self.root_flatland.flatland.lock();
+        flatland
+            .set_translation(&mut self.cursor_transform_id, &mut fmath::Vec_ { x, y })
+            .expect("fidl error");
+        self.root_flatland_presentation_sender
+            .unbounded_send(PresentationMessage::Present)
+            .expect("send failed");
     }
 
-    // TODO(fxbug.dev/86554)
-    fn set_cursor_visibility(&mut self, _visible: bool) {
-        fx_log_warn!("fxbug.dev/86554: set_cursor_visibility() not implemented");
+    fn set_cursor_visibility(&mut self, visible: bool) {
+        if self.cursor_visibility != visible {
+            self.cursor_visibility = visible;
+            let flatland = self.root_flatland.flatland.lock();
+            if visible {
+                flatland
+                    .add_child(
+                        &mut self.root_flatland.root_transform_id.clone(),
+                        &mut self.cursor_transform_id.clone(),
+                    )
+                    .expect("failed to add cursor to scene");
+            } else {
+                flatland
+                    .remove_child(
+                        &mut self.root_flatland.root_transform_id.clone(),
+                        &mut self.cursor_transform_id.clone(),
+                    )
+                    .expect("failed to remove cursor from scene");
+            }
+            self.root_flatland_presentation_sender
+                .unbounded_send(PresentationMessage::Present)
+                .expect("send failed");
+        }
     }
 
     fn get_pointerinjection_display_size(&self) -> Size {
@@ -342,12 +374,14 @@ impl FlatlandSceneManager {
         root_flatland: ui_comp::FlatlandProxy,
         pointerinjector_flatland: ui_comp::FlatlandProxy,
         scene_flatland: ui_comp::FlatlandProxy,
+        cursor_view_provider: ui_app::ViewProviderProxy,
     ) -> Result<Self, Error> {
         let mut id_generator = scenic::flatland::IdGenerator::new();
 
         // Generate unique transform/content IDs that will be used to create the sub-scenegraphs
         // in the Flatland instances managed by SceneManager.
         let cursor_transform_id = id_generator.next_transform_id();
+        let cursor_viewport_content_id = id_generator.next_content_id();
         let pointerinjector_viewport_transform_id = id_generator.next_transform_id();
         let pointerinjector_viewport_content_id = id_generator.next_content_id();
         let a11y_viewport_transform_id = id_generator.next_transform_id();
@@ -363,6 +397,14 @@ impl FlatlandSceneManager {
             root_view_creation_pair.view_creation_token,
             &mut id_generator,
         )?;
+
+        let mut cursor_view_creation_pair = scenic::flatland::LinkTokenPair::new()?;
+        cursor_view_provider
+            .create_view2(ui_app::CreateView2Args {
+                view_creation_token: Some(cursor_view_creation_pair.view_creation_token),
+                ..ui_app::CreateView2Args::EMPTY
+            })
+            .expect("fidl error");
 
         let mut pointerinjector_view_creation_pair = scenic::flatland::LinkTokenPair::new()?;
         let pointerinjector_flatland = FlatlandInstance::new(
@@ -405,14 +447,6 @@ impl FlatlandSceneManager {
                 &mut pointerinjector_viewport_transform_id.clone(),
             )?;
 
-            // We create/add the cursor transform second, so that it is above everything else in
-            // the scene graph.
-            flatland.create_transform(&mut cursor_transform_id.clone())?;
-            flatland.add_child(
-                &mut root_flatland.root_transform_id.clone(),
-                &mut cursor_transform_id.clone(),
-            )?;
-
             let link_properties = ui_comp::ViewportProperties {
                 logical_size: Some(layout_info.logical_size.unwrap()),
                 ..ui_comp::ViewportProperties::EMPTY
@@ -430,6 +464,43 @@ impl FlatlandSceneManager {
             flatland.set_content(
                 &mut pointerinjector_viewport_transform_id.clone(),
                 &mut pointerinjector_viewport_content_id.clone(),
+            )?;
+
+            // We create/add the cursor transform second, so that it is above everything else in
+            // the scene graph.
+            flatland.create_transform(&mut cursor_transform_id.clone())?;
+            flatland.add_child(
+                &mut root_flatland.root_transform_id.clone(),
+                &mut cursor_transform_id.clone(),
+            )?;
+            // Visible but offscreen until we get a first position event.
+            flatland.set_translation(
+                &mut cursor_transform_id.clone(),
+                &mut fmath::Vec_ { x: -100, y: -100 },
+            )?;
+
+            // TODO(fxbug.dev/91061): Make this larger when we have a protocol to
+            // determine the hotspot and the cursor component knows how to produce
+            // output that doesn't occupy the full viewport.
+            const CURSOR_SIZE: fmath::SizeU = fmath::SizeU { width: 18, height: 29 };
+
+            let link_properties = ui_comp::ViewportProperties {
+                logical_size: Some(CURSOR_SIZE),
+                ..ui_comp::ViewportProperties::EMPTY
+            };
+
+            let (_, child_view_watcher_request) =
+                create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
+
+            flatland.create_viewport(
+                &mut cursor_viewport_content_id.clone(),
+                &mut cursor_view_creation_pair.viewport_creation_token,
+                link_properties,
+                child_view_watcher_request,
+            )?;
+            flatland.set_content(
+                &mut cursor_transform_id.clone(),
+                &mut cursor_viewport_content_id.clone(),
             )?;
         }
 
@@ -513,7 +584,7 @@ impl FlatlandSceneManager {
             scene_flatland,
             context_view_ref,
             target_view_ref,
-            _root_flatland_presentation_sender: root_flatland_presentation_sender,
+            root_flatland_presentation_sender,
             _pointerinjector_flatland_presentation_sender:
                 pointerinjector_flatland_presentation_sender,
             scene_flatland_presentation_sender,
@@ -521,6 +592,8 @@ impl FlatlandSceneManager {
             id_generator,
             viewport_hanging_get,
             _viewport_publisher: viewport_publisher,
+            cursor_transform_id,
+            cursor_visibility: true,
         })
     }
 }

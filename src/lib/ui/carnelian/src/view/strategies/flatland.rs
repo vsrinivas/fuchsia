@@ -265,18 +265,23 @@ impl FlatlandViewStrategy {
 
         let viewref_pair = fuchsia_scenic::ViewRefPair::new()?;
         let view_ref = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
-        let mut view_identity = fidl_fuchsia_ui_views::ViewIdentityOnCreation::from(viewref_pair);
 
-        let view_bound_protocols = flatland::ViewBoundProtocols::EMPTY;
-
-        flatland.create_view2(
-            &mut view_creation_token,
-            &mut view_identity,
-            view_bound_protocols,
-            server_end,
-        )?;
-
-        Self::listen_for_key_events(view_ref, &app_sender, view_key)?;
+        // Use CreateView2 if input events are expected.
+        let input = Config::get().input;
+        if input {
+            let mut view_identity =
+                fidl_fuchsia_ui_views::ViewIdentityOnCreation::from(viewref_pair);
+            let view_bound_protocols = flatland::ViewBoundProtocols::EMPTY;
+            flatland.create_view2(
+                &mut view_creation_token,
+                &mut view_identity,
+                view_bound_protocols,
+                server_end,
+            )?;
+            Self::listen_for_key_events(view_ref, &app_sender, view_key)?;
+        } else {
+            flatland.create_view(&mut view_creation_token, server_end)?;
+        }
 
         let sender = app_sender.clone();
         fasync::Task::local(async move {

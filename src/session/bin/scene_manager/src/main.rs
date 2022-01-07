@@ -13,7 +13,7 @@ use {
         RegistryRequest as A11yViewRegistryRequest,
         RegistryRequestStream as A11yViewRegistryRequestStream,
     },
-    fidl_fuchsia_ui_composition as fland,
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as fland,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -70,12 +70,14 @@ async fn main() -> Result<(), Error> {
         let root_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
         let pointerinjector_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
         let a11y_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
+        let cursor_view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()?;
         Arc::new(Mutex::new(Box::new(
             scene_management::FlatlandSceneManager::new(
                 display,
                 pointerinjector_flatland,
                 root_flatland,
                 a11y_flatland,
+                cursor_view_provider,
             )
             .await?,
         )))

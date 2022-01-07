@@ -149,6 +149,9 @@ pub struct Config {
     /// single buffer. This configuration option is to allow testing rendering
     /// with a single buffer even in build that supports multiple.
     pub buffer_count: Option<usize>,
+    #[serde(default)]
+    /// Whether input events are needed.
+    pub input: bool,
 }
 
 impl Config {
@@ -172,6 +175,7 @@ impl Default for Config {
             keymap_name: None,
             display_resource_release_delay: display_resource_release_delay_default(),
             buffer_count: None,
+            input: true,
         }
     }
 }

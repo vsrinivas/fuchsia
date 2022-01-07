@@ -59,6 +59,12 @@ struct MouseInjectorHandlerInner {
 
     /// A [`Sender`] used to communicate the current cursor state.
     cursor_message_sender: Sender<CursorMessage>,
+
+    /// Set to true when in immersive mode.
+    immersive_mode: bool,
+
+    /// The current visibility for the cursor.
+    is_cursor_visible: bool,
 }
 
 #[async_trait(?Send)]
@@ -67,37 +73,102 @@ impl InputHandler for MouseInjectorHandler {
         self: Rc<Self>,
         mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        if let input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(ref mouse_event),
-            device_descriptor:
-                input_device::InputDeviceDescriptor::Mouse(ref mouse_device_descriptor),
-            event_time,
-            handled: input_device::Handled::No,
-        } = input_event
-        {
-            // TODO(fxbug.dev/90317): Investigate latency introduced by waiting for update_cursor_renderer
-            if let Err(e) = self.update_cursor_renderer(mouse_event, &mouse_device_descriptor).await
-            {
-                fx_log_err!("{}", e);
-            }
+        match input_event {
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(ref mouse_event),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Mouse(ref mouse_device_descriptor),
+                event_time,
+                handled: input_device::Handled::No,
+            } => {
+                // TODO(fxbug.dev/90317): Investigate latency introduced by waiting for update_cursor_renderer
+                if let Err(e) =
+                    self.update_cursor_renderer(mouse_event, &mouse_device_descriptor).await
+                {
+                    fx_log_err!("update_cursor_renderer failed: {}", e);
+                }
+                let immersive_mode = self.inner.borrow().immersive_mode;
+                if let Err(e) = self.update_cursor_visibility(!immersive_mode).await {
+                    fx_log_err!("update_cursor_visibility failed: {}", e);
+                }
 
-            // Create a new injector if this is the first time seeing device_id.
-            if let Err(e) = self
-                .ensure_injector_registered(&mouse_event, &mouse_device_descriptor, event_time)
-                .await
-            {
-                fx_log_err!("{}", e);
-            }
+                // Create a new injector if this is the first time seeing device_id.
+                if let Err(e) = self
+                    .ensure_injector_registered(&mouse_event, &mouse_device_descriptor, event_time)
+                    .await
+                {
+                    fx_log_err!("ensure_injector_registered failed: {}", e);
+                }
 
-            // Handle the event.
-            if let Err(e) =
-                self.send_event_to_scenic(&mouse_event, &mouse_device_descriptor, event_time).await
-            {
-                fx_log_err!("{}", e);
-            }
+                // Handle the event.
+                if let Err(e) = self
+                    .send_event_to_scenic(&mouse_event, &mouse_device_descriptor, event_time)
+                    .await
+                {
+                    fx_log_err!("send_event_to_scenic failed: {}", e);
+                }
 
-            // Consume the input event.
-            input_event.handled = input_device::Handled::Yes;
+                // Consume the input event.
+                input_event.handled = input_device::Handled::Yes;
+            }
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Touch(ref _touch_event),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Touch(ref _touch_device_descriptor),
+                event_time: _,
+                handled: _,
+            } => {
+                // Hide the cursor on touch input.
+                // TODO(fxbug.dev/90290): Remove this workaround when we have a
+                // proper cursor API.
+                let visible = false;
+                if let Err(e) = self.update_cursor_visibility(visible).await {
+                    fx_log_err!("update_cursor_visibility failed: {}", e);
+                }
+            }
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
+                device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
+                event_time: _,
+                handled: _,
+            } => {
+                // Alt+Shift+I toggles immersive mode.
+                //
+                // Immersive mode hides the cursor and is a temporary workaround
+                // until we have a cursor API that makes it possible for UI
+                // components to control the appearance of the cursor.
+                //
+                // TODO(fxbug.dev/90290): Remove this workaround when we have a
+                // proper cursor API.
+                if keyboard_device_event.get_event_type()
+                    == fidl_fuchsia_ui_input3::KeyEventType::Pressed
+                    && keyboard_device_event.get_key() == fidl_fuchsia_input::Key::I
+                    && keyboard_device_event
+                        .get_modifiers()
+                        .filter(|m| {
+                            m.contains(
+                                fidl_fuchsia_ui_input3::Modifiers::Alt
+                                    | fidl_fuchsia_ui_input3::Modifiers::Shift,
+                            )
+                        })
+                        .is_some()
+                {
+                    let immersive_mode = {
+                        let mut inner = self.inner.borrow_mut();
+                        inner.immersive_mode = !inner.immersive_mode;
+                        fx_log_info!("Toggled immersive mode: {}", inner.immersive_mode);
+                        inner.immersive_mode
+                    };
+
+                    if let Err(e) = self.update_cursor_visibility(!immersive_mode).await {
+                        fx_log_err!("update_cursor_visibility failed: {}", e);
+                    }
+
+                    // Consume the input event.
+                    input_event.handled = input_device::Handled::Yes
+                }
+            }
+            _ => {}
         }
         vec![input_event]
     }
@@ -189,8 +260,14 @@ impl MouseInjectorHandler {
             inner: RefCell::new(MouseInjectorHandlerInner {
                 viewport: None,
                 injectors: HashMap::new(),
-                current_position: Position::zero(),
+                // Initially centered.
+                current_position: Position {
+                    x: display_size.width / 2.0,
+                    y: display_size.height / 2.0,
+                },
                 cursor_message_sender,
+                immersive_mode: false,
+                is_cursor_visible: true,
             }),
             context_view_ref,
             target_view_ref,
@@ -313,6 +390,29 @@ impl MouseInjectorHandler {
             .send(CursorMessage::SetPosition(pos))
             .await
             .context("Failed to send current mouse position to cursor renderer")
+    }
+
+    /// Updates the current cursor's visibility.
+    ///
+    /// The updated visibility is sent to a client via `self.inner.cursor_message_sender`.
+    ///
+    /// If there is no change to visibility, the state is not sent.
+    ///
+    /// # Parameters
+    /// - `visible`: The new visibility of the cursor.
+    async fn update_cursor_visibility(&self, visible: bool) -> Result<(), anyhow::Error> {
+        let mut inner = self.inner.borrow_mut();
+
+        // No change to visibility needed.
+        if visible == inner.is_cursor_visible {
+            return Ok(());
+        }
+        inner.is_cursor_visible = visible;
+        inner
+            .cursor_message_sender
+            .send(CursorMessage::SetVisibility(visible))
+            .await
+            .context("Failed to send current visibility to cursor renderer")
     }
 
     /// Returns an absolute cursor position scaled from device coordinates to the handler's
@@ -446,10 +546,13 @@ mod tests {
         crate::testing_utilities::{
             assert_handler_ignores_input_event_sequence, create_mouse_event,
             create_mouse_event_with_handled, create_mouse_pointer_sample_event,
+            create_touch_contact, create_touch_event_with_handled,
         },
+        crate::touch_binding,
         fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
         fuchsia_zircon as zx,
         futures::StreamExt,
+        maplit::hashmap,
         matches::assert_matches,
         std::collections::HashSet,
         test_case::test_case,
@@ -467,6 +570,20 @@ mod tests {
             absolute_y_range: Some(fidl_input_report::Range { min: 0, max: 100 }),
             buttons: None,
         });
+
+    /// Returns an TouchDescriptor.
+    fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![touch_binding::ContactDeviceDescriptor {
+                x_range: fidl_input_report::Range { min: 0, max: 100 },
+                y_range: fidl_input_report::Range { min: 0, max: 100 },
+                pressure_range: None,
+                width_range: None,
+                height_range: None,
+            }],
+        })
+    }
 
     /// Handles |fidl_fuchsia_pointerinjector_configuration::SetupRequest::GetViewRefs|.
     async fn handle_configuration_request_stream(
@@ -658,8 +775,8 @@ mod tests {
     // Tests that a mouse move event both sends an update to scenic and sends the current cursor
     // location via the cursor location sender.
     #[test_case(
-        mouse_binding::MouseLocation::Relative(Position { x: 50.0, y: 75.0 }),
-        Position { x: 50.0, y: 75.0 }; "Valid move event."
+        mouse_binding::MouseLocation::Relative(Position { x: 10.0, y: 15.0 }),
+        Position { x: DISPLAY_WIDTH / 2.0 + 10.0, y: DISPLAY_HEIGHT / 2.0 + 15.0 }; "Valid move event."
     )]
     #[test_case(
         mouse_binding::MouseLocation::Relative(Position {
@@ -672,7 +789,7 @@ mod tests {
         }; "Move event exceeds max bounds."
     )]
     #[test_case(
-      mouse_binding::MouseLocation::Relative(Position { x: -20.0, y: -15.0 }),
+      mouse_binding::MouseLocation::Relative(Position { x: -(DISPLAY_WIDTH + 20.0), y: -(DISPLAY_HEIGHT + 15.0) }),
       Position { x: 0.0, y: 0.0 }; "Move event exceeds min bounds."
     )]
     #[fuchsia::test(allow_stalls = false)]
@@ -909,5 +1026,58 @@ mod tests {
 
         // The cursor location stream should not receive any position.
         assert!(receiver.next().await.is_none());
+    }
+
+    // Tests that a mouse move event that has already been handled is not forwarded to scenic.
+    #[fuchsia::test(allow_stalls = false)]
+    async fn touch_hides_cursor() {
+        // Set up fidl streams.
+        let (configuration_proxy, mut configuration_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
+                .expect("Failed to create pointerinjector Setup proxy and stream.");
+        let (injector_registry_proxy, injector_registry_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector::RegistryMarker>()
+                .expect("Failed to create pointerinjector Registry proxy and stream.");
+        let config_request_stream_fut =
+            handle_configuration_request_stream(&mut configuration_request_stream);
+
+        // Create MouseInjectorHandler.
+        let (sender, mut receiver) = futures::channel::mpsc::channel::<CursorMessage>(1);
+        let mouse_handler_fut = MouseInjectorHandler::new_handler(
+            configuration_proxy,
+            injector_registry_proxy,
+            Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
+            sender,
+        );
+        let (mouse_handler_res, _) = futures::join!(mouse_handler_fut, config_request_stream_fut);
+        let mouse_handler = mouse_handler_res.expect("Failed to create mouse handler");
+
+        const TOUCH_ID: u32 = 1;
+        let touch_descriptor = get_touch_device_descriptor();
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let input_events = vec![create_touch_event_with_handled(
+            hashmap! {
+                fidl_fuchsia_ui_input::PointerEventPhase::Add
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
+                fidl_fuchsia_ui_input::PointerEventPhase::Down
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
+            },
+            event_time,
+            &touch_descriptor,
+            input_device::Handled::Yes,
+        )];
+
+        assert_handler_ignores_input_event_sequence(
+            mouse_handler,
+            input_events,
+            injector_registry_request_stream,
+        )
+        .await;
+
+        // Touch event should hide the cursor.
+        match receiver.next().await {
+            Some(CursorMessage::SetVisibility(visible)) => assert_eq!(visible, false),
+            _ => panic!("Touch event did not hide the cursor."),
+        };
     }
 }
