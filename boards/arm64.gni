@@ -32,7 +32,8 @@ board_package_labels += [
   "//src/hwinfo:default_board_config",
   "//src/power/thermd",
   "//src/power/thermd:config",
-  "//garnet/packages/prod:drivers-support",
+  "//src/devices/sysmem/bin/sysmem_connector",
+  "//src/graphics/bin/vulkan_loader",
 ]
 
 max_fuchsia_zbi_size = 16777216  # 16 MiB

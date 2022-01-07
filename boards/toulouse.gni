@@ -29,5 +29,4 @@ board_package_labels = [
   "//boards:verify_zedboot_cmdline_params_for_toulouse",
   "//src/power/thermd",
   "//src/power/thermd:config",
-  "//garnet/packages/prod:drivers-support",
 ]

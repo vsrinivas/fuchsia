@@ -31,7 +31,7 @@ group("all") {
     "//garnet/packages/prod:cobalt_client",
     "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:drivers",
+    "//garnet/packages/prod:drivers-system",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:hwstress",
     "//garnet/packages/prod:insntrace",
@@ -181,24 +181,6 @@ group("debug_agent") {
   public_deps = [ "//src/developer/debug/debug_agent" ]
 }
 
-# TODO(fxb/61170): remove when all product/board files use the two targets
-# below instead.
-group("drivers") {
-  testonly = true
-  public_deps = [
-    ":drivers-support",
-    ":drivers-system",
-  ]
-}
-
-# Tools and configs supporting drivers.
-group("drivers-support") {
-  public_deps = [ "//garnet/packages/prod:vulkan" ]
-  if (target_cpu == "x64") {
-    public_deps += [ "//garnet/packages/prod:goldfish-vulkan-config" ]
-  }
-}
-
 # Note: elements of this group are all installed in the system package.
 group("drivers-system") {
   public_deps = [
@@ -216,11 +198,6 @@ group("far") {
     "//src/sys/pkg/bin/far",
     "//src/sys/pkg/bin/far:host",
   ]
-}
-
-group("goldfish-vulkan-config") {
-  public_deps =
-      [ "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config" ]
 }
 
 group("hwstress") {
@@ -344,10 +321,6 @@ group("setui_client") {
   public_deps = [ "//garnet/bin/setui_client" ]
 }
 
-group("sysmem_connector") {
-  public_deps = [ "//src/devices/sysmem/bin/sysmem_connector" ]
-}
-
 group("tee_manager") {
   public_deps = [ "//src/security/tee_manager" ]
 }
@@ -386,13 +359,6 @@ group("tracing") {
     "//garnet/bin/trace2json",
     "//garnet/bin/trace_manager",
     "//garnet/bin/traceutil",
-  ]
-}
-
-group("vulkan") {
-  public_deps = [
-    "//src/devices/sysmem/bin/sysmem_connector",
-    "//src/graphics/bin/vulkan_loader",
   ]
 }
 

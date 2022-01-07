@@ -78,10 +78,12 @@ board_system_image_deps += [
 board_package_labels += [
   "//src/power/thermd",
   "//src/power/thermd:config",
-  "//garnet/packages/prod:drivers-support",
+  "//src/devices/sysmem/bin/sysmem_connector",
+  "//src/graphics/bin/vulkan_loader",
   "//src/hwinfo:default_board_config",
   "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen",
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
+  "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config",
 ]
 
 # userspace PCI migration flags

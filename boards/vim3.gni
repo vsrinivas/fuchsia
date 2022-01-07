@@ -53,7 +53,8 @@ board_system_image_deps += [
 
 board_package_labels += [
   "//src/graphics/drivers/msd-arm-mali:msd-config",
-  "//garnet/packages/prod:vulkan",
+  "//src/devices/sysmem/bin/sysmem_connector",
+  "//src/graphics/bin/vulkan_loader",
   "//src/graphics/drivers/arm-mali/icd:libvulkan_arm_g52_r0p0",
 ]
 

@@ -20,7 +20,8 @@ group("tests") {
 
   # Add driver dependencies:
   public_deps += [
-    "//garnet/packages/prod:vulkan",
+    "//src/devices/sysmem/bin/sysmem_connector",
+    "//src/graphics/bin/vulkan_loader",
     "//src/graphics/drivers/msd-arm-mali/tests",
     "//src/graphics/drivers/msd-intel-gen/tests",
     "//src/graphics/drivers/msd-vsi-vip/tests/integration",
