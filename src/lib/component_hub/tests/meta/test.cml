@@ -40,4 +40,11 @@
             from: "self",
         },
     ],
+    config: {
+        my_uint8: { type: "uint8" },
+        my_string: {
+            type: "string",
+            max_size: 100,
+        },
+    },
 }

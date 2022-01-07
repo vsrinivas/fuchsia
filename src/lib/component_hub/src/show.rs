@@ -212,6 +212,20 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
     Ok(entries)
 }
 
+// Get all key-value pairs in a config directory.
+async fn get_config_fields(config_dir: Directory) -> Result<Vec<ConfigField>> {
+    let mut entries = config_dir.entries().await?;
+    entries.sort_unstable();
+
+    let mut config = vec![];
+    for key in entries {
+        let value = config_dir.read_file(&key).await?;
+        config.push(ConfigField { key, value })
+    }
+
+    Ok(config)
+}
+
 /// Additional information about components that are using the ELF runner
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq)]
@@ -399,12 +413,20 @@ impl std::fmt::Display for Execution {
     }
 }
 
+/// A single configuration key-value pair
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
+pub struct ConfigField {
+    pub key: String,
+    pub value: String,
+}
+
 /// Additional information about components that are resolved
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct Resolved {
     pub incoming_capabilities: Vec<String>,
     pub exposed_capabilities: Vec<String>,
     pub instance_id: Option<ComponentInstanceId>,
+    pub config: Vec<ConfigField>,
 }
 
 impl Resolved {
@@ -421,7 +443,14 @@ impl Resolved {
 
         let instance_id = resolved_dir.read_file("instance_id").await.ok();
 
-        Ok(Self { incoming_capabilities, exposed_capabilities, instance_id })
+        let config = if resolved_dir.exists("config").await? {
+            let config_dir = resolved_dir.open_dir_readable("config")?;
+            get_config_fields(config_dir).await?
+        } else {
+            vec![]
+        };
+
+        Ok(Self { incoming_capabilities, exposed_capabilities, instance_id, config })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -430,7 +459,12 @@ impl Resolved {
             get_capabilities(in_dir).await?
         };
 
-        Ok(Self { incoming_capabilities, exposed_capabilities: vec![], instance_id: None })
+        Ok(Self {
+            incoming_capabilities,
+            exposed_capabilities: vec![],
+            instance_id: None,
+            config: vec![],
+        })
     }
 }
 
@@ -447,6 +481,14 @@ impl std::fmt::Display for Resolved {
         writeln!(f, "Exposed Capabilities ({}):", self.exposed_capabilities.len())?;
         for capability in &self.exposed_capabilities {
             writeln!(f, "{}{}", SPACER, capability)?;
+        }
+
+        if !self.config.is_empty() {
+            writeln!(f, "Configuration ({}):", self.config.len())?;
+            let max_len = self.config.iter().map(|f| f.key.len()).max().unwrap();
+            for field in &self.config {
+                writeln!(f, "{}{:width$} -> {}", SPACER, field.key, field.value, width = max_len)?;
+            }
         }
         Ok(())
     }
@@ -777,6 +819,8 @@ mod tests {
         //       |- dev
         //    |- expose
         //       |- minfs
+        //    |- config
+        //       |- verbosity
         //    |- instance_id
         fs::create_dir(root.join("children")).unwrap();
         File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
@@ -786,9 +830,14 @@ mod tests {
             .unwrap();
         fs::create_dir_all(root.join("resolved/use/dev")).unwrap();
         fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
+        fs::create_dir_all(root.join("resolved/config")).unwrap();
         File::create(root.join("resolved/instance_id"))
             .unwrap()
             .write_all("abc".as_bytes())
+            .unwrap();
+        File::create(root.join("resolved/config/verbosity"))
+            .unwrap()
+            .write_all("Single(Text(\"DEBUG\"))".as_bytes())
             .unwrap();
 
         let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
@@ -800,6 +849,11 @@ mod tests {
 
         assert!(component.resolved.is_some());
         let resolved = component.resolved.as_ref().unwrap();
+
+        assert_eq!(resolved.config.len(), 1);
+        let field = &resolved.config[0];
+        assert_eq!(field.key, "verbosity");
+        assert_eq!(field.value, "Single(Text(\"DEBUG\"))");
 
         let instance_id = &resolved.instance_id;
         assert_eq!(instance_id, &Some("abc".to_string()));
@@ -820,7 +874,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn resolved_cml_without_instance_id() {
+    async fn resolved_cml_without_instance_id_and_config() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -852,6 +906,8 @@ mod tests {
 
         assert!(component.resolved.is_some());
         let resolved = component.resolved.as_ref().unwrap();
+
+        assert!(resolved.config.is_empty());
 
         let instance_id = &resolved.instance_id;
         assert!(instance_id.is_none());

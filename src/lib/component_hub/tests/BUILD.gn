@@ -22,6 +22,7 @@ fuchsia_component("test") {
   testonly = true
   manifest = "meta/test.cml"
   deps = [ ":integration_test_bin" ]
+  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("foo") {
@@ -29,7 +30,16 @@ fuchsia_component("foo") {
   manifest = "meta/foo.cml"
 }
 
+fuchsia_structured_config_values("test_config_values") {
+  testonly = true
+  component = ":test"
+  values = "config/config_values.json5"
+}
+
 fuchsia_test_package("component_hub_integration_tests") {
   test_components = [ ":test" ]
-  deps = [ ":foo" ]
+  deps = [
+    ":foo",
+    ":test_config_values",
+  ]
 }

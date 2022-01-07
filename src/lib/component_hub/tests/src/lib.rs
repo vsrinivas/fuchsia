@@ -57,6 +57,14 @@ async fn show() {
     let incoming_capability = &incoming_capabilities[1];
     assert_eq!(incoming_capability, "hub");
 
+    assert_eq!(resolved.config.len(), 2);
+    let field1 = &resolved.config[0];
+    let field2 = &resolved.config[1];
+    assert_eq!(field1.key, "my_string");
+    assert_eq!(field1.value, "Single(Text(\"hello, world!\"))");
+    assert_eq!(field2.key, "my_uint8");
+    assert_eq!(field2.value, "Single(Unsigned8(255))");
+
     // We do not verify the contents of the execution, because they are largely dependent on
     // the Rust Test Runner
     assert!(component.execution.is_some());
