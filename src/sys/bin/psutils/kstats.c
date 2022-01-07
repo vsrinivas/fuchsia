@@ -158,11 +158,11 @@ static zx_status_t cpustats(zx_handle_t root_resource, zx_duration_t delay) {
     } else {
       busy_time = 0;
     }
-    unsigned int busypercent = zx_duration_mul_int64(busy_time, 10000) / delay;
+    unsigned long busypercent = zx_duration_mul_int64(busy_time, 10000) / delay;
 
     printf(
         "%3zu"
-        " %3u.%02u%%"
+        " %3lu.%02lu%%"
         " %9lu %4lu %5lu %9lu"
         " %6lu"
         " %5lu"
@@ -216,7 +216,7 @@ static zx_status_t cpuload(zx_handle_t root_resource, zx_duration_t delay) {
     } else {
       busy_time = 0;
     }
-    const double busypercent = (double)busy_time / delay;
+    const double busypercent = (double)busy_time / (double)delay;
 
     static const char kBar[] = "||||||||||||||||||||";
     static const int kBarLength = sizeof(kBar);
@@ -418,7 +418,7 @@ int main(int argc, char** argv) {
     } else {
       // TODO: replace once ctrl-c works in the shell
       char c;
-      int err;
+      long err;
       while ((err = read(STDIN_FILENO, &c, 1)) > 0) {
         if (c == 0x3)
           return 0;

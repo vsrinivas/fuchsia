@@ -177,7 +177,7 @@ static void print_threads(void) {
     if (!raw_time) {
       double percent = 0;
       if (e->delta_time > 0)
-        percent = e->delta_time / (double)delay * 100;
+        percent = (double)e->delta_time / (double)delay * 100;
 
       printf("%8lu %8lu %10.2f %4u %5s %s:%s\n", e->proc_koid, e->koid, percent,
              e->stats.last_scheduled_cpu, state_string(&e->info), e->proc_name, e->name);
@@ -364,7 +364,7 @@ int main(int argc, char** argv) {
     } else {
       // TODO: replace once ctrl-c works in the shell
       char c;
-      int err;
+      long err;
       while ((err = read(STDIN_FILENO, &c, 1)) > 0) {
         if (c == 0x3) {
           ret = 0;

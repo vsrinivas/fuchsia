@@ -42,7 +42,7 @@ void print_table(task_table_t* table, const ps_options_t* options, FILE* out) {
   for (size_t i = 0; i < table->num_entries; i++) {
     const task_entry_t* e = table->entries + i;
     // Indentation + type + : + space + koid
-    int w = 2 * e->depth + 3 + strlen(e->koid_str);
+    int w = 2 * e->depth + 3 + (int)strlen(e->koid_str);
     if (w > id_w) {
       id_w = w;
     }

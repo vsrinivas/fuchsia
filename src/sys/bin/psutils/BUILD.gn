@@ -26,9 +26,6 @@ source_set("ps_internal") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("handles_internal") {
@@ -54,9 +51,6 @@ executable("ps") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("top") {
@@ -68,9 +62,6 @@ executable("top") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("kill") {
@@ -80,9 +71,6 @@ executable("kill") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("killall") {
@@ -152,9 +140,6 @@ executable("kstats") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/pretty",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("threads") {
@@ -180,9 +165,6 @@ executable("signal") {
     "//sdk/lib/fdio",
     "//zircon/system/ulib/task-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("handles") {
