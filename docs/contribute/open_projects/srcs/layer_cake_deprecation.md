@@ -68,6 +68,7 @@ Bug: 36063
 *   [461096: [thermd][shuffle] Migrate thermd from //garnet to //src](https://fuchsia-review.googlesource.com/c/fuchsia/+/461096)
 *   [473957: [sysmem] Move sysmem_connector to src/devices/sysmem/bin](https://fuchsia-review.googlesource.com/c/fuchsia/+/473957)
 *   [592547: [log_listener] Move from garnet to src/diagnostics](https://fuchsia-review.googlesource.com/c/fuchsia/+/592547)
+*   [627766: [boards][garnet] Cleanup graphics targets](https://fuchsia-review.googlesource.com/c/fuchsia/+/627766)
 
 ## Sponsors
 
