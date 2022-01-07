@@ -56,7 +56,7 @@ fn open_target_with_fut<'a>(
     let t_clone = target.clone();
     let target_collection_fut = async move {
         daemon_proxy
-            .connect_to_service(TargetCollectionMarker::NAME, tc_server_end.into_channel())
+            .connect_to_protocol(TargetCollectionMarker::NAME, tc_server_end.into_channel())
             .await?
             .map_err(|err| FfxError::DaemonError { err, target: t_clone, is_default_target })?;
         Result::<()>::Ok(())

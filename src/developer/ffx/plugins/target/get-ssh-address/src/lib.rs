@@ -22,7 +22,7 @@ use {
 // always comes from the daemon after some transition period (~May '21).
 const DEFAULT_SSH_PORT: u16 = 22;
 
-#[ffx_plugin(TargetCollectionProxy = "daemon::service")]
+#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn get_ssh_address(
     collection_proxy: TargetCollectionProxy,
     cmd: GetSshAddressCommand,

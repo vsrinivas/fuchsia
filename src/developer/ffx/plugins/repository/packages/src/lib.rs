@@ -26,7 +26,7 @@ use {
 
 const MAX_HASH: usize = 11;
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn packages(cmd: PackagesCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     match cmd.subcommand {
         PackagesSubcommand::List(subcmd) => list_impl(subcmd, repos, None, stdout()).await,

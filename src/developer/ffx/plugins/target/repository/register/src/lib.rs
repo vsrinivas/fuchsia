@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_developer_bridge::{RepositoryError, RepositoryRegistryProxy, RepositoryTarget},
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn register_cmd(cmd: RegisterCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     register(
         ffx_config::get("target.default").await.context("getting default target from config")?,

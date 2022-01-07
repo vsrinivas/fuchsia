@@ -15,7 +15,7 @@ use {
 #[cfg(not(test))]
 use std::ffi::CString;
 
-#[ffx_plugin(TargetCollectionProxy = "daemon::service")]
+#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand) -> Result<()> {
     let v6bracket = Regex::new(r"^\[([^\]]+)\](:\d+)?$")?;
     let v4port = Regex::new(r"^(\d+\.\d+\.\d+\.\d+)(:\d+)?$")?;

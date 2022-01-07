@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_developer_bridge::TargetCollectionProxy,
 };
 
-#[ffx_plugin(TargetCollectionProxy = "daemon::service")]
+#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn remove(target_collection: TargetCollectionProxy, cmd: RemoveCommand) -> Result<()> {
     remove_impl(target_collection, cmd, &mut std::io::stderr()).await
 }

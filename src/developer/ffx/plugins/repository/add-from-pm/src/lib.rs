@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_developer_bridge_ext::{RepositoryError, RepositorySpec},
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     let full_path = cmd
         .pm_repo_path

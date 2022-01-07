@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_macro.gni")
+
+if (is_host) {
+  rustc_macro("lib") {
+    name = "core_protocol_macros"
+    version = "0.1.0"
+    edition = "2018"
+
+    deps = [
+      "//third_party/rust_crates:heck",
+      "//third_party/rust_crates:proc-macro2",
+      "//third_party/rust_crates:quote",
+      "//third_party/rust_crates:syn",
+    ]
+
+    sources = [ "src/lib.rs" ]
+  }
+}

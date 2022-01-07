@@ -685,7 +685,7 @@ async fn execute_steps(
                 proxy_opt
                     .as_ref()
                     .unwrap()
-                    .connect_to_service(TargetCollectionMarker::NAME, tc_server.into_channel())
+                    .connect_to_protocol(TargetCollectionMarker::NAME, tc_server.into_channel())
             ),
             step_handler,
             _t,
@@ -1174,7 +1174,7 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ConnectToService { responder, name: _, server_channel } => {
+                DaemonRequest::ConnectToProtocol { responder, name: _, server_channel } => {
                     spawn_target_collection(
                         server_channel,
                         |_| vec![],
@@ -1241,7 +1241,7 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                DaemonRequest::ConnectToProtocol { name: _, server_channel, responder } => {
                     spawn_target_collection(
                         server_channel,
                         |_| {
@@ -1291,7 +1291,7 @@ mod test {
                     DaemonRequest::GetVersionInfo { responder } => {
                         responder.send(daemon_version_info()).unwrap();
                     }
-                    DaemonRequest::ConnectToService { name: _, server_channel, responder } => {
+                    DaemonRequest::ConnectToProtocol { name: _, server_channel, responder } => {
                         let nodename = nodename.clone();
                         let waiter = waiter.clone();
                         spawn_target_collection(
@@ -1375,7 +1375,7 @@ mod test {
                 DaemonRequest::GetVersionInfo { responder } => {
                     responder.send(daemon_version_info()).unwrap();
                 }
-                DaemonRequest::ConnectToService { name: _, server_channel: _, responder } => {
+                DaemonRequest::ConnectToProtocol { name: _, server_channel: _, responder } => {
                     // Do nothing with the server_channel.
                     responder.send(&mut Ok(())).unwrap();
                 }

@@ -15,7 +15,7 @@ use {
 
 mod target_formatter;
 
-#[ffx_plugin(TargetCollectionProxy = "daemon::service")]
+#[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn list_targets(
     tc_proxy: TargetCollectionProxy,
     #[ffx(machine = Vec<JsonTargets>)] writer: Writer,

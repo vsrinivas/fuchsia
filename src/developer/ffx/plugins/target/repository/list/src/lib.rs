@@ -14,7 +14,7 @@ use {
     },
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn list_cmd(cmd: ListCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     list_impl(cmd, repos, stdout()).await
 }

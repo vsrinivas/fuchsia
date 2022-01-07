@@ -21,8 +21,8 @@ python_binary("gn_generate_cmd") {
   ]
 }
 
-python_binary("gn_generate_services_macro") {
-  main_source = "gn_generate_services_macro.py"
+python_binary("gn_generate_protocols_macro") {
+  main_source = "gn_generate_protocols_macro.py"
   deps = [
     "//third_party/jinja2",
     "//third_party/markupsafe",

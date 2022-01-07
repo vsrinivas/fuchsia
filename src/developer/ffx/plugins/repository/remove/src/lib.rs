@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_developer_bridge::RepositoryRegistryProxy,
 };
 
-#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
+#[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
 pub async fn remove(cmd: RemoveCommand, repos: RepositoryRegistryProxy) -> Result<()> {
     if !repos.remove_repository(&cmd.name).await? {
         ffx_bail!("No repository named \"{}\".", cmd.name);

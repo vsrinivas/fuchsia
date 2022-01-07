@@ -25,9 +25,9 @@ pub enum FfxError {
         DaemonError::TargetNotFound => format!("Target {} was not found.", target_string(.target, .is_default_target)),
         DaemonError::TargetInFastboot => format!("Target {} was found in Fastboot. Reboot or flash the target to continue.", target_string(.target, .is_default_target)),
         DaemonError::NonFastbootDevice => format!("Target {} was found, but is not in Fastboot, please boot the target into Fastboot to continue.", target_string(.target, .is_default_target)),
-        DaemonError::ServiceNotFound => "The requested ffx service was not found. Run `ffx doctor --restart-daemon`.".to_string(),
-        DaemonError::ServiceOpenError => "The requested ffx service failed to open. Run `ffx doctor --restart-daemon`.".to_string(),
-        DaemonError::BadServiceRegisterState => "The requested service could not be registered. Run `ffx doctor --restart-daemon`.".to_string(),
+        DaemonError::ProtocolNotFound => "The requested ffx service was not found. Run `ffx doctor --restart-daemon`.".to_string(),
+        DaemonError::ProtocolOpenError => "The requested ffx service failed to open. Run `ffx doctor --restart-daemon`.".to_string(),
+        DaemonError::BadProtocolRegisterState => "The requested service could not be registered. Run `ffx doctor --restart-daemon`.".to_string(),
         DaemonError::TargetInZedboot => format!("Target {} was found in Zedboot. Reboot the target to continue.", target_string(.target, .is_default_target)),
     })]
     DaemonError { err: DaemonError, target: Option<String>, is_default_target: bool },

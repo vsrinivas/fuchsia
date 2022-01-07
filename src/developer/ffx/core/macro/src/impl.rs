@@ -35,7 +35,7 @@ const EXPECTED_SIGNATURE: &str = "ffx_plugin expects at least the command create
 const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the parameter's type matches \
                                       the mapping passed into the ffx_plugin attribute.";
 
-const DAEMON_SERVICE_IDENT: &str = "daemon::service";
+const DAEMON_PROTOCOL_IDENT: &str = "daemon::protocol";
 
 lazy_static! {
     static ref KNOWN_PROXIES: Vec<(&'static str, &'static str, bool)> = vec![
@@ -188,7 +188,7 @@ fn parse_arguments(
                         implementation,
                         testing,
                         ffx_attr,
-                    }) = generate_daemon_service_proxy(proxies, &pat, path)?
+                    }) = generate_daemon_protocol_proxy(proxies, &pat, path)?
                     {
                         if extract_ffx_attribute_tokens(&attrs).is_some() {
                             return Err(Error::new(arg.span(), ATTRIBUTE_ON_WRONG_PROXY_TYPE));
@@ -393,16 +393,16 @@ fn generate_known_proxy(
     Ok(None)
 }
 
-fn generate_daemon_service_proxy(
+fn generate_daemon_protocol_proxy(
     proxies: &ProxyMap,
     pattern_type: &Box<Pat>,
     path: &syn::Path,
 ) -> Result<Option<GeneratedProxyParts>, Error> {
     let proxy_wrapper_type = extract_proxy_type(path)?;
     let proxy_type_path = proxy_wrapper_type.unwrap();
-    let daemon_service_name = qualified_name(proxy_type_path);
-    let res = proxies.map.get(&daemon_service_name).and_then(|mapping| {
-        if mapping != "daemon::service" {
+    let daemon_protocol_name = qualified_name(proxy_type_path);
+    let res = proxies.map.get(&daemon_protocol_name).and_then(|mapping| {
+        if mapping != DAEMON_PROTOCOL_IDENT {
             return None;
         }
         if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
@@ -410,7 +410,7 @@ fn generate_daemon_service_proxy(
             let output_fut = Ident::new(&format!("{}_fut", output), Span::call_site());
             let output_fut_res = Ident::new(&format!("{}_fut_res", output), Span::call_site());
             let server_end = Ident::new(&format!("{}_server_end", output), Span::call_site());
-            // TODO(awdavies): When there is a component to test if a service exists, add the test
+            // TODO(awdavies): When there is a component to test if a protocol exists, add the test
             // command for it in the daemon.
             let implementation = quote! {
                 let (#output, #server_end) = fidl::endpoints::create_endpoints::<<#path as fidl::endpoints::Proxy>::Protocol>()?;
@@ -419,31 +419,31 @@ fn generate_daemon_service_proxy(
                 {
                     let svc_name = <<#path as fidl::endpoints::Proxy>::Protocol as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME;
                     use futures::TryFutureExt;
-                    #output_fut = injector.daemon_factory().await?.connect_to_service(
+                    #output_fut = injector.daemon_factory().await?.connect_to_protocol(
                         svc_name,
                         #server_end.into_channel(),
                     ).map_ok_or_else(|e| anyhow::Result::<()>::Err(anyhow::anyhow!(e)), move |fidl_result| {
                         fidl_result
                         .map(|_| ())
                         .map_err(|e| match e {
-                            fidl_fuchsia_developer_bridge::DaemonError::ServiceNotFound =>
+                            fidl_fuchsia_developer_bridge::DaemonError::ProtocolNotFound =>
                                 errors::ffx_error!(
                                     format!(
-"The daemon service '{}' did not match any services on the daemon
-If you are not developing this plugin or the service it connects to, then this is a bug
+"The daemon protocol '{}' did not match any protocols on the daemon
+If you are not developing this plugin or the protocol it connects to, then this is a bug
 
 Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                                         svc_name)
                                     ).into(),
-                            fidl_fuchsia_developer_bridge::DaemonError::ServiceOpenError =>
+                            fidl_fuchsia_developer_bridge::DaemonError::ProtocolOpenError =>
                                 errors::ffx_error!(
                                     format!(
-"The daemon service '{}' failed to open on the daemon.
+"The daemon protocol '{}' failed to open on the daemon.
 
-If you are developing the service, there may be an internal failure when invoking the start
+If you are developing the protocol, there may be an internal failure when invoking the start
 function. See the ffx.daemon.log for details at `ffx config get log.dir -p sub`.
 
-If you are NOT developing this plugin or the service it connects to, then this is a bug.
+If you are NOT developing this plugin or the protocol it connects to, then this is a bug.
 
 Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                                         svc_name
@@ -452,7 +452,7 @@ Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                             unexpected =>
                                 errors::ffx_error!(
                                     format!(
-"While attempting to open the daemon service '{}', received an unexpected error:
+"While attempting to open the daemon protocol '{}', received an unexpected error:
 
 {:?}
 
@@ -502,7 +502,7 @@ fn generate_mapped_proxy(
     let qualified_proxy_name = qualified_name(proxy_type_path);
     if let Some(mapping) = proxies.map.get(&qualified_proxy_name) {
         let mapping_lit = LitStr::new(mapping, Span::call_site());
-        if mapping_lit.value() == DAEMON_SERVICE_IDENT {
+        if mapping_lit.value() == DAEMON_PROTOCOL_IDENT {
             return Ok(None);
         }
         if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
@@ -846,7 +846,7 @@ impl Parse for ProxyMap {
                             // Parse the trailing comma
                             let _: Punct = input.parse()?;
                         }
-                        let selector = if selection.value() == DAEMON_SERVICE_IDENT {
+                        let selector = if selection.value() == DAEMON_PROTOCOL_IDENT {
                             selection.value()
                         } else {
                             let parsed_selector =
@@ -1598,7 +1598,7 @@ mod test {
 
     #[test]
     fn test_service_proxy_works() -> Result<(), Error> {
-        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::protocol" };
         let input: ItemFn = parse_quote! {
             fn test_fn(test_param: TestProxy, cmd: ResultCommand) -> Result<()> {}
         };
@@ -1607,7 +1607,7 @@ mod test {
 
     #[test]
     fn test_service_proxy_works_with_option() -> Result<(), Error> {
-        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::protocol" };
         let input: ItemFn = parse_quote! {
                 fn test_fn(test_param: Option<TestProxy>, cmd: ResultCommand) -> Result<()> {}
         };
@@ -1616,7 +1616,7 @@ mod test {
 
     #[test]
     fn test_service_proxy_works_with_result() -> Result<(), Error> {
-        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::protocol" };
         let input: ItemFn = parse_quote! {
                 fn test_fn(test_param: Result<TestProxy>, cmd: ResultCommand) -> Result<()> {}
         };
@@ -1638,7 +1638,7 @@ mod test {
 
     #[test]
     fn test_ffx_writer_attribute_fails_if_on_service_proxy() -> Result<(), Error> {
-        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::protocol" };
         let input: ItemFn = parse_quote! {
             pub async fn test_fn(
                 #[ffx(machine=Vec<String>)]
@@ -1653,7 +1653,7 @@ mod test {
 
     #[test]
     fn test_ffx_writer_attribute_fails_if_on_known_nonwriter_proxy() -> Result<(), Error> {
-        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::protocol" };
         let input: ItemFn = parse_quote! {
             pub async fn test_fn(
                 #[ffx(machine=Vec<String>)]
@@ -1668,7 +1668,7 @@ mod test {
 
     #[test]
     fn test_ffx_writer_attribute_works_if_on_writer() -> Result<(), Error> {
-        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::protocol" };
         let input: ItemFn = parse_quote! {
             pub async fn test_fn(
                 remote: RemoteControlProxy,

@@ -4,7 +4,7 @@
 library fuchsia.developer.bridge;
 using zx;
 
-const MAX_SERVICE_NAME_SIZE uint8 = 255;
+const MAX_PROTOCOL_NAME_SIZE uint8 = 255;
 
 type DaemonError = strict enum {
     TARGET_CACHE_ERROR = 1;
@@ -25,16 +25,15 @@ type DaemonError = strict enum {
     TARGET_IN_FASTBOOT = 8;
     /// Fastboot device expected.
     NON_FASTBOOT_DEVICE = 9;
-    /// When attempting to connect to a service that does not exist on the
-    /// daemon.
-    SERVICE_NOT_FOUND = 10;
-    /// An error was encountered when attempting to open a service stream.
-    SERVICE_OPEN_ERROR = 11;
-    /// An error encountered when the daemon's service register is in a bad
-    /// state internally. This is primarily caused by trying to open a service
+    /// When attempting to use a protocol that is not supported on the daemon.
+    PROTOCOL_NOT_FOUND = 10;
+    /// An error was encountered when attempting to open a protocol stream.
+    PROTOCOL_OPEN_ERROR = 11;
+    /// An error encountered when the daemon's protocol register is in a bad
+    /// state internally. This is primarily caused by trying to open a protocol
     /// while the daaemon is actively shutting down, and should be extremely
     /// rare.
-    BAD_SERVICE_REGISTER_STATE = 12;
+    BAD_PROTOCOL_REGISTER_STATE = 12;
     /// When attempting to connect to RCS on a Fastboot device.
     TARGET_IN_ZEDBOOT = 13;
 };
@@ -71,18 +70,18 @@ protocol Daemon {
         response string:64;
     });
 
-    /// Connects to a daemon service.
+    /// Connects to a daemon protocol.
     ///
-    /// Takes a service name under which the channel will be connected (the
+    /// Takes a protocol name under which the channel will be connected (the
     /// caller is intended to know the type of the channel a priori).
     ///
     /// Developers are not intended to use this directly. Instead this should
-    /// be invoked automatically through the FFX plugin/service framework.
+    /// be invoked automatically through the FFX plugin/protocol framework.
     ///
     /// Again for emphasis: if you are a developer and you are invoking this
     /// function directly, you should reconsider your actions.
-    ConnectToService(resource struct {
-        name string:MAX_SERVICE_NAME_SIZE;
+    ConnectToProtocol(resource struct {
+        name string:MAX_PROTOCOL_NAME_SIZE;
         server_channel zx.handle:CHANNEL;
     }) -> (struct {}) error DaemonError;
 };

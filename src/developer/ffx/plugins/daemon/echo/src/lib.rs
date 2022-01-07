@@ -10,7 +10,7 @@ use {
     std::io::{stdout, Write},
 };
 
-#[ffx_plugin(EchoProxy = "daemon::service")]
+#[ffx_plugin(EchoProxy = "daemon::protocol")]
 pub async fn echo(echo_proxy: EchoProxy, cmd: EchoCommand) -> Result<()> {
     echo_impl(echo_proxy, cmd, Box::new(stdout())).await
 }

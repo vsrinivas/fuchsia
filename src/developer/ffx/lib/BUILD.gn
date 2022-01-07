@@ -16,7 +16,7 @@ if (is_host) {
     "netext",
     "pkg",
     "rcs",
-    "services",
+    "protocols",
     "schema",
     "symbol-index",
     "tasks",

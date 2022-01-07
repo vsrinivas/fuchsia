@@ -14,7 +14,7 @@ use {
     ffx_daemon_events::{
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
     },
-    ffx_daemon_services::create_service_register_map,
+    ffx_daemon_protocols::create_protocol_register_map,
     ffx_daemon_target::target::Target,
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_daemon_target::zedboot::zedboot_discovery,
@@ -30,8 +30,8 @@ use {
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
+    protocols::{DaemonProtocolProvider, ProtocolError, ProtocolRegister},
     rcs::RcsConnection,
-    services::{DaemonServiceProvider, ServiceError, ServiceRegister},
     std::cell::Cell,
     std::collections::HashSet,
     std::hash::{Hash, Hasher},
@@ -129,13 +129,13 @@ impl DaemonEventHandler {
 }
 
 #[async_trait(?Send)]
-impl DaemonServiceProvider for Daemon {
-    async fn open_service_proxy(&self, service_name: String) -> Result<fidl::Channel> {
+impl DaemonProtocolProvider for Daemon {
+    async fn open_protocol(&self, protocol_name: String) -> Result<fidl::Channel> {
         let (server, client) = fidl::Channel::create().context("creating zx channel")?;
-        self.service_register
+        self.protocol_register
             .open(
-                service_name,
-                services::Context::new(self.clone()),
+                protocol_name,
+                protocols::Context::new(self.clone()),
                 fidl::AsyncChannel::from_channel(server)?,
             )
             .await?;
@@ -145,10 +145,10 @@ impl DaemonServiceProvider for Daemon {
     async fn open_target_proxy(
         &self,
         target_identifier: Option<String>,
-        service_selector: fidl_fuchsia_diagnostics::Selector,
+        protocol_selector: fidl_fuchsia_diagnostics::Selector,
     ) -> Result<fidl::Channel> {
         let (_, channel) =
-            self.open_target_proxy_with_info(target_identifier, service_selector).await?;
+            self.open_target_proxy_with_info(target_identifier, protocol_selector).await?;
         Ok(channel)
     }
 
@@ -169,7 +169,7 @@ impl DaemonServiceProvider for Daemon {
     async fn open_target_proxy_with_info(
         &self,
         target_identifier: Option<String>,
-        service_selector: fidl_fuchsia_diagnostics::Selector,
+        protocol_selector: fidl_fuchsia_diagnostics::Selector,
     ) -> Result<(bridge::Target, fidl::Channel)> {
         let target = self.get_rcs_ready_target(target_identifier).await?;
         let rcs = target
@@ -180,7 +180,7 @@ impl DaemonServiceProvider for Daemon {
 
         // TODO(awdavies): Handle these errors properly so the client knows what happened.
         rcs.proxy
-            .connect(service_selector, server)
+            .connect(protocol_selector, server)
             .await
             .context("FIDL connection")?
             .map_err(|e| anyhow!("{:#?}", e))
@@ -260,11 +260,11 @@ pub struct Daemon {
     // With ffx, ascendd is embedded within the ffx daemon (when ffx daemon is launched, we don’t
     // need an extra process for ascendd).
     ascendd: Rc<Cell<Option<Ascendd>>>,
-    // Handles the registered FIDL services and associated handles. This is initialized with the
-    // list of services defined in src/developer/ffx/daemon/services/BUILD.gn (the deps field in
-    // ffx_service) using the macro generate_service_map in
-    // src/developer/ffx/build/templates/services_macro.md.
-    service_register: ServiceRegister,
+    // Handles the registered FIDL protocols and associated handles. This is initialized with the
+    // list of protocols defined in src/developer/ffx/daemon/protocols/BUILD.gn (the deps field in
+    // ffx_protocol) using the macro generate_protocol_map in
+    // src/developer/ffx/build/templates/protocols_macro.md.
+    protocol_register: ProtocolRegister,
     // All the persistent long running tasks spawned by the daemon. The tasks are standalone. That
     // means that they execute by themselves without any intervention from the daemon.
     // The purpose of this vector is to keep the reference strong count positive until the daemon is
@@ -281,7 +281,7 @@ impl Daemon {
         Self {
             target_collection,
             event_queue,
-            service_register: ServiceRegister::new(create_service_register_map()),
+            protocol_register: ProtocolRegister::new(create_protocol_register_map()),
             ascendd: Rc::new(Cell::new(None)),
             tasks: Vec::new(),
         }
@@ -290,7 +290,7 @@ impl Daemon {
     pub async fn start(&mut self) -> Result<()> {
         self.log_startup_info().await?;
 
-        self.start_services().await?;
+        self.start_protocols().await?;
         self.start_discovery().await?;
         self.start_ascendd().await?;
         self.start_target_expiry(Duration::from_secs(1));
@@ -319,12 +319,12 @@ impl Daemon {
         Ok(())
     }
 
-    async fn start_services(&mut self) -> Result<()> {
-        let cx = services::Context::new(self.clone());
+    async fn start_protocols(&mut self) -> Result<()> {
+        let cx = protocols::Context::new(self.clone());
         let ((), ()) = futures::future::try_join(
-            self.service_register
+            self.protocol_register
                 .start(RepositoryRegistryMarker::PROTOCOL_NAME.to_string(), cx.clone()),
-            self.service_register.start(TargetCollectionMarker::PROTOCOL_NAME.to_string(), cx),
+            self.protocol_register.start(TargetCollectionMarker::PROTOCOL_NAME.to_string(), cx),
         )
         .await?;
         Ok(())
@@ -368,7 +368,7 @@ impl Daemon {
     }
 
     async fn start_ascendd(&mut self) -> Result<()> {
-        // Start the ascendd socket only after we have registered our services.
+        // Start the ascendd socket only after we have registered our protocols.
         log::info!("Starting ascendd");
 
         let ascendd = Ascendd::new(
@@ -545,10 +545,10 @@ impl Daemon {
                     panic!("quit() should not be invoked in test code");
                 }
 
-                self.service_register
-                    .shutdown(services::Context::new(self.clone()))
+                self.protocol_register
+                    .shutdown(protocols::Context::new(self.clone()))
                     .await
-                    .unwrap_or_else(|e| log::error!("shutting down service register: {:?}", e));
+                    .unwrap_or_else(|e| log::error!("shutting down protocol register: {:?}", e));
 
                 add_daemon_metrics_event("quit").await;
                 // It is desirable for the client to receive an ACK for the quit
@@ -579,13 +579,13 @@ impl Daemon {
                         .await?;
                 responder.send(&hash).context("error sending response")?;
             }
-            DaemonRequest::ConnectToService { name, server_channel, responder } => {
+            DaemonRequest::ConnectToProtocol { name, server_channel, responder } => {
                 let name_for_analytics = name.clone();
                 match self
-                    .service_register
+                    .protocol_register
                     .open(
                         name,
-                        services::Context::new(self.clone()),
+                        protocols::Context::new(self.clone()),
                         fidl::AsyncChannel::from_channel(server_channel)?,
                     )
                     .await
@@ -594,21 +594,21 @@ impl Daemon {
                     Err(e) => {
                         log::error!("{}", e);
                         match e {
-                            ServiceError::NoServiceFound(_) => {
-                                responder.send(&mut Err(DaemonError::ServiceNotFound))?
+                            ProtocolError::NoProtocolFound(_) => {
+                                responder.send(&mut Err(DaemonError::ProtocolNotFound))?
                             }
-                            ServiceError::StreamOpenError(_) => {
-                                responder.send(&mut Err(DaemonError::ServiceOpenError))?
+                            ProtocolError::StreamOpenError(_) => {
+                                responder.send(&mut Err(DaemonError::ProtocolOpenError))?
                             }
-                            ServiceError::BadRegisterState(_)
-                            | ServiceError::DuplicateTaskId(..) => {
-                                responder.send(&mut Err(DaemonError::BadServiceRegisterState))?
+                            ProtocolError::BadRegisterState(_)
+                            | ProtocolError::DuplicateTaskId(..) => {
+                                responder.send(&mut Err(DaemonError::BadProtocolRegisterState))?
                             }
                         }
                     }
                 }
                 add_daemon_metrics_event(
-                    format!("connect_to_service: {}", &name_for_analytics).as_str(),
+                    format!("connect_to_protocol: {}", &name_for_analytics).as_str(),
                 )
                 .await;
             }
@@ -630,9 +630,9 @@ impl Daemon {
             chan,
             info: _,
             control_handle: _control_handle,
-        }) = stream.try_next().await.context("error running service provider server")?
+        }) = stream.try_next().await.context("error running protocol provider server")?
         {
-            log::trace!("Received service request for service");
+            log::trace!("Received protocol request for protocol");
             let chan =
                 fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
             let daemon_clone = self.clone();

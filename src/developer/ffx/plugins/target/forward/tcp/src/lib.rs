@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_developer_bridge as bridge,
 };
 
-#[ffx_plugin(bridge::TunnelProxy = "daemon::service")]
+#[ffx_plugin(bridge::TunnelProxy = "daemon::protocol")]
 pub async fn forward_tcp(forward_port: bridge::TunnelProxy, cmd: TcpCommand) -> Result<()> {
     let target: Option<String> =
         ffx_config::get("target.default").await.context("getting default target from config")?;
