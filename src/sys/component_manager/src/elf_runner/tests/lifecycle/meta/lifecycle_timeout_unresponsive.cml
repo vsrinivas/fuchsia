@@ -11,6 +11,7 @@
     collections: [
         {
             name: "test-collection",
+            environment: "#timeout",
             durability: "transient",
         },
     ],
@@ -38,6 +39,13 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: "#test-collection",
+        },
+    ],
+    environments: [
+        {
+            name: "timeout",
+            extends: "realm",
+            __stop_timeout_ms: 2000,
         },
     ],
 }

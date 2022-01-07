@@ -32,6 +32,16 @@
             protocol: "fuchsia.component.Binder",
             from: "framework",
         },
+        {
+            protocol: "test.placeholders.Echo",
+            from: "#custom-timeout-child",
+            as: "custom-timeout-echo",
+        },
+        {
+            protocol: "test.placeholders.Echo",
+            from: "#inherited-timeout-child",
+            as: "inherited-timeout-echo",
+        },
     ],
     environments: [
         {

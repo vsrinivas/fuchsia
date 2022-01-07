@@ -4,11 +4,13 @@
 
 use {
     component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Purged, Started, Stopped},
+        events::{Event, EventMode, EventSource, EventSubscription, Purged, Stopped},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{EventSequence, Ordering},
     },
+    fuchsia_async::{self as fasync, futures::join},
     fuchsia_component_test::ScopedInstance,
+    fuchsia_zircon::{self as zx, HandleBased},
 };
 
 /// This test invokes components which don't stop when they're told to. We
@@ -16,9 +18,9 @@ use {
 #[fuchsia::test]
 async fn test_stop_timeouts() {
     let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
+    let event_stream = event_source
         .subscribe(vec![EventSubscription::new(
-            vec![Started::NAME, Stopped::NAME, Purged::NAME],
+            vec![Stopped::NAME, Purged::NAME],
             EventMode::Async,
         )])
         .await
@@ -38,30 +40,44 @@ async fn test_stop_timeouts() {
         .await
         .unwrap();
 
+        // Make sure we start the root component, since it has no runtime, this
+        // is sufficient.
         let _ = instance.connect_to_binder().unwrap();
 
-        // Why do we have three duplicate events sets here? We expect three things
-        // to stop, the root component and its two children. The problem is that
-        // there isn't a great way to express the path of the children because
-        // it looks something like "./{collection}:{root-name}:{X}/{child-name}".
-        // We don't know what "X" is for sure, it will tend to be "1", but there
-        // is no contract around this and the validation logic does not accept
-        // generic regexes.
         let moniker_stem = format!("./{}:{}", collection_name, instance.child_name().to_string());
         let custom_timeout_child = format!("{}/custom-timeout-child$", moniker_stem);
         let inherited_timeout_child = format!("{}/inherited-timeout-child$", moniker_stem);
         let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
-        for _ in 0..target_monikers.len() {
-            let _ = EventMatcher::ok()
-                .monikers_regex(&target_monikers)
-                .wait::<Started>(&mut event_stream)
-                .await
-                .expect("failed to observe events");
-        }
 
+        // Attempt to connect to protocols exposed from the components whose
+        // stop we want to observe. Those components don't actually provide
+        // these protocols, but trying to access them will force them to start
+        // and once component manager fails to open the protocols from the
+        // components' outgoing directories our channels will be closed.
+        let (server_end, client_end) = zx::Channel::create().unwrap();
+        instance
+            .connect_request_to_named_protocol_at_exposed_dir("inherited-timeout-echo", server_end)
+            .expect("failed to request connection");
+        let client1_startup = async move {
+            fasync::OnSignals::new(&client_end.into_handle(), zx::Signals::CHANNEL_PEER_CLOSED)
+                .await
+                .expect("failed to wait for channel close");
+        };
+        let (server_end, client_end) = zx::Channel::create().unwrap();
+        instance
+            .connect_request_to_named_protocol_at_exposed_dir("custom-timeout-echo", server_end)
+            .expect("failed to request connection");
+        let client2_startup = async move {
+            fasync::OnSignals::new(&client_end.into_handle(), zx::Signals::CHANNEL_PEER_CLOSED)
+                .await
+                .expect("failed to wait for channel close");
+        };
+
+        join!(client1_startup, client2_startup);
         target_monikers
     };
 
+    // We expect three things to stop, the root component and its two children.
     EventSequence::new()
         .all_of(
             vec![
