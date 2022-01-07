@@ -211,6 +211,9 @@
       "prebuilt/third_party/flutter",
       "third_party/boringssl"
     ],
+    "sqlite.lic": [
+      "prebuilt/third_party/flutter"
+    ],
     "ulikunitz.lic": [
       "third_party/golibs/vendor/github.com/ulikunitz/xz"
     ],
