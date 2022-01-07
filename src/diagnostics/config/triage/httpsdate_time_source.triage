@@ -1,11 +1,6 @@
 {
     select: {
         network_available_monotonic: "INSPECT:httpsdate_time_source.cmx:root:network_check_time",
-
-        // TODO(fxbug.dev/70438): Timekeeper used to run the network check, this has been left here
-        // so triage continues to work for builds with old versions of timekeeper. Once we're
-        // confident we won't need to triage devices before the update we should remove this.
-        timekeeper_network_available_monotonic: "INSPECT:timekeeper.cmx:root:network_available_monotonic",
         sample_0_counter: "INSPECT:httpsdate_time_source.cmx:root/sample_0:counter",
         network_error_count: "INSPECT:httpsdate_time_source.cmx:root/failures:NetworkError_count",
 
@@ -21,7 +16,7 @@
         date_format_error_count: "INSPECT:httpsdate_time_source.cmx:root/failures:DateFormatError_count",
     },
     eval: {
-        network_unavailable: "And(Missing(network_available_monotonic), Missing(timekeeper_network_available_monotonic))",
+        network_unavailable: "Missing(network_available_monotonic)",
         sample_created: "sample_0_counter > 0",
         excessive_network_errors: "Option(network_error_count, 0) / Max(Option(network_error_count, 0) + sample_0_counter, 1) > .2",
         configuration_errors: "Option(invalid_hostname_count, scheme_not_https_count, 0) > 0",
@@ -69,20 +64,6 @@
                 sample_0_counter: 26,
             },
         },
-        timekeeper_network_check_ok: {
-            yes: [],
-            no: [
-                "network_unavailable_no_time",
-                "network_available_but_no_time",
-                "excessive_network_errors_retrieving_time",
-                "configuration_issue",
-                "bad_response_issue",
-            ],
-            values: {
-                timekeeper_network_available_monotonic: 30000,
-                sample_0_counter: 26,
-            },
-        },
         network_check_incomplete: {
             yes: [
                 "network_unavailable_no_time",
@@ -109,22 +90,6 @@
             ],
             values: {
                 network_available_monotonic: 30000,
-                sample_0_counter: 0,
-                network_error_count: 34,
-            },
-        },
-        timekeeper_network_check_complete_but_unreachable: {
-            yes: [
-                "network_available_but_no_time",
-                "excessive_network_errors_retrieving_time",
-            ],
-            no: [
-                "network_unavailable_no_time",
-                "configuration_issue",
-                "bad_response_issue",
-            ],
-            values: {
-                timekeeper_network_available_monotonic: 30000,
                 sample_0_counter: 0,
                 network_error_count: 34,
             },
