@@ -28,7 +28,7 @@ namespace media::audio::test {
 namespace {
 constexpr zx::duration kPacketLength = zx::msec(10);
 constexpr int64_t kNumPacketsInPayload = 50;
-constexpr int64_t kDebugFramesPerPacket = 480;
+constexpr int64_t kFramesPerPacketForDisplay = 480;
 // Tolerance to account for scheduling latency.
 constexpr int64_t kToleranceInPackets = 2;
 // The one-sided filter width of the SincSampler.
@@ -118,7 +118,7 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSameFrameRate) {
   // The ring buffer should match the input buffer for the first num_packets.
   // The remaining bytes should be zeros.
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
@@ -161,7 +161,7 @@ TEST_F(AudioRendererPipelineTestInt16, RenderFasterFrameRate) {
                 << silence_start << ", silence_end " << silence_end;
 
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, data_start, data_end),
                       AudioBufferSlice(&expected, data_start, data_end), opts);
@@ -206,7 +206,7 @@ TEST_F(AudioRendererPipelineTestInt16, RenderSlowerFrameRate) {
   auto silence_end = output_->frame_count() - filter_half_width;
 
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, data_start, data_end),
                       AudioBufferSlice(&expected, data_start, data_end), opts);
@@ -277,13 +277,9 @@ TEST_F(AudioRendererPipelineTestInt16, PlayRampUp) {
                       opts);
 }
 
-// Hardcoding this const -- it needs to match the value in AudioRenderer
-constexpr zx::duration kPauseRampdownDuration = zx::msec(5);
-
+// Verify that upon Pause, an AudioRenderer's output ramps down to zero over the expected duration.
+// We expect successive sections of silence, constant value, ramping, and final silence.
 TEST_F(AudioRendererPipelineTestInt16, PauseRampDown) {
-  constexpr int64_t kPauseRampdownFrames =
-      kOutputFrameRate * kPauseRampdownDuration.get() / zx::sec(1).get();
-
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto [num_packets, num_frames] = NumPacketsAndFramesPerBatch(renderer);
   const auto frames_per_packet = num_frames / num_packets;
@@ -323,42 +319,87 @@ TEST_F(AudioRendererPipelineTestInt16, PauseRampDown) {
 
   // We don't know exactly when the Pause took effect in the stream, so we search forward for the
   // first frame value that differs from the constant value.
-  int64_t first_ramping_frame = 2 * frames_per_packet;
-  int64_t first_zero_frame = 2 * frames_per_packet;
+  int64_t first_nonzero_frame, first_ramping_frame, first_zero_frame;
   auto num_channels = ring_buffer.NumSamples() / ring_buffer.NumFrames();
 
-  for (auto frame = 2 * frames_per_packet; frame < ring_buffer.NumFrames(); ++frame) {
-    for (auto chan = 1; chan < num_channels; ++chan) {
-      EXPECT_EQ(ring_buffer.SampleAt(frame, chan), ring_buffer.SampleAt(frame, 0));
-    }
-    if (ring_buffer.SampleAt(frame, 0) != kSampleVal) {
-      first_ramping_frame = frame;
+  for (first_nonzero_frame = 0; first_nonzero_frame < ring_buffer.NumFrames();
+       ++first_nonzero_frame) {
+    if (ring_buffer.SampleAt(first_nonzero_frame, 0) != 0) {
       break;
     }
   }
 
-  // Starting at first_ramping_frame, values should successively ramp down (decrease) to 0. This
-  // ramp duration is unknown to clients, although currently it is 5 msec; we use insider info.
-  for (auto frame = first_ramping_frame; frame < ring_buffer.NumFrames(); ++frame) {
-    for (auto chan = 0; chan < num_channels; ++chan) {
-      // this sample should be less than this channel's in the previous frame
-      EXPECT_LT(ring_buffer.SampleAt(frame, chan), ring_buffer.SampleAt(frame - 1, chan))
-          << "Frame values should monotonically ramp down";
-    }
-    if (ring_buffer.SampleAt(frame, 0) == 0) {
-      first_zero_frame = frame;
+  EXPECT_GT(first_nonzero_frame, 0);
+  EXPECT_EQ(ring_buffer.SampleAt(first_nonzero_frame, 0), kSampleVal);
+  for (first_ramping_frame = first_nonzero_frame + 1; first_ramping_frame < ring_buffer.NumFrames();
+       ++first_ramping_frame) {
+    if (ring_buffer.SampleAt(first_ramping_frame, 0) != kSampleVal) {
       break;
     }
   }
-  // From last constant-value frame to first zero-value frame, should be kPauseRampdownFrames.
+
+  // Starting at first_ramping_frame, values should successively ramp down (decrease) to 0.
+  for (first_zero_frame = first_ramping_frame + 1; first_zero_frame < ring_buffer.NumFrames();
+       ++first_zero_frame) {
+    // This sample should be less than the same channel in previous frame.
+    EXPECT_LT(ring_buffer.SampleAt(first_zero_frame, 0),
+              ring_buffer.SampleAt(first_zero_frame - 1, 0))
+        << "Frame values should monotonically ramp down: [" << first_zero_frame - 1 << "] "
+        << ring_buffer.SampleAt(first_zero_frame - 1, 0) << " then [" << first_zero_frame << "] "
+        << ring_buffer.SampleAt(first_zero_frame, 0);
+    if (ring_buffer.SampleAt(first_zero_frame, 0) == 0) {
+      break;
+    }
+  }
+
+  // Check the ramp-down's duration. This duration is unknown to clients, but kPauseRampdownDuration
+  // is defined based on insider info (5 ms). This must match the duration in AudioRenderer.
+  constexpr zx::duration kPauseRampdownDuration = zx::msec(5);
+  constexpr int64_t kPauseRampdownFrames =
+      kOutputFrameRate * kPauseRampdownDuration.get() / zx::sec(1).get();
+  // From final constant-value frame, to first zero-value frame, should be kPauseRampdownFrames.
   EXPECT_EQ(first_zero_frame - (first_ramping_frame - 1), kPauseRampdownFrames)
-      << "Ramp-down duration was unexpected";
+      << "Unexpected ramp-down duration: first_ramping_frame " << first_ramping_frame
+      << ", first_zero_frame " << first_zero_frame << ", expected delta " << kPauseRampdownFrames;
 
+  // Every remaining frame in ring_buffer should be zero.
   for (auto frame = first_zero_frame; frame < ring_buffer.NumFrames(); ++frame) {
-    for (auto chan = 0; chan < num_channels; ++chan) {
-      // Every remaining sample should be zero.
-      EXPECT_EQ(ring_buffer.SampleAt(frame, chan), 0);
+    if (ring_buffer.SampleAt(frame, 0) != 0) {
+      ADD_FAILURE() << "[" << frame << "] was non-zero (" << ring_buffer.SampleAt(frame, 0) << ")";
+      break;
     }
+  }
+
+  // Throughout ring_buffer, each frame should contain identical values across all channels.
+  for (auto frame = 0; frame < ring_buffer.NumFrames(); ++frame) {
+    auto chan0val = ring_buffer.SampleAt(frame, 0);
+    for (auto chan = 1; chan < num_channels; ++chan) {
+      if (ring_buffer.SampleAt(frame, chan) != chan0val) {
+        ADD_FAILURE() << "All samples in frame [" << frame << "] should be equal: chan 0 "
+                      << chan0val << " versus chan " << chan << " "
+                      << ring_buffer.SampleAt(frame, chan);
+        break;
+      }
+    }
+  }
+
+  constexpr bool kDisplayOutputBuffer = false;
+  constexpr int64_t kDisplayBufferWindow = 32;
+  if (kDisplayOutputBuffer || ::testing::Test::HasFailure()) {
+    ring_buffer.Display(0, kDisplayBufferWindow, "Initial silence start");
+    ring_buffer.Display(first_nonzero_frame - kDisplayBufferWindow, first_nonzero_frame,
+                        "Initial silence end");
+    ring_buffer.Display(first_nonzero_frame, first_nonzero_frame + kDisplayBufferWindow,
+                        "Constant-value start");
+    ring_buffer.Display(first_ramping_frame - kDisplayBufferWindow, first_ramping_frame,
+                        "Constant-value end");
+    ring_buffer.Display(first_ramping_frame, first_ramping_frame + kDisplayBufferWindow,
+                        "Ramp-down start");
+    ring_buffer.Display(first_zero_frame - kDisplayBufferWindow, first_zero_frame, "Ramp-down end");
+    ring_buffer.Display(first_zero_frame, first_zero_frame + kDisplayBufferWindow,
+                        "Final silence start");
+    ring_buffer.Display(ring_buffer.NumFrames() - kDisplayBufferWindow, ring_buffer.NumFrames(),
+                        "Final silence end");
   }
 }
 
@@ -422,7 +463,7 @@ TEST_F(AudioRendererPipelineTestInt16, DiscardDuringPlayback) {
   // bytes should be zeros.
   auto ring_buffer = output_->SnapshotRingBuffer();
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "first_input, first packet";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, 2 * kPacketFrames),
                       AudioBufferSlice(&first_input, 0, 2 * kPacketFrames), opts);
@@ -507,7 +548,7 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
     }
     if (start == 0) {
       ADD_FAILURE() << "could not find half volume sample 0x" << std::hex << kSampleHalfVolume;
-      ring_buffer.Display(0, 3 * kDebugFramesPerPacket);
+      ring_buffer.Display(0, 3 * kFramesPerPacketForDisplay);
       return;
     }
   }
@@ -519,7 +560,7 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
     if (end == ring_buffer.NumFrames() - 1) {
       ADD_FAILURE() << "could not find full volume sample 0x" << std::hex << kSampleFullVolume
                     << " after frame " << std::dec << start;
-      ring_buffer.Display(start, kDebugFramesPerPacket);
+      ring_buffer.Display(start, kFramesPerPacketForDisplay);
       return;
     }
   }
@@ -650,7 +691,7 @@ class AudioRendererGainLimitsTest : public AudioRendererPipelineTestFloat {
         GenerateConstantAudio(format, num_frames - kSilentPrefix, tc.expected_output_sample);
 
     CompareAudioBufferOptions opts;
-    opts.num_frames_per_packet = kDebugFramesPerPacket;
+    opts.num_frames_per_packet = kFramesPerPacketForDisplay;
     opts.test_label = "check initial silence";
     CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, kSilentPrefix),
                         AudioBufferSlice<ASF::FLOAT>(), opts);
@@ -829,7 +870,7 @@ TEST_F(AudioRendererEffectsV1Test, RenderWithEffects) {
   // The ring buffer should match the transformed input buffer for the first num_packets.
   // The remaining bytes should be zeros.
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
@@ -880,7 +921,7 @@ TEST_F(AudioRendererEffectsV1Test, EffectsControllerUpdateEffect) {
   // The ring buffer should match the input buffer for the first num_packets. The remaining bytes
   // should be zeros.
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
@@ -942,7 +983,7 @@ TEST_F(AudioRendererEffectsV2Test, RenderWithEffects) {
   // The ring buffer should match the transformed input buffer for the first num_packets.
   // The remaining bytes should be zeros.
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);
@@ -1006,7 +1047,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
   RunInversionFilter(&first_buffer);
 
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "default config, first packet";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
                       AudioBufferSlice(&first_buffer), opts);
@@ -1060,7 +1101,7 @@ TEST_F(AudioRendererPipelineTuningTest, CorrectStreamOutputUponUpdatedPipeline) 
 
   // Verify the remaining packets have gone through the updated OutputPipeline and thus been
   // unmodified, due to the inversion_filter being disabled in the new configuration.
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "updated config, remaining packets";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, restart_pts, restart_pts + num_frames),
                       AudioBufferSlice(&second_buffer), opts);
@@ -1101,7 +1142,7 @@ TEST_F(AudioRendererPipelineTuningTest, AudioTunerUpdateEffect) {
 
   // Ring buffer should match input buffer, thru num_packets. The remainder should be zeros.
   CompareAudioBufferOptions opts;
-  opts.num_frames_per_packet = kDebugFramesPerPacket;
+  opts.num_frames_per_packet = kFramesPerPacketForDisplay;
   opts.test_label = "check data";
   CompareAudioBuffers(AudioBufferSlice(&ring_buffer, 0, num_frames),
                       AudioBufferSlice(&input_buffer, 0, num_frames), opts);

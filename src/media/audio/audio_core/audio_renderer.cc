@@ -360,8 +360,10 @@ void AudioRenderer::PauseInternal(PauseCallback callback) {
   PostStreamGainMute({.ramp = GainRamp{kFinalRampDownGainDb, kRampDownOnPauseDuration,
                                        fuchsia::media::audio::RampType::SCALE_LINEAR}});
 
-  // Wait for the ramp to complete.
-  const zx::duration delay = kRampDownOnPauseDuration;
+  // Before restoring the original gain, wait for a mix to reflect the rampdown. Gain is calculated
+  // at the start of each mix. Unless we wait for the next one, our SetGain cancels any ongoing
+  // rampdowns, leading to the discontinuities these ramp-downs intend to eliminate.
+  const zx::duration delay = ThreadingModel::kMixProfilePeriod + kRampDownOnPauseDuration;
   context().threading_model().FidlDomain().PostDelayedTask(std::move(finish_pause_ramp), delay);
 }
 
