@@ -52,10 +52,13 @@ use crate::setup::SetupEvent;
 mod storage;
 
 mod fdr;
+mod keyboard;
+mod keys;
 mod proxy_view_assistant;
 
-use crate::proxy_view_assistant::ProxyViewAssistant;
 use fdr::{FactoryResetState, ResetEvent};
+
+use crate::proxy_view_assistant::ProxyViewAssistant;
 
 fn raster_for_circle(center: Point, radius: Coord, render_context: &mut RenderContext) -> Raster {
     let path = path_for_circle(center, radius, render_context);

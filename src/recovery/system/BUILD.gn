@@ -94,6 +94,8 @@ rustc_binary("bin") {
   features = [ "http_setup_server" ]
   sources = [
     "src/fdr.rs",
+    "src/keyboard.rs",
+    "src/keys.rs",
     "src/main.rs",
     "src/ota.rs",
     "src/proxy_view_assistant.rs",
@@ -150,6 +152,8 @@ rustc_binary("bin_fdr") {
   ]
   sources = [
     "src/fdr.rs",
+    "src/keyboard.rs",
+    "src/keys.rs",
     "src/main.rs",
     "src/proxy_view_assistant.rs",
   ]
