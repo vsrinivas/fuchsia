@@ -24,10 +24,11 @@ use {
     net_declare::fidl_ip_v6,
     net_types::ip::IpAddress,
     parking_lot::RwLock,
-    std::collections::{HashMap, VecDeque},
-    std::convert::TryFrom,
+    std::collections::{BTreeMap, HashMap, VecDeque},
+    std::convert::{TryFrom as _, TryInto as _},
     std::hash::{Hash, Hasher},
     std::net::IpAddr,
+    std::num::NonZeroUsize,
     std::rc::Rc,
     std::sync::Arc,
     trust_dns_proto::{
@@ -80,12 +81,17 @@ struct QueryStats {
     inner: Mutex<VecDeque<QueryWindow>>,
 }
 
+/// Relevant info to be recorded about a completed query. The `Ok` variant
+/// contains the number of addresses in the response, and the `Err` variant
+/// contains the kind of error that was encountered.
+type QueryResult<'a> = Result<NonZeroUsize, &'a ResolveErrorKind>;
+
 impl QueryStats {
     fn new() -> Self {
         Self { inner: Mutex::new(VecDeque::new()) }
     }
 
-    async fn finish_query(&self, start_time: fasync::Time, error: Option<&ResolveErrorKind>) {
+    async fn finish_query(&self, start_time: fasync::Time, result: QueryResult<'_>) {
         let now = fasync::Time::now();
         let Self { inner } = self;
         let past_queries = &mut *inner.lock().await;
@@ -111,10 +117,9 @@ impl QueryStats {
         };
 
         let elapsed_time = now - start_time;
-        if let Some(e) = error {
-            current_window.fail(elapsed_time, e)
-        } else {
-            current_window.succeed(elapsed_time)
+        match result {
+            Ok(num_addrs) => current_window.succeed(elapsed_time, num_addrs),
+            Err(e) => current_window.fail(elapsed_time, e),
         }
     }
 }
@@ -241,6 +246,7 @@ struct QueryWindow {
     success_elapsed_time: zx::Duration,
     failure_elapsed_time: zx::Duration,
     failure_stats: FailureStats,
+    address_counts_histogram: BTreeMap<NonZeroUsize, u64>,
 }
 
 impl QueryWindow {
@@ -252,13 +258,15 @@ impl QueryWindow {
             success_elapsed_time: zx::Duration::from_nanos(0),
             failure_elapsed_time: zx::Duration::from_nanos(0),
             failure_stats: FailureStats::default(),
+            address_counts_histogram: Default::default(),
         }
     }
 
-    fn succeed(&mut self, elapsed_time: zx::Duration) {
+    fn succeed(&mut self, elapsed_time: zx::Duration, num_addrs: NonZeroUsize) {
         let QueryWindow {
             success_count,
             success_elapsed_time,
+            address_counts_histogram: address_counts,
             start: _,
             failure_count: _,
             failure_elapsed_time: _,
@@ -266,6 +274,7 @@ impl QueryWindow {
         } = self;
         *success_count += 1;
         *success_elapsed_time += elapsed_time;
+        *address_counts.entry(num_addrs).or_default() += 1;
     }
 
     fn fail(&mut self, elapsed_time: zx::Duration, error: &ResolveErrorKind) {
@@ -276,6 +285,7 @@ impl QueryWindow {
             start: _,
             success_count: _,
             success_elapsed_time: _,
+            address_counts_histogram: _,
         } = self;
         *failure_count += 1;
         *failure_elapsed_time += elapsed_time;
@@ -801,7 +811,17 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
                         }
                     };
                     let () = stats
-                        .finish_query(start_time, result.as_ref().err().map(|e| e.kind()))
+                        .finish_query(
+                            start_time,
+                            result
+                                .as_ref()
+                                .map(|addrs| {
+                                    addrs.len().try_into().expect(
+                                        "got zero resolved addresses in a successful DNS response",
+                                    )
+                                })
+                                .map_err(|e| e.kind()),
+                        )
                         .await;
                     let addrs =
                         result.map_err(|e| handle_err("LookupIp", e)).and_then(|addrs| {
@@ -906,6 +926,7 @@ fn add_query_stats_inspect(
                     success_elapsed_time,
                     failure_elapsed_time,
                     failure_stats,
+                    address_counts_histogram,
                 },
             ) in past_queries.iter().enumerate()
             {
@@ -963,19 +984,30 @@ fn add_query_stats_inspect(
                 let () = errors.record_uint("Proto", *proto);
                 let () = errors.record_uint("Timeout", *timeout);
 
-                let no_records_found_response_codes = errors.create_child("NoRecordsFoundResponseCodeCounts");
+                let no_records_found_response_codes =
+                    errors.create_child("NoRecordsFoundResponseCodeCounts");
                 for (HashableResponseCode { response_code }, count) in response_code_counts {
-                    let () = no_records_found_response_codes.record_uint(format!("{:?}", response_code), *count);
+                    let () = no_records_found_response_codes.record_uint(
+                        format!("{:?}", response_code),
+                        *count,
+                    );
                 }
                 let () = errors.record(no_records_found_response_codes);
 
-                let unhandled_resolve_error_kinds = errors.create_child("UnhandledResolveErrorKindCounts");
+                let unhandled_resolve_error_kinds =
+                    errors.create_child("UnhandledResolveErrorKindCounts");
                 for (error_kind, count) in resolve_error_kind_counts {
                     let () = unhandled_resolve_error_kinds.record_uint(error_kind, *count);
                 }
                 let () = errors.record(unhandled_resolve_error_kinds);
 
                 let () = child.record(errors);
+
+                let address_counts_node = child.create_child("address_counts");
+                for (count, occurrences) in address_counts_histogram {
+                    address_counts_node.record_uint(count.to_string(), *occurrences);
+                }
+                child.record(address_counts_node);
 
                 let () = node.root().record(child);
             }
@@ -1232,6 +1264,14 @@ mod tests {
         }
     }
 
+    fn no_records_found_error() -> ResolveError {
+        let mut response = trust_dns_proto::op::Message::new();
+        let _: &mut trust_dns_proto::op::Message =
+            response.set_response_code(ResponseCode::NoError);
+        ResolveError::from_response(response.into(), false)
+            .expect_err("response with no records should be a NoRecordsFound error")
+    }
+
     #[async_trait]
     impl ResolverLookup for MockResolver {
         fn new(config: ResolverConfig, _options: ResolverOpts) -> Self {
@@ -1249,14 +1289,38 @@ mod tests {
             &self,
             host: N,
         ) -> Result<lookup::Ipv4Lookup, ResolveError> {
-            Ok(Ipv4Lookup::from(self.ip_lookup(host)))
+            let lookup = self.ip_lookup(host);
+            if lookup
+                .iter()
+                .filter(|record| match record {
+                    trust_dns_proto::rr::RData::A(_) => true,
+                    _ => false,
+                })
+                .count()
+                == 0
+            {
+                return Err(no_records_found_error());
+            }
+            Ok(Ipv4Lookup::from(lookup))
         }
 
         async fn ipv6_lookup<N: IntoName + Send>(
             &self,
             host: N,
         ) -> Result<lookup::Ipv6Lookup, ResolveError> {
-            Ok(Ipv6Lookup::from(self.ip_lookup(host)))
+            let lookup = self.ip_lookup(host);
+            if lookup
+                .iter()
+                .filter(|record| match record {
+                    trust_dns_proto::rr::RData::AAAA(_) => true,
+                    _ => false,
+                })
+                .count()
+                == 0
+            {
+                return Err(no_records_found_error());
+            }
+            Ok(Ipv6Lookup::from(lookup))
         }
 
         async fn reverse_lookup(
@@ -1711,16 +1775,22 @@ mod tests {
             query_stats: {
                 "window 1": {
                     start_time_nanos: NonZeroUintProperty,
-                    successful_queries: 2u64,
-                    failed_queries: 0u64,
+                    successful_queries: 1u64,
+                    failed_queries: 1u64,
                     average_success_duration_micros: NonZeroUintProperty,
+                    average_failure_duration_micros: NonZeroUintProperty,
                     errors: {
                         Message: 0u64,
-                        NoRecordsFoundResponseCodeCounts: {},
+                        NoRecordsFoundResponseCodeCounts: {
+                            NoError: 1u64,
+                        },
                         Io: 0u64,
                         Proto: 0u64,
                         Timeout: 0u64,
                         UnhandledResolveErrorKindCounts: {},
+                    },
+                    address_counts: {
+                        "1": 1u64,
                     },
                 },
             }
@@ -1730,21 +1800,18 @@ mod tests {
     fn run_fake_lookup(
         exec: &mut fasync::TestExecutor,
         stats: Arc<QueryStats>,
-        error: Option<ResolveErrorKind>,
+        result: QueryResult<'_>,
         delay: zx::Duration,
     ) {
         let start_time = fasync::Time::now();
         let () = exec.set_fake_time(fasync::Time::after(delay));
-        let update_stats = (|| async {
-            if let Some(error) = error {
-                let () = stats.finish_query(start_time, Some(&error)).await;
-            } else {
-                let () = stats.finish_query(start_time, None).await;
-            }
-        })();
+        let update_stats = stats.finish_query(start_time, result);
         pin_mut!(update_stats);
         assert!(exec.run_until_stalled(&mut update_stats).is_ready());
     }
+
+    // Safety: This is safe because the initial value is not zero.
+    const NON_ZERO_USIZE_ONE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(1) };
 
     #[test]
     fn test_query_stats_inspect_average() {
@@ -1752,16 +1819,24 @@ mod tests {
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
-        let env = TestEnvironment::new();
+        let stats = Arc::new(QueryStats::new());
         let inspector = fuchsia_inspect::Inspector::new();
-        let _query_stats_inspect_node =
-            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
         const SUCCESSFUL_QUERY_COUNT: u64 = 10;
         const SUCCESSFUL_QUERY_DURATION: zx::Duration = zx::Duration::from_seconds(30);
         for _ in 0..SUCCESSFUL_QUERY_COUNT / 2 {
-            let () =
-                run_fake_lookup(&mut exec, env.stats.clone(), None, zx::Duration::from_nanos(0));
-            let () = run_fake_lookup(&mut exec, env.stats.clone(), None, SUCCESSFUL_QUERY_DURATION);
+            let () = run_fake_lookup(
+                &mut exec,
+                stats.clone(),
+                Ok(/*addresses*/ NON_ZERO_USIZE_ONE),
+                zx::Duration::from_nanos(0),
+            );
+            let () = run_fake_lookup(
+                &mut exec,
+                stats.clone(),
+                Ok(/*addresses*/ NON_ZERO_USIZE_ONE),
+                SUCCESSFUL_QUERY_DURATION,
+            );
             let () = exec.set_fake_time(fasync::Time::after(
                 STAT_WINDOW_DURATION - SUCCESSFUL_QUERY_DURATION,
             ));
@@ -1786,6 +1861,9 @@ mod tests {
                     Timeout: 0u64,
                     UnhandledResolveErrorKindCounts: {},
                 },
+                address_counts: {
+                    "1": 2u64,
+                },
             });
             expected.add_child_assertion(child);
         }
@@ -1800,17 +1878,16 @@ mod tests {
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
-        let env = TestEnvironment::new();
+        let stats = Arc::new(QueryStats::new());
         let inspector = fuchsia_inspect::Inspector::new();
-        let _query_stats_inspect_node =
-            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
         const FAILED_QUERY_COUNT: u64 = 10;
         const FAILED_QUERY_DURATION: zx::Duration = zx::Duration::from_millis(500);
         for _ in 0..FAILED_QUERY_COUNT {
             let () = run_fake_lookup(
                 &mut exec,
-                env.stats.clone(),
-                Some(ResolveErrorKind::Timeout),
+                stats.clone(),
+                Err(&ResolveErrorKind::Timeout),
                 FAILED_QUERY_DURATION,
             );
         }
@@ -1833,6 +1910,7 @@ mod tests {
                         Timeout: FAILED_QUERY_COUNT,
                         UnhandledResolveErrorKindCounts: {},
                     },
+                    address_counts: {},
                 },
             }
         });
@@ -1844,18 +1922,17 @@ mod tests {
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
-        let env = TestEnvironment::new();
+        let stats = Arc::new(QueryStats::new());
         let inspector = fuchsia_inspect::Inspector::new();
-        let _query_stats_inspect_node =
-            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
         const FAILED_QUERY_COUNT: u64 = 10;
         const FAILED_QUERY_DURATION: zx::Duration = zx::Duration::from_millis(500);
 
         let mut run_fake_no_records_lookup = |response_code: ResponseCode| {
             run_fake_lookup(
                 &mut exec,
-                env.stats.clone(),
-                Some(ResolveErrorKind::NoRecordsFound {
+                stats.clone(),
+                Err(&ResolveErrorKind::NoRecordsFound {
                     query: Box::new(Query::default()),
                     soa: None,
                     negative_ttl: None,
@@ -1897,8 +1974,67 @@ mod tests {
                         Timeout: 0u64,
                         UnhandledResolveErrorKindCounts: {},
                     },
+                    address_counts: {},
                 },
             }
+        });
+    }
+
+    #[test]
+    fn test_query_stats_resolved_address_counts() {
+        let mut exec = fasync::TestExecutor::new_with_fake_time().unwrap();
+        const START_NANOS: i64 = 1_234_567;
+        exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
+
+        let stats = Arc::new(QueryStats::new());
+        let inspector = fuchsia_inspect::Inspector::new();
+        let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
+
+        // Create some test data to run fake lookups. Simulate a histogram with:
+        //  - 99 occurrences of a response with 1 address,
+        //  - 98 occurrences of a response with 2 addresses,
+        //  - ...
+        //  - 1 occurrence of a response with 99 addresses.
+        let address_counts: HashMap<usize, _> = (1..100).zip((1..100).rev()).collect();
+        const QUERY_DURATION: zx::Duration = zx::Duration::from_millis(10);
+        for (count, occurrences) in address_counts.iter() {
+            for _ in 0..*occurrences {
+                run_fake_lookup(
+                    &mut exec,
+                    stats.clone(),
+                    Ok(NonZeroUsize::new(*count).expect("address count must be greater than zero")),
+                    QUERY_DURATION,
+                );
+            }
+        }
+
+        let mut expected_address_counts = tree_assertion!(address_counts: {});
+        for (count, occurrences) in address_counts.iter() {
+            expected_address_counts
+                .add_property_assertion(&count.to_string(), Box::new(*occurrences));
+        }
+        assert_data_tree!(inspector, root: {
+            query_stats: {
+                "window 1": {
+                    start_time_nanos: u64::try_from(
+                        START_NANOS + QUERY_DURATION.into_nanos()
+                    ).unwrap(),
+                    successful_queries: address_counts.values().sum::<u64>(),
+                    failed_queries: 0u64,
+                    average_success_duration_micros: u64::try_from(
+                        QUERY_DURATION.into_micros()
+                    ).unwrap(),
+                    errors: {
+                        Message: 0u64,
+                        NoRecordsFoundResponseCodeCounts: {},
+                        Io: 0u64,
+                        Proto: 0u64,
+                        Timeout: 0u64,
+                        UnhandledResolveErrorKindCounts: {},
+                    },
+                    expected_address_counts,
+                },
+            },
         });
     }
 
@@ -1908,22 +2044,22 @@ mod tests {
         const START_NANOS: i64 = 1_234_567;
         let () = exec.set_fake_time(fasync::Time::from_nanos(START_NANOS));
 
-        let env = TestEnvironment::new();
+        let stats = Arc::new(QueryStats::new());
         let inspector = fuchsia_inspect::Inspector::new();
-        let _query_stats_inspect_node =
-            add_query_stats_inspect(inspector.root(), env.stats.clone());
+        let _query_stats_inspect_node = add_query_stats_inspect(inspector.root(), stats.clone());
         const DELAY: zx::Duration = zx::Duration::from_millis(100);
         for _ in 0..STAT_WINDOW_COUNT {
-            let () = run_fake_lookup(
-                &mut exec,
-                env.stats.clone(),
-                Some(ResolveErrorKind::Timeout),
-                DELAY,
-            );
+            let () =
+                run_fake_lookup(&mut exec, stats.clone(), Err(&ResolveErrorKind::Timeout), DELAY);
             let () = exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
         }
         for _ in 0..STAT_WINDOW_COUNT {
-            let () = run_fake_lookup(&mut exec, env.stats.clone(), None, DELAY);
+            let () = run_fake_lookup(
+                &mut exec,
+                stats.clone(),
+                Ok(/*addresses*/ NON_ZERO_USIZE_ONE),
+                DELAY,
+            );
             let () = exec.set_fake_time(fasync::Time::after(STAT_WINDOW_DURATION - DELAY));
         }
         // All the failed queries should be erased from the stats as they are
@@ -1948,6 +2084,9 @@ mod tests {
                     Proto: 0u64,
                     Timeout: 0u64,
                     UnhandledResolveErrorKindCounts: {},
+                },
+                address_counts: {
+                    "1": 1u64,
                 },
             });
             expected.add_child_assertion(child);
