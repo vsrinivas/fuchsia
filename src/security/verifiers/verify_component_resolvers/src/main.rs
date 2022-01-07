@@ -5,7 +5,7 @@
 use {
     anyhow::{bail, Context, Result},
     clap::{App, Arg},
-    std::fs,
+    std::{fs, io::Write},
 };
 
 mod lib;
@@ -14,15 +14,22 @@ use lib::{verify_component_resolvers, AllowList, ScrutinyQueryComponentResolvers
 
 pub struct VerifyComponentResolvers {
     stamp_path: String,
+    depfile_path: String,
     allowlist_path: String,
 }
 
 impl VerifyComponentResolvers {
-    /// Creates a new VerifyComponentResolvers instance with a `stamp_path` that is written
-    /// to if the verification succeeds and a `allowlist_path` which lists the
-    /// scheme/moniker/protocol tuples to check and the allowed matching components.
-    fn new<S: Into<String>>(stamp_path: S, allowlist_path: S) -> Self {
-        Self { stamp_path: stamp_path.into(), allowlist_path: allowlist_path.into() }
+    /// Creates a new VerifyComponentResolvers instance with:
+    /// * a `stamp_path` that is written to if the verification succeeds,
+    /// * a `depfile_path` that lists all the files this executable touches, and
+    /// * a `allowlist_path` which lists the scheme/moniker/protocol tuples to check and the
+    /// allowed matching components.
+    fn new<S: Into<String>>(stamp_path: S, depfile_path: S, allowlist_path: S) -> Self {
+        Self {
+            stamp_path: stamp_path.into(),
+            depfile_path: depfile_path.into(),
+            allowlist_path: allowlist_path.into(),
+        }
     }
 
     /// Launches Scrutiny and performs the component resolver analysis. The
@@ -37,9 +44,11 @@ impl VerifyComponentResolvers {
         )
         .context("Failed to deserialize allowlist")?;
 
-        if let Some(violations) = verify_component_resolvers(scrutiny, allowlist)? {
-            bail!(
-                "
+        let deps = match verify_component_resolvers(scrutiny, allowlist)? {
+            Ok(deps) => deps,
+            Err(violations) => {
+                bail!(
+                    "
 Static Component Resolver Capability Analysis Error:
 The component resolver verifier found some components configured to be resolved using
 a privileged component resolver.
@@ -49,10 +58,17 @@ to the allowlist located at: {}
 
 Verification Errors:
 {}",
-                self.allowlist_path,
-                serde_json::to_string_pretty(&violations).unwrap()
-            );
-        }
+                    self.allowlist_path,
+                    serde_json::to_string_pretty(&violations).unwrap()
+                );
+            }
+        };
+
+        // Write out the depfile and stampfile.
+        let mut depfile =
+            fs::File::create(&self.depfile_path).context("failed to create dep file")?;
+        write!(depfile, "{}: {}", self.stamp_path, deps.get().join(" "))
+            .context("failed to write to dep file")?;
 
         fs::write(&self.stamp_path, "Verified\n").context("failed to write stamp file")?;
         Ok(())
@@ -76,6 +92,14 @@ fn main() -> Result<()> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("depfile")
+                .long("depfile")
+                .required(true)
+                .help("The dep file output location")
+                .value_name("depfile")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("allowlist")
                 .long("allowlist")
                 .required(true)
@@ -87,6 +111,7 @@ fn main() -> Result<()> {
 
     let verify_component_resolvers = VerifyComponentResolvers::new(
         args.value_of("stamp").unwrap(),
+        args.value_of("depfile").unwrap(),
         args.value_of("allowlist").unwrap(),
     );
     verify_component_resolvers.verify()

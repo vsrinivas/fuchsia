@@ -19,7 +19,7 @@ use {
     scrutiny::{model::controller::DataController, model::model::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
-    std::sync::Arc,
+    std::{collections::HashSet, sync::Arc},
 };
 
 /// ComponentResolversController
@@ -31,14 +31,23 @@ use {
 pub struct ComponentResolversController {}
 
 /// The expected query format.
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ComponentResolverRequest {
-    // `resolver` URI scheme of interest
+    /// `resolver` URI scheme of interest
     pub scheme: String,
-    // Node path of the `resolver`
+    /// Node path of the `resolver`
     pub moniker: String,
-    // Filter the results to components resolved with a `resolver` with access to a protocol
+    /// Filter the results to components resolved with a `resolver` with access to a protocol
     pub protocol: String,
+}
+
+/// The response schema.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ComponentResolverResponse {
+    /// Files accessed to perform this query, for depfile generation.
+    pub deps: HashSet<String>,
+    /// Component monikers that matched the query.
+    pub monikers: Vec<String>,
 }
 
 /// Walks the tree for component node paths of all components that, in their
@@ -129,6 +138,7 @@ impl DataController for ComponentResolversController {
         let tree_data = model
             .get::<V2ComponentModel>()
             .context("Failed to get V2ComponentModel from ComponentResolversController model")?;
+        let deps = tree_data.deps.clone();
         let controller: ComponentResolverRequest = serde_json::from_value(request)?;
 
         let model = &tree_data.component_model;
@@ -140,8 +150,7 @@ impl DataController for ComponentResolversController {
             "Failed to walk V2ComponentModel with BreadthFirstWalker and ComponentResolversVisitor",
         )?;
 
-        let monikers = visitor.get_monikers();
-        Ok(json!(monikers))
+        Ok(json!(ComponentResolverResponse { monikers: visitor.get_monikers(), deps }))
     }
 
     fn description(&self) -> String {

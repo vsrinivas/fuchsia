@@ -22,6 +22,12 @@ pub struct ComponentResolversRequest {
     protocol: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub struct ComponentResolversResponse {
+    deps: HashSet<String>,
+    monikers: Vec<NodePath>,
+}
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AllowListEntry {
     #[serde(flatten)]
@@ -42,7 +48,12 @@ impl AllowList {
 pub trait QueryComponentResolvers {
     /// Walk the v2 component tree, finding all components with a component resolver for `scheme`
     /// in its environment that has the given `moniker` and has access to `protocol`.
-    fn query(&self, scheme: String, moniker: NodePath, protocol: String) -> Result<Vec<NodePath>>;
+    fn query(
+        &self,
+        scheme: String,
+        moniker: NodePath,
+        protocol: String,
+    ) -> Result<ComponentResolversResponse>;
 }
 
 /// An impl of [`QueryComponentResolvers`] that launches and queries scrutiny relative to the
@@ -61,7 +72,12 @@ impl ScrutinyQueryComponentResolvers {
 }
 
 impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
-    fn query(&self, scheme: String, moniker: NodePath, protocol: String) -> Result<Vec<NodePath>> {
+    fn query(
+        &self,
+        scheme: String,
+        moniker: NodePath,
+        protocol: String,
+    ) -> Result<ComponentResolversResponse> {
         let request = ComponentResolversRequest { scheme, moniker, protocol };
 
         let mut config = Config::run_command_with_plugins(
@@ -88,28 +104,44 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
     }
 }
 
+/// A collection of build dependencies.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub struct Deps(HashSet<String>);
+
+impl Deps {
+    /// Return a sorted vec of the build dependencies.
+    pub fn get(&self) -> Vec<String> {
+        let mut res: Vec<String> = self.0.iter().cloned().collect();
+        res.sort_unstable();
+        res
+    }
+}
+
 /// For each section of the provided `allowlist`, queries scrutiny for all components configured
 /// with a component resolver for `scheme` with the given `moniker` that itself has access
 /// to `protocol`.  If any components match but are not in the allowlist, returns an allowlist that
-/// would allow all found violations.
+/// would allow all found violations. On success, returns the set of files accessed to run the
+/// analysis, for depfile generation.
 pub fn verify_component_resolvers(
     scrutiny: impl QueryComponentResolvers,
     allowlist: AllowList,
-) -> Result<Option<AllowList>> {
+) -> Result<Result<Deps, AllowList>> {
     let mut violations = vec![];
+    let mut deps = Deps::default();
 
     for (query, allowed_monikers) in allowlist.iter() {
         let allowed_monikers: HashSet<&NodePath> = allowed_monikers.into_iter().collect();
 
-        let found_monikers = scrutiny
+        let response = scrutiny
             .query(query.scheme.clone(), query.moniker.clone(), query.protocol.clone())
             .with_context(|| {
                 format!("Failed to query verify.capability_component_resolvers with {:?}", query)
             })?;
+        deps.0.extend(response.deps);
 
         let mut unexpected = vec![];
 
-        for moniker in found_monikers {
+        for moniker in response.monikers {
             if !allowed_monikers.contains(&moniker) {
                 unexpected.push(moniker);
             }
@@ -121,9 +153,9 @@ pub fn verify_component_resolvers(
     }
 
     if violations.is_empty() {
-        Ok(None)
+        Ok(Ok(deps))
     } else {
-        Ok(Some(AllowList(violations)))
+        Ok(Err(AllowList(violations)))
     }
 }
 
@@ -141,8 +173,17 @@ mod tests {
             Self { responses: HashMap::new() }
         }
 
-        fn with_response(self, query: (String, NodePath, String), response: Vec<NodePath>) -> Self {
-            let raw_response = serde_json::to_string(&response).unwrap();
+        fn with_response(
+            self,
+            query: (String, NodePath, String),
+            response: Vec<NodePath>,
+            response_deps: Vec<String>,
+        ) -> Self {
+            let raw_response = serde_json::to_string(&ComponentResolversResponse {
+                monikers: response,
+                deps: response_deps.into_iter().collect(),
+            })
+            .unwrap();
             self.with_raw_response(query, raw_response)
         }
 
@@ -162,7 +203,7 @@ mod tests {
             scheme: String,
             moniker: NodePath,
             protocol: String,
-        ) -> Result<Vec<NodePath>> {
+        ) -> Result<ComponentResolversResponse> {
             let key = (scheme, moniker, protocol);
 
             let response = self
@@ -249,9 +290,10 @@ mod tests {
                 "fuchsia.pkg.PackageResolver".to_owned(),
             ),
             vec!["/core/allowed".to_owned(), "/core/stopme".to_owned()],
+            vec!["path/to/dep.zbi".to_owned()],
         );
 
-        assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Some(violations));
+        assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Err(violations));
     }
 
     #[test]
@@ -277,9 +319,11 @@ mod tests {
                 "fuchsia.pkg.PackageResolver".to_owned(),
             ),
             vec!["/core/allowed".to_owned(), "/core/also-allowed".to_owned()],
+            vec!["path/to/dep.zbi".to_owned()],
         );
 
-        assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), None);
+        let expected_deps = Deps(vec!["path/to/dep.zbi".to_owned()].into_iter().collect());
+        assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Ok(expected_deps));
     }
 
     #[test]
@@ -338,16 +382,19 @@ mod tests {
             .with_response(
                 ("a".to_owned(), "/core/resolver-a".to_owned(), "fuchsia.proto.a".to_owned()),
                 vec!["/core/allowed-a".to_owned(), "/core/violation-a".to_owned()],
+                vec!["dep1".to_owned()],
             )
             .with_response(
                 ("b".to_owned(), "/core/resolver-b".to_owned(), "fuchsia.proto.b".to_owned()),
                 vec!["/core/allowed-b".to_owned()],
+                vec!["dep2".to_owned()],
             )
             .with_response(
                 ("c".to_owned(), "/core/resolver-c".to_owned(), "fuchsia.proto.c".to_owned()),
                 vec!["/core/allowed-c".to_owned(), "/core/violation-c".to_owned()],
+                vec!["dep3".to_owned()],
             );
 
-        assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Some(violations));
+        assert_eq!(verify_component_resolvers(scrutiny, allowlist).unwrap(), Err(violations));
     }
 }

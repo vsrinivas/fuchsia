@@ -614,7 +614,13 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/my-resolver", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/logger"]));
+        assert_eq!(
+            response,
+            json!({
+              "deps": ["core_dep"],
+              "monikers": ["/logger"],
+            })
+        );
         Ok(())
     }
 
@@ -680,7 +686,13 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/logger"]));
+        assert_eq!(
+            response,
+            json!({
+              "deps": ["core_dep"],
+              "monikers": ["/logger"],
+            })
+        );
         Ok(())
     }
 
@@ -764,7 +776,13 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/logger/log-child"]));
+        assert_eq!(
+            response,
+            json!({
+              "deps": ["core_dep"],
+              "monikers": ["/logger/log-child"],
+            })
+        );
         Ok(())
     }
 
@@ -955,7 +973,13 @@ mod tests {
             model.clone(),
             json!({ "scheme": "fuchsia-pkg", "moniker": "/core/custom-resolver", "protocol": "fuchsia.test.SpecialProtocol"}),
         )?;
-        assert_eq!(response, json!(["/core/resolved-from-custom"]));
+        assert_eq!(
+            response,
+            json!({
+              "deps": ["core_dep"],
+              "monikers": ["/core/resolved-from-custom"],
+            })
+        );
         Ok(())
     }
 
