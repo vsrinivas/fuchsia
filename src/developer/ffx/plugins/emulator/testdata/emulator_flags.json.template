@@ -85,6 +85,19 @@
            "-nic",
             "none",
             "-nodefaults",
+        {{else}}
+            {{#if (eq host.networking "tap")}}
+                "-netdev",
+                "type=tap,ifname=qemu,id=net0,script=
+                    {{~#if runtime.upscript~}}
+                        {{runtime.upscript}}
+                    {{~else~}}
+                        no
+                    {{~/if~}}
+                    ,downscript=no",
+                "-device",
+                "virtio-net-pci,vectors=8,netdev=net0,mac={{runtime.mac}}",
+            {{/if}}
         {{/if}}
         {{! TODO(fxbug.dev/90005): These last few items were hard-coded into
             device_launcher, but need to be reevaluated as part of the template
@@ -126,7 +139,7 @@
         "TERM=xterm-256color",
         "kernel.entropy-mixin=42ac2452e99c1c979ebfca03bce0cbb14126e4021a6199ccfeca217999c0aaa0",
         "kernel.halt-on-panic=true",
-        "zircon.nodename=fuchsia-5254-0063-5e7a",
+        "zircon.nodename={{runtime.name}}",
         "kernel.lockup-detector.critical-section-fatal-threshold-ms=0",
         "kernel.lockup-detector.critical-section-threshold-ms=5000",
         "kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0"

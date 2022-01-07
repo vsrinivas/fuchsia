@@ -5,14 +5,15 @@
 //! Utilities for Product Bundle Metadata (PBM).
 
 use anyhow::Result;
-use ffx_emulator_common::config::{FfxConfigWrapper, SDK_ROOT};
+use ffx_emulator_common::config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE, SDK_ROOT};
 use ffx_emulator_config::{
     convert_bundle_to_configs, AccelerationMode, ConsoleType, EmulatorConfiguration, LogLevel,
     NetworkingMode,
 };
 use ffx_emulator_start_args::StartCommand;
 use fms;
-use std::path::PathBuf;
+use futures::executor::block_on;
+use std::{collections::hash_map::DefaultHasher, hash::Hasher, path::PathBuf};
 
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(
@@ -39,7 +40,7 @@ pub(crate) async fn make_configs(
 
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.
-    emu_config = apply_command_line_options(emu_config, cmd)?;
+    emu_config = apply_command_line_options(emu_config, cmd, ffx_config)?;
 
     Ok(emu_config)
 }
@@ -47,63 +48,77 @@ pub(crate) async fn make_configs(
 /// Given an EmulatorConfiguration and a StartCommand, write the values from the
 /// StartCommand onto the EmulatorConfiguration, overriding any previous values.
 fn apply_command_line_options(
-    mut config: EmulatorConfiguration,
+    mut emu_config: EmulatorConfiguration,
     cmd: &StartCommand,
+    ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
     // HostConfig overrides
-    config.host.acceleration = cmd.accel.clone();
-    if config.host.acceleration == AccelerationMode::Auto {
+    emu_config.host.acceleration = cmd.accel.clone();
+    if emu_config.host.acceleration == AccelerationMode::Auto {
         if std::env::consts::OS == "linux" {
-            config.host.acceleration = AccelerationMode::None;
+            emu_config.host.acceleration = AccelerationMode::None;
             // Make sure we have access to KVM.
             let file = std::fs::File::open("/dev/kvm");
             if let Ok(kvm) = file {
                 if let Ok(metadata) = kvm.metadata() {
                     if !metadata.permissions().readonly() {
-                        config.host.acceleration = AccelerationMode::Hyper;
+                        emu_config.host.acceleration = AccelerationMode::Hyper;
                     }
                 }
             }
         } else {
             // We generally assume Macs have HVF installed.
-            config.host.acceleration = AccelerationMode::Hyper;
+            emu_config.host.acceleration = AccelerationMode::Hyper;
         }
     }
-    config.host.gpu = cmd.gpu.clone();
+    emu_config.host.gpu = cmd.gpu.clone();
     if let Some(log) = &cmd.log {
-        config.host.log = PathBuf::from(log);
+        emu_config.host.log = PathBuf::from(log);
     }
-    config.host.networking =
-        if cmd.tuntap { NetworkingMode::Bridged } else { NetworkingMode::None };
-    config.host.os = std::env::consts::OS.to_string();
-    config.host.architecture = std::env::consts::ARCH.to_string();
+    emu_config.host.networking =
+        if cmd.tuntap { NetworkingMode::Tap } else { NetworkingMode::None };
+    emu_config.host.os = std::env::consts::OS.to_string();
+    emu_config.host.architecture = std::env::consts::ARCH.to_string();
 
     // RuntimeConfig options
     if cmd.console {
-        config.runtime.console = ConsoleType::Console;
+        emu_config.runtime.console = ConsoleType::Console;
     } else if cmd.monitor {
-        config.runtime.console = ConsoleType::Monitor;
+        emu_config.runtime.console = ConsoleType::Monitor;
     } else {
-        config.runtime.console = ConsoleType::None;
+        emu_config.runtime.console = ConsoleType::None;
     }
-    config.runtime.debugger = cmd.debugger;
-    config.runtime.dry_run = cmd.dry_run;
-    config.runtime.headless = cmd.headless;
-    if !cmd.headless && std::env::var("DISPLAY").is_err() {
-        println!(
-            "No DISPLAY set in the local environment, try running with --headless if you \
-            encounter failures related to display or Qt.",
-        );
-    }
-    config.runtime.hidpi_scaling = cmd.hidpi_scaling;
-    config.runtime.log_level = if cmd.verbose { LogLevel::Verbose } else { LogLevel::Info };
-    config.runtime.name = cmd.name.clone();
+    emu_config.runtime.debugger = cmd.debugger;
+    emu_config.runtime.dry_run = cmd.dry_run;
+    emu_config.runtime.headless = cmd.headless;
+    emu_config.runtime.hidpi_scaling = cmd.hidpi_scaling;
+    emu_config.runtime.log_level = if cmd.verbose { LogLevel::Verbose } else { LogLevel::Info };
+    emu_config.runtime.mac = generate_mac(&cmd.name);
+    emu_config.runtime.name = cmd.name.clone();
 
     // If the user specified a path to a flag template on the command line, use that.
     if let Some(template_file) = &cmd.start_up_args_template {
-        config.runtime.template = template_file.clone();
+        emu_config.runtime.template = template_file.clone();
     }
-    Ok(config)
+
+    emu_config.runtime.upscript = if let Ok(upscript) = block_on(ffx_config.file(EMU_UPSCRIPT_FILE))
+    {
+        Some(upscript)
+    } else {
+        None
+    };
+
+    Ok(emu_config)
+}
+
+/// Generate a unique MAC address based on the instance name. If using the default instance name
+/// of fuchsia-emulator, this will be 52:54:47:5e:82:ef.
+fn generate_mac(name: &str) -> String {
+    let mut hasher = DefaultHasher::new();
+    hasher.write(name.as_bytes());
+    let hashed = hasher.finish();
+    let bytes = hashed.to_be_bytes();
+    format!("52:54:{:02x}:{:02x}:{:02x}:{:02x}", bytes[0], bytes[1], bytes[2], bytes[3])
 }
 
 #[cfg(test)]
@@ -116,6 +131,9 @@ mod tests {
 
     #[test]
     fn test_apply_command_line_options() -> Result<()> {
+        let mut ffx_config = FfxConfigWrapper::new();
+        ffx_config.overrides.insert(EMU_UPSCRIPT_FILE, "/path/to/upscript".to_string());
+
         // Set up some test data to be applied.
         let mut cmd = StartCommand {
             accel: AccelerationMode::Hyper,
@@ -135,25 +153,26 @@ mod tests {
         };
 
         // Get a default configuration, and verify we know what those values are.
-        let config = EmulatorConfiguration::default();
-        assert_eq!(config.host.acceleration, AccelerationMode::None);
-        assert_eq!(config.host.gpu, GpuType::Auto);
-        assert_eq!(config.host.log, PathBuf::from(""));
-        assert_eq!(config.host.networking, NetworkingMode::None);
-        assert_eq!(config.runtime.console, ConsoleType::None);
-        assert_eq!(config.runtime.debugger, false);
-        assert_eq!(config.runtime.dry_run, false);
-        assert_eq!(config.runtime.headless, false);
-        assert_eq!(config.runtime.hidpi_scaling, false);
-        assert_eq!(config.runtime.log_level, LogLevel::Info);
-        assert_eq!(config.runtime.name, "");
+        let emu_config = EmulatorConfiguration::default();
+        assert_eq!(emu_config.host.acceleration, AccelerationMode::None);
+        assert_eq!(emu_config.host.gpu, GpuType::Auto);
+        assert_eq!(emu_config.host.log, PathBuf::from(""));
+        assert_eq!(emu_config.host.networking, NetworkingMode::None);
+        assert_eq!(emu_config.runtime.console, ConsoleType::None);
+        assert_eq!(emu_config.runtime.debugger, false);
+        assert_eq!(emu_config.runtime.dry_run, false);
+        assert_eq!(emu_config.runtime.headless, false);
+        assert_eq!(emu_config.runtime.hidpi_scaling, false);
+        assert_eq!(emu_config.runtime.log_level, LogLevel::Info);
+        assert_eq!(emu_config.runtime.name, "");
+        assert_eq!(emu_config.runtime.upscript, None);
 
         // Apply the test data, which should change everything in the config.
-        let opts = apply_command_line_options(config, &cmd)?;
+        let opts = apply_command_line_options(emu_config, &cmd, &ffx_config)?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
         assert_eq!(opts.host.gpu, GpuType::Host);
         assert_eq!(opts.host.log, PathBuf::from("/path/to/log"));
-        assert_eq!(opts.host.networking, NetworkingMode::Bridged);
+        assert_eq!(opts.host.networking, NetworkingMode::Tap);
         assert_eq!(opts.runtime.console, ConsoleType::Console);
         assert_eq!(opts.runtime.debugger, true);
         assert_eq!(opts.runtime.dry_run, true);
@@ -161,11 +180,12 @@ mod tests {
         assert_eq!(opts.runtime.hidpi_scaling, true);
         assert_eq!(opts.runtime.log_level, LogLevel::Verbose);
         assert_eq!(opts.runtime.name, "SomeName");
+        assert_eq!(opts.runtime.upscript, Some(PathBuf::from("/path/to/upscript")));
 
         // "console" and "monitor" are exclusive, so swap them and reapply.
         cmd.console = false;
         cmd.monitor = true;
-        let opts = apply_command_line_options(opts, &cmd)?;
+        let opts = apply_command_line_options(opts, &cmd, &ffx_config)?;
         assert_eq!(opts.runtime.console, ConsoleType::Monitor);
 
         Ok(())

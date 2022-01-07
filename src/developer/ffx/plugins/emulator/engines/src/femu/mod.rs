@@ -13,7 +13,7 @@ use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
 use ffx_emulator_config::{
-    ConsoleType, EmulatorConfiguration, EmulatorEngine, EngineType, LogLevel,
+    ConsoleType, EmulatorConfiguration, EmulatorEngine, EngineType, LogLevel, NetworkingMode,
 };
 use serde::{Deserialize, Serialize};
 use shared_child::SharedChild;
@@ -143,6 +143,29 @@ impl EmulatorEngine for FemuEngine {
     }
 
     fn validate(&self) -> Result<()> {
+        if !self.emulator_configuration.runtime.headless && std::env::var("DISPLAY").is_err() {
+            eprintln!(
+                "No DISPLAY set in the local environment, try running with --headless if you \
+                encounter failures related to display or Qt.",
+            );
+        }
+        if self.emulator_configuration.host.networking == NetworkingMode::Tap
+            && std::env::consts::OS == "macos"
+        {
+            eprintln!(
+                "Tun/Tap networking mode is not currently supported on MacOS. \
+                You may experience errors with your current configuration."
+            );
+        }
+        if self.emulator_configuration.host.networking == NetworkingMode::Tap {
+            if !Self::tap_available()? {
+                eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
+                eprintln!(
+                    "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
+                );
+                bail!("Configure Tun/Tap on your host or disable networking.")
+            }
+        }
         self.check_required_files(&self.emulator_configuration.guest)
     }
 

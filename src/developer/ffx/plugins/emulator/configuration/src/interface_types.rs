@@ -178,6 +178,9 @@ pub struct RuntimeConfig {
     /// The verbosity level of the logs for this instance.
     pub log_level: LogLevel,
 
+    // A generated MAC address for the emulators virtual network.
+    pub mac: String,
+
     /// The human-readable name for this instance. Must be unique from any other current
     /// instance on the host.
     pub name: String,
@@ -185,4 +188,8 @@ pub struct RuntimeConfig {
     /// Path to an enumeration flags template file, which contains a Handlebars-renderable
     /// set of arguments to be passed to the Command which starts the emulator.
     pub template: PathBuf,
+
+    /// Optional path to a Tap upscript file, which is passed to the emulator when Tap networking
+    /// is enabled.
+    pub upscript: Option<PathBuf>,
 }

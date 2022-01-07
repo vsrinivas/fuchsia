@@ -139,6 +139,18 @@ pub(crate) trait QemuBasedEngine {
         }
         Ok(())
     }
+
+    fn tap_available() -> Result<bool> {
+        if std::env::consts::OS != "linux" {
+            return Ok(false);
+        }
+        let output = Command::new("ip")
+            .args(["tuntap", "show"])
+            .output()
+            .expect("failed to run ip to check tun/tap status");
+        let ifname = String::from_utf8_lossy(&output.stdout);
+        Ok(ifname != "")
+    }
 }
 
 #[cfg(test)]

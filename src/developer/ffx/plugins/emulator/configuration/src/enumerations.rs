@@ -129,10 +129,10 @@ display_impl!(LogLevel);
 #[serde(rename_all = "snake_case")]
 pub enum NetworkingMode {
     /// Networking will be set up in bridged mode, using an interface such as tun/tap.
-    Bridged,
+    Tap,
 
     /// Networking will be over explicitly mapped ports, using an interface such as SLiRP.
-    Mapped,
+    User,
 
     /// Guest networking will be disabled.
     None,
