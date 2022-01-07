@@ -1,0 +1,11 @@
+[
+    // List of all fuchsia-pkg components that can be resolved using
+    // /core/universe-resolver, which has access to
+    // fuchsia.pkg.PackageResolver.
+    {
+        scheme: "fuchsia-pkg",
+        moniker: "/core/universe-resolver",
+        protocol: "fuchsia.pkg.PackageResolver",
+        components: [],
+    },
+]

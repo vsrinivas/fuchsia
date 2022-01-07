@@ -24,6 +24,7 @@ import("//build/sdk/physical_device.gni")
 import("//build/sdk/product_metadata.gni")
 import("//build/sdk/virtual_device.gni")
 import("//build/security.gni")
+import("//build/security/verifier/verify_component_resolvers.gni")
 import("//build/security/verifier/verify_routes.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -175,6 +176,13 @@ verify_routes("verify_capability_routes") {
   if (bootfs_only) {
     allowlist += [ fuchsia_verify_routes_exceptions_allowlist_bootfs ]
   }
+}
+
+# Verifies that privileged component resolvers only resolve allowed static
+# components, determined by the provided allowlist.
+verify_component_resolvers("verify_component_resolvers") {
+  testonly = true
+  allowlist = fuchsia_verify_component_resolvers_allowlist
 }
 
 # This action runs a script that checks all vtables in fuchsia binaries are
@@ -1190,7 +1198,10 @@ group("updates") {
   ]
 
   if (!is_coverage) {
-    deps += [ ":verify_capability_routes" ]
+    deps += [
+      ":verify_capability_routes",
+      ":verify_component_resolvers",
+    ]
     if (fuchsia_route_sources_config != "") {
       deps += [ "//build/images/fuchsia:fuchsia_route_sources_verify_files" ]
     }

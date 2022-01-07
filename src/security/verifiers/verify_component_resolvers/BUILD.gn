@@ -28,6 +28,11 @@ rustc_binary("bin") {
     "src/lib.rs",
     "src/main.rs",
   ]
+
+  # TODO(https://fxbug.dev/90151): Plug the leak. Don't forget to remove this
+  # target from the visibility list in
+  # //build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 install_host_tools("host") {
