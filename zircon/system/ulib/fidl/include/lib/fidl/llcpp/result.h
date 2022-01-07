@@ -24,12 +24,21 @@ namespace fidl {
 // such, it is always accompanied with a |status| value. The documentation below
 // describes precise semantics of the |status| under different reasons.
 //
-// TODO(fxbug.dev/75702): Consider encapsulating this enum behind more
-// ergonomic APIs that better matches the use cases around errors.
+// While it is possible to write a switch-case on the |Reason| enum, note that
+// some enum members may have subtle semantics, and new reasons may be
+// introduced over time, hence always write a `default:` case. Furthermore,
+// consider whether per-reason special casing is really needed, and consider one
+// of the following instead:
+//
+// - Whether the `.ok()` and `is_peer_closed()` etc. accessors in
+//   |fidl::UnbindInfo| are sufficient.
+// - Whether the error may be propagated outwards and eventually logged at the
+//   top level.
 enum class Reason {
   // The value zero is reserved as a sentinel value that indicates an
-  // uninitialized reason; it will never be returned to user code. So we don't
-  // expose it here.
+  // uninitialized reason; it will never be returned to user code.
+  // NOLINTNEXTLINE
+  __DoNotUse [[deprecated("Add a `default:` case in switch statements")]] = 0,
 
   // The user invoked `Unbind()`.
   //
@@ -217,6 +226,27 @@ class Result {
     return reason_;
   }
 
+  // Returns if the operation failed because the peer endpoint was closed.
+  //
+  // If this error happens on the client side and an epitaph was received,
+  // |status| contains the value of the epitaph.
+  //
+  // This error is of interest since some protocol users may consider the peer
+  // going away to be part of its normal operation, while others might not.
+  bool is_peer_closed() const { return reason_ == Reason::kPeerClosed; }
+
+  // Returns if the operation failed because the async dispatcher is shutting
+  // down.
+  bool is_dispatcher_shutdown() const {
+    return reason_ == fidl::Reason::kDispatcherError && status() == ZX_ERR_CANCELED;
+  }
+
+  // Returns if the operation failed because it was canceled (i.e. the user or
+  // another unrelated error tore down the binding in the meantime).
+  bool is_canceled() const {
+    return reason_ == fidl::Reason::kUnbind && status_ == ZX_ERR_CANCELED;
+  }
+
   // Renders a full description of the success or error.
   //
   // It is more specific than |reason| alone e.g. if an encoding error was
@@ -387,9 +417,9 @@ class UnbindInfo : private Result {
   // unable to take a string or output stream.
   using Result::lossy_description;
 
-  // Returns true iff the unbinding was part of normal operation
-  // (i.e. unbinding/closing that is explicitly initiated by the user),
-  // as opposed to in response of an error/peer closed.
+  // Returns true iff the unbinding was part of normal operation:
+  // - The user called Unbind/Close on the server side.
+  // - A client observed the peer endpoint was closed with a `ZX_OK` epitaph.
   [[nodiscard]] bool ok() const {
     switch (reason()) {
       case internal::kUninitializedReason:
@@ -404,6 +434,24 @@ class UnbindInfo : private Result {
         return false;
     }
   }
+
+  // Returns if the transport was unbound because the peer endpoint was closed.
+  //
+  // This error is of interest since some protocol users may consider the peer
+  // going away to be part of its normal operation, while others might not.
+  using Result::is_peer_closed;
+
+  // Returns if the transport was unbound because the async dispatcher is
+  // shutting down.
+  using Result::is_dispatcher_shutdown;
+
+  // Returns if the user invoked `Close(epitaph)` on a |fidl::ServerBindingRef| or
+  // completer and the epitaph was sent.
+  //
+  // This case is only observable from the server side.
+  //
+  // |status| is the result of sending the epitaph.
+  bool did_send_epitaph() const { return reason() == Reason::kClose; }
 
   // Reinterprets the |UnbindInfo| as the cause of an operation failure.
   fidl::Result ToError() const { return Result(*this); }

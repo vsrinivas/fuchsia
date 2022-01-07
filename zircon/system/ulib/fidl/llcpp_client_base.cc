@@ -91,6 +91,10 @@ void ClientBase::ReleaseResponseContexts(fidl::UnbindInfo info) {
         // These errors apply to all calls.
         context->OnError(info.ToError());
         break;
+      default:
+        // Should not reach here, but there is no compile-time approach to
+        // guarantee it.
+        ZX_PANIC("Unknown reason %d", static_cast<int>(info.reason()));
     }
   }
 }
