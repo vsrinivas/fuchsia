@@ -40,25 +40,25 @@ using fuchsia::ui::composition::OnNextFrameBeginValues;
 // |flatland| is a Flatland object constructed with the MockFlatlandPresenter owned by the
 // FlatlandManagerTest harness. |session_id| is the SessionId for |flatland|. |expect_success|
 // should be false if the call to Present() is expected to trigger an error.
-#define PRESENT(flatland, session_id, expect_success)                                  \
-  {                                                                                    \
-    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);         \
-    if (expect_success) {                                                              \
-      EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));          \
-      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));       \
-    }                                                                                  \
-    fuchsia::ui::composition::PresentArgs present_args;                                \
-    present_args.set_requested_presentation_time(0);                                   \
-    present_args.set_acquire_fences({});                                               \
-    present_args.set_release_fences({});                                               \
-    present_args.set_unsquashable(false);                                              \
-    flatland->Present(std::move(present_args));                                        \
-    /* If expecting success, wait for the worker thread to process the request. */     \
-    if (expect_success) {                                                              \
-      EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this, session_id, num_pending_sessions] { \
-        return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;         \
-      }));                                                                             \
-    }                                                                                  \
+#define PRESENT(flatland, session_id, expect_success)                              \
+  {                                                                                \
+    const auto num_pending_sessions = GetNumPendingSessionUpdates(session_id);     \
+    if (expect_success) {                                                          \
+      EXPECT_CALL(*mock_flatland_presenter_, RegisterPresent(session_id, _));      \
+      EXPECT_CALL(*mock_flatland_presenter_, ScheduleUpdateForSession(_, _, _));   \
+    }                                                                              \
+    fuchsia::ui::composition::PresentArgs present_args;                            \
+    present_args.set_requested_presentation_time(0);                               \
+    present_args.set_acquire_fences({});                                           \
+    present_args.set_release_fences({});                                           \
+    present_args.set_unsquashable(false);                                          \
+    flatland->Present(std::move(present_args));                                    \
+    /* If expecting success, wait for the worker thread to process the request. */ \
+    if (expect_success) {                                                          \
+      RunLoopUntil([this, session_id, num_pending_sessions] {                      \
+        return GetNumPendingSessionUpdates(session_id) > num_pending_sessions;     \
+      });                                                                          \
+    }                                                                              \
   }
 
 namespace {
@@ -152,7 +152,7 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     // which depends on the worker threads receiving "peer closed" for the clients created in
     // the tests.
     if (manager_) {
-      EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return manager_->GetSessionCount() == 0; }));
+      RunLoopUntil([this] { return manager_->GetSessionCount() == 0; });
       EXPECT_EQ(removed_sessions_.size(), session_count);
     }
 
@@ -252,14 +252,12 @@ TEST_F(FlatlandManagerTest, CreateViewportedFlatlands) {
 
     RunLoopUntilIdle();
     EXPECT_EQ(manager_->GetSessionCount(), 2ul);
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [this]() { return !link_system_->GetResolvedTopologyLinks().empty(); }));
+    RunLoopUntil([this] { return !link_system_->GetResolvedTopologyLinks().empty(); });
 
     EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(_));
   }
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this]() { return link_system_->GetResolvedTopologyLinks().empty(); }));
+  RunLoopUntil([this] { return link_system_->GetResolvedTopologyLinks().empty(); });
 }
 
 TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
@@ -277,7 +275,7 @@ TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
   }
 
   // The session should show up in the set of removed sessions.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return manager_->GetSessionCount() == 0; }));
+  RunLoopUntil([this] { return manager_->GetSessionCount() == 0; });
 
   EXPECT_EQ(removed_sessions_.size(), 1ul);
   EXPECT_TRUE(removed_sessions_.count(id));
@@ -301,8 +299,8 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   EXPECT_TRUE(removed_sessions_.count(id));
 
   // Wait until unbound.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }, zx::sec(10),
-                                        zx::msec(100)));
+  RunLoopUntil([&flatland] { return !flatland.is_bound(); },
+               /* step duration */ zx::msec(100));
 }
 
 TEST_F(FlatlandManagerTest, FirstPresentReturnsMaxPresentCredits) {
@@ -336,7 +334,7 @@ TEST_F(FlatlandManagerTest, FirstPresentReturnsMaxPresentCredits) {
   EXPECT_EQ(snapshot.size(), 1u);
   EXPECT_TRUE(snapshot.count(id));
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
+  RunLoopUntil([&returned_tokens] { return returned_tokens != 0; });
   EXPECT_EQ(returned_tokens, scheduling::FrameScheduler::kMaxPresentsInFlight);
   EXPECT_EQ(GetNumPendingSessionUpdates(id), 0ul);
 }
@@ -371,10 +369,10 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentCredits) {
     manager_->UpdateSessions({{id1, next_present_id1}, {id2, next_present_id2}}, /*trace_id=*/0);
     EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
     manager_->OnCpuWorkDone();
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] {
+    RunLoopUntil([&] {
       return returned_tokens1 == scheduling::FrameScheduler::kMaxPresentsInFlight &&
              returned_tokens2 == scheduling::FrameScheduler::kMaxPresentsInFlight;
-    }));
+    });
     EXPECT_EQ(GetNumPendingSessionUpdates(id1), 0ul);
     EXPECT_EQ(GetNumPendingSessionUpdates(id2), 0ul);
     // Now forget about the returned tokens.
@@ -400,7 +398,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentCredits) {
   EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
   manager_->OnCpuWorkDone();
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens1]() { return returned_tokens1 != 0; }));
+  RunLoopUntil([&returned_tokens1] { return returned_tokens1 != 0; });
 
   EXPECT_EQ(returned_tokens1, 1u);
   EXPECT_EQ(returned_tokens2, 0u);
@@ -425,7 +423,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentCredits) {
   EXPECT_TRUE(snapshot.count(id1));
   EXPECT_TRUE(snapshot.count(id2));
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens2]() { return returned_tokens2 != 0; }));
+  RunLoopUntil([&returned_tokens2] { return returned_tokens2 != 0; });
 
   EXPECT_EQ(returned_tokens1, 0u);
   EXPECT_EQ(returned_tokens2, 2u);
@@ -454,8 +452,8 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentCredi
     manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
     EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
     manager_->OnCpuWorkDone();
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return returned_tokens == scheduling::FrameScheduler::kMaxPresentsInFlight; }));
+    RunLoopUntil(
+        [&] { return returned_tokens == scheduling::FrameScheduler::kMaxPresentsInFlight; });
     EXPECT_EQ(GetNumPendingSessionUpdates(id), 0ul);
     returned_tokens = 0;
   }
@@ -482,7 +480,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentCredi
   EXPECT_EQ(snapshot.size(), 1u);
   EXPECT_TRUE(snapshot.count(id));
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
+  RunLoopUntil([&returned_tokens] { return returned_tokens != 0; });
 
   EXPECT_EQ(returned_tokens, 2u);
 
@@ -509,7 +507,7 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // The instance will eventually be unbound, but it takes a pair of thread hops to complete since
   // the destroy_instance_function() posts a task from the worker to the main and that task
   // ultimately posts the destruction back onto the worker.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
+  RunLoopUntil([&flatland] { return !flatland.is_bound(); });
   EXPECT_EQ(error_returned, FlatlandError::NO_PRESENTS_REMAINING);
 }
 
@@ -530,7 +528,7 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   // The instance will eventually be unbound, but it takes a pair of thread hops to complete since
   // the destroy_instance_function() posts a task from the worker to the main and that task
   // ultimately posts the destruction back onto the worker.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
+  RunLoopUntil([&flatland] { return !flatland.is_bound(); });
   EXPECT_EQ(error_returned, FlatlandError::BAD_OPERATION);
 }
 
@@ -551,8 +549,8 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
     manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
     EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
     manager_->OnCpuWorkDone();
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-        [&] { return tokens_remaining == scheduling::FrameScheduler::kMaxPresentsInFlight; }));
+    RunLoopUntil(
+        [&] { return tokens_remaining == scheduling::FrameScheduler::kMaxPresentsInFlight; });
   }
 
   // Present until no tokens remain.
@@ -569,7 +567,7 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
   EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
   manager_->OnCpuWorkDone();
 
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining != 0; }));
+  RunLoopUntil([&tokens_remaining] { return tokens_remaining != 0; });
 
   // Present once more which should succeed.
   PRESENT(flatland, id, true);
@@ -608,10 +606,10 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
     manager_->UpdateSessions({{id1, next_present_id1}, {id2, next_present_id2}}, /*trace_id=*/0);
     EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
     manager_->OnCpuWorkDone();
-    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] {
+    RunLoopUntil([&] {
       return returned_tokens1 == scheduling::FrameScheduler::kMaxPresentsInFlight &&
              returned_tokens2 == scheduling::FrameScheduler::kMaxPresentsInFlight;
-    }));
+    });
   }
 
   // Present both instances twice, but don't update sessions.
@@ -637,7 +635,7 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   manager_->OnFramePresented(latch_times, timestamps);
 
   // Wait until the event has fired.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&info1]() { return info1.has_value(); }));
+  RunLoopUntil([&info1] { return info1.has_value(); });
 
   // Verify that info1 contains the expected data.
   EXPECT_EQ(zx::time(info1->actual_presentation_time), timestamps.presented_time);
@@ -670,8 +668,8 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   manager_->OnFramePresented(latch_times, timestamps);
 
   // Wait until both events have fired.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&info1]() { return info1.has_value(); }));
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&info2]() { return info2.has_value(); }));
+  RunLoopUntil([&info1] { return info1.has_value(); });
+  RunLoopUntil([&info2] { return info2.has_value(); });
 
   // Verify that both infos contain the expected data.
   EXPECT_EQ(zx::time(info1->actual_presentation_time), timestamps.presented_time);

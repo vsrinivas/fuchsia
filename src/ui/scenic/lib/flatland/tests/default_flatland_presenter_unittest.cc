@@ -438,8 +438,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   // sessions have posted their GetFuturePresentationTimes() messages, leading the test to deadlock.
   //
   // First ensure all t threads have posted all their tasks on the main dispatcher.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [&sessions_posted_all_tasks] { return sessions_posted_all_tasks == kNumSessions; }));
+  RunLoopUntil([&sessions_posted_all_tasks] { return sessions_posted_all_tasks == kNumSessions; });
 
   // Then, ensure the main dispatcher can reply to all the tasks, and posts its replies.
   RunLoopUntilIdle();
