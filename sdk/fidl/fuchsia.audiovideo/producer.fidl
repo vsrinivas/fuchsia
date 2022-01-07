@@ -46,7 +46,7 @@ protocol Producer {
         changes vector<ProducerStreamChange>:MAX_STREAM_CHANGES;
     });
 
-    /// Binds to the specified stream.
+    /// Binds to the specified stream requesting the original compression type.
     ///
     /// + request `stream_id` id of the stream to which to bind. If `stream_id` doesn't specify a
     ///   valid stream, the `producer_stream_server_end` is closed by the service with epitaph
@@ -57,6 +57,32 @@ protocol Producer {
         stream_id StreamId;
         producer_stream_server_end server_end:ProducerStream;
     });
+
+    /// Binds to the specified stream requesting the specified compression type.
+    ///
+    /// + request `stream_id` id of the stream to which to bind. If `stream_id` doesn't specify a
+    ///   valid stream, the `producer_stream_server_end` is closed by the service with epitaph
+    ///   ZX_ERR_INVALID_ARGS.
+    /// + request `compression_type` the desired compression type. This value may be the type of
+    ///   `original_compression` from the `ProducerStreamInfo` for this stream, any of the
+    ///   the `available_compression_types' or null if `uncompressed_supported` is true for this
+    ///   stream.
+    /// + request `producer_stream_server_end` server end of the `ProducerStream` channel used to
+    ///   commnicate with the stream.
+    /// - response `format` the format of the stream with the specified compression type applied.
+    ///   If `compression_type` is the type of `original_compression` from the `ProducerStreamInfo`,
+    ///   this value will be identical to `original_format`.
+    /// - response `compression` the compression applied to the stream.
+    ///   If `compression_type` is the type of `original_compression` from the `ProducerStreamInfo`,
+    ///   this value will be identical to `original_compression`.
+    BindStreamWithCompression(resource struct {
+        stream_id StreamId;
+        compression_type fuchsia.mediastreams.CompressionType:optional;
+        producer_stream_server_end server_end:ProducerStream;
+    }) -> (struct {
+        format fuchsia.mediastreams.MediaFormat;
+        compression fuchsia.mediastreams.Compression:optional;
+    }) error fuchsia.media2.ConnectionError;
 };
 
 /// Status of a `Producer`.
@@ -95,25 +121,40 @@ type ProducerStreamChange = flexible union {
     3: removed StreamId;
 };
 
+const MAX_COMPRESSION_TYPES uint32 = 256;
+
 /// Describes a stream exposed by a `Producer`.
-type ProducerStreamInfo = struct {
-    /// The stream identifier.
-    id StreamId;
+type ProducerStreamInfo = table {
+    /// The stream identifier. This value is always set by the producer.
+    1: id StreamId;
 
-    /// The format of the stream.
-    format fuchsia.mediastreams.MediaFormat;
+    /// The format of the unconverted stream. This value is always set by the producer.
+    2: original_format fuchsia.mediastreams.MediaFormat;
 
-    /// The compression applied to the stream.
-    compression fuchsia.mediastreams.Compression:optional;
+    /// The compression applied to the unconverted stream. If this value is absent, the stream is
+    /// uncompressed.
+    3: original_compression fuchsia.mediastreams.Compression;
 
-    /// The encryption applied to the stream.
-    encryption fuchsia.mediastreams.Encryption:optional;
+    /// The encryption applied to the undecrypted stream. If this value is absent, the stream is
+    /// unencrypted.
+    4: encryption fuchsia.mediastreams.Encryption;
 
-    /// The timeline of the stream.
-    timestamp_units fuchsia.media2.PacketTimestampUnits;
+    /// The timeline of the stream. If this value is absent, timestamp units are not defined for
+    /// the stream.
+    5: timestamp_units fuchsia.media2.PacketTimestampUnits;
 
-    /// Metadata regarding this stream.
-    metadata Metadata:optional;
+    /// Metadata regarding this stream. If this value is absent, no metadata is associated with the
+    /// stream.
+    6: metadata Metadata;
+
+    /// The compression types available as alternatives to `original_compression`. If this value is
+    /// absent, no alternative compression types are available.
+    7: available_compression_types
+            vector<fuchsia.mediastreams.CompressionType>:MAX_COMPRESSION_TYPES;
+
+    // Whether an uncompressed stream is available as an alternative to `original_compression`. If
+    // this value is absent, an uncompressed stream is not available as an alternative.
+    8: uncompressed_supported bool;
 };
 
 /// A stream exposed by a `Producer`.
@@ -124,21 +165,17 @@ type ProducerStreamInfo = struct {
 /// `ZX_ERR_UNAVAILABLE` if a `StreamSink` was connected, then it will close the `ProducerStream`
 /// channel with an epitaph of `ZX_ERR_UNAVAILABLE`.
 protocol ProducerStream {
-    /// Connects a stream sink for the stream with the indicate buffer collection. Multiple stream
+    /// Connects a stream sink for the stream with the indicated buffer collection. Multiple stream
     /// sinks may be used sequentially for a given producer stream. This method responds when the
     /// connection is ready or the connect attempt fails.
     /// + request `buffer_collection_token` identifies the logical buffer collection to be used for
     ///   the new connection.
-    /// + request `compressed` indicates whether the produced stream should be of the original
-    ///   compressed format (true) or decoded (false). If the original format is uncompressed, this
-    ///   parameter is ignored.
+    /// + request `stream_sink` the client end of the `StreamSink` channel for this connection.
     Connect(resource struct {
         buffer_collection_token zx.handle:EVENTPAIR;
-        compressed bool;
         stream_sink client_end:fuchsia.media2.StreamSink;
     }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
-    // TODO: Another connect call that trans/encodes into another compression type?
     // TODO: How do we handle decryption?
 
     /// Disconnects the output stream.
