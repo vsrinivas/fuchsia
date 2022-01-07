@@ -8,13 +8,13 @@ using fuchsia.media2;
 using fuchsia.mediastreams;
 using zx;
 
-/// Represents an audio capturer.
+/// Represents an audio producer.
 @discoverable
-protocol Capturer {
+protocol Producer {
     compose fuchsia.media2.ActiveProducer;
     compose fuchsia.media2.ActiveProducerStream;
 
-    /// Connects a stream sink for the capturer with the indicate properties.
+    /// Connects a stream sink for the producer with the indicated properties.
     ///
     /// + request `buffer_collection_token` a participant token for the buffer collection to be
     ///   used for this connection.
@@ -23,7 +23,7 @@ protocol Capturer {
     /// + request `stream_sink` the client end of the `StreamSink` channel for this connection.
     /// * error reason for connection failiure.
     ///
-    /// Multiple stream sinks may be used sequentially for a given capturer. This method responds
+    /// Multiple stream sinks may be used sequentially for a given consumer. This method responds
     /// when the connection is ready or the connect attempt fails.
     ConnectOutputStream(resource struct {
         buffer_collection_token zx.handle:EVENTPAIR;

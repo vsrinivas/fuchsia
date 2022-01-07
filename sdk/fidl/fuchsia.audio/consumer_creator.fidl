@@ -1,0 +1,62 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio;
+
+// Note: These definitions are a temporary part of the vnext prototype. The current plan is to
+// provide no product-generic access to audio rendering capability.
+// TODO(dalesat): remove/update
+
+/// Used to create a local audio consumer with conversion capabilities.
+@discoverable
+protocol LocalConsumerCreator {
+    /// Creates a local audio consumer with conversion capabilities.
+    ///
+    /// + request `usage` the intended usage of the consumer.
+    /// + request `consumer_server_end` the server end of the `Consumer` channel connecting the
+    //    client to the consumer.
+    CreateLocalConsumer(resource struct {
+        usage ConsumerUsage;
+        consumer_server_end server_end:Consumer;
+    });
+};
+
+/// Used to create a local audio consumer with no conversion capabilities (renders uncompressed
+/// streams only).
+@discoverable
+protocol BasicLocalConsumerCreator {
+    /// Creates a basic audio local consumer.
+    ///
+    /// + request `usage` the intended usage of the consumer.
+    /// + request `consumer_server_end` the server end of the `Consumer` channel connecting the
+    //    client to the consumer.
+    CreateBasicLocalConsumer(resource struct {
+        usage ConsumerUsage;
+        consumer_server_end server_end:Consumer;
+    });
+};
+
+/// Usage annotating the purpose of an audio stream.
+type ConsumerUsage = strict enum {
+    /// Stream is intended to be used for ambient or background sound. Streams
+    /// that can be interrupted without consequence should use this.
+    BACKGROUND = 0;
+
+    /// Stream is intended to be used for normal functionality. Streams that
+    /// are part of normal functionality should use this.
+    MEDIA = 1;
+
+    /// Stream is intended to interrupt any ongoing function of the device.
+    /// Streams that are used for interruptions like notifications should use
+    /// this.
+    INTERRUPTION = 2;
+
+    /// Stream is for interaction with a system agent.  This should be used
+    /// in response to a user initiated trigger.
+    SYSTEM_AGENT = 3;
+
+    /// Stream is intended to be used for some form of real time user to user
+    /// communication. Voice/Video chat should use this.
+    COMMUNICATION = 4;
+};

@@ -6,9 +6,10 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.audio") {
   sources = [
-    "capturer.fidl",
+    "consumer.fidl",
+    "consumer_creator.fidl",
     "decoder.fidl",
-    "renderer.fidl",
+    "producer.fidl",
   ]
 
   public_deps = [
