@@ -72,11 +72,14 @@ class ObserverRegistryIntegrationTest : public gtest::TestWithEnvironmentFixture
 };
 
 TEST_F(ObserverRegistryIntegrationTest, RegistryProtocolConnectedSuccess) {
+  FX_LOGS(INFO) << "RegistryProtocolConnectedSuccess test started";
   bool result = false;
   fuchsia::ui::observation::geometry::ProviderHandle listener_handle;
   auto listener_request = listener_handle.NewRequest();
-  observer_registry_ptr_->RegisterGlobalGeometryProvider(std::move(listener_request),
-                                                         [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(std::move(listener_request), [&result] {
+    FX_LOGS(INFO) << "Observer registry callback executed";
+    result = true;
+  });
   RunLoopUntil([&result] { return result; });
   EXPECT_TRUE(result);
 }

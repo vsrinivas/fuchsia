@@ -13,6 +13,8 @@ namespace view_tree {
 void Registry::RegisterGlobalGeometryProvider(
     fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> request,
     Registry::RegisterGlobalGeometryProviderCallback callback) {
+  FX_LOGS(INFO) << "Entered Observer registry's RegisterGlobalGeometryProvider";
+
   // TODO(fxbug.dev/85238): Complete this method.
   callback();
 }
