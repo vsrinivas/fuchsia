@@ -110,7 +110,7 @@ From //build/security.gni:133
 
 **Current value (from the default):** `"DEPRECATED"`
 
-From //build/images/vbmeta.gni:50
+From //build/images/vbmeta.gni:69
 
 ### avb_atx_metadata
 AVB metadata which will be used to validate public key
@@ -337,6 +337,9 @@ by the board definition rather than the product definition.
 From //build/board.gni:17
 
 ### board_extra_vbmeta_descriptors
+DEPRECATED: Remove when no boards set a value for this.
+Use extra_vbmeta_descriptors instead.
+
 Board level extra vbmeta descriptors to be combined into the top-level
 vbmeta struct.
 
@@ -363,14 +366,14 @@ Note: These files cannot contain any comments, and must strictly conform to the
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:46
+From //build/images/vbmeta.gni:49
 
 ### board_extra_vbmeta_images
 DEPRECATED:  Remove when no boards set a value for these.
 
 **Current value (from the default):** `[]`
 
-From //build/images/vbmeta.gni:49
+From //build/images/vbmeta.gni:68
 
 ### board_fastboot_unlock_credentials
 A list of paths to the unlock credentials file necessary to unlock this
@@ -417,7 +420,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support"]`
+**Current value for `target_cpu = "arm64"`:** `["//src/hwinfo:default_board_config", "//src/power/thermd", "//src/power/thermd:config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader"]`
 
 From //boards/arm64.gni:31
 
@@ -425,7 +428,7 @@ From //boards/arm64.gni:31
 
 From //build/board.gni:21
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/devices/sysmem/bin/sysmem_connector", "//src/graphics/bin/vulkan_loader", "//src/hwinfo:default_board_config", "//src/graphics/drivers/intel-gen/icd:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan-config"]`
 
 From //boards/common/x64-common.gni:78
 
@@ -627,12 +630,6 @@ of the most recent update.
 **Current value (from the default):** `""`
 
 From //build/info/info.gni:16
-
-### build_libvulkan_goldfish
-
-**Current value (from the default):** `""`
-
-From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:13
 
 ### build_libvulkan_img_rgx
 Targets that will be built as IMG vulkan ICDS.
@@ -903,19 +900,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/fb1282c0d18177efac375f45ec7ae92ee6de2951/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/baed0e4639edf5c3008e901acb57bb56a4b2ffa4/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/fb1282c0d18177efac375f45ec7ae92ee6de2951/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/baed0e4639edf5c3008e901acb57bb56a4b2ffa4/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/fb1282c0d18177efac375f45ec7ae92ee6de2951/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/baed0e4639edf5c3008e901acb57bb56a4b2ffa4/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1301,6 +1298,26 @@ This is just added to [`known_variants`](#known_variants).
 **Current value (from the default):** `[]`
 
 From //build/config/BUILDCONFIG.gn:1403
+
+### extra_vbmeta_descriptors
+Additional VBMeta Descriptors to add to the vbmeta image during assembly.
+This mimics `board_extra_vbmeta_descriptors` except that this is a list of
+GN dictionaries instead of a list of files.
+
+To add a descriptor, include GN code such as:
+
+```
+extra_vbmeta_descriptors = [{
+  name = "zircon"         # name of the partition
+  size = 12345            # size of the partition in bytes
+  flags = 1               # custom vbmeta flags to add
+  min_avb_version = "1.1" # minimum avb version
+}]
+```
+
+**Current value (from the default):** `false`
+
+From //build/images/vbmeta.gni:65
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2378,7 +2395,7 @@ Maximum allowable size for fuchsia.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:38
+From //boards/arm64.gni:39
 
 **Overridden from the default:** `0`
 
@@ -2401,7 +2418,7 @@ Maximum allowable size for zedboot.zbi
 
 **Current value for `target_cpu = "arm64"`:** `16777216`
 
-From //boards/arm64.gni:39
+From //boards/arm64.gni:40
 
 **Overridden from the default:** `0`
 
@@ -2490,13 +2507,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/461b416dbe5f40a060ee08764b4986a949da6e6e/build/platform.gni#31)
+From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/6562d2d0b2a86026a0c8bfc89d95c0a547ed9e5e/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/461b416dbe5f40a060ee08764b4986a949da6e6e/build/platform.gni#30)
+From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/6562d2d0b2a86026a0c8bfc89d95c0a547ed9e5e/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -4487,6 +4504,12 @@ TODO(fxbug.dev/87237): move this to boards.
 From //build/config/arm.gni:9
 
 ## `target_cpu = "x64"`
+
+### build_libvulkan_goldfish
+
+**Current value (from the default):** `"//third_party/android/device/generic/goldfish-opengl:libvulkan_goldfish"`
+
+From //src/graphics/lib/goldfish-vulkan/gnbuild/BUILD.gn:11
 
 ### deprecated_x86_legacy_boot_protocol
 **TODO(fxbug.dev/32255): This is a temporary switch that will be removed.**
