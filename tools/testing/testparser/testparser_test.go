@@ -7,9 +7,10 @@ package testparser
 import (
 	"bytes"
 	"encoding/json"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"testing"
 )
 
 func compactJson(jsonBytes []byte) []byte {
@@ -939,6 +940,75 @@ ok 61 fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/logs_integratio
 			Format:      "Rust",
 		},
 	}
+	testCaseCmp(t, stdout, want)
+}
+
+func TestTRFLegacyTest(t *testing.T) {
+	stdout := `
+Running test 'fuchsia-pkg://fuchsia.com/vkreadback#meta/vkreadback.cm'
+[RUNNING]	legacy_test
+[stdout - legacy_test]
+[==========] Running 5 tests from 1 test suite.
+[stdout - legacy_test]
+[----------] Global test environment set-up.
+[stdout - legacy_test]
+[----------] 5 tests from Vulkan
+[stdout - legacy_test]
+[ RUN      ] Vulkan.Readback
+[stdout - legacy_test]
+****** Test Failed! 4096 mismatches
+[stdout - legacy_test]
+../../src/graphics/tests/vkreadback/main.cc:33: Failure
+[stdout - legacy_test]
+Value of: test.Readback()
+[stdout - legacy_test]
+	Actual: false
+[stdout - legacy_test]
+Expected: true
+[stdout - legacy_test]
+[  FAILED  ] Vulkan.Readback (132 ms)
+[stdout - legacy_test]
+[ RUN      ] Vulkan.ManyReadback
+[stderr - legacy_test]
+Clear Color Value Mismatch at index 0 - expected 0xbf8000ff, got 0xabababab
+[stderr - legacy_test]
+Clear Color Value Mismatch at index 1 - expected 0xbf8000ff, got 0xabababab
+[stderr - legacy_test]
+Clear Color Value Mismatch at index 2 - expected 0xbf8000ff, got 0xabababab
+[stderr - legacy_test]
+Clear Color Value Mismatch at index 3 - expected 0xbf8000ff, got 0xabababab
+[stdout - legacy_test]
+****** Test Failed! 4096 mismatches
+[stdout - legacy_test]
+../../src/graphics/tests/vkreadback/main.cc:45: Failure
+[stdout - legacy_test]
+Value of: test->Readback()
+[stdout - legacy_test]
+  Actual: false
+[stdout - legacy_test]
+Expected: true
+[stdout - legacy_test]
+[  FAILED  ] Vulkan.ManyReadback (9078 ms)
+[stdout - legacy_test]
+[ RUN      ] Vulkan.ReadbackLoopWithFenceWaitThread
+[stderr - legacy_test]
+Clear Color Value Mismatch at index 0 - expected 0xbf8000ff, got 0xabababab
+[stderr - legacy_test]
+Clear Color Value Mismatch at index 1 - expected 0xbf8000ff, got 0xabababab
+[stdout - legacy_test]
+****** Test Failed! 4096 mismatches
+[stdout - legacy_test]
+../../src/graphics/tests/vkreadback/main.cc:98: Failure
+[stdout - legacy_test]
+Value of: test.Readback()
+[stdout - legacy_test]
+  Actual: false
+[stdout - legacy_test]
+Expected: true
+[stdout - legacy_test]
+[  FAILED  ] Vulkan.ReadbackLoopWithFenceWaitThread (340 ms)
+`
+	want := []TestCaseResult{}
 	testCaseCmp(t, stdout, want)
 }
 

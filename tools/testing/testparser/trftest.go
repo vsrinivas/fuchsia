@@ -26,6 +26,9 @@ var (
 	//   [stderr - suite1.case2]
 	//   second line of error msg from case2
 	trfTestCaseStderr = regexp.MustCompile(`^\[stderr - (?P<test_name>.*?)\]$`)
+	// legacy_test is the generic test name given when trf is running a v1 test suite.
+	// trf treats all v1 test as legacy_test and does not format the stdout correctly.
+	trfLegacyTest = regexp.MustCompile(`\[RUNNING\]\tlegacy_test`)
 )
 
 // Parse tests run by the Test Runner Framework (TRF)
@@ -38,6 +41,10 @@ func parseTrfTest(lines [][]byte) []TestCaseResult {
 	foundStderr := false
 	for _, line := range lines {
 		line := string(line)
+		// Stop parsing if running legacy_test, see: fxbug.dev/91055
+		if trfLegacyTest.MatchString(line) {
+			return []TestCaseResult{}
+		}
 		if m := trfTestCasePattern.FindStringSubmatch(line); m != nil {
 			tc := createTRFTestCase(m[2], m[1])
 			testCases[tc.DisplayName] = tc
