@@ -72,6 +72,11 @@ async fn main_inner() -> Result<(), Error> {
 
     let mut package_index = PackageIndex::new(index_node);
 
+    // TODO(fxbug.dev/88871) Use VFS to serve the out dir because ServiceFs does not support
+    // OPEN_RIGHT_EXECUTABLE and pkgfs/{packages|versions|system} require it.
+    let mut fs = ServiceFs::new();
+    let scope = package_directory::ExecutionScope::new();
+
     let (executability_restrictions, base_packages, cache_packages) = if ignore_system_image {
         fx_log_info!("not loading system_image due to process arguments");
         inspector.root().record_string("system_image", "ignored");
@@ -79,6 +84,8 @@ async fn main_inner() -> Result<(), Error> {
     } else {
         let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
             .context("error connecting to fuchsia.boot/Arguments")?;
+        // TODO(fxbug.dev/88871) Use a blobfs client with RX rights (instead of RW) to create
+        // system_image.
         let system_image = system_image::SystemImage::new(blobfs.clone(), &boot_args)
             .await
             .context("Accessing contents of system_image package")?;
@@ -105,8 +112,19 @@ async fn main_inner() -> Result<(), Error> {
             None
         });
 
+        let executability_restrictions = system_image.load_executability_restrictions();
+
+        let (system_client, system_server) =
+            fidl::endpoints::create_proxy().context("create pkgfs/system endpoints")?;
+        system_image.serve(
+            scope.clone(),
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
+            system_server,
+        );
+        fs.dir("pkgfs").add_remote("system", system_client);
+
         (
-            system_image.load_executability_restrictions(),
+            executability_restrictions,
             Some(base_packages_res.context("loading base packages")?),
             cache_packages,
         )
@@ -126,9 +144,8 @@ async fn main_inner() -> Result<(), Error> {
         SpaceManager(fidl_fuchsia_space::ManagerRequestStream),
     }
 
-    let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;
-    fs.take_and_serve_directory_handle().context("while serving directory handle")?;
+
     fs.dir("svc")
         .add_fidl_service(IncomingService::PackageCache)
         .add_fidl_service(IncomingService::RetainedPackages)
@@ -141,6 +158,7 @@ async fn main_inner() -> Result<(), Error> {
     let base_packages = Arc::new(base_packages);
     let cache_packages = Arc::new(cache_packages);
 
+    fs.take_and_serve_directory_handle().context("while serving directory handle")?;
     let () = fs
         .for_each_concurrent(None, move |svc| {
             match svc {

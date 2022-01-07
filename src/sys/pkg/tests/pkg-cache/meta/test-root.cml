@@ -5,7 +5,7 @@
     children: [
         {
             name: "pkg_cache_integration_test",
-            url: "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-integration-test.cm",
+            url: "#meta/pkg-cache-integration-test.cm",
         },
     ],
     offer: [

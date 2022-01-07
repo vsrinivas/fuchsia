@@ -9,7 +9,9 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_cobalt::CobaltEvent,
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileMarker, FileProxy},
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, OPEN_RIGHT_READABLE,
+    },
     fidl_fuchsia_io2::RW_STAR_DIR,
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
@@ -55,6 +57,7 @@ mod cobalt;
 mod get;
 mod inspect;
 mod open;
+mod pkgfs;
 mod retained_packages;
 mod space;
 mod sync;
@@ -472,6 +475,10 @@ where
             .add_route(RouteBuilder::protocol("fuchsia.space.Manager")
                 .source(RouteEndpoint::component("pkg_cache"))
                 .targets(vec![ RouteEndpoint::AboveRoot ])
+            ).await.unwrap()
+            .add_route(RouteBuilder::directory("system", "system", fidl_fuchsia_io2::RX_STAR_DIR)
+                .source(RouteEndpoint::component("pkg_cache"))
+                .targets(vec![ RouteEndpoint::AboveRoot ])
             ).await.unwrap();
 
         let realm_instance = builder.build().await.unwrap();
@@ -614,6 +621,21 @@ impl<P: PkgFs> TestEnv<P> {
 
     pub fn client(&self) -> fidl_fuchsia_pkg_ext::cache::Client {
         fidl_fuchsia_pkg_ext::cache::Client::from_proxy(self.proxies.package_cache.clone())
+    }
+
+    /// Get a DirectoryProxy to pkg-cache's exposed /system directory.
+    /// This proxy is not stored in Proxies because the directory is not served when there is no
+    /// system_image package.
+    async fn system_dir(&self) -> fidl_fuchsia_io::DirectoryProxy {
+        // TODO(fxbug.dev/88871) Add OPEN_RIGHT_EXECUTABLE once pkg-cache uses VFS instead of
+        // ServiceFs to serve its out dir.
+        io_util::directory::open_directory(
+            self.apps.realm_instance.root.get_exposed_dir(),
+            "system",
+            OPEN_RIGHT_READABLE,
+        )
+        .await
+        .expect("open system")
     }
 }
 

@@ -15,6 +15,11 @@
                 "fuchsia.space.Manager",
             ],
         },
+        {
+            directory: "system",
+            rights: [ "rx*" ],
+            path: "/pkgfs/system",
+        },
     ],
     use: [
         {
@@ -45,6 +50,10 @@
                 "fuchsia.pkg.RetainedPackages",
                 "fuchsia.space.Manager",
             ],
+            from: "self",
+        },
+        {
+            directory: "system",
             from: "self",
         },
     ],
