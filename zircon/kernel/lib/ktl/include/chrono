@@ -23,6 +23,7 @@
 #include <__config>
 #include <__debug>
 #include <concepts>
+#include <compare>
 #include <ctime>
 #include <limits>
 #include <ratio>
