@@ -20,6 +20,9 @@ declare_args() {
   # Partition name from where image will be verified
   zvb_partition_name = "zircon"
 
+  # DEPRECATED: Remove when no boards set a value for this.
+  # Use extra_vbmeta_descriptors instead.
+  #
   # Board level extra vbmeta descriptors to be combined into the top-level
   # vbmeta struct.
   #
@@ -44,6 +47,22 @@ declare_args() {
   # Note: These files cannot contain any comments, and must strictly conform to the
   # [JSON](http://json.org) spec.
   board_extra_vbmeta_descriptors = []
+
+  # Additional VBMeta Descriptors to add to the vbmeta image during assembly.
+  # This mimics `board_extra_vbmeta_descriptors` except that this is a list of
+  # GN dictionaries instead of a list of files.
+  #
+  # To add a descriptor, include GN code such as:
+  #
+  # ```
+  # extra_vbmeta_descriptors = [{
+  #   name = "zircon"         # name of the partition
+  #   size = 12345            # size of the partition in bytes
+  #   flags = 1               # custom vbmeta flags to add
+  #   min_avb_version = "1.1" # minimum avb version
+  # }]
+  # ```
+  extra_vbmeta_descriptors = false
 
   # DEPRECATED:  Remove when no boards set a value for these.
   board_extra_vbmeta_images = []

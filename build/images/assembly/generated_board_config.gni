@@ -83,13 +83,34 @@ template("generated_board_config") {
     }
   }
 
+  # Generate the vbmeta descriptor if needed, and add it to
+  # board_extra_vbmeta_descriptors.
+  descriptor_deps = []
+  if (extra_vbmeta_descriptors != false) {
+    vbmeta_descriptor_label = "${target_name}_vbmeta_descriptor"
+    vbmeta_descriptor_file =
+        "${target_out_dir}/${target_name}_vbmeta_descriptor.json"
+    generated_file(vbmeta_descriptor_label) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      output_conversion = "json"
+      contents = extra_vbmeta_descriptors[0]
+      outputs = [ vbmeta_descriptor_file ]
+    }
+    board_extra_vbmeta_descriptors += [ vbmeta_descriptor_file ]
+    descriptor_deps += [ ":${vbmeta_descriptor_label}" ]
+  }
+
   generated_file(target_name) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
-    deps = []
+    deps = descriptor_deps
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
