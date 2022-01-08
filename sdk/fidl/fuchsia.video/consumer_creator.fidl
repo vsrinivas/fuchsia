@@ -1,0 +1,40 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.video;
+
+using fuchsia.ui.views;
+
+/// Used to create a flatland video consumer with conversion capabilities.
+@discoverable
+protocol FlatlandConsumerCreator {
+    /// Creates a flatland video consumer with conversion capabilities.
+    ///
+    /// + request `view_creation_token` the view creation token for the view. The peer
+    ///   `ViewCreationToken` is used by the parent view to create a viewport containing the
+    ///   created view.
+    /// + request `consumer_server_end` the server end of the `Consumer` channel connecting the
+    //    client to the consumer.
+    CreateFlatlandConsumer(resource struct {
+        view_creation_token fuchsia.ui.views.ViewCreationToken;
+        consumer_server_end server_end:Consumer;
+    });
+};
+
+/// Used to create a flatland video consumer with no conversion capabilities (renders uncompressed
+/// streams only).
+@discoverable
+protocol BasicFlatlandConsumerCreator {
+    /// Creates a basic flatland video consumer.
+    ///
+    /// + request `view_creation_token` the view creation token for the view. The peer
+    ///   `ViewCreationToken` is used by the parent view to create a viewport containing the
+    ///   created view.
+    /// + request `consumer_server_end` the server end of the `Consumer` channel connecting the
+    //    client to the consumer.
+    CreateBasicFlatlandConsumer(resource struct {
+        view_creation_token fuchsia.ui.views.ViewCreationToken;
+        consumer_server_end server_end:Consumer;
+    });
+};

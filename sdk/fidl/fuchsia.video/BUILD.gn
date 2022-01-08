@@ -6,8 +6,9 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.video") {
   sources = [
+    "consumer.fidl",
+    "consumer_creator.fidl",
     "decoder.fidl",
-    "renderer.fidl",
   ]
 
   public_deps = [
