@@ -71,6 +71,7 @@ extern "C" {
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/scoped_utils.h"
 
 namespace {
 
@@ -317,11 +318,8 @@ zx_status_t mac_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* tx
   packet.body = tx_packet->mac_frame_buffer + packet.header_size;
   packet.body_size = tx_packet->mac_frame_size - packet.header_size;
 
-  mtx_lock(&mvmvif->mvm->mutex);
-  zx_status_t ret = iwl_mvm_mac_tx(mvmvif, &packet);
-  mtx_unlock(&mvmvif->mvm->mutex);
-
-  return ret;
+  auto lock = std::lock_guard(mvmvif->mvm->mutex);
+  return iwl_mvm_mac_tx(mvmvif, &packet);
 }
 
 // This function will ensure the mvmvif->phy_ctxt is valid (either get a free one from pool
@@ -461,17 +459,18 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   }
   // Note that 'ap_sta_id' is unset and later will be set in iwl_mvm_add_sta().
 
-  // Copy the BSSID info.
-  mtx_lock(&mvmvif->mvm->mutex);
-  memcpy(mvmvif->bss_conf.bssid, config->bssid, ETH_ALEN);
-  memcpy(mvmvif->bssid, config->bssid, ETH_ALEN);
+  {
+    // Copy the BSSID info.
+    auto lock = std::lock_guard(mvmvif->mvm->mutex);
+    memcpy(mvmvif->bss_conf.bssid, config->bssid, ETH_ALEN);
+    memcpy(mvmvif->bssid, config->bssid, ETH_ALEN);
 
-  // Simulates the behavior of iwl_mvm_bss_info_changed_station().
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, mvmvif->bssid);
-  mtx_unlock(&mvmvif->mvm->mutex);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot set BSSID: %s\n", zx_status_get_string(ret));
-    return ret;
+    // Simulates the behavior of iwl_mvm_bss_info_changed_station().
+    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, mvmvif->bssid);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot set BSSID: %s\n", zx_status_get_string(ret));
+      return ret;
+    }
   }
 
   // Add AP into the STA table in the firmware.
@@ -494,13 +493,14 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* c
   // Note that this would add TIME_EVENT as well.
   iwl_mvm_mac_mgd_prepare_tx(mvmvif->mvm, mvmvif, IWL_MVM_TE_SESSION_PROTECTION_MAX_TIME_MS);
 
-  // Allocate a Tx queue for this station.
-  mtx_lock(&mvmvif->mvm->mutex);
-  ret = iwl_mvm_sta_alloc_queue(mvmvif->mvm, mvm_sta, IEEE80211_AC_BE, IWL_MAX_TID_COUNT);
-  mtx_unlock(&mvmvif->mvm->mutex);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot allocate queue for STA: %s\n", zx_status_get_string(ret));
-    goto exit;
+  {
+    auto lock = std::lock_guard(mvmvif->mvm->mutex);
+    // Allocate a Tx queue for this station.
+    ret = iwl_mvm_sta_alloc_queue(mvmvif->mvm, mvm_sta, IEEE80211_AC_BE, IWL_MAX_TID_COUNT);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot allocate queue for STA: %s\n", zx_status_get_string(ret));
+      goto exit;
+    }
   }
 
 exit:
@@ -610,7 +610,7 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
   if (!mvm_sta) {
     IWL_ERR(mvmvif, "sta info is not set before association.\n");
     ret = ZX_ERR_BAD_STATE;
-    goto out;
+    return ret;
   }
 
   // Change the station states step by step.
@@ -618,47 +618,45 @@ zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ct
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_NONE, IWL_STA_AUTH);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from NONE to AUTH: %s\n", zx_status_get_string(ret));
-    goto out;
+    return ret;
   }
 
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_ASSOC);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from AUTH to ASSOC: %s\n", zx_status_get_string(ret));
-    goto out;
+    return ret;
   }
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTHORIZED);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTHORIZED: %s\n", zx_status_get_string(ret));
-    goto out;
+    return ret;
   }
 
   // Tell firmware to pass multicast packets to driver.
   iwl_mvm_configure_filter(mvmvif->mvm);
 
-  mtx_lock(&mvmvif->mvm->mutex);
+  {
+    auto lock = std::lock_guard(mvmvif->mvm->mutex);
 
-  // Update the MAC context in the firmware.
-  mvmvif->bss_conf.assoc = true;
-  mvmvif->bss_conf.listen_interval = assoc_ctx->listen_interval;
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
-    goto unlock;
-  }
+    // Update the MAC context in the firmware.
+    mvmvif->bss_conf.assoc = true;
+    mvmvif->bss_conf.listen_interval = assoc_ctx->listen_interval;
+    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
+      return ret;
+    }
 
-  ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
-    goto unlock;
+    ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
+      return ret;
+    }
   }
 
   // TODO(43218): support multiple interfaces. Need to port iwl_mvm_update_quotas() in mvm/quota.c.
   // TODO(56093): support low latency in struct iwl_time_quota_data.
-
-unlock:
-  mtx_unlock(&mvmvif->mvm->mutex);
-out:
-  return ret;
+  return ZX_OK;
 }
 
 zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
@@ -690,43 +688,41 @@ zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTHORIZED, IWL_STA_ASSOC);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from AUTHORIZED to ASSOC: %s\n", zx_status_get_string(ret));
-    goto out;
+    return ret;
   }
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_ASSOC, IWL_STA_AUTH);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from ASSOC to AUTH: %s\n", zx_status_get_string(ret));
-    goto out;
+    return ret;
   }
   ret = iwl_mvm_mac_sta_state(mvmvif, mvm_sta, IWL_STA_AUTH, IWL_STA_NONE);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "cannot set state from AUTH to NONE: %s\n", zx_status_get_string(ret));
-    goto out;
+    return ret;
   }
 
-  // Tell firmware to flush all packets in the Tx queue. This must be done before we remove the STA
-  // (in the NONE->NOTEXIST transition).
-  // TODO(79799): understand why we need this.
-  mtx_lock(&mvmvif->mvm->mutex);
-  // Remove Time event (in case assoc failed)
-  ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
+  {
+    // Tell firmware to flush all packets in the Tx queue. This must be done before we remove the
+    // STA (in the NONE->NOTEXIST transition).
+    // TODO(79799): understand why we need this.
+    auto lock = std::lock_guard(mvmvif->mvm->mutex);
+    // Remove Time event (in case assoc failed)
+    ret = iwl_mvm_remove_time_event(mvmvif, &mvmvif->time_event_data);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot remove time event: %s\n", zx_status_get_string(ret));
+    }
+    iwl_mvm_flush_sta(mvmvif->mvm, mvm_sta, false, 0);
+
+    // Update the MAC context in the firmware.
+    mvmvif->bss_conf.assoc = false;
+    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
+      return ret;
+    }
   }
-  iwl_mvm_flush_sta(mvmvif->mvm, mvm_sta, false, 0);
 
-  // Update the MAC context in the firmware.
-  mvmvif->bss_conf.assoc = false;
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
-  mtx_unlock(&mvmvif->mvm->mutex);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvmvif, "cannot update MAC context in the firmware: %s\n", zx_status_get_string(ret));
-    goto out;
-  }
-
-  ret = mac_unconfigure_bss(mvmvif, mvm_sta);
-
-out:
-  return ret;
+  return mac_unconfigure_bss(mvmvif, mvm_sta);
 }
 
 // This function is to revert what mac_configure_bss() does.
@@ -738,16 +734,17 @@ zx_status_t mac_unconfigure_bss(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta* 
     goto out;
   }
 
-  // To simulate the behavior that iwl_mvm_bss_info_changed_station() would do for disassocitaion.
-  mtx_lock(&mvmvif->mvm->mutex);
-  memset(mvmvif->bss_conf.bssid, 0, ETH_ALEN);
-  memset(mvmvif->bssid, 0, ETH_ALEN);
-  // This will take the cleared BSSID from bss_conf and update the firmware.
-  ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
-  mtx_unlock(&mvmvif->mvm->mutex);
-  if (ret != ZX_OK) {
-    IWL_ERR(mvm, "failed to update MAC (clear after unassoc)\n");
-    goto out;
+  {
+    // To simulate the behavior that iwl_mvm_bss_info_changed_station() would do for disassocitaion.
+    auto lock = std::lock_guard(mvmvif->mvm->mutex);
+    memset(mvmvif->bss_conf.bssid, 0, ETH_ALEN);
+    memset(mvmvif->bssid, 0, ETH_ALEN);
+    // This will take the cleared BSSID from bss_conf and update the firmware.
+    ret = iwl_mvm_mac_ctxt_changed(mvmvif, false, NULL);
+    if (ret != ZX_OK) {
+      IWL_ERR(mvm, "failed to update MAC (clear after unassoc)\n");
+      goto out;
+    }
   }
 
   ret = remove_chanctx(mvmvif);
@@ -875,14 +872,14 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
     return ZX_ERR_INVALID_ARGS;
   }
 
-  mtx_lock(&mvm->mutex);
+  auto lock = std::lock_guard(mvm->mutex);
 
   // Find the first empty mvmvif slot.
   int idx;
   ret = iwl_mvm_find_free_mvmvif_slot(mvm, &idx);
   if (ret != ZX_OK) {
     IWL_ERR(mvm, "cannot find an empty slot for new MAC interface\n");
-    goto unlock;
+    return ret;
   }
 
   // Allocate a MAC context. This will be initialized once iwl_mvm_mac_add_interface() is called.
@@ -891,7 +888,7 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
   mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
   if (!mvmvif) {
     ret = ZX_ERR_NO_MEMORY;
-    goto unlock;
+    return ret;
   }
 
   // Set default values into the mvmvif
@@ -905,13 +902,11 @@ zx_status_t phy_create_iface(void* ctx, const wlanphy_impl_create_iface_req_t* r
   if (ret != ZX_OK) {
     IWL_ERR(ctx, "Cannot assign the new mvmvif to MVM: %s\n", zx_status_get_string(ret));
     // The allocated mvmvif instance will be freed at mac_release().
-    goto unlock;
+    return ret;
   }
-  *out_iface_id = idx;
 
-unlock:
-  mtx_unlock(&mvm->mutex);
-  return ret;
+  *out_iface_id = idx;
+  return ZX_OK;
 }
 
 // If there are failures post phy_create_iface() and before phy_start_iface()
@@ -919,11 +914,13 @@ unlock:
 void phy_create_iface_undo(struct iwl_trans* iwl_trans, uint16_t idx) {
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
 
-  // Unbind and free the mvmvif interface.
-  mtx_lock(&mvm->mutex);
-  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[idx];
-  iwl_mvm_unbind_mvmvif(mvm, idx);
-  mtx_unlock(&mvm->mutex);
+  struct iwl_mvm_vif* mvmvif = nullptr;
+  {
+    // Unbind and free the mvmvif interface.
+    auto lock = std::lock_guard(mvm->mutex);
+    mvmvif = mvm->mvmvif[idx];
+    iwl_mvm_unbind_mvmvif(mvm, idx);
+  }
 
   free(mvmvif);
 }
@@ -938,7 +935,7 @@ zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  mtx_lock(&mvm->mutex);
+  auto lock = std::lock_guard(mvm->mutex);
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[idx];
   mvmvif->zxdev = zxdev;
 
@@ -954,7 +951,7 @@ zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
       // TODO: It does not look clean to have unbind happen here.
       iwl_mvm_unbind_mvmvif(mvm, idx);
 
-      goto unlock;
+      return ret;
     }
 
     // Once MVM is started, copy the MAC address to mvmvif.
@@ -962,9 +959,7 @@ zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
     memcpy(mvmvif->addr, nvm_data->hw_addr, ETH_ALEN);
   }
 
-unlock:
-  mtx_unlock(&mvm->mutex);
-  return ret;
+  return ZX_OK;
 }
 
 // This function is working with a PHY context ('ctx') to delete a MAC interface ('id').
@@ -973,43 +968,39 @@ zx_status_t phy_destroy_iface(void* ctx, uint16_t id) {
   const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   struct iwl_mvm_vif* mvmvif = nullptr;
-  zx_status_t ret = ZX_OK;
 
   if (!mvm) {
     IWL_ERR(mvm, "cannot obtain MVM from ctx=%p while destroying interface (%d)\n", ctx, id);
     return ZX_ERR_INVALID_ARGS;
   }
 
-  mtx_lock(&mvm->mutex);
+  {
+    auto lock = std::lock_guard(mvm->mutex);
 
-  if (id >= MAX_NUM_MVMVIF) {
-    IWL_ERR(mvm, "the interface id (%d) is invalid\n", id);
-    ret = ZX_ERR_INVALID_ARGS;
-    goto unlock;
-  }
+    if (id >= MAX_NUM_MVMVIF) {
+      IWL_ERR(mvm, "the interface id (%d) is invalid\n", id);
+      return ZX_ERR_INVALID_ARGS;
+    }
 
-  mvmvif = mvm->mvmvif[id];
-  if (!mvmvif) {
-    IWL_ERR(mvm, "the interface id (%d) has no MAC context\n", id);
-    ret = ZX_ERR_NOT_FOUND;
-    goto unlock;
-  }
+    mvmvif = mvm->mvmvif[id];
+    if (!mvmvif) {
+      IWL_ERR(mvm, "the interface id (%d) has no MAC context\n", id);
+      return ZX_ERR_NOT_FOUND;
+    }
 
-  // Unlink the 'mvmvif' from the 'mvm'. The zxdev will be removed in mac_unbind(),
-  // and the memory of 'mvmvif' will be freed in mac_release().
-  iwl_mvm_unbind_mvmvif(mvm, id);
+    // Unlink the 'mvmvif' from the 'mvm'. The zxdev will be removed in mac_unbind(),
+    // and the memory of 'mvmvif' will be freed in mac_release().
+    iwl_mvm_unbind_mvmvif(mvm, id);
 
-  // the last MAC interface. stop the MVM to save power. 'vif_count' had been decreased in
-  // iwl_mvm_mac_remove_interface().
-  if (mvm->vif_count == 0) {
-    __iwl_mvm_mac_stop(mvm);
+    // the last MAC interface. stop the MVM to save power. 'vif_count' had been decreased in
+    // iwl_mvm_mac_remove_interface().
+    if (mvm->vif_count == 0) {
+      __iwl_mvm_mac_stop(mvm);
+    }
   }
 
   device_async_remove(mvmvif->zxdev);
-
-unlock:
-  mtx_unlock(&mvm->mutex);
-  return ret;
+  return ZX_OK;
 }
 
 zx_status_t phy_set_country(void* ctx, const wlanphy_country_t* country) {
