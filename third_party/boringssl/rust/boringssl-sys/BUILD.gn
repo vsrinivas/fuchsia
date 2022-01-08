@@ -15,11 +15,7 @@ rustc_library("boringssl-sys") {
     "//third_party/boringssl:crypto",
   ]
 
-  source_root =
-      "//build/secondary/third_party/boringssl/rust/boringssl-sys/src/lib.rs"
-  sources = [
-    "//build/secondary/third_party/boringssl/rust/boringssl-sys/src/lib.rs",
-  ]
+  sources = [ "src/lib.rs" ]
 
   if (current_toolchain == host_toolchain) {
     # Unspeakable kludge to get the all wrong and completely fragile

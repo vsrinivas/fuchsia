@@ -87,6 +87,8 @@ tables_generator_tests_*.txt
 
 # Third party repos.
 /third_party/*
+!/third_party/boringssl/
+/third_party/boringssl/src
 !/third_party/libpng/
 /third_party/libpng/src
 !/third_party/llvm-libc/

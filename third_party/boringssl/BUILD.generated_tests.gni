@@ -26,7 +26,7 @@ test_support_sources = [
 ]
 
 crypto_test_sources = [
-  "//build/secondary/third_party/boringssl/crypto_test_data.cc",
+  "crypto_test_data.cc",
   "src/crypto/abi_self_test.cc",
   "src/crypto/asn1/asn1_test.cc",
   "src/crypto/base64/base64_test.cc",

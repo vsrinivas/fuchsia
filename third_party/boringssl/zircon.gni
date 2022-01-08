@@ -17,7 +17,7 @@ boringssl_zircon_kernel_sources = [
 ]
 
 boringssl_zircon_system_sources = [
-  "//build/secondary/third_party/boringssl/err_data.c",
+  "err_data.c",
   "src/crypto/cipher_extra/e_aesgcmsiv.c",
   "src/crypto/cpu-aarch64-fuchsia.c",
   "src/crypto/cpu-arm.c",
