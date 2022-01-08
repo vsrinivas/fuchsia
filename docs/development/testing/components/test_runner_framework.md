@@ -308,7 +308,7 @@ given glob patterns will be executed.
 The following flags are restricted and the test fails if any are passed as
 fuchsia.test.Suite provides equivalent functionality that replaces them.
 
-- **<test_name_matcher>** - Instead use:
+- **\<test_name_matcher\>** - Instead use:
 
 ```posix-terminal
  fx test --test-filter=<glob_pattern> <test_url>
