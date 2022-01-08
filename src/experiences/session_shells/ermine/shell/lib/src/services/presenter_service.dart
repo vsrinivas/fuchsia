@@ -13,6 +13,7 @@ import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_element/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
@@ -67,8 +68,12 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
       InterfaceHandle<AnnotationController>? annotationController,
       InterfaceRequest<ViewController>? viewControllerRequest) async {
     late ViewStateImpl viewState;
-    final viewController = _ViewControllerImpl(() => onViewDismissed(viewState))
-      ..bind(viewControllerRequest);
+
+    _ViewControllerImpl? viewController;
+    if (viewControllerRequest != null) {
+      viewController = _ViewControllerImpl(() => onViewDismissed(viewState))
+        ..bind(viewControllerRequest);
+    }
 
     // Check to see if we have an id that we included in the annotation.
     final id = _getAnnotation(viewSpec.annotations, 'id') ??
@@ -88,7 +93,7 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
 
     final viewRef = viewSpec.viewRef;
     if (!_validateViewSpec(viewSpec, url)) {
-      viewController.close();
+      viewController?.close();
       throw MethodException(PresentViewError.invalidArgs);
     }
 
@@ -122,7 +127,7 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
       id: id,
       title: title!,
       url: url,
-      onClose: viewController.close,
+      onClose: viewController?.close ?? () {},
     );
     onViewPresented(viewState);
   }
@@ -164,6 +169,7 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
     if ((viewSpec.viewHolderToken == null &&
             viewSpec.viewportCreationToken == null) ||
         viewSpec.viewRef == null) {
+      log.warning('ViewSpec has null ViewportCreationToken, ViewHolderToken or ViewRef');
       if (url != null) {
         onError(url,
             'ViewSpec has null ViewportCreationToken, ViewHolderToken or ViewRef');
@@ -172,7 +178,8 @@ class _GraphicalPresenterImpl extends GraphicalPresenter {
     }
 
     if (viewSpec.viewportCreationToken != null &&
-        viewSpec.viewHolderToken != null) {
+      viewSpec.viewHolderToken != null) {
+      log.warning('ViewSpec has both ViewportCreationToken and ViewHolderToken set');
       if (url != null) {
         onError(url,
             'ViewSpec has both ViewportCreationToken and ViewHolderToken set');
