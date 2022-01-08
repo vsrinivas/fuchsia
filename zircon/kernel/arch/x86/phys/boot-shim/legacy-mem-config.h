@@ -17,19 +17,22 @@
 
 #include <efi/boot-services.h>
 
+// E820 memory table, an array of e820entry_t.
+constexpr uint32_t kLegacyZbiTypeE820Table = 0x30323845;  // E820
+
+// EFI memory map, a uint64_t entry size followed by a sequence of
+// EFI memory descriptors aligned on that entry size.
+constexpr uint32_t kLegacyZbiTypeEfiMemoryMap = 0x4d494645;  // EFIM
+
 namespace internal {
 
-// A view into a ZBI_TYPE_MEM_CONFIG table.
-struct MemConfigTable {
-  cpp20::span<const zbi_mem_range_t> table;
-};
+// A view into a ZBI_TYPE_MEM_CONFIG payload.
+using MemConfigTable = cpp20::span<const zbi_mem_range_t>;
 
-// A view into a ZBI_TYPE_E820_TABLE table.
-struct E820Table {
-  cpp20::span<const struct e820entry> table;
-};
+// A view into a kLegacyZbiTypeE820Table payload.
+using E820Table = cpp20::span<const e820entry>;
 
-// A view into a ZBI_TYPE_EFI_MEMORY_MAP table.
+// A view into a kLegacyZbiTypeEfiMemoryMap payload.
 struct EfiTable {
   size_t num_entries;
   size_t entry_size;

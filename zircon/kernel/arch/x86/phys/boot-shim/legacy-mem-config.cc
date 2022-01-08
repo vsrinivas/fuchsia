@@ -58,19 +58,17 @@ zbi_mem_range_t GetTableEntry(const internal::EfiTable& table, size_t n) {
   return internal::ToMemRange(descriptor);
 }
 
-zbi_mem_range_t GetTableEntry(const internal::E820Table& table, size_t n) {
-  return internal::ToMemRange(table.table[n]);
+zbi_mem_range_t GetTableEntry(internal::E820Table table, size_t n) {
+  return internal::ToMemRange(table[n]);
 }
 
-zbi_mem_range_t GetTableEntry(const internal::MemConfigTable& table, size_t n) {
-  return table.table[n];
-}
+zbi_mem_range_t GetTableEntry(internal::MemConfigTable table, size_t n) { return table[n]; }
 
 size_t GetTableSize(const internal::EfiTable& table) { return table.num_entries; }
 
-size_t GetTableSize(const internal::E820Table& table) { return table.table.size(); }
+size_t GetTableSize(internal::E820Table table) { return table.size(); }
 
-size_t GetTableSize(const internal::MemConfigTable& table) { return table.table.size(); }
+size_t GetTableSize(internal::MemConfigTable table) { return table.size(); }
 
 }  // namespace
 
@@ -112,7 +110,7 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t z
                                                                       zbitl::ByteView payload) {
   MemRangeTable result;
   switch (zbi_type) {
-    case ZBI_TYPE_E820_TABLE:
+    case kLegacyZbiTypeE820Table:
       if (payload.size() % sizeof(e820entry_t) != 0) {
         return fitx::error("Invalid size for E820 table");
       };
@@ -126,7 +124,7 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t z
       result.table_ = internal::MemConfigTable{zbitl::AsSpan<const zbi_mem_range_t>(payload)};
       break;
 
-    case ZBI_TYPE_EFI_MEMORY_MAP: {
+    case kLegacyZbiTypeEfiMemoryMap: {
       size_t num_entries;
       size_t entry_size;
       if (!ParseEfiPayload(payload, &num_entries, &entry_size)) {

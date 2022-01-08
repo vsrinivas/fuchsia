@@ -72,8 +72,8 @@ MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
   for (auto it = scan_zbi.begin(); it != scan_zbi.end(); ++it) {
     switch (it->header->type) {
       case ZBI_TYPE_MEM_CONFIG:
-      case ZBI_TYPE_E820_TABLE:
-      case ZBI_TYPE_EFI_MEMORY_MAP:
+      case kLegacyZbiTypeE820Table:
+      case kLegacyZbiTypeEfiMemoryMap:
         break;
       default:
         continue;

@@ -123,9 +123,7 @@ typedef struct {
     macro(ZBI_TYPE_KERNEL_DRIVER, "KERNEL_DRIVER", ".bin") \
     macro(ZBI_TYPE_ACPI_RSDP, "ACPI_RSDP", ".bin") \
     macro(ZBI_TYPE_SMBIOS, "SMBIOS", ".bin") \
-    macro(ZBI_TYPE_EFI_MEMORY_MAP, "EFI_MEMORY_MAP", ".bin") \
     macro(ZBI_TYPE_EFI_SYSTEM_TABLE, "EFI_SYSTEM_TABLE", ".bin") \
-    macro(ZBI_TYPE_E820_TABLE, "E820_TABLE", ".bin") \
     macro(ZBI_TYPE_FRAMEBUFFER, "FRAMEBUFFER", ".bin") \
     macro(ZBI_TYPE_DRV_MAC_ADDRESS, "DRV_MAC_ADDRESS", ".bin") \
     macro(ZBI_TYPE_DRV_PARTITION_MAP, "DRV_PARTITION_MAP", ".bin") \
@@ -547,15 +545,8 @@ typedef struct {
 // SMBIOS entry point, a uint64_t physical address.
 #define ZBI_TYPE_SMBIOS (0x49424d53)  // SMBI
 
-// EFI memory map, a uint64_t entry size followed by a sequence of
-// EFI memory descriptors aligned on that entry size.
-#define ZBI_TYPE_EFI_MEMORY_MAP (0x4d494645)  // EFIM
-
 // EFI system table, a uint64_t physical address.
 #define ZBI_TYPE_EFI_SYSTEM_TABLE (0x53494645)  // EFIS
-
-// E820 memory table, an array of e820entry_t.
-#define ZBI_TYPE_E820_TABLE (0x30323845)  // E820
 
 /* EFI Variable for Crash Log */
 #define ZIRCON_VENDOR_GUID                                                         \

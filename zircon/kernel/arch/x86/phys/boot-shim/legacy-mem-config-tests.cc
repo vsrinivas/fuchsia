@@ -90,7 +90,7 @@ TEST(MemRangeIterator, DefaultContainer) {
 
 TEST(MemRangeIterator, EmptyPayload) {
   // Expect nothing to be found.
-  MemRangeTable container = MemRangeTable::FromSpan(ZBI_TYPE_E820_TABLE, {}).value();
+  MemRangeTable container = MemRangeTable::FromSpan(kLegacyZbiTypeE820Table, {}).value();
   EXPECT_EQ(container.begin(), container.end());
 }
 
@@ -104,7 +104,7 @@ TEST(MemRangeIterator, EfiItem) {
                                 .PhysicalStart = 0x2000,
                                 .NumberOfPages = 1,
                             });
-  MemRangeTable container = MemRangeTable::FromSpan(ZBI_TYPE_EFI_MEMORY_MAP, payload).value();
+  MemRangeTable container = MemRangeTable::FromSpan(kLegacyZbiTypeEfiMemoryMap, payload).value();
 
   // Ensure the entries are correct.
   EXPECT_EQ(container.size(), 2u);
@@ -140,7 +140,7 @@ TEST(MemRangeIterator, E820Item) {
           .addr = 0x2000,
           .size = 0x1000,
       });
-  MemRangeTable container = MemRangeTable::FromSpan(ZBI_TYPE_E820_TABLE, payload).value();
+  MemRangeTable container = MemRangeTable::FromSpan(kLegacyZbiTypeE820Table, payload).value();
 
   // Ensure the entries are correct.
   EXPECT_EQ(container.size(), 2u);
@@ -167,7 +167,7 @@ TEST(MemRangeIterator, EfiRealData) {
   // implementation) running on QEMU.
   //
   // Collected by performing a hexdump to serial of the
-  // "ZBI_TYPE_EFI_MEMORY_MAP" ZBI entry of an EFI platform on boot.
+  // "kLegacyZbiTypeEfiMemoryMap" ZBI entry of an EFI platform on boot.
   constexpr uint8_t efi_table[] = {
       0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -302,7 +302,7 @@ TEST(MemRangeIterator, EfiRealData) {
   zbitl::ByteView payload{reinterpret_cast<const std::byte*>(efi_table), sizeof(efi_table)};
 
   // Ensure we read the correct number of entries.
-  MemRangeTable container = MemRangeTable::FromSpan(ZBI_TYPE_EFI_MEMORY_MAP, payload).value();
+  MemRangeTable container = MemRangeTable::FromSpan(kLegacyZbiTypeEfiMemoryMap, payload).value();
   std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
   ASSERT_EQ(ranges.size(), 40u);
 
