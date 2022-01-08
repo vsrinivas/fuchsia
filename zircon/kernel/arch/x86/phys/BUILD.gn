@@ -238,6 +238,11 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/lib/arch",
       ]
 
+      public_deps = [
+        # linuxboot.h has #include <lib/zircon-internal/e820.h>
+        "//zircon/system/ulib/zircon-internal:headers",
+      ]
+
       # This does `#include "linuxboot.h"` but shouldn't link this stuff in
       # (and that would create a circular dependency here anyway).  It's just a
       # private helper for the linuxboot-header.S code.
@@ -258,6 +263,7 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/phys:main",
         "//zircon/kernel/phys:symbolize",
         "//zircon/kernel/phys/lib/memalloc",
+        "//zircon/system/ulib/zircon-internal",
       ]
       public_deps = [
         ":legacy-boot",
@@ -323,6 +329,7 @@ hwreg_asm_header("linuxboot-asm") {
   visibility = [ ":linuxboot" ]
   output_name = "linuxboot-asm.h"
   sources = [ "linuxboot-asm-gen.cc" ]
+  deps = [ "//zircon/system/ulib/zircon-internal" ]
 }
 
 phys_qemu_test("paging-test") {

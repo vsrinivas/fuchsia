@@ -68,7 +68,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/boot/bootfs.h",
         "zircon/boot/crash-reason.h",
         "zircon/boot/driver-config.h",
-        "zircon/boot/e820.h",
         "zircon/boot/image.h",
         "zircon/boot/multiboot.h",
         "zircon/boot/netboot.h",

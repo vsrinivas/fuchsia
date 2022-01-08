@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
       .Macro("BOOT_PARAMS_E820_ENTRIES", offsetof(linuxboot::boot_params, e820_entries))
       .Macro("BOOT_PARAMS_E820_TABLE", offsetof(linuxboot::boot_params, e820_table))
       .Macro("SIZEOF_BOOT_PARAMS", sizeof(linuxboot::boot_params))
-      .Macro("SIZEOF_E820ENTRY", sizeof(e820entry_t))
+      .Macro("SIZEOF_E820ENTRY", sizeof(E820Entry))
       .Macro("E820_MAGIC", linuxboot::kE820Magic)
       .Macro("MAX_E820_TABLE_ENTRIES", linuxboot::kMaxE820TableEntries)
       .Main(argc, argv);

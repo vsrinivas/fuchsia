@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/boot/e820.h>
+#include <lib/zircon-internal/e820.h>
 #include <zircon/boot/image.h>
 
 #include "src/virtualization/bin/vmm/arch/x64/e820.h"
@@ -35,11 +35,11 @@ void Append(std::vector<Format>& ranges, uint64_t addr, uint64_t size, Type type
             static_cast<uint32_t>(type == Type::kRam ? ZBI_MEM_RANGE_RAM : ZBI_MEM_RANGE_RESERVED),
     });
   } else {
-    static_assert(std::is_same_v<Format, e820entry_t>, "unrecognized memory format");
-    ranges.emplace_back(e820entry_t{
+    static_assert(std::is_same_v<Format, E820Entry>, "unrecognized memory format");
+    ranges.emplace_back(E820Entry{
         .addr = addr,
         .size = size,
-        .type = static_cast<uint32_t>(type == Type::kRam ? E820_RAM : E820_RESERVED),
+        .type = type == Type::kRam ? E820Type::kRam : E820Type::kReserved,
     });
   }
 }
@@ -69,7 +69,7 @@ void Append(std::vector<Format>& ranges, size_t mem_size, const DevMem& dev_mem)
 }  // namespace
 
 E820Map::E820Map(size_t mem_size, const DevMem& dev_mem) {
-  Append<e820entry_t>(entries_, mem_size, dev_mem);
+  Append<E820Entry>(entries_, mem_size, dev_mem);
 }
 
 #ifdef __Fuchsia__

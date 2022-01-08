@@ -41,7 +41,6 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/boot/driver-config.h>
-#include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>

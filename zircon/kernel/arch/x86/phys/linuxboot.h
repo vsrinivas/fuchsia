@@ -7,9 +7,9 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_LINUXBOOT_H_
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_LINUXBOOT_H_
 
+#include <lib/zircon-internal/e820.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <zircon/boot/e820.h>
 
 // This defines some layouts and constants for the Linux/x86 Boot Protocol,
 // described in https://www.kernel.org/doc/html/latest/x86/boot.html; this
@@ -362,7 +362,7 @@ struct [[gnu::packed]] boot_params {
   setup_header hdr;
   uint8_t pad7[0x290 - 0x1f1 - sizeof(setup_header)];
   uint32_t edd_mbr_sig_buffer[kMaxEddMbrSig];
-  e820entry_t e820_table[kMaxE820TableEntries];
+  E820Entry e820_table[kMaxE820TableEntries];
   uint8_t pad8[48];
   edd_info eddbuf[kMaxEddNr];
   uint8_t pad9[276];

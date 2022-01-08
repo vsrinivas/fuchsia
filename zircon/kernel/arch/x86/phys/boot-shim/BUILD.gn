@@ -139,6 +139,9 @@ source_set("legacy-mem-config") {
 
     # legacy-mem-config.h has #include <lib/fitx/result.h>
     "//zircon/system/ulib/zxc",
+
+    # mem-config.h has #include <lib/zircon-internal/e820.h>
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   if (is_kernel) {

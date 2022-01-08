@@ -8,7 +8,7 @@
 #include <lib/fitx/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zbitl/storage-traits.h>
-#include <zircon/boot/e820.h>
+#include <lib/zircon-internal/e820.h>
 #include <zircon/boot/image.h>
 
 #include <iterator>
@@ -17,7 +17,7 @@
 
 #include <efi/boot-services.h>
 
-// E820 memory table, an array of e820entry_t.
+// E820 memory table, an array of E820Entry.
 constexpr uint32_t kLegacyZbiTypeE820Table = 0x30323845;  // E820
 
 // EFI memory map, a uint64_t entry size followed by a sequence of
@@ -30,7 +30,7 @@ namespace internal {
 using MemConfigTable = cpp20::span<const zbi_mem_range_t>;
 
 // A view into a kLegacyZbiTypeE820Table payload.
-using E820Table = cpp20::span<const e820entry>;
+using E820Table = cpp20::span<const E820Entry>;
 
 // A view into a kLegacyZbiTypeEfiMemoryMap payload.
 struct EfiTable {
@@ -39,7 +39,7 @@ struct EfiTable {
   zbitl::ByteView payload;
 };
 
-zbi_mem_range_t ToMemRange(const e820entry_t& range);
+zbi_mem_range_t ToMemRange(const E820Entry& range);
 zbi_mem_range_t ToMemRange(const efi_memory_descriptor& range);
 
 }  // namespace internal

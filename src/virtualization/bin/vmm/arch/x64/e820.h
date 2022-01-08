@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_E820_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_E820_H_
 
-#include <zircon/boot/e820.h>
+#include <lib/zircon-internal/e820.h>
 
 #include <vector>
 
@@ -29,15 +29,15 @@ class E820Map {
   E820Map(size_t mem_size, const DevMem &dev_mem);
 
   void AddReservedRegion(zx_gpaddr_t addr, size_t size) {
-    entries_.emplace_back(e820entry_t{addr, size, E820_RESERVED});
+    entries_.emplace_back(E820Entry{addr, size, E820Type::kReserved});
   }
 
   size_t size() const { return entries_.size(); }
 
-  void copy(e820entry_t *dest) { std::copy(entries_.begin(), entries_.end(), dest); }
+  void copy(E820Entry *dest) { std::copy(entries_.begin(), entries_.end(), dest); }
 
  private:
-  std::vector<e820entry_t> entries_;
+  std::vector<E820Entry> entries_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_E820_H_

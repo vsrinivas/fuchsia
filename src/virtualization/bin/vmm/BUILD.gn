@@ -118,6 +118,7 @@ source_set("lib") {
     "//src/virtualization/third_party/fdt",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zbitl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   public_deps = [

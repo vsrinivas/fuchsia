@@ -6,9 +6,9 @@
 
 #include <inttypes.h>
 #include <lib/zbitl/view.h>
+#include <lib/zircon-internal/e820.h>
 #include <stdio.h>
 #include <zircon/assert.h>
-#include <zircon/boot/e820.h>
 #include <zircon/boot/multiboot.h>
 
 #include <ktl/atomic.h>

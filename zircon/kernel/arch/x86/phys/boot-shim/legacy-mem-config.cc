@@ -4,8 +4,8 @@
 
 #include "legacy-mem-config.h"
 
+#include <lib/zircon-internal/e820.h>
 #include <zircon/assert.h>
-#include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
 #include <efi/boot-services.h>
@@ -73,12 +73,12 @@ size_t GetTableSize(internal::MemConfigTable table) { return table.size(); }
 }  // namespace
 
 namespace internal {
-zbi_mem_range_t ToMemRange(const e820entry_t& range) {
+zbi_mem_range_t ToMemRange(const E820Entry& range) {
   return zbi_mem_range_t{
       .paddr = range.addr,
       .length = range.size,
-      .type = range.type == E820_RAM ? static_cast<uint32_t>(ZBI_MEM_RANGE_RAM)
-                                     : static_cast<uint32_t>(ZBI_MEM_RANGE_RESERVED),
+      .type = range.type == E820Type::kRam ? static_cast<uint32_t>(ZBI_MEM_RANGE_RAM)
+                                           : static_cast<uint32_t>(ZBI_MEM_RANGE_RESERVED),
       .reserved = 0,
   };
 }
@@ -111,10 +111,10 @@ fitx::result<std::string_view, MemRangeTable> MemRangeTable::FromSpan(uint32_t z
   MemRangeTable result;
   switch (zbi_type) {
     case kLegacyZbiTypeE820Table:
-      if (payload.size() % sizeof(e820entry_t) != 0) {
+      if (payload.size() % sizeof(E820Entry) != 0) {
         return fitx::error("Invalid size for E820 table");
       };
-      result.table_ = internal::E820Table{zbitl::AsSpan<const e820entry_t>(payload)};
+      result.table_ = internal::E820Table{zbitl::AsSpan<const E820Entry>(payload)};
       break;
 
     case ZBI_TYPE_MEM_CONFIG:

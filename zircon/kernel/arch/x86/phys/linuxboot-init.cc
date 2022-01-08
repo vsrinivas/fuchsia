@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/zircon-internal/e820.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
 
@@ -17,17 +18,17 @@
 
 namespace {
 
-zbi_mem_range_t FromE820(const e820entry_t& in) {
+zbi_mem_range_t FromE820(const E820Entry& in) {
   zbi_mem_range_t out = {.paddr = in.addr, .length = in.size};
 
   switch (in.type) {
-    case E820_RAM:
+    case E820Type::kRam:
       out.type = ZBI_MEM_RANGE_RAM;
       break;
 
-    case E820_RESERVED:
+    case E820Type::kReserved:
     default:
-      // There are other E820_* types but none indicates usable RAM and
+      // There are other E820Type values but none indicates usable RAM and
       // none corresponds to ZBI_MEM_RANGE_PERIPHERAL.
       out.type = ZBI_MEM_RANGE_RESERVED;
       break;
@@ -42,7 +43,7 @@ zbi_mem_range_t FromE820(const e820entry_t& in) {
 // use at 24 bytes long.  So there isn't space to rewrite the data in place.
 // However, the boot_params format has a fixed table size anyway, so a table
 // in the shim's own bss can be used to store the normalized entries.
-static_assert(sizeof(zbi_mem_range_t) > sizeof(e820entry_t),
+static_assert(sizeof(zbi_mem_range_t) > sizeof(E820Entry),
               "could rewrite in place if entry sizes matched");
 
 zbi_mem_range_t gMemRangesBuffer[linuxboot::kMaxE820TableEntries];
@@ -59,7 +60,7 @@ void PopulateMemRages(const linuxboot::boot_params& bp) {
 
   // Translate the entries directly.
   size_t count = 0;
-  for (const e820entry_t& in : e820) {
+  for (const E820Entry& in : e820) {
     if (in.size > 0) {
       gMemRangesBuffer[count++] = FromE820(in);
     }

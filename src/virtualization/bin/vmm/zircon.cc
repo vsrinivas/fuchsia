@@ -11,6 +11,7 @@
 #include <lib/zbitl/error-string.h>
 #include <lib/zbitl/fd.h>
 #include <lib/zbitl/image.h>
+#include <lib/zircon-internal/e820.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/boot/driver-config.h>
-#include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 
 #include <iterator>

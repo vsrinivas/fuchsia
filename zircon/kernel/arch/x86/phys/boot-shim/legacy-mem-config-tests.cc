@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zbitl/storage-traits.h>
-#include <zircon/boot/e820.h>
+#include <lib/zircon-internal/e820.h>
 #include <zircon/boot/image.h>
 
 #include <efi/boot-services.h>
@@ -68,10 +68,10 @@ TEST(ToMemRange, EfiReservedMemory) {
 }
 
 TEST(ToMemRange, E820) {
-  auto input = e820entry_t{
+  auto input = E820Entry{
       .addr = 0x1234'abcd'ffff'0000,
       .size = 0x10'0000,
-      .type = E820_RAM,
+      .type = E820Type::kRam,
   };
   auto expected = zbi_mem_range_t{
       .paddr = 0x1234'abcd'ffff'0000,
@@ -132,11 +132,11 @@ TEST(MemRangeIterator, ZbiMemRangeItem) {
 
 TEST(MemRangeIterator, E820Item) {
   Bytes payload = JoinBytes(
-      e820entry_t{
+      E820Entry{
           .addr = 0x1000,
           .size = 0x1000,
       },
-      e820entry_t{
+      E820Entry{
           .addr = 0x2000,
           .size = 0x1000,
       });
