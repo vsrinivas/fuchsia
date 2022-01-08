@@ -45,8 +45,8 @@ int sched_yield(void);
 #ifdef _GNU_SOURCE
 void* memcpy(void* __restrict, const void* __restrict, size_t);
 int memcmp(const void*, const void*, size_t);
-void* calloc(size_t, size_t);
-void free(void*);
+void* calloc(size_t, size_t) __nothrow_fn;
+void free(void*) __nothrow_fn;
 
 typedef struct cpu_set_t {
   unsigned long __bits[128 / sizeof(long)];

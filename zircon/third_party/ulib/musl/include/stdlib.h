@@ -31,11 +31,11 @@ unsigned long long strtoull(const char* __restrict, char** __restrict, int);
 int rand(void);
 void srand(unsigned);
 
-void* malloc(size_t);
-void* calloc(size_t, size_t);
-void* realloc(void*, size_t);
-void free(void*);
-void* aligned_alloc(size_t alignment, size_t size);
+void* malloc(size_t) __nothrow_fn;
+void* calloc(size_t, size_t) __nothrow_fn;
+void* realloc(void*, size_t) __nothrow_fn;
+void free(void*) __nothrow_fn;
+void* aligned_alloc(size_t alignment, size_t size) __nothrow_fn;
 
 _Noreturn void abort(void);
 int atexit(void (*)(void));
@@ -96,7 +96,7 @@ size_t __ctype_get_mb_cur_max(void);
 #define WIFSTOPPED(s) ((short)((((s)&0xffff) * 0x10001) >> 8) > 0x7f00)
 #define WIFSIGNALED(s) (((s)&0xffff) - 1U < 0xffu)
 
-int posix_memalign(void**, size_t, size_t);
+int posix_memalign(void**, size_t, size_t) __nothrow_fn;
 int setenv(const char*, const char*, int);
 int unsetenv(const char*);
 int mkstemp(char*);
@@ -136,8 +136,8 @@ void lcong48(unsigned short[7]);
 char* mktemp(char*);
 int mkstemps(char*, int);
 int mkostemps(char*, int, int);
-void* valloc(size_t);
-void* memalign(size_t, size_t);
+void* valloc(size_t) __nothrow_fn;
+void* memalign(size_t, size_t) __nothrow_fn;
 int clearenv(void);
 #define WCOREDUMP(s) ((s)&0x80)
 #define WIFCONTINUED(s) ((s) == 0xffff)

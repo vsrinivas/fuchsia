@@ -32,4 +32,16 @@
 #define _Noreturn
 #endif
 
+#ifndef __cplusplus
+#ifdef __GNUC__
+#define __nothrow_fn __attribute__((__nothrow__))
+#else
+#define __nothrow_fn
+#endif
+#elif __cplusplus >= 201710L
+#define __nothrow_fn noexcept
+#else
+#define __nothrow_fn throw()
+#endif
+
 #endif  // SYSROOT_FEATURES_H_
