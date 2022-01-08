@@ -81,5 +81,16 @@ void SpinelFidlInterface::Process(const otRadioSpinelContext &aContext) {
   }
 }
 
+void SpinelFidlInterface::OnRcpReset(void) {
+  otPlatLog(OT_LOG_LEVEL_WARN, OT_LOG_REGION_PLATFORM, "SpinelFidlInterface::OnRcpReset()");
+}
+
+#if OPENTHREAD_SPINEL_CONFIG_RESET_CONNECTION
+otError SpinelFidlInterface::ResetConnection(void) {
+  otPlatLog(OT_LOG_LEVEL_NOTE, OT_LOG_REGION_PLATFORM, "SpinelFidlInterface::ResetConnection()");
+  return OT_ERROR_NONE;
+}
+#endif
+
 }  // namespace Fuchsia
 }  // namespace ot

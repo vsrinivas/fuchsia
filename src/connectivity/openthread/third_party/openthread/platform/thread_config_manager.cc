@@ -4,7 +4,8 @@
 
 #include "thread_config_manager.h"
 
-#include <lib/syslog/cpp/macros.h>
+#include <sstream>
+#include <string>
 
 #include "openthread-system.h"
 #include "rapidjson/stringbuffer.h"
@@ -18,20 +19,25 @@ ThreadConfigManager::ThreadConfigManager(const std::string& path) : config_store
   if (files::IsFile(config_store_path_)) {
     std::vector<uint8_t> file_contents;
     if (files::ReadFileToVector(config_store_path_, &file_contents)) {
-      FX_LOGS(INFO) << "Read the file: " << config_store_path_ << " with contents: ";
+      otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "Read the file: %s",
+                config_store_path_.c_str());
       {
         std::stringstream file_contents_combined;
         std::copy(file_contents.begin(), file_contents.end(),
                   std::ostream_iterator<char>(file_contents_combined, ""));
-        FX_LOGS(INFO) << file_contents_combined.str();
+        otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "               ...with contents: %s",
+                  file_contents_combined.str().c_str());
       }
+
     } else {
-      FX_LOGS(ERROR) << "Failed to read file: " << config_store_path_ << " to vector.";
+      otPlatLog(OT_LOG_LEVEL_CRIT, OT_LOG_REGION_PLATFORM, "Failed to read file: %s to vector.",
+                config_store_path_.c_str());
     }
 
     config_ = json_parser_.ParseFromFile(config_store_path_);
   } else {
-    FX_LOGS(INFO) << "File: " << config_store_path_ << " not present, will create new.";
+    otPlatLog(OT_LOG_LEVEL_NOTE, OT_LOG_REGION_PLATFORM, "File: %s not present, will create new.",
+              config_store_path_.c_str());
     config_.SetObject();
   }
 
@@ -52,7 +58,8 @@ ThreadConfigManager::ThreadConfigManager(const std::string& path) : config_store
 
 ThreadConfigManager::~ThreadConfigManager() {
   CommitKVPairs();
-  FX_LOGS(INFO) << "ThreadConfigManager being destroyed";
+  otPlatLog(OT_LOG_LEVEL_DEBG, otLogRegion::OT_LOG_REGION_PLATFORM,
+            "ThreadConfigManager being destroyed");
 }
 
 ThreadConfigMgrError ThreadConfigManager::AppendConfigValueBinArray(const std::string& key,

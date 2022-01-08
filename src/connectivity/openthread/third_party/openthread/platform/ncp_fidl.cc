@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 #include "ncp_fidl.h"
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <sstream>
 
 namespace ot {

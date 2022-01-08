@@ -32,8 +32,6 @@
  *
  */
 
-#include <lib/syslog/cpp/macros.h>
-
 #include <openthread/platform/misc.h>
 #include <openthread/platform/settings.h>
 
@@ -44,15 +42,15 @@ static otError platformSettingsDelete(otInstance *instance, uint16_t key, int in
 std::unique_ptr<ThreadConfigManager> config_manager;
 
 void otPlatSettingsInit(otInstance *instance) {
-  FX_LOGS(INFO) << "Inside otPlatSettingsInit";
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "Inside otPlatSettingsInit");
   if (config_manager == nullptr) {
     config_manager = std::make_unique<ThreadConfigManager>(kThreadSettingsPath);
-    FX_LOGS(INFO) << "Created new config_manager!";
+    otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "Created new config_manager!");
   }
 }
 
 void otPlatSettingsDeinit(otInstance *instance) {
-  FX_LOGS(INFO) << "Deleting config_manager during Deinit.";
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "Deleting config_manager during Deinit.");
   config_manager.reset();
 }
 
@@ -65,7 +63,6 @@ static otError get_ot_error(ThreadConfigMgrError error) {
     case kThreadConfigMgrErrorPersistedStorageFail:
       otPlatLog(OT_LOG_LEVEL_CRIT, otLogRegion::OT_LOG_REGION_PLATFORM,
                 "failed to write to config file: kThreadConfigMgrErrorPersistedStorageFail");
-      // TODO(rquattle): Do we really want to abort here?
       abort();
       // return OT_ERROR_FAILED;
     case kThreadConfigMgrErrorConflictingTypes:
@@ -75,9 +72,7 @@ static otError get_ot_error(ThreadConfigMgrError error) {
       // config manager itself
       otPlatLog(OT_LOG_LEVEL_CRIT, otLogRegion::OT_LOG_REGION_PLATFORM,
                 "Matching keys with different types");
-      // TODO(rquattle): Do we really want to abort here?
       abort();
-      // return OT_ERROR_FAILED;
     default:
       return OT_ERROR_NONE;
   }
@@ -138,7 +133,8 @@ otError otPlatSettingsDelete(otInstance *instance, uint16_t key, int index) {
 
 static otError platformSettingsDelete(otInstance *instance, uint16_t key, int index) {
   OT_UNUSED_VARIABLE(instance);
-  FX_LOGS(INFO) << "Deleting settings for key: " << key << " index: " << index;
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM, "Deleting settings for key: %d index: %d",
+            key, index);
   std::string key_str(std::to_string(key));
   ThreadConfigMgrError err;
   if (index < -1) {
@@ -159,7 +155,8 @@ static otError platformSettingsDelete(otInstance *instance, uint16_t key, int in
 
 void otPlatSettingsWipe(otInstance *instance) {
   OT_UNUSED_VARIABLE(instance);
-  FX_LOGS(INFO) << "Clearing all settings during otPlatSettingsWipe!";
+  otPlatLog(OT_LOG_LEVEL_DEBG, OT_LOG_REGION_PLATFORM,
+            "Clearing all settings during otPlatSettingsWipe!");
   if (config_manager == nullptr) {
     return;
   }

@@ -58,12 +58,18 @@ class SpinelFidlInterface {
    */
   void Process(const otRadioSpinelContext& aContext);
 
-#ifdef OPENTHREAD_SOFT_TRANSITION_NEW_CODE
   /**
-   * Used when RCP is reset to recreate the connection with it.
+   * This method is called when RCP failure detected and resets internal states of the interface.
    *
    */
-  otError ResetConnection(void) { return OT_ERROR_NONE; }
+  void OnRcpReset(void);
+
+#if OPENTHREAD_SPINEL_CONFIG_RESET_CONNECTION
+  /**
+   * This method is called when RCP is reset to recreate the connection with it.
+   *
+   */
+  otError ResetConnection(void);
 #endif
 
  private:
