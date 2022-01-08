@@ -7,7 +7,6 @@
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/boot-shim/pool-mem-config.h>
 #include <lib/zbitl/error-stdio.h>
-#include <lib/zbitl/items/mem-config.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,6 +18,8 @@
 #include <phys/boot-zbi.h>
 #include <phys/main.h>
 #include <phys/symbolize.h>
+
+#include "legacy-mem-config.h"
 
 // This a shim between a ZBI protocol boot loader using the old x86 protocol
 // and a bootable ZBI using the modern protocol.  It mostly just treats the
@@ -47,7 +48,7 @@ using Shim = boot_shim::BootShim<MemConfigItem>;
 constexpr size_t kMaxMemConfigEntries = 512;
 zbi_mem_range_t gMemConfigBuffer[kMaxMemConfigEntries];
 
-ktl::span<zbi_mem_range_t> GetMemoryRanges(const zbitl::MemRangeTable& table) {
+ktl::span<zbi_mem_range_t> GetMemoryRanges(const MemRangeTable& table) {
   const size_t count = table.size();
   ZX_ASSERT_MSG(count <= ktl::size(gMemConfigBuffer),
                 "legacy table with %zu entries > fixed %zu shim table!", count,
@@ -59,8 +60,8 @@ ktl::span<zbi_mem_range_t> GetMemoryRanges(const zbitl::MemRangeTable& table) {
 
 // Scan the ZBI for any of the memory table item types, old or new.  If we find
 // one, we'll record it and then mark the original item as discarded.
-zbitl::MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
-  zbitl::MemRangeTable table;
+MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
+  MemRangeTable table;
 
   cpp20::span<ktl::byte> mutable_zbi{
       const_cast<ktl::byte*>(zbi.storage().data()),
@@ -77,7 +78,7 @@ zbitl::MemRangeTable FindIncomingMemoryTable(BootZbi::InputZbi zbi) {
       default:
         continue;
     }
-    auto result = zbitl::MemRangeTable::FromSpan(it->header->type, it->payload);
+    auto result = MemRangeTable::FromSpan(it->header->type, it->payload);
     if (result.is_error()) {
       ktl::string_view type = zbitl::TypeName(it->header->type);
       printf("%s: Bad legacy %.*s item: %.*s\n", Symbolize::kProgramName_,

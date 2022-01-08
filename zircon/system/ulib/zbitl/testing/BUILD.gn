@@ -16,7 +16,6 @@ fuzzer_package("zbitl-fuzzers") {
     ":append-fuzzer",
     ":bootfs-iteration-fuzzer",
     ":copy-fuzzer",
-    ":mem-config-fuzzer",
     ":view-iteration-fuzzer",
   ]
 }
@@ -45,11 +44,6 @@ fuzzer("bootfs-iteration-fuzzer") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-cpp_fuzzer("mem-config-fuzzer") {
-  sources = [ "mem-config-fuzzer.cc" ]
-  deps = [ ".." ]
 }
 
 cpp_fuzzer("view-iteration-fuzzer") {

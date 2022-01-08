@@ -50,6 +50,7 @@ group("boot-shim") {
 zbi_executable("x86-legacy-zbi-boot-shim") {
   sources = [ "x86-legacy-zbi-boot-shim.cc" ]
   deps = [
+    ":legacy-mem-config",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
     "//zircon/kernel/phys:allocation",
@@ -122,6 +123,31 @@ zbi_test("x86-boot-shim-tests") {
     # Finally, the PIC->1M shim hands off to the 1M test program.
     ":phys-1mb-hello-world",
   ]
+}
+
+source_set("legacy-mem-config") {
+  visibility = [ ":*" ]
+  sources = [ "legacy-mem-config.cc" ]
+  public_deps = [
+    "//sdk/lib/stdcompat",
+
+    # legacy-mem-config.h has #include <efi/boot-services.h>
+    "//zircon/kernel/lib/efi",
+
+    # legacy-mem-config.h has #include <lib/zbitl/storage-traits.h>
+    "//zircon/system/ulib/zbitl",
+
+    # legacy-mem-config.h has #include <lib/fitx/result.h>
+    "//zircon/system/ulib/zxc",
+  ]
+
+  if (is_kernel) {
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+    public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
+  }
 }
 
 if (toolchain_environment == "kernel.phys32") {
@@ -216,6 +242,17 @@ test("legacy-boot-shim-tests") {
   ]
 }
 
+test("legacy-mem-config-tests") {
+  sources = [ "legacy-mem-config-tests.cc" ]
+  deps = [
+    ":legacy-mem-config",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/zbitl",
+  ]
+}
+
 qemu_shim_tests = [
   "bootsvc-integration-tests",
   "core-tests",
@@ -244,6 +281,7 @@ group("tests") {
   testonly = true
   deps = [
     ":legacy-boot-shim-tests($host_toolchain)",
+    ":legacy-mem-config-tests($host_toolchain)",
     ":x86-boot-shim-tests",
   ]
   foreach(shim, legacy_shims) {

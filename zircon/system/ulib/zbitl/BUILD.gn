@@ -15,12 +15,10 @@ zx_library("zbitl") {
     "checking.cc",
     "cpu-topology.cc",
     "item.cc",
-    "mem-config.cc",
   ]
   deps = [
     ":internal.decompress-zstd",
     "//src/zircon/lib/zircon",
-    "//zircon/kernel/lib/efi",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
