@@ -52,7 +52,7 @@ const BOLD_ITALIC_FONT: &'static str = "/pkg/data/bold-italic-font.ttf";
 const FONT_SIZE: f32 = 16.0;
 
 // Amount of change to font size when zooming.
-const FONT_SIZE_INCREMENT: f32 = 16.0;
+const FONT_SIZE_INCREMENT: f32 = 4.0;
 
 // Font size limits.
 const MIN_FONT_SIZE: f32 = 16.0;
@@ -874,7 +874,7 @@ mod tests {
         let alt_modifier = true;
         view.handle_keyboard_event_internal(&make_keyboard_event(equal, alt_modifier))?;
 
-        assert_eq!(view.font_size, 32.0);
+        assert_eq!(view.font_size, 20.0);
 
         let test_buffer = view.pty_context.as_mut().unwrap().test_buffer.take().unwrap();
         assert_eq!(test_buffer, b"");

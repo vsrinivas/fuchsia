@@ -79,7 +79,7 @@ const STATUS_COLOR_ACTIVE: Rgb = Rgb { r: 255, g: 255, b: 85 };
 const STATUS_COLOR_UPDATED: Rgb = Rgb { r: 85, g: 255, b: 85 };
 
 // Amount of change to font size when zooming.
-const FONT_SIZE_INCREMENT: f32 = 16.0;
+const FONT_SIZE_INCREMENT: f32 = 4.0;
 
 // Maximum terminal size in cells. We support up to 4 layers per cell.
 const MAX_CELLS: u32 = SceneOrder::MAX.as_u32() / 4;
