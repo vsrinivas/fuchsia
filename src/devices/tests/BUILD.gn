@@ -21,6 +21,7 @@ group("tests") {
     "ddk-runcompatibilityhook:tests",
     "devfs_exporter:tests",
     "device-watcher:tests",
+    "driver-development:tests",
     "driver-inspect-test",
     "driver-runner-integration:tests",
     "driver-runtime:tests",
