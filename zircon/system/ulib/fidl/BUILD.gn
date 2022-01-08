@@ -88,6 +88,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/client_end.h",
                     "lib/fidl/llcpp/client.h",
                     "lib/fidl/llcpp/coding.h",
+                    "lib/fidl/llcpp/channel.h",
                     "lib/fidl/llcpp/connect_service.h",
                     "lib/fidl/llcpp/envelope.h",
                     "lib/fidl/llcpp/extract_resource_on_destruction.h",

@@ -114,6 +114,90 @@ class ServerEnd final
  public:
   using fidl::internal::ServerEndBase<Protocol, fidl::internal::DriverTransport>::ServerEndBase;
 };
+
+template <typename Protocol>
+struct Endpoints {
+  fdf::ClientEnd<Protocol> client;
+  fdf::ServerEnd<Protocol> server;
+};
+
+// Creates a pair of fdf channel endpoints speaking the |Protocol| protocol.
+// Whenever interacting with LLCPP, using this method should be encouraged over
+// |fdf::ChannelPair::Create|, because this method encodes the precise protocol
+// type into its results at compile time.
+//
+// The return value is a result type wrapping the client and server endpoints.
+// Given the following:
+//
+//     auto endpoints = fdf::CreateEndpoints<MyProtocol>();
+//
+// The caller should first ensure that |endpoints.is_ok() == true|, after which
+// the channel endpoints may be accessed in one of two ways:
+//
+// - Direct:
+//     endpoints->client;
+//     endpoints->server;
+//
+// - Structured Binding:
+//     auto [client_end, server_end] = std::move(endpoints.value());
+template <typename Protocol>
+zx::status<fdf::Endpoints<Protocol>> CreateEndpoints() {
+  auto pair = fdf::ChannelPair::Create(0);
+  if (!pair.is_ok()) {
+    return pair.take_error();
+  }
+  return zx::ok(Endpoints<Protocol>{
+      fdf::ClientEnd<Protocol>(std::move(pair->end0)),
+      fdf::ServerEnd<Protocol>(std::move(pair->end1)),
+  });
+}
+
+// Creates a pair of fdf channel endpoints speaking the |Protocol| protocol.
+// Whenever interacting with LLCPP, using this method should be encouraged over
+// |fdf::ChannelPair::Create|, because this method encodes the precise protocol
+// type into its results at compile time.
+//
+// This overload of |CreateEndpoints| may lead to more concise code when the
+// caller already has the client endpoint defined as an instance variable.
+// It will replace the destination of |out_client| with a newly created client
+// endpoint, and return the corresponding server endpoint in a |zx::status|:
+//
+//     // |client_end_| is an instance variable.
+//     auto server_end = fdf::CreateEndpoints(&client_end_);
+//     if (server_end.is_ok()) { ... }
+template <typename Protocol>
+zx::status<fdf::ServerEnd<Protocol>> CreateEndpoints(fdf::ClientEnd<Protocol>* out_client) {
+  auto endpoints = CreateEndpoints<Protocol>();
+  if (!endpoints.is_ok()) {
+    return endpoints.take_error();
+  }
+  *out_client = fdf::ClientEnd<Protocol>(std::move(endpoints->client));
+  return zx::ok(fdf::ServerEnd<Protocol>(std::move(endpoints->server)));
+}
+
+// Creates a pair of fdf channel endpoints speaking the |Protocol| protocol.
+// Whenever interacting with LLCPP, using this method should be encouraged over
+// |fdf::ChannelPair::Create|, because this method encodes the precise protocol
+// type into its results at compile time.
+//
+// This overload of |CreateEndpoints| may lead to more concise code when the
+// caller already has the server endpoint defined as an instance variable.
+// It will replace the destination of |out_server| with a newly created server
+// endpoint, and return the corresponding client endpoint in a |zx::status|:
+//
+//     // |server_end_| is an instance variable.
+//     auto client_end = fdf::CreateEndpoints(&server_end_);
+//     if (client_end.is_ok()) { ... }
+template <typename Protocol>
+zx::status<fdf::ClientEnd<Protocol>> CreateEndpoints(fdf::ServerEnd<Protocol>* out_server) {
+  auto endpoints = CreateEndpoints<Protocol>();
+  if (!endpoints.is_ok()) {
+    return endpoints.take_error();
+  }
+  *out_server = fdf::ServerEnd<Protocol>(std::move(endpoints->server));
+  return zx::ok(fdf::ClientEnd<Protocol>(std::move(endpoints->client)));
+}
+
 }  // namespace fdf
 
 #endif  // LIB_FIDL_DRIVER_INCLUDE_LIB_FIDL_DRIVER_CPP_TRANSPORT_H_

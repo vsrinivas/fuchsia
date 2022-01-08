@@ -5,11 +5,11 @@
 #ifndef LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
-#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/wire_messaging_declarations.h>
 #include <lib/fit/function.h>
 
 #ifdef __Fuchsia__
+#include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/soft_migration.h>

@@ -17,7 +17,10 @@ fidl("test.transport") {
 
 test("fidl_driver_transport_tests_bin") {
   output_name = "fidl_driver_transport_tests"
-  sources = [ "two_way_test.cc" ]
+  sources = [
+    "api_test.cc",
+    "two_way_test.cc",
+  ]
   deps = [
     ":test.transport_driver",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
