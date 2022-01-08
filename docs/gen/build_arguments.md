@@ -104,7 +104,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:133
+From //build/security.gni:140
 
 ### avb_algorithm
 
@@ -900,19 +900,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/baed0e4639edf5c3008e901acb57bb56a4b2ffa4/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/d6c56223c37c798d3988f7e63febc772bd8e6627/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/baed0e4639edf5c3008e901acb57bb56a4b2ffa4/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/d6c56223c37c798d3988f7e63febc772bd8e6627/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/baed0e4639edf5c3008e901acb57bb56a4b2ffa4/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/d6c56223c37c798d3988f7e63febc772bd8e6627/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -936,6 +936,13 @@ From //sdk/cts/build/cts_version.gni:16
 ### current_os
 
 **Current value (from the default):** `""`
+
+### cursor_pointer_path
+Path to file to use for pointer
+
+**Current value (from the default):** `"//src/session/bin/cursor/data/pointer.riv"`
+
+From //src/session/bin/cursor/cursor_args.gni:7
 
 ### custom_signing_script
 If non-empty, the given script will be invoked to produce a signed ZBI
@@ -1527,6 +1534,12 @@ above changes.
 **Current value (from the default):** `[]`
 
 From //build/security.gni:81
+
+### fuchsia_verify_component_resolvers_allowlist
+
+**Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
+
+From //build/security.gni:103
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
@@ -2507,13 +2520,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/6562d2d0b2a86026a0c8bfc89d95c0a547ed9e5e/build/platform.gni#31)
+From [//third_party/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/bbb68fcec19ff7c268fadeebd2ef79f7203fa2f2/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/6562d2d0b2a86026a0c8bfc89d95c0a547ed9e5e/build/platform.gni#30)
+From [//third_party/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/bbb68fcec19ff7c268fadeebd2ef79f7203fa2f2/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3285,7 +3298,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:111
+From //build/security.gni:118
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -3343,7 +3356,7 @@ From //build/toolchain/restat.gni:13
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/366fa29f0287e5064bf5d264162b3c7dca9b68a1/BUILD.gn#14)
+From //third_party/boringssl/BUILD.gn:14
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -3862,7 +3875,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:124
+From //build/security.gni:131
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -4523,10 +4536,4 @@ be removed after everyone has had a chance to get hold of their machines.
 **Current value (from the default):** `false`
 
 From //zircon/kernel/BUILD.gn:29
-
-### use_custom_gbm
-
-**Current value (from the default):** `false`
-
-From //src/graphics/lib/gbm/gbm.gni:6
 
