@@ -5,6 +5,7 @@
     ],
     program: {
         data: "data/login",
+        args: [ "--expose_dirs=hosted_directories" ],
     },
     children: [
         {
@@ -20,7 +21,7 @@
         {
             directory: "account_dir",
             rights: [ "rw*" ],
-            path: "/account_data",
+            path: "/hosted_directories/account_data",
         },
         {
             storage: "account",

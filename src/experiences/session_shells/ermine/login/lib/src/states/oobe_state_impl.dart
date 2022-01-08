@@ -11,8 +11,8 @@ import 'package:flutter/services.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
+import 'package:fuchsia_vfs/vfs.dart';
 import 'package:internationalization/strings.dart';
-import 'package:mobx/mobx.dart';
 import 'package:login/src/services/auth_service.dart';
 import 'package:login/src/services/channel_service.dart';
 import 'package:login/src/services/device_service.dart';
@@ -20,6 +20,9 @@ import 'package:login/src/services/privacy_consent_service.dart';
 import 'package:login/src/services/shell_service.dart';
 import 'package:login/src/services/ssh_keys_service.dart';
 import 'package:login/src/states/oobe_state.dart';
+import 'package:mobx/mobx.dart';
+
+const kHostedDirectories = 'hosted_directories';
 
 /// Defines an implementation of [OobeState].
 class OobeStateImpl with Disposable implements OobeState {
@@ -43,10 +46,17 @@ class OobeStateImpl with Disposable implements OobeState {
     required this.privacyConsentService,
   })  : componentContext = ComponentContext.create(),
         _localeStream = channelService.stream.asObservable() {
-    authService.outgoing = componentContext.outgoing;
     privacyPolicy = privacyConsentService.privacyPolicy;
     shellService.onShellExit = _onErmineShellExit;
 
+    // Create a directory that will host the account_data directory. This is needed
+    // because the root directories are expected to exist at the time of serving.
+    final hostedDirectories = PseudoDir();
+    componentContext.outgoing
+        .rootDir()
+        .addNode(kHostedDirectories, hostedDirectories);
+
+    authService.hostedDirectories = hostedDirectories;
     componentContext.outgoing.serveFromStartupInfo();
 
     channelService.onConnected = (connected) => runInAction(() async {

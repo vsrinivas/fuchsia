@@ -25,7 +25,7 @@ const kAccountDirectory = 'account_data';
 ///   behavior. The client of the service should ensure to not call account
 ///   creation in this case.
 class AuthService {
-  late final Outgoing outgoing;
+  late final PseudoDir hostedDirectories;
 
   final _accountManager = AccountManagerProxy();
   AccountProxy? _account;
@@ -114,7 +114,7 @@ class AuthService {
     final directory = ChannelPair();
     await account.getDataDirectory(InterfaceRequest(directory.second));
 
-    outgoing.rootDir()
+    hostedDirectories
       ..removeNode(kAccountDirectory)
       ..addNode(kAccountDirectory, RemoteDir(directory.first!));
 
