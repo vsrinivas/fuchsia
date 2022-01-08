@@ -120,7 +120,8 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
       }
     };
     ResponseContext context;
-    client->GetResource(&context);
+    fidl::AsyncClientBuffer<test::Protocol::GetResource> buffer;
+    client.buffer(buffer.view())->GetResource(&context);
 
     ASSERT_OK(loop.RunUntilIdle());
     zx_signals_t signals;

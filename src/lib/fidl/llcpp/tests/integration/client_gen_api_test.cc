@@ -100,7 +100,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
   sync_completion_t done;
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
   ResponseContext context(&done, data, strlen(data));
-  client->TwoWay(buffer.view(), fidl::StringView(data), &context);
+  client.buffer(buffer.view())->TwoWay(fidl::StringView(data), &context);
   ASSERT_OK(sync_completion_wait(&done, ZX_TIME_INFINITE));
 
   server_binding.Unbind();
@@ -411,7 +411,7 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
                                      fidl::Reason::kTransportError);
 
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-  client->TwoWay(buffer.view(), "foo", &context);
+  client.buffer(buffer.view())->TwoWay("foo", &context);
   ASSERT_OK(error.Wait());
 }
 
@@ -430,7 +430,7 @@ TEST(GenAPITestCase, AsyncNotifySendError) {
                                        fidl::Reason::kTransportError);
 
     fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-    client->TwoWay(buffer.view(), "foo", &context);
+    client.buffer(buffer.view())->TwoWay("foo", &context);
     // The context should be asynchronously notified.
     EXPECT_FALSE(error.signaled());
     loop.RunUntilIdle();
@@ -455,7 +455,7 @@ TEST(GenAPITestCase, AsyncNotifyTeardownError) {
   ExpectErrorResponseContext context(error.get(), ZX_ERR_CANCELED, fidl::Reason::kUnbind);
 
   fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-  client->TwoWay(buffer.view(), "foo", &context);
+  client.buffer(buffer.view())->TwoWay("foo", &context);
   EXPECT_FALSE(error.signaled());
   loop.RunUntilIdle();
   EXPECT_TRUE(error.signaled());
@@ -485,7 +485,7 @@ TEST(GenAPITestCase, SyncNotifyErrorIfDispatcherShutdown) {
     EXPECT_FALSE(error.signaled());
 
     fidl::AsyncClientBuffer<Example::TwoWay> buffer;
-    client->TwoWay(buffer.view(), "foo", &context);
+    client.buffer(buffer.view())->TwoWay("foo", &context);
     // If the loop was shutdown, |context| should still be notified, although
     // it has to happen on the current stack frame.
     EXPECT_TRUE(error.signaled());
