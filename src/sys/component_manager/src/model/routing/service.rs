@@ -21,7 +21,7 @@ use {
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     log::*,
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     std::{path::PathBuf, sync::Arc},
     vfs::{
         directory::{
@@ -59,7 +59,7 @@ impl CollectionServiceDirectoryProvider {
             collection_component.lock_resolved_state().await?.execution_scope().clone();
         let dir = lazy::lazy(CollectionServiceDirectory {
             target,
-            collection_component: collection_component.abs_moniker().clone(),
+            collection_component: collection_component.partial_abs_moniker().clone(),
             provider,
         });
         Ok(CollectionServiceDirectoryProvider { execution_scope, dir })
@@ -106,7 +106,7 @@ struct ServiceInstanceDirectoryEntry {
     /// The original target of the capability route (the component that opened this directory).
     target: WeakComponentInstance,
     /// The moniker of the component at which the instance was aggregated.
-    intermediate_component: AbsoluteMoniker,
+    intermediate_component: PartialAbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
     provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
 }
@@ -199,7 +199,7 @@ struct CollectionServiceDirectory {
     /// The original target of the capability route (the component that opened this directory).
     target: WeakComponentInstance,
     /// The moniker of the component hosting the collection.
-    collection_component: AbsoluteMoniker,
+    collection_component: PartialAbsoluteMoniker,
     /// The provider that lists collection instances and performs routing to an instance.
     provider: Box<dyn AggregateCapabilityProvider<ComponentInstance>>,
 }
